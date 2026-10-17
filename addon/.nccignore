@@ -1,0 +1,3 @@
+# Repository documentation and source artwork are not runtime files.
+*.md
+LycheeGroup_UI/Media/lychee-logo.png

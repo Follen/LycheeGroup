@@ -1,0 +1,2557 @@
+{
+  "schema": "lycheegroup.meetingstone-comparison.v1",
+  "date": "2026-10-18",
+  "timezone": "Asia/Shanghai",
+  "hardware": {
+    "cpu": "AMD Ryzen 7 9800X3D 8-Core Processor",
+    "osVisiblePhysicalMemoryGB": 50.53
+  },
+  "design": {
+    "sameClientAndCharacter": true,
+    "runOrder": [
+      "lychee",
+      "meetingstone"
+    ],
+    "installationScope": "Both addons installed and loaded alongside the user's existing addon set; only the measured addon's main window open.",
+    "source": "tests/live_compare.lua; second trial changes only targetName to meetingstone.",
+    "apiSourceCommit": "18c6d677b605b312f3d813d498404631fb941977",
+    "attribution": "Native per-addon CPU and memory counters. LycheeGroup is the sum of all four packages; embedded dependencies stay with their native owner.",
+    "limits": [
+      "Online results and result-update event counts vary between trials.",
+      "The two addons apply their own display rules; returned and displayed counts are retained separately.",
+      "Memory is the highest refreshed sample, not an unsampled upper bound or process/native texture memory.",
+      "CPU is cumulative during the measured window with scriptProfile=1; warmup and login loading are excluded.",
+      "No explicit garbage collection was performed; observer refresh cost is reported separately."
+    ]
+  },
+  "restoration": {
+    "applications": 0,
+    "grouped": false,
+    "listing": false,
+    "lycheeClosed": true,
+    "maxFPS": "120",
+    "maxFPSBk": "30",
+    "meetingstoneClosed": true,
+    "meetingstoneLastSearch": "6-0-0-0",
+    "meetingstoneSelection": "6-0-0-0",
+    "restored": true,
+    "scriptProfile": "0"
+  },
+  "connectionCleanup": {
+    "closed": true,
+    "complete": true,
+    "cleanup": "complete"
+  },
+  "runs": {
+    "lychee": {
+      "checks": {
+        "businessUnchanged": true,
+        "closed": true,
+        "fpsRestored": true,
+        "nonempty": true,
+        "preferencesRestored": true,
+        "sixSearches": true,
+        "wheelCalls": true
+      },
+      "client": {
+        "build": "70391",
+        "interface": 120105,
+        "locale": "zhCN",
+        "uiScale": 0.7111111283302307,
+        "version": "12.1.5"
+      },
+      "cpuEnd": [
+        21.018900000000002,
+        50.8739,
+        1.647,
+        109.6538,
+        296.4536
+      ],
+      "cpuMs": 162.7782,
+      "cpuPackageMs": [
+        16.2419,
+        43.9585,
+        1.5503,
+        101.0275,
+        43.679299999999984
+      ],
+      "cpuStart": [
+        4.777,
+        6.9154,
+        0.09670000000000001,
+        8.6263,
+        252.7743
+      ],
+      "duration": 60.02999999996973,
+      "events": {
+        "failed": 0,
+        "received": 6,
+        "updated": 147
+      },
+      "measurement": {
+        "cpu": "UpdateAddOnCPUUsage + GetAddOnCPUUsage end minus start (ms)",
+        "gc": "natural, no explicit collection",
+        "memory": "refreshed GetAddOnMemoryUsage per package, simultaneous sum; KB*1024/1000000 MB",
+        "scriptProfile": "1"
+      },
+      "observer": {
+        "cpuMs": 73.86739999055862,
+        "memoryMs": 5217.465099811554
+      },
+      "ok": true,
+      "packages": [
+        "LycheeGroup",
+        "LycheeGroup_Group",
+        "LycheeGroup_Notes",
+        "LycheeGroup_UI",
+        "MeetingStone"
+      ],
+      "peakKB": 14893.123046875,
+      "peakMB": 15.250558,
+      "peakSample": 61,
+      "queries": [
+        {
+          "activityID": 1956,
+          "at": 0,
+          "completedAt": 0.98599999997532,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "results": 47,
+          "shown": 47
+        },
+        {
+          "activityID": 1956,
+          "at": 10.024999999965075,
+          "completedAt": 10.910999999963678,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "results": 47,
+          "shown": 47
+        },
+        {
+          "activityID": 1956,
+          "at": 20.03200000000652,
+          "completedAt": 20.89399999997113,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "results": 47,
+          "shown": 47
+        },
+        {
+          "activityID": 1956,
+          "at": 30.010999999998603,
+          "completedAt": 30.871999999973923,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "results": 46,
+          "shown": 46
+        },
+        {
+          "activityID": 1956,
+          "at": 40.00299999996787,
+          "completedAt": 40.93899999995483,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "results": 46,
+          "shown": 46
+        },
+        {
+          "activityID": 1956,
+          "at": 50.00199999997858,
+          "completedAt": 50.8859999999986,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "results": 47,
+          "shown": 47
+        }
+      ],
+      "samples": [
+        {
+          "at": 0,
+          "fps": 59.999996185302734,
+          "nativeIDs": 48,
+          "nativeResults": 48,
+          "observerMs": 85.16060000658035,
+          "offset": 0,
+          "packageKB": [
+            825.8720703125,
+            1976.833984375,
+            41.6162109375,
+            740.0185546875,
+            97961.6259765625
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 3584.3408203125
+        },
+        {
+          "at": 1.0480000000097789,
+          "fps": 53.05039596557617,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 84.76010000705719,
+          "offset": 0,
+          "packageKB": [
+            825.8720703125,
+            2547.169921875,
+            41.6162109375,
+            742.7919921875,
+            100891.0400390625
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 4157.4501953125
+        },
+        {
+          "at": 2.044999999983702,
+          "fps": 54.94505310058594,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 79.4598000049591,
+          "offset": 288,
+          "packageKB": [
+            825.9072265625,
+            2737.388671875,
+            41.6162109375,
+            752.5302734375,
+            100943.880859375
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 4357.4423828125
+        },
+        {
+          "at": 3.0359999999636784,
+          "fps": 55.81394958496094,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 80.66339999437332,
+          "offset": 576,
+          "packageKB": [
+            825.9072265625,
+            2971.115234375,
+            41.6162109375,
+            762.2685546875,
+            101062.521484375
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 4600.9072265625
+        },
+        {
+          "at": 4.028999999980442,
+          "fps": 55.710304260253906,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 87.21259999275208,
+          "offset": 864,
+          "packageKB": [
+            825.9423828125,
+            3091.630859375,
+            41.6162109375,
+            772.015625,
+            101119.646484375
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 4731.205078125
+        },
+        {
+          "at": 5.027999999991152,
+          "fps": 55.40165710449219,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 80.5518000125885,
+          "offset": 1152,
+          "packageKB": [
+            825.9423828125,
+            3225.052734375,
+            41.6162109375,
+            781.6845703125,
+            101119.646484375
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 4874.2958984375
+        },
+        {
+          "at": 6.021000000007916,
+          "fps": 55.710304260253906,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 84.67690002918243,
+          "offset": 1440,
+          "packageKB": [
+            825.9775390625,
+            3351.880859375,
+            41.6162109375,
+            791.4677734375,
+            101120.341796875
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 5010.9423828125
+        },
+        {
+          "at": 7.021000000007916,
+          "fps": 55.40165710449219,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 85.4844999909401,
+          "offset": 1728,
+          "packageKB": [
+            826.0126953125,
+            3476.279296875,
+            41.6162109375,
+            801.083984375,
+            101243.654296875
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 5144.9921875
+        },
+        {
+          "at": 8.043000000005122,
+          "fps": 55.045867919921875,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 79.34869998693466,
+          "offset": 2016,
+          "packageKB": [
+            826.0126953125,
+            3618.654296875,
+            41.6162109375,
+            810.65625,
+            101243.654296875
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 5296.939453125
+        },
+        {
+          "at": 9.033999999985099,
+          "fps": 55.86591720581055,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 80.237399995327,
+          "offset": 2304,
+          "packageKB": [
+            826.1181640625,
+            3719.349609375,
+            41.6162109375,
+            820.19921875,
+            101244.349609375
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 5407.283203125
+        },
+        {
+          "at": 10.024999999965075,
+          "fps": 55.86591720581055,
+          "nativeIDs": 0,
+          "nativeResults": 0,
+          "observerMs": 86.01420003175735,
+          "offset": 0,
+          "packageKB": [
+            826.1181640625,
+            3803.701171875,
+            41.6162109375,
+            830.5048828125,
+            101345.947265625
+          ],
+          "results": 0,
+          "shown": 0,
+          "totalKB": 5501.9404296875
+        },
+        {
+          "at": 11.036999999952968,
+          "fps": 54.79452133178711,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 86.27969998121262,
+          "offset": 0,
+          "packageKB": [
+            826.1181640625,
+            4376.099609375,
+            41.6162109375,
+            832.7705078125,
+            104273.107421875
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 6076.6044921875
+        },
+        {
+          "at": 12.035999999963678,
+          "fps": 55.45286178588867,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 82.78449994325638,
+          "offset": 288,
+          "packageKB": [
+            826.1181640625,
+            4507.380859375,
+            41.6162109375,
+            842.2705078125,
+            104273.802734375
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 6217.3857421875
+        },
+        {
+          "at": 13.030999999959022,
+          "fps": 55.658626556396484,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 87.8779000043869,
+          "offset": 576,
+          "packageKB": [
+            826.1181640625,
+            4658.318359375,
+            41.6162109375,
+            851.7705078125,
+            104273.802734375
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 6377.8232421875
+        },
+        {
+          "at": 14.046999999962281,
+          "fps": 55.40165710449219,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 86.62389999628067,
+          "offset": 864,
+          "packageKB": [
+            826.1181640625,
+            4781.716796875,
+            41.6162109375,
+            861.314453125,
+            104384.482421875
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 6510.765625
+        },
+        {
+          "at": 15.044999999983702,
+          "fps": 55.50415802001953,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 84.4961000084877,
+          "offset": 1152,
+          "packageKB": [
+            826.1181640625,
+            4921.654296875,
+            41.6162109375,
+            870.814453125,
+            104444.458984375
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 6660.203125
+        },
+        {
+          "at": 16.039999999979045,
+          "fps": 55.6070442199707,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 83.06999999284744,
+          "offset": 1440,
+          "packageKB": [
+            826.1181640625,
+            5052.529296875,
+            41.6162109375,
+            880.40234375,
+            104468.1181640625
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 6800.666015625
+        },
+        {
+          "at": 17.03499999997439,
+          "fps": 55.658626556396484,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 76.62180000543594,
+          "offset": 1728,
+          "packageKB": [
+            826.1181640625,
+            5170.412109375,
+            41.6162109375,
+            889.90234375,
+            104516.4619140625
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 6928.048828125
+        },
+        {
+          "at": 18.023999999975786,
+          "fps": 55.970149993896484,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 80.48780000209808,
+          "offset": 2016,
+          "packageKB": [
+            826.1181640625,
+            5318.552734375,
+            41.6162109375,
+            899.40234375,
+            104572.466796875
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 7085.689453125
+        },
+        {
+          "at": 19.0339999999851,
+          "fps": 55.76207733154297,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 84.99469995498657,
+          "offset": 2304,
+          "packageKB": [
+            826.1181640625,
+            5432.279296875,
+            41.6162109375,
+            908.90234375,
+            104700.6357421875
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 7208.916015625
+        },
+        {
+          "at": 20.03200000000652,
+          "fps": 55.45286178588867,
+          "nativeIDs": 0,
+          "nativeResults": 0,
+          "observerMs": 81.01019996404648,
+          "offset": 0,
+          "packageKB": [
+            826.1181640625,
+            5529.662109375,
+            41.6162109375,
+            919.12890625,
+            104921.822265625
+          ],
+          "results": 0,
+          "shown": 0,
+          "totalKB": 7316.525390625
+        },
+        {
+          "at": 21.038000000000466,
+          "fps": 55.096412658691406,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 82.07690000534058,
+          "offset": 0,
+          "packageKB": [
+            826.1181640625,
+            6104.529296875,
+            41.6162109375,
+            921.39453125,
+            107883.591796875
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 7893.658203125
+        },
+        {
+          "at": 22,
+          "fps": 55.096412658691406,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 94.47689998149872,
+          "offset": 288,
+          "packageKB": [
+            826.1181640625,
+            6245.826171875,
+            41.6162109375,
+            930.89453125,
+            107951.7294921875
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 8044.455078125
+        },
+        {
+          "at": 23.006999999983236,
+          "fps": 54.99541473388672,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 91.34709995985031,
+          "offset": 576,
+          "packageKB": [
+            826.1181640625,
+            6407.255859375,
+            41.6162109375,
+            940.39453125,
+            108041.7373046875
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 8215.384765625
+        },
+        {
+          "at": 24.010999999998603,
+          "fps": 55.197792053222656,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 93.27189999818802,
+          "offset": 864,
+          "packageKB": [
+            826.1181640625,
+            6554.208984375,
+            41.6162109375,
+            950.9091796875,
+            108081.9638671875
+          ],
+          "results": 46,
+          "shown": 46,
+          "totalKB": 8372.8525390625
+        },
+        {
+          "at": 25.01600000000326,
+          "fps": 55.14705276489258,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 87.47399997711182,
+          "offset": 1152,
+          "packageKB": [
+            826.1181640625,
+            6723.896484375,
+            41.6162109375,
+            960.4091796875,
+            108180.6533203125
+          ],
+          "results": 46,
+          "shown": 46,
+          "totalKB": 8552.0400390625
+        },
+        {
+          "at": 26.014999999955762,
+          "fps": 55.45286178588867,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 82.70579999685287,
+          "offset": 1440,
+          "packageKB": [
+            826.1181640625,
+            6853.326171875,
+            41.6162109375,
+            969.9462890625,
+            108199.9580078125
+          ],
+          "results": 46,
+          "shown": 46,
+          "totalKB": 8691.0068359375
+        },
+        {
+          "at": 27.007999999972526,
+          "fps": 55.76207733154297,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 81.69879996776581,
+          "offset": 1728,
+          "packageKB": [
+            826.1181640625,
+            6997.248046875,
+            41.6162109375,
+            979.4462890625,
+            108272.2783203125
+          ],
+          "results": 46,
+          "shown": 46,
+          "totalKB": 8844.4287109375
+        },
+        {
+          "at": 28.00099999998929,
+          "fps": 55.710304260253906,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 84.93999999761581,
+          "offset": 2016,
+          "packageKB": [
+            826.1181640625,
+            7134.654296875,
+            41.6162109375,
+            988.9462890625,
+            108272.2783203125
+          ],
+          "results": 46,
+          "shown": 46,
+          "totalKB": 8991.3349609375
+        },
+        {
+          "at": 29.04699999996228,
+          "fps": 55.6070442199707,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 87.09209996461868,
+          "offset": 2304,
+          "packageKB": [
+            826.1181640625,
+            7231.646484375,
+            41.6162109375,
+            998.4462890625,
+            108272.2783203125
+          ],
+          "results": 46,
+          "shown": 46,
+          "totalKB": 9097.8271484375
+        },
+        {
+          "at": 30.010999999998603,
+          "fps": 55.50415802001953,
+          "nativeIDs": 0,
+          "nativeResults": 0,
+          "observerMs": 80.79789996147156,
+          "offset": 0,
+          "packageKB": [
+            826.1181640625,
+            7288.380859375,
+            41.6162109375,
+            1008.6728515625,
+            108272.9736328125
+          ],
+          "results": 0,
+          "shown": 0,
+          "totalKB": 9164.7880859375
+        },
+        {
+          "at": 31.005999999993946,
+          "fps": 54.79452133178711,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 92.11179995536804,
+          "offset": 0,
+          "packageKB": [
+            826.1181640625,
+            7856.396484375,
+            41.6162109375,
+            1010.9384765625,
+            111105.6728515625
+          ],
+          "results": 46,
+          "shown": 46,
+          "totalKB": 9735.0693359375
+        },
+        {
+          "at": 32.01000000000931,
+          "fps": 55.197792053222656,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 85.93979996442795,
+          "offset": 288,
+          "packageKB": [
+            826.1181640625,
+            8073.451171875,
+            41.6162109375,
+            1020.4384765625,
+            111362.2978515625
+          ],
+          "results": 46,
+          "shown": 46,
+          "totalKB": 9961.6240234375
+        },
+        {
+          "at": 33.008999999961816,
+          "fps": 55.40165710449219,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 91.26719999313354,
+          "offset": 576,
+          "packageKB": [
+            826.1181640625,
+            8202.998046875,
+            41.6162109375,
+            1029.9384765625,
+            111427.5244140625
+          ],
+          "results": 46,
+          "shown": 46,
+          "totalKB": 10100.6708984375
+        },
+        {
+          "at": 34.01299999997718,
+          "fps": 55.197792053222656,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 86.60589998960495,
+          "offset": 864,
+          "packageKB": [
+            826.1181640625,
+            8369.763671875,
+            41.6162109375,
+            1039.482421875,
+            111525.271484375
+          ],
+          "results": 46,
+          "shown": 46,
+          "totalKB": 10276.98046875
+        },
+        {
+          "at": 35.01299999997718,
+          "fps": 55.35055160522461,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 90.31720000505447,
+          "offset": 1152,
+          "packageKB": [
+            826.1181640625,
+            8496.193359375,
+            41.6162109375,
+            1049.0185546875,
+            111525.271484375
+          ],
+          "results": 46,
+          "shown": 46,
+          "totalKB": 10412.9462890625
+        },
+        {
+          "at": 36.01499999995576,
+          "fps": 55.248619079589844,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 83.08400005102158,
+          "offset": 1440,
+          "packageKB": [
+            826.1181640625,
+            8617.310546875,
+            41.6162109375,
+            1058.5185546875,
+            111600.2783203125
+          ],
+          "results": 46,
+          "shown": 46,
+          "totalKB": 10543.5634765625
+        },
+        {
+          "at": 37.0109999999986,
+          "fps": 55.6070442199707,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 86.12680000066757,
+          "offset": 1728,
+          "packageKB": [
+            826.1181640625,
+            8759.724609375,
+            41.6162109375,
+            1068.0185546875,
+            111639.0205078125
+          ],
+          "results": 46,
+          "shown": 46,
+          "totalKB": 10695.4775390625
+        },
+        {
+          "at": 38.0109999999986,
+          "fps": 55.40165710449219,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 82.91049998998642,
+          "offset": 2016,
+          "packageKB": [
+            826.1181640625,
+            8906.904296875,
+            41.6162109375,
+            1077.5185546875,
+            111773.8408203125
+          ],
+          "results": 46,
+          "shown": 46,
+          "totalKB": 10852.1572265625
+        },
+        {
+          "at": 39.0109999999986,
+          "fps": 55.40165710449219,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 81.38030004501343,
+          "offset": 2304,
+          "packageKB": [
+            826.1181640625,
+            9016.927734375,
+            41.6162109375,
+            1087.0185546875,
+            111865.4658203125
+          ],
+          "results": 46,
+          "shown": 46,
+          "totalKB": 10971.6806640625
+        },
+        {
+          "at": 40.00299999996787,
+          "fps": 55.76207733154297,
+          "nativeIDs": 0,
+          "nativeResults": 0,
+          "observerMs": 84.96819996833801,
+          "offset": 0,
+          "packageKB": [
+            826.1181640625,
+            9083.435546875,
+            41.6162109375,
+            1097.2451171875,
+            112001.0791015625
+          ],
+          "results": 0,
+          "shown": 0,
+          "totalKB": 11048.4150390625
+        },
+        {
+          "at": 41.01399999996647,
+          "fps": 54.79452133178711,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 81.6486000418663,
+          "offset": 0,
+          "packageKB": [
+            826.1181640625,
+            9657.623046875,
+            41.6162109375,
+            1099.5107421875,
+            114832.5791015625
+          ],
+          "results": 46,
+          "shown": 46,
+          "totalKB": 11624.8681640625
+        },
+        {
+          "at": 42.007999999972526,
+          "fps": 55.299537658691406,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 86.97229999303818,
+          "offset": 288,
+          "packageKB": [
+            826.1181640625,
+            9790.138671875,
+            41.6162109375,
+            1109.0107421875,
+            114833.2744140625
+          ],
+          "results": 46,
+          "shown": 46,
+          "totalKB": 11766.8837890625
+        },
+        {
+          "at": 43.005999999993946,
+          "fps": 55.50415802001953,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 86.70740002393723,
+          "offset": 576,
+          "packageKB": [
+            826.1181640625,
+            9913.169921875,
+            41.6162109375,
+            1118.5107421875,
+            114833.2744140625
+          ],
+          "results": 46,
+          "shown": 46,
+          "totalKB": 11899.4150390625
+        },
+        {
+          "at": 44.00500000000466,
+          "fps": 55.45286178588867,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 91.42890000343323,
+          "offset": 864,
+          "packageKB": [
+            826.1181640625,
+            10086.583984375,
+            41.6162109375,
+            1128.0107421875,
+            114971.0087890625
+          ],
+          "results": 46,
+          "shown": 46,
+          "totalKB": 12082.3291015625
+        },
+        {
+          "at": 45.01399999996647,
+          "fps": 54.94505310058594,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 87.83840000629425,
+          "offset": 1152,
+          "packageKB": [
+            826.1181640625,
+            10216.271484375,
+            41.6162109375,
+            1137.5546875,
+            115055.880859375
+          ],
+          "results": 46,
+          "shown": 46,
+          "totalKB": 12221.560546875
+        },
+        {
+          "at": 46.01799999998184,
+          "fps": 55.197792053222656,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 80.88719999790192,
+          "offset": 1440,
+          "packageKB": [
+            826.1181640625,
+            10365.373046875,
+            41.6162109375,
+            1147.0546875,
+            115159.0986328125
+          ],
+          "results": 46,
+          "shown": 46,
+          "totalKB": 12380.162109375
+        },
+        {
+          "at": 47.0109999999986,
+          "fps": 55.710304260253906,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 85.49250000715256,
+          "offset": 1728,
+          "packageKB": [
+            826.1181640625,
+            10527.099609375,
+            41.6162109375,
+            1156.5546875,
+            115216.8330078125
+          ],
+          "results": 46,
+          "shown": 46,
+          "totalKB": 12551.388671875
+        },
+        {
+          "at": 48.007999999972526,
+          "fps": 55.55555725097656,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 82.50069999694824,
+          "offset": 2016,
+          "packageKB": [
+            826.1181640625,
+            10704.669921875,
+            41.6162109375,
+            1166.0546875,
+            115283.2001953125
+          ],
+          "results": 46,
+          "shown": 46,
+          "totalKB": 12738.458984375
+        },
+        {
+          "at": 49.00500000000466,
+          "fps": 55.50415802001953,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 82.98280000686646,
+          "offset": 2304,
+          "packageKB": [
+            826.1181640625,
+            10808.177734375,
+            41.6162109375,
+            1175.5546875,
+            115345.2626953125
+          ],
+          "results": 46,
+          "shown": 46,
+          "totalKB": 12851.466796875
+        },
+        {
+          "at": 50.00199999997858,
+          "fps": 55.55555725097656,
+          "nativeIDs": 0,
+          "nativeResults": 0,
+          "observerMs": 85.33109998703003,
+          "offset": 0,
+          "packageKB": [
+            826.1181640625,
+            10864.912109375,
+            41.6162109375,
+            1185.78125,
+            115345.2626953125
+          ],
+          "results": 0,
+          "shown": 0,
+          "totalKB": 12918.427734375
+        },
+        {
+          "at": 51.01499999995576,
+          "fps": 54.74452209472656,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 91.7053000330925,
+          "offset": 0,
+          "packageKB": [
+            826.1181640625,
+            11444.779296875,
+            41.6162109375,
+            1188.083984375,
+            118271.5869140625
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 13500.59765625
+        },
+        {
+          "at": 52.02899999998044,
+          "fps": 54.694618225097656,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 96.74570000171661,
+          "offset": 288,
+          "packageKB": [
+            826.1181640625,
+            11683.998046875,
+            41.6162109375,
+            1197.583984375,
+            119356.2880859375
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 13749.31640625
+        },
+        {
+          "at": 53.039999999979045,
+          "fps": 54.8446044921875,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 82.81650000810623,
+          "offset": 576,
+          "packageKB": [
+            826.1181640625,
+            11839.591796875,
+            41.6162109375,
+            1207.083984375,
+            119413.3193359375
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 13914.41015625
+        },
+        {
+          "at": 54.039999999979045,
+          "fps": 55.40165710449219,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 84.4908999800682,
+          "offset": 864,
+          "packageKB": [
+            826.1181640625,
+            11947.552734375,
+            41.6162109375,
+            1216.6279296875,
+            119451.5224609375
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 14031.9150390625
+        },
+        {
+          "at": 55.041999999957625,
+          "fps": 55.299537658691406,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 87.2237000465393,
+          "offset": 1152,
+          "packageKB": [
+            826.1181640625,
+            12088.724609375,
+            41.6162109375,
+            1226.171875,
+            119521.9130859375
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 14182.630859375
+        },
+        {
+          "at": 56.01299999997718,
+          "fps": 55.096412658691406,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 85.91440004110336,
+          "offset": 1440,
+          "packageKB": [
+            826.1181640625,
+            12207.076171875,
+            41.6162109375,
+            1235.671875,
+            119553.4677734375
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 14310.482421875
+        },
+        {
+          "at": 57.02799999999115,
+          "fps": 53.7634391784668,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 87.67689996957779,
+          "offset": 1728,
+          "packageKB": [
+            826.1181640625,
+            12382.669921875,
+            41.6162109375,
+            1245.171875,
+            119806.734375
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 14495.576171875
+        },
+        {
+          "at": 58.02899999998044,
+          "fps": 55.35055160522461,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 87.58569997549057,
+          "offset": 2016,
+          "packageKB": [
+            826.1181640625,
+            12523.333984375,
+            41.6162109375,
+            1254.671875,
+            119829.7421875
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 14645.740234375
+        },
+        {
+          "at": 59.02999999996973,
+          "fps": 55.35055160522461,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 83.1966000199318,
+          "offset": 2304,
+          "packageKB": [
+            826.1181640625,
+            12627.287109375,
+            41.6162109375,
+            1264.171875,
+            119864.78125
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 14759.193359375
+        },
+        {
+          "at": 60.02999999996973,
+          "fps": 55.40165710449219,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 99.90979999303818,
+          "offset": 2592,
+          "packageKB": [
+            826.1181640625,
+            12751.716796875,
+            41.6162109375,
+            1273.671875,
+            120031.421875
+          ],
+          "results": 47,
+          "shown": 47,
+          "totalKB": 14893.123046875
+        }
+      ],
+      "scenario": {
+        "activityID": 1956,
+        "fpsLimit": 60,
+        "memorySampleSeconds": 1,
+        "name": "烈毒之渊（英雄）",
+        "searchIntervalSeconds": 10,
+        "searches": 6,
+        "seconds": 60,
+        "warmupMinimumSeconds": 10,
+        "wheelCalls": 120,
+        "wheelIntervalSeconds": 0.5
+      },
+      "schema": "lycheegroup.live-comparison.v1",
+      "searches": 6,
+      "target": "lychee",
+      "versions": {
+        "LycheeGroup": "1.0.0",
+        "LycheeGroup_Group": "1.0.0",
+        "LycheeGroup_Notes": "1.0.0",
+        "LycheeGroup_UI": "1.0.0",
+        "MeetingStone": "12.2.4"
+      },
+      "warmupSeconds": 10.008000000030734,
+      "wheelCalls": 120,
+      "statistics": {
+        "fpsAverage": 55.38481240194352,
+        "memoryObserverMeanMs": 85.53221475100908,
+        "nativeSearchResultsMin": 46,
+        "nativeSearchResultsMax": 47,
+        "displayedAtCompletionMin": 46,
+        "displayedAtCompletionMax": 47
+      }
+    },
+    "meetingstone": {
+      "checks": {
+        "businessUnchanged": true,
+        "closed": true,
+        "fpsRestored": true,
+        "nonempty": true,
+        "preferencesRestored": true,
+        "sixSearches": true,
+        "wheelCalls": true
+      },
+      "client": {
+        "build": "70391",
+        "interface": 120105,
+        "locale": "zhCN",
+        "uiScale": 0.7111111283302307,
+        "version": "12.1.5"
+      },
+      "cpuEnd": [
+        21.0927,
+        50.889900000000004,
+        1.647,
+        107.9246,
+        1154.6456
+      ],
+      "cpuMs": 762.6793,
+      "cpuPackageMs": [
+        0,
+        0,
+        0,
+        -0.0034000000000133923,
+        762.6793
+      ],
+      "cpuStart": [
+        21.0927,
+        50.889900000000004,
+        1.647,
+        107.92800000000001,
+        391.96630000000005
+      ],
+      "duration": 60.005999999993946,
+      "events": {
+        "failed": 0,
+        "received": 6,
+        "updated": 96
+      },
+      "measurement": {
+        "cpu": "UpdateAddOnCPUUsage + GetAddOnCPUUsage end minus start (ms)",
+        "gc": "natural, no explicit collection",
+        "memory": "refreshed GetAddOnMemoryUsage per package, simultaneous sum; KB*1024/1000000 MB",
+        "scriptProfile": "1"
+      },
+      "observer": {
+        "cpuMs": 73.78729999065399,
+        "memoryMs": 5359.345800220966
+      },
+      "ok": true,
+      "packages": [
+        "LycheeGroup",
+        "LycheeGroup_Group",
+        "LycheeGroup_Notes",
+        "LycheeGroup_UI",
+        "MeetingStone"
+      ],
+      "peakKB": 137955.9873046875,
+      "peakMB": 141.266931,
+      "peakSample": 22,
+      "queries": [
+        {
+          "activityID": 1956,
+          "at": 0,
+          "completedAt": 0.9469999999855645,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "results": 41,
+          "shown": 41
+        },
+        {
+          "activityID": 1956,
+          "at": 10.009000000020023,
+          "completedAt": 10.886999999987893,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "results": 41,
+          "shown": 40
+        },
+        {
+          "activityID": 1956,
+          "at": 20.039999999979045,
+          "completedAt": 20.912000000011176,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "results": 41,
+          "shown": 41
+        },
+        {
+          "activityID": 1956,
+          "at": 30.005999999993946,
+          "completedAt": 30.882999999972526,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "results": 40,
+          "shown": 40
+        },
+        {
+          "activityID": 1956,
+          "at": 40.006999999983236,
+          "completedAt": 40.89199999999255,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "results": 40,
+          "shown": 40
+        },
+        {
+          "activityID": 1956,
+          "at": 50.021999999997206,
+          "completedAt": 50.93599999998696,
+          "nativeIDs": 48,
+          "nativeResults": 48,
+          "results": 42,
+          "shown": 40
+        }
+      ],
+      "samples": [
+        {
+          "at": 0,
+          "fps": 59.82053756713867,
+          "nativeIDs": 47,
+          "nativeResults": 47,
+          "observerMs": 84.81659996509552,
+          "offset": 1,
+          "packageKB": [
+            825.84375,
+            1128.6005859375,
+            41.6162109375,
+            731.0517578125,
+            48414.5556640625
+          ],
+          "results": 41,
+          "shown": 41,
+          "totalKB": 48414.5556640625
+        },
+        {
+          "at": 1.0009999999892898,
+          "fps": 52.17390823364258,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 93.53119999170303,
+          "offset": 19,
+          "packageKB": [
+            825.84375,
+            1128.6005859375,
+            41.6162109375,
+            731.0517578125,
+            52963.8544921875
+          ],
+          "results": 41,
+          "shown": 41,
+          "totalKB": 52963.8544921875
+        },
+        {
+          "at": 2.033999999985099,
+          "fps": 52.816898345947266,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 88.16370004415512,
+          "offset": 33,
+          "packageKB": [
+            825.84375,
+            1128.6005859375,
+            41.6162109375,
+            731.0517578125,
+            58712.939453125
+          ],
+          "results": 41,
+          "shown": 41,
+          "totalKB": 58712.939453125
+        },
+        {
+          "at": 3.0489999999990687,
+          "fps": 54.99541473388672,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 94.39399999380112,
+          "offset": 15,
+          "packageKB": [
+            825.84375,
+            1128.6005859375,
+            41.6162109375,
+            731.0517578125,
+            63224.056640625
+          ],
+          "results": 41,
+          "shown": 41,
+          "totalKB": 63224.056640625
+        },
+        {
+          "at": 4.032999999995809,
+          "fps": 53.38078308105469,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 87.07310003042221,
+          "offset": 1,
+          "packageKB": [
+            825.84375,
+            1128.6005859375,
+            41.6162109375,
+            731.0517578125,
+            66159.853515625
+          ],
+          "results": 41,
+          "shown": 41,
+          "totalKB": 66159.853515625
+        },
+        {
+          "at": 5.043999999994412,
+          "fps": 54.8446044921875,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 87.94709998369217,
+          "offset": 19,
+          "packageKB": [
+            825.84375,
+            1128.6005859375,
+            41.6162109375,
+            731.0517578125,
+            70591.53515625
+          ],
+          "results": 41,
+          "shown": 41,
+          "totalKB": 70591.53515625
+        },
+        {
+          "at": 6.036000000021886,
+          "fps": 54.3970947265625,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 86.88630002737045,
+          "offset": 32,
+          "packageKB": [
+            825.84375,
+            1128.6005859375,
+            41.6162109375,
+            731.0517578125,
+            74748.83203125
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 74748.83203125
+        },
+        {
+          "at": 7.0499999999883585,
+          "fps": 54.3970947265625,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 86.71050000190735,
+          "offset": 14,
+          "packageKB": [
+            825.84375,
+            1128.6005859375,
+            41.6162109375,
+            731.0517578125,
+            80601.458984375
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 80601.458984375
+        },
+        {
+          "at": 8.020000000018626,
+          "fps": 54.29863739013672,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 92.7039999961853,
+          "offset": 1,
+          "packageKB": [
+            825.84375,
+            1128.6005859375,
+            41.6162109375,
+            731.0517578125,
+            83551.513671875
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 83551.513671875
+        },
+        {
+          "at": 9.039999999979045,
+          "fps": 54.3970947265625,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 93.00640004873276,
+          "offset": 19,
+          "packageKB": [
+            825.84375,
+            1128.6005859375,
+            41.6162109375,
+            731.0517578125,
+            86497.169921875
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 86497.169921875
+        },
+        {
+          "at": 10.009000000020023,
+          "fps": 54.054046630859375,
+          "nativeIDs": 0,
+          "nativeResults": 0,
+          "observerMs": 89.08759999275208,
+          "offset": 32,
+          "packageKB": [
+            825.84375,
+            1128.6005859375,
+            41.6162109375,
+            731.0517578125,
+            89290.13671875
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 89290.13671875
+        },
+        {
+          "at": 11.026000000012573,
+          "fps": 53.667259216308594,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 86.44069999456406,
+          "offset": 14,
+          "packageKB": [
+            825.84375,
+            1128.6005859375,
+            41.6162109375,
+            731.0517578125,
+            93755.97265625
+          ],
+          "results": 41,
+          "shown": 41,
+          "totalKB": 93755.97265625
+        },
+        {
+          "at": 12.038000000000466,
+          "fps": 54.59508514404297,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 101.83050000667572,
+          "offset": 1,
+          "packageKB": [
+            825.84375,
+            1128.6005859375,
+            41.6162109375,
+            731.0517578125,
+            99823.01171875
+          ],
+          "results": 41,
+          "shown": 41,
+          "totalKB": 99823.01171875
+        },
+        {
+          "at": 13.047000000020489,
+          "fps": 52.53940200805664,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 93.99110001325607,
+          "offset": 19,
+          "packageKB": [
+            825.84375,
+            1128.6005859375,
+            41.6162109375,
+            731.0517578125,
+            104270.52734375
+          ],
+          "results": 41,
+          "shown": 41,
+          "totalKB": 104270.52734375
+        },
+        {
+          "at": 14.033999999985099,
+          "fps": 53.52363586425781,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 88.0485999584198,
+          "offset": 33,
+          "packageKB": [
+            825.84375,
+            1128.6005859375,
+            41.6162109375,
+            731.0517578125,
+            108585.01171875
+          ],
+          "results": 41,
+          "shown": 41,
+          "totalKB": 108585.01171875
+        },
+        {
+          "at": 15.043000000005122,
+          "fps": 55.096412658691406,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 93.43659996986389,
+          "offset": 15,
+          "packageKB": [
+            825.84375,
+            1128.6005859375,
+            41.6162109375,
+            731.0517578125,
+            113026.83203125
+          ],
+          "results": 41,
+          "shown": 41,
+          "totalKB": 113026.83203125
+        },
+        {
+          "at": 16.007999999972526,
+          "fps": 54.49591064453125,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 85.40620005130768,
+          "offset": 1,
+          "packageKB": [
+            825.84375,
+            1128.6005859375,
+            41.6162109375,
+            731.0517578125,
+            115986.08203125
+          ],
+          "results": 41,
+          "shown": 41,
+          "totalKB": 115986.08203125
+        },
+        {
+          "at": 17.027000000001863,
+          "fps": 54.44646072387695,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 90.4297000169754,
+          "offset": 19,
+          "packageKB": [
+            825.84375,
+            1128.6005859375,
+            41.6162109375,
+            731.0517578125,
+            120452.26953125
+          ],
+          "results": 41,
+          "shown": 41,
+          "totalKB": 120452.26953125
+        },
+        {
+          "at": 18.04800000000978,
+          "fps": 54.29863739013672,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 93.27009999752045,
+          "offset": 33,
+          "packageKB": [
+            825.84375,
+            1128.6005859375,
+            41.6162109375,
+            731.0517578125,
+            124749.02734375
+          ],
+          "results": 41,
+          "shown": 41,
+          "totalKB": 124749.02734375
+        },
+        {
+          "at": 19.01799999998184,
+          "fps": 54.34782028198242,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 89.02829998731613,
+          "offset": 15,
+          "packageKB": [
+            825.84375,
+            1128.6005859375,
+            41.6162109375,
+            731.0517578125,
+            129071.07421875
+          ],
+          "results": 41,
+          "shown": 41,
+          "totalKB": 129071.07421875
+        },
+        {
+          "at": 20.039999999979045,
+          "fps": 54.29863739013672,
+          "nativeIDs": 0,
+          "nativeResults": 0,
+          "observerMs": 85.29830002784729,
+          "offset": 1,
+          "packageKB": [
+            825.84375,
+            1128.6005859375,
+            41.6162109375,
+            731.0517578125,
+            133538.1865234375
+          ],
+          "results": 41,
+          "shown": 41,
+          "totalKB": 133538.1865234375
+        },
+        {
+          "at": 21.04800000000978,
+          "fps": 53.90835189819336,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 102.23949998617172,
+          "offset": 19,
+          "packageKB": [
+            825.84375,
+            1128.6005859375,
+            41.6162109375,
+            731.0517578125,
+            137955.9873046875
+          ],
+          "results": 41,
+          "shown": 41,
+          "totalKB": 137955.9873046875
+        },
+        {
+          "at": 22.03499999997439,
+          "fps": 51.19453430175781,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 76.50150001049042,
+          "offset": 33,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            29909.1728515625
+          ],
+          "results": 41,
+          "shown": 41,
+          "totalKB": 29909.1728515625
+        },
+        {
+          "at": 23,
+          "fps": 54.644805908203125,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 77.94700002670288,
+          "offset": 15,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            32817.6806640625
+          ],
+          "results": 41,
+          "shown": 41,
+          "totalKB": 32817.6806640625
+        },
+        {
+          "at": 24.004000000015367,
+          "fps": 55.197792053222656,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 87.29050004482269,
+          "offset": 1,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            38885.685546875
+          ],
+          "results": 41,
+          "shown": 41,
+          "totalKB": 38885.685546875
+        },
+        {
+          "at": 25.023999999975786,
+          "fps": 54.3970947265625,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 77.53099995851517,
+          "offset": 19,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            44724.890625
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 44724.890625
+        },
+        {
+          "at": 26.043999999994412,
+          "fps": 54.34782028198242,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 84.36070001125336,
+          "offset": 32,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            48897.2119140625
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 48897.2119140625
+        },
+        {
+          "at": 27.04899999999907,
+          "fps": 55.14705276489258,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 82.2402999997139,
+          "offset": 14,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            53147.1181640625
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 53147.1181640625
+        },
+        {
+          "at": 28.00199999997858,
+          "fps": 55.197792053222656,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 80.13029998540878,
+          "offset": 1,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            59131.384765625
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 59131.384765625
+        },
+        {
+          "at": 29.003000000026077,
+          "fps": 55.299537658691406,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 79.84060001373291,
+          "offset": 19,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            62022.189453125
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 62022.189453125
+        },
+        {
+          "at": 30.005999999993946,
+          "fps": 55.197792053222656,
+          "nativeIDs": 0,
+          "nativeResults": 0,
+          "observerMs": 85.40090000629425,
+          "offset": 32,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            64745.921875
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 64745.921875
+        },
+        {
+          "at": 31.027000000001863,
+          "fps": 54.29863739013672,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 96.40200001001358,
+          "offset": 14,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            69199.568359375
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 69199.568359375
+        },
+        {
+          "at": 32.01500000001397,
+          "fps": 53.00353240966797,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 87.59839999675751,
+          "offset": 1,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            74014.748046875
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 74014.748046875
+        },
+        {
+          "at": 33.03100000001723,
+          "fps": 54.74452209472656,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 87.7552000284195,
+          "offset": 19,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            79852.693359375
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 79852.693359375
+        },
+        {
+          "at": 34.036000000021886,
+          "fps": 54.94505310058594,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 87.73780000209808,
+          "offset": 32,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            82562.373046875
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 82562.373046875
+        },
+        {
+          "at": 35.01500000001397,
+          "fps": 53.95682907104492,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 85.70569998025894,
+          "offset": 14,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            86796.818359375
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 86796.818359375
+        },
+        {
+          "at": 36.02700000000186,
+          "fps": 54.79452133178711,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 84.86509996652603,
+          "offset": 1,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            91141.1376953125
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 91141.1376953125
+        },
+        {
+          "at": 37.03200000000652,
+          "fps": 55.14705276489258,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 83.15980005264282,
+          "offset": 19,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            95478.2314453125
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 95478.2314453125
+        },
+        {
+          "at": 38.036000000021886,
+          "fps": 55.197792053222656,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 83.21450001001358,
+          "offset": 32,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            99656.6689453125
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 99656.6689453125
+        },
+        {
+          "at": 39.037000000011176,
+          "fps": 55.299537658691406,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 87.27250003814697,
+          "offset": 14,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            102563.4501953125
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 102563.4501953125
+        },
+        {
+          "at": 40.006999999983236,
+          "fps": 54.34782028198242,
+          "nativeIDs": 0,
+          "nativeResults": 0,
+          "observerMs": 90.23870003223419,
+          "offset": 1,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            108407.98828125
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 108407.98828125
+        },
+        {
+          "at": 41.039999999979045,
+          "fps": 53.7634391784668,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 87.74870002269745,
+          "offset": 19,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            112850.767578125
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 112850.767578125
+        },
+        {
+          "at": 42.00300000002608,
+          "fps": 54.005393981933594,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 102.22269999980927,
+          "offset": 32,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            117035.916015625
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 117035.916015625
+        },
+        {
+          "at": 43.02500000002328,
+          "fps": 53.428314208984375,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 93.63679999113083,
+          "offset": 14,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            121279.9140625
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 121279.9140625
+        },
+        {
+          "at": 44.04999999998836,
+          "fps": 54.1516227722168,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 93.8416000008583,
+          "offset": 1,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            125610.8671875
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 125610.8671875
+        },
+        {
+          "at": 45.022999999986496,
+          "fps": 53.95682907104492,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 93.59950000047684,
+          "offset": 19,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            129976.1796875
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 129976.1796875
+        },
+        {
+          "at": 46.037000000011176,
+          "fps": 54.694618225097656,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 93.69450002908707,
+          "offset": 32,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            132693.265625
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 132693.265625
+        },
+        {
+          "at": 47.01000000000931,
+          "fps": 54.200538635253906,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 89.1129999756813,
+          "offset": 14,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            136951.853515625
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 136951.853515625
+        },
+        {
+          "at": 48.03200000000652,
+          "fps": 52.72407531738281,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 80.81729996204376,
+          "offset": 1,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            29614.6396484375
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 29614.6396484375
+        },
+        {
+          "at": 49.01299999997718,
+          "fps": 53.859962463378906,
+          "nativeIDs": 46,
+          "nativeResults": 46,
+          "observerMs": 83.0663999915123,
+          "offset": 19,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            35484.5029296875
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 35484.5029296875
+        },
+        {
+          "at": 50.021999999997206,
+          "fps": 54.89478302001953,
+          "nativeIDs": 0,
+          "nativeResults": 0,
+          "observerMs": 90.59869998693466,
+          "offset": 32,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            41100.228515625
+          ],
+          "results": 40,
+          "shown": 40,
+          "totalKB": 41100.228515625
+        },
+        {
+          "at": 51.039999999979045,
+          "fps": 53.715309143066406,
+          "nativeIDs": 48,
+          "nativeResults": 48,
+          "observerMs": 83.9375,
+          "offset": 14,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            45705.193359375
+          ],
+          "results": 42,
+          "shown": 42,
+          "totalKB": 45705.193359375
+        },
+        {
+          "at": 52.04599999997299,
+          "fps": 54.054046630859375,
+          "nativeIDs": 48,
+          "nativeResults": 48,
+          "observerMs": 79.05169999599457,
+          "offset": 1,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            50263.3818359375
+          ],
+          "results": 42,
+          "shown": 42,
+          "totalKB": 50263.3818359375
+        },
+        {
+          "at": 53.00199999997858,
+          "fps": 55.096412658691406,
+          "nativeIDs": 48,
+          "nativeResults": 48,
+          "observerMs": 88.15349996089935,
+          "offset": 19,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            53244.4365234375
+          ],
+          "results": 42,
+          "shown": 42,
+          "totalKB": 53244.4365234375
+        },
+        {
+          "at": 54.01600000000326,
+          "fps": 54.694618225097656,
+          "nativeIDs": 48,
+          "nativeResults": 48,
+          "observerMs": 88.96459996700287,
+          "offset": 33,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            58832.865234375
+          ],
+          "results": 41,
+          "shown": 41,
+          "totalKB": 58832.865234375
+        },
+        {
+          "at": 55.02600000001257,
+          "fps": 54.8446044921875,
+          "nativeIDs": 48,
+          "nativeResults": 48,
+          "observerMs": 83.89890003204346,
+          "offset": 15,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            63046.794921875
+          ],
+          "results": 41,
+          "shown": 41,
+          "totalKB": 63046.794921875
+        },
+        {
+          "at": 56.02700000000186,
+          "fps": 55.299537658691406,
+          "nativeIDs": 48,
+          "nativeResults": 48,
+          "observerMs": 79.64259999990463,
+          "offset": 1,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            65914.162109375
+          ],
+          "results": 41,
+          "shown": 41,
+          "totalKB": 65914.162109375
+        },
+        {
+          "at": 57.02899999998044,
+          "fps": 55.299537658691406,
+          "nativeIDs": 48,
+          "nativeResults": 48,
+          "observerMs": 85.75459998846054,
+          "offset": 19,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            70218.0107421875
+          ],
+          "results": 41,
+          "shown": 41,
+          "totalKB": 70218.0107421875
+        },
+        {
+          "at": 58.04599999997299,
+          "fps": 54.54545211791992,
+          "nativeIDs": 48,
+          "nativeResults": 48,
+          "observerMs": 82.78470003604889,
+          "offset": 33,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            75742.404296875
+          ],
+          "results": 41,
+          "shown": 41,
+          "totalKB": 75742.404296875
+        },
+        {
+          "at": 59.04599999997299,
+          "fps": 55.40165710449219,
+          "nativeIDs": 48,
+          "nativeResults": 48,
+          "observerMs": 92.28490000963211,
+          "offset": 15,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            79996.498046875
+          ],
+          "results": 41,
+          "shown": 41,
+          "totalKB": 79996.498046875
+        },
+        {
+          "at": 60.005999999993946,
+          "fps": 54.89478302001953,
+          "nativeIDs": 48,
+          "nativeResults": 48,
+          "observerMs": 87.60100001096725,
+          "offset": 1,
+          "packageKB": [
+            825.6591796875,
+            586.7099609375,
+            41.6162109375,
+            730.5419921875,
+            82924.974609375
+          ],
+          "results": 41,
+          "shown": 41,
+          "totalKB": 82924.974609375
+        }
+      ],
+      "scenario": {
+        "activityID": 1956,
+        "fpsLimit": 60,
+        "memorySampleSeconds": 1,
+        "name": "烈毒之渊（英雄）",
+        "searchIntervalSeconds": 10,
+        "searches": 6,
+        "seconds": 60,
+        "warmupMinimumSeconds": 10,
+        "wheelCalls": 120,
+        "wheelIntervalSeconds": 0.5
+      },
+      "schema": "lycheegroup.live-comparison.v1",
+      "searches": 6,
+      "target": "meetingstone",
+      "versions": {
+        "LycheeGroup": "1.0.0",
+        "LycheeGroup_Group": "1.0.0",
+        "LycheeGroup_Notes": "1.0.0",
+        "LycheeGroup_UI": "1.0.0",
+        "MeetingStone": "12.2.4"
+      },
+      "warmupSeconds": 10.03200000000652,
+      "wheelCalls": 120,
+      "statistics": {
+        "fpsAverage": 54.40457021994669,
+        "memoryObserverMeanMs": 87.85812787247485,
+        "nativeSearchResultsMin": 46,
+        "nativeSearchResultsMax": 48,
+        "displayedAtCompletionMin": 40,
+        "displayedAtCompletionMax": 41
+      }
+    }
+  }
+}

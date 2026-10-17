@@ -46,5 +46,6 @@
     }
   ],
   "image_note": "四张配图均由实机截图通过 image_gen 脱敏编辑；封面为宣传合成图。",
-  "publication_note": "以上路径均相对于 release 目录。发布时上传图片并用平台返回的图片地址替换正文中的本地路径；本清单不是可执行的上传计划。"
+  "publication_note": "以上路径均相对于 release 目录。发布时上传图片并用平台返回的图片地址替换正文中的本地路径；本清单不是可执行的上传计划。",
+  "logo_file": "plugin-logo.png"
 }

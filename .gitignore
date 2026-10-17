@@ -6,6 +6,7 @@
 
 # Build output
 /dist/
+/publish/
 
 # Operating system files
 .DS_Store
