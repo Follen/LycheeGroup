@@ -1,0 +1,16 @@
+## Interface: 120105
+## Title: Lychee LFG · Player Notes
+## Author: FollenFang
+## Title-zhCN: |cffD53C49荔枝|r组队 · 玩家记录
+## Notes: Player records and party reminders.
+## Notes-zhCN: 玩家记录与队伍成员提醒。
+## IconTexture: Interface\AddOns\LycheeGroup\Media\addon-logo.tga
+## Dependencies: LycheeGroup
+## LoadOnDemand: 1
+## Version: 1.0.0
+## SavedVariables: LycheeGroupNotesDB
+Locale.lua
+Notes.lua
+Records.lua
+RosterReminder.lua
+PlayerInfo.lua

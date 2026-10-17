@@ -1,0 +1,18 @@
+{
+  "generator": "built-in image_gen",
+  "reference": "../wow/role-icons.png",
+  "prompts": [
+    {
+      "key": "tank",
+      "prompt": "Use case: logo-brand. Asset type: small 16–22px role icon in a dark World of Warcraft addon UI. Use the attached World of Warcraft native role strip strictly as the silhouette/reference, not the previous custom icons. Produce one isolated icon centered on a square genuinely transparent canvas, with 12% clear padding. Flatten the original into crisp clean 2D filled shapes, consistent medium silhouette weight, 2–3 color planes, no painted detail, no gradient, no glossy effect, no glow or shadow, no circle or tile background, no lettering. Keep it immediately recognizable to WoW players. Preserve true alpha. Subject: ONLY the shield at the right of the reference. Preserve its broad angular silver rim, blue/teal inner field, pointed lower tip and small central shield motif. Colors: pale silver-white rim and muted teal-blue interior. Not an empty outline. Do not include the cross or sword."
+    },
+    {
+      "key": "healer",
+      "prompt": "Use case: logo-brand. Asset type: small 16–22px role icon in a dark World of Warcraft addon UI. Use the attached World of Warcraft native role strip strictly as the silhouette/reference, not the previous custom icons. Produce one isolated icon centered on a square genuinely transparent canvas, with 12% clear padding. Flatten the original into crisp clean 2D filled shapes, consistent medium silhouette weight, 2–3 color planes, no painted detail, no gradient, no glossy effect, no glow or shadow, no circle or tile background, no lettering. Keep it immediately recognizable to WoW players. Preserve true alpha. Subject: ONLY the healing cross in the middle of the reference. Preserve the broad equal-arm white cross silhouette with a restrained green lower edge/accent as in the game icon. Colors: pale white and calm mint green. Flat crisp cross, no ring, no embellishments. Do not include the shield or sword."
+    },
+    {
+      "key": "dps",
+      "prompt": "Use case: logo-brand. Asset type: small 16–22px role icon in a dark World of Warcraft addon UI. Use the attached World of Warcraft native role strip strictly as the silhouette/reference, not the previous custom icons. Produce one isolated icon centered on a square genuinely transparent canvas, with 12% clear padding. Flatten the original into crisp clean 2D filled shapes, consistent medium silhouette weight, 2–3 color planes, no painted detail, no gradient, no glossy effect, no glow or shadow, no circle or tile background, no lettering. Keep it immediately recognizable to WoW players. Preserve true alpha. Subject: ONLY the single sword at the left of the reference. Preserve the recognizable diagonal sword orientation, steel broad blade, compact golden/bronze crossguard and dark red/brown grip. Simplify original planes while keeping native silhouette. NOT crossed swords. Do not include the shield or cross."
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+## Interface: 120105
+## Title: Lychee LFG
+## Author: FollenFang
+## Title-zhCN: |cffD53C49荔枝|r组队
+## Notes: Group finding and player notes for retail World of Warcraft.
+## Notes-zhCN: 正式服组队与玩家记录。
+## IconTexture: Interface\AddOns\LycheeGroup\Media\addon-logo.tga
+## Version: 1.0.0
+## SavedVariables: LycheeGroupDB
+Libs\LycheeUI\embeds.xml
+Locale.lua
+Core.lua
+Floating.lua
+Entrypoints.lua

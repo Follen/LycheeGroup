@@ -1,0 +1,462 @@
+{
+  "checks": {
+    "allFivePackagesLoaded": true,
+    "budget": true,
+    "closedResultsReleased": true,
+    "knownOwnersIdle": true,
+    "reusedPage": true
+  },
+  "client": {
+    "build": "70391",
+    "interface": 120105,
+    "version": "12.1.5"
+  },
+  "elapsedSeconds": 42.83100000000559,
+  "ok": true,
+  "packages": [
+    "LycheeGroup",
+    "LycheeGroup_Group",
+    "LycheeGroup_Notes",
+    "LycheeGroup_UI",
+    "LycheeUI"
+  ],
+  "peakBytes": 3419402,
+  "queries": [
+    {
+      "action": "reopen",
+      "completedAt": 1.570000000006985,
+      "finalGeneration": 3,
+      "generationAtRequest": 3,
+      "generationBefore": 2,
+      "resultCount": 38,
+      "startedAt": 0.10199999998440035
+    },
+    {
+      "action": "refresh",
+      "completedAt": 9.38200000001234,
+      "finalGeneration": 4,
+      "generationAtRequest": 4,
+      "generationBefore": 3,
+      "resultCount": 39,
+      "startedAt": 8.13200000001234
+    },
+    {
+      "action": "reopen",
+      "completedAt": 18.304999999993015,
+      "finalGeneration": 6,
+      "generationAtRequest": 6,
+      "generationBefore": 5,
+      "resultCount": 40,
+      "startedAt": 16.771000000007916
+    },
+    {
+      "action": "refresh",
+      "completedAt": 26.103999999992084,
+      "finalGeneration": 7,
+      "generationAtRequest": 7,
+      "generationBefore": 6,
+      "resultCount": 42,
+      "startedAt": 24.861000000004424
+    },
+    {
+      "action": "reopen",
+      "completedAt": 35.04199999998673,
+      "finalGeneration": 9,
+      "generationAtRequest": 9,
+      "generationBefore": 8,
+      "resultCount": 42,
+      "startedAt": 33.48000000001048
+    },
+    {
+      "action": "refresh",
+      "completedAt": 42.73000000001048,
+      "finalGeneration": 10,
+      "generationAtRequest": 10,
+      "generationBefore": 9,
+      "resultCount": 43,
+      "startedAt": 41.486000000004424
+    }
+  ],
+  "sampleCount": 16,
+  "samples": [
+    {
+      "addonKB": [
+        153.2265625,
+        247.4453125,
+        33.03515625,
+        1014.3916015625,
+        542.5859375
+      ],
+      "addonTotalKB": 1990.6845703125,
+      "atSeconds": 0,
+      "counterRefreshMs": 80.56769999861717,
+      "loaded": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "realResults": 0,
+      "round": 0,
+      "searchState": "idle",
+      "tag": "before"
+    },
+    {
+      "addonKB": [
+        153.40625,
+        248.859375,
+        33.16015625,
+        1031.3623046875,
+        558.1953125
+      ],
+      "addonTotalKB": 2024.9833984375,
+      "atSeconds": 0.10199999998440035,
+      "counterRefreshMs": 81.60950002074242,
+      "loaded": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "realResults": 0,
+      "round": 1,
+      "searchState": "searching",
+      "tag": "search_started"
+    },
+    {
+      "addonKB": [
+        153.2265625,
+        556.640625,
+        33.16015625,
+        1044.8935546875,
+        557.849609375
+      ],
+      "addonTotalKB": 2345.7705078125,
+      "atSeconds": 1.570000000006985,
+      "counterRefreshMs": 78.85549998283386,
+      "loaded": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "realResults": 38,
+      "round": 1,
+      "searchState": "done",
+      "tag": "search_complete"
+    },
+    {
+      "addonKB": [
+        153.2265625,
+        592.0390625,
+        33.16015625,
+        1047.953125,
+        557.884765625
+      ],
+      "addonTotalKB": 2384.263671875,
+      "atSeconds": 8.13200000001234,
+      "counterRefreshMs": 76.53470000624657,
+      "loaded": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "realResults": 0,
+      "round": 2,
+      "searchState": "searching",
+      "tag": "search_started"
+    },
+    {
+      "addonKB": [
+        153.2265625,
+        808.859375,
+        33.16015625,
+        1052.94140625,
+        557.9208984375
+      ],
+      "addonTotalKB": 2606.1083984375,
+      "atSeconds": 9.38200000001234,
+      "counterRefreshMs": 73.85690000653267,
+      "loaded": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "realResults": 39,
+      "round": 2,
+      "searchState": "done",
+      "tag": "search_complete"
+    },
+    {
+      "addonKB": [
+        153.2265625,
+        839.7109375,
+        33.16015625,
+        1055.44140625,
+        558.4208984375
+      ],
+      "addonTotalKB": 2639.9599609375,
+      "atSeconds": 16.154000000009546,
+      "counterRefreshMs": 81.95870000123978,
+      "loaded": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "realResults": 0,
+      "round": 2,
+      "searchState": "idle",
+      "tag": "closed_between_searches"
+    },
+    {
+      "addonKB": [
+        153.40625,
+        841.125,
+        33.28515625,
+        1070.44140625,
+        574.0302734375
+      ],
+      "addonTotalKB": 2672.2880859375,
+      "atSeconds": 16.771000000007916,
+      "counterRefreshMs": 81.1845999956131,
+      "loaded": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "realResults": 0,
+      "round": 3,
+      "searchState": "searching",
+      "tag": "search_started"
+    },
+    {
+      "addonKB": [
+        153.40625,
+        1146.7265625,
+        33.28515625,
+        1076.55078125,
+        574.06640625
+      ],
+      "addonTotalKB": 2984.03515625,
+      "atSeconds": 18.304999999993015,
+      "counterRefreshMs": 78.63379999995232,
+      "loaded": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "realResults": 40,
+      "round": 3,
+      "searchState": "done",
+      "tag": "search_complete"
+    },
+    {
+      "addonKB": [
+        153.40625,
+        1185.3828125,
+        33.28515625,
+        1079.48046875,
+        574.06640625
+      ],
+      "addonTotalKB": 3025.62109375,
+      "atSeconds": 24.861000000004424,
+      "counterRefreshMs": 78.09369999170303,
+      "loaded": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "realResults": 0,
+      "round": 4,
+      "searchState": "searching",
+      "tag": "search_started"
+    },
+    {
+      "addonKB": [
+        153.40625,
+        1420.0234375,
+        33.28515625,
+        1085.8203125,
+        574.138671875
+      ],
+      "addonTotalKB": 3266.673828125,
+      "atSeconds": 26.103999999992084,
+      "counterRefreshMs": 82.15299999713898,
+      "loaded": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "realResults": 42,
+      "round": 4,
+      "searchState": "done",
+      "tag": "search_complete"
+    },
+    {
+      "addonKB": [
+        153.40625,
+        1457.390625,
+        33.28515625,
+        1088.3203125,
+        574.638671875
+      ],
+      "addonTotalKB": 3307.041015625,
+      "atSeconds": 32.861000000004424,
+      "counterRefreshMs": 82.91049998998642,
+      "loaded": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "realResults": 0,
+      "round": 4,
+      "searchState": "idle",
+      "tag": "closed_between_searches"
+    },
+    {
+      "addonKB": [
+        153.5859375,
+        1458.8046875,
+        33.41015625,
+        1103.2109375,
+        590.248046875
+      ],
+      "addonTotalKB": 3339.259765625,
+      "atSeconds": 33.48000000001048,
+      "counterRefreshMs": 83.64139997959137,
+      "loaded": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "realResults": 0,
+      "round": 5,
+      "searchState": "searching",
+      "tag": "search_started"
+    },
+    {
+      "addonKB": [
+        153.2265625,
+        625.4296875,
+        33.28515625,
+        1058.28125,
+        572.419921875
+      ],
+      "addonTotalKB": 2442.642578125,
+      "atSeconds": 35.04199999998673,
+      "counterRefreshMs": 86.5591000020504,
+      "loaded": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "realResults": 42,
+      "round": 5,
+      "searchState": "done",
+      "tag": "search_complete"
+    },
+    {
+      "addonKB": [
+        153.2265625,
+        667.34375,
+        33.28515625,
+        1061.2109375,
+        572.419921875
+      ],
+      "addonTotalKB": 2487.486328125,
+      "atSeconds": 41.486000000004424,
+      "counterRefreshMs": 78.04769998788834,
+      "loaded": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "realResults": 0,
+      "round": 6,
+      "searchState": "searching",
+      "tag": "search_started"
+    },
+    {
+      "addonKB": [
+        153.2265625,
+        902.640625,
+        33.28515625,
+        1065.73046875,
+        572.4560546875
+      ],
+      "addonTotalKB": 2727.3388671875,
+      "atSeconds": 42.73000000001048,
+      "counterRefreshMs": 82.80090001225471,
+      "loaded": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "realResults": 43,
+      "round": 6,
+      "searchState": "done",
+      "tag": "search_complete"
+    },
+    {
+      "addonKB": [
+        153.2265625,
+        930.234375,
+        33.28515625,
+        1068.01171875,
+        572.9560546875
+      ],
+      "addonTotalKB": 2757.7138671875,
+      "atSeconds": 42.83100000000559,
+      "counterRefreshMs": 81.28700000047684,
+      "loaded": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "realResults": 0,
+      "round": 6,
+      "searchState": "idle",
+      "tag": "closed_final"
+    }
+  ],
+  "scenario": {
+    "gcPolicy": "natural; no explicit collection",
+    "minimumSearchSpacingSeconds": 8,
+    "rounds": 6,
+    "samplePolicy": "each phase boundary and each second while waiting"
+  },
+  "schema": "lycheegroup.refresh-memory.v1",
+  "settings": {
+    "reduceMotion": false,
+    "scriptProfile": "0"
+  }
+}

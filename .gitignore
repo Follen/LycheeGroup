@@ -1,0 +1,13 @@
+# Local development data and settings
+/.lycheedev/
+/.claude/
+/.worktrees/
+/tools/Remove-ReferenceDirectory.ps1
+
+# Build output
+/dist/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+Desktop.ini

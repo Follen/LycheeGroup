@@ -1,0 +1,21 @@
+{
+  "tool": "Built-in image_gen",
+  "transparent_background": true,
+  "assets": [
+    {
+      "name": "tank",
+      "file": "role-tank.png",
+      "prompt": "Use case: logo-brand. Asset type: tiny 18–20 pixel RPG role pictogram on charcoal UI #191A1D. Redesign the provided old icon; it is too detailed, grey and blurry at actual size. Keep its role meaning only. Use a crisp FLAT 2D solid-color pictogram, extremely bold clear silhouette and large filled shapes. The silhouette should occupy 92% of the square canvas with only a small even transparent margin. Output one centered icon on a truly transparent background, clean alpha edges. Uniform flat fill, high saturation and high luminance so the role is instantly distinguished on dark UI. No gradients, metallic highlights, bevels, textures, shadows, glow, smoke, flecks, thin outlines, text, letters, surrounding circle or background. Small-size recognizability is more important than decoration. Subject: ONE upright solid heraldic shield, a broad flat top and slightly curved sides tapering to a blunt bottom point. Fill the shield with bright sky blue #8CC8FF. One thick pale-blue inset border only; no center emblem."
+    },
+    {
+      "name": "healer",
+      "file": "role-healer.png",
+      "prompt": "Use case: logo-brand. Asset type: tiny 18–20 pixel RPG role pictogram on charcoal UI #191A1D. Redesign the provided old icon; it is too detailed, grey and blurry at actual size. Keep its role meaning only. Use a crisp FLAT 2D solid-color pictogram, extremely bold clear silhouette and large filled shapes. The silhouette should occupy 92% of the square canvas with only a small even transparent margin. Output one centered icon on a truly transparent background, clean alpha edges. Uniform flat fill, high saturation and high luminance so the role is instantly distinguished on dark UI. No gradients, metallic highlights, bevels, textures, shadows, glow, smoke, flecks, thin outlines, text, letters, surrounding circle or background. Small-size recognizability is more important than decoration. Subject: ONE bold plus-shaped healing cross with equal arms and large square terminals. Fill with bright mint green #84F5AE. The arms are extremely broad, approximately one third of the icon width. No badge or outer border."
+    },
+    {
+      "name": "dps",
+      "file": "role-dps.png",
+      "prompt": "Use case: logo-brand. Create one RPG damage-dealer (DPS) role icon for an 18 pixel charcoal game UI. Subject: two broad short swords crossing in a clear symmetrical X, tips pointing toward the two top corners and thick short handles at the bottom corners. Make it a simple flat bright coral-red #FFA6A6 filled pictogram. Large chunky geometric shapes, plain blades, plain guards, no fine detail. Occupy 90 percent of the square canvas. No gradients, bevels, grey shading, textures, sparks, halos, shadow, text, border, badge, or surrounding scene. Clean crisp antialiased edges. Transparent background. The icon must remain instantly identifiable at 18 pixels."
+    }
+  ]
+}

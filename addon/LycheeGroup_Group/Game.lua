@@ -1,0 +1,73 @@
+-- 最小唤醒常驻;浏览、申请者与秘境过程事件由实际消费者启停。
+local A = _G.LycheeGroup
+local G = A.Group
+local Game = {}
+G.Game = Game
+
+local WAKE_EVENTS = {
+	"LFG_LIST_APPLICATION_STATUS_UPDATED",
+	"LFG_LIST_ACTIVE_ENTRY_UPDATE",
+	"CHALLENGE_MODE_START",
+}
+
+local SEARCH_EVENTS = {
+	"LFG_LIST_SEARCH_RESULTS_RECEIVED",
+	"LFG_LIST_SEARCH_RESULT_UPDATED",
+	"LFG_LIST_UPDATE_SEARCH_RESULTS",
+	"LFG_LIST_SEARCH_FAILED",
+}
+
+local APPLICANT_EVENTS = {
+	"LFG_LIST_APPLICANT_LIST_UPDATED",
+	"LFG_LIST_APPLICANT_UPDATED",
+}
+
+local ACTIVITY_EVENTS = { "LFG_LIST_AVAILABILITY_UPDATE" }
+local PERMISSION_EVENTS = { "PARTY_LEADER_CHANGED" }
+local ROSTER_EVENTS = { "ACTIVE_PLAYER_SPECIALIZATION_CHANGED", "PLAYER_SPECIALIZATION_CHANGED", "PLAYER_EQUIPMENT_CHANGED", "INSPECT_READY", "PLAYER_REGEN_ENABLED", "UNIT_CONNECTION" }
+
+local RUN_EVENTS = {
+	"CHALLENGE_MODE_COMPLETED",
+	"CHALLENGE_MODE_RESET",
+	"PLAYER_ENTERING_WORLD",
+}
+
+local function SetEvents(frame, events, enabled)
+	local update = enabled and frame.RegisterEvent or frame.UnregisterEvent
+	for _, event in ipairs(events) do update(frame, event) end
+end
+
+function Game:Init()
+	if self.frame then return end
+	local frame = CreateFrame("Frame")
+	self.frame = frame
+	frame:SetScript("OnEvent", function(_, event, ...) G:OnEvent(event, ...) end)
+	SetEvents(frame, WAKE_EVENTS, true)
+end
+
+function Game:RefreshSubscriptions()
+	local frame = self.frame
+	if not frame then return end
+	SetEvents(frame, SEARCH_EVENTS, G:HasViews("search") or G.Search:GetState()=="searching")
+	SetEvents(frame, ACTIVITY_EVENTS, G:HasViews())
+	local listing = C_LFGList.HasActiveEntryInfo()
+	SetEvents(frame, APPLICANT_EVENTS, listing)
+	SetEvents(frame, PERMISSION_EVENTS, listing or G:HasViews("create"))
+	if self.runTracking or G:HasViews() or listing then frame:RegisterEvent("GROUP_ROSTER_UPDATE") else frame:UnregisterEvent("GROUP_ROSTER_UPDATE") end
+	SetEvents(frame, ROSTER_EVENTS, G:HasViews("create"))
+	G.Roster:SetActive(G:HasViews("create"))
+end
+
+function Game:EnableRunTracking()
+	if self.runTracking then return end
+	self.runTracking = true
+	SetEvents(self.frame, RUN_EVENTS, true)
+	self:RefreshSubscriptions()
+end
+
+function Game:DisableRunTracking()
+	if not self.runTracking then return end
+	self.runTracking = false
+	SetEvents(self.frame, RUN_EVENTS, false)
+	self:RefreshSubscriptions()
+end

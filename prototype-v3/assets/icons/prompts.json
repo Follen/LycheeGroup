@@ -1,0 +1,91 @@
+{
+  "mode": "built-in image_gen",
+  "reference": "D:/Code/wow/addons/Lychee/assets/menu-icons/flat-atlas.png",
+  "basePrompt": "Use case: stylized-concept. Asset type: one small UI icon for the World of Warcraft addon LycheeGroup. Generate exactly ONE isolated icon, no grid, no atlas, no text. Match the supplied Lychee menu icon style seen in this conversation: solid chunky flat pictograms, cream/off-white #F6F1D7 and light silver-blue #ACBBC3 filled shapes, a restrained red #E73745 accent, simple slightly softened silhouettes. The magenta in the reference is only a preview background: output must have a genuinely transparent alpha background with NO magenta or colored backdrop. The shape must remain immediately legible at 18–28 pixels. Uniform visual weight, centered square composition, artwork spans about 80 percent of the square with consistent 10 percent transparent padding. Crisp clean edges; no stroke-only line art, no gradients, no 3D, no realistic material, no shadows, no glow, no outline, no frame, no watermark. Subject: ",
+  "assets": [
+    {
+      "file": "search.png",
+      "subject": "A magnifying glass: thick pale-silver circular rim, transparent open lens, short cream diagonal handle with one small red tip."
+    },
+    {
+      "file": "plus.png",
+      "subject": "A single bold cream plus sign, broad softly squared arms, with a small red inset square exactly at its center. Clean and highly legible add/create symbol."
+    },
+    {
+      "file": "book.png",
+      "subject": "A closed cream notebook with pale-silver spine, a single red ribbon bookmark, minimal cover without lettering, slight flat three-quarter perspective matching the reference menu book."
+    },
+    {
+      "file": "close.png",
+      "subject": "A single thick pale-silver X made of two softly squared diagonal bars. Tiny red accent on one bar end. Perfectly balanced close symbol."
+    },
+    {
+      "file": "tank.png",
+      "subject": "A broad medieval heater shield, pale-silver outer silhouette with a cream inset face and a small simple red vertical stripe. Strong symmetric silhouette."
+    },
+    {
+      "file": "healer.png",
+      "subject": "A bold cream healer cross with broad squared arms, set on a very simple pale-silver four-point glow shape. Small red central square, no medical lettering."
+    },
+    {
+      "file": "damage.png",
+      "subject": "Two short crossed swords, broad cream blades and pale-silver hilts, each pommel a small red circle. Flat compact symmetric silhouette."
+    },
+    {
+      "file": "mountain.png",
+      "subject": "A chunky pale-silver stone archway dungeon entrance, dark opening completely transparent, cream keystone block, one small red torch flame on each side. No scenery."
+    },
+    {
+      "file": "tower.png",
+      "subject": "A compact pale-silver fantasy castle with three bold towers, cream central doorway and one small red vertical banner. Simple solid silhouette."
+    },
+    {
+      "file": "delve.png",
+      "subject": "A chunky irregular pale-silver cave doorway with one cream pickaxe leaning diagonally at the side and a tiny red grip. Broad shapes, very simple."
+    },
+    {
+      "file": "pvp.png",
+      "subject": "Two compact crossed battle axes with cream blades, pale-silver handles and a small red diamond at the crossing. Simple bold silhouette."
+    },
+    {
+      "file": "refresh.png",
+      "subject": "Two broad pale-silver curved arrows forming a nearly complete circle with open transparent center. One arrowhead cream and one small red segment. Bold refresh symbol."
+    },
+    {
+      "file": "bell.png",
+      "subject": "A cream notification bell with pale-silver rim and clapper and a small red top knob. Simple broad flat silhouette, no lines indicating sound."
+    },
+    {
+      "file": "chevron.png",
+      "subject": "One bold cream right-pointing chevron, made from two wide softly squared diagonal strokes. No extra object, no outline, no circle, no decoration."
+    },
+    {
+      "file": "history.png",
+      "subject": "A simple pale-silver clock face with cream hands and a red curved counterclockwise arrow around part of its outer rim. No numerals or tick marks; broad shapes only."
+    },
+    {
+      "file": "arrow.png",
+      "subject": "A bold cream left-pointing arrow with a straight pale-silver shaft. Simple wide filled silhouette, no frame or circle, no added details."
+    },
+    {
+      "file": "friend.png",
+      "subject": "Two friendly head-and-shoulders human silhouettes side by side: larger cream person at left front, smaller pale-silver person at right behind, one tiny red dot on chest. No facial features."
+    },
+    {
+      "file": "guild.png",
+      "subject": "A pale-silver hanging guild banner on a short pole, a single cream trio-of-people emblem on the banner, one small red pennant corner. Compact bold silhouette."
+    },
+    {
+      "file": "heart.png",
+      "subject": "A warm cream heart with a simple pale-silver offset lower edge and one tiny red heart inset near the upper right. Clean friendly endorsement symbol, flat solid shapes."
+    },
+    {
+      "file": "caution.png",
+      "subject": "A pale-silver broad circle with a thick red diagonal bar across its center, a cream small person bust behind the bar. Simple unmistakable blocked-player symbol."
+    },
+    {
+      "file": "flag.png",
+      "subject": "A rolled cream parchment quest scroll, pale-silver curled ends, one large red exclamation mark centered. No lettering or other markings."
+    }
+  ]
+}

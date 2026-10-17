@@ -1,0 +1,50 @@
+{
+  "name": "荔枝组队 · Lychee LFG",
+  "summary_file": "summary.zh-CN.txt",
+  "description_files": {
+    "markdown": "description.zh-CN.txt",
+    "html": "description.zh-CN.html"
+  },
+  "gallery": [
+    {
+      "file": "release-cover.png",
+      "title": "封面"
+    },
+    {
+      "file": "02-find-group.png",
+      "title": "寻求组队"
+    },
+    {
+      "file": "01-create-group.png",
+      "title": "创建组队"
+    },
+    {
+      "file": "04-floating.png",
+      "title": "荔枝浮窗"
+    },
+    {
+      "file": "03-player-notes.png",
+      "title": "荔枝笔记"
+    }
+  ],
+  "inline_images": [
+    {
+      "file": "02-find-group.png",
+      "caption": "寻求组队：队伍信息、筛选与申请进度集中展示。"
+    },
+    {
+      "file": "01-create-group.png",
+      "caption": "创建组队：申请者与当前队伍同屏，同行申请整组处理。"
+    },
+    {
+      "file": "04-floating.png",
+      "caption": "荔枝浮窗：保留游戏视野，直接处理同行申请与单人申请。"
+    },
+    {
+      "file": "03-player-notes.png",
+      "caption": "荔枝笔记：记录玩家与原因，结合历史找回曾经的队友。"
+    }
+  ],
+  "image_note": "四张配图均由实机截图通过 image_gen 脱敏编辑；封面为宣传合成图。",
+  "publication_note": "以上路径均相对于 release 目录。发布时上传图片并用平台返回的图片地址替换正文中的本地路径；本清单不是可执行的上传计划。"
+}

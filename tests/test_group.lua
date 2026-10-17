@@ -1,0 +1,1540 @@
+-- Group 包行为:搜索代次与结果、申请状态、招募/申请者、大秘境历史、团长收藏。
+local Stubs = TestStubs
+Stubs.Install({ locale = "zhCN", realm = "晨风号角" })
+_G.GetInspectSpecialization = nil -- 目标客户端只依赖当前 C_SpecializationInfo 接口。
+Stubs.SetUnit("player", { name = "本人", realm = "晨风号角", class = "WARRIOR", classID = 1, guid = "P-0" })
+
+Load.addon("LycheeGroup", "Locale.lua")
+Load.addon("LycheeGroup", "Core.lua")
+
+-- ---------------------------------------------------------------- LFG/秘境替身
+
+local S = {
+	-- 搜索
+	searchCalls = {},
+	failSearch = false,
+	results = {},          -- resultID -> GetSearchResultInfo 表
+	resultIDs = {},        -- GetFilteredSearchResults 返回
+	resultReads = 0,
+	players = {}, counts = {}, encounters = {}, friends = {}, playerReads = 0, memberCountReads = 0,
+	-- 申请
+	applications = {},     -- 原生仍存在的申请 ID
+	appStatus = {},        -- id -> status
+	appPending = {},       -- id -> pending status
+	applyCalls = {},
+	-- 招募
+	activeEntry = nil,
+	createDataHistory = {},
+	removeCalls = 0,
+	-- 申请者
+	applicants = {},       -- applicantID -> GetApplicantInfo 表
+	applicantMembers = {}, -- applicantID -> 成员返回值数组
+	applicantPvp = {}, applicantPvpCalls = {}, -- activityID -> applicantID -> memberIndex -> native rating
+	inviteCalls = {},
+	-- 秘境
+	activeMap = nil,
+	keystoneLevel = 0,
+}
+
+S.now=100
+_G.GetTime=function() return S.now end
+_G.InCombatLockdown=function() return false end
+_G.CanInspect=function(unit) return UnitExists(unit) end
+local specCallbacks={}
+local specLibrary={RegisterGroup=function(owner,callback) specCallbacks[owner]=callback end,UnregisterGroup=function(owner) specCallbacks[owner]=nil end}
+_G.LibStub=function(name) assert(name=="LibSpecialization");return specLibrary end
+_G.SOUNDKIT={UI_GROUP_FINDER_RECEIVE_APPLICATION=47615}
+_G.PlaySound=function(id,channel,_,finish) S.soundCalls=(S.soundCalls or 0)+1;S.soundKit=id;S.soundChannel=channel;S.soundFinish=finish;return true,7 end
+_G.StopSound=function() end
+C_SpecializationInfo.GetSpecialization=function() return nil end
+_G.GetAverageItemLevel=function() return 0,0 end
+_G.C_PaperDollInfo={GetInspectItemLevel=function() return nil end}
+_G.C_PlayerInfo={GetPlayerMythicPlusRatingSummary=function() return nil end}
+_G.Enum={LFGListFilter={CurrentSeason=64,NotCurrentSeason=128,Recommended=1,NotRecommended=2,PvE=4}}
+_G.bit={bor=function(a,b) return a+b end}
+_G.C_EncounterJournal={GetInstanceForGameMap=function() return nil end}
+_G.LE_PARTY_CATEGORY_HOME=1
+_G.UnitIsGroupAssistant=function() return false end
+_G.EJ_GetCurrentTier=function() return 1 end
+_G.EJ_GetNumTiers=function() return 1 end
+_G.EJ_GetTierInfo=function() return "Test expansion" end
+_G.EJ_SelectTier=function() end
+_G.EJ_GetInstanceByIndex=function() return nil end
+local ACTIVITY = {
+	[501] = { fullName = "黑翼之巢", shortName = "黑翼", categoryID = 3, isCurrentRaidActivity = true, maxNumPlayers = 30 },
+	[502] = { mapID=111,groupFinderActivityGroupID=20, fullName = "旋云之巅", shortName = "旋云", categoryID = 2, isMythicPlusActivity = true, maxNumPlayers = 5 },
+	[503] = { fullName = "通灵战潮", shortName = "通灵", categoryID = 2, isMythicPlusActivity = true, maxNumPlayers = 5 },
+	[504] = { mapID=111,groupFinderActivityGroupID=20, fullName = "其他地城", shortName = "其他", categoryID = 2, isMythicPlusActivity = false, maxNumPlayers = 5 },
+}
+
+_G.C_LFGList = {
+ ClearSearchTextFields=function() S.nativeSearchText="" end,
+	Search = function(categoryID, filter, preferred, language, crossFaction, advanced, activityFilter)
+		if S.failSearch then error("protected", 0) end
+		S.searchCalls[#S.searchCalls + 1] = { categoryID = categoryID, activityFilter = activityFilter, nativeSearchText=S.nativeSearchText }
+		if S.syncSearch == "results" then Stubs.FireEvent("LFG_LIST_SEARCH_RESULTS_RECEIVED") end
+		if S.syncSearch == "failed" then Stubs.FireEvent("LFG_LIST_SEARCH_FAILED", "throttled") end
+	end,
+	GetFilteredSearchResults = function()
+		return #S.resultIDs, S.resultIDs
+	end,
+	GetSearchResultInfo = function(id) S.resultReads = S.resultReads + 1; return S.results[id] end,
+	GetSearchResultPlayerInfo = function(id,index) S.playerReads=S.playerReads+1;return S.players[id] and S.players[id][index] end,
+	GetSearchResultFriends = function(id) local f=S.friends[id] or {};return f.bnet or {},f.character or {},f.guild or {} end,
+	GetSearchResultMemberCounts = function(id) S.memberCountReads=S.memberCountReads+1;return S.counts[id] end,
+	GetSearchResultEncounterInfo = function(id) return S.encounters[id] end,
+	GetActivityInfoTable = function(id) return ACTIVITY[id] end,
+	RequestAvailableActivities = function() S.availabilityRequests = (S.availabilityRequests or 0) + 1 end,
+	GetAvailableCategories=function() return {2,3} end,
+ GetLfgCategoryInfo=function(id) return {name=id==2 and "Dungeons" or "Raids"} end,
+ GetAvailableActivityGroups=function(id) return {id==2 and 20 or 10} end,
+ GetActivityGroupInfo=function(id) return "Group "..id end,
+ GetAvailableActivities = function(categoryID,groupID,flags)
+		local ids = {}
+		for id, info in pairs(ACTIVITY) do
+			if info.categoryID == categoryID  then ids[#ids + 1] = id end
+		end
+		table.sort(ids)
+		return ids
+	end,
+	GetLanguageSearchFilter = function() return nil end,
+	GetApplications = function() return S.applications end,
+	GetApplicationInfo = function(id) return id, S.appStatus[id], S.appPending[id], 120 end,
+	ApplyToGroup = function(id, tank, healer, damage)
+		S.applyCalls[#S.applyCalls + 1] = { id = id, tank = tank, healer = healer, damage = damage }
+		S.appStatus[id] = "applied"
+		S.applications[#S.applications + 1] = id
+	end,
+	CancelApplication = function(id)
+		for i, v in ipairs(S.applications) do
+			if v == id then table.remove(S.applications, i) break end
+		end
+		S.appStatus[id] = "cancelled"
+	end,
+	AcceptInvite = function(id) S.appStatus[id] = "inviteaccepted" end,
+	DeclineInvite = function(id) S.appStatus[id] = "invitedeclined" end,
+	HasActiveEntryInfo = function() return S.activeEntry ~= nil end,
+	GetActiveEntryInfo = function() return S.activeEntry end,
+	CreateListing = function(createData)
+		S.createDataHistory[#S.createDataHistory + 1] = { op = "create", data = createData }
+		S.activeEntry = {
+			activityIDs = createData.activityIDs,
+			name = "原生标题", comment = "原生说明",
+			requiredItemLevel = createData.requiredItemLevel or 0,
+			requiredDungeonScore = createData.requiredDungeonScore,
+			autoAccept = createData.isAutoAccept,
+			privateGroup = createData.isPrivateGroup,
+			isCrossFactionListing = createData.isCrossFactionListing,
+			newPlayerFriendly = createData.newPlayerFriendly,
+			playstyle = createData.playstyle,
+			generalPlaystyle = createData.generalPlaystyle,
+			requiredPvpRating = createData.requiredPvpRating,
+			questID = createData.questID,
+			duration = 0,
+		}
+		return true
+	end,
+	UpdateListing = function(createData)
+		S.createDataHistory[#S.createDataHistory + 1] = { op = "update", data = createData }
+		S.activeEntry.activityIDs = createData.activityIDs
+		S.activeEntry.requiredItemLevel = createData.requiredItemLevel or 0
+		S.activeEntry.isCrossFactionListing = createData.isCrossFactionListing
+		return true
+	end,
+	RemoveListing = function()
+		S.removeCalls = S.removeCalls + 1
+		S.activeEntry = nil
+	end,
+	GetApplicants = function()
+		S.applicantListReads=(S.applicantListReads or 0)+1
+		local ids = {}
+		for id in pairs(S.applicants) do ids[#ids + 1] = id end
+		table.sort(ids)
+		return ids
+	end,
+	GetApplicantInfo = function(id) S.applicantInfoReads=(S.applicantInfoReads or 0)+1;return S.applicants[id] end,
+	RefreshApplicants = function() S.applicantRefreshCalls=(S.applicantRefreshCalls or 0)+1 end,
+	GetApplicantMemberInfo = function(id, index)
+		local members = S.applicantMembers[id]
+		local m = members and members[index] or nil
+		if not m then return nil end
+		return m.name, m.class, m.localizedClass, m.level, m.itemLevel, m.honorLevel,
+			m.tank, m.healer, m.damage, m.assignedRole, m.relationship,
+			m.dungeonScore, m.pvpItemLevel, m.factionGroup, m.raceID, m.specID, m.isLeaver
+	end,
+	GetApplicantPvpRatingInfoForListing = function(id,index,activityID)
+		S.applicantPvpCalls[#S.applicantPvpCalls+1]={id,index,activityID}
+		local activity=S.applicantPvp[activityID]
+		return activity and activity[id] and activity[id][index]
+	end,
+	InviteApplicant = function(id) S.inviteCalls[#S.inviteCalls + 1] = id end,
+	DeclineApplicant = function(id) S.declineCalls=(S.declineCalls or 0)+1;S.lastDeclined=id end,
+}
+
+_G.C_ChallengeMode = {
+	GetActiveChallengeMapID = function() return S.activeMap end,
+	IsChallengeModeActive = function()
+		if S.challengeActive ~= nil then return S.challengeActive end
+		return S.activeMap ~= nil
+	end,
+	GetMapUIInfo = function(mapID) return "测试秘境·" .. mapID, mapID, 1800, nil, nil, mapID end,
+	GetActiveKeystoneInfo = function() return S.keystoneLevel, {}, false end,
+}
+
+Load.addon("LycheeGroup_Group", "Locale.lua")
+Load.addon("LycheeGroup_Group", "Group.lua")
+Load.addon("LycheeGroup_Group", "Roster.lua")
+Load.addon("LycheeGroup_Group", "Game.lua")
+Load.addon("LycheeGroup_Group", "Catalog.lua")
+Load.addon("LycheeGroup_Group", "Search.lua")
+Load.addon("LycheeGroup_Group", "Results.lua")
+Load.addon("LycheeGroup_Group", "Applications.lua")
+Load.addon("LycheeGroup_Group", "Listing.lua")
+Load.addon("LycheeGroup_Group", "Alerts.lua")
+Load.addon("LycheeGroup_Group", "Applicants.lua")
+Load.addon("LycheeGroup_Group", "History.lua")
+
+local A = _G.LycheeGroup
+local G = A.Group
+G:Initialize()
+T.eq(type(G.db.prefs), "table", "搜索页面偏好由组队存档入口初始化")
+
+local searchView, listingView = {}, {}
+T.eq(#Stubs.FramesWithEvent("LFG_LIST_UPDATE_SEARCH_RESULTS"), 0, "无浏览时不监听搜索更新")
+G:Attach(listingView, "listing")
+T.eq(#Stubs.FramesWithEvent("LFG_LIST_AVAILABILITY_UPDATE"), 1, "创建页只消费活动目录")
+T.eq(#Stubs.FramesWithEvent("LFG_LIST_UPDATE_SEARCH_RESULTS"), 0, "创建页不建立搜索监听")
+G:Detach(listingView)
+G:Attach(searchView, "search")
+T.eq(#Stubs.FramesWithEvent("LFG_LIST_UPDATE_SEARCH_RESULTS"), 1, "搜索页建立搜索监听")
+
+local notifications = {}
+local unsubscribe = G:Subscribe(function(kind)
+	notifications[kind] = (notifications[kind] or 0) + 1
+end)
+
+local function Fire(event, ...)
+	local delivered = Stubs.FireEvent(event, ...)
+	-- 帧未注册的唤醒事件经 Core 交接路径同样要可达:测试直接走 G:OnEvent。
+	if delivered == 0 then
+		G:OnEvent(event, ...)
+	end
+end
+
+-- ---------------------------------------------------------------- 搜索与结果
+
+do
+	S.results[11] = {
+		searchResultID = 11, activityIDs = { 501 }, name = "黑翼速通", comment = "来敏锐",
+		leaderName = "团长甲-晨风号角", numMembers = 5, age = 100,
+		requiredItemLevel = 200, leaderOverallDungeonScore = 2400, autoAccept = false, isDelisted = false,
+	}
+	S.results[12] = {
+		searchResultID = 12, activityIDs = { 502 }, name = "+10 旋云", comment = "限时",
+		leaderName = "团长乙-晨风号角", numMembers = 4, age = 50,
+		requiredItemLevel = 180, leaderOverallDungeonScore = 1800, autoAccept = true, isDelisted = false,
+	}
+	S.results[13] = {
+		searchResultID = 13, activityIDs = { 502 }, name = "+7 通灵 补坦", comment = "",
+		leaderName = nil, numMembers = 3, age = 20, requiredItemLevel = 0,
+		leaderOverallDungeonScore = nil, autoAccept = false, isDelisted = false,
+	}
+	S.resultIDs = { 11, 12, 13 }
+
+	S.nativeSearchText="毒牙祭坛（史诗钥石）"
+	local ok = G.Search:Search("3", nil)
+	T.ok(ok, "团本搜索提交成功")
+ T.eq(S.searchCalls[#S.searchCalls].nativeSearchText,"","独立分类请求清掉其他界面遗留的注册搜索文本与活动token")
+	T.eq(S.searchCalls[#S.searchCalls].categoryID, 3, "原生分类 3")
+	T.eq(G.Search:GetState(), "searching")
+	Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED")
+	T.eq(G.Search:GetState(), "done")
+	T.eq(G.Results:GetCount(), 3, "完整合法结果不截断")
+	T.ok(notifications.results and notifications.search, "真实搜索链通知订阅者")
+	T.eq(#S.createDataHistory, 0, "业务通知不会转成发布招募")
+
+	-- newest 排序:age 升序 → 13,12,11。
+	local ids = G.Results:GetResults()
+	T.eq(table.concat(ids, ","), "13,12,11", "默认最新在前")
+
+	-- 队长姓名是可公开读取的普通字符串，可以由统一搜索文本本地匹配。
+	local nativeTitle=setmetatable({}, {__index=function() error("native result text must not be parsed") end})
+	S.results[12].name,S.results[12].comment=nativeTitle,nativeTitle
+	G.Results:OnResultUpdated(12)
+	G.Search:SetFilters({text="限时",minLevel=8,maxLevel=15})
+	T.eq(table.concat(G.Results:GetResults(),","),"13,12,11","legacy local text and level filters do not hide native search results")
+	T.eq(G.Results:GetResult(12).name,nativeTitle,"native display text is retained without parsing")
+	T.eq(G.Results:GetResult(12).level,nil,"key level is not guessed from the title")
+	S.results[12].name,S.results[12].comment="+10 旋云","限时"
+	G.Results:OnResultUpdated(12)
+	G.Search:SetFilters({})
+	G.Search:SetFilters({leaderText="团长甲"})
+	T.eq(table.concat(G.Results:GetResults(),","),"11","leader search matches the public captain name")
+	local originalLeaderName=S.results[11].leaderName
+	S.results[11].leaderName="灵止光-晨风号角"
+	G.Results:OnResultUpdated(11)
+	G.Search:SetFilters({leaderText="灵止光"})
+	T.eq(table.concat(G.Results:GetResults(),","),"11","leader search matches a captain's character name")
+	S.results[11].leaderName=originalLeaderName
+	G.Results:OnResultUpdated(11)
+	S.results[13].comment="没有团长名时仍可按备注筛选"
+	G.Results:OnResultUpdated(13)
+	G.Search:SetFilters({leaderText="仍可按备注"})
+	T.eq(table.concat(G.Results:GetResults(),","),"","leader mode ignores descriptions when leaderName is nil")
+	G.Search:SetFilters({})
+
+	-- 规范化字段与身份。
+	local record = G.Results:GetResult(11)
+	T.eq(record.activityName, "黑翼之巢")
+	T.eq(record.leaderKey, "团长甲-晨风号角")
+	T.eq(G.Results:GetResult(13).leaderKey, nil, "leaderName 缺失时键为 nil")
+	T.eq(record.bnetFriends, 0)
+	S.players[12]={{name="治疗者-晨风号角",classFilename="PRIEST",className="牧师",assignedRole="HEALER",specName="神圣",isLeader=true}}
+	S.counts[12]={TANK=0,HEALER=1,DAMAGER=3}
+	S.counts[13]={TANK=1,HEALER=0,DAMAGER=2}
+	S.encounters[12]={"已击败的首领"}
+	local countReads=S.memberCountReads
+	local details=G:GetResultDetails(12)
+	T.eq(S.memberCountReads,countReads,"individual party avatars do not fetch the unused native class/spec count maps")
+	T.eq(details.members[1].nameKey,"治疗者-晨风号角","成员身份与姓名来自原生数据")
+	T.eq(details.members[1].specName,"神圣")
+	T.eq(details.members[1].class,"PRIEST")
+	T.eq(details.encounters[1],"已击败的首领")
+	S.results[12].numCharFriends=1;S.results[12].numBNetFriends=1;S.results[12].numGuildMates=1
+	S.friends[12]={character={"治疗者-晨风号角"},bnet={"战网昵称"},guild={"治疗者-晨风号角"}}
+	G.Results:OnResultUpdated(12);details=G:GetResultDetails(12)
+	T.eq(details.members[1].isCharFriend,true,"原生好友名单标记对应成员")
+	T.eq(details.members[1].isGuildMate,true,"同一成员可以同时是好友与公会成员")
+	T.eq(details.members[1].isBNetFriend,false,"战网显示名不能被猜测成任意成员")
+	T.eq(details.relationships.bnet[1],"战网昵称","无法对应角色的原生战网姓名仍完整保留")
+	S.results[12].numCharFriends=0;S.results[12].numBNetFriends=0;S.results[12].numGuildMates=0
+	G.Results:OnResultUpdated(12);details=G:GetResultDetails(12)
+	T.eq(details.members[1].isCharFriend,false,"关系消失后旧成员标记被清除")
+	T.eq(details.relationships,nil)
+	local reads=S.playerReads
+	T.eq(G:GetResultDetails(12),details,"行与提示共用成员快照")
+	T.eq(S.playerReads,reads,"重复显示不重读成员")
+	G.Search:SetFilters({neededRole="TANK"})
+	T.eq(table.concat(G.Results:GetResults(),","),"12","仅五人队伍的实际空缺命中职责筛选")
+	G.Search:SetFilters({neededRole="HEALER"})
+	T.eq(table.concat(G.Results:GetResults(),","),"13")
+	G.Search:SetFilters({})
+end
+
+do
+	-- 代次守卫:旧代次迟到结果不覆盖新查询。
+	local oldGen = G.Search:GetGeneration()
+	G.Search:Search("seasonDungeon", nil)
+	T.eq(#S.searchCalls[#S.searchCalls].activityFilter, 3, "赛季地图搜索包含其原生全部难度")
+	G.Results:CommitResults(oldGen)
+	T.eq(G.Results:GetCount(), 0, "旧代次结果被拒绝")
+	Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED")
+	T.eq(G.Results:GetCount(), 3, "新代次正常提交")
+
+	-- 单条更新与下架移除。
+	S.results[12].numMembers = 5
+	Fire("LFG_LIST_SEARCH_RESULT_UPDATED", 12)
+	G.Game.frame:GetScript("OnUpdate")()
+	T.eq(G.Results:GetResult(12).numMembers, 5, "单条更新生效")
+	S.players[12][1].specName="戒律"
+	T.eq(G:GetResultDetails(12).members[1].specName,"戒律","成员快照随队伍更新失效")
+	S.results[11].isDelisted = true
+	Fire("LFG_LIST_SEARCH_RESULT_UPDATED", 11)
+	G.Game.frame:GetScript("OnUpdate")()
+	T.eq(G.Results:GetResult(11), nil, "下架结果移除")
+	S.results[11].isDelisted = false
+end
+
+do
+	-- 搜索失败:受保护拒绝回到 idle,发布失败状态。
+	S.failSearch = true
+	local ok, err = G.Search:Search("3", nil)
+	T.eq(ok, false)
+	T.ok(err)
+	T.eq(G.Search:GetState(), "failed")
+	T.eq(G.Search:GetSearchError(), err, "提交受限保留实际失败状态")
+	S.failSearch = false
+	-- 失败后的流式更新事件被忽略,不伪造新结果。
+	local before = G.Results:GetCount()
+	S.resultIDs = { 11 }
+	Fire("LFG_LIST_UPDATE_SEARCH_RESULTS")
+	T.eq(G.Results:GetCount(), before, "idle 状态忽略流式更新")
+	S.resultIDs = { 11, 12, 13 }
+end
+
+do
+	-- 同步事件发生在 Search 返回前时,仓库必须已经归属本次请求。
+	S.syncSearch = "results"
+	T.ok(G.Search:Search("3"))
+	T.eq(G.Search:GetState(), "done", "同步完成事件不被提交后的初始化覆盖")
+	T.eq(G:GetResultCount(), 3, "同步返回的完整结果不会随后被清空")
+	S.syncSearch = "failed"
+	G.Search:Search("3")
+	T.eq(G.Search:GetState(), "waiting", "同步节流进入等待恢复状态")
+	T.eq(G:GetSearchError(), G.L.searchThrottled:format(5), "节流原因本地化并说明自动恢复")
+	T.eq(G:GetResultCount(), 0)
+	S.syncSearch = nil
+	G.Search:EndBrowse()
+end
+
+-- ---------------------------------------------------------------- 申请状态
+
+do
+	G.Search:Search("3", nil)
+	Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED")
+
+	local ok = G.Applications:Apply(11, { tank = true, damage = true })
+	T.ok(ok, "申请提交")
+	T.eq(S.applyCalls[#S.applyCalls].tank, true)
+	T.eq(S.applyCalls[#S.applyCalls].damage, true)
+	T.eq(G.Applications:GetApplication(11).status, "applied", "提交后读回状态")
+	T.ok(notifications.applications, "真实申请链通知订阅者")
+
+	local dup = G.Applications:Apply(11, { tank = true })
+	T.eq(dup, false, "重复申请被拒绝")
+
+	-- 邀请到达 → 可接受。
+	Fire("LFG_LIST_APPLICATION_STATUS_UPDATED", 11, "invited", "applied", "黑翼速通")
+	T.eq(G.Applications:GetApplication(11).status, "invited")
+	T.eq(G.Applications:GetApplication(11).name, "黑翼速通", "事件 groupName 记录名称")
+	T.ok(G.Applications:AcceptInvite(11), "接受邀请")
+	Fire("LFG_LIST_APPLICATION_STATUS_UPDATED", 11, "inviteaccepted", "invited", "黑翼速通")
+	T.eq(G.Applications:GetApplication(11).status, "inviteaccepted")
+	T.eq(G.Applications:HasActive(), false, "接受成功是申请终态")
+
+	-- 原生已结束的申请在下一次同步时移除。
+	table.remove(S.applications, 1)
+	S.appStatus[11] = "timedout"
+	Fire("LFG_LIST_APPLICATION_STATUS_UPDATED", 11, "timedout", "inviteaccepted", "黑翼速通")
+	T.eq(G.Applications:GetApplication(11).status, "timedout")
+end
+
+-- A native failure during submission must never be replaced with a fake pending application.
+do
+ local apply,cancel=C_LFGList.ApplyToGroup,C_LFGList.CancelApplication
+ local cancelled,updates=0,0
+ local unsub=G:Subscribe(function(kind) if kind=="applications" then updates=updates+1 end end)
+ C_LFGList.CancelApplication=function(id) cancelled=cancelled+1;cancel(id) end
+ C_LFGList.ApplyToGroup=function(id)
+  S.appStatus[id]="failed"
+  G:OnEvent("LFG_LIST_APPLICATION_STATUS_UPDATED",id,"failed","none")
+ end
+ T.ok(G:Apply(21,{damage=true}),"a submission request can finish without a Lua exception")
+ T.eq(G.Applications:IsActive(21),false,"a synchronous terminal event with no native ID must not be resurrected as pending")
+ T.eq(G:GetApplication(21),nil,"native-absent terminal entries are removed even while browsing")
+ C_LFGList.ApplyToGroup=function() end
+ T.ok(G:Apply(22,{damage=true}))
+ T.eq(G:GetApplication(22),nil,"a void request without native data never manufactures an application")
+ S.applications={22};S.appStatus[22]="none";S.appPending[22]="applied"
+ G:OnEvent("LFG_LIST_APPLICATION_STATUS_UPDATED",22,"none","none")
+ T.ok(G.Applications:IsActive(22),"a later native pending event still becomes an active submission")
+ T.eq(G.Applications:CanCancel(22),false,"role-check or submission pending entries cannot be cancelled")
+ T.eq(G:Cancel(22),false);T.eq(cancelled,0,"a stale pending button does not call the cancellation API")
+ S.appStatus[22]="applied";S.appPending[22]="cancelled"
+ G:OnEvent("LFG_LIST_APPLICATION_STATUS_UPDATED",22,"applied","none")
+ T.eq(G.Applications:IsActive(22),false,"a pending cancellation stops occupying an active slot")
+ T.eq(G.Applications:GetActiveCount(),0)
+ S.appStatus[22]="timedout";S.appPending[22]="applied"
+ G:OnEvent("LFG_LIST_APPLICATION_STATUS_UPDATED",22,"timedout","applied")
+ T.eq(G.Applications:IsActive(22),false,"a terminal event wins over a stale pending-applied field")
+ S.applications={};G.Applications:SyncAll()
+ T.eq(G:GetApplication(22),nil,"synchronization removes an absent ended entry while its page stays open")
+
+ C_LFGList.ApplyToGroup=apply
+ T.ok(G:Apply(23,{damage=true}));T.ok(G.Applications:CanCancel(23))
+ local notified=updates
+ T.ok(G:Cancel(23))
+ T.eq(G:GetApplication(23),nil,"synchronous native cancellation without an event is read back")
+ T.eq(G.Applications:GetActiveCount(),0)
+ T.ok(updates>notified,"the page receives cancellation state even without a native event")
+
+ T.ok(G:Apply(24,{damage=true}))
+ C_LFGList.CancelApplication=function(id) cancelled=cancelled+1;S.appPending[id]="cancelled" end
+ local before=cancelled
+ T.ok(G:Cancel(24));T.eq(G:GetApplication(24).status,"applied","the native current status is not optimistically rewritten")
+ T.eq(G:GetApplication(24).pendingStatus,"cancelled")
+ T.eq(G.Applications:IsActive(24),false);T.eq(G:Cancel(24),false)
+ T.eq(cancelled,before+1,"pending cancellation cannot submit a second request")
+ S.applications={};G.Applications:SyncAll()
+
+ T.ok(G:Apply(25,{damage=true}))
+ C_LFGList.CancelApplication=function() cancelled=cancelled+1 end
+ T.ok(G:Cancel(25));T.ok(G.Applications:IsActive(25),"an unchanged native snapshot stays active until confirmation")
+ S.applications={};S.appStatus[25]="none"
+ T.ok(G:Cancel(25));T.eq(G:GetApplication(25),nil,"a native-absent stale row disappears after a no-op cancellation")
+
+ T.ok(G:Apply(26,{damage=true}))
+ C_LFGList.CancelApplication=function(id) cancelled=cancelled+1;cancel(id);G:OnEvent("LFG_LIST_APPLICATION_STATUS_UPDATED",id,"cancelled","applied") end
+ before=cancelled
+ T.ok(G:Cancel(26));T.eq(cancelled,before+1);T.eq(G:GetApplication(26),nil,"synchronous events and cancellation readback converge without resurrecting a row")
+
+ T.ok(G:Apply(27,{damage=true}))
+ local clock=S.now;before=cancelled;S.now=clock+121
+ T.ok(G.Applications:IsActive(27),"the local display deadline never fabricates a terminal native status")
+ T.eq(cancelled,before,"elapsed display time does not automatically submit a cancellation")
+ S.now=clock;C_LFGList.CancelApplication=cancel
+ T.ok(G:Cancel(27));T.eq(G.Applications:GetActiveCount(),0)
+ unsub()
+end
+
+-- ---------------------------------------------------------------- 招募/申请者
+
+do
+ local create,getNum=C_LFGList.CreateListing,C_LFGList.GetNumApplications
+ local activeApplications=1
+ C_LFGList.CreateListing=function() return false end
+ C_LFGList.GetNumApplications=function() return 3,activeApplications end
+ local ok,reason=G:Publish({activityID=501})
+ T.eq(ok,false,"native creation refusal is not reported as a successful listing")
+ T.eq(reason,"你还有有效的组队申请，处理完成后才能发布组队。","active applications receive a specific creation refusal")
+ T.eq(G:GetListing(),nil,"a refused listing does not create a local snapshot")
+ activeApplications=0
+ ok,reason=G:Publish({activityID=501})
+ T.eq(ok,false);T.eq(reason,A.GroupLocale.publishFailed,"historical applications do not explain an unrelated native creation failure")
+ C_LFGList.CreateListing,C_LFGList.GetNumApplications=create,getNum
+end
+
+do
+	local ok, err = G.Listing:Publish({
+		activityID = 501, requiredItemLevel = 200, isAutoAccept = false,
+		isPrivateGroup = false, isCrossFactionListing = false,
+	})
+	T.ok(ok, "发布组队")
+	T.ok(notifications.listing, "招募发布后通知订阅者,动作门面与通知分开")
+	T.eq(#Stubs.FramesWithEvent("LFG_LIST_APPLICANT_UPDATED"), 1, "真实招募期间监听申请者")
+	local listing = G.Listing:GetListing()
+	T.ok(listing, "发布后存在招募快照")
+	T.eq(listing.activityName, "黑翼之巢")
+	T.eq(listing.name, "原生标题", "标题来自原生快照(不可编程提交)")
+
+	-- 同阵营更新走 UpdateListing。
+	S.activeEntry.generalPlaystyle = 2
+ G.Listing:OnEntryUpdate()
+	S.activeEntry.questID = 12345
+ G.Listing:OnEntryUpdate()
+	ok = G.Listing:Update({ activityID = 501, requiredItemLevel = 220, isCrossFactionListing = false })
+	T.ok(ok, "同阵营更新组队")
+	T.eq(S.createDataHistory[#S.createDataHistory].op, "update", "同阵营走 Update")
+	T.eq(G.Listing:GetListing().requiredItemLevel, 220)
+	local updateData = S.createDataHistory[#S.createDataHistory].data
+	T.eq(updateData.generalPlaystyle, 2, "未编辑的原生玩法字段保留")
+	T.eq(updateData.questID, 12345, "未编辑的原生任务字段保留")
+
+	-- 跨阵营变更走先下架再创建。
+	ok = G.Listing:Update({ activityID = 501, isCrossFactionListing = true })
+	T.ok(ok, "跨阵营更新组队")
+	T.eq(S.createDataHistory[#S.createDataHistory].op, "create", "跨阵营变更 Remove 后 Create")
+	T.ok(S.removeCalls >= 1, "跨阵营变更触发下架")
+	T.ok(S.activeEntry ~= nil, "更新后仍有招募")
+
+	-- 申请者列表。
+	S.applicants[701] = {
+		applicantID = 701, applicationStatus = "applied", pendingApplicationStatus = nil,
+		numMembers = 2, isNew = true, comment = "带朋友", displayOrderID = 2,
+	}
+	S.applicants[702] = {
+		applicantID = 702, applicationStatus = "applied", pendingApplicationStatus = nil,
+		numMembers = 1, isNew = false, comment = "", displayOrderID = 1,
+	}
+	S.applicantMembers[701] = {
+		{ name = "申请甲-晨风号角", class = "WARRIOR", localizedClass = "战士", level = 80, itemLevel = 210, tank = true },
+		{ name = "申请乙-银松森林", class = "PALADIN", localizedClass = "圣骑士", level = 80, itemLevel = 205, healer = true },
+	}
+	S.applicantMembers[702] = {
+		{ name = "申请丙-晨风号角", class = "MAGE", localizedClass = "法师", level = 80, itemLevel = 220, damage = true, dungeonScore = 2600 },
+	}
+	Fire("LFG_LIST_APPLICANT_LIST_UPDATED")
+	local ids = G.Applicants:GetApplicants()
+	T.eq(table.concat(ids, ","), "702,701", "非新申请在前,再按 displayOrderID")
+	local applicant = G.Applicants:GetApplicant(701)
+	T.eq(#applicant.members, 2, "多成员申请成组")
+	T.eq(applicant.members[1].nameKey, "申请甲-晨风号角")
+	T.eq(applicant.members[2].nameKey, "申请乙-银松森林")
+
+	-- 邀请防重入。
+	T.ok(G.Applicants:Invite(701), "邀请提交")
+	T.eq(G.Applicants:Invite(701), false, "在途动作防重入")
+	Fire("LFG_LIST_APPLICANT_UPDATED", 701)
+	T.eq(G.Applicants:Invite(701), false, "重复原生事件不恢复在途动作")
+ S.applicants[701].applicationStatus="invited";Fire("LFG_LIST_APPLICANT_UPDATED",701)
+ T.eq(G.Applicants:GetApplicant(701).status,"invited","原生状态确认邀请")
+
+	-- 结束招募:下架后由原生事件确认并清空申请者。
+	T.ok(G.Listing:RemoveListing(), "结束招募")
+	Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE", nil)
+	T.eq(G.Listing:GetListing(), nil)
+	T.eq(G.Applicants:GetCount(), 0, "招募结束清空申请者")
+	T.eq(#Stubs.FramesWithEvent("LFG_LIST_APPLICANT_UPDATED"), 0, "招募结束停止申请者监听")
+end
+
+-- ---------------------------------------------------------------- 大秘境历史
+
+do
+ -- Confirmed terminal rows retire while the same creation view remains open.
+ local clock=S.now
+ local function Advance(seconds) S.now=S.now+seconds;Stubs.AdvanceClock(seconds) end
+ local getInfo=C_LFGList.GetApplicantInfo;local reads,updates,missingInfo=0,0,nil
+ local availabilityRequests=S.availabilityRequests
+ C_LFGList.GetApplicantInfo=function(id) reads=reads+1;if id~=missingInfo then return getInfo(id) end end
+ local savedApplicants,savedMembers=S.applicants,S.applicantMembers
+ S.applicants={};S.applicantMembers={};S.activeEntry={activityIDs={501},name="Retirement test"}
+ Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE",true)
+ local view={};G:Attach(view,"create")
+ for _,id in ipairs({8501,8502,8503}) do
+  S.applicants[id]={applicationStatus=id==8503 and "invited" or "applied",numMembers=1,displayOrderID=id}
+  S.applicantMembers[id]={{name="Retirement"..id.."-Away",class="MAGE",damage=true}}
+ end
+ G.Applicants:RefreshList(true)
+ local unsubscribe=G:Subscribe(function(kind) if kind=="applicants" then updates=updates+1;G:GetApplicants() end end)
+ for id,status in pairs({[8501]="cancelled",[8502]="declined"}) do S.applicants[id].applicationStatus=status;Fire("LFG_LIST_APPLICANT_UPDATED",id) end
+ T.eq(#G:GetApplicants(),3,"confirmed applicant results remain briefly visible")
+ Stubs.AdvanceClock(0) -- Flush the display task before counting expiry work.
+ local expiryTimers=Stubs.PendingTimers()
+ Advance(4);Fire("LFG_LIST_APPLICANT_UPDATED",8501);G.Applicants:RefreshList(true)
+ Stubs.AdvanceClock(0)
+ local before,readBefore=updates,reads
+ Advance(1)
+ T.eq(G:GetApplicant(8501),nil,"a cancelled applicant disappears after five seconds without leaving the page")
+ T.eq(expiryTimers,1,"multiple finished applicant rows share one expiry timer")
+ T.eq(G:GetApplicant(8502),nil,"a declined applicant expires in the same batch")
+ T.eq(updates,before+1,"one expiry batch produces one applicant notification")
+ T.eq(reads,readBefore,"expiry only removes local rows, without polling native applicants")
+ T.same(G:GetApplicants(),{8503});T.eq(Stubs.PendingTimers(),0)
+ G.Applicants:RefreshList(true);Fire("LFG_LIST_APPLICANT_UPDATED",8501)
+ T.eq(G:GetApplicant(8501),nil,"a repeated terminal native snapshot does not resurrect an expired row")
+ missingInfo=8502;Fire("LFG_LIST_APPLICANT_UPDATED",8502);missingInfo=nil;G.Applicants:RefreshList(true)
+ T.eq(G:GetApplicant(8502),nil,"temporarily unavailable details do not end an ID still present in the native applicant list")
+ S.applicants[8501].applicationStatus="applied";Fire("LFG_LIST_APPLICANT_UPDATED",8501);G.Alerts:Stop()
+ T.eq(G:GetApplicant(8501).status,"applied","a new applied round can reuse a retired applicant ID")
+ S.applicants[8501].pendingApplicationStatus="cancelled";Fire("LFG_LIST_APPLICANT_UPDATED",8501)
+ Advance(6)
+ T.ok(G:GetApplicant(8501),"pending cancellation is not a confirmed terminal state")
+ T.eq(G:GetApplicant(8503).status,"invited","an invitation is never retired by the five-second display deadline")
+ S.applicants[8501].applicationStatus="cancelled";S.applicants[8501].pendingApplicationStatus=nil;Fire("LFG_LIST_APPLICANT_UPDATED",8501)
+ Advance(2);S.applicants[8502].applicationStatus="applied";Fire("LFG_LIST_APPLICANT_UPDATED",8502);G.Alerts:Stop()
+ S.applicants[8502].applicationStatus="declined";Fire("LFG_LIST_APPLICANT_UPDATED",8502)
+ Advance(3)
+ T.eq(G:GetApplicant(8501),nil);T.ok(G:GetApplicant(8502),"the next deadline keeps its own remaining retention time")
+ T.eq(Stubs.PendingTimers(),1,"only the next applicant expiry remains scheduled")
+ S.applicants[8502]=nil;G.Applicants:RefreshList(true)
+ Stubs.AdvanceClock(0)
+ T.eq(G:GetApplicant(8502),nil,"native absence removes an ended applicant before five seconds")
+ T.eq(Stubs.PendingTimers(),0,"removing the last finished native ID cancels expiry")
+ S.applicants[8504]={applicationStatus="failed",numMembers=1,displayOrderID=8504};S.applicantMembers[8504]={{name="Failed-Away",class="MAGE"}}
+ Fire("LFG_LIST_APPLICANT_UPDATED",8504);Stubs.AdvanceClock(0);T.eq(Stubs.PendingTimers(),1)
+ S.activeEntry=nil;Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE",false)
+ T.eq(Stubs.PendingTimers(),0,"ending the listing cancels applicant retirement")
+ Advance(5);T.eq(#G:GetApplicants(),0)
+ unsubscribe();G:Detach(view);C_LFGList.GetApplicantInfo=getInfo
+ S.applicants,S.applicantMembers=savedApplicants,savedMembers;S.now=clock;S.availabilityRequests=availabilityRequests
+end
+
+do
+ -- My applications still release active slots immediately; only retained records expire.
+ local clock=S.now;local function Advance(seconds) S.now=S.now+seconds;Stubs.AdvanceClock(seconds) end
+ local getInfo=C_LFGList.GetApplicationInfo;local reads,updates=0,0
+ C_LFGList.GetApplicationInfo=function(id) reads=reads+1;return getInfo(id) end
+ S.applications={8601,8602,8603,8604}
+ for _,id in ipairs(S.applications) do S.appStatus[id]="applied";S.appPending[id]=nil end
+ S.appStatus[8603]="invited";S.appPending[8604]="cancelled"
+ G.Applications:SyncAll()
+ local unsubscribe=G:Subscribe(function(kind) if kind=="applications" then updates=updates+1;G:GetApplications() end end)
+ for id,status in pairs({[8601]="cancelled",[8602]="declined"}) do S.appStatus[id]=status;Fire("LFG_LIST_APPLICATION_STATUS_UPDATED",id,status,"applied") end
+ T.eq(G.Applications:GetActiveCount(),1,"confirmed terminals immediately stop occupying application slots")
+ T.eq(Stubs.PendingTimers(),1,"finished applications share one expiry timer")
+ Advance(4);Fire("LFG_LIST_APPLICATION_STATUS_UPDATED",8601,"cancelled","cancelled");G.Applications:SyncAll()
+ local before,readBefore=updates,reads
+ Advance(1)
+ T.eq(G:GetApplication(8601),nil,"finished applications are released while the browse view remains open")
+ T.eq(G:GetApplication(8602),nil);T.eq(updates,before+1,"application expiry emits one batched notification")
+ T.eq(reads,readBefore,"retiring applications never polls native state")
+ T.eq(Stubs.PendingTimers(),0)
+ G.Applications:SyncAll();Fire("LFG_LIST_APPLICATION_STATUS_UPDATED",8601,"cancelled","cancelled")
+ T.eq(G:GetApplication(8601),nil,"a repeated terminal application snapshot cannot resurrect a retired record")
+ S.appPending[8602]="applied";G.Applications:SyncAll()
+ T.eq(G:GetApplication(8602),nil,"stale pending-applied data cannot revive a confirmed terminal")
+ S.appStatus[8601]="applied";Fire("LFG_LIST_APPLICATION_STATUS_UPDATED",8601,"applied","cancelled")
+ T.ok(G.Applications:IsActive(8601),"a new applied round reuses the original application ID")
+ Advance(6)
+ T.eq(G:GetApplication(8603).status,"invited","invited applications do not expire on a local retirement deadline")
+ T.ok(G:GetApplication(8604),"pending cancellation remains until a native confirmation or native removal")
+ T.ok(G.Applications:IsActive(8601))
+ S.appStatus[8601]="failed";Fire("LFG_LIST_APPLICATION_STATUS_UPDATED",8601,"failed","applied")
+ T.eq(Stubs.PendingTimers(),1)
+ S.applications={};G.Applications:SyncAll()
+ T.eq(Stubs.PendingTimers(),0,"native absence cancels the final application expiry")
+ T.eq(#G:GetApplications(),0)
+ unsubscribe();C_LFGList.GetApplicationInfo=getInfo;S.now=clock
+end
+
+do
+	-- 进行中的秘境:开始 → 采集 → 完成 → 写入。
+	Stubs.SetUnit("party1", { name = "队友甲", realm = "晨风号角", class = "PALADIN", classID = 2, guid = "P-1" })
+	Stubs.SetUnit("party2", { name = "队友乙", realm = "银松森林", class = "MAGE", classID = 1, guid = "P-2" })
+	Stubs.SetInspectSpec("party1", 66)
+	Stubs.SetInspectSpec("party2", 0)
+	S.activeMap = 502
+	S.keystoneLevel = 10
+
+	Fire("CHALLENGE_MODE_START", 502)
+	local active = G.History:GetActiveRun()
+	T.ok(active, "run 开始")
+	T.eq(active.mapName, "测试秘境·502")
+	T.eq(active.level, 10, "层数来自钥石信息")
+	T.eq(#active.members, 3, "含自己在内 3 名成员")
+	T.eq(G.charDB.activeRun.id, active.id, "进行中基线直接持久到角色存档")
+	Stubs.SetTime(active.startedAt + 60)
+	Fire("CHALLENGE_MODE_START", 502)
+	T.eq(G.History:GetActiveRun().id, active.id, "同一次 START 交接不重建run")
+	T.eq(G.History:GetActiveRun().startedAt, active.startedAt, "重复开始保留原开始时间")
+	local selfMember
+	for _, m in ipairs(active.members) do
+		if m.isSelf then selfMember = m end
+	end
+	T.eq(selfMember and selfMember.name, "本人", "成员含自己并标注")
+
+	-- 中途加入的成员在队伍事件中补录。
+	Stubs.SetUnit("party3", { name = "队友丙", realm = "晨风号角", class = "WARRIOR", classID = 1, guid = "P-3" })
+	Fire("GROUP_ROSTER_UPDATE")
+	T.eq(#G.History:GetActiveRun().members, 4, "中途加入成员补录")
+	-- 重复队伍事件不重复记录。
+	Fire("GROUP_ROSTER_UPDATE")
+	T.eq(#G.History:GetActiveRun().members, 4, "按 key 去重")
+
+	-- 只重载 History 文件模拟 /reload 后的局部内存丢失,角色存档保持。
+	local beforeReload = G.History:GetActiveRun()
+	Stubs.SetUnit("party3", nil)
+	Load.addon("LycheeGroup_Group", "History.lua")
+	G.History:Restore()
+	local afterReload = G.History:GetActiveRun()
+	T.eq(afterReload.id, beforeReload.id, "恢复复用同一个run身份")
+	T.eq(afterReload.startedAt, beforeReload.startedAt, "恢复保留原开始时间")
+	T.eq(#afterReload.members, 4, "重载后仍保留此前离队成员")
+	T.eq(afterReload.members[4].name, "队友丙")
+	G.History:Restore()
+	T.eq(G.History:GetActiveRun().id, beforeReload.id, "重复恢复不生成新run")
+
+	Fire("CHALLENGE_MODE_COMPLETED")
+	T.eq(G.History:GetActiveRun(), nil, "完成后无进行中 run")
+	T.eq(G.charDB.activeRun, nil, "完成后清理持久待定基线")
+	T.eq(#G.charDB.runs, 1, "完成 run 写入历史")
+	local run = G.History:GetHistory()[1]
+	T.eq(run.completedAt >= run.startedAt, true)
+	local memberA, memberSelf
+	for _, m in ipairs(run.members) do
+		if m.name == "队友甲" then memberA = m end
+		if m.isSelf then memberSelf = m end
+	end
+	T.eq(memberA and memberA.specID, 66, "已有专精数据的成员记录专精")
+	T.eq(memberSelf and memberSelf.specID, nil, "无专精数据的成员存 nil,不猜测")
+	T.eq(#Stubs.FramesWithEvent("CHALLENGE_MODE_COMPLETED"), 0, "run 结束退订监听")
+	T.eq(#Stubs.FramesWithEvent("GROUP_ROSTER_UPDATE"), 1, "run结束后可见页面仍持有队伍监听")
+	S.challengeActive = false -- 地图信息仍可用,但挑战已经结束。
+	G.History:Restore()
+	Fire("CHALLENGE_MODE_COMPLETED")
+	T.eq(#G.charDB.runs, 1, "完成后重开与重复完成不写入第二条run")
+	S.challengeActive = nil
+
+	-- 未完成即离开:丢弃,不写入。
+	S.activeMap = 503
+	Fire("CHALLENGE_MODE_START", 503)
+	T.ok(G.History:GetActiveRun(), "第二个 run 开始")
+	S.activeMap = nil
+	Fire("GROUP_ROSTER_UPDATE")
+	Fire("PLAYER_ENTERING_WORLD")
+	T.eq(G.History:GetActiveRun(), nil, "离开秘境丢弃待定 run")
+	T.eq(#G.charDB.runs, 1, "未完成 run 不写入历史")
+
+	-- 活动中重登:Restore 恢复基线(party3 已离场)。
+	S.activeMap = 502
+	Stubs.SetUnit("party3", nil)
+	G.History:Restore()
+	local restored = G.History:GetActiveRun()
+	T.ok(restored, "重登恢复进行中 run")
+	T.eq(#restored.members, 3, "恢复时采集当前在场成员")
+	S.activeMap = nil
+	Fire("CHALLENGE_MODE_COMPLETED")
+	T.eq(#G.charDB.runs, 2, "恢复后的完成同样写入")
+	T.eq(G.charDB.activeRun, nil)
+
+	-- 重置后的相同地图/层数是新run,不能沿用上一次基线。
+	S.activeMap = 502
+	Fire("CHALLENGE_MODE_START", 502)
+	local resetID = G.History:GetActiveRun().id
+	Fire("CHALLENGE_MODE_RESET", 502)
+	T.eq(G.charDB.activeRun, nil, "RESET 清理未完成基线")
+	Fire("CHALLENGE_MODE_START", 502)
+	T.ok(G.History:GetActiveRun().id ~= resetID, "同地图重新开钥匙建立新run")
+	S.activeMap = nil
+	Fire("PLAYER_ENTERING_WORLD")
+	S.activeMap, S.challengeActive = 504, false
+	Fire("CHALLENGE_MODE_START", 504)
+	T.eq(G.History:GetActiveRun(), nil, "非进行中挑战不采集无关场景")
+	S.activeMap, S.challengeActive = nil, nil
+
+	local history = G.History:GetHistory()
+	T.eq(history[1].id ~= history[2].id, true, "run id 唯一")
+	T.eq(history[1].completedAt >= history[2].completedAt, true, "完成时间倒序")
+
+	Stubs.SetUnit("party1", nil)
+	Stubs.SetUnit("party2", nil)
+	Stubs.SetUnit("party3", nil)
+	Stubs.SetTime(nil)
+end
+
+-- ---------------------------------------------------------------- 公开门面
+
+do
+	-- UI 平铺合同:GetActivities 目录与各所有者方法的委托。
+	local raids = G:GetActivities("3")
+	T.eq(#raids, 1, "团本目录含分类 3 活动")
+	T.eq(raids[1].name, "黑翼之巢", "活动显示副本完整名称，不只显示难度")
+	local mplus = G:GetActivities("seasonDungeon")
+	T.eq(#mplus, 3, "赛季地图目录包含原生全部难度")
+	T.eq(#G:GetActivities("nope"), 0, "未知分类返回空表")
+
+	for _, name in ipairs({ "SetFilters", "GetResults", "GetResult", "GetApplications",
+		"Apply", "Cancel", "AcceptInvite", "DeclineInvite", "GetListing", "Publish", "Update",
+		"RemoveListing", "GetApplicants", "GetApplicant", "Invite", "Decline", "GetHistory",
+		"GetActiveRun", "Subscribe" }) do
+		T.eq(type(G[name]), "function", "门面方法 " .. name)
+	end
+	T.eq(type(G.Search), "table", "搜索服务保持表(门面无同名方法)")
+	T.eq(type(G.Search.Search), "function", "搜索经服务调用")
+
+	-- 门面委托链路:搜索 → 事件 → 结果。
+	S.nativeSearchText="毒牙祭坛（史诗钥石）"
+	local ok = G.Search:Search("3", nil)
+	T.ok(ok)
+	Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED")
+	T.ok(#G:GetResults() >= 1, "门面搜索→结果链路通")
+
+	-- 流式更新:搜索会话建立后,引擎持续增删结果,按代次全量重读。
+	S.results[14] = {
+		searchResultID = 14, activityIDs = { 501 }, name = "新出现的队伍", comment = "",
+		leaderName = "新团长-晨风号角", numMembers = 2, age = 5,
+		requiredItemLevel = 0, autoAccept = false, isDelisted = false,
+	}
+	S.resultIDs[#S.resultIDs + 1] = 14
+	Fire("LFG_LIST_UPDATE_SEARCH_RESULTS")
+	G.Game.frame:GetScript("OnUpdate")()
+	T.eq(G.Results:GetCount(), 4, "流式更新提交新增结果")
+	T.ok(G.Results:GetResult(14) ~= nil, "新队伍可见")
+end
+
+-- ---------------------------------------------------------------- 可用性刷新
+
+do
+	-- 请求属于进入视图,读目录与处理可用性事件都不重新触发请求。
+	T.eq(S.availabilityRequests, 2, "两个视图首次进入时各请求一次")
+	T.eq(#G:GetActivities("3"), 1, "缓存命中不重复请求")
+	T.eq(S.availabilityRequests, 2, "缓存命中不再请求")
+
+	-- 可用性事件清缓存:目录变化后重建并再次请求。
+	ACTIVITY[105] = { orderIndex=20, fullName = "旧团本（普通）", shortName = "普通", categoryID = 3, isCurrentRaidActivity = false, maxNumPlayers = 30 }
+	Fire("LFG_LIST_AVAILABILITY_UPDATE")
+	T.eq(#G:GetActivities("3"), 2, "刷新后目录重建")
+	T.eq(G:GetActivities("3")[1].id, 501, "当前团本排在较小 ID 的旧团本之前")
+	T.eq(G:GetActivities("3")[2].name, "旧团本（普通）")
+	T.eq(S.availabilityRequests, 2, "可用性事件重建不产生请求循环")
+	ACTIVITY[105] = nil
+	Fire("LFG_LIST_AVAILABILITY_UPDATE")
+end
+
+-- ---------------------------------------------------------------- 浏览与后台业务生命周期
+
+do
+	local ok = G:Apply(11, { tank = true })
+	T.ok(ok, "关闭前存在真实活动申请")
+	local app = G:GetApplication(11)
+	T.eq(app.name, "黑翼速通", "申请独立保存必要队伍摘要")
+	local secondView = {}
+	G:Attach(secondView, "search")
+	G:Detach(searchView)
+	T.ok(G:GetResultCount() > 0, "另一个浏览消费者仍在时保留完整结果")
+	G:Detach(secondView)
+	T.eq(#Stubs.FramesWithEvent("GROUP_ROSTER_UPDATE"),0,"无页面且无进行中run时释放队伍监听")
+	T.eq(G:GetResultCount(), 0, "最后一个浏览消费者离开后释放全部搜索结果")
+	T.eq(G.Search:GetState(), "idle", "关闭结束搜索会话")
+	T.eq(G:GetApplication(11), app, "清搜索结果不取消或复制申请")
+	T.eq(app.comment, nil, "申请不保留整条搜索说明")
+	T.eq(#Stubs.FramesWithEvent("LFG_LIST_UPDATE_SEARCH_RESULTS"), 0, "隐藏后停止搜索流式监听")
+	T.eq(#Stubs.FramesWithEvent("LFG_LIST_SEARCH_RESULT_UPDATED"), 0, "隐藏后停止单条结果监听")
+	local reads = S.resultReads
+	T.eq(Stubs.FireEvent("LFG_LIST_UPDATE_SEARCH_RESULTS"), 0, "原生更新不再触达搜索处理器")
+	G:OnEvent("LFG_LIST_UPDATE_SEARCH_RESULTS")
+	T.eq(S.resultReads, reads, "直接迟到事件也不读取隐藏结果")
+	T.eq(#Stubs.FramesWithEvent("LFG_LIST_APPLICATION_STATUS_UPDATED"), 1, "活动申请仍由最小业务入口推进")
+	Fire("LFG_LIST_APPLICATION_STATUS_UPDATED", 11, "invited", "applied", "黑翼速通")
+	T.eq(G:GetApplication(11).status, "invited", "隐藏后继续收到邀请")
+	T.ok(G:AcceptInvite(11), "独立申请不依赖结果仓库即可接受邀请")
+	Fire("LFG_LIST_APPLICATION_STATUS_UPDATED", 11, "inviteaccepted", "invited", "黑翼速通")
+	T.eq(G:GetApplication(11), nil, "隐藏时终态申请释放摘要")
+	S.applications = {}
+
+	-- 本窗口关闭后在原生界面重新发布,最小入口仍能接管申请者。
+	S.activeEntry = { activityIDs = { 501 }, name = "原生新队伍" }
+	Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE", true)
+	T.eq(#Stubs.FramesWithEvent("LFG_LIST_APPLICANT_UPDATED"), 1, "原生招募唤醒申请者业务")
+	S.activeEntry = nil
+	Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE", false)
+	T.eq(#Stubs.FramesWithEvent("LFG_LIST_APPLICANT_UPDATED"), 0, "原生招募结束后重新退订")
+	T.eq(G.Applicants:GetCount(), 0)
+
+	G:Attach(searchView, "search")
+	T.ok(G.Search:Search("3"), "重开可发起下一轮真实搜索")
+	Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED")
+	T.ok(G:GetResultCount() > 0, "重新建立事件和完整结果")
+	G:Detach(searchView)
+	T.eq(G:GetResultCount(), 0)
+end
+
+-- Current-group display reads the full roster without recording or inspecting it.
+Stubs.SetUnit("party1",{name="当前治疗",realm="晨风号角",class="PRIEST",role="HEALER",leader=true})
+local roster=G:GetRoster()
+T.eq(#roster,2)
+T.eq(roster[2].nameKey,"当前治疗-晨风号角")
+T.eq(roster[2].assignedRole,"HEALER")
+T.eq(roster[2].isLeader,true)
+Stubs.SetUnit("party1",nil)
+do
+ -- Native raid aliases still identify the local player; inspect data is not self data.
+ local player={name="本人",realm="晨风号角",class="PALADIN",classID=2,guid="P-0",role="HEALER"}
+ local selected,reads,inspectReads=1,0,{}
+ local getSpec,getInfo,getInspect=C_SpecializationInfo.GetSpecialization,C_SpecializationInfo.GetSpecializationInfo,C_SpecializationInfo.GetInspectSpecialization
+ local groupCount,averageLevel=GetNumGroupMembers,GetAverageItemLevel
+ Stubs.SetUnit("player",player);Stubs.SetUnit("raid2",player)
+ Stubs.SetUnit("raid1",{name="未检视队友",realm="晨风号角",class="PRIEST",classID=5,guid="P-1"})
+ GetNumGroupMembers=function() return 2 end
+ GetAverageItemLevel=function() return 250,248 end
+ C_SpecializationInfo.GetSpecialization=function() reads=reads+1;return selected end
+ C_SpecializationInfo.GetSpecializationInfo=function(index)
+  if index==1 then return 65,"神圣",nil,135920,"HEALER" end
+  if index==2 then return 66,"防护",nil,236264,"TANK" end
+ end
+ C_SpecializationInfo.GetInspectSpecialization=function(unit) inspectReads[#inspectReads+1]=unit;return 0 end
+ local view={};G:Attach(view,"create")
+ local members=G:GetRoster()
+ T.eq(#members,2);T.eq(members[2].unit,"raid2")
+ T.eq(members[2].specID,65,"the player raid alias uses the actual selected player specialization")
+ T.eq(members[2].itemLevel,248,"the player raid alias also uses equipped player item level")
+ T.eq(members[1].specID,nil,"another member without inspect data remains unknown")
+ T.same(inspectReads,{"raid1"},"the local raid alias never goes through inspect")
+ T.eq(G:GetRoster(),members);T.eq(reads,1,"unchanged roster reuses its specialization snapshot")
+ local refreshed
+ local unsubscribe=G:Subscribe(function(kind) if kind=="roster" then refreshed=G:GetRoster() end end)
+ selected=2;Fire("ACTIVE_PLAYER_SPECIALIZATION_CHANGED")
+ T.eq(refreshed and refreshed[2].specID,66,"the native active-player specialization event refreshes visible roster consumers")
+ T.eq(refreshed[1].specID,nil,"self specialization never fills another member's missing data")
+ selected=1;Fire("PLAYER_SPECIALIZATION_CHANGED","player")
+ T.eq(refreshed[2].specID,65,"the unit specialization event also refreshes the raid-alias player")
+ T.eq(#Stubs.FramesWithEvent("ACTIVE_PLAYER_SPECIALIZATION_CHANGED"),1)
+ unsubscribe();G:Detach(view)
+ T.eq(#Stubs.FramesWithEvent("ACTIVE_PLAYER_SPECIALIZATION_CHANGED"),0,"self specialization tracking stops when the create view leaves")
+ C_SpecializationInfo.GetSpecialization,C_SpecializationInfo.GetSpecializationInfo,C_SpecializationInfo.GetInspectSpecialization=getSpec,getInfo,getInspect
+ GetNumGroupMembers,GetAverageItemLevel=groupCount,averageLevel
+ Stubs.SetUnit("raid1",nil);Stubs.SetUnit("raid2",nil)
+ Stubs.SetUnit("player",{name="本人",realm="晨风号角",class="WARRIOR",classID=1,guid="P-0"})
+ G:InvalidateRoster()
+end
+
+-- A fresh teammate has no inspect cache: prefer LibSpecialization, then inspect.
+do
+ local view={}
+ local function sync(spec,name) for _,callback in pairs(specCallbacks) do callback(spec,"HEALER","MELEE",name,"unused talents") end end
+ local function advance(seconds) S.now=S.now+seconds;Stubs.AdvanceClock(seconds) end
+ Stubs.SetUnit("party1",{name="同步队友",realm="晨风号角",class="PALADIN",classID=2,guid="LIB-1"})
+ Stubs.SetUnit("party2",{name="检视队友",realm="晨风号角",class="PALADIN",classID=2,guid="NATIVE-2"})
+ Stubs.SetInspectSpec("party1",0);Stubs.SetInspectSpec("party2",0)
+ local start=#Stubs.InspectRequests()
+ G:Attach(view,"create")
+ G:GetRoster()
+ sync(65,"同步队友")
+ local members=G:GetRoster()
+ T.eq(members[2].specID,65,"LibSpecialization fills a teammate with no native inspect cache")
+ T.eq(members[2].specSource,"libspecialization")
+ advance(1)
+ T.eq(#Stubs.InspectRequests(),start+1,"only the teammate missing library data receives an inspect request")
+ T.eq(Stubs.InspectRequests()[start+1],"party2")
+ Stubs.SetInspectSpec("party2",66);Fire("INSPECT_READY","NATIVE-2")
+ members=G:GetRoster()
+ T.eq(members[3].specID,66,"matching INSPECT_READY fills the missing specialization")
+ T.eq(members[3].specSource,"inspect")
+ Stubs.SetInspectSpec("party1",70);G:InvalidateRoster()
+ T.eq(G:GetRoster()[2].specID,65,"library data has priority over native inspect data")
+ sync(70,"同步队友")
+ T.eq(G:GetRoster()[2].specID,70,"a library specialization event refreshes existing rows")
+ sync(257,"不在队里的名字")
+ T.eq(#G:GetRoster(),3,"messages from outside the current roster are ignored")
+ Stubs.SetInspectSpec("party2",0)
+ Fire("PLAYER_SPECIALIZATION_CHANGED","party2")
+ T.eq(G:GetRoster()[3].specID,nil,"a specialization change invalidates the old native value")
+ advance(2)
+ T.eq(#Stubs.InspectRequests(),start+2,"the changed teammate is queried once")
+ local pending,rosterUpdates=G.Roster.pending,0
+ local unsubscribe=G:Subscribe(function(kind) if kind=="roster" then rosterUpdates=rosterUpdates+1;G:GetRoster() end end)
+ Fire("INSPECT_READY","OLD-GUID")
+ T.eq(rosterUpdates,0,"an unrelated inspect response does not notify or rebuild the current roster")
+ T.eq(G.Roster.pending,pending,"an unrelated response does not release the current inspect request")
+ T.eq(G:GetRoster()[3].specID,nil,"an unrelated inspect response cannot complete this teammate")
+ Fire("INSPECT_READY","LIB-1")
+ T.eq(rosterUpdates,1,"a current teammate inspected by another consumer still updates the roster")
+ T.eq(G.Roster.pending,pending,"another teammate's response keeps the current request intact")
+ Stubs.SetUnit("party2",nil);Fire("INSPECT_READY","NATIVE-2")
+ T.eq(G.Roster.pending,nil,"the owned response still releases its request after the member has left")
+ T.eq(#G:GetRoster(),2)
+ unsubscribe()
+ G:Detach(view)
+ local afterClose=#Stubs.InspectRequests()
+ advance(10)
+ T.eq(#Stubs.InspectRequests(),afterClose,"closing the view cancels pending inspect work")
+ T.eq(#Stubs.FramesWithEvent("INSPECT_READY"),0)
+ Stubs.SetUnit("party1",nil);Stubs.SetUnit("party2",nil)
+ G:InvalidateRoster()
+end
+
+-- Visiting many rows retains a small detail cache while preserving every result.
+S.results={};S.resultIDs={}
+for id=101,165 do S.results[id]={activityIDs={502},name="Group "..id,numMembers=1};S.resultIDs[#S.resultIDs+1]=id end
+G.Results:BeginSearch(900);G.Results:CommitResults(900)
+S.players[165]={{name="Cached-Away",classFilename="PRIEST",className="牧师",assignedRole="HEALER",specName="神圣",isLeader=true}}
+S.counts[165]={TANK=0,HEALER=1,DAMAGER=0};S.encounters[165]={"Boss A"}
+for id=101,165 do G:GetResultDetails(id) end
+T.eq(G:GetResultCount(),65)
+T.eq(G:GetResult(101).details,nil,"old member snapshots leave the cache without dropping groups")
+T.ok(G:GetResult(165).details,"recently displayed detail remains reusable")
+do
+	local details=G:GetResultDetails(165);local counts=G:GetResult(165).memberCounts;local reads=S.playerReads
+	local infoReads=S.resultReads
+	G.Results:CommitResults(900)
+	T.eq(S.resultReads,infoReads,"bulk notifications in the same frame reuse normalized records")
+	T.eq(G:GetResultDetails(165),details,"an unchanged bulk snapshot retains member and encounter details")
+	T.eq(G:GetResult(165).memberCounts,counts);T.eq(S.playerReads,reads,"bulk refresh does not reread unchanged cached members")
+	local resultEvents=notifications.result or 0;local resultsEvents=notifications.results or 0
+	S.players[165][1].specName="戒律";S.encounters[165]={"Boss A","Boss B"}
+	G.Results:OnResultUpdated(165)
+	local changed=G:GetResultDetails(165)
+	T.eq(changed,details,"specific updates refill the cached detail container")
+	T.eq(changed.members[1].specName,"戒律","a specific update refreshes members even when their count is unchanged")
+	T.eq(#changed.encounters,2,"a specific update refreshes native encounter progress")
+	T.eq(notifications.result,resultEvents+1);T.eq(notifications.results or 0,resultsEvents,"one result update publishes only one refresh notification")
+	S.results[164].numMembers=2;S.now=S.now+.02;G.Results:CommitResults(900)
+	T.eq(G:GetResult(164).detailsDirty,true,"bulk membership changes mark the existing detail container for refill")
+	T.eq(G:GetResultDetails(165),changed,"other results retain their cached details")
+	G:GetResultDetails(101)
+	T.eq(G:GetResult(102).details,nil,"the same sixty-four-entry eviction queue survives bulk refreshes")
+	local retained=0;for id=101,165 do if G:GetResult(id).details then retained=retained+1 end end
+	T.ok(retained<=64,"preserving snapshots never increases the detail cache bound")
+	T.eq(G:GetResultCount(),65,"cache reuse preserves the complete native result set")
+end
+G.Results:BeginSearch(901)
+do
+ S.results[165].name="Before burst";S.resultIDs={165}
+ G.Results:CommitResults(901)
+ local before=S.resultReads
+ for i=1,8 do S.results[165].name="Latest "..i;G:OnEvent("LFG_LIST_SEARCH_RESULT_UPDATED",165);G.Results:QueueUpdate() end
+ T.eq(S.resultReads,before,"native event bursts queue work without repeated info allocations")
+ local flush=G.Game.frame:GetScript("OnUpdate");T.ok(flush)
+ S.now=S.now+.02;flush()
+ T.eq(S.resultReads,before+1,"bulk and per-result notifications share one final native read")
+ T.eq(G:GetResult(165).name,"Latest 8","the merged update reads the final native metadata")
+ T.eq(G.Game.frame:GetScript("OnUpdate"),nil,"the event frame has no idle refresh callback")
+ G.Results:QueueUpdate(165);G.Results:BeginSearch(902)
+ T.eq(G.Game.frame:GetScript("OnUpdate"),nil,"a new search or browse close cancels queued result work")
+ T.eq(G.Results.updatePending,nil)
+end
+S.now=100
+unsubscribe()
+T.eq(Stubs.PendingTimers(), 0, "Group 包不产生任何常驻计时器")
+
+-- The global five-application limit counts all categories and native deadlines.
+S.applications={11,12,13,14,15};S.appStatus={}
+for _,id in ipairs(S.applications) do S.appStatus[id]="applied" end
+G.Applications:Restore()
+T.eq(G.Applications:GetActiveCount(),5)
+T.eq(G:Apply(16,{damage=true}),false,"a sixth application cannot be submitted")
+T.eq(G:GetApplication(11).expiresAt,220,"deadline uses native remaining seconds")
+S.appStatus[11]="cancelled";G:OnEvent("LFG_LIST_APPLICATION_STATUS_UPDATED",11,"cancelled")
+T.eq(G.Applications:GetActiveCount(),4,"native cancellation frees a global slot")
+T.ok(G:Apply(16,{damage=true}));T.eq(G.Applications:GetActiveCount(),5)
+A.db.autoJoin=false
+S.appStatus[12]="invited";S.appStatus[13]="invited";G.Applications:SyncAll()
+local accepts=0;C_LFGList.AcceptInvite=function() accepts=accepts+1 end
+A:SetSetting("autoJoin",true);T.eq(accepts,1,"enable accepts only one pending invitation")
+G.Applications:TryAutoJoin();G:OnEvent("LFG_LIST_APPLICATION_STATUS_UPDATED",12,"invited")
+T.eq(accepts,1,"duplicate events cannot accept another invitation while one is inflight")
+S.appStatus[15]="none";S.appPending[15]="applied";G.Applications:SyncAll()
+S.appStatus[12]="inviteaccepted";G:OnEvent("LFG_LIST_APPLICATION_STATUS_UPDATED",12,"inviteaccepted")
+T.eq(accepts,1,"successful acceptance stops automatic acceptance of other groups")
+G.Applications:SyncAll();G.Applications:TryAutoJoin()
+T.eq(accepts,1,"passive refreshes of old applied and pending-applied entries preserve the completed-round lock")
+G:OnEvent("LFG_LIST_APPLICATION_STATUS_UPDATED",14,"applied","applied")
+G:OnEvent("LFG_LIST_APPLICATION_STATUS_UPDATED",15,"none","none")
+T.eq(accepts,1,"duplicate application events do not accept a second old invitation after joining")
+S.applications={};S.appStatus={};S.appPending={};G.Applications:SyncAll();G.Applications:ReleaseFinished()
+C_LFGList.ApplyToGroup(18,false,true,false)
+G:OnEvent("LFG_LIST_APPLICATION_STATUS_UPDATED",18,"applied","none")
+S.appStatus[18]="invited";G:OnEvent("LFG_LIST_APPLICATION_STATUS_UPDATED",18,"invited","applied")
+T.eq(accepts,2,"an application submitted through the native entry starts a new auto-join round")
+S.appStatus[18]="inviteaccepted";G:OnEvent("LFG_LIST_APPLICATION_STATUS_UPDATED",18,"inviteaccepted","invited")
+S.applications={};S.appStatus={};G.Applications:SyncAll();G.Applications:ReleaseFinished()
+C_LFGList.ApplyToGroup(19,false,false,true)
+S.appStatus[19]="none";S.appPending[19]="applied"
+G:OnEvent("LFG_LIST_APPLICATION_STATUS_UPDATED",19,"none","none")
+S.appStatus[19]="invited";S.appPending[19]=nil;G:OnEvent("LFG_LIST_APPLICATION_STATUS_UPDATED",19,"invited","none")
+T.eq(accepts,3,"a new pending-applied event also starts a native application round")
+S.appStatus[19]="inviteaccepted";G:OnEvent("LFG_LIST_APPLICATION_STATUS_UPDATED",19,"inviteaccepted","invited")
+S.applications={};S.appStatus={};G.Applications:SyncAll();G.Applications:ReleaseFinished()
+T.ok(G:Apply(17,{healer=true}),"a later application round uses the same business entry")
+S.appStatus[17]="invited";G:OnEvent("LFG_LIST_APPLICATION_STATUS_UPDATED",17,"invited","applied")
+T.eq(accepts,4,"the new application round can auto-accept after the previous round joined")
+S.appStatus[17]="inviteaccepted";G:OnEvent("LFG_LIST_APPLICATION_STATUS_UPDATED",17,"inviteaccepted","invited")
+A.db.autoJoin=false
+-- New applicant audio coalesces a batch and finishes without a ticker.
+S.activeEntry={activityIDs={501},name="Sound test"};G.Listing:OnEntryUpdate()
+G.Applicants:Clear();S.applicants={[801]={applicationStatus="applied",numMembers=1,displayOrderID=1}}
+S.applicantMembers={[801]={{name="Sound-Away",class="MAGE",itemLevel=250,dungeonScore=2400}}}
+local sounds=S.soundCalls or 0
+G.Applicants:RefreshList();G.Applicants:RefreshList();Stubs.AdvanceClock(.13)
+T.eq(S.soundCalls,sounds+1,"one sound for a new applicant batch")
+G.Applicants:OnApplicantUpdated(801);Stubs.AdvanceClock(.13)
+T.eq(S.soundCalls,sounds+1,"sorting and duplicate member updates stay silent")
+T.eq(S.soundKit,47615);T.eq(S.soundChannel,"Master");T.eq(S.soundFinish,true)
+Stubs.FireEvent("SOUNDKIT_FINISHED",7);T.eq(G.Alerts.handle,nil);T.eq(#Stubs.FramesWithEvent("SOUNDKIT_FINISHED"),0);T.eq(Stubs.PendingTimers(),0,"native audio completion has no idle timer")
+G.Applicants:Clear();S.activeEntry=nil
+
+-- Lightweight specialization resolution stays within the member's native class.
+local resolvedID,resolvedName=G:ResolveMemberSpec({class="WARRIOR",specName="武器"})
+T.eq(resolvedID,71);T.eq(resolvedName,"武器")
+T.eq(G:ResolveMemberSpec({class="PALADIN",specName="武器"}),nil,"the same spec label is not guessed across classes")
+
+-- The last journal tier is the observed season subset, not another expansion.
+local nativeAvailable=C_LFGList.GetAvailableActivities
+local raidIDs={105,106,501,505,506,507,508,509,510,511,512,513}
+local selectedTier=2
+local raidJournals={{8101},{8102,8111,8112,8113,8199},{8199,8111,8112,8113}}
+local journalByMap={[4101]=8101,[4102]=8102,[4111]=8111,[4112]=8112,[4113]=8113,[0]=1206}
+local journalMapCalls={}
+EJ_GetCurrentTier=function() return selectedTier end
+EJ_GetNumTiers=function() return #raidJournals end
+EJ_GetTierInfo=function(id) return ({"The War Within","Midnight","Test season"})[id] end
+EJ_SelectTier=function(id) selectedTier=id end
+EJ_GetInstanceByIndex=function(index,isRaid) return isRaid and raidJournals[selectedTier][index] or nil end
+EJ_GetInstanceInfo=function() return nil end
+C_EncounterJournal.GetInstanceForGameMap=function(mapID) journalMapCalls[mapID]=(journalMapCalls[mapID] or 0)+1;return journalByMap[mapID] end
+C_LFGList.GetAvailableActivities=function(category,group,flags)
+ if category==3 then
+  if flags==68 then return {} end -- Real client behavior: raids do not use the dungeon season bit.
+  if flags==4 then return raidIDs end
+  if flags==5 then local ids={};for _,id in ipairs(raidIDs) do if id~=105 then ids[#ids+1]=id end end;return ids end
+  if flags==6 then return {105} end
+ end
+ if category==2 then if flags==68 then return {502,504} elseif flags==4 then return {502,504} else return {504} end end
+ if category==121 then return {601,602,603} end
+ return {}
+end
+ACTIVITY[105]={fullName="Previous expansion raid",shortName="Previous",categoryID=3,mapID=4101,groupFinderActivityGroupID=105,maxNumPlayers=30}
+ACTIVITY[106]={fullName="Earlier current expansion raid",shortName="Earlier",categoryID=3,mapID=4102,groupFinderActivityGroupID=106,maxNumPlayers=30,isCurrentRaidActivity=true}
+for groupIndex,ids in ipairs({{501,505,506},{507,508,509},{510,511,512}}) do
+ for difficultyIndex,id in ipairs(ids) do
+  ACTIVITY[id]={fullName="Season raid "..groupIndex,shortName="Season "..groupIndex,categoryID=3,mapID=4110+groupIndex,
+   groupFinderActivityGroupID=110+groupIndex,difficultyID=({14,15,16})[difficultyIndex],maxNumPlayers=30,isCurrentRaidActivity=true}
+ end
+end
+ACTIVITY[513]={fullName="World boss",shortName="World",categoryID=3,mapID=0,groupFinderActivityGroupID=513,maxNumPlayers=40,isCurrentRaidActivity=true}
+ACTIVITY[601]={fullName="First delve",shortName="First",categoryID=121,mapID=2664,groupFinderActivityGroupID=601}
+ACTIVITY[602]={fullName="Second delve",shortName="Second",categoryID=121,mapID=2933,groupFinderActivityGroupID=602}
+ACTIVITY[603]={fullName="New unknown delve",shortName="Unknown",categoryID=121,mapID=99999,groupFinderActivityGroupID=603}
+C_LFGList.GetAvailableCategories=function() return {2,3,121} end
+EXPANSION_NAME10="The War Within";EXPANSION_NAME11="Midnight"
+G.Catalog:Invalidate()
+local seasonRaids=G.Catalog:GetGroups("seasonRaid")
+T.eq(#seasonRaids,3,"season raids follow the last journal tier, excluding older current-expansion raids and world bosses")
+T.eq(#G:GetActivities("seasonRaid"),9,"season raids retain every native difficulty variant")
+for _,group in ipairs(seasonRaids) do
+ T.eq(#group.variants,3);T.eq(group.tier,2,"season membership does not overwrite the original expansion")
+end
+T.eq(selectedTier,2,"catalog enumeration restores the selected adventure-journal tier")
+local tiers=G.Catalog:GetTiers()
+T.eq(#tiers,2,"the season pseudo-tier is omitted from the expansion menu")
+T.eq(tiers[1].id,1);T.eq(tiers[2].id,2)
+T.eq(G.Catalog:GetTierName(2),"Midnight","labels use catalog tier identities")
+T.eq(G.Catalog:GetTierName(3),nil,"the season pseudo-tier is not an expansion label")
+T.eq(#G:GetActivities("3"),#raidIDs,"ordinary raid browsing includes the complete native PvE catalog")
+T.eq(G.Catalog:GetGroup("3",106).tier,2,"earlier raids remain selectable in the current expansion")
+T.eq(G.Catalog:GetGroup("3",111).tier,2,"current season raids also remain in their original expansion")
+T.eq(G.Catalog:GetGroup("3",105).tier,1)
+T.eq(G.Catalog:GetSearchFilter("seasonRaid"),4,"season raid search uses PvE plus explicit native activity IDs")
+T.ok(G.Catalog:Matches(G.Catalog:GetActivity(505),"seasonRaid",111,15),"season heroic selection retains its native activity")
+T.eq(G.Catalog:Matches(G.Catalog:GetActivity(106),"seasonRaid"),false,"isCurrentRaidActivity does not admit earlier raids")
+T.eq(G.Catalog:Matches(G.Catalog:GetActivity(513),"seasonRaid"),false,"map-zero world bosses are not season raid instances")
+T.eq(G.Catalog:GetActivity(513).journalID,nil,"map-zero world boss cannot acquire a fake Encounter Journal instance")
+T.eq(journalMapCalls[0],nil,"map-zero activity never reaches GetInstanceForGameMap")
+T.eq(G.Catalog:GetActivity(501).journalID,8111,"positive raid maps still resolve their real Encounter Journal instance")
+do
+ local activities=G.Catalog:GetActivities("seasonRaid")
+ local originals,reads={},0
+ for index,activity in ipairs(activities) do
+  originals[index]=activity
+  activities[index]=setmetatable({},{__index=function(_,key) if key=="id" then reads=reads+1 end;return activity[key] end})
+ end
+ for index=1,4 do T.ok(G.Catalog:Matches(G.Catalog:GetActivity(505),"seasonRaid",111,15)) end
+ for index,activity in ipairs(originals) do activities[index]=activity end
+ T.eq(reads,0,"repeated result matching does not rescan the cached activity array")
+end
+raidJournals[3][4]=8102
+G.Catalog:Invalidate()
+T.ok(G.Catalog:GetGroup("seasonRaid",106),"activity invalidation refreshes the journal season subset")
+T.eq(G.Catalog:GetGroup("seasonRaid",113),nil,"old season membership is released on invalidation")
+T.ok(G.Catalog:Matches(G.Catalog:GetActivity(106),"seasonRaid"),"new season membership is admitted after invalidation")
+T.eq(G.Catalog:Matches(G.Catalog:GetActivity(510),"seasonRaid"),false,"removed season membership cannot survive invalidation")
+T.eq(G.Catalog:GetActivityTier(G.Catalog:GetActivity(106)),2,"refreshed season duplicates still preserve expansion ownership")
+raidJournals[3][4]=8113
+G.Catalog:Invalidate()
+local seasonal=G:GetActivities("seasonDungeon")
+T.eq(#seasonal,2,"season maps restore all native available difficulty variants")
+T.eq(G.Catalog:GetGroups("seasonDungeon")[1].key,20,"season group keeps the native current-season context")
+T.eq(#G.Catalog:GetGroups("seasonDungeon")[1].variants,2,"all native available difficulties remain in the season context")
+T.eq(G.Catalog:GetGroupKey("2",G.Catalog:GetActivity(504)),20,"the original expansion keeps the same native group under its separate category context")
+T.eq(G.Catalog:GetSearchFilter("seasonDungeon"),4,"season search does not filter normal activities out with the season bit")
+T.ok(G.Catalog:Matches(G.Catalog:GetActivity(502),"seasonDungeon"))
+T.eq(G.Catalog:Matches(G.Catalog:GetActivity(502),"2"),false,"membership is scoped to the category, including overlapping seasonal activities")
+T.ok(G.Catalog:Matches(G.Catalog:GetActivity(504),"2"))
+T.ok(G.Catalog:Matches(G.Catalog:GetActivity(504),"seasonDungeon"),"the same native group retains all variants in each eligible context")
+
+do
+	-- Native input changes distinguish requests without inspecting restricted text.
+	local view={};G:Attach(view,"search");G.Search:EndBrowse()
+	local previousUI=A.UI;local lease={revision=1};A.UI={Native={searchLease=lease}}
+	local calls=#S.searchCalls
+	G.Search:Search("seasonRaid",501)
+	lease.revision=2;G.Search:Search("seasonRaid",501)
+	T.eq(#S.searchCalls,calls+1,"changed native input waits for the current request")
+	Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED");Stubs.AdvanceClock(0)
+	T.eq(#S.searchCalls,calls+2,"the same activity with newer native input is searched again")
+	T.eq(S.searchCalls[#S.searchCalls].activityFilter[1],501)
+	Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED");G:Detach(view);A.UI=previousUI
+end
+
+do
+	-- Leader searches clear native title tokens before asking for a broad result set.
+	local view={};G:Attach(view,"search");G.Search:EndBrowse()
+	S.nativeSearchText="title-only token"
+	local calls=#S.searchCalls
+	T.ok(G.Search:Search("seasonRaid",501,"leader","灵止光"))
+	T.eq(S.nativeSearchText,"","leader search clears native text before filtering public leader names")
+	T.eq(#S.searchCalls,calls+1)
+	Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED");G:Detach(view)
+end
+
+do
+	-- Rapid category changes keep one latest request; confirmed throttling backs off.
+	local view={};G:Attach(view,"search");G.Search:EndBrowse()
+	local oldTime=GetTime;local now=1000;GetTime=function() return now end
+	local function Advance(seconds) now=now+seconds;Stubs.AdvanceClock(seconds) end
+	local calls=#S.searchCalls;local applications=#G:GetApplications()
+	local previousUI=A.UI;A.UI={Native={searchLease={}}};S.nativeSearchText="12-15"
+	T.ok(G.Search:Search("seasonRaid"))
+	T.eq(S.searchCalls[#S.searchCalls].nativeSearchText,"12-15","an active native search lease preserves registered search text")
+	A.UI=previousUI
+	T.ok(G.Search:Search("seasonDungeon"),"a selection made during search is accepted for later")
+	T.ok(G.Search:Search("3",105),"only the latest selection remains queued")
+	T.eq(#S.searchCalls,calls+1,"inflight searches never overlap")
+	Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED");Advance(0)
+	T.eq(#S.searchCalls,calls+2)
+	T.eq(S.searchCalls[#S.searchCalls].activityFilter[1],105,"completion submits the latest native activity")
+	Fire("LFG_LIST_SEARCH_FAILED","throttled")
+	T.eq(G.Search:GetState(),"waiting")
+	T.ok(G:GetSearchError():find("自动",1,true),"waiting explains automatic recovery in Chinese")
+	T.ok(G.Search:Search("seasonRaid",501),"a newer selection replaces the throttled request")
+	Advance(4);T.eq(#S.searchCalls,calls+2,"throttling waits instead of immediately retrying")
+	Advance(1);T.eq(#S.searchCalls,calls+3);T.eq(S.searchCalls[#S.searchCalls].activityFilter[1],501)
+	Fire("LFG_LIST_SEARCH_FAILED","throttled")
+	Advance(9);T.eq(#S.searchCalls,calls+3,"repeated throttling extends the wait")
+	Advance(1);T.eq(#S.searchCalls,calls+4)
+	Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED");T.eq(G.Search:GetState(),"done")
+	G.Search:Search("seasonRaid");Fire("LFG_LIST_SEARCH_FAILED","timeout")
+	T.eq(G.Search:GetState(),"failed","other failures do not enter an automatic retry loop")
+	Advance(60);T.eq(#S.searchCalls,calls+5)
+	G.Search:Search("seasonRaid");Fire("LFG_LIST_SEARCH_FAILED","throttled")
+	local timer=G.Search.timer;T.ok(timer,"a throttled request owns one cancelable timer")
+	G:Detach(view);T.eq(timer.cancelled,true,"closing cancels the queued search")
+	Advance(60);T.eq(#S.searchCalls,calls+6,"a closed page never restarts its queued search")
+	T.eq(#G:GetApplications(),applications,"search scheduling does not change applications")
+	GetTime=oldTime
+end
+T.eq(G:GetActivities("2")[1].id,504,"original difficulty context uses non-season flags")
+local delves=G.Catalog:GetGroups("121")
+T.eq(#delves,3,"new unmapped delves remain visible")
+T.eq(delves[1].tier,1,"TWW tier comes from verified map expansion metadata")
+T.eq(delves[2].tier,2,"Midnight tier comes from verified map expansion metadata")
+T.eq(delves[3].tier,nil,"unknown map expansion is not inferred")
+do
+ local tierInfo=EJ_GetTierInfo
+ EJ_GetTierInfo=function(id) return id==2 and "Different journal label" or tierInfo(id) end
+ G.Catalog:Invalidate()
+ T.eq(G.Catalog:GetActivityTier(G.Catalog:GetActivity(602)),"exp11","verified delve expansion remains usable without a matching journal label")
+ T.eq(G.Catalog:GetTierName("exp11"),"Midnight","synthetic expansion IDs resolve through the catalog, not EJ_GetTierInfo")
+ EJ_GetTierInfo=tierInfo;G.Catalog:Invalidate()
+end
+
+do
+ ACTIVITY[999]={fullName="评级战场",shortName="评级",categoryID=9,isPvpActivity=true,isRatedPvpActivity=true,maxNumPlayers=0}
+ S.results[999]={activityIDs={999},name="Rated",numMembers=8,age=0,leaderOverallDungeonScore=3123,requiredDungeonScore=2500,requiredPvpRating=1800,leaderPvpRatingInfo={{bracket=4,rating=1620,activityName="评级战场",tier=3},{bracket=1,rating=2400,activityName="2v2",tier=4}}}
+ local r=G.Results:Capture(999)
+ T.eq(r.leaderRating,1620,"评级PvP跟随原生首项赛制评分，不取最高竞技分或大秘境分")
+ T.eq(r.requiredRating,1800,"PvP要求独立于大秘境要求")
+ T.eq(r.pvpRatingActivity,"评级战场")
+ T.eq(#r.pvpRatings,2,"队长所有原生赛制评分保留给详情")
+ S.results[999].leaderPvpRatingInfo[3]={bracket=3,rating=1550,activityName="5v5",tier=2}
+ r=G.Results:Capture(999);T.eq(r.pvpRatings[3].activityName,"5v5","尊重API真返回的旧赛制，不制造新活动")
+ S.results[999].leaderPvpRatingInfo[1].rating=0;r=G.Results:Capture(999);T.eq(r.leaderRating,0,"零分仍是有效评级")
+ S.results[999].leaderPvpRatingInfo={};r=G.Results:Capture(999);T.eq(r.leaderRating,nil,"缺少PvP评分不回退大秘境分")
+ ACTIVITY[999].isRatedPvpActivity=false;S.results[999].leaderPvpRatingInfo={{rating=1620}};r=G.Results:Capture(999);T.eq(r.leaderRating,nil,"非评级PvP不展示无关评分")
+ T.eq(r.pvpRatings,nil,"非评级结果不保留无关赛制列表")
+end
+
+do
+ ACTIVITY[997]={fullName="2v2",shortName="2v2",categoryID=4,isRatedPvpActivity=true,maxNumPlayers=2}
+ ACTIVITY[998]={fullName="3v3",shortName="3v3",categoryID=4,isPvpActivity=true,isRatedPvpActivity=true,maxNumPlayers=3}
+ S.results[997]={activityIDs={997},name="2v2 team",numMembers=1,age=1,leaderOverallDungeonScore=3900,leaderPvpRatingInfo={{bracket=1,rating=1450,activityName="2v2"},{bracket=2,rating=2400,activityName="3v3"}}}
+ S.results[998]={activityIDs={998},name="3v3 team",numMembers=1,age=2,leaderOverallDungeonScore=2100,leaderPvpRatingInfo={{bracket=2,rating=1900,activityName="3v3"},{bracket=1,rating=1200,activityName="2v2"}}}
+ S.players[997]={{name="ArenaLeader-Away",isLeader=true,classFilename="MAGE",dungeonScore=3900}}
+ S.resultIDs={997,998};G.Results:BeginSearch(990);G.Results:CommitResults(990);G.Search:SetFilters({sort="rating"})
+ T.same(G.Results:GetResults(),{998,997},"竞技场排序使用每条原生首列评级，不取最高赛制或M+评分")
+ local r=G.Results:GetResult(997);T.eq(r.ratingKind,"pvp");T.eq(r.leaderRating,1450);T.eq(r.pvpRatingActivity,"2v2")
+ local member=G.Results:GetDetails(r).members[1]
+ T.eq(member.rating,1450,"已知队长身份的成员详情使用同一原生PvP首列评分");T.eq(member.ratingKind,"pvp")
+ S.results[997].leaderPvpRatingInfo[1].rating=0;S.results[997].age=5
+ S.results[998].leaderPvpRatingInfo={};S.results[998].age=1
+ G.Results:OnResultUpdated(997);G.Results:OnResultUpdated(998)
+ T.same(G.Results:GetResults(),{997,998},"有效PvP零分排在缺失评分之前")
+
+ S.activeEntry={activityIDs={997},name="Arena listing"}
+ S.applicants={[950]={applicationStatus="applied",numMembers=2,displayOrderID=1}}
+ S.applicantMembers={[950]={{name="ArenaOne-Away",class="MAGE",itemLevel=250,pvpItemLevel=288,dungeonScore=3900},{name="ArenaTwo-Away",class="PRIEST",itemLevel=260,pvpItemLevel=285,dungeonScore=4100}}}
+ S.applicantPvp[997]={[950]={{bracket=1,rating=1500,activityName="2v2",tier=2}}}
+ S.applicantPvp[998]={[950]={{bracket=2,rating=1820,activityName="3v3",tier=3},{bracket=2,rating=1740,activityName="3v3",tier=2}}}
+ Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE",false)
+ local app=G.Applicants:GetApplicant(950);local first=app.members[1]
+ T.same(S.applicantPvpCalls[#S.applicantPvpCalls],{950,2,997},"申请者API使用招募activityIDs[1]与真实成员索引")
+ T.eq(first.rating,1500);T.eq(first.ratingKind,"pvp");T.eq(first.itemLevel,288,"PvP申请者使用PvP装等")
+ T.eq(app.members[2].rating,nil,"缺少当前竞技场赛制评分不回退M+分")
+ S.applicantPvp[997][950][1].rating=0;Fire("LFG_LIST_APPLICANT_UPDATED",950);T.eq(first.rating,0,"申请者零分保留")
+ S.activeEntry.activityIDs={998};Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE",false)
+ T.eq(app.members[1],first,"活动切换原地更新申请者");T.eq(first.rating,1820,"非新建的招募活动变更也重取新赛制")
+ T.eq(first.pvpRatingInfo.activityName,"3v3");T.eq(app.members[2].rating,1740)
+ local calls=#S.applicantPvpCalls
+ S.activeEntry.activityIDs={501};Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE",false)
+ T.eq(first.ratingKind,"dungeon");T.eq(first.rating,3900);T.eq(first.itemLevel,250)
+ T.eq(first.pvpRatingInfo,nil,"切回PvE不残留旧竞技场赛制");T.eq(#S.applicantPvpCalls,calls,"PvE不请求PvP申请者评分")
+ S.activeEntry=nil;Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE",false)
+end
+
+-- Recruitment data stays readable; only the native action owners enforce roles.
+do
+ local inGroup,isLeader,isAssistant=IsInGroup,UnitIsGroupLeader,UnitIsGroupAssistant
+ local role,grouped="member",true
+ IsInGroup=function(category) return grouped end
+ UnitIsGroupLeader=function(unit,category) return category~=LE_PARTY_CATEGORY_HOME or role=="leader" end
+ UnitIsGroupAssistant=function(unit,category) return category==LE_PARTY_CATEGORY_HOME and role=="assistant" end
+ local permissionChanges=0
+ local unsubscribe=G:Subscribe(function(kind) if kind=="permissions" then permissionChanges=permissionChanges+1 end end)
+ S.activeEntry={activityIDs={501},name="Shared listing",isCrossFactionListing=false}
+ S.applicants={
+  [981]={applicationStatus="applied",numMembers=2,displayOrderID=1,comment="One shared comment"},
+  [982]={applicationStatus="applied",numMembers=1,displayOrderID=2}}
+ S.applicantMembers={
+  [981]={{name="First-Away",class="MAGE"},{name="Second-Away",class="PRIEST"}},
+  [982]={{name="Third-Away",class="WARRIOR"}}}
+ Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE",true);Fire("GROUP_ROSTER_UPDATE")
+ T.eq(G:HasViews(),false,"permission events remain active after every page closes")
+ T.eq(#Stubs.FramesWithEvent("PARTY_LEADER_CHANGED"),1,"an active listing observes leadership changes without a page")
+ T.eq(G:CanManageApplicants(),false,"instance leadership does not grant home-group applicant management")
+ T.eq(G:CanManageListing(),false,"ordinary home-group members cannot change the listing")
+ local refreshes,reads,infoReads=S.applicantRefreshCalls or 0,S.applicantListReads,S.applicantInfoReads
+ T.ok(G:RefreshApplicants(),"ordinary members may request the native applicant refresh")
+ T.eq(S.applicantRefreshCalls,refreshes+1)
+ T.eq(S.applicantListReads,reads+1,"read-only viewers still read the native full ID list")
+ T.eq(S.applicantInfoReads,infoReads+2,"every returned applicant is read regardless of the viewer role")
+ T.same(G:GetApplicants(),{981,982});T.eq(#G:GetApplicant(981).members,2)
+ T.eq(G:GetApplicant(981).comment,"One shared comment")
+ local invites,declines,changes,removes=#S.inviteCalls,S.declineCalls or 0,#S.createDataHistory,S.removeCalls
+ T.eq(G:Invite(981),false);T.eq(G:Decline(982),false)
+ T.eq(#S.inviteCalls,invites);T.eq(S.declineCalls or 0,declines)
+ T.eq(G:GetApplicant(981).acting,nil,"a rejected read-only action does not enter a pending state")
+ T.eq(G:Publish({activityID=501}),false);T.eq(G:Update({activityID=501,isCrossFactionListing=true}),false);T.eq(G:RemoveListing(),false)
+ T.eq(#S.createDataHistory,changes);T.eq(S.removeCalls,removes,"read-only and stale delist calls never reach native APIs")
+ local before=permissionChanges
+ Fire("GROUP_ROSTER_UPDATE");T.eq(permissionChanges,before,"unchanged permissions do not rebuild applicant controls")
+ role="assistant";Fire("GROUP_ROSTER_UPDATE")
+ T.eq(permissionChanges,before+1,"promotion updates permission consumers")
+ T.ok(G:CanManageApplicants());T.eq(G:CanManageListing(),false,"assistants manage applicants but cannot edit the listing")
+ T.ok(G:Invite(981));T.ok(G:Decline(982));T.eq(#S.inviteCalls,invites+1);T.eq(S.declineCalls,declines+1)
+ T.eq(G:Update({activityID=501}),false);T.eq(G:RemoveListing(),false);T.eq(S.removeCalls,removes)
+ local staleInvite,staleDecline=G.Invite,G.Decline
+ role="member";Fire("GROUP_ROSTER_UPDATE")
+ local ok,reason=staleInvite(G,981)
+ T.eq(ok,false);T.eq(reason,G.L.applicantPermission,"lost permissions win over an older button's pending record")
+ T.eq(staleDecline(G,982),false);T.eq(#S.inviteCalls,invites+1);T.eq(S.declineCalls,declines+1)
+ T.same(G:GetApplicants(),{981,982},"losing management rights preserves all returned applicant records")
+ role="leader";Fire("PARTY_LEADER_CHANGED")
+ T.ok(G:CanManageApplicants());T.ok(G:CanManageListing())
+ T.ok(G:RemoveListing());Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE",false)
+ T.ok(G:Publish({activityID=501,isCrossFactionListing=false}),"the home-group leader can publish")
+ T.ok(G:Update({activityID=501,requiredItemLevel=222,isCrossFactionListing=false}))
+ T.eq(S.createDataHistory[#S.createDataHistory].op,"update")
+ T.eq(G:GetListing().requiredItemLevel,222)
+ T.ok(G:RemoveListing());Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE",false)
+ T.eq(#Stubs.FramesWithEvent("PARTY_LEADER_CHANGED"),0,"finished recruitment releases its leadership listener")
+ grouped=false;role="member"
+ T.ok(G:CanManageApplicants(),"solo publishers retain applicant ownership before anyone joins")
+ T.ok(G:CanManageListing());T.ok(G:Publish({activityID=501}),"solo publishing remains available")
+ T.ok(G:RemoveListing());Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE",false)
+ local requested=S.applicantRefreshCalls
+ T.eq(G:RefreshApplicants(),false);T.eq(S.applicantRefreshCalls,requested,"no listing means no native applicant refresh request")
+ unsubscribe();IsInGroup,UnitIsGroupLeader,UnitIsGroupAssistant=inGroup,isLeader,isAssistant
+ G:RefreshPermissions();S.applicants={};S.applicantMembers={}
+end
+
+-- Native applicant bursts update business state now and publish one display refresh.
+do
+ local applicants,members=S.applicants,S.applicantMembers
+ S.activeEntry={activityIDs={501},name="Burst listing"};S.applicants={};S.applicantMembers={}
+ Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE",true)
+ for id=1,50 do
+  S.applicants[id]={applicationStatus="applied",numMembers=5,displayOrderID=id}
+  S.applicantMembers[id]={}
+  for index=1,5 do S.applicantMembers[id][index]={name="Burst"..id.."_"..index.."-Away",class="WARRIOR",dungeonScore=2000} end
+ end
+ G:RefreshApplicants();G:GetApplicants()
+ local updates,sorts=0,0
+ local sort=table.sort
+ table.sort=function(...)
+  if debug.getinfo(2,"S").short_src:find("LycheeGroup_Group/Applicants.lua",1,true) then sorts=sorts+1 end
+  return sort(...)
+ end
+ local unsubscribe=G:Subscribe(function(kind) if kind=="applicants" then updates=updates+1;G:GetApplicants() end end)
+ for id=1,50 do
+  S.applicants[id].displayOrderID=51-id
+  if id==1 then S.applicants[id].pendingApplicationStatus="invited" end
+  if id==2 then S.applicantMembers[id][1].specID=71 end
+  Fire("LFG_LIST_APPLICANT_UPDATED",id)
+ end
+ Fire("LFG_LIST_APPLICANT_LIST_UPDATED")
+ T.eq(G:GetApplicant(1).pendingStatus,"invited","pending state is readable before the display task runs")
+ T.eq(G:GetApplicant(2).members[1].specID,71,"member metadata is immediately current")
+ T.eq(G:Invite(1),false,"a queued repaint never permits another action during native pending state")
+ T.eq(updates,0,"a same-frame event burst defers display notifications")
+ T.eq(Stubs.PendingTimers(),1,"the entire burst owns one pending display task")
+ Stubs.AdvanceClock(0)
+ T.eq(updates,1);T.eq(sorts,1,"the consumer sorts the full applicant list once for the burst")
+ local expected={};for id=50,1,-1 do expected[#expected+1]=id end
+ T.eq(table.concat(G:GetApplicants(),","),table.concat(expected,","),"all fifty batches retain the native display order")
+ T.eq(#G:GetApplicant(50).members,5,"all members of the final batch remain present")
+ local invite=C_LFGList.InviteApplicant
+ C_LFGList.InviteApplicant=function(id)
+  invite(id);S.applicants[id].pendingApplicationStatus="invited";Fire("LFG_LIST_APPLICANT_UPDATED",id)
+ end
+ Fire("LFG_LIST_APPLICANT_UPDATED",2);local before=updates
+ T.ok(G:Invite(2));T.eq(updates,before+1,"inviting publishes the resulting state synchronously")
+ T.eq(G:GetApplicant(2).pendingStatus,"invited","a synchronous native response is retained")
+ T.eq(Stubs.PendingTimers(),0,"the action consumes any pending display task")
+ Stubs.AdvanceClock(0);T.eq(updates,before+1,"no stale repaint follows the synchronous action")
+ C_LFGList.InviteApplicant=invite
+ Fire("LFG_LIST_APPLICANT_UPDATED",3);before=updates
+ T.ok(G:Decline(3));T.eq(updates,before+1,"declining also publishes synchronously")
+ T.eq(Stubs.PendingTimers(),0)
+ Fire("LFG_LIST_APPLICANT_UPDATED",4);before=updates
+ G.Applicants:Clear();T.eq(updates,before+1,"clear publishes the empty state synchronously")
+ T.eq(Stubs.PendingTimers(),0,"clear cancels the pending display task")
+ Stubs.AdvanceClock(0);T.eq(updates,before+1);T.eq(#G:GetApplicants(),0)
+ unsubscribe();table.sort=sort
+ S.activeEntry=nil;Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE",false)
+ S.applicants,S.applicantMembers=applicants,members
+end
+
+-- Hidden applications reuse their containers while every native refresh stays fresh.
+do
+ A.db.autoJoin=false
+ ACTIVITY[9002]={fullName="Private application",shortName="",categoryID=2,mapID=0,maxNumPlayers=5,groupFinderActivityGroupID=9002,difficultyID=0}
+ S.results[9003]={activityIDs={9002},name="Before refresh",leaderName="PrivateLeader-Away",numMembers=2}
+ S.players[9003]={
+  {name="PrivateLeader-Away",classFilename="WARRIOR",specName="Arms",isLeader=true},
+  {name="PrivateMember-Away",classFilename="PALADIN",specName="Retribution"}}
+ S.applications={9003};S.appStatus={[9003]="applied"};S.appPending={}
+ G.Results:BeginSearch(20000);G.Applications:SyncAll()
+ local app=G:GetApplication(9003);local result,details=app.result,app.result.details
+ local members,reads=details.members,S.playerReads
+ T.eq(G:GetResult(9003),nil,"the application owns its snapshot after the browse store is cleared")
+ S.results[9003].name="After refresh"
+ S.players[9003][1]={name="PrivateLeader-Away",classFilename="PALADIN",specName="Holy",isLeader=true}
+ S.players[9003][2]={name="Replacement-Away",classFilename="WARRIOR",specName="Fury"}
+ G.Applications:SyncAll()
+ T.eq(app.result,result,"an application without a search-store record reuses its result container")
+ T.eq(app.result.details,details,"private refreshes reuse the detail container")
+ T.eq(app.result.details.members,members,"private refreshes reuse the members array")
+ T.eq(S.playerReads,reads+2,"container reuse still reads every native member, even in the same frame")
+ T.eq(app.name,"After refresh");T.eq(app.leaderClass,"PALADIN")
+ T.eq(members[1].specName,"Holy");T.eq(members[2].name,"Replacement-Away")
+ G.Results:QueueUpdate(9003)
+ T.eq(G.Results.updatePending,nil,"a private application is not covered by the cleared search-store update queue")
+ reads=S.playerReads;S.players[9003][2].specName="Arms"
+ Fire("LFG_LIST_APPLICATION_STATUS_UPDATED",9003,"applied","applied")
+ T.eq(S.playerReads,reads+2,"application status events also refresh all same-count member details")
+ T.eq(members[2].specName,"Arms")
+ S.players[9003][1].isLeader=false
+ G.Applications:SyncAll()
+ T.eq(app.leaderClass,nil,"an unavailable leader class cannot retain the previous snapshot's color")
+ S.applications={};G.Applications:SyncAll();G.Applications:ReleaseFinished()
+ S.results[9003],S.players[9003],ACTIVITY[9002]=nil,nil,nil
+end
+
+-- Reuse only a known identity at the same position; tooltip-held identities stay stable.
+do
+ ACTIVITY[9004]={fullName="Identity arena",shortName="",categoryID=7,mapID=0,maxNumPlayers=5,isPvpActivity=true,isRatedPvpActivity=true}
+ ACTIVITY[9005]={fullName="Identity dungeon",shortName="",categoryID=2,mapID=0,maxNumPlayers=5}
+ S.results[9004]={activityIDs={9004},name="Identity snapshot",leaderName="Stable-Away",numMembers=2,numCharFriends=1,leaderPvpRatingInfo={{bracket=2,rating=1400,activityName="3v3"}}}
+ S.players[9004]={
+  {name="Stable-Away",classFilename="WARRIOR",className="Warrior",specName="Arms",assignedRole="DAMAGER",isLeader=true,areaName="Before",lfgRoles=4,isLeaver=true},
+  {name="Second-Away",classFilename="PRIEST",className="Priest",specName="Holy",assignedRole="HEALER"}}
+ S.friends[9004]={character={"Stable-Away"}}
+ G.Results:BeginSearch(20001);S.resultIDs={9004};G.Results:CommitResults(20001)
+ local details=G:GetResultDetails(9004);local held,second=details.members[1],details.members[2]
+ T.eq(held.rating,1400);T.eq(held.isCharFriend,true)
+ S.results[9004].activityIDs={9005};S.results[9004].numCharFriends=0
+ S.players[9004]={
+  {name="Stable-Away",classFilename="WARRIOR",className="Warrior",specName="Fury",assignedRole="DAMAGER",isLeader=true,lfgRoles=4},
+  {name="Second-Away",classFilename="PRIEST",className="Priest",specName="Discipline",assignedRole="HEALER"}}
+ G.Results:OnResultUpdated(9004);G:GetResultDetails(9004)
+ T.ok(details.members[1]==held,"fresh native tables reuse the same explicit identity at the same position")
+ T.eq(held.specName,"Fury");T.eq(held.lfgRoles,4,"all native fields survive the copy")
+ T.eq(held.areaName,nil,"native fields that disappear do not survive in the reused member")
+ T.eq(held.isLeaver,nil);T.eq(held.isCharFriend,false);T.eq(held.ratingKind,"dungeon")
+ T.eq(held.rating,nil);T.eq(held.pvpRatingInfo,nil,"old PvP metadata is cleared when the activity changes")
+ S.players[9004][1]=held -- Existing fixtures may return the already normalized object.
+ G.Results:OnResultUpdated(9004);G:GetResultDetails(9004)
+ T.eq(held.name,"Stable-Away");T.eq(held.classFilename,"WARRIOR","a native object aliased to the cached member is never wiped before copying itself")
+ S.players[9004]={
+  {name="Second-Away",classFilename="PRIEST",specName="Discipline"},
+  {name="Stable-Away",classFilename="WARRIOR",specName="Protection"}}
+ G.Results:OnResultUpdated(9004);G:GetResultDetails(9004)
+ T.ok(details.members[1]~=held and details.members[2]~=second,"reordering replaces slots instead of changing their previous identities")
+ T.eq(held.name,"Stable-Away");T.eq(held.specName,"Fury","a tooltip-held member is not rewritten as a different slot's player")
+ S.players[9004]={{name="Unknown",classFilename="MAGE",specName="Frost"}}
+ S.results[9004].numMembers=1;G.Results:OnResultUpdated(9004);G:GetResultDetails(9004)
+ local unknown=details.members[1];T.eq(#details.members,1,"a smaller native roster truncates the reused array")
+ S.players[9004]={{name="Unknown",classFilename="MAGE",specName="Fire"}}
+ G.Results:OnResultUpdated(9004);G:GetResultDetails(9004)
+ T.ok(details.members[1]~=unknown,"an incomplete player identity cannot authorize object reuse")
+ T.eq(unknown.specName,"Frost");T.eq(details.members[1].specName,"Fire")
+ G.Results:BeginSearch(20002)
+ S.results[9004],S.players[9004],S.friends[9004],ACTIVITY[9004],ACTIVITY[9005]=nil,nil,nil,nil,nil
+end
+
+_G.LycheeGroupDB = nil
+_G.LycheeGroupGroupDB = nil
+_G.LycheeGroupCharacterDB = nil
+_G.LycheeGroup = nil
+_G.C_LFGList = nil
+_G.C_ChallengeMode = nil

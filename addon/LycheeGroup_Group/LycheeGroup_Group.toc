@@ -1,0 +1,26 @@
+## Interface: 120105
+## Title: Lychee LFG · Search & Listings
+## Author: FollenFang
+## Title-zhCN: |cffD53C49荔枝|r组队 · 搜索与招募
+## Notes: Search, applications, listings, group history.
+## Notes-zhCN: 队伍搜索、申请、招募、历史队友。
+## IconTexture: Interface\AddOns\LycheeGroup\Media\addon-logo.tga
+## Dependencies: LycheeGroup
+## LoadOnDemand: 1
+## Version: 1.0.0
+## SavedVariables: LycheeGroupGroupDB
+## SavedVariablesPerCharacter: LycheeGroupCharacterDB
+Locale.lua
+Libs\LibStub\LibStub.lua
+Libs\LibSpecialization\LibSpecialization.lua
+Group.lua
+Roster.lua
+Game.lua
+Catalog.lua
+Search.lua
+Results.lua
+Applications.lua
+Listing.lua
+Alerts.lua
+Applicants.lua
+History.lua

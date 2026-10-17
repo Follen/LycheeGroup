@@ -1,0 +1,3656 @@
+{
+  "checks": {
+    "allPackagesLoaded": true,
+    "knownOwnersIdle": true,
+    "nativeDraftPreserved": true,
+    "notesUnchanged": true,
+    "pageFramesReused": true,
+    "poolsReused": true,
+    "under20MB": true
+  },
+  "codec": [
+    {
+      "decodeMs": 111.91229999065399,
+      "encodeMs": 135.0203000307083,
+      "encodedBytes": 481719
+    },
+    {
+      "decodeMs": 112.22610002756119,
+      "encodeMs": 123.57690000534058,
+      "encodedBytes": 481719
+    },
+    {
+      "decodeMs": 115.84380000829697,
+      "encodeMs": 117.60430002212524,
+      "encodedBytes": 481719
+    }
+  ],
+  "elapsedSeconds": 64.91600000002654,
+  "fixture": {
+    "applicantGenerationHeapDeltaKB": -24399.9755859375,
+    "codecGenerationHeapDeltaKB": 386.1845703125,
+    "raidGenerationHeapDeltaKB": 4648.1953125,
+    "reasonBytes": 198,
+    "visiblePreviewResults": 100
+  },
+  "notesAtStart": 1,
+  "ok": true,
+  "operations": {
+    "applicantRefresh": 24,
+    "applicantScroll": 98,
+    "applicantTips": 49,
+    "pageClose": 36,
+    "pageOpen": 36,
+    "raidScroll": 95,
+    "raidTips": 47,
+    "transferOpen": 12
+  },
+  "packages": [
+    "LycheeGroup",
+    "LycheeGroup_Group",
+    "LycheeGroup_Notes",
+    "LycheeGroup_UI"
+  ],
+  "peakBytes": 14024576,
+  "peaks": {
+    "closed": 14024576,
+    "notes_codec_1000": 14024576,
+    "page_lifetimes": 5730050,
+    "preview_100_groups_40_members": 7779831,
+    "preview_50_applicant_batches": 3935245
+  },
+  "retainedKB": 2414.5078125,
+  "sampleCount": 170,
+  "samples": [
+    {
+      "addonKB": [
+        791.9794921875,
+        801.857421875,
+        40.61328125,
+        2030.7900390625
+      ],
+      "addonTotalKB": 3665.240234375,
+      "atSeconds": 0,
+      "counterRefreshMs": 84.5611999630928,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 416950.3583984375,
+      "phase": "page_lifetimes",
+      "tag": "before"
+    },
+    {
+      "addonKB": [
+        792.1591796875,
+        801.857421875,
+        40.61328125,
+        2031.9150390625
+      ],
+      "addonTotalKB": 3666.544921875,
+      "atSeconds": 0.1309999999939464,
+      "counterRefreshMs": 83.04460000991821,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 416994.2412109375,
+      "phase": "page_lifetimes",
+      "tag": "page_open_settings"
+    },
+    {
+      "addonKB": [
+        792.1591796875,
+        801.857421875,
+        40.61328125,
+        2032.4775390625
+      ],
+      "addonTotalKB": 3667.107421875,
+      "atSeconds": 0.5569999999715947,
+      "counterRefreshMs": 84.87949997186661,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 417053.8095703125,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        792.7236328125,
+        801.857421875,
+        42.83984375,
+        2087.8310546875
+      ],
+      "addonTotalKB": 3725.251953125,
+      "atSeconds": 0.779999999969732,
+      "counterRefreshMs": 82.12339997291565,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 417175.296875,
+      "phase": "page_lifetimes",
+      "tag": "page_open_notes"
+    },
+    {
+      "addonKB": [
+        792.7236328125,
+        801.857421875,
+        43.34765625,
+        2088.2998046875
+      ],
+      "addonTotalKB": 3726.228515625,
+      "atSeconds": 1.1340000000200234,
+      "counterRefreshMs": 82.94879996776581,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 417210.6953125,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        830.0517578125,
+        807.146484375,
+        43.76171875,
+        2106.7919921875
+      ],
+      "addonTotalKB": 3787.751953125,
+      "atSeconds": 1.4550000000162981,
+      "counterRefreshMs": 81.04280000925064,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 417314.2802734375,
+      "phase": "page_lifetimes",
+      "tag": "page_open_create"
+    },
+    {
+      "addonKB": [
+        830.0517578125,
+        886.271484375,
+        43.76171875,
+        2112.9248046875
+      ],
+      "addonTotalKB": 3873.009765625,
+      "atSeconds": 1.6790000000037253,
+      "counterRefreshMs": 82.41650003194809,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 417890.0849609375,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        831.0439453125,
+        886.271484375,
+        43.76171875,
+        2114.8310546875
+      ],
+      "addonTotalKB": 3875.908203125,
+      "atSeconds": 2.1010000000242144,
+      "counterRefreshMs": 93.16190004348755,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 417941.7255859375,
+      "phase": "page_lifetimes",
+      "tag": "page_open_settings"
+    },
+    {
+      "addonKB": [
+        831.0439453125,
+        886.271484375,
+        43.76171875,
+        2114.8310546875
+      ],
+      "addonTotalKB": 3875.908203125,
+      "atSeconds": 2.201999999990221,
+      "counterRefreshMs": 86.15110003948212,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 417953.3583984375,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        831.0439453125,
+        886.271484375,
+        43.76171875,
+        2115.3935546875
+      ],
+      "addonTotalKB": 3876.470703125,
+      "atSeconds": 2.727000000013504,
+      "counterRefreshMs": 89.34930002689362,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 418023.43359375,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        831.2236328125,
+        886.271484375,
+        45.76953125,
+        2125.4951171875
+      ],
+      "addonTotalKB": 3888.759765625,
+      "atSeconds": 2.727000000013504,
+      "counterRefreshMs": 81.98650002479553,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 418036.16015625,
+      "phase": "page_lifetimes",
+      "tag": "page_open_notes"
+    },
+    {
+      "addonKB": [
+        831.2236328125,
+        886.271484375,
+        45.76953125,
+        2126.0576171875
+      ],
+      "addonTotalKB": 3889.322265625,
+      "atSeconds": 3.305999999982305,
+      "counterRefreshMs": 91.67890000343323,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 418100.94921875,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        868.5517578125,
+        891.560546875,
+        46.18359375,
+        2143.9873046875
+      ],
+      "addonTotalKB": 3950.283203125,
+      "atSeconds": 3.4380000000237487,
+      "counterRefreshMs": 86.61489999294281,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 418172.11328125,
+      "phase": "page_lifetimes",
+      "tag": "page_open_create"
+    },
+    {
+      "addonKB": [
+        868.5517578125,
+        970.685546875,
+        46.18359375,
+        2150.6826171875
+      ],
+      "addonTotalKB": 4036.103515625,
+      "atSeconds": 3.8690000000060536,
+      "counterRefreshMs": 79.84139996767044,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 418780.5517578125,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        869.5439453125,
+        970.685546875,
+        46.18359375,
+        2152.0263671875
+      ],
+      "addonTotalKB": 4038.439453125,
+      "atSeconds": 4.086999999999534,
+      "counterRefreshMs": 83.40339994430542,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 418808.9736328125,
+      "phase": "page_lifetimes",
+      "tag": "page_open_settings"
+    },
+    {
+      "addonKB": [
+        869.5439453125,
+        970.685546875,
+        46.18359375,
+        2152.0263671875
+      ],
+      "addonTotalKB": 4038.439453125,
+      "atSeconds": 4.411000000021886,
+      "counterRefreshMs": 81.2364000082016,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 418843.3876953125,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        869.7236328125,
+        970.685546875,
+        48.41015625,
+        2166.5029296875
+      ],
+      "addonTotalKB": 4055.322265625,
+      "atSeconds": 4.730999999970663,
+      "counterRefreshMs": 84.72240000963211,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 418906.458984375,
+      "phase": "page_lifetimes",
+      "tag": "page_open_notes"
+    },
+    {
+      "addonKB": [
+        869.7236328125,
+        970.685546875,
+        48.41015625,
+        2166.5029296875
+      ],
+      "addonTotalKB": 4055.322265625,
+      "atSeconds": 4.956000000005588,
+      "counterRefreshMs": 86.1593000292778,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 418929.755859375,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        907.0517578125,
+        975.974609375,
+        48.82421875,
+        2184.9951171875
+      ],
+      "addonTotalKB": 4116.845703125,
+      "atSeconds": 5.380999999993946,
+      "counterRefreshMs": 83.53719997406006,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 419080.6572265625,
+      "phase": "page_lifetimes",
+      "tag": "page_open_create"
+    },
+    {
+      "addonKB": [
+        907.0517578125,
+        975.974609375,
+        48.82421875,
+        2184.9951171875
+      ],
+      "addonTotalKB": 4116.845703125,
+      "atSeconds": 5.507999999972526,
+      "counterRefreshMs": 79.34229999780655,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 419092.4150390625,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        907.0517578125,
+        1055.099609375,
+        48.82421875,
+        2191.6904296875
+      ],
+      "addonTotalKB": 4202.666015625,
+      "atSeconds": 6.026000000012573,
+      "counterRefreshMs": 81.41839998960495,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 419738.0078125,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        908.0439453125,
+        1055.099609375,
+        48.82421875,
+        2193.0341796875
+      ],
+      "addonTotalKB": 4205.001953125,
+      "atSeconds": 6.026000000012573,
+      "counterRefreshMs": 80.33109998703003,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 419740.9453125,
+      "phase": "page_lifetimes",
+      "tag": "page_open_settings"
+    },
+    {
+      "addonKB": [
+        908.0439453125,
+        1055.099609375,
+        48.82421875,
+        2193.5966796875
+      ],
+      "addonTotalKB": 4205.564453125,
+      "atSeconds": 6.597000000008848,
+      "counterRefreshMs": 86.33939999341965,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 419817.091796875,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        908.2236328125,
+        1055.099609375,
+        50.83203125,
+        2203.6982421875
+      ],
+      "addonTotalKB": 4217.853515625,
+      "atSeconds": 6.724999999976717,
+      "counterRefreshMs": 88.95229995250702,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 419889.310546875,
+      "phase": "page_lifetimes",
+      "tag": "page_open_notes"
+    },
+    {
+      "addonKB": [
+        908.2236328125,
+        1055.099609375,
+        50.83203125,
+        2204.2607421875
+      ],
+      "addonTotalKB": 4218.416015625,
+      "atSeconds": 7.157000000006519,
+      "counterRefreshMs": 80.8672000169754,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 419938.708984375,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        945.5517578125,
+        1060.388671875,
+        51.24609375,
+        2222.1904296875
+      ],
+      "addonTotalKB": 4279.376953125,
+      "atSeconds": 7.37599999998929,
+      "counterRefreshMs": 81.03130000829697,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 420020.693359375,
+      "phase": "page_lifetimes",
+      "tag": "page_open_create"
+    },
+    {
+      "addonKB": [
+        945.5517578125,
+        1139.513671875,
+        51.24609375,
+        2228.3232421875
+      ],
+      "addonTotalKB": 4364.634765625,
+      "atSeconds": 7.7000000000116415,
+      "counterRefreshMs": 80.18079996109009,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 420617.349609375,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        946.5439453125,
+        1139.513671875,
+        51.24609375,
+        2230.2294921875
+      ],
+      "addonTotalKB": 4367.533203125,
+      "atSeconds": 8.018999999971129,
+      "counterRefreshMs": 90.02020001411438,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 420657.451171875,
+      "phase": "page_lifetimes",
+      "tag": "page_open_settings"
+    },
+    {
+      "addonKB": [
+        946.5439453125,
+        1139.513671875,
+        51.24609375,
+        2230.2294921875
+      ],
+      "addonTotalKB": 4367.533203125,
+      "atSeconds": 8.25099999998929,
+      "counterRefreshMs": 82.24819999933243,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 420680.748046875,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        946.7236328125,
+        1139.513671875,
+        53.47265625,
+        2244.7060546875
+      ],
+      "addonTotalKB": 4384.416015625,
+      "atSeconds": 8.670999999972992,
+      "counterRefreshMs": 87.3134999871254,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 420754.97265625,
+      "phase": "page_lifetimes",
+      "tag": "page_open_notes"
+    },
+    {
+      "addonKB": [
+        946.7236328125,
+        1139.513671875,
+        53.47265625,
+        2244.7060546875
+      ],
+      "addonTotalKB": 4384.416015625,
+      "atSeconds": 8.799999999988358,
+      "counterRefreshMs": 82.82590001821518,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 420767.08984375,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        946.7236328125,
+        1139.513671875,
+        53.47265625,
+        2244.9404296875
+      ],
+      "addonTotalKB": 4384.650390625,
+      "atSeconds": 9.321999999985565,
+      "counterRefreshMs": 85.35110002756119,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 420826.98828125,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        984.0517578125,
+        1144.802734375,
+        53.88671875,
+        2263.1982421875
+      ],
+      "addonTotalKB": 4445.939453125,
+      "atSeconds": 9.321999999985565,
+      "counterRefreshMs": 82.50450003147125,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 420884.17578125,
+      "phase": "page_lifetimes",
+      "tag": "page_open_create"
+    },
+    {
+      "addonKB": [
+        984.0517578125,
+        1223.927734375,
+        53.88671875,
+        2270.0029296875
+      ],
+      "addonTotalKB": 4531.869140625,
+      "atSeconds": 9.900000000023283,
+      "counterRefreshMs": 83.59349995851517,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 421510.009765625,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        985.0439453125,
+        1223.927734375,
+        53.88671875,
+        2271.2373046875
+      ],
+      "addonTotalKB": 4534.095703125,
+      "atSeconds": 10.023999999975786,
+      "counterRefreshMs": 83.23229998350143,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 421523.830078125,
+      "phase": "page_lifetimes",
+      "tag": "page_open_settings"
+    },
+    {
+      "addonKB": [
+        985.0439453125,
+        1223.927734375,
+        53.88671875,
+        2271.7998046875
+      ],
+      "addonTotalKB": 4534.658203125,
+      "atSeconds": 10.449000000022352,
+      "counterRefreshMs": 85.26639997959137,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 421573.361328125,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        985.2236328125,
+        1223.927734375,
+        55.89453125,
+        2281.9013671875
+      ],
+      "addonTotalKB": 4546.947265625,
+      "atSeconds": 10.672000000020489,
+      "counterRefreshMs": 84.83100003004074,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 421620.7265625,
+      "phase": "page_lifetimes",
+      "tag": "page_open_notes"
+    },
+    {
+      "addonKB": [
+        985.2236328125,
+        1223.927734375,
+        55.89453125,
+        2281.9013671875
+      ],
+      "addonTotalKB": 4546.947265625,
+      "atSeconds": 11,
+      "counterRefreshMs": 84.29720002412796,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 421659.765625,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1022.5517578125,
+        1229.216796875,
+        56.30859375,
+        2300.3935546875
+      ],
+      "addonTotalKB": 4608.470703125,
+      "atSeconds": 11.327999999979511,
+      "counterRefreshMs": 82.78799998760223,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 421777.4609375,
+      "phase": "page_lifetimes",
+      "tag": "page_open_create"
+    },
+    {
+      "addonKB": [
+        1022.5517578125,
+        1308.341796875,
+        56.30859375,
+        2306.5263671875
+      ],
+      "addonTotalKB": 4693.728515625,
+      "atSeconds": 11.554000000003725,
+      "counterRefreshMs": 79.05419999361038,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 422353.6875,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1023.5439453125,
+        1308.341796875,
+        56.30859375,
+        2308.4326171875
+      ],
+      "addonTotalKB": 4696.626953125,
+      "atSeconds": 11.972000000008848,
+      "counterRefreshMs": 82.90659999847412,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 422414.419921875,
+      "phase": "page_lifetimes",
+      "tag": "page_open_settings"
+    },
+    {
+      "addonKB": [
+        1023.5439453125,
+        1308.341796875,
+        56.30859375,
+        2308.4326171875
+      ],
+      "addonTotalKB": 4696.626953125,
+      "atSeconds": 12.096000000019558,
+      "counterRefreshMs": 80.10130000114441,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 422426.537109375,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1023.5439453125,
+        1308.341796875,
+        56.30859375,
+        2308.9951171875
+      ],
+      "addonTotalKB": 4697.189453125,
+      "atSeconds": 12.614000000001397,
+      "counterRefreshMs": 86.24930000305176,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 422491.388671875,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1023.7236328125,
+        1308.341796875,
+        58.53515625,
+        2322.9091796875
+      ],
+      "addonTotalKB": 4713.509765625,
+      "atSeconds": 12.614000000001397,
+      "counterRefreshMs": 85.12260001897812,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 422507.818359375,
+      "phase": "page_lifetimes",
+      "tag": "page_open_notes"
+    },
+    {
+      "addonKB": [
+        1023.7236328125,
+        1308.341796875,
+        58.53515625,
+        2323.1435546875
+      ],
+      "addonTotalKB": 4713.744140625,
+      "atSeconds": 13.192999999970198,
+      "counterRefreshMs": 81.47819995880127,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 422577.68359375,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1061.0517578125,
+        1313.630859375,
+        58.94921875,
+        2341.4013671875
+      ],
+      "addonTotalKB": 4775.033203125,
+      "atSeconds": 13.313000000023749,
+      "counterRefreshMs": 79.72420001029968,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 422657.4072265625,
+      "phase": "page_lifetimes",
+      "tag": "page_open_create"
+    },
+    {
+      "addonKB": [
+        1061.0517578125,
+        1392.755859375,
+        58.94921875,
+        2348.0966796875
+      ],
+      "addonTotalKB": 4860.853515625,
+      "atSeconds": 13.73499999998603,
+      "counterRefreshMs": 81.45160001516342,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 423256.7900390625,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1062.0439453125,
+        1392.755859375,
+        58.94921875,
+        2349.4404296875
+      ],
+      "addonTotalKB": 4863.189453125,
+      "atSeconds": 13.955000000016298,
+      "counterRefreshMs": 89.2742999792099,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 423340.2958984375,
+      "phase": "page_lifetimes",
+      "tag": "page_open_settings"
+    },
+    {
+      "addonKB": [
+        1062.0439453125,
+        1392.755859375,
+        58.94921875,
+        2349.4404296875
+      ],
+      "addonTotalKB": 4863.189453125,
+      "atSeconds": 14.286000000021886,
+      "counterRefreshMs": 86.77430003881454,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 423374.7099609375,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1062.2236328125,
+        1392.755859375,
+        60.95703125,
+        2360.1044921875
+      ],
+      "addonTotalKB": 4876.041015625,
+      "atSeconds": 14.612000000022817,
+      "counterRefreshMs": 87.17540001869202,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 423429.3740234375,
+      "phase": "page_lifetimes",
+      "tag": "page_open_notes"
+    },
+    {
+      "addonKB": [
+        1062.2236328125,
+        1392.755859375,
+        60.95703125,
+        2360.1044921875
+      ],
+      "addonTotalKB": 4876.041015625,
+      "atSeconds": 14.840000000025611,
+      "counterRefreshMs": 83.14109998941422,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 423452.9208984375,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1099.5517578125,
+        1398.044921875,
+        61.37109375,
+        2378.5966796875
+      ],
+      "addonTotalKB": 4937.564453125,
+      "atSeconds": 15.262999999977183,
+      "counterRefreshMs": 82.32940000295639,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 423567.7314453125,
+      "phase": "page_lifetimes",
+      "tag": "page_open_create"
+    },
+    {
+      "addonKB": [
+        1099.5517578125,
+        1477.169921875,
+        61.37109375,
+        2384.7294921875
+      ],
+      "addonTotalKB": 5022.822265625,
+      "atSeconds": 15.39000000001397,
+      "counterRefreshMs": 97.87279999256134,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 424135.0908203125,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1099.5517578125,
+        1477.169921875,
+        61.37109375,
+        2385.2919921875
+      ],
+      "addonTotalKB": 5023.384765625,
+      "atSeconds": 15.893999999971129,
+      "counterRefreshMs": 84.59599995613098,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 424204.7685546875,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1100.5439453125,
+        1477.169921875,
+        61.37109375,
+        2386.6357421875
+      ],
+      "addonTotalKB": 5025.720703125,
+      "atSeconds": 15.893999999971129,
+      "counterRefreshMs": 84.70550000667572,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 424207.7060546875,
+      "phase": "page_lifetimes",
+      "tag": "page_open_settings"
+    },
+    {
+      "addonKB": [
+        1100.5439453125,
+        1477.169921875,
+        61.37109375,
+        2387.1982421875
+      ],
+      "addonTotalKB": 5026.283203125,
+      "atSeconds": 16.471000000019558,
+      "counterRefreshMs": 81.14849996566772,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 424268.1669921875,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1100.7236328125,
+        1477.169921875,
+        63.59765625,
+        2401.1123046875
+      ],
+      "addonTotalKB": 5042.603515625,
+      "atSeconds": 16.59000000002561,
+      "counterRefreshMs": 83.01399999856949,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 424321.1044921875,
+      "phase": "page_lifetimes",
+      "tag": "page_open_notes"
+    },
+    {
+      "addonKB": [
+        1100.7236328125,
+        1477.169921875,
+        63.59765625,
+        2401.3466796875
+      ],
+      "addonTotalKB": 5042.837890625,
+      "atSeconds": 17.01600000000326,
+      "counterRefreshMs": 91.55239999294281,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 424378.6337890625,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1138.0517578125,
+        1482.458984375,
+        64.01171875,
+        2419.6044921875
+      ],
+      "addonTotalKB": 5104.126953125,
+      "atSeconds": 17.246999999973923,
+      "counterRefreshMs": 85.25529998540878,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 424460.9462890625,
+      "phase": "page_lifetimes",
+      "tag": "page_open_create"
+    },
+    {
+      "addonKB": [
+        1138.0517578125,
+        1561.583984375,
+        64.01171875,
+        2425.7373046875
+      ],
+      "addonTotalKB": 5189.384765625,
+      "atSeconds": 17.57500000001164,
+      "counterRefreshMs": 83.88849997520447,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 425048.3046875,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1139.0439453125,
+        1561.583984375,
+        64.01171875,
+        2427.6435546875
+      ],
+      "addonTotalKB": 5192.283203125,
+      "atSeconds": 17.896999999997206,
+      "counterRefreshMs": 79.93769997358322,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 425093.21875,
+      "phase": "page_lifetimes",
+      "tag": "page_open_settings"
+    },
+    {
+      "addonKB": [
+        1139.0439453125,
+        1561.583984375,
+        64.01171875,
+        2427.6435546875
+      ],
+      "addonTotalKB": 5192.283203125,
+      "atSeconds": 18.118000000016764,
+      "counterRefreshMs": 80.81400001049042,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 425125.779296875,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1139.2236328125,
+        1561.583984375,
+        66.01953125,
+        2438.3076171875
+      ],
+      "addonTotalKB": 5205.134765625,
+      "atSeconds": 18.537000000011176,
+      "counterRefreshMs": 86.82429999113083,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 425189.162109375,
+      "phase": "page_lifetimes",
+      "tag": "page_open_notes"
+    },
+    {
+      "addonKB": [
+        1139.2236328125,
+        1561.583984375,
+        66.01953125,
+        2438.3076171875
+      ],
+      "addonTotalKB": 5205.134765625,
+      "atSeconds": 18.666000000026543,
+      "counterRefreshMs": 87.50110000371933,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 425201.279296875,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1139.2236328125,
+        1561.583984375,
+        66.01953125,
+        2438.8701171875
+      ],
+      "addonTotalKB": 5205.697265625,
+      "atSeconds": 19.191999999980908,
+      "counterRefreshMs": 84.3746999502182,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 425316.94921875,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1176.5517578125,
+        1566.873046875,
+        66.43359375,
+        2456.7998046875
+      ],
+      "addonTotalKB": 5266.658203125,
+      "atSeconds": 19.191999999980908,
+      "counterRefreshMs": 85.00690001249313,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 425373.80859375,
+      "phase": "page_lifetimes",
+      "tag": "page_open_create"
+    },
+    {
+      "addonKB": [
+        1176.5517578125,
+        1645.998046875,
+        66.43359375,
+        2463.4951171875
+      ],
+      "addonTotalKB": 5352.478515625,
+      "atSeconds": 19.771999999997206,
+      "counterRefreshMs": 83.84529995918274,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 425987.19921875,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1177.5439453125,
+        1645.998046875,
+        66.43359375,
+        2464.8388671875
+      ],
+      "addonTotalKB": 5354.814453125,
+      "atSeconds": 19.895000000018626,
+      "counterRefreshMs": 85.1599999666214,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 426004.08203125,
+      "phase": "page_lifetimes",
+      "tag": "page_open_settings"
+    },
+    {
+      "addonKB": [
+        1177.5439453125,
+        1645.998046875,
+        66.43359375,
+        2465.4013671875
+      ],
+      "addonTotalKB": 5355.376953125,
+      "atSeconds": 20.321999999985565,
+      "counterRefreshMs": 83.12360000610352,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 426060.048828125,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1177.7236328125,
+        1645.998046875,
+        68.66015625,
+        2479.3154296875
+      ],
+      "addonTotalKB": 5371.697265625,
+      "atSeconds": 20.543000000005122,
+      "counterRefreshMs": 86.74409997463226,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 426101.666015625,
+      "phase": "page_lifetimes",
+      "tag": "page_open_notes"
+    },
+    {
+      "addonKB": [
+        1177.7236328125,
+        1645.998046875,
+        68.66015625,
+        2479.3154296875
+      ],
+      "addonTotalKB": 5371.697265625,
+      "atSeconds": 20.870999999984633,
+      "counterRefreshMs": 81.39579999446869,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 426136.142578125,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1215.0517578125,
+        1651.287109375,
+        69.07421875,
+        2497.8076171875
+      ],
+      "addonTotalKB": 5433.220703125,
+      "atSeconds": 21.190999999991618,
+      "counterRefreshMs": 86.47869998216629,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 426244.2421875,
+      "phase": "page_lifetimes",
+      "tag": "page_open_create"
+    },
+    {
+      "addonKB": [
+        1215.0517578125,
+        1730.412109375,
+        69.07421875,
+        2503.9404296875
+      ],
+      "addonTotalKB": 5518.478515625,
+      "atSeconds": 21.419999999983702,
+      "counterRefreshMs": 85.078400015831,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 426820.40625,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1216.0439453125,
+        1730.412109375,
+        69.07421875,
+        2505.8466796875
+      ],
+      "addonTotalKB": 5521.376953125,
+      "atSeconds": 21.84399999998277,
+      "counterRefreshMs": 84.50230002403259,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 426895.421875,
+      "phase": "page_lifetimes",
+      "tag": "page_open_settings"
+    },
+    {
+      "addonKB": [
+        1216.0439453125,
+        1730.412109375,
+        69.07421875,
+        2505.8466796875
+      ],
+      "addonTotalKB": 5521.376953125,
+      "atSeconds": 21.971000000019558,
+      "counterRefreshMs": 83.84179997444153,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 426907.5390625,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1216.0439453125,
+        1730.412109375,
+        69.07421875,
+        2506.4091796875
+      ],
+      "addonTotalKB": 5521.939453125,
+      "atSeconds": 22.493000000016764,
+      "counterRefreshMs": 88.26380002498627,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 426977.216796875,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1216.2236328125,
+        1730.412109375,
+        71.08203125,
+        2516.5107421875
+      ],
+      "addonTotalKB": 5534.228515625,
+      "atSeconds": 22.493000000016764,
+      "counterRefreshMs": 83.87220001220703,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 426989.943359375,
+      "phase": "page_lifetimes",
+      "tag": "page_open_notes"
+    },
+    {
+      "addonKB": [
+        1216.2236328125,
+        1730.412109375,
+        71.08203125,
+        2517.0732421875
+      ],
+      "addonTotalKB": 5534.791015625,
+      "atSeconds": 23.072999999974854,
+      "counterRefreshMs": 87.21380001306534,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 427095.99609375,
+      "phase": "page_lifetimes",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1253.5517578125,
+        1735.701171875,
+        71.49609375,
+        2535.0029296875
+      ],
+      "addonTotalKB": 5595.751953125,
+      "atSeconds": 23.19900000002235,
+      "counterRefreshMs": 91.94370001554489,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 427173.111328125,
+      "phase": "page_lifetimes",
+      "tag": "page_open_create"
+    },
+    {
+      "addonKB": [
+        1254.3642578125,
+        2122.3603515625,
+        71.74609375,
+        2636.54296875
+      ],
+      "addonTotalKB": 6085.013671875,
+      "atSeconds": 23.503000000026077,
+      "counterRefreshMs": 88.31979995965958,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 432805.302734375,
+      "phase": "preview_100_groups_40_members",
+      "tag": "preview_ready"
+    },
+    {
+      "addonKB": [
+        1254.3642578125,
+        2122.3603515625,
+        71.74609375,
+        2637.04296875
+      ],
+      "addonTotalKB": 6085.513671875,
+      "atSeconds": 23.628000000026077,
+      "counterRefreshMs": 80.30519998073578,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 432817.490234375,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.40625,
+        2122.3603515625,
+        71.74609375,
+        2933.9208984375
+      ],
+      "addonTotalKB": 6382.43359375,
+      "atSeconds": 24.146999999997206,
+      "counterRefreshMs": 83.62540000677109,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 433418.126953125,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.40625,
+        2122.3603515625,
+        71.74609375,
+        2971.716796875
+      ],
+      "addonTotalKB": 6420.2294921875,
+      "atSeconds": 24.669999999983702,
+      "counterRefreshMs": 91.9850999712944,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 433516.1494140625,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.40625,
+        2122.3603515625,
+        71.74609375,
+        3010.8330078125
+      ],
+      "addonTotalKB": 6459.345703125,
+      "atSeconds": 25.20100000000093,
+      "counterRefreshMs": 83.83060002326965,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 433619.904296875,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.40625,
+        2122.3603515625,
+        71.74609375,
+        3046.75390625
+      ],
+      "addonTotalKB": 6495.2666015625,
+      "atSeconds": 25.722999999998137,
+      "counterRefreshMs": 85.51399999856949,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 433711.5517578125,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.40625,
+        2122.3603515625,
+        71.74609375,
+        3101.244140625
+      ],
+      "addonTotalKB": 6549.7568359375,
+      "atSeconds": 26.25199999997858,
+      "counterRefreshMs": 85.69459998607635,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 433826.7763671875,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.40625,
+        2122.3603515625,
+        71.74609375,
+        3137.3134765625
+      ],
+      "addonTotalKB": 6585.826171875,
+      "atSeconds": 26.777000000001863,
+      "counterRefreshMs": 83.18690001964569,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 433920.337890625,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.40625,
+        2122.3603515625,
+        71.74609375,
+        3175.46875
+      ],
+      "addonTotalKB": 6623.9814453125,
+      "atSeconds": 27.29999999998836,
+      "counterRefreshMs": 86.04000002145767,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 434035.5048828125,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.40625,
+        2122.3603515625,
+        71.74609375,
+        3212.9130859375
+      ],
+      "addonTotalKB": 6661.42578125,
+      "atSeconds": 27.82500000001164,
+      "counterRefreshMs": 85.61710000038147,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 434128.48828125,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.40625,
+        2122.3603515625,
+        71.74609375,
+        3265.5595703125
+      ],
+      "addonTotalKB": 6714.072265625,
+      "atSeconds": 28.353000000002794,
+      "counterRefreshMs": 81.98019999265671,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 434241.3359375,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.40625,
+        2122.3603515625,
+        71.74609375,
+        3302.39453125
+      ],
+      "addonTotalKB": 6750.9072265625,
+      "atSeconds": 28.87300000002142,
+      "counterRefreshMs": 86.77700001001358,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 434333.7099609375,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.40625,
+        2122.3603515625,
+        71.74609375,
+        3342.1591796875
+      ],
+      "addonTotalKB": 6790.671875,
+      "atSeconds": 29.400000000023283,
+      "counterRefreshMs": 82.88780003786087,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 434438.41015625,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.40625,
+        2122.3603515625,
+        71.74609375,
+        3382.103515625
+      ],
+      "addonTotalKB": 6830.6162109375,
+      "atSeconds": 29.92200000002049,
+      "counterRefreshMs": 85.88309997320175,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 434533.5966796875,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.40625,
+        2122.3603515625,
+        71.74609375,
+        3435.0546875
+      ],
+      "addonTotalKB": 6883.5673828125,
+      "atSeconds": 30.44900000002235,
+      "counterRefreshMs": 85.42820000648499,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 434605.859375,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.40625,
+        2122.21875,
+        71.74609375,
+        3471.171875
+      ],
+      "addonTotalKB": 6919.54296875,
+      "atSeconds": 30.972999999998137,
+      "counterRefreshMs": 82.63450002670288,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 434680.6201171875,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.40625,
+        2122.1279296875,
+        71.74609375,
+        3504.61328125
+      ],
+      "addonTotalKB": 6952.8935546875,
+      "atSeconds": 31.494999999995343,
+      "counterRefreshMs": 96.36759996414185,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 434757.9853515625,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.40625,
+        2122.076171875,
+        71.74609375,
+        3536.3271484375
+      ],
+      "addonTotalKB": 6984.5556640625,
+      "atSeconds": 31.996999999973923,
+      "counterRefreshMs": 87.11480003595352,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 434826.5927734375,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.40625,
+        2121.9072265625,
+        71.74609375,
+        3584.6142578125
+      ],
+      "addonTotalKB": 7032.673828125,
+      "atSeconds": 32.52600000001257,
+      "counterRefreshMs": 82.12470000982285,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 434921.115234375,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.40625,
+        2121.79296875,
+        71.74609375,
+        3621.7431640625
+      ],
+      "addonTotalKB": 7069.6884765625,
+      "atSeconds": 33.04899999999907,
+      "counterRefreshMs": 84.7024000287056,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 434858.041015625,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.40625,
+        2121.533203125,
+        71.74609375,
+        3657.51953125
+      ],
+      "addonTotalKB": 7105.205078125,
+      "atSeconds": 33.572999999974854,
+      "counterRefreshMs": 84.99370002746582,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 434931.658203125,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.40625,
+        2121.486328125,
+        71.74609375,
+        3691.9677734375
+      ],
+      "addonTotalKB": 7139.6064453125,
+      "atSeconds": 34.09700000000885,
+      "counterRefreshMs": 82.45579999685287,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 434983.51953125,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.40625,
+        2121.27734375,
+        71.74609375,
+        3742.7666015625
+      ],
+      "addonTotalKB": 7190.1962890625,
+      "atSeconds": 34.62199999997392,
+      "counterRefreshMs": 82.42239999771118,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 435116.798828125,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.21484375,
+        2121.27734375,
+        71.74609375,
+        3773.283203125
+      ],
+      "addonTotalKB": 7220.521484375,
+      "atSeconds": 35.14399999997113,
+      "counterRefreshMs": 84.79539996385574,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 435190.2890625,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.21484375,
+        2121.2216796875,
+        71.74609375,
+        3806.8037109375
+      ],
+      "addonTotalKB": 7253.986328125,
+      "atSeconds": 35.66899999999441,
+      "counterRefreshMs": 81.41580003499985,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 435270.869140625,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.21484375,
+        2121.068359375,
+        71.74609375,
+        3840.9892578125
+      ],
+      "addonTotalKB": 7288.0185546875,
+      "atSeconds": 36.18900000001304,
+      "counterRefreshMs": 83.69760000705719,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 435344.0341796875,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.21484375,
+        2120.775390625,
+        71.74609375,
+        3892.234375
+      ],
+      "addonTotalKB": 7338.970703125,
+      "atSeconds": 36.71500000002561,
+      "counterRefreshMs": 85.3154000043869,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 435440.796875,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.21484375,
+        2120.451171875,
+        71.74609375,
+        3924.875
+      ],
+      "addonTotalKB": 7371.287109375,
+      "atSeconds": 37.23999999999069,
+      "counterRefreshMs": 85.3992999792099,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 435421.3916015625,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.21484375,
+        2120.451171875,
+        71.74609375,
+        3959.1162109375
+      ],
+      "addonTotalKB": 7405.5283203125,
+      "atSeconds": 37.76400000002468,
+      "counterRefreshMs": 89.08850002288818,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 435321.751953125,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.21484375,
+        2120.158203125,
+        71.74609375,
+        3997.9677734375
+      ],
+      "addonTotalKB": 7444.0869140625,
+      "atSeconds": 38.29200000001583,
+      "counterRefreshMs": 85.22740000486374,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 435348.0673828125,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.21484375,
+        2119.861328125,
+        71.74609375,
+        4046.994140625
+      ],
+      "addonTotalKB": 7492.81640625,
+      "atSeconds": 38.819000000017695,
+      "counterRefreshMs": 85.87190002202988,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 435432.9375,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.021484375,
+        2119.6484375,
+        71.74609375,
+        4081.1923828125
+      ],
+      "addonTotalKB": 7526.6083984375,
+      "atSeconds": 39.34399999998277,
+      "counterRefreshMs": 83.1836000084877,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 435520.138671875,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.021484375,
+        2119.51953125,
+        71.74609375,
+        4116.0546875
+      ],
+      "addonTotalKB": 7561.341796875,
+      "atSeconds": 39.869000000006054,
+      "counterRefreshMs": 85.67160004377365,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 435599.322265625,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1254.021484375,
+        2119.287109375,
+        71.74609375,
+        4152.4365234375
+      ],
+      "addonTotalKB": 7597.4912109375,
+      "atSeconds": 40.39399999997113,
+      "counterRefreshMs": 85.29030001163483,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 435680.3515625,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        1214.708984375,
+        2032.701171875,
+        69.19921875,
+        3640.3017578125
+      ],
+      "addonTotalKB": 6956.9111328125,
+      "atSeconds": 40.92099999997299,
+      "counterRefreshMs": 84.39120000600815,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 433293.45703125,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        792.380859375,
+        1172.396484375,
+        42.74609375,
+        3263.44921875
+      ],
+      "addonTotalKB": 5270.97265625,
+      "atSeconds": 41.444000000017695,
+      "counterRefreshMs": 83.37739998102188,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 424377.9169921875,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        792.021484375,
+        1172.396484375,
+        40.73828125,
+        3287.9326171875
+      ],
+      "addonTotalKB": 5293.0888671875,
+      "atSeconds": 41.9660000000149,
+      "counterRefreshMs": 82.61419999599457,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 418122.46875,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        792.021484375,
+        1172.396484375,
+        40.73828125,
+        3323.892578125
+      ],
+      "addonTotalKB": 5329.048828125,
+      "atSeconds": 42.48700000002282,
+      "counterRefreshMs": 88.09729999303818,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 408264.0927734375,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        786.927734375,
+        1160.599609375,
+        40.73828125,
+        3358.453125
+      ],
+      "addonTotalKB": 5346.71875,
+      "atSeconds": 43.01899999997113,
+      "counterRefreshMs": 81.26850003004074,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 401000.6748046875,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        786.927734375,
+        1160.599609375,
+        40.73828125,
+        2134.4833984375
+      ],
+      "addonTotalKB": 4122.7490234375,
+      "atSeconds": 43.538999999989755,
+      "counterRefreshMs": 76.48180001974106,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 394429.572265625,
+      "phase": "preview_100_groups_40_members",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2198.1240234375
+      ],
+      "addonTotalKB": 3685.857421875,
+      "atSeconds": 43.538999999989755,
+      "counterRefreshMs": 73.96860003471375,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 365359.853515625,
+      "phase": "preview_50_applicant_batches",
+      "tag": "applicants_ready"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2199.7705078125
+      ],
+      "addonTotalKB": 3687.50390625,
+      "atSeconds": 44.10999999998603,
+      "counterRefreshMs": 77.32139998674393,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 365382.6806640625,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2205.2919921875
+      ],
+      "addonTotalKB": 3693.025390625,
+      "atSeconds": 44.62599999998929,
+      "counterRefreshMs": 71.35960000753403,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 365446.0458984375,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2207.0478515625
+      ],
+      "addonTotalKB": 3694.78125,
+      "atSeconds": 45.13500000000931,
+      "counterRefreshMs": 71.58319997787476,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 365512.4560546875,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2213.470703125
+      ],
+      "addonTotalKB": 3701.2041015625,
+      "atSeconds": 45.646999999997206,
+      "counterRefreshMs": 74.52600002288818,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 365580.83984375,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2218.6220703125
+      ],
+      "addonTotalKB": 3706.35546875,
+      "atSeconds": 46.15999999997439,
+      "counterRefreshMs": 72.862399995327,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 365694.5791015625,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2220.7578125
+      ],
+      "addonTotalKB": 3708.4912109375,
+      "atSeconds": 46.67200000002049,
+      "counterRefreshMs": 79.28860002756119,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 365748.14453125,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2225.9091796875
+      ],
+      "addonTotalKB": 3713.642578125,
+      "atSeconds": 47.18900000001304,
+      "counterRefreshMs": 75.89529997110367,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 365809.5986328125,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2232.4462890625
+      ],
+      "addonTotalKB": 3720.1796875,
+      "atSeconds": 47.7050000000163,
+      "counterRefreshMs": 74.46509999036789,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 365878.6572265625,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2234.20703125
+      ],
+      "addonTotalKB": 3721.9404296875,
+      "atSeconds": 48.21799999999348,
+      "counterRefreshMs": 70.06000000238419,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 365957.001953125,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2239.7333984375
+      ],
+      "addonTotalKB": 3727.466796875,
+      "atSeconds": 48.727000000013504,
+      "counterRefreshMs": 74.08799999952316,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 366054.78125,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2241.494140625
+      ],
+      "addonTotalKB": 3729.2275390625,
+      "atSeconds": 49.2390000000014,
+      "counterRefreshMs": 77.08249998092651,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 366119.5146484375,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2248.03125
+      ],
+      "addonTotalKB": 3735.7646484375,
+      "atSeconds": 49.756999999983236,
+      "counterRefreshMs": 77.30660003423691,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 366181.6220703125,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2253.1826171875
+      ],
+      "addonTotalKB": 3740.916015625,
+      "atSeconds": 50.272999999986496,
+      "counterRefreshMs": 78.63830000162125,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 366255.927734375,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2255.318359375
+      ],
+      "addonTotalKB": 3743.0517578125,
+      "atSeconds": 50.79200000001583,
+      "counterRefreshMs": 81.37519997358322,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 366317.5166015625,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2260.4697265625
+      ],
+      "addonTotalKB": 3748.203125,
+      "atSeconds": 51.31300000002375,
+      "counterRefreshMs": 72.10199999809265,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 366396.384765625,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2267.0068359375
+      ],
+      "addonTotalKB": 3754.740234375,
+      "atSeconds": 51.82400000002235,
+      "counterRefreshMs": 75.91069996356964,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 366462.2890625,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2268.767578125
+      ],
+      "addonTotalKB": 3756.5009765625,
+      "atSeconds": 52.337999999988824,
+      "counterRefreshMs": 70.60100001096725,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 366532.9287109375,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2274.2939453125
+      ],
+      "addonTotalKB": 3762.02734375,
+      "atSeconds": 52.84700000000885,
+      "counterRefreshMs": 70.994500041008,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 366560.369140625,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2276.0546875
+      ],
+      "addonTotalKB": 3763.7880859375,
+      "atSeconds": 53.35599999997066,
+      "counterRefreshMs": 74.70719999074936,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 366607.0341796875,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2282.591796875
+      ],
+      "addonTotalKB": 3770.3251953125,
+      "atSeconds": 53.86999999999534,
+      "counterRefreshMs": 85.77279996871948,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 366663.1806640625,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2287.357421875
+      ],
+      "addonTotalKB": 3775.0908203125,
+      "atSeconds": 54.396000000007916,
+      "counterRefreshMs": 79.38050001859665,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 366741.0537109375,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2289.107421875
+      ],
+      "addonTotalKB": 3776.8408203125,
+      "atSeconds": 54.913999999989755,
+      "counterRefreshMs": 85.72130000591278,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 366798.3974609375,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2293.873046875
+      ],
+      "addonTotalKB": 3781.6064453125,
+      "atSeconds": 55.43900000001304,
+      "counterRefreshMs": 77.9147999882698,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 366861.6767578125,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2299.638671875
+      ],
+      "addonTotalKB": 3787.3720703125,
+      "atSeconds": 55.95600000000559,
+      "counterRefreshMs": 69.86059999465942,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 366926.681640625,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2301.013671875
+      ],
+      "addonTotalKB": 3788.7470703125,
+      "atSeconds": 56.463999999978114,
+      "counterRefreshMs": 75.35649996995926,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 367041.2861328125,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2306.154296875
+      ],
+      "addonTotalKB": 3793.8876953125,
+      "atSeconds": 57.01199999998789,
+      "counterRefreshMs": 72.31569999456406,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 367105.7548828125,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2307.529296875
+      ],
+      "addonTotalKB": 3795.2626953125,
+      "atSeconds": 57.521999999997206,
+      "counterRefreshMs": 73.81550002098083,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 367169.8232421875,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2313.294921875
+      ],
+      "addonTotalKB": 3801.0283203125,
+      "atSeconds": 58.036000000021886,
+      "counterRefreshMs": 77.62639999389648,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 367229.1513671875,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2318.060546875
+      ],
+      "addonTotalKB": 3805.7939453125,
+      "atSeconds": 58.552000000025146,
+      "counterRefreshMs": 75.09079998731613,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 367302.1337890625,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2319.810546875
+      ],
+      "addonTotalKB": 3807.5439453125,
+      "atSeconds": 59.06599999999162,
+      "counterRefreshMs": 76.11710000038147,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 367371.1103515625,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2324.576171875
+      ],
+      "addonTotalKB": 3812.3095703125,
+      "atSeconds": 59.58100000000559,
+      "counterRefreshMs": 73.56499999761581,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 367447.2802734375,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2330.341796875
+      ],
+      "addonTotalKB": 3818.0751953125,
+      "atSeconds": 60.09299999999348,
+      "counterRefreshMs": 72.3274000287056,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 367512.1162109375,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2331.716796875
+      ],
+      "addonTotalKB": 3819.4501953125,
+      "atSeconds": 60.603000000002794,
+      "counterRefreshMs": 76.01799994707108,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 367507.4208984375,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2336.857421875
+      ],
+      "addonTotalKB": 3824.5908203125,
+      "atSeconds": 61.118000000016764,
+      "counterRefreshMs": 74.82780003547668,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 367572.2646484375,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2338.232421875
+      ],
+      "addonTotalKB": 3825.9658203125,
+      "atSeconds": 61.631999999983236,
+      "counterRefreshMs": 75.19870001077652,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 367642.4814453125,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2343.998046875
+      ],
+      "addonTotalKB": 3831.7314453125,
+      "atSeconds": 62.147999999986496,
+      "counterRefreshMs": 82.74299997091293,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 367848.0380859375,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2348.763671875
+      ],
+      "addonTotalKB": 3836.4970703125,
+      "atSeconds": 62.6699999999837,
+      "counterRefreshMs": 80.02410000562668,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 367922.1484375,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2350.513671875
+      ],
+      "addonTotalKB": 3838.2470703125,
+      "atSeconds": 63.18900000001304,
+      "counterRefreshMs": 73.146399974823,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 367960.2421875,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2355.279296875
+      ],
+      "addonTotalKB": 3843.0126953125,
+      "atSeconds": 63.70100000000093,
+      "counterRefreshMs": 74.25309997797012,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 368082.439453125,
+      "phase": "preview_50_applicant_batches",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        787.0205078125,
+        659.849609375,
+        40.86328125,
+        2356.474609375
+      ],
+      "addonTotalKB": 3844.2080078125,
+      "atSeconds": 63.70100000000093,
+      "counterRefreshMs": 81.01469999551773,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 368470.5302734375,
+      "phase": "notes_codec_1000",
+      "tag": "codec_input_ready"
+    },
+    {
+      "addonKB": [
+        2108.9453125,
+        659.849609375,
+        40.86328125,
+        6309.19140625
+      ],
+      "addonTotalKB": 9118.849609375,
+      "atSeconds": 63.87099999998463,
+      "counterRefreshMs": 81.08020001649857,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 374173.873046875,
+      "phase": "notes_codec_1000",
+      "tag": "encoded_1"
+    },
+    {
+      "addonKB": [
+        2108.9453125,
+        659.849609375,
+        40.86328125,
+        7903.091796875
+      ],
+      "addonTotalKB": 10712.75,
+      "atSeconds": 63.87099999998463,
+      "counterRefreshMs": 80.3517000079155,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 375768.525390625,
+      "phase": "notes_codec_1000",
+      "tag": "decoded_1"
+    },
+    {
+      "addonKB": [
+        2108.9453125,
+        659.849609375,
+        40.86328125,
+        7903.091796875
+      ],
+      "addonTotalKB": 10712.75,
+      "atSeconds": 64.28499999997439,
+      "counterRefreshMs": 80.7263999581337,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 375786.1796875,
+      "phase": "notes_codec_1000",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        2108.9453125,
+        659.849609375,
+        40.86328125,
+        8844.466796875
+      ],
+      "addonTotalKB": 11654.125,
+      "atSeconds": 64.40600000001723,
+      "counterRefreshMs": 76.97600001096725,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 376699.015625,
+      "phase": "notes_codec_1000",
+      "tag": "encoded_2"
+    },
+    {
+      "addonKB": [
+        2108.9453125,
+        659.849609375,
+        40.86328125,
+        9394.654296875
+      ],
+      "addonTotalKB": 12204.3125,
+      "atSeconds": 64.40600000001723,
+      "counterRefreshMs": 76.69199997186661,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 377249.955078125,
+      "phase": "notes_codec_1000",
+      "tag": "decoded_2"
+    },
+    {
+      "addonKB": [
+        2108.9453125,
+        659.849609375,
+        40.86328125,
+        9394.654296875
+      ],
+      "addonTotalKB": 12204.3125,
+      "atSeconds": 64.80099999997765,
+      "counterRefreshMs": 76.0667000412941,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 377261.587890625,
+      "phase": "notes_codec_1000",
+      "tag": "periodic"
+    },
+    {
+      "addonKB": [
+        2108.9453125,
+        659.849609375,
+        40.86328125,
+        10336.029296875
+      ],
+      "addonTotalKB": 13145.6875,
+      "atSeconds": 64.91600000002654,
+      "counterRefreshMs": 76.48510003089905,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 378163.57421875,
+      "phase": "notes_codec_1000",
+      "tag": "encoded_3"
+    },
+    {
+      "addonKB": [
+        2108.9453125,
+        659.849609375,
+        40.86328125,
+        10886.216796875
+      ],
+      "addonTotalKB": 13695.875,
+      "atSeconds": 64.91600000002654,
+      "counterRefreshMs": 81.54609996080399,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 378714.513671875,
+      "phase": "notes_codec_1000",
+      "tag": "decoded_3"
+    },
+    {
+      "addonKB": [
+        2108.9453125,
+        659.849609375,
+        40.86328125,
+        10886.216796875
+      ],
+      "addonTotalKB": 13695.875,
+      "atSeconds": 64.91600000002654,
+      "counterRefreshMs": 81.57490003108978,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 378715.279296875,
+      "phase": "closed",
+      "tag": "closed_final"
+    },
+    {
+      "addonKB": [
+        754.693359375,
+        587.232421875,
+        40.48828125,
+        1032.09375
+      ],
+      "addonTotalKB": 2414.5078125,
+      "atSeconds": 64.91600000002654,
+      "counterRefreshMs": 72.94980001449585,
+      "gcMs": 169.41890001296997,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapKB": 354082.62109375,
+      "phase": "closed",
+      "tag": "closed_after_diagnostic_gc"
+    }
+  ],
+  "scenario": {
+    "codecRecords": 1000,
+    "codecRounds": 3,
+    "fixtureScope": "private preview data; tests rendering, not native data acquisition; fixture generation heap recorded separately",
+    "gcPolicy": "natural until final closed sample; separate collection after all work",
+    "input": "page/list/tooltip controllers; synthetic codec records are never merged into saved notes",
+    "pageCycles": 12,
+    "pages": [
+      "settings",
+      "notes",
+      "create"
+    ],
+    "previewApplicants": 50,
+    "previewGroups": 100,
+    "previewMembersPerApplication": 5,
+    "previewMembersPerGroup": 40,
+    "skippedNativeCreation": false
+  },
+  "schema": "lycheegroup.memory-scenarios.v1",
+  "units": "KB"
+}

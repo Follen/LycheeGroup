@@ -1,0 +1,8 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+    <Script file="Core.lua"/>
+    <Script file="Theme.lua"/>
+    <Script file="Motion.lua"/>
+    <Script file="Components.lua"/>
+    <Script file="Native.lua"/>
+    <Script file="Menu.lua"/>
+</Ui>

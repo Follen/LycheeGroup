@@ -1,0 +1,813 @@
+{
+  "checks": {
+    "knownOwnersIdleBeforeCleanup": true,
+    "originalHiddenPageRestored": true,
+    "probeResourcesReleased": true
+  },
+  "client": {
+    "build": "70391",
+    "date": "Oct 13 2026",
+    "interface": 120105,
+    "version": "12.1.5"
+  },
+  "closedOwnersAfterCleanup": {
+    "activeChallenge": false,
+    "activeListing": false,
+    "applicants": 0,
+    "applications": 0,
+    "expectedNotesReminder": false,
+    "extraGroupEvents": {},
+    "groupViews": false,
+    "knownOwnersIdle": true,
+    "motionJobs": 0,
+    "motionOnUpdate": false,
+    "nativeInputBorrowed": false,
+    "results": 0,
+    "searchState": "idle",
+    "uiHiding": false,
+    "uiShown": false
+  },
+  "closedOwnersBeforeCleanup": {
+    "activeChallenge": false,
+    "activeListing": false,
+    "applicants": 0,
+    "applications": 0,
+    "expectedNotesReminder": false,
+    "extraGroupEvents": {},
+    "groupViews": false,
+    "knownOwnersIdle": true,
+    "motionJobs": 0,
+    "motionOnUpdate": false,
+    "nativeInputBorrowed": false,
+    "results": 0,
+    "searchState": "idle",
+    "uiHiding": false,
+    "uiShown": false
+  },
+  "coreOnlyAtStart": true,
+  "elapsedSeconds": 80.83699999999953,
+  "initialClosedOwners": {
+    "activeChallenge": false,
+    "activeListing": false,
+    "applicants": 0,
+    "applications": 0,
+    "expectedNotesReminder": false,
+    "extraGroupEvents": {},
+    "groupViews": false,
+    "knownOwnersIdle": true,
+    "motionJobs": 0,
+    "motionOnUpdate": false,
+    "nativeInputBorrowed": false,
+    "results": 0,
+    "searchState": "unloaded",
+    "uiHiding": false,
+    "uiShown": false
+  },
+  "loadedAtEnd": [
+    true,
+    true,
+    true,
+    true
+  ],
+  "loadedAtStart": [
+    true,
+    false,
+    false,
+    false
+  ],
+  "observer": {
+    "periodicDrivers": 1,
+    "preallocatedSamples": 32,
+    "setupHeapDeltaKB": 23.265625,
+    "wrappedCallbacks": 2
+  },
+  "packages": [
+    "LycheeGroup",
+    "LycheeGroup_Group",
+    "LycheeGroup_Notes",
+    "LycheeGroup_UI"
+  ],
+  "pageBuiltAtStart": {
+    "create": false,
+    "find": false,
+    "notes": false,
+    "settings": false
+  },
+  "sampleCount": 29,
+  "samples": [
+    {
+      "addonKB": [
+        140.4990234375,
+        0,
+        0,
+        0
+      ],
+      "addonTotalKB": 140.4990234375,
+      "atSeconds": 0,
+      "counterRefreshMs": 71.23589998483658,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        false,
+        false,
+        false
+      ],
+      "luaHeapAfterRefreshKB": 444881.384765625,
+      "luaHeapKB": 444879.353515625,
+      "mode": "natural",
+      "tag": "start"
+    },
+    {
+      "addonKB": [
+        140.4990234375,
+        0,
+        0,
+        0
+      ],
+      "addonTotalKB": 140.4990234375,
+      "atSeconds": 0,
+      "counterRefreshMs": 64.20860001444817,
+      "gcMs": 160.94699999690056,
+      "loaded": [
+        true,
+        false,
+        false,
+        false
+      ],
+      "luaHeapAfterRefreshKB": 366468.1181640625,
+      "luaHeapKB": 366467.6806640625,
+      "mode": "after_gc",
+      "tag": "start"
+    },
+    {
+      "addonKB": [
+        140.6787109375,
+        0,
+        0,
+        2044.95703125
+      ],
+      "addonTotalKB": 2185.6357421875,
+      "atSeconds": 2.2079999999841675,
+      "counterRefreshMs": 63.96209999918938,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        false,
+        false,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 369079.076171875,
+      "luaHeapKB": 369078.615234375,
+      "mode": "natural",
+      "page": "settings",
+      "round": 1,
+      "tag": "first_observed_open"
+    },
+    {
+      "addonKB": [
+        140.6787109375,
+        0,
+        0,
+        2045.46484375
+      ],
+      "addonTotalKB": 2186.1435546875,
+      "atSeconds": 4.111000000004424,
+      "counterRefreshMs": 66.64039999246597,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        false,
+        false,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 369425.8994140625,
+      "luaHeapKB": 369425.4619140625,
+      "mode": "natural",
+      "page": "settings",
+      "round": 1,
+      "tag": "first_observed_closed"
+    },
+    {
+      "addonKB": [
+        141.7880859375,
+        0,
+        108.0615234375,
+        2253.5830078125
+      ],
+      "addonTotalKB": 2503.4326171875,
+      "atSeconds": 7.915999999997439,
+      "counterRefreshMs": 66.40779998898506,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 370478.140625,
+      "luaHeapKB": 370477.6796875,
+      "mode": "natural",
+      "page": "notes",
+      "round": 2,
+      "tag": "first_observed_open"
+    },
+    {
+      "addonKB": [
+        141.7880859375,
+        0,
+        108.0615234375,
+        2254.2158203125
+      ],
+      "addonTotalKB": 2504.0654296875,
+      "atSeconds": 9.854999999981374,
+      "counterRefreshMs": 67.31980001926422,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 370799.5712890625,
+      "luaHeapKB": 370799.1337890625,
+      "mode": "natural",
+      "page": "notes",
+      "round": 2,
+      "tag": "first_observed_closed"
+    },
+    {
+      "addonKB": [
+        142.1396484375,
+        705.498046875,
+        108.1865234375,
+        2738.5615234375
+      ],
+      "addonTotalKB": 3694.3857421875,
+      "atSeconds": 13.684999999997672,
+      "counterRefreshMs": 76.52419999241829,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 449680.140625,
+      "luaHeapKB": 449679.6796875,
+      "mode": "natural",
+      "page": "find",
+      "round": 3,
+      "tag": "first_observed_open"
+    },
+    {
+      "addonKB": [
+        142.1396484375,
+        706.373046875,
+        108.1865234375,
+        2738.8505859375
+      ],
+      "addonTotalKB": 3695.5498046875,
+      "atSeconds": 15.603000000002794,
+      "counterRefreshMs": 76.06679999828339,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 450828.966796875,
+      "luaHeapKB": 450828.529296875,
+      "mode": "natural",
+      "page": "find",
+      "round": 3,
+      "tag": "first_observed_closed"
+    },
+    {
+      "addonKB": [
+        141.6005859375,
+        380.9521484375,
+        33.28515625,
+        1439.3486328125
+      ],
+      "addonTotalKB": 1995.1865234375,
+      "atSeconds": 19.419999999983702,
+      "counterRefreshMs": 69.19290000200272,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 428652.84765625,
+      "luaHeapKB": 428652.41015625,
+      "mode": "natural",
+      "page": "create",
+      "round": 4,
+      "tag": "first_observed_open"
+    },
+    {
+      "addonKB": [
+        141.6005859375,
+        380.9521484375,
+        33.28515625,
+        1440.2314453125
+      ],
+      "addonTotalKB": 1996.0693359375,
+      "atSeconds": 21.330999999976484,
+      "counterRefreshMs": 71.89379999041557,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 429055.3173828125,
+      "luaHeapKB": 429054.8798828125,
+      "mode": "natural",
+      "page": "create",
+      "round": 4,
+      "tag": "first_observed_closed"
+    },
+    {
+      "addonKB": [
+        141.6005859375,
+        303.65625,
+        33.03515625,
+        1416.798828125
+      ],
+      "addonTotalKB": 1895.0908203125,
+      "atSeconds": 21.330999999976484,
+      "counterRefreshMs": 66.47760000824928,
+      "gcMs": 160.63199999928474,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 370657.7890625,
+      "luaHeapKB": 370657.3515625,
+      "mode": "after_gc",
+      "tag": "warmed_closed_baseline"
+    },
+    {
+      "addonKB": [
+        141.7802734375,
+        303.65625,
+        33.03515625,
+        1419.353515625
+      ],
+      "addonTotalKB": 1897.8251953125,
+      "atSeconds": 27.035000000003492,
+      "counterRefreshMs": 67.8154000043869,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 371731.46484375,
+      "luaHeapKB": 371731.02734375,
+      "mode": "natural",
+      "page": "settings",
+      "round": 1,
+      "tag": "warm_closed"
+    },
+    {
+      "addonKB": [
+        141.9599609375,
+        303.65625,
+        33.55078125,
+        1423.212890625
+      ],
+      "addonTotalKB": 1902.3798828125,
+      "atSeconds": 32.74199999999837,
+      "counterRefreshMs": 70.19820001721382,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 372828.4892578125,
+      "luaHeapKB": 372828.0517578125,
+      "mode": "natural",
+      "page": "notes",
+      "round": 2,
+      "tag": "warm_closed"
+    },
+    {
+      "addonKB": [
+        142.1396484375,
+        377.9609375,
+        33.67578125,
+        1435.150390625
+      ],
+      "addonTotalKB": 1988.9267578125,
+      "atSeconds": 38.49499999999534,
+      "counterRefreshMs": 68.9666000008583,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 450075.162109375,
+      "luaHeapKB": 450074.724609375,
+      "mode": "natural",
+      "page": "find",
+      "round": 3,
+      "tag": "warm_closed"
+    },
+    {
+      "addonKB": [
+        141.6005859375,
+        380.890625,
+        33.28515625,
+        1441.8017578125
+      ],
+      "addonTotalKB": 1997.578125,
+      "atSeconds": 44.26999999998952,
+      "counterRefreshMs": 73.43309998512268,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 421866.1357421875,
+      "luaHeapKB": 421865.6982421875,
+      "mode": "natural",
+      "page": "create",
+      "round": 4,
+      "tag": "warm_closed"
+    },
+    {
+      "addonKB": [
+        141.7802734375,
+        380.890625,
+        33.28515625,
+        1444.3564453125
+      ],
+      "addonTotalKB": 2000.3125,
+      "atSeconds": 49.98099999999977,
+      "counterRefreshMs": 73.73440000414848,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 422778.427734375,
+      "luaHeapKB": 422777.990234375,
+      "mode": "natural",
+      "page": "settings",
+      "round": 5,
+      "tag": "warm_closed"
+    },
+    {
+      "addonKB": [
+        141.6005859375,
+        303.65625,
+        33.03515625,
+        1416.798828125
+      ],
+      "addonTotalKB": 1895.0908203125,
+      "atSeconds": 49.98099999999977,
+      "counterRefreshMs": 66.42689999938011,
+      "gcMs": 159.11309999227524,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 370733.8701171875,
+      "luaHeapKB": 370733.4326171875,
+      "mode": "after_gc",
+      "tag": "natural_phase_retained"
+    },
+    {
+      "addonKB": [
+        141.7802734375,
+        303.65625,
+        33.03515625,
+        1417.986328125
+      ],
+      "addonTotalKB": 1896.4580078125,
+      "atSeconds": 55.68499999999767,
+      "counterRefreshMs": 71.25090000033379,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 371946.685546875,
+      "luaHeapKB": 371946.248046875,
+      "mode": "natural",
+      "page": "settings",
+      "round": 1,
+      "tag": "warm_closed"
+    },
+    {
+      "addonKB": [
+        141.6005859375,
+        303.65625,
+        33.03515625,
+        1416.798828125
+      ],
+      "addonTotalKB": 1895.0908203125,
+      "atSeconds": 55.68499999999767,
+      "counterRefreshMs": 61.86550000309944,
+      "gcMs": 153.6152000129223,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 370761.7197265625,
+      "luaHeapKB": 370761.2822265625,
+      "mode": "after_gc",
+      "page": "settings",
+      "round": 1,
+      "tag": "warm_closed"
+    },
+    {
+      "addonKB": [
+        141.7802734375,
+        303.65625,
+        33.55078125,
+        1420.658203125
+      ],
+      "addonTotalKB": 1899.6455078125,
+      "atSeconds": 61.4769999999844,
+      "counterRefreshMs": 67.56849998235703,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 372016.5400390625,
+      "luaHeapKB": 372016.1025390625,
+      "mode": "natural",
+      "page": "notes",
+      "round": 2,
+      "tag": "warm_closed"
+    },
+    {
+      "addonKB": [
+        141.6005859375,
+        303.65625,
+        33.03515625,
+        1416.798828125
+      ],
+      "addonTotalKB": 1895.0908203125,
+      "atSeconds": 61.4769999999844,
+      "counterRefreshMs": 72.79020002484322,
+      "gcMs": 158.83170002698898,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 370846.5341796875,
+      "luaHeapKB": 370846.0966796875,
+      "mode": "after_gc",
+      "page": "notes",
+      "round": 2,
+      "tag": "warm_closed"
+    },
+    {
+      "addonKB": [
+        141.7802734375,
+        377.9609375,
+        33.16015625,
+        1428.517578125
+      ],
+      "addonTotalKB": 1981.4189453125,
+      "atSeconds": 67.22999999998137,
+      "counterRefreshMs": 71.6555999815464,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 448161.14453125,
+      "luaHeapKB": 448160.70703125,
+      "mode": "natural",
+      "page": "find",
+      "round": 3,
+      "tag": "warm_closed"
+    },
+    {
+      "addonKB": [
+        141.6005859375,
+        238.7421875,
+        33.03515625,
+        1416.689453125
+      ],
+      "addonTotalKB": 1830.0673828125,
+      "atSeconds": 67.22999999998137,
+      "counterRefreshMs": 64.39180001616478,
+      "gcMs": 156.9079999923706,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 370782.9794921875,
+      "luaHeapKB": 370782.5419921875,
+      "mode": "after_gc",
+      "page": "find",
+      "round": 3,
+      "tag": "warm_closed"
+    },
+    {
+      "addonKB": [
+        141.7802734375,
+        325.765625,
+        33.16015625,
+        1461.580078125
+      ],
+      "addonTotalKB": 1962.2861328125,
+      "atSeconds": 73.04099999999744,
+      "counterRefreshMs": 69.5779000222683,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 448033.4462890625,
+      "luaHeapKB": 448033.0087890625,
+      "mode": "natural",
+      "page": "create",
+      "round": 4,
+      "tag": "warm_closed"
+    },
+    {
+      "addonKB": [
+        141.6005859375,
+        303.65625,
+        33.03515625,
+        1416.580078125
+      ],
+      "addonTotalKB": 1894.8720703125,
+      "atSeconds": 73.04099999999744,
+      "counterRefreshMs": 64.21680000424385,
+      "gcMs": 157.64250001311302,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 370862.9326171875,
+      "luaHeapKB": 370862.4951171875,
+      "mode": "after_gc",
+      "page": "create",
+      "round": 4,
+      "tag": "warm_closed"
+    },
+    {
+      "addonKB": [
+        141.7802734375,
+        303.65625,
+        33.03515625,
+        1419.134765625
+      ],
+      "addonTotalKB": 1897.6064453125,
+      "atSeconds": 78.83999999999651,
+      "counterRefreshMs": 70.40860000252724,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 372145.25390625,
+      "luaHeapKB": 372144.81640625,
+      "mode": "natural",
+      "page": "settings",
+      "round": 5,
+      "tag": "warm_closed"
+    },
+    {
+      "addonKB": [
+        141.6005859375,
+        303.65625,
+        33.03515625,
+        1416.580078125
+      ],
+      "addonTotalKB": 1894.8720703125,
+      "atSeconds": 78.83999999999651,
+      "counterRefreshMs": 66.16170001029968,
+      "gcMs": 154.36659997701645,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 370884.2568359375,
+      "luaHeapKB": 370883.8193359375,
+      "mode": "after_gc",
+      "page": "settings",
+      "round": 5,
+      "tag": "warm_closed"
+    },
+    {
+      "addonKB": [
+        141.6005859375,
+        303.65625,
+        33.03515625,
+        1416.580078125
+      ],
+      "addonTotalKB": 1894.8720703125,
+      "atSeconds": 80.83699999999953,
+      "counterRefreshMs": 68.58290001749992,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 371239.4189453125,
+      "luaHeapKB": 371238.9814453125,
+      "mode": "natural",
+      "tag": "final_closed"
+    },
+    {
+      "addonKB": [
+        141.6005859375,
+        303.65625,
+        33.03515625,
+        1416.580078125
+      ],
+      "addonTotalKB": 1894.8720703125,
+      "atSeconds": 80.83699999999953,
+      "counterRefreshMs": 66.0755999982357,
+      "gcMs": 159.96720001101494,
+      "loaded": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 370853.083984375,
+      "luaHeapKB": 370852.646484375,
+      "mode": "after_gc",
+      "tag": "final_closed"
+    }
+  ],
+  "scenario": {
+    "asyncLimitSeconds": 110,
+    "explicitGCPolicy": "collect_only; never stop/restart/change GC settings",
+    "naturalWarmRounds": 5,
+    "retainedWarmRounds": 5,
+    "settleSeconds": 1.9
+  },
+  "schema": "lycheegroup.memory.v1",
+  "settings": {
+    "notesEnabled": true,
+    "notesHasRecords": false,
+    "reduceMotion": false,
+    "scriptProfile": "0"
+  },
+  "summary": {
+    "addonDeltaKB": [
+      0,
+      0,
+      0,
+      -0.21875
+    ],
+    "addonTotalDeltaKB": -0.21875,
+    "baselineSample": 11,
+    "baselineTag": "warmed_closed_baseline",
+    "finalSample": 29,
+    "finalTag": "final_closed",
+    "mode": "after_gc",
+    "wholeClientLuaHeapDeltaKB": 195.294921875
+  },
+  "units": "KB"
+}

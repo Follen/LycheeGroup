@@ -1,0 +1,3146 @@
+{
+  "category": "seasonDungeon",
+  "checks": {
+    "engineResourceAttribution": false,
+    "knownOwnersIdle": true,
+    "knownOwnersIdleAfterCleanup": true,
+    "naturalFivePackageBudget": false,
+    "noProbeDrivers": true,
+    "resultPoolStable": true,
+    "retainedFivePackageBudget": true,
+    "searchGenerationUnchanged": true
+  },
+  "client": {
+    "build": "70391",
+    "date": "Oct 13 2026",
+    "interface": 120105,
+    "version": "12.1.5"
+  },
+  "closedOwnersAfterCleanup": {
+    "allGroupViews": false,
+    "knownOwnersIdle": true,
+    "motionJobs": 0,
+    "motionOnUpdate": false,
+    "nativeBorrowed": false,
+    "pendingSearch": false,
+    "results": 0,
+    "searchState": "idle",
+    "searchTimer": false,
+    "searchViews": false,
+    "uiHiding": false,
+    "uiShown": false
+  },
+  "closedOwnersBeforeCleanup": {
+    "allGroupViews": false,
+    "knownOwnersIdle": true,
+    "motionJobs": 0,
+    "motionOnUpdate": false,
+    "nativeBorrowed": false,
+    "pendingSearch": false,
+    "results": 0,
+    "searchState": "idle",
+    "searchTimer": false,
+    "searchViews": false,
+    "uiHiding": false,
+    "uiShown": false
+  },
+  "elapsedSeconds": 57.896000000007916,
+  "finalActiveListing": false,
+  "finalFilteredResults": 81,
+  "finalNativeApplications": 0,
+  "finalRealResults": 81,
+  "frameCounts": {
+    "final": 171,
+    "finalTruncated": true,
+    "warm": 171,
+    "warmTruncated": true
+  },
+  "generationAtOpen": 5,
+  "generationBeforeOpen": 4,
+  "generationWhenDone": 5,
+  "initialActiveListing": false,
+  "initialDetailCount": 16,
+  "initialFilteredResults": 96,
+  "initialNativeApplications": 0,
+  "initialNativeFilteredResults": 100,
+  "initialRealResults": 96,
+  "observer": {
+    "periodicDrivers": 1,
+    "preallocatedSamples": 104,
+    "setupHeapDeltaKB": 177.3828125,
+    "setupHeapKB": 477834.58984375,
+    "wrappedCallbacks": 2
+  },
+  "ok": false,
+  "operations": [
+    {
+      "calls": 24,
+      "heapNetKB": 9937.833984375,
+      "inclusiveMs": 106.26580002903938,
+      "maxInclusiveMs": 5.1478999853134155,
+      "recordsUpdated": 0
+    },
+    {
+      "calls": 24,
+      "heapNetKB": 4986.4765625,
+      "inclusiveMs": 555.123900026083,
+      "maxInclusiveMs": 33.2989000082016,
+      "recordsUpdated": 178
+    },
+    {
+      "calls": 24,
+      "heapNetKB": 1879.2568359375,
+      "inclusiveMs": 66.41980004310608,
+      "maxInclusiveMs": 4.081800013780594,
+      "recordsUpdated": 0
+    },
+    {
+      "calls": 24,
+      "heapNetKB": 300.421875,
+      "inclusiveMs": 34.965799897909164,
+      "maxInclusiveMs": 2.0499999821186066,
+      "recordsUpdated": 0
+    }
+  ],
+  "packages": [
+    "LycheeGroup",
+    "LycheeGroup_Group",
+    "LycheeGroup_Notes",
+    "LycheeGroup_UI",
+    "LycheeUI"
+  ],
+  "resultPoolAtStart": 10,
+  "sampleCount": 103,
+  "samples": [
+    {
+      "addonKB": [
+        149.4267578125,
+        1971.0927734375,
+        0,
+        1442.634765625,
+        6595.7568359375
+      ],
+      "addonTotalKB": 10158.9111328125,
+      "atSeconds": 0,
+      "counterRefreshMs": 80.1337000131607,
+      "filteredResults": 0,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 477807.73046875,
+      "luaHeapKB": 477805.90234375,
+      "phase": "natural",
+      "realResults": 0,
+      "scrollOffset": 0,
+      "step": 0,
+      "tag": "before_open",
+      "visiblePool": 0
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        1502.6083984375,
+        0,
+        1041.7890625,
+        4012.8115234375
+      ],
+      "addonTotalKB": 6706.6357421875,
+      "atSeconds": 6.173000000009779,
+      "counterRefreshMs": 71.12729999423027,
+      "filteredResults": 96,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 447568.212890625,
+      "luaHeapKB": 447568.212890625,
+      "phase": "natural",
+      "realResults": 96,
+      "scrollOffset": 0,
+      "step": 0,
+      "tag": "stable_real_list",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        1916.1083984375,
+        0,
+        1045.9404296875,
+        4041.1396484375
+      ],
+      "addonTotalKB": 7152.615234375,
+      "atSeconds": 6.694000000017695,
+      "counterRefreshMs": 73.40340000391006,
+      "filteredResults": 95,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 448069.6064453125,
+      "luaHeapKB": 448069.6064453125,
+      "phase": "natural",
+      "realResults": 95,
+      "scrollOffset": 0,
+      "step": 1,
+      "tag": "commit_native_snapshot",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        2003.0615234375,
+        0,
+        1045.9404296875,
+        4207.6396484375
+      ],
+      "addonTotalKB": 7406.068359375,
+      "atSeconds": 7.217000000004191,
+      "counterRefreshMs": 79.81679999828339,
+      "filteredResults": 95,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 448396.677734375,
+      "luaHeapKB": 448396.677734375,
+      "phase": "natural",
+      "realResults": 95,
+      "scrollOffset": 0,
+      "step": 2,
+      "tag": "update_eight_real_records",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        2009.5771484375,
+        0,
+        1045.982421875,
+        4259.6708984375
+      ],
+      "addonTotalKB": 7464.6572265625,
+      "atSeconds": 7.74199999999837,
+      "counterRefreshMs": 72.74909999966621,
+      "filteredResults": 94,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 448537.2744140625,
+      "luaHeapKB": 448537.2744140625,
+      "phase": "natural",
+      "realResults": 94,
+      "scrollOffset": 0,
+      "step": 3,
+      "tag": "local_filter_sort",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        2009.5771484375,
+        0,
+        1045.982421875,
+        4270.0771484375
+      ],
+      "addonTotalKB": 7475.0634765625,
+      "atSeconds": 8.263000000006286,
+      "counterRefreshMs": 76.41839998960495,
+      "filteredResults": 94,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 448651.3505859375,
+      "luaHeapKB": 448651.3505859375,
+      "phase": "natural",
+      "realResults": 94,
+      "scrollOffset": 0,
+      "step": 4,
+      "tag": "refresh_scroll",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        2557.8037109375,
+        0,
+        1175.318359375,
+        4390.5068359375
+      ],
+      "addonTotalKB": 8273.0556640625,
+      "atSeconds": 8.777000000001863,
+      "counterRefreshMs": 79.06790000200272,
+      "filteredResults": 94,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 449508.5087890625,
+      "luaHeapKB": 449508.5087890625,
+      "phase": "natural",
+      "realResults": 94,
+      "scrollOffset": 3128,
+      "step": 5,
+      "tag": "commit_native_snapshot",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        2580.6083984375,
+        0,
+        1175.318359375,
+        4568.5693359375
+      ],
+      "addonTotalKB": 8473.9228515625,
+      "atSeconds": 9.291000000026543,
+      "counterRefreshMs": 83.20170000195503,
+      "filteredResults": 94,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 449785.2646484375,
+      "luaHeapKB": 449785.2646484375,
+      "phase": "natural",
+      "realResults": 94,
+      "scrollOffset": 3128,
+      "step": 6,
+      "tag": "update_eight_real_records",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        2637.5537109375,
+        0,
+        1193.9853515625,
+        4581.2158203125
+      ],
+      "addonTotalKB": 8562.181640625,
+      "atSeconds": 9.819000000017695,
+      "counterRefreshMs": 72.65440002083778,
+      "filteredResults": 94,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 449938.234375,
+      "luaHeapKB": 449938.234375,
+      "phase": "natural",
+      "realResults": 94,
+      "scrollOffset": 3128,
+      "step": 7,
+      "tag": "local_filter_sort",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        2637.5537109375,
+        0,
+        1193.9853515625,
+        4593.3564453125
+      ],
+      "addonTotalKB": 8574.322265625,
+      "atSeconds": 10.340000000025611,
+      "counterRefreshMs": 76.36730000376701,
+      "filteredResults": 94,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 450074.697265625,
+      "luaHeapKB": 450074.697265625,
+      "phase": "natural",
+      "realResults": 94,
+      "scrollOffset": 3128,
+      "step": 8,
+      "tag": "refresh_scroll",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        3172.1708984375,
+        0,
+        1263.4306640625,
+        4679.2724609375
+      ],
+      "addonTotalKB": 9264.30078125,
+      "atSeconds": 10.854000000021188,
+      "counterRefreshMs": 74.45600000023842,
+      "filteredResults": 94,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 450811.88671875,
+      "luaHeapKB": 450811.88671875,
+      "phase": "natural",
+      "realResults": 94,
+      "scrollOffset": 6256,
+      "step": 9,
+      "tag": "commit_native_snapshot",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        3198.2333984375,
+        0,
+        1263.4306640625,
+        4845.7724609375
+      ],
+      "addonTotalKB": 9456.86328125,
+      "atSeconds": 11.375,
+      "counterRefreshMs": 77.8652999997139,
+      "filteredResults": 94,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 451078.181640625,
+      "luaHeapKB": 451078.181640625,
+      "phase": "natural",
+      "realResults": 94,
+      "scrollOffset": 6256,
+      "step": 10,
+      "tag": "update_eight_real_records",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        3252.6630859375,
+        0,
+        1278.177734375,
+        4856.3935546875
+      ],
+      "addonTotalKB": 9536.6611328125,
+      "atSeconds": 11.896000000007916,
+      "counterRefreshMs": 78.94100001454353,
+      "filteredResults": 94,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 451267.4404296875,
+      "luaHeapKB": 451267.4404296875,
+      "phase": "natural",
+      "realResults": 94,
+      "scrollOffset": 6256,
+      "step": 11,
+      "tag": "local_filter_sort",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        3252.6630859375,
+        0,
+        1278.177734375,
+        4866.7998046875
+      ],
+      "addonTotalKB": 9547.0673828125,
+      "atSeconds": 12.418000000005122,
+      "counterRefreshMs": 72.1875,
+      "filteredResults": 94,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 451352.9619140625,
+      "luaHeapKB": 451352.9619140625,
+      "phase": "natural",
+      "realResults": 94,
+      "scrollOffset": 6256,
+      "step": 12,
+      "tag": "refresh_scroll",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        3907.6630859375,
+        0,
+        1431.994140625,
+        5008.1875
+      ],
+      "addonTotalKB": 10497.271484375,
+      "atSeconds": 12.937000000005355,
+      "counterRefreshMs": 77.2320000231266,
+      "filteredResults": 93,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 452368.4189453125,
+      "luaHeapKB": 452368.4189453125,
+      "phase": "natural",
+      "realResults": 93,
+      "scrollOffset": 0,
+      "step": 13,
+      "tag": "commit_native_snapshot",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        3933.7255859375,
+        0,
+        1431.994140625,
+        5220.9375
+      ],
+      "addonTotalKB": 10736.083984375,
+      "atSeconds": 13.458000000013271,
+      "counterRefreshMs": 76.05759999155998,
+      "filteredResults": 93,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 452712.083984375,
+      "luaHeapKB": 452712.083984375,
+      "phase": "natural",
+      "realResults": 93,
+      "scrollOffset": 0,
+      "step": 14,
+      "tag": "update_eight_real_records",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        4001.9287109375,
+        0,
+        1450.486328125,
+        5291.1796875
+      ],
+      "addonTotalKB": 10893.021484375,
+      "atSeconds": 13.986000000004424,
+      "counterRefreshMs": 78.98970001935959,
+      "filteredResults": 93,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 452954.169921875,
+      "luaHeapKB": 452954.169921875,
+      "phase": "natural",
+      "realResults": 93,
+      "scrollOffset": 0,
+      "step": 15,
+      "tag": "local_filter_sort",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        4015.4677734375,
+        0,
+        1450.486328125,
+        5353.6171875
+      ],
+      "addonTotalKB": 10968.998046875,
+      "atSeconds": 14.5,
+      "counterRefreshMs": 75.54370000958443,
+      "filteredResults": 93,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 453116.9384765625,
+      "luaHeapKB": 453116.9384765625,
+      "phase": "natural",
+      "realResults": 93,
+      "scrollOffset": 0,
+      "step": 16,
+      "tag": "refresh_scroll",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        4598.6865234375,
+        0,
+        1561.5263671875,
+        5505.23046875
+      ],
+      "addonTotalKB": 11814.8701171875,
+      "atSeconds": 15.021000000007916,
+      "counterRefreshMs": 74.15370002388954,
+      "filteredResults": 93,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 454022.044921875,
+      "luaHeapKB": 454022.044921875,
+      "phase": "natural",
+      "realResults": 93,
+      "scrollOffset": 3092,
+      "step": 17,
+      "tag": "commit_native_snapshot",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        4634.5224609375,
+        0,
+        1561.5263671875,
+        5835.91796875
+      ],
+      "addonTotalKB": 12181.3935546875,
+      "atSeconds": 15.541000000026543,
+      "counterRefreshMs": 73.41969999670982,
+      "filteredResults": 93,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 454495.36328125,
+      "luaHeapKB": 454495.36328125,
+      "phase": "natural",
+      "realResults": 93,
+      "scrollOffset": 3092,
+      "step": 18,
+      "tag": "update_eight_real_records",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        4716.0068359375,
+        0,
+        1580.0185546875,
+        5909.91796875
+      ],
+      "addonTotalKB": 12355.3701171875,
+      "atSeconds": 16.07600000000093,
+      "counterRefreshMs": 77.7863999903202,
+      "filteredResults": 93,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 454757.3623046875,
+      "luaHeapKB": 454757.3623046875,
+      "phase": "natural",
+      "realResults": 93,
+      "scrollOffset": 3092,
+      "step": 19,
+      "tag": "local_filter_sort",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        4719.2646484375,
+        0,
+        1580.0185546875,
+        5948.07421875
+      ],
+      "addonTotalKB": 12396.7841796875,
+      "atSeconds": 16.59000000002561,
+      "counterRefreshMs": 74.9631000161171,
+      "filteredResults": 93,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 454890.404296875,
+      "luaHeapKB": 454890.404296875,
+      "phase": "natural",
+      "realResults": 93,
+      "scrollOffset": 3092,
+      "step": 20,
+      "tag": "refresh_scroll",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        5216.1396484375,
+        0,
+        1607.9560546875,
+        6003.0322265625
+      ],
+      "addonTotalKB": 12976.5546875,
+      "atSeconds": 17.111000000004424,
+      "counterRefreshMs": 77.89939999580383,
+      "filteredResults": 93,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 455517.5498046875,
+      "luaHeapKB": 455517.5498046875,
+      "phase": "natural",
+      "realResults": 93,
+      "scrollOffset": 6184,
+      "step": 21,
+      "tag": "commit_native_snapshot",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        5248.7177734375,
+        0,
+        1608.0400390625,
+        6199.5947265625
+      ],
+      "addonTotalKB": 13205.779296875,
+      "atSeconds": 17.625,
+      "counterRefreshMs": 74.2209999859333,
+      "filteredResults": 91,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 455833.5927734375,
+      "luaHeapKB": 455833.5927734375,
+      "phase": "natural",
+      "realResults": 91,
+      "scrollOffset": 6040,
+      "step": 22,
+      "tag": "update_eight_real_records",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        5256.4833984375,
+        0,
+        1610.0947265625,
+        6209.7119140625
+      ],
+      "addonTotalKB": 13225.716796875,
+      "atSeconds": 18.13900000002468,
+      "counterRefreshMs": 75.97949999570847,
+      "filteredResults": 91,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 455963.3193359375,
+      "luaHeapKB": 455963.3193359375,
+      "phase": "natural",
+      "realResults": 91,
+      "scrollOffset": 6040,
+      "step": 23,
+      "tag": "local_filter_sort",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        5256.4833984375,
+        0,
+        1610.0947265625,
+        6220.1181640625
+      ],
+      "addonTotalKB": 13236.123046875,
+      "atSeconds": 18.660000000003492,
+      "counterRefreshMs": 79.77380001544952,
+      "filteredResults": 91,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 456076.8349609375,
+      "luaHeapKB": 456076.8349609375,
+      "phase": "natural",
+      "realResults": 91,
+      "scrollOffset": 6040,
+      "step": 24,
+      "tag": "refresh_scroll",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        5882.8583984375,
+        0,
+        1758.2734375,
+        6310.4921875
+      ],
+      "addonTotalKB": 14101.05078125,
+      "atSeconds": 19.183000000019092,
+      "counterRefreshMs": 78.16739997267723,
+      "filteredResults": 91,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 456988.9189453125,
+      "luaHeapKB": 456988.9189453125,
+      "phase": "natural",
+      "realResults": 91,
+      "scrollOffset": 0,
+      "step": 25,
+      "tag": "commit_native_snapshot",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        5915.4287109375,
+        0,
+        1758.2734375,
+        6504.7421875
+      ],
+      "addonTotalKB": 14327.87109375,
+      "atSeconds": 19.695000000006985,
+      "counterRefreshMs": 87.52499997615814,
+      "filteredResults": 91,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 457289.240234375,
+      "luaHeapKB": 457289.240234375,
+      "phase": "natural",
+      "realResults": 91,
+      "scrollOffset": 0,
+      "step": 26,
+      "tag": "update_eight_real_records",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        5976.1005859375,
+        0,
+        1776.765625,
+        6517.75
+      ],
+      "addonTotalKB": 14420.04296875,
+      "atSeconds": 20.229000000021188,
+      "counterRefreshMs": 81.07429999113083,
+      "filteredResults": 91,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 457445.888671875,
+      "luaHeapKB": 457445.888671875,
+      "phase": "natural",
+      "realResults": 91,
+      "scrollOffset": 0,
+      "step": 27,
+      "tag": "local_filter_sort",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        5982.6162109375,
+        0,
+        1776.8076171875,
+        6587.125
+      ],
+      "addonTotalKB": 14495.9755859375,
+      "atSeconds": 20.743000000016764,
+      "counterRefreshMs": 74.01739999651909,
+      "filteredResults": 90,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 457615.2568359375,
+      "luaHeapKB": 457615.2568359375,
+      "phase": "natural",
+      "realResults": 90,
+      "scrollOffset": 0,
+      "step": 28,
+      "tag": "refresh_scroll",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        6553.7412109375,
+        0,
+        1906.2958984375,
+        6714.7822265625
+      ],
+      "addonTotalKB": 15324.24609375,
+      "atSeconds": 21.25700000001234,
+      "counterRefreshMs": 82.27859997749329,
+      "filteredResults": 90,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 458502.62109375,
+      "luaHeapKB": 458502.62109375,
+      "phase": "natural",
+      "realResults": 90,
+      "scrollOffset": 2984,
+      "step": 29,
+      "tag": "commit_native_snapshot",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        6586.3115234375,
+        0,
+        1906.337890625,
+        6936.7822265625
+      ],
+      "addonTotalKB": 15578.8583984375,
+      "atSeconds": 21.771000000007916,
+      "counterRefreshMs": 79.53569999337196,
+      "filteredResults": 89,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 458847.4814453125,
+      "luaHeapKB": 458847.4814453125,
+      "phase": "natural",
+      "realResults": 89,
+      "scrollOffset": 2984,
+      "step": 30,
+      "tag": "update_eight_real_records",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        6659.7958984375,
+        0,
+        1924.830078125,
+        6978.6962890625
+      ],
+      "addonTotalKB": 15712.7490234375,
+      "atSeconds": 22.291000000026543,
+      "counterRefreshMs": 74.66729998588562,
+      "filteredResults": 89,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 459106.9228515625,
+      "luaHeapKB": 459106.9228515625,
+      "phase": "natural",
+      "realResults": 89,
+      "scrollOffset": 2984,
+      "step": 31,
+      "tag": "local_filter_sort",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        6659.7958984375,
+        0,
+        1924.830078125,
+        6993.1494140625
+      ],
+      "addonTotalKB": 15727.2021484375,
+      "atSeconds": 22.80500000002212,
+      "counterRefreshMs": 80.65700000524521,
+      "filteredResults": 89,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 459196.6005859375,
+      "luaHeapKB": 459196.6005859375,
+      "phase": "natural",
+      "realResults": 89,
+      "scrollOffset": 2984,
+      "step": 32,
+      "tag": "refresh_scroll",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        7159.2255859375,
+        0,
+        1991.572265625,
+        7031.052734375
+      ],
+      "addonTotalKB": 16331.27734375,
+      "atSeconds": 23.32600000000093,
+      "counterRefreshMs": 79.09700000286102,
+      "filteredResults": 89,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 459850.73046875,
+      "luaHeapKB": 459850.73046875,
+      "phase": "natural",
+      "realResults": 89,
+      "scrollOffset": 5896,
+      "step": 33,
+      "tag": "commit_native_snapshot",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        7182.0302734375,
+        0,
+        1991.572265625,
+        7095.802734375
+      ],
+      "addonTotalKB": 16418.83203125,
+      "atSeconds": 23.84000000002561,
+      "counterRefreshMs": 84.05490002036095,
+      "filteredResults": 89,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 460051.5654296875,
+      "luaHeapKB": 460051.5654296875,
+      "phase": "natural",
+      "realResults": 89,
+      "scrollOffset": 5896,
+      "step": 34,
+      "tag": "update_eight_real_records",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        7212.8740234375,
+        0,
+        1994.564453125,
+        7103.029296875
+      ],
+      "addonTotalKB": 16459.89453125,
+      "atSeconds": 24.361000000004424,
+      "counterRefreshMs": 73.40659999847412,
+      "filteredResults": 89,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 460162.3310546875,
+      "luaHeapKB": 460162.3310546875,
+      "phase": "natural",
+      "realResults": 89,
+      "scrollOffset": 5896,
+      "step": 35,
+      "tag": "local_filter_sort",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        7216.1318359375,
+        0,
+        1994.6064453125,
+        7132.513671875
+      ],
+      "addonTotalKB": 16492.6787109375,
+      "atSeconds": 24.884000000020023,
+      "counterRefreshMs": 82.35250002145767,
+      "filteredResults": 88,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 460367.830078125,
+      "luaHeapKB": 460367.830078125,
+      "phase": "natural",
+      "realResults": 88,
+      "scrollOffset": 5824,
+      "step": 36,
+      "tag": "refresh_scroll",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        7812.9365234375,
+        0,
+        2124.0517578125,
+        7203.3701171875
+      ],
+      "addonTotalKB": 17289.78515625,
+      "atSeconds": 25.402000000001863,
+      "counterRefreshMs": 78.19229999184608,
+      "filteredResults": 88,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 461212.0146484375,
+      "luaHeapKB": 461212.0146484375,
+      "phase": "natural",
+      "realResults": 88,
+      "scrollOffset": 0,
+      "step": 37,
+      "tag": "commit_native_snapshot",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        7838.9990234375,
+        0,
+        2124.0517578125,
+        7379.1201171875
+      ],
+      "addonTotalKB": 17491.59765625,
+      "atSeconds": 25.918000000005122,
+      "counterRefreshMs": 80.51099997758865,
+      "filteredResults": 88,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 461487.3095703125,
+      "luaHeapKB": 461487.3095703125,
+      "phase": "natural",
+      "realResults": 88,
+      "scrollOffset": 0,
+      "step": 38,
+      "tag": "update_eight_real_records",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        7912.6630859375,
+        0,
+        2142.5439453125,
+        7390.6826171875
+      ],
+      "addonTotalKB": 17595.31640625,
+      "atSeconds": 26.445000000006985,
+      "counterRefreshMs": 76.82429999113083,
+      "filteredResults": 88,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 461655.2705078125,
+      "luaHeapKB": 461655.2705078125,
+      "phase": "natural",
+      "realResults": 88,
+      "scrollOffset": 0,
+      "step": 39,
+      "tag": "local_filter_sort",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        7912.6630859375,
+        0,
+        2142.5439453125,
+        7402.8232421875
+      ],
+      "addonTotalKB": 17607.45703125,
+      "atSeconds": 26.96500000002561,
+      "counterRefreshMs": 78.55009999871254,
+      "filteredResults": 88,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 461742.7607421875,
+      "luaHeapKB": 461742.7607421875,
+      "phase": "natural",
+      "realResults": 88,
+      "scrollOffset": 0,
+      "step": 40,
+      "tag": "refresh_scroll",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        8459.9208984375,
+        0,
+        2253.4970703125,
+        7492.46875
+      ],
+      "addonTotalKB": 18355.3134765625,
+      "atSeconds": 27.479000000021188,
+      "counterRefreshMs": 75.00280001759529,
+      "filteredResults": 88,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 462548.1171875,
+      "luaHeapKB": 462548.1171875,
+      "phase": "natural",
+      "realResults": 88,
+      "scrollOffset": 2912,
+      "step": 41,
+      "tag": "commit_native_snapshot",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        8519.0615234375,
+        0,
+        2253.4970703125,
+        7823.15625
+      ],
+      "addonTotalKB": 18745.1416015625,
+      "atSeconds": 27.993000000016764,
+      "counterRefreshMs": 80.32039999961853,
+      "filteredResults": 88,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 463061.4990234375,
+      "luaHeapKB": 463061.4990234375,
+      "phase": "natural",
+      "realResults": 88,
+      "scrollOffset": 2912,
+      "step": 42,
+      "tag": "update_eight_real_records",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        8594.5302734375,
+        0,
+        2271.9892578125,
+        7862.1796875
+      ],
+      "addonTotalKB": 18878.1259765625,
+      "atSeconds": 28.521000000007916,
+      "counterRefreshMs": 75.78499999642372,
+      "filteredResults": 88,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 463316.1005859375,
+      "luaHeapKB": 463316.1005859375,
+      "phase": "natural",
+      "realResults": 88,
+      "scrollOffset": 2912,
+      "step": 43,
+      "tag": "local_filter_sort",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        8597.7880859375,
+        0,
+        2271.9892578125,
+        7905.5390625
+      ],
+      "addonTotalKB": 18924.7431640625,
+      "atSeconds": 29.041000000026543,
+      "counterRefreshMs": 75.97810000181198,
+      "filteredResults": 88,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 463449.564453125,
+      "luaHeapKB": 463449.564453125,
+      "phase": "natural",
+      "realResults": 88,
+      "scrollOffset": 2912,
+      "step": 44,
+      "tag": "refresh_scroll",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        9142.2724609375,
+        0,
+        2373.6064453125,
+        7998.328125
+      ],
+      "addonTotalKB": 19663.6337890625,
+      "atSeconds": 29.55500000002212,
+      "counterRefreshMs": 72.25299999117851,
+      "filteredResults": 88,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 464263.861328125,
+      "luaHeapKB": 464263.861328125,
+      "phase": "natural",
+      "realResults": 88,
+      "scrollOffset": 5824,
+      "step": 45,
+      "tag": "commit_native_snapshot",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        9175.0615234375,
+        0,
+        2373.6064453125,
+        8192.578125
+      ],
+      "addonTotalKB": 19890.6728515625,
+      "atSeconds": 30.07600000000093,
+      "counterRefreshMs": 73.82660001516342,
+      "filteredResults": 88,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 464569.5732421875,
+      "luaHeapKB": 464569.5732421875,
+      "phase": "natural",
+      "realResults": 88,
+      "scrollOffset": 5824,
+      "step": 46,
+      "tag": "update_eight_real_records",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        9227.1240234375,
+        0,
+        2382.7626953125,
+        8200.9609375
+      ],
+      "addonTotalKB": 19960.2744140625,
+      "atSeconds": 30.59000000002561,
+      "counterRefreshMs": 76.54000002145767,
+      "filteredResults": 88,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 464706.4326171875,
+      "luaHeapKB": 464706.4326171875,
+      "phase": "natural",
+      "realResults": 88,
+      "scrollOffset": 5824,
+      "step": 47,
+      "tag": "local_filter_sort",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        9227.1240234375,
+        0,
+        2382.7626953125,
+        8205.5859375
+      ],
+      "addonTotalKB": 19964.8994140625,
+      "atSeconds": 31.111000000004424,
+      "counterRefreshMs": 76.27440002560616,
+      "filteredResults": 88,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 464785.8974609375,
+      "luaHeapKB": 464785.8974609375,
+      "phase": "natural",
+      "realResults": 88,
+      "scrollOffset": 5824,
+      "step": 48,
+      "tag": "refresh_scroll",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.4267578125,
+        9451.6240234375,
+        0,
+        2549.1923828125,
+        8322.728515625
+      ],
+      "addonTotalKB": 20472.9716796875,
+      "atSeconds": 31.736000000004424,
+      "counterRefreshMs": 74.99100002646446,
+      "filteredResults": 88,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 465383.1474609375,
+      "luaHeapKB": 465383.1474609375,
+      "phase": "natural",
+      "realResults": 88,
+      "scrollOffset": 0,
+      "step": 48,
+      "tag": "natural_end_before_gc",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.3828125,
+        691.01953125,
+        0,
+        959.7841796875,
+        469.4072265625
+      ],
+      "addonTotalKB": 2269.59375,
+      "atSeconds": 31.736000000004424,
+      "counterRefreshMs": 68.39609998464584,
+      "filteredResults": 88,
+      "gcMs": 164.34700000286102,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 371683.330078125,
+      "luaHeapKB": 371683.330078125,
+      "phase": "gc",
+      "realResults": 88,
+      "scrollOffset": 0,
+      "step": 48,
+      "tag": "open_retained_baseline",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        1130.8857421875,
+        0,
+        959.7841796875,
+        490.44921875
+      ],
+      "addonTotalKB": 2730.974609375,
+      "atSeconds": 32.25700000001234,
+      "counterRefreshMs": 69.84089997410774,
+      "filteredResults": 88,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 372168.52734375,
+      "luaHeapKB": 372168.52734375,
+      "phase": "retained",
+      "realResults": 88,
+      "scrollOffset": 0,
+      "step": 1,
+      "tag": "commit_native_snapshot",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        1211.1044921875,
+        0,
+        974.208984375,
+        990.0205078125
+      ],
+      "addonTotalKB": 3325.189453125,
+      "atSeconds": 32.778000000020256,
+      "counterRefreshMs": 76.34349998831749,
+      "filteredResults": 87,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 372880.486328125,
+      "luaHeapKB": 372880.486328125,
+      "phase": "retained",
+      "realResults": 87,
+      "scrollOffset": 0,
+      "step": 2,
+      "tag": "update_eight_real_records",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        1252.7578125,
+        0,
+        990.681640625,
+        1006.4951171875
+      ],
+      "addonTotalKB": 3399.7900390625,
+      "atSeconds": 33.312000000005355,
+      "counterRefreshMs": 71.7747999727726,
+      "filteredResults": 87,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 373065.3984375,
+      "luaHeapKB": 373065.3984375,
+      "phase": "retained",
+      "realResults": 87,
+      "scrollOffset": 0,
+      "step": 3,
+      "tag": "local_filter_sort",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        1259.2734375,
+        0,
+        990.681640625,
+        1064.3076171875
+      ],
+      "addonTotalKB": 3464.1181640625,
+      "atSeconds": 33.83300000001327,
+      "counterRefreshMs": 71.15369999408722,
+      "filteredResults": 87,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 373227.927734375,
+      "luaHeapKB": 373227.927734375,
+      "phase": "retained",
+      "realResults": 87,
+      "scrollOffset": 0,
+      "step": 4,
+      "tag": "refresh_scroll",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        1821.580078125,
+        0,
+        1120.248046875,
+        1165.224609375
+      ],
+      "addonTotalKB": 4256.908203125,
+      "atSeconds": 34.34700000000885,
+      "counterRefreshMs": 68.18920001387596,
+      "filteredResults": 87,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 374070.9677734375,
+      "luaHeapKB": 374070.9677734375,
+      "phase": "retained",
+      "realResults": 87,
+      "scrollOffset": 2876,
+      "step": 5,
+      "tag": "commit_native_snapshot",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        1857.408203125,
+        0,
+        1138.7822265625,
+        1367.3154296875
+      ],
+      "addonTotalKB": 4513.361328125,
+      "atSeconds": 34.868000000016764,
+      "counterRefreshMs": 69.39629998803139,
+      "filteredResults": 86,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 374459.3798828125,
+      "luaHeapKB": 374459.3798828125,
+      "phase": "retained",
+      "realResults": 86,
+      "scrollOffset": 2876,
+      "step": 6,
+      "tag": "update_eight_real_records",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        1923.564453125,
+        0,
+        1157.44921875,
+        1378.8046875
+      ],
+      "addonTotalKB": 4609.673828125,
+      "atSeconds": 35.38400000002002,
+      "counterRefreshMs": 69.84870001673698,
+      "filteredResults": 86,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 374620.1142578125,
+      "luaHeapKB": 374620.1142578125,
+      "phase": "retained",
+      "realResults": 86,
+      "scrollOffset": 2876,
+      "step": 7,
+      "tag": "local_filter_sort",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        1937.513671875,
+        0,
+        1176.02734375,
+        1413.5283203125
+      ],
+      "addonTotalKB": 4676.9248046875,
+      "atSeconds": 35.903000000020256,
+      "counterRefreshMs": 71.68479999899864,
+      "filteredResults": 85,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 374769.24609375,
+      "luaHeapKB": 374769.24609375,
+      "phase": "retained",
+      "realResults": 85,
+      "scrollOffset": 2876,
+      "step": 8,
+      "tag": "refresh_scroll",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        2476.43359375,
+        0,
+        1245.3837890625,
+        1508.044921875
+      ],
+      "addonTotalKB": 5379.7177734375,
+      "atSeconds": 36.41800000000512,
+      "counterRefreshMs": 72.10359999537468,
+      "filteredResults": 85,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 375519.9140625,
+      "luaHeapKB": 375519.9140625,
+      "phase": "retained",
+      "realResults": 85,
+      "scrollOffset": 5608,
+      "step": 9,
+      "tag": "commit_native_snapshot",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        2505.75390625,
+        0,
+        1245.3837890625,
+        1695.357421875
+      ],
+      "addonTotalKB": 5596.3505859375,
+      "atSeconds": 36.93800000002375,
+      "counterRefreshMs": 80.93909999728203,
+      "filteredResults": 85,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 375831.1279296875,
+      "luaHeapKB": 375831.1279296875,
+      "phase": "retained",
+      "realResults": 85,
+      "scrollOffset": 5608,
+      "step": 10,
+      "tag": "update_eight_real_records",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        2564.3056640625,
+        0,
+        1260.130859375,
+        1706.845703125
+      ],
+      "addonTotalKB": 5681.1376953125,
+      "atSeconds": 37.45900000000256,
+      "counterRefreshMs": 73.15009999275208,
+      "filteredResults": 85,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 375980.7509765625,
+      "luaHeapKB": 375980.7509765625,
+      "phase": "retained",
+      "realResults": 85,
+      "scrollOffset": 5608,
+      "step": 11,
+      "tag": "local_filter_sort",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        2564.3056640625,
+        0,
+        1260.130859375,
+        1718.986328125
+      ],
+      "addonTotalKB": 5693.2783203125,
+      "atSeconds": 37.97900000002119,
+      "counterRefreshMs": 72.17909997701645,
+      "filteredResults": 85,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 376068.376953125,
+      "luaHeapKB": 376068.376953125,
+      "phase": "retained",
+      "realResults": 85,
+      "scrollOffset": 5608,
+      "step": 12,
+      "tag": "refresh_scroll",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        3198.7255859375,
+        0,
+        1439.72265625,
+        1829.4443359375
+      ],
+      "addonTotalKB": 6617.748046875,
+      "atSeconds": 38.5,
+      "counterRefreshMs": 76.04080000519753,
+      "filteredResults": 85,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 377039.8779296875,
+      "luaHeapKB": 377039.8779296875,
+      "phase": "retained",
+      "realResults": 85,
+      "scrollOffset": 0,
+      "step": 13,
+      "tag": "commit_native_snapshot",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        3229.2958984375,
+        0,
+        1439.72265625,
+        2023.6943359375
+      ],
+      "addonTotalKB": 6842.568359375,
+      "atSeconds": 39.021000000007916,
+      "counterRefreshMs": 71.30900001525879,
+      "filteredResults": 85,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 377338.4775390625,
+      "luaHeapKB": 377338.4775390625,
+      "phase": "retained",
+      "realResults": 85,
+      "scrollOffset": 0,
+      "step": 14,
+      "tag": "update_eight_real_records",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        3290.9833984375,
+        0,
+        1456.16015625,
+        2041.0380859375
+      ],
+      "addonTotalKB": 6938.037109375,
+      "atSeconds": 39.53500000000349,
+      "counterRefreshMs": 72.21619999408722,
+      "filteredResults": 85,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 377550.2216796875,
+      "luaHeapKB": 377550.2216796875,
+      "phase": "retained",
+      "realResults": 85,
+      "scrollOffset": 0,
+      "step": 15,
+      "tag": "local_filter_sort",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        3290.9833984375,
+        0,
+        1456.16015625,
+        2061.8505859375
+      ],
+      "addonTotalKB": 6958.849609375,
+      "atSeconds": 40.05100000000675,
+      "counterRefreshMs": 92.0881000161171,
+      "filteredResults": 85,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 377679.02734375,
+      "luaHeapKB": 377679.02734375,
+      "phase": "retained",
+      "realResults": 85,
+      "scrollOffset": 0,
+      "step": 16,
+      "tag": "refresh_scroll",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        3866.6728515625,
+        0,
+        1511.7236328125,
+        2127.0693359375
+      ],
+      "addonTotalKB": 7655.3212890625,
+      "atSeconds": 40.570000000006985,
+      "counterRefreshMs": 71.77889999747276,
+      "filteredResults": 85,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 378427.689453125,
+      "luaHeapKB": 378427.689453125,
+      "phase": "retained",
+      "realResults": 85,
+      "scrollOffset": 2804,
+      "step": 17,
+      "tag": "commit_native_snapshot",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        3886.2197265625,
+        0,
+        1511.7236328125,
+        2314.3818359375
+      ],
+      "addonTotalKB": 7862.1806640625,
+      "atSeconds": 41.09000000002561,
+      "counterRefreshMs": 68.88820001482964,
+      "filteredResults": 85,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 378708.546875,
+      "luaHeapKB": 378708.546875,
+      "phase": "retained",
+      "realResults": 85,
+      "scrollOffset": 2804,
+      "step": 18,
+      "tag": "update_eight_real_records",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        3942.5791015625,
+        0,
+        1530.2158203125,
+        2358.8974609375
+      ],
+      "addonTotalKB": 7981.5478515625,
+      "atSeconds": 41.611000000004424,
+      "counterRefreshMs": 69.7509999871254,
+      "filteredResults": 85,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 378904.15625,
+      "luaHeapKB": 378904.15625,
+      "phase": "retained",
+      "realResults": 85,
+      "scrollOffset": 2804,
+      "step": 19,
+      "tag": "local_filter_sort",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        3945.8369140625,
+        0,
+        1530.2158203125,
+        2391.8505859375
+      ],
+      "addonTotalKB": 8017.7587890625,
+      "atSeconds": 42.13200000001234,
+      "counterRefreshMs": 81.52830001711845,
+      "filteredResults": 85,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 379027.6484375,
+      "luaHeapKB": 379027.6484375,
+      "phase": "retained",
+      "realResults": 85,
+      "scrollOffset": 2804,
+      "step": 20,
+      "tag": "refresh_scroll",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        4466.47265625,
+        0,
+        1575.1142578125,
+        2458.443359375
+      ],
+      "addonTotalKB": 8649.8857421875,
+      "atSeconds": 42.653000000020256,
+      "counterRefreshMs": 74.86570000648499,
+      "filteredResults": 85,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 379707.509765625,
+      "luaHeapKB": 379707.509765625,
+      "phase": "retained",
+      "realResults": 85,
+      "scrollOffset": 5608,
+      "step": 21,
+      "tag": "commit_native_snapshot",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        4489.27734375,
+        0,
+        1575.1142578125,
+        2596.037109375
+      ],
+      "addonTotalKB": 8810.2841796875,
+      "atSeconds": 43.17399999999907,
+      "counterRefreshMs": 69.59740000963211,
+      "filteredResults": 85,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 379941.3828125,
+      "luaHeapKB": 379941.3828125,
+      "phase": "retained",
+      "realResults": 85,
+      "scrollOffset": 5608,
+      "step": 22,
+      "tag": "update_eight_real_records",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        4497.04296875,
+        0,
+        1577.1689453125,
+        2606.154296875
+      ],
+      "addonTotalKB": 8830.2216796875,
+      "atSeconds": 43.68800000002375,
+      "counterRefreshMs": 67.4341000020504,
+      "filteredResults": 85,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 380026.484375,
+      "luaHeapKB": 380026.484375,
+      "phase": "retained",
+      "realResults": 85,
+      "scrollOffset": 5608,
+      "step": 23,
+      "tag": "local_filter_sort",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        4497.04296875,
+        0,
+        1577.1689453125,
+        2616.560546875
+      ],
+      "addonTotalKB": 8840.6279296875,
+      "atSeconds": 44.20900000000256,
+      "counterRefreshMs": 68.56529998779297,
+      "filteredResults": 85,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 380112.4384765625,
+      "luaHeapKB": 380112.4384765625,
+      "phase": "retained",
+      "realResults": 85,
+      "scrollOffset": 5608,
+      "step": 24,
+      "tag": "refresh_scroll",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        5169.69921875,
+        0,
+        1780.7802734375,
+        2744.3623046875
+      ],
+      "addonTotalKB": 9844.697265625,
+      "atSeconds": 44.72900000002119,
+      "counterRefreshMs": 76.8352000117302,
+      "filteredResults": 85,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 381172.5703125,
+      "luaHeapKB": 381172.5703125,
+      "phase": "retained",
+      "realResults": 85,
+      "scrollOffset": 0,
+      "step": 25,
+      "tag": "commit_native_snapshot",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        5205.52734375,
+        0,
+        1780.7802734375,
+        2942.0810546875
+      ],
+      "addonTotalKB": 10078.244140625,
+      "atSeconds": 45.251000000018394,
+      "counterRefreshMs": 71.95239999890327,
+      "filteredResults": 85,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 381517.5810546875,
+      "luaHeapKB": 381517.5810546875,
+      "phase": "retained",
+      "realResults": 85,
+      "scrollOffset": 0,
+      "step": 26,
+      "tag": "update_eight_real_records",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        5278.51171875,
+        0,
+        1797.2177734375,
+        3020.4169921875
+      ],
+      "addonTotalKB": 10246.001953125,
+      "atSeconds": 45.771000000007916,
+      "counterRefreshMs": 71.5430999994278,
+      "filteredResults": 85,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 381783.771484375,
+      "luaHeapKB": 381783.771484375,
+      "phase": "retained",
+      "realResults": 85,
+      "scrollOffset": 0,
+      "step": 27,
+      "tag": "local_filter_sort",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        5281.76953125,
+        0,
+        1797.2177734375,
+        3062.0419921875
+      ],
+      "addonTotalKB": 10290.884765625,
+      "atSeconds": 46.28500000000349,
+      "counterRefreshMs": 69.80550000071526,
+      "filteredResults": 85,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 381915.14453125,
+      "luaHeapKB": 381915.14453125,
+      "phase": "retained",
+      "realResults": 85,
+      "scrollOffset": 0,
+      "step": 28,
+      "tag": "refresh_scroll",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        5871.2490234375,
+        0,
+        1963.689453125,
+        3212.8603515625
+      ],
+      "addonTotalKB": 11197.654296875,
+      "atSeconds": 46.80600000001141,
+      "counterRefreshMs": 69.64969998598099,
+      "filteredResults": 84,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 382887.90625,
+      "luaHeapKB": 382887.90625,
+      "phase": "retained",
+      "realResults": 84,
+      "scrollOffset": 2804,
+      "step": 29,
+      "tag": "commit_native_snapshot",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        5897.3037109375,
+        0,
+        1963.689453125,
+        3386.2978515625
+      ],
+      "addonTotalKB": 11397.146484375,
+      "atSeconds": 47.327000000019325,
+      "counterRefreshMs": 71.43520000576973,
+      "filteredResults": 84,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 383161.7900390625,
+      "luaHeapKB": 383161.7900390625,
+      "phase": "retained",
+      "realResults": 84,
+      "scrollOffset": 2804,
+      "step": 30,
+      "tag": "update_eight_real_records",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        5972.9365234375,
+        0,
+        1982.181640625,
+        3430.2353515625
+      ],
+      "addonTotalKB": 11535.208984375,
+      "atSeconds": 47.8410000000149,
+      "counterRefreshMs": 68.73679998517036,
+      "filteredResults": 84,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 383375.9150390625,
+      "luaHeapKB": 383375.9150390625,
+      "phase": "retained",
+      "realResults": 84,
+      "scrollOffset": 2804,
+      "step": 31,
+      "tag": "local_filter_sort",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        5972.9365234375,
+        0,
+        1982.181640625,
+        3445.8447265625
+      ],
+      "addonTotalKB": 11550.818359375,
+      "atSeconds": 48.361000000004424,
+      "counterRefreshMs": 69.58559998869896,
+      "filteredResults": 84,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 383467.1240234375,
+      "luaHeapKB": 383467.1240234375,
+      "phase": "retained",
+      "realResults": 84,
+      "scrollOffset": 2804,
+      "step": 32,
+      "tag": "refresh_scroll",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        6486.755859375,
+        0,
+        2084.1318359375,
+        3487.216796875
+      ],
+      "addonTotalKB": 12207.9599609375,
+      "atSeconds": 48.88400000002002,
+      "counterRefreshMs": 68.19969999790192,
+      "filteredResults": 84,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 384172.1484375,
+      "luaHeapKB": 384172.1484375,
+      "phase": "retained",
+      "realResults": 84,
+      "scrollOffset": 5536,
+      "step": 33,
+      "tag": "commit_native_snapshot",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        6509.560546875,
+        0,
+        2084.1318359375,
+        3551.966796875
+      ],
+      "addonTotalKB": 12295.5146484375,
+      "atSeconds": 49.403000000020256,
+      "counterRefreshMs": 75.99770000576973,
+      "filteredResults": 84,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 384333.302734375,
+      "luaHeapKB": 384333.302734375,
+      "phase": "retained",
+      "realResults": 84,
+      "scrollOffset": 5536,
+      "step": 34,
+      "tag": "update_eight_real_records",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        6540.404296875,
+        0,
+        2087.1240234375,
+        3559.193359375
+      ],
+      "addonTotalKB": 12336.5771484375,
+      "atSeconds": 49.91800000000512,
+      "counterRefreshMs": 74.35240000486374,
+      "filteredResults": 84,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 384439.294921875,
+      "luaHeapKB": 384439.294921875,
+      "phase": "retained",
+      "realResults": 84,
+      "scrollOffset": 5536,
+      "step": 35,
+      "tag": "local_filter_sort",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        6540.404296875,
+        0,
+        2087.1240234375,
+        3569.021484375
+      ],
+      "addonTotalKB": 12346.4052734375,
+      "atSeconds": 50.43800000002375,
+      "counterRefreshMs": 68.93719998002052,
+      "filteredResults": 84,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 384552.6787109375,
+      "luaHeapKB": 384552.6787109375,
+      "phase": "retained",
+      "realResults": 84,
+      "scrollOffset": 5536,
+      "step": 36,
+      "tag": "refresh_scroll",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        7193.474609375,
+        0,
+        2270.267578125,
+        3719.6591796875
+      ],
+      "addonTotalKB": 13333.2568359375,
+      "atSeconds": 50.95900000000256,
+      "counterRefreshMs": 72.53429999947548,
+      "filteredResults": 83,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 385700.0595703125,
+      "luaHeapKB": 385700.0595703125,
+      "phase": "retained",
+      "realResults": 83,
+      "scrollOffset": 0,
+      "step": 37,
+      "tag": "commit_native_snapshot",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        7219.537109375,
+        0,
+        2270.267578125,
+        3932.4091796875
+      ],
+      "addonTotalKB": 13572.0693359375,
+      "atSeconds": 51.47900000002119,
+      "counterRefreshMs": 73.74750000238419,
+      "filteredResults": 83,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 386012.6669921875,
+      "luaHeapKB": 386012.6669921875,
+      "phase": "retained",
+      "realResults": 83,
+      "scrollOffset": 0,
+      "step": 38,
+      "tag": "update_eight_real_records",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        7290.685546875,
+        0,
+        2288.759765625,
+        3944.5498046875
+      ],
+      "addonTotalKB": 13673.8505859375,
+      "atSeconds": 52,
+      "counterRefreshMs": 69.81769999861717,
+      "filteredResults": 83,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 386183.9482421875,
+      "luaHeapKB": 386183.9482421875,
+      "phase": "retained",
+      "realResults": 83,
+      "scrollOffset": 0,
+      "step": 39,
+      "tag": "local_filter_sort",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        7290.685546875,
+        0,
+        2288.759765625,
+        3955.5341796875
+      ],
+      "addonTotalKB": 13684.8349609375,
+      "atSeconds": 52.521000000007916,
+      "counterRefreshMs": 73.69470000267029,
+      "filteredResults": 83,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 386270.2353515625,
+      "luaHeapKB": 386270.2353515625,
+      "phase": "retained",
+      "realResults": 83,
+      "scrollOffset": 0,
+      "step": 40,
+      "tag": "refresh_scroll",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        7864.94140625,
+        0,
+        2381.306640625,
+        4105.3046875
+      ],
+      "addonTotalKB": 14501.408203125,
+      "atSeconds": 53.03500000000349,
+      "counterRefreshMs": 75.77459999918938,
+      "filteredResults": 82,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 387151.30859375,
+      "luaHeapKB": 387151.30859375,
+      "phase": "retained",
+      "realResults": 82,
+      "scrollOffset": 2732,
+      "step": 41,
+      "tag": "commit_native_snapshot",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        7897.51171875,
+        0,
+        2381.306640625,
+        4299.5546875
+      ],
+      "addonTotalKB": 14728.228515625,
+      "atSeconds": 53.54899999999907,
+      "counterRefreshMs": 76.904599994421,
+      "filteredResults": 82,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 387451.5673828125,
+      "luaHeapKB": 387451.5673828125,
+      "phase": "retained",
+      "realResults": 82,
+      "scrollOffset": 2732,
+      "step": 42,
+      "tag": "update_eight_real_records",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        7969.72265625,
+        0,
+        2399.798828125,
+        4312.8515625
+      ],
+      "addonTotalKB": 14832.228515625,
+      "atSeconds": 54.070000000006985,
+      "counterRefreshMs": 74.20009997487068,
+      "filteredResults": 82,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 387718.15625,
+      "luaHeapKB": 387718.15625,
+      "phase": "retained",
+      "realResults": 82,
+      "scrollOffset": 2732,
+      "step": 43,
+      "tag": "local_filter_sort",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        7972.98046875,
+        0,
+        2399.798828125,
+        4356.2109375
+      ],
+      "addonTotalKB": 14878.845703125,
+      "atSeconds": 54.59000000002561,
+      "counterRefreshMs": 69.38660001754761,
+      "filteredResults": 82,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 387849.5263671875,
+      "luaHeapKB": 387849.5263671875,
+      "phase": "retained",
+      "realResults": 82,
+      "scrollOffset": 2732,
+      "step": 44,
+      "tag": "refresh_scroll",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        8541.3125,
+        0,
+        2518.087890625,
+        4460.056640625
+      ],
+      "addonTotalKB": 15669.3125,
+      "atSeconds": 55.10500000001048,
+      "counterRefreshMs": 68.48890000581741,
+      "filteredResults": 82,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 388687.6962890625,
+      "luaHeapKB": 388687.6962890625,
+      "phase": "retained",
+      "realResults": 82,
+      "scrollOffset": 5392,
+      "step": 45,
+      "tag": "commit_native_snapshot",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        8587.1328125,
+        0,
+        2518.1298828125,
+        4765.306640625
+      ],
+      "addonTotalKB": 16020.4248046875,
+      "atSeconds": 55.618000000016764,
+      "counterRefreshMs": 70.11010000109673,
+      "filteredResults": 81,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 389178.314453125,
+      "luaHeapKB": 389178.314453125,
+      "phase": "retained",
+      "realResults": 81,
+      "scrollOffset": 5320,
+      "step": 46,
+      "tag": "update_eight_real_records",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        8642.453125,
+        0,
+        2527.2861328125,
+        4799.416015625
+      ],
+      "addonTotalKB": 16119.0107421875,
+      "atSeconds": 56.13900000002468,
+      "counterRefreshMs": 77.47889998555183,
+      "filteredResults": 81,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 389350.9599609375,
+      "luaHeapKB": 389350.9599609375,
+      "phase": "retained",
+      "realResults": 81,
+      "scrollOffset": 5320,
+      "step": 47,
+      "tag": "local_filter_sort",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        8648.96875,
+        0,
+        2527.2861328125,
+        4822.541015625
+      ],
+      "addonTotalKB": 16148.6513671875,
+      "atSeconds": 56.653000000020256,
+      "counterRefreshMs": 69.70219999551773,
+      "filteredResults": 81,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 389477.7392578125,
+      "luaHeapKB": 389477.7392578125,
+      "phase": "retained",
+      "realResults": 81,
+      "scrollOffset": 5320,
+      "step": 48,
+      "tag": "refresh_scroll",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.85546875,
+        8897.703125,
+        0,
+        2712.2958984375,
+        4991.642578125
+      ],
+      "addonTotalKB": 16751.4970703125,
+      "atSeconds": 57.271000000007916,
+      "counterRefreshMs": 73.75499999523163,
+      "filteredResults": 81,
+      "gcMs": 0,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 390203.328125,
+      "luaHeapKB": 390203.328125,
+      "phase": "retained",
+      "realResults": 81,
+      "scrollOffset": 0,
+      "step": 48,
+      "tag": "repeat_end_before_gc",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.3828125,
+        689.28515625,
+        0,
+        959.7841796875,
+        469.3720703125
+      ],
+      "addonTotalKB": 2267.82421875,
+      "atSeconds": 57.271000000007916,
+      "counterRefreshMs": 68.2276999950409,
+      "filteredResults": 81,
+      "gcMs": 167.29859998822212,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 371545.52734375,
+      "luaHeapKB": 371545.52734375,
+      "phase": "gc",
+      "realResults": 81,
+      "scrollOffset": 0,
+      "step": 48,
+      "tag": "open_retained_final",
+      "visiblePool": 10
+    },
+    {
+      "addonKB": [
+        149.3828125,
+        252.58984375,
+        0,
+        959.5732421875,
+        469.3720703125
+      ],
+      "addonTotalKB": 1830.91796875,
+      "atSeconds": 57.896000000007916,
+      "counterRefreshMs": 69.32980000972748,
+      "filteredResults": 0,
+      "gcMs": 170.40399998426437,
+      "loaded": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "luaHeapAfterRefreshKB": 370626.220703125,
+      "luaHeapKB": 370626.220703125,
+      "phase": "closed",
+      "realResults": 0,
+      "scrollOffset": 0,
+      "step": 48,
+      "tag": "closed_after_gc",
+      "visiblePool": 10
+    }
+  ],
+  "scenario": {
+    "gcPolicy": "natural phase first; first explicit collection follows all natural steps; collect only, never stop/restart GC",
+    "nativeObjects": "known main-window Frame subtree counts only; no texture/engine-byte attribution",
+    "nativeSearches": 1,
+    "naturalSteps": 48,
+    "operations": [
+      "commit_native_snapshot",
+      "update_eight_real_records",
+      "local_filter_sort",
+      "refresh_scroll"
+    ],
+    "retainedSteps": 48,
+    "stepIntervalSeconds": 0.45,
+    "timeoutSeconds": 105
+  },
+  "schema": "lycheegroup.list-memory.v1",
+  "settings": {
+    "noteMarks": true,
+    "reduceMotion": false,
+    "scriptProfile": "0"
+  },
+  "summary": {
+    "budgetBytes": 20000000,
+    "finalOpenRetainedBytes": 2322252,
+    "naturalHeapPeakKB": 477805.90234375,
+    "naturalPeakBytes": 20964323,
+    "naturalPeakKB": 20472.9716796875,
+    "retainedBaselineSample": 52,
+    "retainedDeltaKB": -1.76953125,
+    "retainedFinalSample": 102,
+    "retainedPackageDeltaKB": [
+      0,
+      -1.734375,
+      0,
+      0,
+      -0.03515625
+    ],
+    "retainedWorkloadPeakKB": 16751.4970703125,
+    "sampledUncollectedPeakBytes": 20964323,
+    "sampledUncollectedPeakKB": 20472.9716796875,
+    "wholeHeapRetainedDeltaKB": -137.802734375
+  },
+  "units": "KB"
+}

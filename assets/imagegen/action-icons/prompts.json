@@ -1,0 +1,12 @@
+{
+  "tool_mode": "built-in image_gen",
+  "transparent_background": true,
+  "outputs": {
+    "accept": "invite-flat.png",
+    "decline": "decline-flat.png"
+  },
+  "prompts": {
+    "accept": "Use case: logo-brand. Generate one FLAT TWO-DIMENSIONAL UI check-mark icon on a truly transparent background. It must look like a clean vector symbol exported to PNG, NOT a rendered object. Exactly one uniform solid color #A8D5BA throughout the opaque silhouette. Short diagonal left arm and long rising right arm, medium-bold consistent strokes, small rounded end caps, clean joins. Centered, 76 percent of a square canvas, readable at 20 pixels. Absolutely NO gradient, NO highlights, NO bevel, NO 3D, NO extrusion, NO lighting, NO texture, NO shadow, NO glow, NO outline, NO surrounding container, NO decoration, NO text. Smooth antialiased edges only. A simple precise functional accept/invite symbol.",
+    "decline": "Use case: logo-brand. Generate one FLAT TWO-DIMENSIONAL UI X-mark icon on a truly transparent background. It must look like a clean vector symbol exported to PNG, NOT a rendered object. Exactly one uniform solid color #E87983 throughout the opaque silhouette. Two equal diagonal strokes in a balanced multiplication-style X, medium-bold consistent stroke width, small rounded end caps, clean central union. Centered, 72 percent of a square canvas, readable at 20 pixels. Absolutely NO gradient, NO highlights, NO bevel, NO 3D, NO extrusion, NO lighting, NO texture, NO shadow, NO glow, NO outline, NO surrounding container, NO decoration, NO text. Smooth antialiased edges only. A simple precise functional reject/decline symbol matching a flat green check."
+  }
+}

@@ -1,0 +1,23 @@
+## Interface: 120105
+## Title: Lychee LFG · Interface
+## Author: FollenFang
+## Title-zhCN: |cffD53C49荔枝|r组队 · 界面
+## Notes: LFG search, player notes and settings interface.
+## Notes-zhCN: 组队、玩家记录与设置界面。
+## IconTexture: Interface\AddOns\LycheeGroup\Media\addon-logo.tga
+## Dependencies: LycheeGroup
+## LoadOnDemand: 1
+## Version: 1.0.0
+Locale.lua
+Theme.lua
+Motion.lua
+Components.lua
+Preview.lua
+Tooltip.lua
+Native.lua
+Transfer.lua
+Host.lua
+Find.lua
+Create.lua
+Notes.lua
+Settings.lua
