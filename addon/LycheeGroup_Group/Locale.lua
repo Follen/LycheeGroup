@@ -24,6 +24,7 @@ A.GroupLocale = {
 
 	-- 申请
 	alreadyApplied = choose("已经申请过这支队伍。", "You have already applied to this group."),
+	applicationCancelled = choose("这条申请已取消，请刷新队伍列表后再次申请。", "This application was cancelled. Refresh the group list before applying again."),
 	applyFailed = choose("申请提交失败。", "Could not submit the application."),
 	cancelFailed = choose("取消申请失败。", "Could not cancel the application."),
 	acceptFailed = choose("接受邀请失败。", "Could not accept the invite."),

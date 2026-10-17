@@ -270,6 +270,20 @@ do
 end
 T.ok(create.score:IsShown(),"key activity exposes score")
 do
+ local catalog=G.Catalog
+ local group=catalog:GetGroups("seasonDungeon")[1]
+ local variants=group.variants
+ group.variants={catalog:GetActivity(3),catalog:GetActivity(2)}
+ create.pickerEntries={{category="seasonDungeon",group=group}}
+ create:SelectPickerRow(1)
+ T.eq(create:FormData().activityID,2,"new seasonal dungeons default to Mythic Keystone even when Normal sorts first")
+ for _,button in ipairs(create.difficultyButtons) do if button.value==3 then button:Fire("OnClick");break end end
+ create:RefreshPicker()
+ T.eq(create:FormData().activityID,3,"an explicit Normal choice remains selected on refresh")
+ group.variants=variants
+ create:SelectPickerRow(1)
+end
+do
  create:TogglePicker()
  local picker=create.picker
  T.ok(picker:IsShown(),"first expansion creates the complete activity popup")
@@ -314,6 +328,19 @@ do
  T.eq(#create.batchPool,1,"only the visible applicant batch is allocated")
  local solo=create.batchPool[1];T.eq(#solo.people,1,"a solo applicant does not prebuild four unused member rows")
  local nodes=#S.nodes;G:Notify("applicants");T.eq(#S.nodes,nodes,"unchanged applicants reuse their batch and member controls")
+ local dk={name="DeathKnight-Away",nameKey="DeathKnight-Away",class="DEATHKNIGHT",specID=252,assignedRole="DAMAGER",requestedRoles={TANK=true,DAMAGER=true,HEALER=false}}
+ G.applicants[70].members[1]=dk;G:Notify("applicants")
+ local row=solo.people[1];local specTexture=row.icon:GetTexture()
+ T.eq(row.roles[1]:GetTexture(),U.Theme.media.."role-tank.tga");T.eq(row.roles[2]:GetTexture(),U.Theme.media.."role-dps.tga")
+ T.eq(row.roles[1]:IsShown(),true);T.eq(row.roles[2]:IsShown(),true);T.eq(row.roles[3]:IsShown(),false,"a DK applicant can request tank and damage independently of specialization")
+ create.roleFilters.TANK:Fire("OnClick");T.eq(#create.appIDs,1)
+ create.roleFilters.DAMAGER:Fire("OnClick");T.eq(#create.appIDs,1)
+ create.roleFilters.HEALER:Fire("OnClick");T.eq(#create.appIDs,0)
+ create.roleFilters.ALL:Fire("OnClick")
+ dk.requestedRoles.TANK=false;G:Notify("applicants")
+ T.eq(solo.people[1],row,"changing requested roles reuses the existing applicant row")
+ T.eq(row.roles[1]:GetTexture(),U.Theme.media.."role-dps.tga");T.eq(row.roles[2]:IsShown(),false);T.eq(row.roles[3]:IsShown(),false,"row reuse removes the old second requested role")
+ T.eq(dk.specID,252);T.eq(row.icon:GetTexture(),specTexture,"requested roles do not rewrite the DK specialization icon")
  G.applicants[70]=nil;G:Notify("applicants")
  T.eq(solo.appID,nil);T.eq(solo.people[1].member,nil,"emptying recruitment releases pooled member bindings")
 end
@@ -545,16 +572,21 @@ do
  local scripts={};for _,event in ipairs(events) do scripts[event]=box:GetScript(event) end
  box:UserType("Old native activity token")
  local remember=A.db.rememberFilters;A.db.rememberFilters=true
- G.db.prefs.find={filters={text="Old saved local query",minLevel=12,maxLevel=99}}
+ G.db.prefs.find={filters={text="Old saved local query",minLevel=12,maxLevel=99,tankPresence="present",healerPresence="missing",needsDamage=true}}
  local combat=InCombatLockdown;_G.InCombatLockdown=function() return true end
  T.eq(A:Open("find"),true,"Find first opens during combat without protected mouse propagation")
  local page=U.pages.find
+ T.eq(G.filters.tankPresence,"present");T.eq(G.filters.healerPresence,"missing");T.eq(G.filters.needsDamage,true,"first entry restores all role-presence fields from fallback filters")
+ T.eq(page.rolePresenceChoices.TANK.value,"present");T.eq(page.rolePresenceChoices.HEALER.value,"missing");T.eq(page.rolePresenceChoices.DAMAGER.value,"missing")
+ page:ClearFilters();T.eq(G.filters.tankPresence,nil);T.eq(G.filters.healerPresence,nil);T.eq(G.filters.needsDamage,nil)
  T.eq(page.picker,nil,"Find keeps the activity popup unbuilt while only results are open")
  T.eq(page.main.keyboardEnabled,nil,"first combat build does not change restricted keyboard propagation")
  T.eq(page.main.events.PLAYER_REGEN_ENABLED,true)
  _G.InCombatLockdown=combat;page.main:Fire("OnEvent","PLAYER_REGEN_ENABLED")
  T.eq(page.main.keyboardEnabled,true);T.eq(page.main.keyboardPropagation,true)
  T.eq(page.main.events.PLAYER_REGEN_ENABLED,nil,"shortcut setup releases its one-time event")
+ T.eq(page.emptyText:GetText(),"请选择副本","opening Find waits for an explicit instance selection")
+ page:SelectCategory("seasonDungeon");page.activities.rows[1]:Fire("OnClick","LeftButton")
  T.eq(page.search.box,box,"group mode starts with the registered native input")
  T.eq(page.searchHint:GetText(),"队伍标题或钥石范围，如 12-15")
  T.eq(page.searchModeToggle.label:GetText(),"标题","title is the default search mode label")
@@ -579,7 +611,7 @@ do
  T.eq(box:GetText(),"");T.ok(G.searchClears>0,"leader search and first native lease discard stale native activity tokens")
  T.eq(page.searchHint:GetText(),"队伍标题或钥石范围，如 12-15")
  T.eq(page.fMinLevel,nil);T.eq(page.fMaxLevel,nil,"unsupported local level range inputs are not created")
- T.eq(page.filterPanel:GetHeight(),536,"key filters retain role, size, relations and sorting without the removed range row")
+ T.eq(page.filterPanel:GetHeight(),616,"seasonal role-presence rows fit alongside size, relations and sorting")
  local revision=U.Native.searchLease.revision
  box:UserType("12-15");T.eq(U.Native.searchLease.revision,revision+1,"each native edit distinguishes a newer query without parsing it")
  T.eq(G.filters.text,nil);T.eq(G.filters.leaderText,nil);T.eq(G.filters.minLevel,nil);T.eq(G.filters.maxLevel,nil,"native range text is never copied into local result filters")
@@ -592,9 +624,11 @@ do
  T.eq(page.searchHint:GetText(),"队伍标题","raid search returns to title mode without a key-range hint")
  T.eq(page.searchModeToggle:IsShown(),true);T.eq(page.search.box,box)
  T.eq(G.filters.maxMembers,nil,"a category without saved conditions does not inherit the dungeon member limit")
+ page.activities.rows[1]:Fire("OnClick","LeftButton")
  page.search.box:UserType("Heroic");page.refresh:Fire("OnClick");T.eq(G.searchMode,"group");T.eq(G.searchText,"Heroic")
  page.searchClear:Fire("OnClick");T.eq(page.search.box:GetText(),"");T.eq(G.searchText,"")
  page:SelectCategory("seasonDungeon")
+ page.activities.rows[1]:Fire("OnClick","LeftButton")
  local clears=G.searchClears
  box:UserType("12-15");box:SetFocus();U:Hide(true)
  T.eq(U.Native.searchLease,nil);T.eq(box:GetParent(),parent)
@@ -741,6 +775,7 @@ local membersAnchor={find.fMembers:GetPoint()}
 T.eq(membersAnchor[#membersAnchor],-139,"non-dungeon filters close the hidden key-level row")
 T.ok(find.fMembers.placeholder and find.fMembers.placeholder:IsShown(),"an empty numeric filter visibly says unrestricted")
 T.eq(find.fMembers.increase,nil,"numeric filters have no stepper arrows")
+find.activities.rows[1]:Fire("OnClick","LeftButton")
 do
  local getResults=G.GetResults;local reads=0
  G.GetResults=function(self) reads=reads+1;return getResults(self) end
@@ -757,16 +792,58 @@ find.fMinMembers.box:SetText("3");T.eq(G.filters.maxMembers,4)
 find:SelectCategory("seasonDungeon");T.eq(G.filters.minMembers,nil,"a category without a minimum stays unrestricted")
 find:SelectCategory("seasonRaid");T.eq(G.filters.minMembers,3);T.eq(G.filters.maxMembers,4,"both bounds restore with their category")
 find:ClearFilters();T.eq(G.filters.minMembers,nil);T.eq(G.filters.maxMembers,nil)
+do
+ find:SelectCategory("seasonDungeon")
+ local filtersOpen=find.filtersOpen;find:SetFiltersOpen(true)
+ local choices=find.rolePresenceChoices
+ local function Choose(role,value)
+  for _,button in ipairs(choices[role].buttons) do if button.value==value then button:Fire("OnClick");return end end
+  error("missing role-presence option "..role..":"..value)
+ end
+ T.eq(find.rolePresencePanel:IsShown(),true);T.eq(find.roleChoice:IsShown(),false,"seasonal dungeons replace the old one-role menu")
+ T.eq(#choices.TANK.buttons,3);T.eq(#choices.HEALER.buttons,3);T.eq(#choices.DAMAGER.buttons,2,"damage exposes only unrestricted and missing")
+ Choose("TANK","present");T.eq(G.filters.tankPresence,"present")
+ Choose("TANK","missing");T.eq(G.filters.tankPresence,"missing");T.eq(choices.TANK.buttons[2].active,false);T.eq(choices.TANK.buttons[3].active,true,"tank presence options are mutually exclusive")
+ Choose("HEALER","present");Choose("DAMAGER","missing")
+ T.eq(G.filters.tankPresence,"missing");T.eq(G.filters.healerPresence,"present");T.eq(G.filters.needsDamage,true,"independent role fields combine in the result filter")
+ find:SelectCategory("seasonRaid")
+ T.eq(find.rolePresencePanel:IsShown(),false);T.eq(G.filters.tankPresence,nil);T.eq(G.filters.healerPresence,nil);T.eq(G.filters.needsDamage,nil,"seasonal conditions do not leak to raids")
+ find:SelectCategory("seasonDungeon")
+ T.eq(choices.TANK.value,"missing");T.eq(choices.HEALER.value,"present");T.eq(choices.DAMAGER.value,"missing","returning restores the category's visible controls")
+ local catalog=G.Catalog;local getActivities=catalog.GetActivities
+ catalog.GetActivities=function(self,key) if key=="2" then return {self:GetActivity(2)} end;return getActivities(self,key) end
+ find:SelectCategory("2");T.eq(find.roleChoice:IsShown(),true,"ordinary Mythic+ browsing keeps the existing missing-role menu")
+ Pick(find.roleChoice,"TANK");T.eq(G.filters.neededRole,"TANK");T.eq(G.filters.tankPresence,nil)
+ find:SelectCategory("seasonDungeon");T.eq(G.filters.neededRole,nil);T.eq(G.filters.tankPresence,"missing")
+ find:SelectCategory("2");T.eq(find.roleChoice.value,"TANK");T.eq(G.filters.neededRole,"TANK","the original category restores its own role choice")
+ find:SelectCategory("seasonDungeon");catalog.GetActivities=getActivities;find.clearFilters:Fire("OnClick")
+ for _,role in ipairs({"TANK","HEALER","DAMAGER"}) do T.eq(choices[role].value,"any") end
+ T.eq(G.filters.tankPresence,nil);T.eq(G.filters.healerPresence,nil);T.eq(G.filters.needsDamage,nil)
+ find:SelectCategory("seasonRaid");find:SelectCategory("seasonDungeon")
+ T.eq(choices.TANK.value,"any");T.eq(choices.HEALER.value,"any");T.eq(choices.DAMAGER.value,"any","cleared conditions do not return after a category switch")
+ for _,role in ipairs({"TANK","HEALER","DAMAGER"}) do
+  find:RestoreCategory({neededRole=role});find:UpdateFilters()
+  T.eq(choices[role].value,"missing","legacy saved missing-role filters migrate to a visible seasonal choice")
+  T.eq(G.filters.neededRole,nil,"the migrated condition has only one active representation")
+  Choose(role,"any")
+  local saved=G.db.prefs.find.categoryPrefs.seasonDungeon
+  T.eq(saved.neededRole,nil);T.eq(saved.tankPresence,nil);T.eq(saved.healerPresence,nil);T.eq(saved.needsDamage,nil,"choosing unrestricted completely removes the legacy condition")
+ end
+ find:SelectCategory("seasonRaid");find:SetFiltersOpen(filtersOpen)
+end
 A.db.rememberFilters=rememberBounds
 T.eq(find.filterToggle.label:GetText(),"筛选","the filter arrow is texture art rather than an unsupported font glyph")
 for _,r in ipairs(find.seasonCategories.rows) do if r.key=="seasonRaid" then T.eq(r.selected:IsShown(),true,"category selection has a tonal background and vertical marker");T.eq(r.mark:IsShown(),true) end end
 
 
 find:SelectCategory("seasonDungeon")
-local activityRow=find.activities.rows[1]
+local activityRow=find.activities.rows[2]
 activityRow:Fire("OnMouseDown");activityRow:Fire("OnClick","LeftButton")
 for _,button in ipairs(find.difficultyButtons) do if button.value==1 and button:IsShown() then button:Fire("OnClick") end end
 T.eq(find.searchHint:GetText(),"队伍标题","normal dungeon search uses the native title query")
+T.eq(find.rolePresencePanel:IsShown(),true,"seasonal role-presence choices also work at normal difficulty")
+find.rolePresenceChoices.TANK.buttons[2]:Fire("OnClick");T.eq(G.filters.tankPresence,"present");T.eq(G.filters.neededRole,nil)
+find.rolePresenceChoices.TANK.buttons[1]:Fire("OnClick")
 local searchMethod=G.Search.Search;local requestedActivity
 G.Search.Search=function(_,category,id) requestedActivity=id;return true end
 find:DoSearch();T.eq(requestedActivity,3,"a selected seasonal map and normal difficulty request its unique native activity")
@@ -774,6 +851,135 @@ for _,button in ipairs(find.difficultyButtons) do if button.value==false and but
 T.eq(find.searchHint:GetText(),"队伍标题或钥石范围，如 12-15");T.eq(find.searchModeToggle:IsShown(),true,"title and leader modes remain available with Mythic+ selected")
 find:DoSearch();T.eq(requestedActivity,nil,"multiple valid native difficulties are not replaced by a guessed activity")
 G.Search.Search=searchMethod
+find:SetFiltersOpen(true);Pick(find.socialChoice,"noCaution")
+T.eq(find.socialChoice.label:GetText(),"不含拉黑记录");T.eq(G.filters.notes,"noCaution","the note choice requests exclusion rather than blocked-only results")
+Pick(find.socialChoice,false);find:SetFiltersOpen(false)
+do
+ local catalog=G.Catalog
+ local getActivities,getGroups,getTier,getShort=catalog.GetActivities,catalog.GetGroups,catalog.GetActivityTier,catalog.GetGroupShortName
+ local search=G.Search.Search;local calls,lastActivity=0,nil
+ G.Search.Search=function(_,category,id) calls=calls+1;lastActivity=id;return true end
+ local activities={
+  {id=2001,groupKey=201,categoryID=2,difficultyID=8,isMythicPlusActivity=true,fixtureTier=1},
+  {id=2002,groupKey=202,categoryID=2,difficultyID=8,isMythicPlusActivity=true,fixtureTier=1},
+  {id=2003,groupKey=201,categoryID=2,difficultyID=1,fixtureTier=1},
+  {id=2004,groupKey=203,categoryID=2,difficultyID=1,fixtureTier=1},
+ }
+ local groups={{key=201,name="毒牙洞窟",tier=1,activity=activities[1]},{key=202,name="红玉新生法池",tier=1,activity=activities[2]},{key=203,name="普通专属地下城",tier=1,activity=activities[4]}}
+ catalog.GetActivities=function(self,key) if key=="seasonDungeon" or key=="2" then return activities end;return getActivities(self,key) end
+ catalog.GetGroups=function(self,key) if key=="seasonDungeon" or key=="2" then return groups end;return getGroups(self,key) end
+ catalog.GetActivityTier=function(self,activity) return activity.fixtureTier or getTier(self,activity) end
+ catalog.GetGroupShortName=function(self,key,groupKey) if groupKey==201 then return "毒牙" elseif groupKey==202 then return "红玉" end;return getShort(self,key,groupKey) end
+ local remember=A.db.rememberFilters;A.db.rememberFilters=true
+ local function Row(key) for _,row in ipairs(find.activities.rows) do if row.key==key then return row end end;error("missing activity row "..key) end
+ local function Difficulty(id) for _,button in ipairs(find.difficultyButtons) do if button.value==id and button:IsShown() then button:Fire("OnClick");return end end;error("missing difficulty "..tostring(id)) end
+ local function Check(key) if not find.multiSelectMode then find.multiSelectToggle:Fire("OnClick") end;Row(key).multiSelect:Fire("OnClick") end
+ find:SelectCategory("seasonRaid")
+ T.eq(Row(0).title:GetText(),"全部副本","the seasonal raid menu restores an explicit all-instances entry")
+ find:SelectCategory("seasonDungeon")
+ local before=calls
+ T.eq(find.emptyText:GetText(),"请选择副本");T.eq(#find.results.ids,0,"a pending category cannot relabel the old result rows")
+ Difficulty(8);T.eq(calls,before,"category and difficulty selection prepare a choice without searching")
+ T.eq(Row(201).multiSelect:IsShown(),false);T.eq(Row(202).multiSelect:IsShown(),false,"checkboxes are hidden in the default single-selection view")
+ T.eq(find.multiSelectToggle:GetParent(),Row(0));T.eq(find.multiSelectToggle.label:GetText(),"多选")
+ find.multiSelectToggle:Fire("OnClick")
+ T.eq(Row(201).multiSelect:IsShown(),true);T.eq(Row(202).multiSelect:IsShown(),true);T.eq(Row(203).multiSelect:IsShown(),false,"entering multi-selection only enables actual keystone rows")
+ T.eq(calls,before,"entering multi-selection does not search")
+ T.eq(find.pickerConfirm:IsShown(),false)
+ local savedDifficulty=G.db.prefs.find.categoryPrefs.seasonDungeon.difficultyID
+ find:ClosePicker();find:SelectCategory("seasonDungeon")
+ T.eq(G.filters.difficultyID,savedDifficulty,"closing an unsubmitted choice restores the confirmed difficulty")
+ Difficulty(8)
+ Check(202);Check(201)
+ T.eq(calls,before,"checkbox drafts do not send native searches")
+ T.eq(G.filters.groupKeys,nil,"checkbox drafts do not change the active result filters")
+ T.eq(find.pickerConfirm:IsShown(),true);T.eq(find.pickerConfirm:GetHeight(),40);T.eq(find.pickerConfirm.primary,true)
+ Check(202);Check(201);T.eq(find.pickerConfirm:IsShown(),false,"unchecking the whole draft hides confirmation")
+ Check(202);Check(201);find.pickerConfirm:Fire("OnClick")
+ T.eq(calls,before+1);T.eq(lastActivity,nil,"confirming multiple dungeons submits one complete native search")
+ T.same(G.filters.groupKeys,{[201]=true,[202]=true});T.eq(G.filters.groupKey,nil)
+ T.eq(find.context:GetText(),"毒牙·红玉  ·  "..GetDifficultyInfo(8),"multi-selection titles use catalog order and short names")
+ T.eq(find.draftGroupKeys,nil);T.eq(find.picker:IsShown(),false)
+ find:SelectCategory("seasonDungeon");T.eq(calls,before+1,"reopening the active category never resubmits")
+ T.eq(Row(201).multiSelect:IsShown(),false);T.eq(find.pickerConfirm:IsShown(),false,"reopening keeps the confirmed collection while hiding multi-selection controls")
+ T.eq(find.activities.selectedKey,nil);T.eq(Row(0).selected:IsShown(),false,"a confirmed collection never highlights the all-instances single-selection row")
+ T.eq(Row(201).multiSelect:GetChecked(),true);T.eq(Row(202).multiSelect:GetChecked(),true)
+ T.eq(Row(201).multiSelect.mark:IsShown(),true)
+ for _,stroke in ipairs(Row(201).multiSelect.mark.strokes) do T.same(stroke.fill,U.Theme.onPrimary,"the checkbox strokes use the untinted white foreground") end
+ find.multiSelectToggle:Fire("OnClick");Row(202):Fire("OnClick","LeftButton")
+ T.eq(Row(202).multiSelect:GetChecked(),false);T.eq(calls,before+1,"clicking an activity in multi-selection only toggles the draft")
+ find.multiSelectToggle:Fire("OnClick")
+ T.eq(Row(202).multiSelect:IsShown(),false);T.eq(find.pickerConfirm:IsShown(),false,"cancelling multi-selection hides the draft controls")
+ find:ClosePicker();T.same(G.filters.groupKeys,{[201]=true,[202]=true},"cancelling discards checkbox edits")
+ find:SelectCategory("seasonDungeon");T.eq(Row(202).multiSelect:GetChecked(),true,"reopening restores the active checks")
+ Check(202);find.pickerConfirm:Fire("OnClick")
+ T.same(G.filters.groupKeys,{[201]=true});T.eq(lastActivity,nil,"even one checked dungeon uses the complete-search multi-selection path")
+ T.eq(find.context:GetText(),"毒牙洞窟  ·  "..GetDifficultyInfo(8),"a one-item collection retains the complete dungeon name")
+ find:SelectCategory("seasonDungeon");Row(202):Fire("OnClick","LeftButton")
+ T.eq(G.filters.groupKeys,nil);T.eq(G.filters.groupKey,202);T.eq(lastActivity,2002,"the row keeps its original single-selection request")
+ local singleCalls=calls
+ find:SelectCategory("seasonDungeon");T.eq(find.activities.selectedKey,202);T.eq(G.filters.difficultyID,8);T.eq(calls,singleCalls,"same-category reopening preserves the confirmed single selection and difficulty")
+ find:SelectCategory("seasonRaid");find:SelectCategory("seasonDungeon")
+ T.eq(G.filters.groupKey,202);T.eq(find.activities.selectedKey,202);T.eq(Row(202).selected:IsShown(),true,"returning from another category restores the seasonal single-selection highlight")
+ T.eq(G.filters.difficultyID,8);T.eq(calls,singleCalls,"restoring a confirmed seasonal single selection still waits for an explicit search action")
+ Row(0):Fire("OnClick","LeftButton");T.eq(G.filters.groupKey,nil);T.eq(G.filters.groupKeys,nil);T.eq(find.context:GetText(),"全部副本  ·  "..GetDifficultyInfo(8))
+ find:SelectCategory("seasonDungeon");Check(201);Check(202);find.pickerConfirm:Fire("OnClick")
+ local selectedCalls=calls
+ G.Search.pending={categoryKey="seasonDungeon"};G.Search.timer=C_Timer.NewTimer(.2,function() calls=calls+100 end)
+ find:SelectCategory("seasonRaid");T.eq(G.Search.pending,nil);T.eq(G.Search.timer,nil)
+ f.base.AdvanceClock(.3);T.eq(calls,selectedCalls,"switching category cancels delayed native searches")
+ find:SelectCategory("seasonDungeon");T.eq(calls,selectedCalls)
+ T.same(G.filters.groupKeys,{[201]=true,[202]=true});T.eq(G.filters.difficultyID,8,"category restoration recovers only the confirmed keystone selection")
+ T.ok(find.refresh:IsEnabled(),"restoring confirmed dungeons keeps manual refresh available")
+ T.ok(not find.emptyPanel:IsShown() or find.emptyText:GetText()~="请选择副本","confirmed dungeons never render the unselected prompt")
+ T.eq(Row(201).multiSelect:GetChecked(),true);T.eq(Row(202).multiSelect:GetChecked(),true)
+ T.eq(find.appList.rows[1].key,101,"preparing a browse choice preserves real pinned applications")
+ Difficulty(1);T.eq(G.filters.groupKeys,nil);T.eq(Row(201).multiSelect:IsShown(),false);T.eq(calls,selectedCalls,"a non-keystone draft clears the collection without a search")
+ find:ClosePicker();find:SelectCategory("seasonDungeon");T.eq(Row(201).multiSelect:GetChecked(),true,"closing the unsubmitted difficulty draft returns to the confirmed collection")
+ Difficulty(1);Row(203):Fire("OnClick","LeftButton");T.eq(G.filters.groupKeys,nil)
+ find:SelectCategory("2");Difficulty(8);Check(201);find.pickerConfirm:Fire("OnClick")
+ find:SelectCategory("2");local tierCalls=calls
+ G.Search.pending={categoryKey="2"};G.Search.timer=C_Timer.NewTimer(.2,function() calls=calls+100 end)
+ Pick(find.tierChoice,1);T.eq(G.filters.groupKeys,nil,"changing expansion removes the active dungeon collection")
+ T.eq(calls,tierCalls);T.eq(G.Search.pending,nil);T.eq(G.Search.timer,nil)
+ f.base.AdvanceClock(.3);T.eq(calls,tierCalls,"changing expansion cancels queued searches and waits for an explicit activity selection")
+ T.eq(find.emptyText:GetText(),"请选择副本")
+ find:ClosePicker();find:SelectCategory("2")
+ T.same(G.filters.groupKeys,{[201]=true});T.eq(Row(201).multiSelect:GetChecked(),true,"closing the expansion draft restores the last confirmed collection")
+ local saved=G.db.prefs.find.categoryPrefs.seasonDungeon
+ saved.groupKey=nil;saved.groupKeys={[201]=true,[203]=true,[999]=true};saved.difficultyID=8
+ find:SelectCategory("seasonRaid");find:SelectCategory("seasonDungeon")
+ T.same(G.filters.groupKeys,{[201]=true},"restoration excludes removed groups and groups without the chosen keystone activity")
+ Row(0):Fire("OnClick","LeftButton");Difficulty(false)
+ local getCategories=catalog.GetCategories
+ local activityGroups,activityLists,extraCategories={},{},{}
+ local allLabels={[1]="全部任务",[4]="全部竞技场",[5]="全部竞技场练习赛",[6]="全部自定义活动",[121]="全部地下堡"}
+ for _,entry in ipairs({{1,"任务"},{4,"竞技场"},{5,"竞技场练习赛"},{6,"自定义"},{9,"评级战场"},{121,"地下堡"}}) do
+  local id,name=entry[1],entry[2];local key=tostring(id)
+  extraCategories[#extraCategories+1]={key=key,id=id,name=name,icon="pvp"}
+  local activity={id=9000+id,groupKey=900+id,categoryID=id,fixtureTier=1}
+  activityLists[key]={activity};activityGroups[key]={{key=900+id,name="单个"..name,tier=1,activity=activity}}
+ end
+ local priorActivities,priorGroups=catalog.GetActivities,catalog.GetGroups
+ catalog.GetCategories=function(self) local list={};for _,cat in ipairs(getCategories(self)) do list[#list+1]=cat end;for _,cat in ipairs(extraCategories) do list[#list+1]=cat end;return list end
+ catalog.GetActivities=function(self,key) return activityLists[key] or priorActivities(self,key) end
+ catalog.GetGroups=function(self,key) return activityGroups[key] or priorGroups(self,key) end
+ for _,id in ipairs({1,4,5,6,121}) do
+  find:SelectCategory(tostring(id));local unopenedCalls=calls
+  T.eq(find.emptyText:GetText(),"请选择活动");T.ok(find.emptyHelp:GetText():find(allLabels[id],1,true),"pending non-dungeon copy names the matching all-activity choice")
+  T.eq(Row(0).title:GetText(),allLabels[id],"all-activity rows name their own activity category")
+  T.eq(#find.activityIDs,2,"other one-item categories retain their all-activity choice")
+  Row(0):Fire("OnClick","LeftButton")
+  T.eq(calls,unopenedCalls+1);T.eq(find.context:GetText(),allLabels[id],"selecting all activities keeps the full category name in the result title")
+ end
+ find:SelectCategory("9");local ratedCalls=calls
+ T.same(find.activityIDs,{909},"rated battlegrounds alone omit the redundant all-activities row")
+ T.eq(calls,ratedCalls);Row(909):Fire("OnClick","LeftButton");T.eq(calls,ratedCalls+1);T.eq(lastActivity,9009)
+ find:SelectCategory("seasonRaid");catalog.GetCategories=getCategories
+ catalog.GetActivities,catalog.GetGroups,catalog.GetActivityTier,catalog.GetGroupShortName=getActivities,getGroups,getTier,getShort
+ G.Search.Search=search;A.db.rememberFilters=remember
+ find:SelectCategory("seasonRaid");find:SelectCategory("seasonDungeon");Row(0):Fire("OnClick","LeftButton")
+end
 find:SelectCategory("seasonDungeon");find:ClosePicker()
 T.eq(find.appList.rows[1].key,101,"applications survive the browse result selection")
 T.eq(find.appList.rows[1].status:GetText(),"5:00")
@@ -781,7 +987,7 @@ do
  local row=find.appList.rows[1]
  T.ok(row.leaderIcon:IsShown(),"my applications show the leader crown")
  T.eq(row.count:IsShown(),false);row:Fire("OnClick","LeftButton");T.eq(row.count:IsShown(),false)
- row.membersButton:Fire("OnClick");T.ok(row.count:IsShown());row.membersButton:Fire("OnClick");T.eq(row.count:IsShown(),false)
+ row.membersButton:Fire("OnClick");T.eq(row.count:IsShown(),false,"party applications also omit the N/N expansion");T.eq(row.count:GetText(),"")
 end
 find.autoJoin:Fire("OnClick");T.eq(A.db.autoJoin,true,"invite handling uses the shared account preference")
 do
@@ -800,6 +1006,18 @@ do
  switch:SetAvailable(true);switch:SetValue(true)
 end
 find.appList.rows[1].cancel:Fire("OnClick");T.eq(G.cancelled,101)
+do
+ local search,calls=G.Search.Search,0
+ local status=G.apps[1].status
+ local applies=G.applyCalls
+ G.Search.Search=function(self,...) calls=calls+1;return search(self,...) end
+ G.apps[1].status="cancelled";G:Notify("applicationCancelled",101)
+ T.eq(calls,1,"confirmed cancellation refreshes the current browse to obtain reusable result IDs")
+ T.eq(G.applyCalls,applies,"refreshing cancelled results never submits an application")
+ G:Notify("applicationCancelled",99999)
+ T.eq(calls,1,"cancelling outside the current result set does not refresh an unrelated browse")
+ G.Search.Search=search;G.apps[1].status=status;G:Notify("applications")
+end
 find:DoSearch();T.eq(G.state,"done")
 local target=find.results.rows[1]
 do
@@ -824,19 +1042,32 @@ do
  T.ok(Geometry(target.ilvl).x+target.ilvl:GetWidth()+20<=Geometry(target.count).x)
  T.ok(Geometry(target.count).x+target.count:GetWidth()+20<=Geometry(target.age).x)
  T.eq(Geometry(find.resultsHeader).y-find.resultsHeader:GetHeight()-Geometry(find.results).y,12,"the single header has a clear gap above the first row")
- local members={{name="One",nameKey="One-Away",class="WARRIOR",assignedRole="TANK"}}
+ local getSpecInfo=GetSpecializationInfoByID
+ _G.GetSpecializationInfoByID=function(id) return id,"Spec "..id,nil,200000+id end
+ local members={{name="One",nameKey="One-Away",class="WARRIOR",assignedRole="TANK",specID=71}}
  r.categoryID=2;r.maxNumPlayers=5;r.numMembers=1;r.age=10;r.leaderRating=2500;r.requiredItemLevel=320;r.ratingKind=nil
  r.details={members=members,counts={TANK=1,HEALER=0,DAMAGER=0},encounters={}};Render()
  local roster,count,age,score=Geometry(target.roster),Geometry(target.count),Geometry(target.age),Geometry(target.score)
  T.eq(roster.anchor,"CENTER");T.eq(Geometry(target.membersButton).x,count.x);T.eq(Geometry(target.membersButton).y,0)
  T.eq(target.count:IsShown(),false,"member totals are hidden until the role summary is clicked")
- T.eq(target.roster.counts[1].text:GetText(),"1");T.eq(target.roster.counts[2].text:GetText(),"0");T.eq(target.roster.counts[3].text:GetText(),"0")
+ T.eq(target.roster.slots[1].icon:IsShown(),true);T.eq(target.roster.slots[1].icon:GetTexture(),200071,"a party result shows its member's specialization")
+ T.eq(target.roster.counts[1].text:IsShown(),false,"party rows use individual specializations rather than aggregate role counts")
  target:Fire("OnClick","LeftButton");T.eq(target.count:IsShown(),false,"ordinary row clicks do not expand member totals")
- target.membersButton:Fire("OnClick");T.eq(target.count:IsShown(),true);T.eq(target.count:GetText(),"1/5")
- T.eq(Geometry(target.membersButton).y,11);T.eq(Geometry(target.count).y,-13)
+ target.membersButton:Fire("OnClick");T.eq(target.count:IsShown(),false);T.eq(target.count:GetText(),"","party slots never reveal a redundant N/N counter")
+ T.eq(Geometry(target.membersButton).y,0)
  target.membersButton:Fire("OnClick");T.eq(target.count:IsShown(),false)
+ for i,role in ipairs({"TANK","HEALER","DAMAGER","DAMAGER","DAMAGER"}) do
+  local slot=target.roster.slots[i]
+  T.eq(slot.role:IsShown(),true,"empty party slots retain a role placeholder")
+  T.eq(slot.role:GetTexture(),U.Theme.media..({TANK="role-tank",HEALER="role-healer",DAMAGER="role-dps"})[role]..".tga")
+  T.eq(slot.icon:IsShown(),i==1,"only the occupied slot shows a specialization")
+ end
  T.eq(count.width,138);T.eq(age.width,76)
- for i=2,5 do members[i]={name="Member"..i,nameKey="Member"..i.."-Away",class="MAGE",assignedRole=i==2 and "HEALER" or "DAMAGER"} end
+ members[1]={name="Damage1",class="MAGE",assignedRole="DAMAGER",specID=63}
+ members[2]={name="Tank",class="WARRIOR",assignedRole="TANK",specID=71}
+ members[3]={name="Damage2",class="MAGE",assignedRole="DAMAGER",specID=62}
+ members[4]={name="Healer",class="PRIEST",assignedRole="HEALER",specID=257}
+ members[5]={name="Damage3",class="MAGE",assignedRole="DAMAGER",specID=64}
  r.numMembers=5;r.age=99*86400;r.leaderRating=nil;Render()
  T.eq(Geometry(target.roster).x,roster.x,"one to five members share the membership column center")
  T.eq(target.roster:GetWidth(),132,"party and raid role summaries use the same width")
@@ -844,11 +1075,18 @@ do
  T.same(Geometry(target.age),age,"longer time text does not resize the time column")
  T.same(Geometry(target.score),score,"unknown scores retain the same numeric column")
  T.ok(target.score:GetStringWidth()<=target.score:GetWidth(),"the complete unknown-score label fits")
- T.eq(target.roster.slots[5].icon:IsShown(),false,"the compact row shows role totals instead of individual portraits")
- T.eq(target.roster.counts[1].text:GetText(),"1");T.eq(target.roster.counts[2].text:GetText(),"1");T.eq(target.roster.counts[3].text:GetText(),"3")
+ for i,spec in ipairs({71,257,63,62,64}) do
+  T.eq(target.roster.slots[i].icon:IsShown(),true)
+  T.eq(target.roster.slots[i].icon:GetTexture(),200000+spec,"unordered party members render tank, healer, then damage in stable order")
+ end
+ T.eq(members[1].specID,63,"rendering preserves provider member order")
  r.categoryID=3;r.maxNumPlayers=40;r.numMembers=40;r.details.counts={TANK=2,HEALER=8,DAMAGER=30};Render()
  T.eq(Geometry(target.roster).x,roster.x,"raid composition shares the membership column center")
  T.eq(target.roster:GetWidth(),132,"raid roles are centered without a trailing column gap")
+ T.eq(target.roster.slots[1].icon:IsShown(),false,"raid rows switch back to aggregate role counts")
+ T.eq(target.roster.counts[1].text:GetText(),"2");T.eq(target.roster.counts[2].text:GetText(),"8");T.eq(target.roster.counts[3].text:GetText(),"30")
+ target.membersButton:Fire("OnClick");T.eq(target.count:IsShown(),true);T.eq(target.count:GetText(),"40/40","raid results keep their member counter")
+ target.membersButton:Fire("OnClick")
  local roleColumns={}
  for i,item in ipairs(target.roster.counts) do
   roleColumns[i]=Geometry(item.icon);T.eq(roleColumns[i].x,(i-1)*46);T.eq(item.text:GetWidth(),20)
@@ -859,6 +1097,7 @@ do
  r.categoryID=4;r.ratingKind="pvp";r.leaderRating=0;Render()
  T.eq(find.resultHeadings.rating:GetText(),"评分","PvP uses the shared score column")
  T.eq(target.score:GetText(),"暂无分数");T.ok(target.score:GetStringWidth()<=target.score:GetWidth())
+ _G.GetSpecializationInfoByID=getSpecInfo
  for _,key in ipairs(fields) do r[key]=saved[key] end;Render()
 end
 do
@@ -893,7 +1132,7 @@ do
  r.ratingKind=nil;r.leaderRating=score;r.requiredRating=nil;r.pvpRatingActivity=nil;r.pvpRatings=nil;r.maxNumPlayers=5
  G:Notify("result",r.id);U.Motion:Tick(.016)
 end
-target.membersButton:Fire("OnClick");T.ok(target.count:IsShown());target.membersButton:Fire("OnClick")
+target.membersButton:Fire("OnClick");T.eq(target.count:IsShown(),false)
 find:OnResultSelect(target.key,"LeftButton",target)
 local firstFocusBackground
 local noteBox=LFGListApplicationDialog.Description.EditBox
@@ -934,6 +1173,14 @@ T.eq(find.continueApplication:IsEnabled(),false,"cancellation waits for a native
 G.apps[2].status="cancelled";G:Notify("applications")
 T.eq(find.continueApplication:IsEnabled(),true)
 T.eq(LFGListApplicationDialog.resultID,previousID,"freeing a slot does not auto apply")
+do
+ local search,calls=G.Search.Search,0
+ G.Search.Search=function(self,...) calls=calls+1;return search(self,...) end
+ G.apps[1].status="cancelled";G:Notify("applicationCancelled",101);G:Notify("applications")
+ T.eq(calls,0,"freeing a slot keeps the pending application's original result ID")
+ T.eq(find.continueApplication:IsEnabled(),true)
+ G.Search.Search=search;G.apps[1].status="applied";G:Notify("applications")
+end
 find.continueApplication:Fire("OnClick");T.eq(U.Native.applicationLease.id,102,"continuing configures the original target when no role has been confirmed yet")
 G.apps[2].status="applied";U.Native:Apply(102)
 f.base.AdvanceClock(6.4);G:Notify("applications");f.base.AdvanceClock(.11)
@@ -979,69 +1226,94 @@ do
  _G.SetLFGRoles=function() error("an application must not change dungeon finder roles") end
  local originalSubmit=dialog.SignUpButton:GetScript("OnClick");local originalEvent=dialog:GetScript("OnEvent");local noteParent=dialog.Description.EditBox:GetParent();local noteFont={dialog.Description.EditBox:GetFont()}
  local before=dialog.submissions
- find:Apply(102);T.eq(dialog.submissions,before,"first application opens configuration before submitting")
+ U:CloseModal()
+ T.eq(U.Native:IsAutoApplyEnabled(),false,"automatic application starts disabled for this login")
+ T.eq(find.autoApply.value,false);T.eq(find.autoApply:GetWidth(),44,"only the actual track is a toggle target")
+ T.eq(find.applicationRoles,nil,"header role shortcuts are removed")
+ find.applicationSettings:Fire("OnClick");T.eq(U.activeModal,nil,"the disabled text cannot bypass enabling configuration")
+ T.eq(target.key,102);target:Fire("OnDoubleClick","LeftButton");T.eq(dialog.submissions,before,"a disabled double click opens a temporary confirmation")
  T.eq(U.Native.applicationLease.id,102);T.eq(dialog.Description:GetParent(),U.Native.applicationModal.note)
- T.eq(U.Native.applicationLease.role,"TANK","first configuration preselects the current specialization over dungeon finder roles")
- T.eq(U.Native:GetApplicationRole(),nil,"a preselected role is not a confirmed application preference")
- U:CloseModal();T.eq(dialog.submissions,before,"cancelling first configuration does not submit or confirm the preselection")
+ T.eq(U.Native.applicationLease.roles.TANK,true,"first confirmation prefers the current specialization")
+ T.eq(U.Native:GetApplicationRoles(),nil,"preselection does not confirm saved automatic roles")
+ U:CloseModal();T.eq(dialog.submissions,before)
  _G.GetSpecializationRole=function() return "HEALER" end
- find:Apply(102);T.eq(U.Native.applicationLease.role,"DAMAGER","an unavailable specialization falls back to the available queue role")
+ find:Apply(102);T.eq(U.Native.applicationLease.roles.DAMAGER,true,"an unavailable specialization falls back to an available queue role")
  U:CloseModal();_G.GetSpecializationRole=function() return "TANK" end
  find:Apply(102)
- dialog.Description.EditBox:UserType("A reusable native note")
+ dialog.Description.EditBox:UserType("Temporary native note")
  U.Native.applicationModal.roles.DAMAGER:Fire("OnClick");U.Native.applicationModal.submit:Fire("OnClick")
- T.eq(dialog.submissions,before+1);T.eq(dialog.submitted.note,"A reusable native note");T.eq(dialog.submitted.damage,true)
- T.eq(G.applyCalls,1,"the UI uses the business Apply entry for its first submission")
+ T.eq(dialog.submissions,before+1);T.eq(dialog.submitted.note,"Temporary native note")
+ T.eq(dialog.submitted.tank,true);T.eq(dialog.submitted.damage,true,"manual confirmation preserves multiple selected roles")
+ T.eq(G.applyCalls,1,"temporary confirmation submits through the business Apply entry")
+ T.eq(U.Native:IsAutoApplyEnabled(),false);T.eq(U.Native:GetApplicationRoles(),nil,"temporary application does not configure automatic roles")
  T.eq(U.activeModal,nil);T.eq(dialog.Description:GetParent(),dialog);T.eq(dialog.Description.EditBox:GetParent(),noteParent)
- T.eq(dialog.SignUpButton:GetScript("OnClick"),originalSubmit,"the stock submit callback is never modified")
- T.eq(dialog:GetScript("OnEvent"),originalEvent);T.same({dialog.Description.EditBox:GetFont()},noteFont,"returning the note restores its native text presentation")
- T.eq(find.applicationSettings.label:GetText(),"自动申请")
- T.eq(find.applicationRoles.DAMAGER.active,true,"the damage icon identifies the configured application role")
- T.eq(find.applicationRoles.DAMAGER.roleIcon:GetTexture(),U.Theme.media.."role-dps.tga")
- T.eq(find.applicationRoles.HEALER:IsEnabled(),false,"unavailable roles cannot be selected from the header")
+ T.eq(dialog.SignUpButton:GetScript("OnClick"),originalSubmit);T.eq(dialog:GetScript("OnEvent"),originalEvent)
+ T.same({dialog.Description.EditBox:GetFont()},noteFont,"releasing restores the original native text presentation")
+ find.main:Fire("OnKeyDown","ENTER");T.eq(dialog.submissions,before+1,"Enter still requires confirmation while automatic application is off")
+ T.eq(U.Native.applicationLease.id,102);U:CloseModal()
+ find.autoApply:Fire("OnClick")
+ T.eq(find.autoApply.value,false,"the switch stays off while its configuration is pending")
+ T.eq(U.Native.applicationLease.id,nil)
+ T.eq(U.Native.applicationModal.group:IsShown(),false,"configuration has no retired explanation or empty group row")
+ T.eq(({U.Native.applicationModal.roleLabel:GetPoint()})[3],0,"roles start at the content edge after removing the help text")
+ U:CloseModal();T.eq(U.Native:IsAutoApplyEnabled(),false,"cancelling activation leaves the feature off")
+ find.autoApply:Fire("OnClick")
+ local modal=U.Native.applicationModal
+ modal.roles.TANK:Fire("OnClick")
+ T.eq(modal.submit:IsEnabled(),false,"activation cannot save an empty role selection")
+ modal.submit:Fire("OnClick");T.eq(U.Native:IsAutoApplyEnabled(),false)
+ modal.roles.DAMAGER:Fire("OnClick");modal.roles.TANK:Fire("OnClick")
+ T.eq(modal.roles.TANK.active,true);T.eq(modal.roles.DAMAGER.active,true)
+ dialog.Description.EditBox:UserType("A reusable native note");modal.submit:Fire("OnClick")
+ T.eq(dialog.submissions,before+1,"saving activation does not submit a group application")
+ T.eq(U.Native:IsAutoApplyEnabled(),true);T.eq(find.autoApply.value,true)
+ T.same(U.Native:GetApplicationRoles(),{TANK=true,DAMAGER=true})
+ T.eq(LycheeGroupDB.autoApply,nil,"automatic application preferences remain session only")
  local activity=G.records[102].activityID;G.records[102].activityID=1
- find:Apply(102);T.eq(dialog.submissions,before+2,"another activity can reuse the same registered input without opening stock Show")
- T.eq(dialog.submitted.damage,true,"quick application retains the confirmed role instead of the current specialization")
+ target:Fire("OnDoubleClick","LeftButton");T.eq(dialog.submissions,before+2,"an enabled double click reuses the configured input directly")
+ T.eq(dialog.submitted.tank,true);T.eq(dialog.submitted.damage,true,"quick submission retains the complete multi-role selection")
  T.eq(dialog.submitted.note,"A reusable native note");T.eq(U.activeModal,nil);T.eq(G.clearedApplication,nil)
  G.records[102].activityID=activity
- find.main:Fire("OnKeyDown","ENTER");T.eq(dialog.submissions,before+3,"Enter also uses the configured quick path")
- find.applicationSettings:Fire("OnClick");T.eq(U.Native.applicationLease.id,nil);T.eq(U.Native.applicationModal.submit.label:GetText(),U.L.save)
- dialog.Description.EditBox:UserType("Updated native note");U.Native.applicationModal.roles.TANK:Fire("OnClick");U.Native.applicationModal.submit:Fire("OnClick")
- T.eq(dialog.submissions,before+3,"saving application settings without a target does not apply")
- T.eq(dialog.Description.EditBox:GetText(),"Updated native note");T.eq(find.applicationSettings.label:GetText(),"自动申请")
- T.eq(find.applicationRoles.TANK.active,true);T.eq(find.applicationRoles.DAMAGER.active,false)
+ find.main:Fire("OnKeyDown","ENTER");T.eq(dialog.submissions,before+3,"enabled Enter follows the configured quick path")
+ find.applicationSettings:Fire("OnEnter")
+ T.same(find.applicationSettings.label.color,U.Theme.brand,"the separate settings text uses brand color on hover")
+ T.eq(find.applicationSettings.hover:IsShown(),false,"the settings text has no surrounding hover surface")
+ find.applicationSettings:Fire("OnLeave");find.applicationSettings:Fire("OnClick")
+ T.eq(U.Native:IsAutoApplyEnabled(),true,"clicking the text edits without toggling")
+ T.eq(U.Native.applicationLease.id,nil);T.eq(modal.submit.label:GetText(),U.L.save)
+ dialog.Description.EditBox:UserType("Updated native note");modal.roles.DAMAGER:Fire("OnClick");modal.submit:Fire("OnClick")
+ T.eq(dialog.submissions,before+3);T.same(U.Native:GetApplicationRoles(),{TANK=true})
  find:OpenResultMenu(find.results,102)
- local menu=U.context.menu
- T.eq(menu.items[1].label,"编辑后申请…")
+ local menu=U.context.menu;T.eq(menu.items[1].label,"编辑后申请")
  menu.list.rows[1]:Fire("OnClick","LeftButton")
- T.eq(dialog.submissions,before+3,"the context menu opens a manual application without submitting")
- T.eq(U.Native.applicationLease.id,102);T.eq(U.Native.applicationModal.submit.label:GetText(),"申请")
- T.eq(dialog.Description.EditBox:GetText(),"Updated native note","manual application keeps the registered editable note")
+ T.eq(dialog.submissions,before+3,"the context menu always waits for confirmation")
+ T.eq(U.Native.applicationLease.id,102);T.eq(modal.submit.label:GetText(),"申请")
  dialog.Description.EditBox:UserType("Manual application note")
- U.Native.applicationModal.submit:Fire("OnClick")
- T.eq(dialog.submissions,before+4,"the manual dialog submits only when the player confirms")
- T.eq(dialog.submitted.note,"Manual application note")
- T.eq(U.activeModal,nil);T.eq(dialog.submitted.tank,true)
+ modal.roles.DAMAGER:Fire("OnClick");modal.roles.TANK:Fire("OnClick");modal.submit:Fire("OnClick")
+ T.eq(dialog.submissions,before+4);T.eq(dialog.submitted.note,"Manual application note")
+ T.eq(dialog.submitted.damage,true);T.eq(dialog.submitted.tank,false)
+ T.same(U.Native:GetApplicationRoles(),{TANK=true},"manual application does not replace the automatic role configuration")
  dialog.Description.EditBox:UserType("Updated native note")
- before=before+1
  dialog.available.TANK=false;find:Apply(102)
- T.eq(dialog.submissions,before+3,"an unavailable remembered role cannot be submitted")
- T.eq(U.Native.applicationModal.submit:IsEnabled(),false)
- U.Native.applicationModal.roles.DAMAGER:Fire("OnClick");U.Native.applicationModal.submit:Fire("OnClick")
- T.eq(dialog.submissions,before+4);T.eq(dialog.submitted.note,"Updated native note")
+ T.eq(dialog.submissions,before+4,"an unavailable remembered role cannot be submitted")
+ T.eq(modal.submit:IsEnabled(),false)
+ modal.roles.DAMAGER:Fire("OnClick");modal.submit:Fire("OnClick")
+ T.eq(dialog.submissions,before+5);T.eq(dialog.submitted.damage,true)
  dialog.available.TANK=true
- find:UpdateApplicationSettings();find.applicationRoles.TANK:Fire("OnClick")
- T.eq(U.Native:GetApplicationRole(),"TANK");T.eq(U.activeModal,nil,"the header role icon selects a role without a manual application dialog")
- T.eq(dialog.submissions,before+4,"changing the configured role does not submit an application")
+ find.autoApply:Fire("OnClick");T.eq(U.Native:IsAutoApplyEnabled(),false)
+ find:Apply(102);T.eq(dialog.submissions,before+5,"turning the switch off immediately restores confirmation")
+ T.eq(U.Native.applicationLease.id,102);U:CloseModal()
+ find.autoApply:Fire("OnClick");modal.submit:Fire("OnClick")
+ T.eq(U.Native:IsAutoApplyEnabled(),true,"reenabling requires saving configuration again")
  _G.GetSpecializationRole=function() return "DAMAGER" end
  find.applicationSettings:Fire("OnClick")
- T.eq(U.Native.applicationLease.role,"TANK","explicitly selected roles remain selected when editing")
+ T.eq(U.Native.applicationLease.roles.TANK,true,"editing retains explicitly saved roles across specialization changes")
  local foreign=CreateFrame("Frame",nil,UIParent);dialog.Description:SetParent(foreign);dialog.Description:SetHeight(40)
- T.eq(U.Native.applicationLease,nil,"an external owner ends the application lease");T.eq(dialog.Description:GetParent(),foreign,"release preserves the other owner's layout")
+ T.eq(U.Native.applicationLease,nil);T.eq(dialog.Description:GetParent(),foreign,"lease release preserves an external owner's layout")
  T.eq(U.activeModal,nil);dialog.Description:SetParent(dialog);dialog.Description:SetSize(210,28)
- T.same({GetLFGRoles()},roles,"both configuration and quick applications leave global queue preferences unchanged")
+ T.same({GetLFGRoles()},roles,"temporary and automatic applications leave dungeon finder roles unchanged")
  local nativeApply=C_LFGList.ApplyToGroup;C_LFGList.ApplyToGroup=function() error("Rejected by client") end
- find:Apply(102);T.eq(find.limitText:GetText(),G.L.applyFailed,"a client rejection is reported beside the application controls")
+ find:Apply(102);T.eq(find.limitText:GetText(),G.L.applyFailed,"client rejection is reported beside the application controls")
  C_LFGList.ApplyToGroup=nativeApply
  local priorApps=G.apps;G.apps={}
  for i=1,5 do G.apps[i]={id=900+i,name="Pending "..i,categoryID=3,status="applied"} end
@@ -1247,4 +1519,31 @@ do
  local crownPoint={find.results.rows[1].leaderIcon:GetPoint()}
  T.eq(leaderPoint[1],"LEFT");T.eq(leaderPoint[#leaderPoint],0,"the leader name centers on the complete result row")
  T.eq(crownPoint[1],"LEFT");T.eq(crownPoint[#crownPoint],0,"the leader crown shares the name's center")
+end
+-- A fresh UI instance restores the saved seasonal single selection before any
+-- new search; this also covers the English all-instances label.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("enUS")
+ fresh.A.db.rememberFilters=true
+ fresh.G.db.prefs.find={category="seasonDungeon",categoryPrefs={seasonDungeon={groupKey=20,difficultyID=8}}}
+ fresh.A:Open("find")
+ local page=fresh.U.pages.find
+ T.eq(fresh.G.filters.groupKey,20);T.eq(fresh.G.filters.difficultyID,8,"first entry restores the seasonal single-selection context")
+ T.eq(fresh.G.searchText,"","opening Find searches the restored confirmed selection")
+ T.eq(page.refresh:IsEnabled(),true,"a restored confirmed single selection can be refreshed")
+ page:SelectCategory("seasonDungeon")
+ T.eq(page.activities.selectedKey,20);T.eq(page.activities.rows[1].title:GetText(),"All instances")
+ fresh.U:Hide(true)
+end
+-- A collection and the explicit all-instances choice both survive a reload.
+for _,choice in ipairs({{groupKeys={[20]=true},difficultyID=8},{selected=true,difficultyID=8}}) do
+ local fresh=dofile("tests/ui_fixture.lua")("zhCN")
+ fresh.G.db.prefs.find={category="seasonDungeon",categoryPrefs={seasonDungeon=choice}}
+ fresh.A:Open("find")
+ local page=fresh.U.pages.find
+ T.eq(fresh.G.searchText,"","restoring a confirmed collection or all-instances choice starts browsing")
+ T.ok(page.refresh:IsEnabled(),"restored selection enables refresh")
+ T.ok(page.emptyText:GetText()~="请选择副本","restored selection does not ask for another choice")
+ T.same(fresh.G.filters.groupKeys,choice.groupKeys)
+ fresh.U:Hide(true)
 end

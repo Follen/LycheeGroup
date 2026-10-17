@@ -134,6 +134,7 @@ end
 
 local function OnPlayerLogin()
     A:LoadDB()
+    A.Minimap:Initialize()
     A:SyncNativeLFGEntry()
     RegisterPlayerMenus()
     if A.db.notesEnabled and A.db.notesHasRecords then

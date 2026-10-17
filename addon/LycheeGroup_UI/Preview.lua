@@ -63,7 +63,7 @@ local function NewProvider(scenario)
   if minLevel then minLevel,maxLevel=tonumber(minLevel),tonumber(maxLevel) end
   for _,id in ipairs(self.recordIDs) do
    local r=self.records[id];local counts=r.details.counts
-   local pass=not self.Applications:IsActive(id) and self.Catalog:Matches(r.activity,f.category or self.category,f.groupKey,f.difficultyID,f.tier)
+   local pass=not self.Applications:IsActive(id) and self.Catalog:Matches(r.activity,f.category or self.category,f.groupKey,f.difficultyID,f.tier,f.groupKeys)
    if pass and text~="" then
     if f.searchMode=="group" and minLevel then pass=r.level and r.level>=minLevel and r.level<=maxLevel
     elseif f.searchMode=="leader" then pass=r.leaderName and r.leaderName:lower():find(text,1,true)~=nil
@@ -72,9 +72,15 @@ local function NewProvider(scenario)
    if pass and f.minMembers then pass=r.numMembers>=f.minMembers end
    if pass and f.maxMembers then pass=r.numMembers<=f.maxMembers end
    if pass and f.neededRole then pass=r.maxNumPlayers==5 and counts[f.neededRole]<(f.neededRole=="DAMAGER" and 3 or 1) end
+   if pass and (f.tankPresence or f.healerPresence or f.needsDamage) then
+    pass=r.maxNumPlayers==5
+    if pass and f.tankPresence then pass=counts.TANK~=nil and (counts.TANK>0)==(f.tankPresence=="present") end
+    if pass and f.healerPresence then pass=counts.HEALER~=nil and (counts.HEALER>0)==(f.healerPresence=="present") end
+    if pass and f.needsDamage then pass=counts.DAMAGER~=nil and counts.DAMAGER<3 end
+   end
    if pass and f.friends then pass=r.charFriends>0 end
    if pass and f.guild then pass=r.guildMates>0 end
-   if pass and (f.notes or f.personKey and f.personKey~=r.leaderKey) then pass=false end
+   if pass and (f.notes and f.notes~="noCaution" or f.personKey and f.personKey~=r.leaderKey) then pass=false end
    if pass then ids[#ids+1]=id end
   end
   table.sort(ids,function(a,b)

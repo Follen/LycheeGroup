@@ -193,17 +193,23 @@ local function ApplicationPrefs()
  Native.applicationPrefs=Native.applicationPrefs or {}
  return Native.applicationPrefs
 end
-function Native:GetApplicationRole()
- local prefs=ApplicationPrefs();return prefs.ready and prefs.role or nil
+function Native:GetApplicationRoles()
+ return ApplicationPrefs().roles
+end
+function Native:IsAutoApplyEnabled()
+ return ApplicationPrefs().enabled==true
 end
 local function RefreshApplicationEntry()
  local page=UI.pages.find
  if page.applicationSettings then page:UpdateApplicationSettings() end
 end
-function Native:SelectApplicationRole(role)
- local tank,healer,damage=C_LFGList.GetAvailableRoles()
- if not (role=="TANK" and tank or role=="HEALER" and healer or role=="DAMAGER" and damage) then return false,L.applicationRoleUnavailable end
- local prefs=ApplicationPrefs();prefs.role,prefs.ready=role,true
+function Native:SetAutoApply(enabled)
+ if enabled then
+  local ok,err=self:OpenApplicationSettings(nil,true)
+  RefreshApplicationEntry()
+  return ok,err
+ end
+ ApplicationPrefs().enabled=false
  RefreshApplicationEntry()
  return true
 end
@@ -212,7 +218,7 @@ function Native:BuildApplication()
  local modal=UI:OpenModal("application",Say("申请加入","Apply to group"),456,434)
  local content=modal.content
  modal.group=C.Text(content,"",14,T.muted,408,22);modal.group:SetPoint("TOPLEFT");modal.group:SetWordWrap(true);modal.group:SetMaxLines(2)
- modal.roleLabel=C.Text(content,Say("选择本次申请的职责","Choose your role"),14,T.muted);C.SetLineHeight(modal.roleLabel,20,true)
+ modal.roleLabel=C.Text(content,Say("选择申请职责（可多选）","Choose your roles (multiple allowed)"),14,T.muted);C.SetLineHeight(modal.roleLabel,20,true)
  modal.roles={}
  for _,role in ipairs(roleKeys) do
   modal.roles[role]=C.RoleButton(content,role,nil,roleLabels[role],function() Native:SetApplicationRole(role) end)
@@ -221,62 +227,67 @@ function Native:BuildApplication()
  modal.note=C.Field(content,408,96,false,"modal")
  modal.error=C.Text(content,"",14,T.warning,408,20);modal.error:SetMaxLines(1)
  modal.cancel=C.Button(modal.frame,L.cancel,nil,function() UI:CloseModal() end);modal.cancel:SetWidth(math.max(72,modal.cancel.label:GetStringWidth()+40));modal.cancel:SetHeight(40)
- modal.submit=C.Button(modal.frame,L.saveAndApply,112,function() Native:ConfirmApplication() end);modal.submit:SetPrimary(true);modal.submit:SetHeight(40)
+ modal.submit=C.Button(modal.frame,L.apply,112,function() Native:ConfirmApplication() end);modal.submit:SetPrimary(true);modal.submit:SetHeight(40)
  self.applicationModal=modal
  return modal
 end
 function Native:LayoutApplication()
  local modal=self.applicationModal
- local groupHeight=math.max(22,math.min(44,modal.group:GetStringHeight()))
+ local hasGroup=modal.group:GetText()~=""
+ local groupHeight=hasGroup and math.max(22,math.min(44,modal.group:GetStringHeight())) or 0
+ local groupOffset=hasGroup and groupHeight+20 or 0
+ modal.group:SetShown(hasGroup)
  modal.group:SetHeight(groupHeight)
- modal.roleLabel:SetPoint("TOPLEFT",0,-groupHeight-20)
+ modal.roleLabel:SetPoint("TOPLEFT",0,-groupOffset)
  local x=0
  for _,role in ipairs(roleKeys) do
-  local button=modal.roles[role];button:SetPoint("TOPLEFT",x,-groupHeight-48);x=x+button:GetWidth()+8
+  local button=modal.roles[role];button:SetPoint("TOPLEFT",x,-groupOffset-28);x=x+button:GetWidth()+8
  end
- modal.noteLabel:SetPoint("TOPLEFT",0,-groupHeight-108)
- modal.note:SetPoint("TOPLEFT",0,-groupHeight-136)
+ modal.noteLabel:SetPoint("TOPLEFT",0,-groupOffset-88)
+ modal.note:SetPoint("TOPLEFT",0,-groupOffset-116)
  local hasError=modal.error:GetText()~=""
- modal.error:SetShown(hasError);modal.error:SetPoint("TOPLEFT",0,-groupHeight-244);modal.error:SetHeight(hasError and 20 or 0)
- modal.frame:SetHeight(412+groupHeight+(hasError and 20 or 0))
+ modal.error:SetShown(hasError);modal.error:SetPoint("TOPLEFT",0,-groupOffset-224);modal.error:SetHeight(hasError and 20 or 0)
+ modal.frame:SetHeight(392+groupOffset+(hasError and 20 or 0))
  modal.submit:SetWidth(math.max(96,modal.submit.label:GetStringWidth()+40));modal.submit:SetPoint("BOTTOMRIGHT",-24,24)
  modal.cancel:SetPoint("RIGHT",modal.submit,"LEFT",-8,0)
 end
 function Native:SetApplicationRole(role)
  local lease=self.previewApplication or self.applicationLease;if not lease or not lease.available[role] then return end
- lease.role=role
- for _,key in ipairs(roleKeys) do self.applicationModal.roles[key]:SetActive(key==role) end
- self.applicationModal.submit:SetAvailable(true);UI:SetText(self.applicationModal.error,"")
- self:LayoutApplication()
+ lease.roles[role]=not lease.roles[role] or nil
+ self:RefreshApplicationRoles()
 end
 function Native:RefreshApplicationRoles()
  local lease=self.previewApplication or self.applicationLease;if not lease then return end
  local tank,healer,damage=C_LFGList.GetAvailableRoles()
  lease.available.TANK,lease.available.HEALER,lease.available.DAMAGER=tank,healer,damage
- local selected=lease.role
- if not selected or not lease.available[selected] then
-  selected=nil
-  if not ApplicationPrefs().ready then
+ if not lease.initialized then
+  lease.initialized=true
+  if not ApplicationPrefs().roles then
    local specRole
    if GetSpecialization and GetSpecializationRole then
     local spec=GetSpecialization();specRole=spec and GetSpecializationRole(spec)
    end
-   if specRole and lease.available[specRole] then selected=specRole end
-   if not selected then
+   if specRole and lease.available[specRole] then lease.roles[specRole]=true
+   else
     local _,a,b,c=GetLFGRoles()
-    selected=tank and a and "TANK" or healer and b and "HEALER" or damage and c and "DAMAGER" or tank and "TANK" or healer and "HEALER" or damage and "DAMAGER" or nil
+    lease.roles.TANK=tank and a or nil;lease.roles.HEALER=healer and b or nil;lease.roles.DAMAGER=damage and c or nil
+    if not next(lease.roles) then
+     local role=tank and "TANK" or healer and "HEALER" or damage and "DAMAGER"
+     if role then lease.roles[role]=true end
+    end
    end
   end
  end
+ local selected=false
  for _,role in ipairs(roleKeys) do
+  if not lease.available[role] then lease.roles[role]=nil end
+  if lease.roles[role] then selected=true end
   self.applicationModal.roles[role]:SetAvailable(lease.available[role]==true)
-  self.applicationModal.roles[role]:SetActive(role==selected)
+  self.applicationModal.roles[role]:SetActive(lease.roles[role]==true)
  end
- if selected then self:SetApplicationRole(selected)
- else
-  lease.role=nil;self.applicationModal.submit:SetAvailable(false);UI:SetText(self.applicationModal.error,L.applicationRoleUnavailable)
-  self:LayoutApplication()
- end
+ self.applicationModal.submit:SetAvailable(selected)
+ UI:SetText(self.applicationModal.error,selected and "" or L.applicationRoleUnavailable)
+ self:LayoutApplication()
 end
 function Native:ReleaseApplication()
  local lease=self.previewApplication or self.applicationLease;if not lease then return end
@@ -287,12 +298,13 @@ function Native:ReleaseApplication()
  else modal.previewNote.box:ClearFocus();modal.previewNote.box:SetText("");modal.previewNote:Hide() end
  if modal.frame:IsShown() then modal:Close() end
 end
-function Native:OpenApplicationSettings(resultID,manual)
+function Native:OpenApplicationSettings(resultID,enableOnSave)
  if not UI.preview then local entry,err=self:Ready();if not entry then return false,err end end
  self:ReleaseApplication()
- local title=manual and Say("申请加入","Apply to group") or L.applicationSettings
+ local title=resultID and Say("申请加入","Apply to group") or L.applicationSettings
  local modal=self.applicationModal;if modal then UI:OpenModal("application",title,456,434) else modal=self:BuildApplication();modal:SetTitle(title) end
- local prefs=ApplicationPrefs();local lease={id=resultID,available={},role=prefs.role}
+ local prefs=ApplicationPrefs();local lease={id=resultID,available={},roles={},enableOnSave=enableOnSave}
+ for _,role in ipairs(roleKeys) do if prefs.roles and prefs.roles[role] then lease.roles[role]=true end end
  if UI.preview then
   self.previewApplication=lease
   if not modal.previewNote then modal.previewNote=C.Edit(modal.note,408,96,true,false,"modal");modal.previewNote:SetAllPoints(modal.note) end
@@ -309,25 +321,28 @@ function Native:OpenApplicationSettings(resultID,manual)
  end
  modal.onClose=function() Native:ReleaseApplication() end
  local result=resultID and UI:GetGroup():GetResult(resultID)
- UI:SetText(modal.group,result and result.name or L.applicationReuseHelp)
- UI:SetText(modal.submit.label,manual and L.apply or resultID and L.saveAndApply or L.save)
+ UI:SetText(modal.group,result and result.name or "")
+ UI:SetText(modal.submit.label,resultID and L.apply or L.save)
  self:RefreshApplicationRoles()
  return true
 end
 function Native:ConfirmApplication()
  local lease=self.previewApplication or self.applicationLease;if not lease then return end
  if lease.description and not lease.description:IsOwned() then self:ReleaseApplication();return end
- local tank,healer,damage=C_LFGList.GetAvailableRoles()
- if not (lease.role=="TANK" and tank or lease.role=="HEALER" and healer or lease.role=="DAMAGER" and damage) then self:RefreshApplicationRoles();return end
- local prefs=ApplicationPrefs();prefs.role,prefs.ready=lease.role,true
+ self:RefreshApplicationRoles()
+ if not next(lease.roles) then return end
+ local prefs=ApplicationPrefs()
  if self.previewApplication then prefs.note=self.applicationModal.previewNote.box:GetText() end
- RefreshApplicationEntry()
  if lease.id then
-  local ok,err=self:Apply(lease.id)
+  local ok,err=self:Apply(lease.id,true,lease.roles)
   if not ok and self.applicationModal.frame:IsShown() then UI:SetText(self.applicationModal.error,err or L.failed);self:LayoutApplication() end
- else self:ReleaseApplication() end
+ else
+  prefs.roles=lease.roles
+  if lease.enableOnSave then prefs.enabled=true end
+  RefreshApplicationEntry();self:ReleaseApplication()
+ end
 end
-function Native:Apply(resultID,manual)
+function Native:Apply(resultID,manual,confirmedRoles)
  local group=UI:GetGroup()
  if group:GetListing() then return false,group.L.recruiting end
  if group.Applications:IsActive(resultID) then return false,group.L.alreadyApplied end
@@ -337,11 +352,13 @@ function Native:Apply(resultID,manual)
   local result=C_LFGList.GetSearchResultInfo(resultID);if not result or result.isDelisted then return false,L.unavailable end
  end
  local prefs=ApplicationPrefs();local tank,healer,damage=C_LFGList.GetAvailableRoles()
- local role=prefs.role
- if manual or not prefs.ready or not (role=="TANK" and tank or role=="HEALER" and healer or role=="DAMAGER" and damage) then return self:OpenApplicationSettings(resultID,manual) end
+ local roles=confirmedRoles or prefs.roles
+ if not confirmedRoles and (manual or not prefs.enabled or not roles) then return self:OpenApplicationSettings(resultID) end
+ if not next(roles) or roles.TANK and not tank or roles.HEALER and not healer or roles.DAMAGER and not damage then return self:OpenApplicationSettings(resultID) end
+ local submittedRoles={tank=roles.TANK==true,healer=roles.HEALER==true,damage=roles.DAMAGER==true}
  local ok,err
- if UI.preview then ok,err=group:Apply(resultID,role,prefs.note or "")
- else ok,err=group:Apply(resultID,{tank=role=="TANK",healer=role=="HEALER",damage=role=="DAMAGER"}) end
+ if UI.preview then ok,err=group:Apply(resultID,submittedRoles,prefs.note or "")
+ else ok,err=group:Apply(resultID,submittedRoles) end
  if ok then self:ReleaseApplication() end
  return ok,err
 end

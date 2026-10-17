@@ -1,5 +1,5 @@
 local addonName, private = ...
-local REVISION=9
+local REVISION=13
 local Library=_G.LycheeUI
 private.LycheeUILoad,private.LycheeUILoadVersion=nil,nil
 if Library and Library.version and Library.version>=REVISION then private.LycheeUI=Library;return end

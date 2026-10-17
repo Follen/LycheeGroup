@@ -139,7 +139,7 @@ function G:HasViews(kind)
 end
 
 -- Subscribe(callback(kind, id)) -> unsubscribe
--- kind: "search"|"results"|"result"|"activities"|"applications"|"application"|"listing"|"applicants"|"applicant"|"permissions"|"history"
+-- kind: "search"|"results"|"result"|"activities"|"applications"|"application"|"applicationCancelled"|"listing"|"applicants"|"applicant"|"permissions"|"history"
 function G:Subscribe(callback)
 	if type(callback) ~= "function" then
 		return function() end

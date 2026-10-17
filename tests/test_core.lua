@@ -125,6 +125,8 @@ do
 		}
 		return true
 	end
+	local minimapInits=0
+	A.Minimap={Initialize=function() minimapInits=minimapInits+1 end}
 	Load.addon("LycheeGroup", "Entrypoints.lua")
 	Stubs.FireEvent("ADDON_LOADED", "UnrelatedBefore")
 	T.eq(#loads, 0, "其他插件不唤醒业务")
@@ -135,6 +137,7 @@ do
 		return id, ({"declined_full", "inviteaccepted", "cancelled"})[id], nil
 	end
 	Stubs.FireEvent("PLAYER_LOGIN")
+	T.eq(minimapInits,1,"登录创建独立小地图入口")
 	T.eq(#Stubs.FramesWithEvent("PLAYER_LOGIN"), 0, "登录初始化只运行一次")
 	T.eq(#loads, 0, "只有已结束的申请时不加载业务包")
 	Stubs.FireEvent("ADDON_LOADED", "UnrelatedAfter")

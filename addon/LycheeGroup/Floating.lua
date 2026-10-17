@@ -2,7 +2,6 @@
 local A=_G.LycheeGroup
 local F={};A.Floating=F
 local zh=GetLocale()=="zhCN"
-local font=STANDARD_TEXT_FONT
 local C,T
 local cardColor,cardHover={0,0,0,.60},{.04,.04,.04,.66}
 local MEMBER_TEXT_X,MEMBER_TEXT_WIDTH,MEMBER_METRIC_WIDTH=56,168,76
@@ -58,7 +57,7 @@ function F:HoverRow(row,inside)
 end
 function F:Build()
  if self.frame then return end
- self.context=_G.LycheeUI:CreateContext({reducedMotion=function() return A.db.reduceMotion end})
+ self.context=_G.LycheeUI:CreateContext({font=A.Fonts:GetPath(),reducedMotion=function() return A.db.reduceMotion end})
  C,T=self.context.C,self.context.Theme
  local inviteHover,invitePressed={.47,.8,.69,.14},{.47,.8,.69,.22}
  local cancelHover,cancelPressed={.94,.35,.4,.14},{.94,.35,.4,.22}
@@ -96,7 +95,7 @@ function F:Build()
   end
   for _,batch in ipairs(F.batches) do batch.exit=nil;batch.exitAlpha=nil;batch.exitTop=nil;batch:EnableMouse(true);batch.applicantID=nil;batch.background:Hide();batch:Hide() end
  end)
- local cancel=C.Button(panel,"",160);cancel:SetHeight(24);cancel:SetPoint("TOPRIGHT",-24,-4);cancel.label:SetFont(font,14,"");C.SetLineHeight(cancel.label,20,true);cancel.label:ClearAllPoints();cancel.label:SetPoint("RIGHT");cancel:SetTextColors(T.muted,T.brand);self.cancel=cancel
+ local cancel=C.Button(panel,"",160);cancel:SetHeight(24);cancel:SetPoint("TOPRIGHT",-24,-4);cancel.label:SetFont(T.font,14,"");C.SetLineHeight(cancel.label,20,true);cancel.label:ClearAllPoints();cancel.label:SetPoint("RIGHT");cancel:SetTextColors(T.muted,T.brand);self.cancel=cancel
  local transparent={0,0,0,0};cancel:SetSurfaceColors(transparent,transparent)
  cancel:HookScript("OnEnter",function() F:CancelHide() end)
  cancel:HookScript("OnLeave",function() F:ScheduleHide() end)
@@ -292,7 +291,7 @@ function F:ScheduleHide()
 end
 function F:ResetPosition(restore)
  local p=restore and A.db.floatingPosition
- self.frame:ClearAllPoints();if p then self.frame:SetPoint(p.point,UIParent,p.relativePoint,p.x,p.y) else self.frame:SetPoint("BOTTOMLEFT",UIParent,"BOTTOMLEFT",28,160) end
+ self.frame:ClearAllPoints();if p then self.frame:SetPoint(p.point,UIParent,p.relativePoint,p.x,p.y) else self.frame:SetPoint("TOPLEFT",UIParent,"TOPLEFT",25.660334,-2.884586) end
 end
 function F:Bind(group)
  if self.unsub then return end
@@ -304,6 +303,11 @@ function F:UpdateSettings()
  self.frame:SetScale(A.db.floatingScale/100);self.frame:SetShown(A.db.floating==true)
  if not A.db.floating then self.panel:Hide();self.entries=nil;self:CancelHide() end
  self:Update()
+end
+function F:ApplyFont(path)
+ if not self.frame then return end
+ T.font=path;A.Fonts:ApplyTree(self.frame,path)
+ self.lastCount=nil;self:Update()
 end
 function F:Update()
  if not self.frame or not A.db.floating then return end
@@ -337,11 +341,11 @@ function F:ShowPanel()
      if batch then wipe(batch) else batch={};batchEntries[batchCount]=batch end
      batch.top,batch.applicantID=total,id
      for index,member in ipairs(app.members) do
-      self.measure:SetFont(font,MEMBER_NAME_SIZE,"");C.SetLineHeight(self.measure,MEMBER_NAME_LINE);self.measure:SetWidth(MEMBER_TEXT_WIDTH);self.measure:SetText(member.nameKey or member.name or A.L.invalidName)
+      self.measure:SetFont(T.font,MEMBER_NAME_SIZE,"");C.SetLineHeight(self.measure,MEMBER_NAME_LINE);self.measure:SetWidth(MEMBER_TEXT_WIDTH);self.measure:SetText(member.nameKey or member.name or A.L.invalidName)
       local nameHeight=math.max(MEMBER_NAME_LINE,self.measure:GetStringHeight())
       local _,spec,icon,class=group:ResolveMemberSpec(member)
       local meta=(class or (zh and "未知职业" or "Unknown class")).." · "..(spec or member.specName or (zh and "未知专精" or "Unknown specialization"))
-      self.measure:SetFont(font,MEMBER_META_SIZE,"");C.SetLineHeight(self.measure,MEMBER_META_LINE);self.measure:SetText(meta)
+      self.measure:SetFont(T.font,MEMBER_META_SIZE,"");C.SetLineHeight(self.measure,MEMBER_META_LINE);self.measure:SetText(meta)
       local metaHeight=math.max(MEMBER_META_LINE,self.measure:GetStringHeight());local pad=index==1 and 12 or 4
       local contentHeight=nameHeight+2+metaHeight
       local height=pad+contentHeight;local entry=AddEntry(total,height);total=total+height
@@ -349,7 +353,7 @@ function F:ShowPanel()
      end
      if canManage or comment then
       local textWidth=canManage and 180 or 324-MEMBER_TEXT_X-12;local textHeight=0
-      if comment then self.measure:SetFont(font,MEMBER_META_SIZE,"");C.SetLineHeight(self.measure,MEMBER_META_LINE);self.measure:SetWidth(textWidth);self.measure:SetText(comment);textHeight=math.max(MEMBER_META_LINE,self.measure:GetStringHeight()) end
+      if comment then self.measure:SetFont(T.font,MEMBER_META_SIZE,"");C.SetLineHeight(self.measure,MEMBER_META_LINE);self.measure:SetWidth(textWidth);self.measure:SetText(comment);textHeight=math.max(MEMBER_META_LINE,self.measure:GetStringHeight()) end
       local height=math.max(canManage and 40 or 0,textHeight+24)
       local footer=AddEntry(total,height);total=total+height
       footer.footer,footer.actions,footer.comment,footer.applicantID,footer.batch,footer.textHeight,footer.textWidth=true,canManage,comment,id,batch,textHeight,textWidth
@@ -362,15 +366,15 @@ function F:ShowPanel()
   else
    for _,app in ipairs(group:GetApplications()) do if Waiting(app) then
     local detailText=app.activityDetail and app.activityDetail~="" and ("· "..app.activityDetail) or ""
-    self.measure:SetFont(font,14,"");C.SetLineHeight(self.measure,20);self.measure:SetWidth(112);self.measure:SetText(detailText)
+    self.measure:SetFont(T.font,14,"");C.SetLineHeight(self.measure,20);self.measure:SetWidth(112);self.measure:SetText(detailText)
     local detailWidth=math.min(112,self.measure:GetStringWidth())
     local detailHeight=detailWidth>0 and self.measure:GetStringHeight() or 0
     local activityWidth=224-detailWidth-(detailWidth>0 and 6 or 0)
-    self.measure:SetFont(font,16,"");C.SetLineHeight(self.measure,22);self.measure:SetWidth(activityWidth);self.measure:SetText(app.activityLabel or app.activityName or app.result and app.result.activityName or "")
+    self.measure:SetFont(T.font,16,"");C.SetLineHeight(self.measure,22);self.measure:SetWidth(activityWidth);self.measure:SetText(app.activityLabel or app.activityName or app.result and app.result.activityName or "")
     local activityHeight=math.max(22,self.measure:GetStringHeight(),detailHeight)
-    self.measure:SetFont(font,T.listTitleSize,"");C.SetLineHeight(self.measure,T.listTitleLineHeight);self.measure:SetWidth(224);self.measure:SetText(app.name or "")
+    self.measure:SetFont(T.font,T.listTitleSize,"");C.SetLineHeight(self.measure,T.listTitleLineHeight);self.measure:SetWidth(224);self.measure:SetText(app.name or "")
     local titleHeight=math.max(T.listTitleLineHeight,self.measure:GetStringHeight())
-    self.measure:SetFont(font,14,"");C.SetLineHeight(self.measure,20);self.measure:SetWidth(196);self.measure:SetText(app.leaderName or (zh and "队长身份未知" or "Leader unknown"))
+    self.measure:SetFont(T.font,14,"");C.SetLineHeight(self.measure,20);self.measure:SetWidth(196);self.measure:SetText(app.leaderName or (zh and "队长身份未知" or "Leader unknown"))
     local leaderHeight=math.max(20,self.measure:GetStringHeight())
     local height=24+activityHeight+4+titleHeight+4+leaderHeight+8;local entry=AddEntry(total,height);total=total+height
     entry.application,entry.gap,entry.activityWidth,entry.detailWidth,entry.detailText,entry.activityHeight,entry.titleHeight=app,8,activityWidth,detailWidth,detailText,activityHeight,titleHeight
@@ -430,8 +434,8 @@ function F:Render()
    row.icon:SetShown(entry.member~=nil or entry.application~=nil);row.meta:SetShown(entry.member~=nil or entry.application~=nil);row.score:SetShown(entry.member~=nil);row.itemLevel:SetShown(entry.member~=nil);row.leader:SetShown(entry.application~=nil);row.timer:SetShown(entry.application~=nil)
    row.name:ClearAllPoints();row.meta:ClearAllPoints();row.name:SetHeight(0);row.name:SetWordWrap(true);row.meta:SetWordWrap(true);row.leader:SetWordWrap(true)
    row.invite:Hide();row.decline:Hide();row.cancel:Hide();row.invite.applicantID=nil;row.decline.applicantID=nil;row.cancel.applicationID=nil
-   row.name:SetTextColor(unpack(T.text));row.name:SetFont(font,entry.comment and MEMBER_META_SIZE or entry.member and MEMBER_NAME_SIZE or 16,"")
-   C.SetLineHeight(row.name,entry.member and MEMBER_NAME_LINE or entry.comment and MEMBER_META_LINE or 22);row.meta:SetFont(font,entry.application and T.listTitleSize or MEMBER_META_SIZE,"");C.SetLineHeight(row.meta,entry.application and T.listTitleLineHeight or MEMBER_META_LINE)
+   row.name:SetTextColor(unpack(T.text));row.name:SetFont(T.font,entry.comment and MEMBER_META_SIZE or entry.member and MEMBER_NAME_SIZE or 16,"")
+   C.SetLineHeight(row.name,entry.member and MEMBER_NAME_LINE or entry.comment and MEMBER_META_LINE or 22);row.meta:SetFont(T.font,entry.application and T.listTitleSize or MEMBER_META_SIZE,"");C.SetLineHeight(row.meta,entry.application and T.listTitleLineHeight or MEMBER_META_LINE)
    if entry.footer then
      local commentTop=entry.actions and entry.comment and entry.textHeight<=MEMBER_META_LINE and 6 or 12
      row.name:SetWidth(entry.textWidth);row.name:SetPoint("TOPLEFT",MEMBER_TEXT_X,-commentTop);row.name:SetHeight(entry.textHeight);row.name:SetTextColor(unpack(T.muted));row.name:SetText(entry.comment or "")
@@ -450,14 +454,14 @@ function F:Render()
     local color=m.class and RAID_CLASS_COLORS[m.class];if color then row.name:SetTextColor(color.r,color.g,color.b) end
     MemberIcon(row.icon,m,entry.memberIcon)
     if m.ratingKind=="pvp" then ColorScore(row.score,m.rating,"pvp") else ColorScore(row.score,m.dungeonScore) end
-    row.itemLevel:SetFont(font,MEMBER_META_SIZE,"");C.SetLineHeight(row.itemLevel,MEMBER_META_LINE,true)
+    row.itemLevel:SetFont(T.font,MEMBER_META_SIZE,"");C.SetLineHeight(row.itemLevel,MEMBER_META_LINE,true)
     row.itemLevel:ClearAllPoints();row.itemLevel:SetWidth(MEMBER_METRIC_WIDTH);row.itemLevel:SetPoint("TOPRIGHT",-12,-pad-entry.nameHeight-2);row.itemLevel:SetText((zh and "装等 " or "ilvl ")..(m.itemLevel and math.floor(m.itemLevel) or "—"))
 
    else
     local app=entry.application;row.applicationID=app.id;row.application=app;row.background:SetHovered(row:IsMouseOver());row.background:Show()
     row.icon:SetSize(24,24);row.icon:ClearAllPoints();row.icon:SetPoint("TOPLEFT",12,-11);F.context:SetGameTexture(row.icon,app.activityArt or "Interface\\Icons\\INV_Misc_GroupLooking")
     row.name:SetPoint("TOPLEFT",48,-12);row.name:SetText(app.activityLabel or app.activityName or app.result and app.result.activityName or "")
-    row.score:Show();row.score:SetFont(font,14,"");row.score:SetHeight(0);row.score:SetWordWrap(true);C.SetLineHeight(row.score,20);row.score:ClearAllPoints();row.score:SetWidth(entry.detailWidth);row.score:SetTextColor(unpack(T.muted));row.score:SetText(entry.detailText);row.score:SetJustifyH("LEFT")
+    row.score:Show();row.score:SetFont(T.font,14,"");row.score:SetHeight(0);row.score:SetWordWrap(true);C.SetLineHeight(row.score,20);row.score:ClearAllPoints();row.score:SetWidth(entry.detailWidth);row.score:SetTextColor(unpack(T.muted));row.score:SetText(entry.detailText);row.score:SetJustifyH("LEFT")
     row.name:SetWidth(entry.activityWidth);local nameWidth=math.min(entry.activityWidth,row.name:GetStringWidth());row.name:SetWidth(nameWidth);row.score:SetPoint("TOPLEFT",48+nameWidth+6,-12)
     row.meta:SetWidth(224);row.meta:SetPoint("TOPLEFT",48,-16-entry.activityHeight);row.meta:SetText(app.name or "")
     row.cancel:ClearAllPoints();row.cancel:SetPoint("TOPRIGHT",-8,-7);row.cancel.applicationID=app.id;row.cancel:Show();row.cancel:SetEnabled(not app.pendingStatus)
@@ -465,7 +469,7 @@ function F:Render()
     local color=app.leaderClass and RAID_CLASS_COLORS[app.leaderClass];if color then row.leader:SetTextColor(color.r,color.g,color.b) else row.leader:SetTextColor(unpack(T.muted)) end
    end
    if row:IsMouseOver() then self:HoverRow(row,true) end
-   if entry.member then row.score:SetFont(font,14,"");row.score:SetWordWrap(false);C.SetLineHeight(row.score,MEMBER_NAME_LINE,true);row.score:ClearAllPoints();row.score:SetPoint("TOPRIGHT",-12,-entry.padTop);row.score:SetWidth(MEMBER_METRIC_WIDTH);row.score:SetJustifyH("RIGHT") end
+   if entry.member then row.score:SetFont(T.font,14,"");row.score:SetWordWrap(false);C.SetLineHeight(row.score,MEMBER_NAME_LINE,true);row.score:ClearAllPoints();row.score:SetPoint("TOPRIGHT",-12,-entry.padTop);row.score:SetWidth(MEMBER_METRIC_WIDTH);row.score:SetJustifyH("RIGHT") end
   end
  end
  for i=bound+1,#self.rows do local row=self.rows[i];row:Hide();row.applicationID=nil;row.applicantID=nil;row.application=nil;row.batch=nil;row.invite:Hide();row.decline:Hide();row.cancel:Hide();row.invite.applicantID=nil;row.decline.applicantID=nil;row.cancel.applicationID=nil end

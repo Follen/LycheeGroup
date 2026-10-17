@@ -27,6 +27,9 @@ local DEFAULTS = {
 	askReason = true,
 	reduceMotion = false,
 	nativeLFGEntry = true,
+	minimap = true,
+	minimapAngle = 225,
+	font = "default",
 	autoJoin = false,
 	relations = true,
 	noteMarks = true,
@@ -38,7 +41,7 @@ local DEFAULTS = {
 	raidMembers = "shift",
 	floating = true,
 	floatingLocked = false,
-	floatingScale = 100,
+	floatingScale = 130,
 }
 
 local initialized = {}
@@ -205,6 +208,8 @@ function A:SetSetting(key, value)
 	if self.db[key] == value then return end
 	self.db[key] = value
 	if key == "nativeLFGEntry" then self:SyncNativeLFGEntry() end
+	if key == "minimap" then self.Minimap:UpdateSettings() end
+	if key == "font" then self.Fonts:Apply() end
 	if key == "history" and self.Group then
 		if value then self.Group.History:Restore() else self.Group.History:Discard() end
 	end

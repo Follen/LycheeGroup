@@ -4,6 +4,11 @@ local G = A.Group
 local Catalog = {activities={},groups={},journalTiers={}}
 G.Catalog = Catalog
 local F = Enum.LFGListFilter
+-- Labels only: membership remains the live catalog's native group identity.
+local dungeonAbbreviations={
+ [2993]={"毒牙","AoF"},[2825]={"洞穴","DoN"},[1877]={"神庙","ToS"},[1762]={"诸王","KR"},
+ [2521]={"红玉","RLP"},[2859]={"夺目","BV"},[2813]={"密谋","MR"},[2923]={"竞技场","VA"},
+}
 -- Client-derived Delve map metadata, Retail 12.1.5.70391.
 -- Data pin PIN-93b278ff0cb7e66294714a107bb19afb8456125a9a9acae43275a3828de17938;
 -- CAP-d0352dd303ec3a04ef12dd845dad7233a3729b526a7a767d508223155b862189.
@@ -160,11 +165,17 @@ end
 function Catalog:GetGroup(key,groupKey)
  for _,group in ipairs(self:GetGroups(key)) do if group.key==groupKey then return group end end
 end
-function Catalog:Matches(activity,key,groupKey,difficultyID,tier)
+function Catalog:GetGroupShortName(key,groupKey)
+ local group=self:GetGroup(key,groupKey)
+ local names=dungeonAbbreviations[group.activity.mapID]
+ return names and names[GetLocale()=="zhCN" and 1 or 2] or group.name
+end
+function Catalog:Matches(activity,key,groupKey,difficultyID,tier,groupKeys)
  if not activity then return false end
  local category=self:GetCategory(key)
  if not category or activity.categoryID~=category.id then return false end
  if groupKey and self:GetGroupKey(key,activity)~=groupKey then return false end
+ if groupKeys and not groupKeys[self:GetGroupKey(key,activity)] then return false end
  if difficultyID and activity.difficultyID~=difficultyID then return false end
  if tier then self:GetTiers();if self:GetActivityTier(activity)~=tier then return false end end
  if category.season or category.id==2 or category.id==3 then

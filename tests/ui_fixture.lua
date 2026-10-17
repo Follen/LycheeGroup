@@ -2,8 +2,8 @@
 return function(locale)
 local base=dofile("tests/stubs.lua");base.Install({locale=locale,realm="Home"})
 local S=dofile("tests/ui_stubs.lua");S.Install()
-_G.LycheeGroup=nil;_G.LycheeGroupDB=nil;_G.LycheeGroupNotesDB=nil
-dofile("addon/LycheeGroup/Core.lua");dofile("addon/LycheeGroup/Locale.lua")
+_G.LycheeGroup=nil;_G.LycheeGroupDB=nil;_G.LycheeGroupNotesDB=nil;_G.LibStub=nil
+dofile("addon/LycheeGroup/Core.lua");dofile("addon/LycheeGroup/Locale.lua");dofile("addon/LycheeGroup/Fonts.lua")
 local A=LycheeGroup;A:LoadDB()
 for _,file in ipairs({"Locale.lua","Notes.lua","Records.lua","PlayerInfo.lua","RosterReminder.lua"}) do dofile("addon/LycheeGroup_Notes/"..file) end
 A.Notes:Initialize()
@@ -58,7 +58,7 @@ function G.Applications:GetActiveCount()
  local count=0;for _,app in ipairs(G.apps) do if app.status=="applied" or app.status=="invited" or app.pendingStatus then count=count+1 end end;return count
 end
 G.Alerts={Stop=function() end}
-function G.Search:EndBrowse() G.state="idle";G.records={};G:Notify("results") end
+function G.Search:EndBrowse() G.state="idle";self.pending=nil;if self.timer then self.timer:Cancel();self.timer=nil end;G:Notify("results") end
 function G.Search:Search(category,activityID,mode,text)
  if mode=="leader" then C_LFGList.ClearSearchTextFields() end
  G.searchText=LFGListFrame.SearchPanel.SearchBox:GetText();G.searchMode=mode;G.leaderText=text;G.state="done";G:Notify("results");G:Notify("search");return true

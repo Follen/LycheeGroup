@@ -6,6 +6,10 @@ UI.C = context.C
 function UI:SetRoleIcon(icon,role)
  return _G.LycheeUI.Context.SetRoleIcon(context,icon,role)
 end
+function UI:MemberHasRole(member,role)
+ if member.requestedRoles then return member.requestedRoles[role]==true end
+ return member.assignedRole==role
+end
 local specIcons={}
 function UI:SpecName(member)
  if member.specName then return member.specName end

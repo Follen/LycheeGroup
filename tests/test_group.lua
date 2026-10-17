@@ -318,6 +318,38 @@ do
 	T.eq(table.concat(G.Results:GetResults(),","),"12","仅五人队伍的实际空缺命中职责筛选")
 	G.Search:SetFilters({neededRole="HEALER"})
 	T.eq(table.concat(G.Results:GetResults(),","),"13")
+	G.Search:SetFilters({tankPresence="missing",healerPresence="present"})
+	T.eq(table.concat(G.Results:GetResults(),","),"12","缺坦克与已有治疗可组合")
+	G.Search:SetFilters({tankPresence="present",healerPresence="missing",needsDamage=true})
+	T.eq(table.concat(G.Results:GetResults(),","),"13","已有坦克、缺治疗、缺输出共同过滤")
+	G.Search:SetFilters({healerPresence="present",needsDamage=true})
+	T.eq(#G.Results:GetResults(),0,"已有三名输出的队伍不命中缺输出")
+	S.counts[13]={TANK=1,DAMAGER=2};G.Results:OnResultUpdated(13)
+	G.Search:SetFilters({healerPresence="missing"})
+	T.eq(#G.Results:GetResults(),0,"未知职责人数不当成缺少该职责")
+	S.counts[13]={TANK=1,HEALER=0,DAMAGER=2};G.Results:OnResultUpdated(13)
+	S.results[13].activityIDs={503};G.Results:OnResultUpdated(13)
+	G.Search:SetFilters({category="seasonDungeon",groupKeys={[20]=true}})
+	T.same(G.Results:GetResults(),{12},"副本集合只保留所选副本的结果")
+	G.Search:SetFilters({category="seasonDungeon",groupKeys={[20]=true,[-503]=true}})
+	T.same(G.Results:GetResults(),{13,12},"多个副本合并结果并保留统一排序")
+	G.Search:SetFilters({category="seasonDungeon",groupKeys={[-503]=true},needsDamage=true})
+	T.same(G.Results:GetResults(),{13},"副本多选与职责条件组合")
+	S.results[13].activityIDs={502};G.Results:OnResultUpdated(13)
+	local previousNotes=A.Notes
+	A.Notes=nil;G.Search:SetFilters({notes="noCaution"})
+	T.same(G.Results:GetResults(),{13,12,11},"排除拉黑记录在没有笔记时保留所有队伍")
+	local noteRecords={}
+	A.Notes={Find=function(_,key) return noteRecords[key] end}
+	noteRecords["团长甲-晨风号角"]={type="caution"};G.Results:InvalidateView()
+	T.same(G.Results:GetResults(),{13,12},"不含拉黑记录排除拉黑队长")
+	noteRecords["治疗者-晨风号角"]={type="caution"};G.Results:InvalidateView()
+	T.same(G.Results:GetResults(),{13},"不含拉黑记录也排除普通队员命中的队伍")
+	noteRecords["治疗者-晨风号角"]={type="positive"};G.Results:InvalidateView()
+	T.same(G.Results:GetResults(),{13,12},"推荐记录不被拉黑排除条件误杀")
+	G.Search:SetFilters({notes="positive"})
+	T.same(G.Results:GetResults(),{12},"推荐玩家仍使用包含匹配")
+	A.Notes=previousNotes
 	G.Search:SetFilters({})
 end
 
@@ -455,6 +487,24 @@ do
  T.eq(G:GetApplication(24).pendingStatus,"cancelled")
  T.eq(G.Applications:IsActive(24),false);T.eq(G:Cancel(24),false)
  T.eq(cancelled,before+1,"pending cancellation cannot submit a second request")
+ local applied=#S.applyCalls
+ local allowed,reason=G:Apply(24,{damage=true})
+ T.eq(allowed,false,"reapplying while native cancellation is pending is rejected")
+ T.eq(reason,A.GroupLocale.actionBusy);T.eq(#S.applyCalls,applied,"pending cancellation never reaches ApplyToGroup")
+ local cancellationEvents=0
+ local cancelUnsub=G:Subscribe(function(kind,id) if kind=="applicationCancelled" and id==24 then cancellationEvents=cancellationEvents+1 end end)
+ S.appStatus[24],S.appPending[24]="cancelled",nil
+ Fire("LFG_LIST_APPLICATION_STATUS_UPDATED",24,"cancelled","applied")
+ T.eq(cancellationEvents,1,"a confirmed cancellation requests one browse refresh")
+ G.Applications:SyncAll();Fire("LFG_LIST_APPLICATION_STATUS_UPDATED",24,"cancelled","cancelled")
+ T.eq(cancellationEvents,1,"duplicate native cancellation snapshots never request another search")
+ allowed,reason=G:Apply(24,{damage=true})
+ T.eq(allowed,false,"a cancelled native search result cannot be reported as a new application")
+ T.eq(reason,A.GroupLocale.applicationCancelled);T.eq(#S.applyCalls,applied)
+ local cancelledClock=S.now;S.now=S.now+5;Stubs.AdvanceClock(5)
+ T.eq(G:GetApplication(24),nil,"the finished local display record retires normally")
+ T.eq(G:Apply(24,{damage=true}),false,"retiring the local record does not make the cancelled native result reusable")
+ T.eq(#S.applyCalls,applied);S.now=cancelledClock;cancelUnsub()
  S.applications={};G.Applications:SyncAll()
 
  T.ok(G:Apply(25,{damage=true}))
@@ -537,7 +587,7 @@ do
 		numMembers = 1, isNew = false, comment = "", displayOrderID = 1,
 	}
 	S.applicantMembers[701] = {
-		{ name = "申请甲-晨风号角", class = "WARRIOR", localizedClass = "战士", level = 80, itemLevel = 210, tank = true },
+		{ name = "申请甲-晨风号角", class = "DEATHKNIGHT", localizedClass = "死亡骑士", level = 80, itemLevel = 210, tank = true, damage = true, assignedRole = "DAMAGER", specID = 252 },
 		{ name = "申请乙-银松森林", class = "PALADIN", localizedClass = "圣骑士", level = 80, itemLevel = 205, healer = true },
 	}
 	S.applicantMembers[702] = {
@@ -550,6 +600,18 @@ do
 	T.eq(#applicant.members, 2, "多成员申请成组")
 	T.eq(applicant.members[1].nameKey, "申请甲-晨风号角")
 	T.eq(applicant.members[2].nameKey, "申请乙-银松森林")
+	local dk=applicant.members[1]
+	T.eq(dk.requestedRoles.TANK,true,"邪恶专精申请者保留报名坦克")
+	T.eq(dk.requestedRoles.DAMAGER,true,"同一申请同时保留报名输出")
+	T.eq(dk.requestedRoles.HEALER,false)
+	T.eq(dk.specID,252,"报名职责不改写当前邪恶专精")
+	T.eq(dk.assignedRole,"DAMAGER","原生分配职责与报名职责分别保留")
+	local requested=dk.requestedRoles
+	S.applicantMembers[701][1].tank=false
+	Fire("LFG_LIST_APPLICANT_UPDATED",701)
+	T.eq(dk.requestedRoles,requested,"刷新复用报名职责集合")
+	T.eq(dk.requestedRoles.TANK,false,"取消的报名职责不会残留")
+	T.eq(dk.requestedRoles.DAMAGER,true)
 
 	-- 邀请防重入。
 	T.ok(G.Applicants:Invite(701), "邀请提交")
@@ -1201,6 +1263,18 @@ T.ok(G.Catalog:Matches(G.Catalog:GetActivity(502),"seasonDungeon"))
 T.eq(G.Catalog:Matches(G.Catalog:GetActivity(502),"2"),false,"membership is scoped to the category, including overlapping seasonal activities")
 T.ok(G.Catalog:Matches(G.Catalog:GetActivity(504),"2"))
 T.ok(G.Catalog:Matches(G.Catalog:GetActivity(504),"seasonDungeon"),"the same native group retains all variants in each eligible context")
+do
+ local group=G.Catalog:GetGroup("seasonDungeon",20)
+ local map,locale=group.activity.mapID,GetLocale
+ group.activity.mapID=2993;GetLocale=function() return "zhCN" end
+ T.eq(G.Catalog:GetGroupShortName("seasonDungeon",20),"毒牙","Chinese multi-dungeon labels use the requested short names")
+ GetLocale=function() return "enUS" end
+ T.eq(G.Catalog:GetGroupShortName("seasonDungeon",20),"AoF","English clients use an English abbreviation")
+ group.activity.mapID=2521
+ T.eq(G.Catalog:GetGroupShortName("seasonDungeon",20),"RLP")
+ group.activity.mapID=map;GetLocale=locale
+ T.eq(G.Catalog:GetGroupShortName("seasonDungeon",20),group.name,"unmapped future dungeons retain their actual catalog name")
+end
 
 do
 	-- Native input changes distinguish requests without inspecting restricted text.

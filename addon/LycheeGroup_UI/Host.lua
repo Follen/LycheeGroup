@@ -25,6 +25,27 @@ function UI:OnSettingChanged(key)
 	if page and page.OnNotesChanged and not self.hiding then page:OnNotesChanged() end
 end
 
+function UI:ApplyFont(path)
+ T.font=path
+ if not self.frame then return end
+ self:CloseMenu();self.Tooltip:Hide()
+ A.Fonts:ApplyTree(self.frame,path)
+ A.Fonts:ApplyTree(self.context.menu,path)
+ A.Fonts:ApplyTree(self.Tooltip.interactive,path)
+ local x=0
+ for _,key in ipairs({"find","create","notes"}) do
+  local button=self.navItems[key]
+  button:SetWidth(button.label:GetStringWidth()+38)
+  button:ClearAllPoints();button:SetPoint("TOPLEFT",button:GetParent(),"TOPLEFT",x,0)
+  x=x+button:GetWidth()+T.navGap
+ end
+ self.navItems.find:GetParent():SetWidth(x-T.navGap)
+ self.settingsButton:SetWidth(math.max(72,self.settingsButton.label:GetStringWidth()+40))
+ self._nav=nil;self:UpdateNav()
+ local settings=self.pages.settings
+ if settings.frame then settings:LayoutRows();settings:Sync() end
+end
+
 function UI:FitToScreen()
 	local scale = math.min(1, (UIParent:GetWidth() - 40) / T.width, (UIParent:GetHeight() - 40) / T.height)
 	self.frame:SetScale(scale)

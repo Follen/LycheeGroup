@@ -192,7 +192,7 @@ end
 local function Pass(record,filters)
  if G.Applications:IsActive(record.id) then return false end
  if filters.leaderText and not MatchesLeaderText(record,filters.leaderText) then return false end
- if filters.category and not G.Catalog:Matches(record.activity,filters.category,filters.groupKey,filters.difficultyID,filters.tier) then return false end
+ if filters.category and not G.Catalog:Matches(record.activity,filters.category,filters.groupKey,filters.difficultyID,filters.tier,filters.groupKeys) then return false end
  if filters.personKey then
   local match=record.leaderKey==filters.personKey
   if not match then for _,member in ipairs(Results:GetDetails(record).members) do if member.nameKey==filters.personKey then match=true;break end end end
@@ -205,16 +205,24 @@ local function Pass(record,filters)
   local target=filters.neededRole=="DAMAGER" and 3 or 1
   if record.maxNumPlayers~=5 or not counts or not counts[filters.neededRole] or counts[filters.neededRole]>=target then return false end
  end
+ if filters.tankPresence or filters.healerPresence or filters.needsDamage then
+  local counts=Results:GetMemberCounts(record)
+  if record.maxNumPlayers~=5 or not counts then return false end
+  if filters.tankPresence and (counts.TANK==nil or (counts.TANK>0)~=(filters.tankPresence=="present")) then return false end
+  if filters.healerPresence and (counts.HEALER==nil or (counts.HEALER>0)~=(filters.healerPresence=="present")) then return false end
+  if filters.needsDamage and (counts.DAMAGER==nil or counts.DAMAGER>=3) then return false end
+ end
  if filters.friends and record.bnetFriends+record.charFriends==0 then return false end
  if filters.guild and record.guildMates==0 then return false end
  if filters.notes then
-  if not A.Notes then return false end
-  local found=false
-  found=MatchesNote(record.leaderKey,filters.notes)
+  local exclude=filters.notes=="noCaution"
+  if not A.Notes then return exclude end
+  local kind=exclude and "caution" or filters.notes
+  local found=MatchesNote(record.leaderKey,kind)
   if not found then
-   for _,member in ipairs(Results:GetDetails(record).members) do if MatchesNote(member.nameKey,filters.notes) then found=true;break end end
+   for _,member in ipairs(Results:GetDetails(record).members) do if MatchesNote(member.nameKey,kind) then found=true;break end end
   end
-  if not found then return false end
+  if exclude and found or not exclude and not found then return false end
  end
  return true
 end

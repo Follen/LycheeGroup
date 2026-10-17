@@ -570,18 +570,35 @@ function C.Roster(parent,size,gap)
   local text=C.Text(frame,"",14,T.text,22);C.SetLineHeight(text,20,true);text:SetPoint("LEFT",icon,"RIGHT",3,0)
   frame.counts[i]={icon=icon,text=text,role=role}
  end
- function frame:Update(members,counts,maximum)
+ function frame:Update(members,counts,maximum,fixedRoles)
   local party=maximum==5
   for _,item in ipairs(self.counts) do item.icon:SetShown(not party);item.text:SetShown(not party);if not party then UI:SetText(item.text,counts and counts[item.role] or "—") end end
   local used=0
-  if party and members then
+  if party and (members or fixedRoles) then
+   local tanks,healers,damage=0,0,0
    for rank=1,4 do
+    local present=0
     for i=1,5 do
-     local member=members[i]
+     local member=members and members[i]
      if member and (rosterRoleOrder[member.assignedRole] or 4)==rank then
+      present=present+1
       used=used+1;local slot=self.slots[used]
       slot.icon:Show();slot.role:Hide();UI:SetMemberIcon(slot.icon,member);slot.icon:SetAlpha(1)
+      slot.role:SetSize(10,10);slot.role:ClearAllPoints();slot.role:SetPoint("BOTTOMRIGHT",slot.icon,"BOTTOMRIGHT",1,-1)
       if member.assignedRole and member.assignedRole~="NONE" then UI:SetRoleIcon(slot.role,member.assignedRole);slot.role:Show() end
+     end
+    end
+    if rank==1 then tanks=present elseif rank==2 then healers=present elseif rank==3 then damage=present end
+   end
+   if fixedRoles then
+    for rank=1,3 do
+     local present=rank==1 and tanks or rank==2 and healers or damage
+     local missing=math.min(5-used,math.max(0,(rank==3 and 3 or 1)-present))
+     local role=rank==1 and "TANK" or rank==2 and "HEALER" or "DAMAGER"
+     for i=1,missing do
+      used=used+1;local slot=self.slots[used]
+      slot.icon:Hide();slot.role:SetSize(size,size);slot.role:ClearAllPoints();slot.role:SetPoint("CENTER",slot.icon,"CENTER",0,0)
+      UI:SetRoleIcon(slot.role,role);slot.role:Show()
      end
     end
    end
@@ -596,7 +613,7 @@ function C.Slider(parent,width,min,max,step,onChange)
  slider:SetOrientation("HORIZONTAL");slider:SetMinMaxValues(min or 0,max or 100);slider:SetValueStep(step or 1);slider:SetObeyStepOnDrag(true)
  local track=CreateFrame("Frame",nil,slider);track:SetFrameLevel(slider:GetFrameLevel()-1);track:SetPoint("LEFT");track:SetPoint("RIGHT");track:SetHeight(4);C.Panel(track,T.surfaceHigh,2)
  local progress=CreateFrame("Frame",nil,slider);progress:SetFrameLevel(slider:GetFrameLevel()-1);progress:SetPoint("LEFT");progress:SetHeight(4);C.Panel(progress,T.accent,2)
- local thumb=slider:CreateTexture(nil,"OVERLAY");thumb:SetTexture(T.media.."circle.tga");thumb:SetVertexColor(unpack(T.accent));thumb:SetSize(18,18);slider:SetThumbTexture(thumb)
+ local thumb=slider:CreateTexture(nil,"OVERLAY");thumb:SetTexture(130871);thumb:SetVertexColor(unpack(T.accent));thumb:SetSize(8,12);slider:SetThumbTexture(thumb)
  progress:SetPoint("RIGHT",thumb,"CENTER",0,0)
  function shell:SetValue(value) self.updating=true;slider:SetValue(value);self.updating=false end
  function shell:GetValue() return slider:GetValue() end

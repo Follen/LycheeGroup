@@ -75,6 +75,8 @@ local function Read(id,activityID)
    end
   else member.itemLevel,member.rating=G.Public(itemLevel),member.dungeonScore end
   member.assignedRole,member.specID,member.relationship=G.Public(role),G.Public(specID),G.Public(relationship)
+  local requested=member.requestedRoles or {};member.requestedRoles=requested
+  requested.TANK,requested.HEALER,requested.DAMAGER=G.Public(tank)==true,G.Public(healer)==true,G.Public(damage)==true
   member.isLeaver=G.Public(isLeaver)==true
  end
  for i=#record.members,record.numMembers+1,-1 do record.members[i]=nil end

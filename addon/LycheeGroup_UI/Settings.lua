@@ -21,7 +21,9 @@ local definitions={
  {"floatingScale",S("悬浮窗缩放","Floating window scale"),S("单独调整悬浮窗大小，不影响主窗口。","Adjust the floating window independently."),"range"}},
  interface={{"nativeLFGEntry",S("接管原生组队眼睛","Use the native LFG eye"),S("点击小地图组队眼睛打开荔枝组队；右键仍显示原生队列菜单。","Open Lychee LFG from the minimap eye; right-click keeps the native queue menu.")},
  {"reduceMotion",L.reduceMotion,S("关闭开窗位移、Logo 动作和局部过渡。","Disable window movement, logo animation and local transitions.")},
- {"raidMembers",S("团本成员列表","Raid members"),S("控制团本悬停提示中何时展开成员。","Choose when raid tooltips expand the member list."),{{value="shift",label=S("按 Shift 切换","Press Shift to toggle")},{value="always",label=S("始终展开","Always expand")}}}}}
+ {"raidMembers",S("团本成员列表","Raid members"),S("控制团本悬停提示中何时展开成员。","Choose when raid tooltips expand the member list."),{{value="shift",label=S("按 Shift 切换","Press Shift to toggle")},{value="always",label=S("始终展开","Always expand")}}},
+ {"font",S("界面字体","Interface font"),S("选择游戏字体或已安装的共享字体，立即生效。","Choose a game or installed shared font. Changes apply immediately."),function() return A.Fonts:Choices() end},
+ {"minimap",S("显示小地图按钮","Show minimap button"),S("左键开关主窗口，右键打开设置；拖动调整位置。","Left-click toggles the window; right-click opens settings. Drag to reposition.")}}}
 local RAIL, MAIN_X, PAD = 208, 224, 24
 local BODY_WIDTH = T.contentWidth - MAIN_X - PAD*2 - 12
 function P:Build(parent)
@@ -94,6 +96,7 @@ function P:BuildRow(parent,row,index)
  local label=C.Text(holder,row[2],14,T.text,labelWidth);label:SetPoint("LEFT",12,0);label:SetWordWrap(true);C.SetLineHeight(label,20)
  local help=C.Text(holder,row[3],14,T.muted,helpWidth);help:SetPoint("LEFT",28+labelWidth,0);help:SetWordWrap(true);C.SetLineHeight(help,20)
  local rowHeight=math.max(80,label:GetStringHeight()+32,help:GetStringHeight()+32);holder:SetHeight(rowHeight);parent.nextRowY=(parent.nextRowY or 0)+rowHeight
+ parent.rows=parent.rows or {};parent.rows[#parent.rows+1]={frame=holder,label=label,help=help}
  local control
  if row[4]=="range" then
   control=C.Slider(holder,132,50,150,5,function(value)
@@ -104,7 +107,7 @@ function P:BuildRow(parent,row,index)
  elseif row[4]=="action" then
   control=C.Button(holder,S("重置位置","Reset position"),144,function() A.db.floatingPosition=nil;if A.Floating then A.Floating:ResetPosition() end end);control:SetPoint("RIGHT",-12,0)
  elseif row[4] then
-  control=C.Choice(holder,controlWidth,function() return row[4] end,function(value) A:SetSetting(row[1],value) end);control:SetHeight(44);control:SetPoint("RIGHT",-12,0)
+  control=C.Choice(holder,controlWidth,function() return type(row[4])=="function" and row[4]() or row[4] end,function(value) A:SetSetting(row[1],value) end);control:SetHeight(44);control:SetPoint("RIGHT",-12,0)
  else
   control=C.Check(holder,"",function(value) A:SetSetting(row[1],value);P:Sync() end)
   control.track:ClearAllPoints();control.track:SetPoint("RIGHT",-12,0);control.label:ClearAllPoints();control.label:SetPoint("RIGHT",control.track,"LEFT",-12,0);control.label:SetFont(T.font,14,"");control:SetPoint("RIGHT",0,0)
@@ -114,6 +117,17 @@ function P:BuildRow(parent,row,index)
   control:HookScript("OnHide",function(button) UI:Color(button.label,T.muted) end)
  end
  if row[4]~="action" then self.controls[row[1]]={widget=control,definition=row} end
+end
+function P:LayoutRows()
+ self.back:SetWidth(self.back.label:GetStringWidth()+58)
+ for _,panel in pairs(self.panels) do
+  local top=0
+  for _,row in ipairs(panel.rows or {}) do
+   local height=math.max(80,row.label:GetStringHeight()+32,row.help:GetStringHeight()+32)
+   row.frame:ClearAllPoints();row.frame:SetPoint("TOPLEFT",0,-top);row.frame:SetHeight(height);top=top+height
+  end
+  panel.nextRowY=top
+ end
 end
 function P:SelectSection(key)
  local changed=self.section~=key
@@ -129,7 +143,7 @@ function P:Sync()
  for key,entry in pairs(self.controls) do
   local c,row=entry.widget,entry.definition
   if row[4]=="range" then c:SetValue(A.db[key]);UI:SetText(c.valueLabel,A.db[key].."%")
-  elseif row[4] then local label;for _,choice in ipairs(row[4]) do if choice.value==A.db[key] then label=choice.label;break end end;c:SetValue(A.db[key],label)
+  elseif row[4] then local label;local choices=type(row[4])=="function" and row[4]() or row[4];for _,choice in ipairs(choices) do if choice.value==A.db[key] then label=choice.label;break end end;c:SetValue(A.db[key],label)
   else c:SetValue(A.db[key]==true);UI:SetText(c.label,A.db[key] and S("已开启","On") or S("已关闭","Off"));c:SetWidth(math.ceil(c.label:GetStringWidth())+c.track:GetWidth()+36);UI:Color(c.label,c._inside and T.text or T.muted) end
  end
  self.syncing=nil

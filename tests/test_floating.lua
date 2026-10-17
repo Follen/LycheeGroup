@@ -5,7 +5,7 @@ _G.LycheeUI=nil
 local libraryPrivate={}
 for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Components.lua","Native.lua","Menu.lua"}) do assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/"..file))("LycheeGroup",libraryPrivate) end
 _G.LycheeGroup=nil;_G.LycheeGroupDB=nil
-for _,file in ipairs({"Locale.lua","Core.lua","Floating.lua"}) do dofile("addon/LycheeGroup/"..file) end
+for _,file in ipairs({"Locale.lua","Core.lua","Fonts.lua","Floating.lua"}) do dofile("addon/LycheeGroup/"..file) end
 local A=LycheeGroup;A:LoadDB()
 local apps={{id=1,name="A group",status="applied",activityID=1,activityName="A dungeon",leaderName="Leader-Away",expiresAt=130},{id=2,name="An invitation",status="invited",activityID=1}}
 local members={};for i=1,30 do members[i]={name="Player"..i.."-Away",nameKey="Player"..i.."-Away",class="WARRIOR",specID=71,dungeonScore=2000+i,itemLevel=500+i} end
@@ -107,7 +107,7 @@ apps[2].status="applied";for i=3,5 do apps[i]={id=i,name="Another group",status=
 F:ShowPanel();T.eq(F.scroll:GetHeight(),522,"five padded application cards remain fully visible");T.eq(F.rows[1]:GetHeight(),98);T.eq(F.scrollBar:IsShown(),false,"floating wheel scrolling has no visible track");T.eq(F.rows[5]:IsShown(),true)
 for i=5,3,-1 do apps[i]=nil end;apps[2].status="invited";F.panel:Hide()
 F:ShowPanel()
-listing={name="My listing"};callback("listing");T.eq(F.count:GetText(),"30","recruitment counts individual people");T.eq(F.scroll:GetHeight(),UIParent:GetHeight()-F.frame:GetHeight()-48)
+listing={name="My listing"};callback("listing");T.eq(F.count:GetText(),"30","recruitment counts individual people");T.eq(F.scroll:GetHeight(),UIParent:GetHeight()/F.frame:GetScale()-F.frame:GetHeight()-48)
 T.eq(F.context.logo,F.logoTexture,"the applicant reminder animates the original logo through the shared Brand context")
 T.eq(F.entries,workingEntries);T.eq(F.entries[1],firstEntry);T.eq(firstEntry.application,nil,"recruitment reuse clears the previous application reference")
 local batchEntry=F.entries[1].batch

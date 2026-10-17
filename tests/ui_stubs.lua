@@ -51,7 +51,7 @@ function N:GetScale() return self.scale or 1 end
 function N:GetEffectiveScale() return self:GetScale()*(self.parent and self.parent:GetEffectiveScale() or 1) end
 function N:SetAlpha(v) self.alpha=v end
 function N:GetAlpha() return self.alpha end
-function N:SetFont(...) self.font={...};return true end
+function N:SetFont(...) self.font={...};if self._objectType~="Font" then return true end end
 function N:GetFont() return unpack(self.font) end
 function N:GetLineHeight() assert(self._objectType=="FontString","GetLineHeight belongs to FontString");return (self.font[2] or 14)*1.2 end
 function N:GetShadowOffset() return unpack(self.shadowOffset or {0,0}) end
@@ -73,6 +73,7 @@ function N:GetStringHeight()
  return lines*((self.font[2] or 14)*1.2+(self.spacing or 0))
 end
 function N:SetSpacing(v) self.spacing=v end
+function N:GetSpacing() return self.spacing or 0 end
 function N:SetMaxLines(v) self.maxLines=v end
 function N:SetTextColor(...) self.color={...} end
 function N:GetTextColor() return unpack(self.color or {1,1,1,1}) end
@@ -143,6 +144,7 @@ end
 function S.Install()
  S.nodes={}
  _G.CreateFrame=S.New
+ _G.CreateFont=function(name) return S.New("Font",name) end
  _G.UIParent=S.New("Frame");UIParent:SetSize(1920,1080)
  _G.UISpecialFrames={};_G.InCombatLockdown=function() return false end
  _G.STANDARD_TEXT_FONT="font"

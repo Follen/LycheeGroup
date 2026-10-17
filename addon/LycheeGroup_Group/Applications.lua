@@ -42,6 +42,7 @@ local function Update(id,status,pending,remaining,groupName)
  elseif retired[id] then return nil end
  local record=records[id]
  if not record then sequence=sequence+1;record={id=id,seq=sequence};records[id]=record end
+ local cancelled=status=="cancelled" and record.status~="cancelled"
  local wasApplying=record.status=="applied" or record.pendingStatus=="applied"
  -- Native and other UI submissions must start a new round too. Refreshing an
  -- existing application must keep the latch that protects the previous join.
@@ -63,6 +64,7 @@ local function Update(id,status,pending,remaining,groupName)
  end
  if groupName and groupName~="" then record.name=groupName end
  dirty=true
+ if cancelled then G:Notify("applicationCancelled",id) end
  return record
 end
 function Applications:SyncAll()
@@ -83,6 +85,9 @@ function Applications:Apply(id,roles)
  local record=records[id]
  if record and Active(record) then return false,L.alreadyApplied end
  if self:GetActiveCount()>=5 then return false,L.applicationLimit end
+ local _,status,pending=C_LFGList.GetApplicationInfo(id)
+ if pending=="cancelled" then return false,L.actionBusy end
+ if status=="cancelled" then return false,L.applicationCancelled end
  local ok=pcall(C_LFGList.ApplyToGroup,id,roles.tank==true,roles.healer==true,roles.damage==true)
  if not ok then return false,L.applyFailed end
  self:SyncAll()

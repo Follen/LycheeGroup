@@ -10,5 +10,7 @@
 Libs\LycheeUI\embeds.xml
 Locale.lua
 Core.lua
+Fonts.lua
 Floating.lua
+Minimap.lua
 Entrypoints.lua

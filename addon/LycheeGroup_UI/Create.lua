@@ -49,6 +49,16 @@ local function PlaystyleLabel(value)
  return ""
 end
 local roles={TANK=L.tank,HEALER=L.healer,DAMAGER=L.damage}
+local roleOrder={"TANK","HEALER","DAMAGER"}
+local function UpdateApplicantRoles(row,member)
+ local count,single=0
+ for _,role in ipairs(roleOrder) do
+  if UI:MemberHasRole(member,role) then count=count+1;single=role;UI:SetRoleIcon(row.roles[count],role) end
+ end
+ for i,icon in ipairs(row.roles) do icon:SetShown(i<=count) end
+ row.roleText:SetShown(count<=1)
+ UI:SetText(row.roleText,count==1 and roles[single] or L.unknown)
+end
 local function Shell(parent,w,h,x,y)
  local shell=C.Field(parent,w,h);shell:SetPoint("TOPLEFT",x,y);return shell
 end
@@ -202,6 +212,8 @@ function P:EnsureBatchMembers(f,count)
   row.title=C.Text(row,"",T.listTitleSize,T.text,211);row.title:SetPoint("TOPLEFT",48,-4);C.SetLineHeight(row.title,T.listTitleLineHeight,true);row.title:SetWordWrap(false)
   row.meta=C.Text(row,"",14,T.dim,211);row.meta:SetPoint("TOPLEFT",48,-32);C.SetLineHeight(row.meta,20,true);row.meta:SetWordWrap(false)
   row.role=C.Icon(row,16);row.role:SetPoint("LEFT",columns.role.x,0)
+  row.roles={row.role}
+  for slot=2,3 do local icon=C.Icon(row,16);icon:SetPoint("LEFT",columns.role.x+(slot-1)*22,0);row.roles[slot]=icon end
   row.roleText=C.Text(row,"",14,T.muted,columns.role.width-22);row.roleText:SetPoint("LEFT",columns.role.x+22,0);C.SetLineHeight(row.roleText,20,true)
   row.ilvl=C.Text(row,"",14,T.muted,columns.ilvl.width);row.ilvl:SetPoint("LEFT",columns.ilvl.x,0);row.ilvl:SetJustifyH(columns.ilvl.align);C.SetLineHeight(row.ilvl,20,true)
   row.score=C.Text(row,"",14,T.muted,columns.rating.width);row.score:SetPoint("LEFT",columns.rating.x,0);row.score:SetJustifyH(columns.rating.align);C.SetLineHeight(row.score,20,true)
@@ -306,7 +318,12 @@ function P:RefreshPicker()
  -- Native activity selection remains independent of the optional difficulty UI.
  local activities=group and group.variants or {};local valid=false
  for _,activity in ipairs(activities) do if activity.id==form.activityID then valid=true;break end end
- if not valid then form.activityID=activities[1] and activities[1].id end
+ if not valid then
+  form.activityID=activities[1] and activities[1].id
+  for _,activity in ipairs(activities) do
+   if activity.isMythicPlusActivity then form.activityID=activity.id;break end
+  end
+ end
  local variants=self:DifficultyItems()
  local label=L.chooseActivity;for _,entry in ipairs(variants) do if entry.value==form.activityID then label=entry.label end end;self.difficultyChoice:SetValue(form.activityID,label)
  UI:SetText(self.difficultyFixed,label)
@@ -417,7 +434,7 @@ function P:RefreshApplicants()
  UI.Motion:Stop(self.batchScroll);self.batchScrollTarget=nil
  local tip=UI.Tooltip;local refreshMember=false
  local ids={};for _,id in ipairs(UI:GetGroup():GetApplicants()) do
-  local app=UI:GetGroup():GetApplicant(id);local match=not state.role;for _,m in ipairs(app.members) do if m.assignedRole==state.role then match=true end;if m==tip.member then refreshMember=true end end
+  local app=UI:GetGroup():GetApplicant(id);local match=not state.role;for _,m in ipairs(app.members) do if state.role and UI:MemberHasRole(m,state.role) then match=true end;if m==tip.member then refreshMember=true end end
   if match then ids[#ids+1]=id end
  end
  table.sort(ids,function(a,b)
@@ -477,7 +494,7 @@ function P:RenderBatches()
     local m=app.members[i];if row.member~=m then HideMemberTooltip(row) end;row:SetShown(m~=nil);row.member=m
     if m then row:ClearAllPoints();row:SetPoint("TOPLEFT",0,sharedY-(i-1)*MEMBER_STRIDE);UI:SetMemberIcon(row.icon,m);UI:SetText(row.title,m.nameKey or m.name and (m.name..(m.realm and "-"..m.realm or "")) or L.unknown);row.title:SetTextColor(UI:ClassColor(m.class))
      local relation=A.db.relations and m.relationship and m.relationship~="" and m.relationship or "";local note=A.db.noteMarks~=false and UI:HasNote(m.nameKey);local metadata=relation..(note and (relation~="" and " · " or "")..S("有玩家记录","Player note") or "");UI:SetText(row.meta,metadata);row.meta:SetShown(metadata~="");row.title:ClearAllPoints();row.title:SetPoint("TOPLEFT",48,metadata~="" and -4 or -16)
-     UI:SetRoleIcon(row.role,m.assignedRole);UI:SetText(row.roleText,roles[m.assignedRole] or L.unknown);UI:SetText(row.ilvl,m.itemLevel and math.floor(m.itemLevel) or "—");UI:SetScore(row.score,UI:MemberRating(m))
+     UpdateApplicantRoles(row,m);UI:SetText(row.ilvl,m.itemLevel and math.floor(m.itemLevel) or "—");UI:SetScore(row.score,UI:MemberRating(m))
     end
    end
  end
