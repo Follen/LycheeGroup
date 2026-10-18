@@ -2,30 +2,30 @@
 local A=_G.LycheeGroup
 local UI=A.UI
 local C,T,L=UI.C,UI.Theme,UI.L
-local P={section="interface"};UI.pages.settings=P
+local P={section="general"};UI.pages.settings=P
 local zh=GetLocale()=="zhCN"
 local function S(cn,en) return zh and cn or en end
-local sections={{"interface",S("界面与提示","Interface")},{"browse",S("队伍浏览","Group browsing")},{"notes",S("笔记与提醒","Notes and reminders")},{"floating",S("悬浮窗","Floating window")},{"about",L.about}}
+local sections={{"general",S("入口与快捷键","Access and shortcuts")},{"interface",S("界面外观","Appearance")},{"browse",S("队伍与成员","Groups and members")},{"notes",S("笔记与提醒","Notes and reminders")},{"floating",S("悬浮窗","Floating window")},{"about",L.about}}
 local types={{value="positive",label=S("推荐","Recommended")},{value="neutral",label=S("中性","Neutral")},{value="caution",label=S("拉黑","Blocked")}}
 local definitions={
+ general={{"toggleBinding",A.L.bindingToggle,"","binding"},
+ {"minimap",S("显示小地图按钮","Show minimap button"),S("左键开关主窗口，右键打开设置；拖动调整位置。","Left-click toggles the window; right-click opens settings. Drag to reposition.")},
+ {"nativeLFGEntry",S("接管原生组队眼睛","Use the native LFG eye"),S("点击小地图组队眼睛打开荔枝组队；右键仍显示原生队列菜单。","Open Lychee LFG from the minimap eye; right-click keeps the native queue menu.")}},
+ interface={{"uiScale",S("主窗口缩放","Main window scale"),S("等比调整整个主窗口，当前基准大小为 100%；悬浮窗单独设置。","Scale the entire main window; its baseline size is 100%. The floating window has a separate setting."),"range",75,125},
+ {"font",S("界面字体","Interface font"),S("选择游戏字体或已安装的共享字体，立即生效。","Choose a game or installed shared font. Changes apply immediately."),function() return A.Fonts:Choices() end},
+ {"reduceMotion",L.reduceMotion,S("关闭开窗位移、Logo 动作和局部过渡。","Disable window movement, logo animation and local transitions.")}},
  browse={
  {"defaultSort",S("默认排序","Default sorting"),S("进入其他活动分类时采用的排序。","Sorting used when entering another activity category."),{{value="newest",label=L.newest},{value="rating",label=L.leaderRating},{value="itemLevel",label=L.requiredItemLevel},{value="members",label=L.members}}},
  {"rememberFilters",S("记住各分类的筛选","Remember category filters"),S("切换活动后恢复筛选条件；赛季分类默认查看全部活动。","Restore filters for each category; seasonal categories start with all activities.")},
  {"relations",S("好友与公会标记","Friend and guild markers"),S("在队伍、申请者和成员提示中显示关系。","Show relationships in group, applicant and player details.")},
- {"noteMarks",S("荔枝笔记标记","Player note markers"),S("分别显示推荐、中性和拉黑记录；包含队伍成员。","Show recommendation, neutral and block markers, including group members.")}},
+ {"raidMembers",S("团本成员列表","Raid members"),S("控制团本悬停提示中何时展开成员。","Choose when raid tooltips expand the member list."),{{value="shift",label=S("按 Shift 切换","Press Shift to toggle")},{value="alt",label=S("按 Alt 切换","Press Alt to toggle")},{value="ctrl",label=S("按 Ctrl 切换","Press Ctrl to toggle")},{value="always",label=S("始终展开","Always expand")}}}},
  notes={{"defaultNote",S("新记录的默认类型","Default note type"),S("每次记笔记时仍可选择其他类型。","Choose a different type whenever you record a player."),types},
+ {"noteMarks",S("荔枝笔记标记","Player note markers"),S("分别显示推荐、中性和拉黑记录；包含队伍成员。","Show recommendation, neutral and block markers, including group members.")},
  {"reminders",S("组队与邀请提醒","Group and invite reminders"),S("收到邀请、邀请玩家或再次组队时，提示符合范围的记录。","Show matching player notes when receiving an invite, inviting a player or grouping again."),{{value="all",label=S("全部记录","All notes")},{value="positive",label=S("仅推荐","Recommended only")},{value="caution",label=S("仅拉黑","Blocked only")},{value="off",label=S("不提醒","Off")}}},
  {"history",S("记录大秘境历史队友","Record Mythic+ teammates"),S("完成后保留活动与成员，便于回顾和补充笔记。","Keep completed runs and teammates for reviewing and adding notes.")}},
  floating={{"floating",S("显示悬浮窗","Show floating window"),S("查看申请与招募状态，关闭主窗口后仍然显示。","View active applications and recruitment while the main window is closed.")},
- {"floatingLocked",S("锁定位置","Lock position"),S("锁定后不能拖动，查看状态和点击入口不受影响。","Lock movement while keeping the status and shortcuts active.")},
- {"floatingScale",S("悬浮窗缩放","Floating window scale"),S("单独调整悬浮窗大小，不影响主窗口。","Adjust the floating window independently."),"range"}},
- interface={{"toggleBinding",A.L.bindingToggle,"","binding"},
- {"uiScale",S("主窗口缩放","Main window scale"),S("等比调整整个主窗口，当前基准大小为 100%；悬浮窗单独设置。","Scale the entire main window; its baseline size is 100%. The floating window has a separate setting."),"range",75,125},
- {"nativeLFGEntry",S("接管原生组队眼睛","Use the native LFG eye"),S("点击小地图组队眼睛打开荔枝组队；右键仍显示原生队列菜单。","Open Lychee LFG from the minimap eye; right-click keeps the native queue menu.")},
- {"reduceMotion",L.reduceMotion,S("关闭开窗位移、Logo 动作和局部过渡。","Disable window movement, logo animation and local transitions.")},
- {"raidMembers",S("团本成员列表","Raid members"),S("控制团本悬停提示中何时展开成员。","Choose when raid tooltips expand the member list."),{{value="shift",label=S("按 Shift 切换","Press Shift to toggle")},{value="always",label=S("始终展开","Always expand")}}},
- {"font",S("界面字体","Interface font"),S("选择游戏字体或已安装的共享字体，立即生效。","Choose a game or installed shared font. Changes apply immediately."),function() return A.Fonts:Choices() end},
- {"minimap",S("显示小地图按钮","Show minimap button"),S("左键开关主窗口，右键打开设置；拖动调整位置。","Left-click toggles the window; right-click opens settings. Drag to reposition.")}}}
+ {"floatingScale",S("悬浮窗缩放","Floating window scale"),S("单独调整悬浮窗大小，不影响主窗口。","Adjust the floating window independently."),"range"},
+ {"floatingLocked",S("锁定位置","Lock position"),S("锁定后不能拖动，查看状态和点击入口不受影响。","Lock movement while keeping the status and shortcuts active.")}}}
 local RAIL, MAIN_X, PAD = 208, 224, 24
 local BODY_WIDTH = T.contentWidth - MAIN_X - PAD*2 - 12
 function P:Build(parent)
@@ -39,7 +39,7 @@ function P:Build(parent)
  root:HookScript("OnHide",function() P:CancelBindingCapture(true) end)
  local rail=CreateFrame("Frame",nil,root);rail:SetSize(RAIL,T.contentHeight);rail:SetPoint("TOPLEFT")
  self.nav={};for i,entry in ipairs(sections) do
-  local b=C.Navigation(rail,entry[2],RAIL,function() P:SelectSection(entry[1]) end);b.fill:SetRadius(8);b.hover:SetRadius(8);b:SetPoint("TOPLEFT",0,-12-(i-1)*52);b:SetHeight(48);b.label:SetFont(T.font,14,"");b.label:ClearAllPoints();b.label:SetPoint("LEFT",16,0);b.label:SetWidth(176)
+  local b=C.Navigation(rail,entry[2],RAIL,function() P:SelectSection(entry[1]) end,nil,{radius=8,fontSize=14});b:SetPoint("TOPLEFT",0,-12-(i-1)*52);b.label:SetWidth(176)
   self.nav[entry[1]]=b
  end
  local main=CreateFrame("Frame",nil,root);main:SetSize(T.contentWidth-MAIN_X,T.contentHeight);main:SetPoint("TOPLEFT",MAIN_X,0);C.Panel(main,T.surfaceLow,24);self.main=main
@@ -98,54 +98,11 @@ end
 -- The window-scale control uses a manual track: a native Slider can update its
 -- value before Lua mouse handlers, while its own parent is the thing being scaled.
 local function WindowScaleControl(parent)
- local minimum,maximum,step=75,125,5
- local control=CreateFrame("Frame",nil,parent);control:SetSize(132,40)
- local input=CreateFrame("Frame",nil,control);input:SetSize(132,24);input:SetPoint("CENTER");input:EnableMouse(true)
- local track=CreateFrame("Frame",nil,input);track:SetHeight(4);track:SetPoint("LEFT");track:SetPoint("RIGHT");C.Panel(track,T.surfaceHigh,2)
- local progress=CreateFrame("Frame",nil,track);progress:SetHeight(4);progress:SetPoint("LEFT");C.Panel(progress,T.accent,2)
- local thumb=CreateFrame("Button",nil,input);thumb:SetSize(8,12)
- local texture=thumb:CreateTexture(nil,"ARTWORK");texture:SetAllPoints();texture:SetTexture(130871);texture:SetVertexColor(unpack(T.accent))
- control.slider,control.track,control.progress,control.thumb=input,track,progress,thumb
- function control:SetValue(value)
-  value=minimum+math.floor((value-minimum)/step+.5)*step
-  self.value=math.max(minimum,math.min(maximum,value))
-  local x=input:GetWidth()*(self.value-minimum)/(maximum-minimum)
-  progress:SetWidth(x);thumb:ClearAllPoints();thumb:SetPoint("CENTER",input,"LEFT",x,0)
-  if self.valueLabel then UI:SetText(self.valueLabel,self.value.."%") end
- end
- function control:GetValue() return self.value end
- function input:GetValue() return control.value end
- function input:SetValue(value) control:SetValue(value) end
- local function Sample(first)
-  local x=select(1,GetCursorPosition())/control.dragScale-control.dragLeft
-  local raw=minimum+math.max(0,math.min(1,x/control.dragWidth))*(maximum-minimum)
-  local value=minimum+math.floor((raw-minimum)/step+.5)*step
-  -- A small dead band around each boundary prevents alternating adjacent steps.
-  if first or math.abs(raw-control.value)>=step*.65 then
-   control.pendingScale=value;control:SetValue(value)
-  end
- end
- function control:FinishScaleDrag(commit)
-  input:SetScript("OnUpdate",nil)
-  local value=self.pendingScale
-  self.scaleDragging,self.pendingScale,self.dragScale,self.dragLeft,self.dragWidth=nil,nil,nil,nil,nil
-  if commit and value then A:SetSetting("uiScale",value) else self:SetValue(A.db.uiScale) end
- end
- local function Begin(_,button)
-  if button~="LeftButton" or control.scaleDragging then return end
-  control.dragScale,control.dragLeft,control.dragWidth=input:GetEffectiveScale(),input:GetLeft(),input:GetWidth()
-  control.scaleDragging=true;control.pendingScale=control.value;Sample(true)
-  input:SetScript("OnUpdate",function()
-   Sample(false)
-   if not IsMouseButtonDown("LeftButton") then control:FinishScaleDrag(true) end
-  end)
- end
- local function Release(_,button)
-  if button=="LeftButton" and control.scaleDragging then Sample(false);control:FinishScaleDrag(true) end
- end
- input:SetScript("OnMouseDown",Begin);input:SetScript("OnMouseUp",Release)
- thumb:SetScript("OnMouseDown",Begin);thumb:SetScript("OnMouseUp",Release)
- control:HookScript("OnHide",function() control:FinishScaleDrag(false) end)
+ local control
+ control=C.Slider(parent,132,75,125,5,function(value) A:SetSetting("uiScale",value) end,{
+  commitOnRelease=true,
+  onPreview=function(value) if control and control.valueLabel then UI:SetText(control.valueLabel,value.."%") end end,
+ })
  control:SetValue(A.db.uiScale)
  return control
 end
@@ -271,7 +228,7 @@ function P:Sync()
    if not self.bindingCapture and conflict then text=text.."\n"..A.L.bindingDefaultConflict:format(GetBindingName(conflict)) end
    UI:SetText(entry.help,text)
    UI:SetText(c.label,self.bindingCapture and S("按下新按键…","Press a key…") or A.L.bindingChange)
-  elseif row[4]=="range" then if not c.scaleDragging then c:SetValue(A.db[key]);UI:SetText(c.valueLabel,A.db[key].."%") end
+  elseif row[4]=="range" then if not c:IsDragging() then c:SetValue(A.db[key]);UI:SetText(c.valueLabel,A.db[key].."%") end
   elseif row[4] then local label;local choices=type(row[4])=="function" and row[4]() or row[4];for _,choice in ipairs(choices) do if choice.value==A.db[key] then label=choice.label;break end end;c:SetValue(A.db[key],label)
   else c:SetValue(A.db[key]==true);UI:SetText(c.label,A.db[key] and S("已开启","On") or S("已关闭","Off"));c:SetWidth(math.ceil(c.label:GetStringWidth())+c.track:GetWidth()+36);UI:Color(c.label,c._inside and T.text or T.muted) end
  end
@@ -281,7 +238,7 @@ end
 function P:Enter(context) self.frame:RegisterEvent("UPDATE_BINDINGS");self:SelectSection(context and context.section or self.section) end
 function P:Leave()
  self.frame:UnregisterEvent("UPDATE_BINDINGS")
- self.controls.uiScale.widget:FinishScaleDrag(false)
+ self.controls.uiScale.widget:FinishDrag(false)
  self:CancelBindingCapture(true)
  for _,panel in pairs(self.panels) do UI.Motion:FinishPlacement(panel) end
 end

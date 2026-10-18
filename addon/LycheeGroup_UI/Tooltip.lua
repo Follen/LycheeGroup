@@ -5,8 +5,15 @@ local Members=UI.Members
 -- A separate tooltip owned by this UI; the global GameTooltip stays untouched.
 local Tip={orderedMembers={},rosterGroupCounts={}}
 local GUTTER=T.scrollWidth
+local function ScrollMaximum(scroll,canvas)
+ local overflow=canvas:GetHeight()-scroll:GetHeight()
+ -- Match List: native scaled dimensions may differ by a tiny rounding residue.
+ return overflow>.01 and overflow or 0
+end
 local PLAYER_NAME_SIZE,PLAYER_NAME_HEIGHT,PLAYER_ICON_SIZE=16,22,36
 local IDENTITY_GAP,IDENTITY_MARK_SIZE=12,16
+local raidModifierKeys={LSHIFT="shift",RSHIFT="shift",LALT="alt",RALT="alt",LCTRL="ctrl",RCTRL="ctrl"}
+local raidModifierLabels={shift="Shift",alt="Alt",ctrl="Ctrl"}
 UI.Tooltip=Tip
 -- Capture once so the pointer can enter the interactive tooltip. Screen edges,
 -- rather than the main window, bound it so it can sit beside the result list.
@@ -148,15 +155,15 @@ function Tip:BuildInteractive()
  outside:SetScript("OnShow",function(self) self:RegisterEvent("GLOBAL_MOUSE_DOWN") end)
  outside:SetScript("OnHide",function(self) self:UnregisterEvent("GLOBAL_MOUSE_DOWN") end)
  outside:SetScript("OnEvent",function()
-  local menu=UI.context.menu
-  local ownMenu=menu and menu:IsShown() and menu.anchor and menu.anchor:GetParent()==Tip.interactive.canvas
-  if not Tip.interactive:IsMouseOver() and not (ownMenu and menu:IsMouseOver()) then Tip:Hide() end
+  local owner=UI.context:GetMenuAnchor()
+  local ownMenu=owner and owner:GetParent()==Tip.interactive.canvas and UI.context:IsMenuHovered(owner)
+  if not Tip.interactive:IsMouseOver() and not ownMenu then Tip:Hide() end
  end)
  outside:Hide();self.outsideClicks=outside
  f:SetScript("OnEnter",function() UI.Motion:Stop(Tip) end)
  f:SetScript("OnLeave",function() Tip:LeaveOwner() end)
  f:SetScript("OnEvent",function(_,event,key,down)
-  if event=="MODIFIER_STATE_CHANGED" and down==1 and (key=="LSHIFT" or key=="RSHIFT") and Tip.record and A.GroupPresentation.Result(Tip.record).kind=="raid" and not Tip.member and A.db.raidMembers~="always" then
+  if event=="MODIFIER_STATE_CHANGED" and down==1 and raidModifierKeys[key]==A.db.raidMembers and Tip.record and A.GroupPresentation.Result(Tip.record).kind=="raid" and not Tip.member then
    Tip.expanded=not Tip.expanded;Tip:RenderGroup()
   end
  end)
@@ -165,7 +172,7 @@ function Tip:BuildInteractive()
  local slider=C.ScrollBar(f);slider:SetPoint("TOPRIGHT",0,-16);slider:SetPoint("BOTTOMRIGHT",0,16);f.scrollbar=slider
  slider:SetScript("OnValueChanged",function(_,value) if not f.updatingScroll then UI.Motion:Stop(scroll);scroll.scrollTarget=nil;scroll:SetVerticalScroll(value) end end)
  scroll:EnableMouseWheel(true);scroll:SetScript("OnMouseWheel",function(self,delta)
-  local maximum=math.max(0,canvas:GetHeight()-self:GetHeight());local target=math.max(0,math.min(maximum,(self.scrollTarget or self:GetVerticalScroll())-delta*42))
+  local maximum=ScrollMaximum(self,canvas);local target=math.max(0,math.min(maximum,(self.scrollTarget or self:GetVerticalScroll())-delta*42))
   self.scrollTarget=target;UI.Motion:Stop(self)
   if A.db.reduceMotion then self:SetVerticalScroll(target);f.updatingScroll=true;slider:SetValue(target);f.updatingScroll=false;return end
   local from,elapsed=self:GetVerticalScroll(),0
@@ -181,7 +188,6 @@ function Tip:BuildInteractive()
  f.title=C.Text(canvas,"",18,T.text);f.title:SetPoint("TOPLEFT",46,0);f.title:SetWordWrap(true)
  f.subtitle=C.Text(canvas,"",14,T.muted);f.subtitle:SetPoint("TOPLEFT",52,-28);C.SetLineHeight(f.subtitle,20)
  f.summary=C.Text(canvas,"",14,T.muted);f.summary:SetPoint("TOPLEFT",0,-56);C.SetLineHeight(f.summary,20)
- f.relations=C.Text(canvas,"",14,T.muted);f.relations:SetWordWrap(true);C.SetLineHeight(f.relations,20);f.relations:Hide()
  f.pvpRatings=C.Text(canvas,"",14,T.muted);f.pvpRatings:SetWordWrap(true);C.SetLineHeight(f.pvpRatings,20);f.pvpRatings:Hide()
  f.metrics={}
  for i=1,4 do local title=C.Text(canvas,"",14,T.dim);C.SetLineHeight(title,20,true);local value=C.Text(canvas,"",14,T.text);C.SetLineHeight(value,20,true);f.metrics[i]={title=title,value=value} end
@@ -195,6 +201,7 @@ function Tip:BuildInteractive()
  f.bossText=C.Text(canvas,"",14,T.muted,180);f.bossText:SetWordWrap(true);C.SetLineHeight(f.bossText,20)
  f.bossRows={}
  f.memberButtons={}
+ f.relationshipRows={}
  f.rosterGroupTitles={}
  f.dungeonTitle=C.Text(canvas,Say("本赛季大秘境","This season's Mythic+"),14,T.text);C.SetLineHeight(f.dungeonTitle,20,true);f.dungeonTitle:Hide()
  f.dungeonEmpty=C.Text(canvas,Say("未提供大秘境记录","No Mythic+ records provided"),14,T.dim);C.SetLineHeight(f.dungeonEmpty,20);f.dungeonEmpty:SetWordWrap(true);f.dungeonEmpty:Hide()
@@ -256,8 +263,9 @@ function Tip:ResetInteractive(owner,width)
  f.comment:ClearAllPoints();f.comment:SetPoint("TOPLEFT",0,-146)
  for _,b in ipairs(f.memberButtons) do b:Hide();b.member=nil;b.memberContext=nil;b.targetKey=nil end
  for _,title in pairs(f.rosterGroupTitles) do title:Hide() end
+ for _,row in pairs(f.relationshipRows) do row:Hide() end
  for _,metric in ipairs(f.metrics) do metric.title:Hide();metric.value:Hide();metric.title:SetWordWrap(false);C.SetLineHeight(metric.title,20,true) end
- f.back:Hide();f.note:Hide();f.wcl:Hide();f.playerRole:Hide();f.noteHeading:Hide();f.noteGlyph:Hide();f.noteDate:Hide();f.noteDivider:Hide();f.bossTitle:Hide();f.bossCount:Hide();f.bossText:Hide();f.composition:Hide();f.relations:Hide();f.pvpRatings:Hide()
+ f.back:Hide();f.note:Hide();f.wcl:Hide();f.playerRole:Hide();f.noteHeading:Hide();f.noteGlyph:Hide();f.noteDate:Hide();f.noteDivider:Hide();f.bossTitle:Hide();f.bossCount:Hide();f.bossText:Hide();f.composition:Hide();f.pvpRatings:Hide()
  for _,row in ipairs(f.bossRows) do row:Hide() end
  f.dungeonTitle:Hide();f.dungeonEmpty:Hide();f.playerFaction:Hide()
  for _,row in ipairs(f.dungeonRows) do row:Hide() end
@@ -283,7 +291,7 @@ function Tip:ShowApplicants(owner,app,keepPinned)
 end
 function Tip:Place(height)
  local f=self.interactive;local _,scale,topLimit,bottomLimit=Viewport();f:SetScale(scale);f.canvas:SetHeight(height);f:SetHeight(math.min(height+32,math.min(760,bottomLimit-topLimit)))
- f.scroll:SetHeight(f:GetHeight()-32);local maximum=math.max(0,height-f.scroll:GetHeight())
+ f.scroll:SetHeight(f:GetHeight()-32);local maximum=ScrollMaximum(f.scroll,f.canvas)
  f.updatingScroll=true;f.scrollbar:SetMinMaxValues(0,maximum);f.scrollbar:SetValue(math.min(f.scroll:GetVerticalScroll(),maximum));f.updatingScroll=false;f.scrollbar:SetShown(maximum>0)
  self:Position(f)
  self.outsideClicks:SetShown(self.pinned==true);f:Show()
@@ -291,7 +299,8 @@ end
 function Tip:BindMember(button,member,width,isLeader)
  local context=self.sourceRoster and A.GroupPresentation.Member("roster") or self.sourceApp and ApplicantContext(self.sourceApp) or A.GroupPresentation.Member("search",self.record and self.record.activity)
  button.memberContext=context
- return Members:Bind(button,member,width,isLeader,context.canOpenDetails,context.canOpenDetails and 12 or 6,context.canOpenDetails and 8 or 4)
+ local bind=self.sourceRoster and Members.BindRoster or self.record and Members.BindSearch or Members.Bind
+ return bind(Members,button,member,width,isLeader,context.canOpenDetails,context.canOpenDetails and 12 or 6,context.canOpenDetails and 8 or 4)
 end
 function Tip:LayoutMemberGrid(members,columns,width,top,leader)
  self:EnsureMemberButtons(#members)
@@ -305,6 +314,29 @@ function Tip:LayoutMemberGrid(members,columns,width,top,leader)
   if i%columns==0 or i==#members then rowTop=rowTop+rowHeight+(i==#members and 0 or 2);rowHeight=0 end
  end
  return rowTop
+end
+function Tip:LayoutRelationships(relationships,width,top)
+ if not A.db.relations or not relationships then return top end
+ local rows=self.interactive.relationshipRows
+ local shown=false
+ for _,kind in ipairs({"bnet","character","guild"}) do
+  local names=relationships[kind]
+  if names and #names>0 then
+   local row=rows[kind]
+   if not row then
+    row=CreateFrame("Frame",nil,self.interactive.canvas)
+    row.icon=C.Icon(row,18);row.icon:SetTexture(Members.relationshipTextures[kind]);row.icon:SetPoint("TOPLEFT",0,-1)
+    row.names=C.Text(row,"",14,T.muted);row.names:SetWordWrap(true);C.SetLineHeight(row.names,20);row.names:SetPoint("TOPLEFT",22,0)
+    rows[kind]=row
+   end
+   row:SetWidth(width);row.names:SetWidth(width-22);row.names:SetHeight(0)
+   UI:SetText(row.names,(zh and "：" or ": ")..table.concat(names,zh and "、" or ", "))
+   local height=math.max(20,row.names:GetStringHeight())
+   row:SetHeight(height);row:ClearAllPoints();row:SetPoint("TOPLEFT",0,-top);row:Show()
+   top=top+height+4;shown=true
+  end
+ end
+ return shown and top+8 or top
 end
 function Tip:LayoutRosterGroups(members,columns,width,top)
  self:EnsureMemberButtons(#members)
@@ -375,7 +407,42 @@ function Tip:RefreshRoster(owner,members,activityContext)
  elseif self.directPlayer then self:Hide();return
  else self:ShowRoster(owner,members,self.pinned,self.rosterContext) end
  local f=self.interactive
- f.scrollbar:SetValue(math.min(scroll,math.max(0,f.canvas:GetHeight()-f.scroll:GetHeight())))
+ f.scrollbar:SetValue(math.min(scroll,ScrollMaximum(f.scroll,f.canvas)))
+end
+function Tip:RefreshRelations()
+ local f=self.interactive
+ if not f or not f:IsShown() then return end
+ local group=UI:GetGroup()
+ if self.sourceRoster then self:RefreshRoster(self.owner,group:GetRoster(),self.rosterContext);return end
+ local offset=f.scroll:GetVerticalScroll()
+ local members
+ if self.record then
+  local app=group:GetApplication(self.record.id)
+  local record=group:GetResult(self.record.id) or app and app.result
+  if not record then self:Hide();return end
+  self.record=record;self.details=group.Results:GetDetails(record);members=self.details.members
+ elseif self.sourceApp or self.memberContext and self.memberContext.source=="applicant" then
+  local id=self.sourceApp and self.sourceApp.id or self.member and self.member.applicantID
+  local app=id and group:GetApplicant(id)
+  if not app then self:Hide();return end
+  self.sourceApp=app;members=app.members
+ end
+ if self.member then
+  local current=self.member
+  if members then
+   current=nil;local key=Members:ID(self.member)
+   for _,member in ipairs(members) do
+    if member==self.member or key and Members:ID(member)==key then current=member;break end
+   end
+  end
+  if current then
+   self:RenderPlayer(current,f.back:IsShown());f.scrollbar:SetValue(math.min(offset,ScrollMaximum(f.scroll,f.canvas)));return
+  end
+  self.member=nil;self.memberContext=nil
+ end
+ if self.record then self:RenderGroup()
+ elseif self.sourceApp then self:ShowApplicants(self.owner,self.sourceApp,self.pinned) end
+ f.scrollbar:SetValue(math.min(offset,ScrollMaximum(f.scroll,f.canvas)))
 end
 function Tip:ShowGroup(owner,record)
  if self.pinned then return end
@@ -404,14 +471,14 @@ function Tip:RenderGroup()
  local leader
  for _,member in ipairs(details and details.members or {}) do if member.isLeader or record.leaderKey and member.nameKey==record.leaderKey then leader=member;break end end
  if leader then f.leader:SetTextColor(UI:ClassColor(leader.class)) end
- if raid then
+ do
   f.leader:SetWidth(0);local leaderWidth=math.min(mainWidth*.42,f.leader:GetStringWidth()+18)
   f.leader:SetWidth(leaderWidth-18);f.leader:SetWordWrap(true);f.leader:SetJustifyH("LEFT");f.leader:ClearAllPoints();f.leader:SetPoint("TOPRIGHT",f.canvas,"TOPLEFT",mainWidth,-4)
   f.leaderIcon:ClearAllPoints();f.leaderIcon:SetPoint("CENTER",f.leader,"TOPLEFT",-11,-f.leader:GetLineHeight()/2);f.leaderIcon:Show()
   f.title:SetWidth(mainWidth-leaderWidth-16-52);f.subtitle:SetWidth(mainWidth-leaderWidth-16-52)
   titleHeight=math.max(24,f.title:GetStringHeight());f.subtitle:ClearAllPoints();f.subtitle:SetPoint("TOPLEFT",52,-titleHeight-4)
   headerHeight=math.max(40,titleHeight+4+math.max(18,f.subtitle:GetStringHeight()),f.leader:GetStringHeight()+4)
- else f.leader:Hide() end
+ end
  f.summary:Hide()
  local itemLevel=(record.requiredItemLevel or 0)>0 and math.floor(record.requiredItemLevel) or Say("不限","Any")
  local metricTop=headerHeight+16
@@ -455,15 +522,7 @@ function Tip:RenderGroup()
   end
   f.pvpRatings:SetWidth(mainWidth);f.pvpRatings:SetHeight(0);UI:SetText(f.pvpRatings,table.concat(lines,"\n"));f.pvpRatings:ClearAllPoints();f.pvpRatings:SetPoint("TOPLEFT",0,-top);f.pvpRatings:Show();top=top+f.pvpRatings:GetStringHeight()+12
  end
- if A.db.relations and details and details.relationships then
-  local r=details.relationships;local lines={}
-  if #r.bnet>0 then lines[#lines+1]=UI:Hex(T.blue)..L.friendBnet.."|r · "..table.concat(r.bnet,"、") end
-  if #r.character>0 then lines[#lines+1]=UI:Hex(T.blue)..L.friendChar.."|r · "..table.concat(r.character,"、") end
-  if #r.guild>0 then lines[#lines+1]=UI:Hex(T.good)..L.friendGuild.."|r · "..table.concat(r.guild,"、") end
-  if #lines>0 then
-   f.relations:SetWidth(mainWidth);f.relations:SetHeight(0);UI:SetText(f.relations,table.concat(lines,"\n"));f.relations:ClearAllPoints();f.relations:SetPoint("TOPLEFT",0,-top);f.relations:Show();top=top+f.relations:GetStringHeight()+12
-  end
- end
+ top=self:LayoutRelationships(details and details.relationships,mainWidth,top)
  if expanded then
   local members=details and details.members or {}
   local ordered=members
@@ -473,7 +532,8 @@ function Tip:RenderGroup()
   top=self:LayoutMemberGrid(ordered,raid and 3 or 1,mainWidth,top,leader)
  end
  if raid and A.db.raidMembers~="always" then
-  top=top+12;UI:SetText(f.footer,expanded and Say("按 Shift 收起名单","Press Shift to collapse") or Say("按 Shift 展开成员名单","Press Shift to expand the member list"));f.footer:ClearAllPoints();f.footer:SetPoint("TOPLEFT",0,-top);top=top+20
+  local hint=expanded and Say("按 %s 收起名单","Press %s to collapse") or Say("按 %s 展开成员名单","Press %s to expand the member list")
+  top=top+12;UI:SetText(f.footer,hint:format(raidModifierLabels[A.db.raidMembers]));f.footer:ClearAllPoints();f.footer:SetPoint("TOPLEFT",0,-top);top=top+20
  else UI:SetText(f.footer,"") end
  if raid then
   local list=Bosses(record.activity);local bossTop=32

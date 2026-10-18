@@ -15,6 +15,7 @@ Libs\LibStub\LibStub.lua
 Libs\LibSpecialization\LibSpecialization.lua
 Group.lua
 RaidBuffs.lua
+Relations.lua
 Roster.lua
 Game.lua
 Catalog.lua

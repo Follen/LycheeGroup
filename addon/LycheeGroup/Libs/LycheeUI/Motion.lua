@@ -41,7 +41,11 @@ for index,pose in ipairs(poses) do
 end
 function Library.CreateMotion(UI)
 -- 单一驱动;switches/alphas 记录进行中动画的终值,StopAll 据此落终态不留残影。
-local M = {jobs={}, startTimes={}, switches={}, alphas={}, colors={}, placements={},waiting={},spins={},spinOwners={},tickBuffer={}}
+local M = {jobs={}, startTimes={}, switches={}, alphas={}, colors={}, placements={},waiting={},busy={},spins={},spinOwners={},tickBuffer={}}
+local function RestoreWaiting(region,saved)
+ region:SetSize(saved.width,saved.height);region:SetAlpha(saved.alpha)
+ region:ClearAllPoints();if saved.point[1] then region:SetPoint(unpack(saved.point)) end
+end
 local function Drive(_, elapsed)
  M:Tick(elapsed,next(M.startTimes) and GetTimePreciseSec() or nil)
 end
@@ -56,6 +60,8 @@ end
 function M:Stop(key)
  self.jobs[key]=nil
  self.startTimes[key]=nil
+ if self.waiting[key] then RestoreWaiting(key,self.waiting[key]);self.waiting[key]=nil end
+ if self.busy[key] then key:SetAlpha(self.busy[key]);self.busy[key]=nil end
  if self.spins[key] then key:SetRotation(0);self.spins[key]=nil end
  self.switches[key]=nil;self.alphas[key]=nil;self.colors[key]=nil
  if self.running and not next(self.jobs) then
@@ -104,10 +110,11 @@ function M:FinishPlacement(region)
  if target then region:ClearAllPoints();region:SetPoint(unpack(target));region:SetAlpha(1);self.placements[region]=nil end
  self:Stop(region)
 end
-function M:Busy(region,enabled,width)
+function M:Busy(region,enabled)
  self:Stop(region)
  region:SetShown(enabled)
  if not enabled then return end
+ self.busy[region]=region:GetAlpha()
  if UI:IsReducedMotion() then region:SetAlpha(1);return end
  local elapsed=0
  self:Start(region,function(dt)
@@ -118,15 +125,16 @@ end
 -- Waiting is local to the lychee texture and lives only for an active search.
 function M:Waiting(region,enabled)
  self:Stop(region);region:SetShown(enabled)
- self.waiting[region]=enabled and true or nil
- local size=44
- if not enabled or UI:IsReducedMotion() then region:SetSize(size,size);region:SetAlpha(1);region:ClearAllPoints();region:SetPoint("TOP",0,-26);return end
+ if not enabled then return end
+ local saved={width=region:GetWidth(),height=region:GetHeight(),alpha=region:GetAlpha(),point={region:GetPoint()}}
+ self.waiting[region]=saved
+ if UI:IsReducedMotion() then return end
  local elapsed,placed=0,false
  self:Start(region,function(dt)
   elapsed=(elapsed+dt)%1.2;local wave=.5-.5*math.cos(elapsed/1.2*math.pi*2)
-  region:SetSize(size*(1+.035*wave),size*(1-.025*wave));region:SetAlpha(.65+.35*wave)
+  region:SetSize(saved.width*(1+.035*wave),saved.height*(1-.025*wave));region:SetAlpha(.65+.35*wave)
   if not placed then region:ClearAllPoints();placed=true end
-  region:SetPoint("TOP",0,-26+wave*3)
+  if saved.point[1] then region:SetPoint(saved.point[1],saved.point[2],saved.point[3],saved.point[4],saved.point[5]+wave*3) end
  end)
 end
 function M:Count() local count=0;for _ in pairs(self.jobs) do count=count+1 end;return count end
@@ -276,7 +284,8 @@ end
 -- 停止全部活动动画,并把进行中的滑块与透明度直接置于终态。
 function M:StopAll()
  for texture in pairs(self.spins) do texture:SetRotation(0);self.spins[texture]=nil end
- for region in pairs(self.waiting) do region:SetSize(44,44);region:SetAlpha(1);region:ClearAllPoints();region:SetPoint("TOP",0,-26);self.waiting[region]=nil end
+ for region,saved in pairs(self.waiting) do RestoreWaiting(region,saved);self.waiting[region]=nil end
+ for region,alpha in pairs(self.busy) do region:SetAlpha(alpha);self.busy[region]=nil end
  for region,target in pairs(self.placements) do region:ClearAllPoints();region:SetPoint(unpack(target));region:SetAlpha(1);self.placements[region]=nil end
  for key in pairs(self.jobs) do self.jobs[key]=nil;self.startTimes[key]=nil end
  if self.running then self.running=false;self.driver:SetScript("OnUpdate",nil);self.driver:Hide() end

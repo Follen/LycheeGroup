@@ -145,11 +145,15 @@ people.push(
  {id:'dew',name:'朝露',realm:'白银之手',class:'PRIEST',role:'HEALER',spec:'神圣',ilvl:646,score:3027}
 );
 person('wind').friend=true;
+person('wind').faction='alliance';
+person('night').faction='horde';
 person('star').friend=true;
 person('sugar').guild=true;
 person('tea').guild=true;
 person('leaf').guild=true;
-person('moon').friend=true;
+Object.assign(person('moon'),{name:'浅墨影',spec:'敏锐',bnetFriend:true});
+Object.assign(person('rain'),{name:'荔枝小月亮',realm:'燃烧之刃',class:'PALADIN',spec:'神圣',ilvl:327,bnetFriend:true,faction:'horde'});
+initialNotes.push({id:'rain',type:'neutral',name:'荔枝小月亮',realm:'燃烧之刃',classSpec:'圣骑士 · 神圣',date:'26/10/18',reason:'备注内容示例。'});
 initialNotes.push({id:'night',type:'caution',name:'长夜微光',realm:'凤凰之神',classSpec:'恶魔猎手 · 复仇',date:'26/10/13',reason:'上次提前离队；再组之前先确认能否打完整场。'});
 groups.forEach(g=>{g.category=act(g.activity).kind==='raid'?'season-raids':'season-dungeons';g.difficulty=g.difficulty||'keystone';});
 groups.find(g=>g.id===11).members=people.slice(0,17).map(p=>p.id);
@@ -221,15 +225,20 @@ groups.push(
  {id:62,category:'custom',activity:'custom',title:'幻化收集，来一起刷',leader:'bird',members:['bird','tea'],ilvl:0,minScore:0,age:120,comment:'休闲收集外观。'},
  {id:63,category:'custom',activity:'custom',title:'旧副本成就，一起完成',leader:'cedar',members:['cedar','ash'],ilvl:0,minScore:0,age:145,comment:'提前确认成就步骤。'}
 );
-const ownPartyIds=()=>state.partyMode==='raid'?people.slice(0,30).map(p=>p.id):['brook','rain','cloud'];
+const relationKinds=[['bnetFriend','battlenet-friend','战网好友'],['friend','friend','角色好友'],['guild','guild','公会成员']];
+// The search API supplies these name lists separately from the member roster.
+groups.forEach(g=>g.friendNames=Object.fromEntries(relationKinds.map(([key])=>[key,g.members.filter(id=>person(id)[key]).map(id=>person(id).name)])));
+const ownPartyIds=()=>state.joinedMembers|| (state.partyMode==='raid'?people.slice(0,30).map(p=>p.id):['brook','rain','cloud']);
 const ownPartyName=()=>state.partyMode==='raid'?'当前团队':'当前队伍';
 const noteTypes={positive:{label:'推荐',icon:'heart',hint:'想再一起组队，把好队友留在笔记里。'},neutral:{label:'中性',icon:'book',hint:'记下见过的人、约定或其他背景。'},caution:{label:'拉黑',icon:'caution',hint:'记录拉黑原因，再次遇到时提醒。'}};
 const defaultSettings={relations:true,noteMarks:true,rememberFilters:true,autoJoin:false,defaultSort:'newest',defaultNote:'neutral',reminders:'all',history:true,motion:false,raidMembers:'shift',floating:true,floatingLocked:false,floatingScale:100};
-const defaultForm={category:'season-raids',activity:'palace',difficulty:'heroic',title:'英雄尼鲁巴尔王宫',description:'',ilvl:635,score:0,playstyle:'高阶挑战',private:false,cross:true,auto:false};
+const defaultForm={category:'season-raids',activity:'palace',difficulty:'heroic',title:'',description:'',ilvl:635,score:0,playstyle:'高阶挑战',private:false,cross:true,auto:false};
+Object.assign(defaultSettings,{toggleBinding:';',minimap:true,nativeLFGEntry:true,uiScale:100,font:'default'});
 const mixedApplicationIDs=[1,11,51,33,61];
 let state={};
 function resetState(){
  state={createActivityQuery:'',autoTitle:true,partyMode:'party',page:'find',lastMain:'find',category:'season-dungeons',expansion:'all',activity:'all',difficulty:'keystone',activityQuery:'',query:'',personFilter:null,sort:'newest',mode:'results',selected:null,filters:{},savedFilters:{},apps:{},notes:structuredClone(initialNotes),noteQuery:'',noteTab:'all',editNote:null,noteDraft:null,settings:structuredClone(defaultSettings),settingsSection:'browse',filtersExpanded:false,listing:null,editing:false,form:{...defaultForm},selectedApplicant:null,appRole:'',appSort:'newest',appStatus:Object.fromEntries(applicants.map(a=>[a.id,a.status])),searching:false};
+ state.settingsSection='general';
  state.apps=Object.fromEntries([1,2].map(id=>[id,'applied']));
  state.applicationDeadlines=Object.fromEntries([1,2].map((id,i)=>[id,Date.now()+300000-i*23000]));
  state.previewApplicationDeadlines={...state.applicationDeadlines};
@@ -245,6 +254,7 @@ function resetState(){
  state.newApplicantIds=[];
  state.floatingPosition=null;
  state.floatingRecruitPosition=null;
+ state.joinedMembers=null;
 }
 resetState();
 const allApplicants=()=>[...applicants,...state.extraApplicants];
@@ -287,9 +297,20 @@ function refreshApplicationCountdowns(){
 }
 function toast(message){clearTimeout(toastTimer);$('#toast').textContent=message;$('#toast').classList.add('visible');toastTimer=setTimeout(()=>$('#toast').classList.remove('visible'),3000);}
 function options(entries,selected){return entries.map(([v,l])=>`<option value="${esc(v)}" ${String(v)===String(selected)?'selected':''}>${esc(l)}</option>`).join('');}
-function noteBadge(id,compact=false){const n=noteOf(id);if(!n||!state.settings.noteMarks)return '';const t=noteTypes[n.type];return `<span class="person-tag note-${n.type}" title="荔枝笔记 · ${t.label}">${icon(t.icon)}${compact?'':t.label}</span>`;}
-function personRelations(id,compact=false){if(!state.settings.relations)return '';const p=person(id);return (p.friend?`<span class="person-tag friend" title="好友">${icon('friend')}${compact?'':'好友'}</span>`:'')+(p.guild?`<span class="person-tag guild" title="同公会">${icon('guild')}${compact?'':'同公会'}</span>`:'');}
-function groupSignals(ids){const chips=[];if(state.settings.relations){const friends=ids.filter(id=>person(id).friend).length,guild=ids.filter(id=>person(id).guild).length;if(friends)chips.push(`<span class="signal friend">${icon('friend')}好友 ${friends}</span>`);if(guild)chips.push(`<span class="signal guild">${icon('guild')}公会 ${guild}</span>`);}if(state.settings.noteMarks)for(const [type,info] of Object.entries(noteTypes)){const count=ids.filter(id=>noteOf(id)?.type===type).length;if(count)chips.push(`<span class="signal note-${type}">${icon(info.icon)}${info.label} ${count}</span>`);}return chips.length?`<span class="group-signals">${chips.join('')}</span>`:'';}
+function relationMark(glyph,label,kind=''){return `<span class="person-tag relation-mark ${kind}" title="${label}" aria-label="${label}">${icon(glyph)}</span>`;}
+function noteBadge(id,compact=false,clickable=false){const n=noteOf(id);if(!n||!state.settings.noteMarks)return '';const t=noteTypes[n.type],label=`荔枝笔记 · ${t.label}`;return clickable?`<button type="button" class="note-mark-button relation-mark note-${n.type}" data-note-person="${id}" title="${label} · 查看记录" aria-label="查看${esc(n.name)}的${t.label}记录">${icon(t.icon)}</button>`:relationMark(t.icon,label,`note-${n.type}`);}
+function personRelations(id){if(!state.settings.relations)return '';const p=person(id);return (p.bnetFriend?relationMark('battlenet-friend','战网好友','bnet'):'')+(p.friend?relationMark('friend','角色好友','friend'):'')+(p.guild?relationMark('guild','同公会','guild'):'');}
+function factionMark(id){const faction=person(id).faction;return faction?relationMark('faction-'+faction,faction==='horde'?'部落':'联盟','faction-mark'):'';}
+function groupSignals(ids,noteIds=ids){const chips=[];if(state.settings.relations){for(const [key,glyph,label] of relationKinds){const count=ids.filter(id=>person(id)[key]).length;if(count)chips.push(relationMark(glyph,`${label} · ${count} 人`,key));}}if(state.settings.noteMarks)for(const [type,info] of Object.entries(noteTypes)){const count=noteIds.filter(id=>noteOf(id)?.type===type).length;if(count)chips.push(relationMark(info.icon,`荔枝笔记 · ${info.label} · ${count} 人`,`note-${type}`));}return chips.length?`<span class="group-signals">${chips.join('')}</span>`:'';}
+function searchRelations(g){
+ if(!state.settings.relations)return '';
+ const rows=relationKinds.filter(([key])=>g.friendNames[key].length).map(([key,glyph,label])=>`<div class="tip-relation-row">${relationMark(glyph,label,key)}<span class="relation-colon">：</span><span>${g.friendNames[key].map(esc).join('、')}</span></div>`);
+ return rows.length?`<section class="tip-relationships" aria-label="队内好友与公会成员">${rows.join('')}</section>`:'';
+}
+function searchLeader(g,extraClass=''){
+ const m=person(g.leader);
+ return `<div class="search-tip-leader ${extraClass}">${leaderIcon()}<span style="color:${colorOf(m)}">${esc(m.name)}-${esc(m.realm)}</span></div>`;
+}
 function nav(){const labels={find:['search','寻求组队'],create:['plus','创建组队'],notes:['book','荔枝笔记']};$('#main-nav').innerHTML=Object.entries(labels).map(([key,[glyph,label]])=>`<button class="nav-button ${state.page===key?'active':''}" data-page="${key}" aria-current="${state.page===key?'page':'false'}">${icon(glyph)}<span class="nav-label">${label}</span></button>`).join('');$('.settings-button').textContent='设置';$('.settings-button').classList.toggle('active',state.page==='settings');$('#close-window').innerHTML=icon('close');}
 function navigate(page){if(page!=='settings')state.lastMain=page;state.page=page;state.categoryMenuOpen=false;hideTip();closeModal();renderPage(true);}
 function renderPage(animate=false){
@@ -326,7 +347,16 @@ function difficultySwitch(category,value,attribute,includeAll=false,activityID='
  return `<div class="difficulty-switch" role="group" aria-label="难度">${(includeAll?[['all','全部'],...choices]:choices).map(([key,label])=>`<button type="button" ${attribute}="${key}" class="${value===key?'active':''}" aria-pressed="${value===key}">${label}</button>`).join('')}</div>`;
 }
 function renderFind(){
- return `<div class="find-layout find-v3">${renderCategoryRail()}<div class="find-main"><div class="search-row"><form class="search-bar ${state.searching?'searching':''}" id="search-form"><div class="search-field">${icon('search')}<input id="group-query" aria-label="搜索队伍" placeholder="队伍名称或钥石范围，如 12-15" value="${esc(state.query)}"></div>${renderFilterToggle()}</form><button type="button" class="search-refresh" data-action="refresh-search" aria-label="刷新队伍" title="刷新队伍" ${state.searching?'disabled':''}>${icon('refresh')}</button></div><section class="applications-pinned" aria-label="置顶的我的申请"><div class="application-topline"><div id="application-header"></div><div class="application-tools"><button type="button" class="auto-join-toggle" data-action="toggle-auto-join" role="switch" aria-label="自动进组" aria-checked="${state.settings.autoJoin}" title="自动接受已申请队伍的邀请"><span>自动进组</span><span class="switch ${state.settings.autoJoin?'on':''}"></span></button></div></div><div id="application-notice" class="application-notice" role="status" hidden></div><div id="application-list" class="application-list"></div></section><div class="list-toolbar"><div class="result-context" id="result-context">${browseContext()}</div><span class="results-label">队伍 <span id="result-count"></span></span></div><div class="group-list" id="group-list"></div></div></div>`;
+ return `<div class="find-layout find-v3">${renderCategoryRail()}<div class="find-main"><div class="search-row"><form class="search-bar ${state.searching?'searching':''}" id="search-form"><div class="search-field">${icon('search')}<input id="group-query" aria-label="搜索队伍" placeholder="${state.searchMode==='leader'?'队长名字，可带服务器':'队伍标题或钥石范围，如 12-15'}" value="${esc(state.query)}"></div><button type="button" class="search-mode text-action" data-action="toggle-search-mode">${state.searchMode==='leader'?'队长':'队伍'}</button>${renderFilterToggle()}</form><button type="button" class="search-refresh" data-action="refresh-search" aria-label="刷新队伍" title="刷新队伍" ${state.searching?'disabled':''}>${icon('refresh')}</button></div><section class="applications-pinned" aria-label="置顶的我的申请"><div class="application-topline"><div id="application-header"></div><div class="application-tools"><div class="auto-apply-control"><button class="text-action" data-action="application-settings">申请设置</button><button class="auto-join-toggle" data-action="toggle-auto-apply" role="switch" aria-label="自动申请" aria-checked="${!!state.autoApply}"><span class="switch ${state.autoApply?'on':''}"></span></button></div><button type="button" class="auto-join-toggle" data-action="toggle-auto-join" role="switch" aria-label="自动进组" aria-checked="${state.settings.autoJoin}" title="自动接受已申请队伍的邀请"><span>自动进组</span><span class="switch ${state.settings.autoJoin?'on':''}"></span></button></div></div><div id="application-notice" class="application-notice" role="status" hidden></div><div id="application-list" class="application-list"></div></section><div class="list-toolbar"><div class="result-context" id="result-context">${browseContext()}</div><span class="results-label"><span id="result-count"></span> 支队伍</span></div>${resultHeader()}<div class="group-list" id="group-list"></div></div></div>`;
+}
+function resultHeader(){
+ const raid=categoryOf(state.category).kind==='raid';
+ return `<div id="result-header" class="find-table-head ${raid?'raid-results':''}"><span>队伍</span><span>队长</span><span>成员</span><span>装等</span>${raid?'<span>描述</span><span>进度</span>':'<span>评分</span><span>描述</span>'}<span>发布</span></div>`;
+}
+function searchRoster(g){
+ const max=g.max||5;if(max>5)return roster(g.members,max,g.counts);
+ const counts=roleCount(g.members),vacancies=['TANK','HEALER','DAMAGER'].flatMap((role,i)=>Array(Math.max(0,(i===2?3:1)-counts[i])).fill(role)).slice(0,Math.max(0,5-g.members.length));
+ return `<div class="roster-strip">${g.members.map(id=>classIcon(person(id))).join('')}${vacancies.map(role=>`<span class="class-icon empty">${roleIcon(role)}</span>`).join('')}</div>`;
 }
 const filterCount=()=>['members','social',...(usesKeyFilters()?['role']:[])].filter(key=>state.filters[key]).length;
 function renderFilterToggle(){const count=filterCount();return `<button type="button" class="filter-toggle ${state.filtersExpanded?'expanded':''}" data-action="toggle-filters" aria-label="${state.filtersExpanded?'收起':'展开'}筛选条件" aria-expanded="${state.filtersExpanded}" aria-controls="search-filters"><span>筛选</span><span class="filter-count" ${count?'':'hidden'}>${count}</span>${icon('chevron')}</button>`;}
@@ -341,6 +371,7 @@ function setFiltersExpanded(open){state.filtersExpanded=open;hideTip();closeCate
 const sortOptions=value=>options([['newest','最新'],['rating','队长评分'],['ilvl','要求装等'],['members','队伍人数']],value);
 function groupInCategory(g){const c=categoryOf(state.category);return c.season?act(g.activity).season&&act(g.activity).kind===c.kind:['dungeons','raids'].includes(c.id)?act(g.activity).kind===c.kind:g.category===c.id;}
 function matchesGroupQuery(g,query){
+ if(state.searchMode==='leader')return `${person(g.leader).name}-${person(g.leader).realm}`.toLowerCase().includes(query.toLowerCase());
  const range=usesKeyFilters()&&/^(\d{1,2})\s*-\s*(\d{1,2})$/.exec(query);
  if(range)return g.difficulty==='keystone'&&g.level>=Number(range[1])&&g.level<=Number(range[2]);
  const level=usesKeyFilters()&&/^(?:\+(\d{1,2})|(\d{1,2})\+?)$/.exec(query);
@@ -353,16 +384,17 @@ function filteredGroups(){
  if(state.personFilter){if(!g.members.includes(state.personFilter))return false;}else if(q&&!matchesGroupQuery(g,q))return false;
  if(f.members&&(g.size||g.members.length)>f.members)return false;
  if(usesKeyFilters()&&f.role){const idx=['TANK','HEALER','DAMAGER'].indexOf(f.role);if(roleCount(g.members)[idx]>=(idx===2?3:1))return false;}
- if(f.social==='friend'&&!g.members.some(id=>person(id).friend))return false;
+ if(f.social==='friend'&&!g.members.some(id=>person(id).friend||person(id).bnetFriend))return false;
  if(f.social==='guild'&&!g.members.some(id=>person(id).guild))return false;
- if(f.social==='noted'&&!g.members.some(noted))return false;
- if(['positive','caution'].includes(f.social)&&!g.members.some(id=>noteOf(id)?.type===f.social))return false;
+ if(f.social==='noted'&&!noted(g.leader))return false;
+ if(['positive','caution'].includes(f.social)&&noteOf(g.leader)?.type!==f.social)return false;
  return true;});
  return list.sort((a,b)=>state.sort==='rating'?person(b.leader).score-person(a.leader).score:state.sort==='ilvl'?b.ilvl-a.ilvl:state.sort==='members'?(b.size||b.members.length)-(a.size||a.members.length):a.age-b.age);
 }
 function renderFindResults(){
  hideTip();closeGroupMenu();const list=filteredGroups().filter(g=>!activeApplication(g.id));if(!list.some(g=>g.id===state.selected))state.selected=null;
  $('#result-count').textContent=list.length;$('#result-context').innerHTML=browseContext();
+ $('#result-header').hidden=!list.length;
  const container=$('#group-list');
  container.innerHTML=list.length?list.map(groupRow).join(''):`<div class="empty-state">${icon('search')}<h2>没有符合条件的队伍</h2><p>可以切换副本或难度，也可以放宽筛选。</p><button class="button primary" data-action="${state.query?'clear-search':filterCount()?'clear-filters':'open-category-menu'}">${state.query?'清空搜索':filterCount()?'清空筛选':'选择活动'}</button></div>`;
  container.scrollTop=state.browseScroll;
@@ -371,8 +403,13 @@ function renderFindResults(){
  $('.filter-count').textContent=filterCount();$('.filter-count').hidden=!filterCount();
 }
 function groupRow(g){
- const m=person(g.leader),a=act(g.activity),s=state.apps[g.id];
- return `<article class="browse-row ${state.selected===g.id?'selected':''}" data-result-id="${g.id}"><button class="browse-identity" data-group="${g.id}" data-tip-group="${g.id}" aria-label="队伍：${esc(g.title)}" aria-description="双击或按 Enter 申请加入，右键查看更多操作">${activityArt(a)}<span class="browse-copy"><strong>${esc(g.title)}</strong><small>${a.name}${g.difficulty&&g.difficulty!=='keystone'?' · '+difficultyNames[g.difficulty]:''}${groupSignals(g.members)}</small></span></button><span class="browse-leader" style="color:${colorOf(m)}" title="队长：${esc(m.name)}-${esc(m.realm)}">${leaderIcon()}<span>${esc(m.name)}</span></span><div class="browse-side"><div class="browse-stats">${a.kind==='raid'?`<span title="团队首领进度">进度 <b class="good">${g.progress}</b></span>`:`<span title="队长评分">评分 <b>${m.score}</b></span>`}<span title="要求装等">装等 <b>${g.ilvl||'不限'}</b></span></div><div class="browse-composition">${roster(g.members,g.max||5,g.counts)}<span>${g.size||g.members.length}/${g.max||5}</span></div></div><span class="browse-age">${statusName(s)||age(g.age)}</span></article>`;
+ const m=person(g.leader),a=act(g.activity),s=state.apps[g.id],raid=a.kind==='raid',large=(g.max||5)>5,expanded=state.expandedGroups?.[g.id];
+ const description=`<span class="browse-description">${esc(g.comment||'—')}</span>`,metric=`<span class="browse-rating ${raid?'good':''}">${raid?g.progress||'—':m.score}</span>`;
+ return `<article class="browse-row result-table-row ${raid?'raid-results':''} ${state.selected===g.id?'selected':''}" data-result-id="${g.id}" data-tip-group="${g.id}">
+ <button class="browse-identity" data-group="${g.id}" aria-label="队伍：${esc(g.title)}" aria-description="双击或按 Enter 申请加入，右键查看更多操作">${activityArt(a)}<span class="browse-copy"><strong>${esc(g.title)}</strong><small><span class="browse-activity-name">${esc(a.name)}</span>${groupSignals(g.members,[g.leader])}</small></span></button>
+ <span class="browse-leader" style="color:${colorOf(m)}">${leaderIcon()}<span>${esc(m.name)}</span></span>
+ <${large?'button type="button"':'div'} class="browse-members ${expanded?'is-expanded':''}" ${large?`data-action="toggle-result-members" data-id="${g.id}" aria-label="${expanded?'收起':'展开'}队伍人数"`:''}>${searchRoster(g)}${large&&expanded?`<small>${g.size||g.members.length}/${g.max} 人</small>`:''}</${large?'button':'div'}>
+ <span class="browse-ilvl">${g.ilvl||'不限'}</span>${raid?description+metric:metric+description}<span class="browse-age">${statusName(s)||age(g.age)}</span></article>`;
 }
 function renderApplications(){
  const all=groups.filter(g=>activeApplication(g.id)),localCount=all.filter(groupInCategory).length;
@@ -393,7 +430,7 @@ function applicationCard(g){
 function renderCreate(){
  const editing=!state.listing||state.editing;
  if(editing)return `<div class="create-layout is-editing"><div class="create-main">${renderForm()}</div>${renderCreationParty()}</div>`;
- return `<div class="create-layout"><div class="create-main">${renderManagement()}</div><aside class="group-rail surface"><div class="rail-title"><h2>${ownPartyName()}</h2><small>${ownPartyIds().length} 人</small></div>${roster(ownPartyIds(),30)}<div class="own-party-rail-list">${ownPartyIds().map(id=>ownPartyMember(id)).join('')}</div></aside></div>`;
+ return `<div class="create-layout"><div class="create-main">${renderManagement()}</div>${renderCreationParty()}</div>`;
 }
 function renderListingActivity(){
  const f=state.form,c=categoryOf(f.category),searching=!!state.createActivityQuery.trim(),a=act(f.activity);
@@ -410,14 +447,34 @@ function creationActivityRows(){
  return list.length?list.map(({a,category})=>{const selected=f.activity===a.id&&f.category===category.id;return `<button type="button" class="category-item creation-activity-option ${selected?'active':''}" data-form-activity="${a.id}" data-activity-category="${category.id}" aria-pressed="${selected}" title="${a.name}">${activityArt(a)}<span class="truncate">${a.name}</span>${q?`<small class="truncate">${category.season?'本赛季':a.expansion||category.name}</small>`:''}</button>`;}).join(''):'<p class="creation-search-empty">没有匹配的活动</p>';
 }
 function creationCategory(a){return a.kind==='dungeon'?(a.season?'season-dungeons':'dungeons'):a.kind==='raid'?(a.season?'season-raids':'raids'):({delve:'delves',pvp:'pvp',quest:'quests',custom:'custom'}[a.kind]);}
-function updateCreationTitle(){if(state.autoTitle)state.form.title=`${difficultyNames[state.form.difficulty]||''}${act(state.form.activity).name}`;}
+function updateCreationTitle(){state.autoTitle=false;}
+function creationPreset(source){return Object.fromEntries(['category','activity','difficulty','ilvl','score','playstyle','private','cross','auto'].map(key=>[key,source[key]]));}
+function creationFavoriteButton(source=state.form){
+ const saved=(state.creationFavorites||[]).some(entry=>JSON.stringify(entry)===JSON.stringify(creationPreset(source)));
+ return `<button type="button" class="creation-favorite ${saved?'is-saved':''}" data-creation-favorite="toggle" data-favorite-source="${source===state.listing?'listing':'form'}" aria-label="${saved?'取消收藏':'收藏招募设置'}" aria-pressed="${saved}"><img src="${assetSrc('icons/favorite-'+(saved?'on':'off')+'.png')}" alt="" aria-hidden="true"></button>`;
+}
+document.addEventListener('click',event=>{
+ const button=event.target.closest('[data-creation-favorite]');if(!button)return;
+ event.preventDefault();event.stopImmediatePropagation();
+ if($('#listing-form'))readForm();
+ const entries=state.creationFavorites||(state.creationFavorites=[]),action=button.dataset.creationFavorite;
+ if(action==='expand')state.creationFavoritesExpanded=!state.creationFavoritesExpanded;
+ else if(action==='toggle'){
+  const entry=creationPreset(button.dataset.favoriteSource==='listing'?state.listing:state.form),index=entries.findIndex(saved=>JSON.stringify(saved)===JSON.stringify(entry));
+  if(index<0)entries.push(entry);else entries.splice(index,1);
+ }else if(action==='remove')entries.splice(Number(button.dataset.index),1);
+ else if(action==='apply'){
+  Object.assign(state.form,entries[Number(button.dataset.index)]);state.autoTitle=false;state.editing=false;
+ }
+ renderPage();
+},true);
 function renderForm(){
  const f=state.form,c=categoryOf(f.category),scoreLabel=ratingLabel(f.activity,f.difficulty),isPvp=c.kind==='pvp'||f.activity==='custom-pvp';
  return `<form class="create-form" id="listing-form">
   <div class="page-title"><h1>${state.editing?'修改组队':'创建组队'}</h1></div>
   <div class="form-surface">
    <section class="form-section description-section">
-    <div class="form-field"><h3 class="form-section-label">活动与难度</h3><div class="listing-activity-context">${renderListingActivity()}${difficultySwitch(f.category,f.difficulty,'data-form-difficulty',false,f.activity)}</div></div>
+    <div class="form-field"><h3 class="form-section-label">活动与难度</h3><div class="listing-activity-context">${renderListingActivity()}${difficultySwitch(f.category,f.difficulty,'data-form-difficulty',false,f.activity)}${creationFavoriteButton()}</div></div>
     <input type="hidden" id="listing-activity" name="activity" value="${f.activity}">
     <div class="form-field"><label for="listing-title">队伍名称</label><input id="listing-title" name="title" class="field form-title" required maxlength="100" placeholder="队伍名称" value="${esc(f.title)}"></div>
     <div class="form-field"><label for="listing-description">说明</label><textarea id="listing-description" name="description" class="field form-description" placeholder="开打前确认分工、语音要求、节奏安排等（选填）">${esc(f.description)}</textarea></div>
@@ -436,8 +493,14 @@ function renderForm(){
  </form>`;
 }
 function renderCreationParty(){
- const ids=ownPartyIds(),ordered=['TANK','HEALER','DAMAGER'].flatMap(role=>ids.filter(id=>person(id).role===role));
- return `<aside class="creation-team surface"><header class="creation-team-heading"><h2>${ownPartyName()} <span>${ids.length} 人</span></h2></header><div class="creation-team-composition">${roster(ids,30)}</div><div class="creation-team-list" aria-label="当前队伍成员">${ordered.map(ownPartyMember).join('')}</div><div class="creation-team-signals">${groupSignals(ids)}</div></aside>`;
+ const ids=ownPartyIds(),form=state.listing||state.form,a=act(form.activity),summary=a.kind==='raid'||a.id==='battleground',entries=state.creationFavorites||[],expanded=!!state.creationFavoritesExpanded;
+ return `<aside class="creation-rail"><section class="creation-favorites"><button type="button" class="creation-favorites-toggle" data-creation-favorite="expand" aria-expanded="${expanded}"><span>收藏</span>${icon('chevron')}</button>${expanded?`<div class="creation-favorites-body">${entries.length?entries.map((entry,index)=>`<article class="creation-preset">${activityArt(act(entry.activity))}<div class="creation-preset-copy"><b>${esc(act(entry.activity).name)}</b><small>${[difficultyNames[entry.difficulty],entry.ilvl?`装等 ${entry.ilvl}`:'',entry.score?`评分 ${entry.score}`:''].filter(Boolean).join(' · ')||'无条件要求'}</small></div><button type="button" class="creation-preset-remove" data-creation-favorite="remove" data-index="${index}" aria-label="移除收藏">${icon('close')}</button><footer>${state.listing?'<small>结束招募后可应用</small>':''}<button type="button" class="button" data-creation-favorite="apply" data-index="${index}" ${state.listing?'disabled':''}>应用</button></footer></article>`).join(''):'<p class="creation-favorites-empty">暂无收藏</p>'}</div>`:''}</section><section class="creation-team surface"><header class="creation-team-heading"><h2>当前队伍 <span>${ids.length} 人</span></h2></header>${summary?`<button type="button" class="creation-team-composition" data-tip-own-roster aria-label="查看当前队伍成员">${roster(ids,30)}</button>${renderCreationBuffs(form,ids)}`:`<div class="creation-team-list" aria-label="当前队伍成员">${ids.map(ownPartyMember).join('')}</div>`}</section></aside>`;
+}
+function renderCreationBuffs(form,ids){
+ if(form.category!=='season-raids')return '';
+ const included=form.difficulty==='mythic'?ids.slice(0,20):ids,counts={};included.forEach(id=>{const key=person(id).class;counts[key]=(counts[key]||0)+1;});
+ const missing=[['WARRIOR','战斗怒吼'],['PALADIN','虔诚光环'],['HUNTER','猎人印记'],['ROGUE',counts.ROGUE===1?'毒药仅1人':'盗贼毒药',2],['PRIEST','耐力'],['DEATHKNIGHT','拉拽／减速'],['SHAMAN','天怒'],['MAGE','智力'],['WARLOCK','术士'],['MONK','物理易伤'],['DRUID','野性印记'],['DEMONHUNTER','魔法易伤'],['EVOKER','唤魔师']].filter(([key,,required=1])=>(counts[key]||0)<required);
+ return `<section class="creation-buffs"><h3>缺少增益</h3>${missing.length?`<div class="creation-buff-grid">${missing.map(([key,label])=>`<span>${classIcon({class:key},false)}<span>${label}</span></span>`).join('')}</div>`:'<p>增益齐全</p>'}</section>`;
 }
 function closeCreationPicker(){
  state.createPickerOpen=false;state.createActivityQuery='';
@@ -446,22 +509,22 @@ function closeCreationPicker(){
 }
 function ownPartyMember(id){
  const m=person(id);
- return `<button type="button" class="own-party-member" data-note-person="${id}">${classIcon(m)}<span class="own-party-copy"><b style="color:${colorOf(m)}">${id===(state.partyMode==='raid'?'wind':'brook')?leaderIcon():''}${m.name}-${m.realm}</b><small>${classInfo[m.class][0]} · ${m.spec}</small><span class="member-tags">${personRelations(id)}${noteBadge(id)}</span></span></button>`;
+ return `<button type="button" class="own-party-member" data-tip-own-member="${id}"><span class="own-party-portrait">${classIcon(m,false)}${id===(state.partyMode==='raid'?'wind':'brook')?leaderIcon():''}</span><span class="own-party-copy"><b style="color:${colorOf(m)}">${esc(m.name)}</b><small>${esc(m.spec||classInfo[m.class][0])}</small></span><span class="own-party-marks">${factionMark(id)}${personRelations(id)}${noteBadge(id)}${roleIcon(m.role)}</span></button>`;
 }
 function readForm(){Object.assign(state.form,Object.fromEntries(new FormData($('#listing-form'))));state.form.ilvl=Number(state.form.ilvl)||0;state.form.score=$('#listing-score')?Number(state.form.score)||0:0;}
 function renderManagement(){
- const l=state.listing,a=act(l.activity);let list=allApplicants().filter(x=>!state.appRole||x.ids.some(id=>person(id).role===state.appRole));
+ const l=state.listing,a=act(l.activity),showScore=a.kind!=='raid';let list=allApplicants().filter(x=>!state.appRole||x.ids.some(id=>person(id).role===state.appRole));
  if(state.appSort==='newest')list.sort((a,b)=>b.id-a.id);
  if(state.appSort!=='newest')list.sort((a,b)=>minimum(b,state.appSort)-minimum(a,state.appSort));
- return `<section class="listing-summary">${activityArt(a,true)}<div class="summary-copy"><div class="listing-meta"><span>${esc(a.name)}</span><span>${difficultyNames[l.difficulty]||categoryOf(l.category).name}</span>${l.ilvl?`<span>装等 ${l.ilvl}</span>`:''}</div><h2 class="truncate">${esc(l.title)}</h2></div><div class="summary-actions"><button data-action="edit-listing">编辑</button><button class="cancel-listing" data-action="end-listing">取消招募</button></div></section><div class="applicants-heading"><h2>管理申请者</h2><small>${list.length} 组申请</small></div><div class="applicant-controls"><div class="role-filters">${[['','全部'],['TANK','坦克'],['HEALER','治疗'],['DAMAGER','输出']].map(([r,l])=>`<button data-app-role="${r}" class="${state.appRole===r?'active':''}">${r?roleIcon(r):''}${l}</button>`).join('')}</div><select id="sort-applicants" aria-label="申请者排序">${options([['newest','最新'],['score','评分'],['ilvl','装等']],state.appSort)}</select></div><div class="applicant-head"><span>申请者 / 成员标记</span><span>申请备注</span><span>职责</span><span class="number">装等</span><span class="number">评分</span><span class="number">操作</span></div><div class="applicant-list">${list.map(applicantRow).join('')||'<div class="empty-state"><h2>没有该职责的申请</h2><p>切换到全部，继续比较其他队友。</p></div>'}</div>`;
+ return `<section class="listing-summary">${activityArt(a,true)}<div class="summary-copy"><div class="listing-meta"><span>${esc(a.name)}</span><span>${difficultyNames[l.difficulty]||categoryOf(l.category).name}</span>${l.ilvl?`<span>装等 ${l.ilvl}</span>`:''}</div><h2 class="truncate">${esc(l.title)}</h2></div><div class="summary-actions">${creationFavoriteButton(l)}<button data-action="edit-listing">编辑</button><button class="cancel-listing" data-action="end-listing">取消招募</button></div></section><div class="applicants-heading"><h2>管理申请者</h2><small>${list.length} 组申请</small></div><div class="applicant-controls"><div class="role-filters">${[['','全部'],['TANK','坦克'],['HEALER','治疗'],['DAMAGER','输出']].map(([r,l])=>`<button data-app-role="${r}" class="${state.appRole===r?'active':''}">${r?roleIcon(r):''}${l}</button>`).join('')}</div><select id="sort-applicants" aria-label="申请者排序">${options([['newest','最新'],...(showScore?[['score','评分']]:[]),['ilvl','装等']],state.appSort)}</select></div><div class="applicant-head ${showScore?'':'raid-applicants'}"><span>申请者</span><span class="role-heading">职责</span>${showScore?'<span class="number">评分</span>':''}<span class="number">装等</span><span>备注</span><span class="actions-heading">操作</span></div><div class="applicant-list">${list.map(applicantRow).join('')||'<div class="empty-state"><h2>没有该职责的申请</h2><p>切换到全部，继续比较其他队友。</p></div>'}</div>`;
 }
 function minimum(a,key){return Math.min(...a.ids.map(id=>person(id)[key]));}
 function applicantRow(a){
  const s=state.appStatus[a.id],isNew=state.newApplicantIds.includes(a.id),label=a.ids.length>1?`这组 ${a.ids.length} 人`:person(a.ids[0]).name;
- const start=1;
- return `<article class="applicant-batch ${isNew?'is-new':''} ${s}" data-applicant-id="${a.id}" style="--member-start:${start};--member-count:${a.ids.length}">
+ const start=1,showScore=act(state.listing.activity).kind!=='raid';
+ return `<article class="applicant-batch ${showScore?'':'raid-applicants'} ${isNew?'is-new':''} ${s}" data-applicant-id="${a.id}" style="--member-start:${start};--member-count:${a.ids.length}">
  <p class="applicant-comment">${esc(a.comment)}</p>
- ${a.ids.map((id,i)=>{const m=person(id);return `<div class="applicant-person" data-member-id="${id}" style="--member-row:${start+i}"><button class="applicant-person-name" data-note-person="${id}" data-tip-member="${id}">${classIcon(m,false)}<span><b style="color:${colorOf(m)}">${m.name}<small>-${m.realm}</small></b><span class="member-tags">${personRelations(id)}${noteBadge(id)}</span></span></button><span class="applicant-person-role" title="${m.spec}">${roleIcon(m.role)}${roleNames[m.role]}</span><span class="number">${m.ilvl}</span><span class="number">${m.score}</span></div>`;}).join('')}
+ ${a.ids.map((id,i)=>{const m=person(id);return `<div class="applicant-person" data-member-id="${id}" style="--member-row:${start+i}"><div class="applicant-person-name" data-tip-member="${id}">${classIcon(m,false)}<b class="applicant-fullname" style="color:${colorOf(m)}" title="${esc(m.name)}-${esc(m.realm)}">${m.name}<small>-${m.realm}</small></b><span class="identity-marks">${factionMark(id)}${personRelations(id)}${noteBadge(id,true,true)}</span></div><span class="applicant-person-role" title="${m.spec}">${roleIcon(m.role)}</span>${showScore?`<span class="number applicant-score">${m.score}</span>`:''}<span class="number applicant-ilvl">${m.ilvl}</span></div>`;}).join('')}
  <div class="applicant-decision">${s==='applied'?`<div><button class="applicant-accept" data-action="invite-applicant" data-id="${a.id}" aria-label="邀请${label}" title="邀请${label}"><span class="decision-check" aria-hidden="true"></span></button><button class="applicant-reject" data-action="decline-applicant" data-id="${a.id}" aria-label="拒绝${label}" title="拒绝${label}"><span class="decision-cross" aria-hidden="true"></span></button></div>${isNew?'<small class="good">新申请</small>':''}`:`<span class="status ${s}">${applicantStatus(s)}</span>`}</div></article>`;
 }
 function respondToApplicant(id,next){
@@ -484,7 +547,7 @@ function renderNotes(){
  const tabs=[['all','全部记录'],['positive','推荐'],['neutral','中性'],['caution','拉黑'],['history','历史队友']];
  return `<section class="notes-page">
   <aside class="category-rail notes-rail surface" aria-label="笔记分类">${tabs.map(([key,label])=>`<button data-note-tab="${key}" aria-pressed="${state.noteTab===key}" class="category-item ${state.noteTab===key?'active':''} ${key==='history'?'history-nav':''}">${key==='history'?icon('history'):key==='all'?icon('friend'):icon(noteTypes[key].icon)}<span>${label}</span><small>${key==='history'?historyRuns.length:key==='all'?state.notes.length:state.notes.filter(n=>n.type===key).length}</small></button>`).join('')}</aside>
-  <div class="notes-main"><div class="notes-heading"><div class="page-title"><h1>${history?'历史队友':'荔枝笔记'}</h1></div><span class="reminder-state">${icon('bell')}${{all:'全部记录提醒',positive:'推荐玩家提醒',caution:'仅拉黑记录提醒',off:'重逢提醒已关闭'}[state.settings.reminders]}</span></div>
+  <div class="notes-main"><div class="notes-heading"><div class="page-title"><h1>${history?'历史队友':'荔枝笔记'}</h1></div></div>
   ${history?renderHistory():`<div class="notes-toolbar"><div class="notes-search"><input id="notes-query" placeholder="搜索玩家或理由" aria-label="搜索笔记" value="${esc(state.noteQuery)}"></div><div class="notes-actions"><button class="button" data-action="import-notes">导入</button><button class="button" data-action="export-notes">导出</button><button class="button primary" data-action="add-note">${icon('plus')}添加记录</button></div></div><div class="notes-workspace"><div class="notes-list-area"><div class="notes-list-heading"><span>玩家记录</span><span class="notes-count">${list.length} 条记录</span></div><div id="notes-list">${notesRows()}</div></div>${state.editNote?renderNoteDrawer():'<div class="notes-detail-empty"><h2>选择玩家查看记录</h2></div>'}</div>`}
   </div></section>`;
 }
@@ -519,7 +582,7 @@ function saveNote(){
  state.noteTab='all';renderPage();toast('荔枝组队：记录已保存。');
 }
 function renderHistory(){
- return `<div class="history-page"><div class="history-caption"><span>当前角色完成的大秘境</span><span>${state.settings.history?'自动记录已开启':'自动记录已关闭，已有历史保留'}</span></div><div class="history-run-head"><span>活动</span><span>队友</span><span>完成时间</span><span></span></div>${historyRuns.map(run=>`<button class="history-run" data-action="history" data-run="${run.id}"><span class="history-activity">${activityArt(act(run.activity),true)}<span><b>${act(run.activity).name}</b><small>+${run.level} · ${run.duration}</small></span></span><span>${roster(run.ids)}${groupSignals(run.ids)}</span><span>${run.date}</span>${icon('chevron')}</button>`).join('')}</div>`;
+ return `<div class="history-page"><div class="history-caption"><span>当前角色完成的大秘境</span></div><div class="history-run-head"><span>活动</span><span>队友</span><span>完成时间</span><span></span></div>${historyRuns.map(run=>`<button class="history-run" data-action="history" data-run="${run.id}"><span class="history-activity">${activityArt(act(run.activity),true)}<span><b>${act(run.activity).name}</b><small>+${run.level} · ${run.duration}</small></span></span><span>${roster(run.ids)}</span><span>${run.date}</span>${icon('chevron')}</button>`).join('')}</div>`;
 }
 function historyModal(id){
  const run=historyRuns.find(r=>r.id===id);
@@ -593,9 +656,37 @@ function autoJoinPending(){
  if(!state.settings.autoJoin||state.listing)return;
  const group=groups.find(g=>state.apps[g.id]==='invited');
  if(!group)return;
- state.apps[group.id]='accepted';delete state.applicationDeadlines[group.id];closeNativeInvite();
- if(state.page==='find')renderFindResults();else renderFloatingWidget();
- toast('已自动接受邀请：'+group.title);
+ joinPreviewGroup(group,true);
+}
+function joinPreviewGroup(g,automatic=false){
+ state.apps={[g.id]:'accepted'};state.applicationDeadlines={};
+ state.joinedMembers=[...new Set([...g.members,'brook'])];state.partyMode=g.max>5?'raid':'party';
+ closeNativeInvite();hideTip();
+ if(state.page==='find')renderFindResults();else if(state.page==='create')renderPage();else renderFloatingWidget();
+ const chosen=state.settings.reminders==='off'?[]:state.joinedMembers.map(noteOf).filter(n=>n&&(state.settings.reminders==='all'||n.type===state.settings.reminders));
+ const notice=$('#join-notice');notice.hidden=!chosen.length;
+ notice.innerHTML=chosen.length?`<header><h2>荔枝笔记 · 入队提醒</h2><button class="icon-button" data-action="close-join-notice" aria-label="关闭入队提醒">${icon('close')}</button></header><p>已加入队伍，全队发现 ${chosen.length} 条玩家记录。</p>${chosen.map(n=>`<div class="join-notice-record note-${n.type}">${icon(noteTypes[n.type].icon)}<div><b>${esc(n.name)}-${esc(n.realm)}</b><p>${esc(n.reason)}</p></div><button class="text-action" data-note-person="${n.id}">查看记录</button></div>`).join('')}`:'';
+ toast((automatic?'已自动加入：':'已加入：')+g.title);
+ refreshApplicationCountdowns();
+}
+function showMockScene(scene){
+ hideTip();closeModal();closeNativeInvite();$('#join-notice').hidden=true;
+ clearTimeout(toastTimer);$('#toast').classList.remove('visible');
+ presence(true);
+ state.apps={};state.applicationDeadlines={};state.listing=null;state.editing=false;state.filters={};state.filtersExpanded=false;state.selected=null;state.browseScroll=0;
+ if(scene==='party-tip'||scene==='raid-tip'){
+  const raid=scene==='raid-tip',g=groups.find(g=>g.id===(raid?11:205));
+  state.page=state.lastMain='find';state.category=raid?'season-raids':'season-dungeons';state.activity='all';state.difficulty='all';state.query='';renderPage();
+  const owner=$(`[data-tip-group="${g.id}"]`);owner.scrollIntoView({block:'center'});
+  const box=owner.getBoundingClientRect();tipPoint={clientX:box.left+32,clientY:box.top+16};tipExpanded=raid;showTip(owner);tipPinned=true;
+ }else if(scene==='party-applicants'||scene==='raid-applicants'){
+  const raid=scene==='raid-applicants';state.page=state.lastMain='create';state.partyMode=raid?'raid':'party';state.joinedMembers=null;
+  state.form={...defaultForm,...(raid?{title:'英雄尼鲁巴尔王宫'}:{category:'season-dungeons',activity:'academy',difficulty:'keystone',title:'+12 艾杰斯亚学院，稳定限时',ilvl:640,score:2800})};state.listing={...state.form};state.appSort='newest';state.appRole='';renderPage();
+ }else if(scene==='join'){
+  state.page=state.lastMain='find';state.category='season-dungeons';state.activity='all';state.difficulty='all';state.query='';renderPage();joinPreviewGroup(groups.find(g=>g.id===205));
+ }else{
+  state.page=state.lastMain=scene;state.form={...defaultForm};state.partyMode='party';state.joinedMembers=null;renderPage();
+ }
 }
 function nativeInvitePreview(){
  hideTip();
@@ -604,26 +695,81 @@ function nativeInvitePreview(){
  if(state.settings.autoJoin){autoJoinPending();return;}
  const layer=$('#native-invite-layer');layer.innerHTML=`<section class="modal native-invite-demo" role="dialog" aria-label="队伍邀请流程示意"><header><h2>队伍邀请</h2><button class="icon-button" data-action="close-native-invite" aria-label="关闭邀请演示">${icon('close')}</button></header><p class="native-invite-caption">游戏原生弹窗 · 流程示意</p><h3>${esc(g.title)}</h3><p>${act(g.activity).name}</p><div class="native-invite-role">${roleIcon('DAMAGER')}你的职责：输出</div><footer><button class="button" data-action="decline-invite" data-id="${g.id}">拒绝</button><button class="button primary" data-action="accept-invite" data-id="${g.id}">接受</button></footer></section>`;layer.hidden=false;layer.querySelector('button').focus();
 }
-const settingsSections={browse:['search','队伍浏览'],notes:['book','笔记与提醒'],floating:['','悬浮窗'],interface:['settings','界面与提示']};
+const settingsSections={general:['','入口与快捷键'],interface:['','界面外观'],browse:['','队伍与成员'],notes:['','笔记与提醒'],floating:['','悬浮窗'],about:['','关于']};
 function switchSetting(key,label,hint){return `<div class="setting-row"><h3>${label}</h3><p>${hint}</p><button class="setting-control" role="switch" aria-label="${label}" aria-checked="${state.settings[key]}" data-setting="${key}"><span>${state.settings[key]?'已开启':'已关闭'}</span><span class="switch ${state.settings[key]?'on':''}"></span></button></div>`;}
 function selectSetting(key,label,hint,choices){return `<div class="setting-row"><h3>${label}</h3><p>${hint}</p><select data-setting-select="${key}" aria-label="${label}">${options(choices,state.settings[key])}</select></div>`;}
 function rangeSetting(key,label,hint,min,max,step=5){return `<div class="setting-row"><h3>${label}</h3><p>${hint}</p><div class="setting-range"><input type="range" data-setting-range="${key}" aria-label="${label}" min="${min}" max="${max}" step="${step}" value="${state.settings[key]}"><output>${state.settings[key]}%</output></div></div>`;}
+function settingsBindingRow(){
+ return `<div class="setting-row"><h3>打开／关闭荔枝组队</h3><p>${state.bindingCapture?'按下新按键，Esc 取消录入。':'当前按键：'+esc(state.settings.toggleBinding)}</p><button class="button settings-keybind ${state.bindingCapture?'listening':''}" data-settings-keybind>${state.bindingCapture?'按下新按键…':'修改快捷键'}</button></div>`;
+}
+function settingsMainScaleRow(){
+ return `<div class="setting-row"><h3>主窗口缩放</h3><p>等比调整整个主窗口，当前基准大小为 100%；悬浮窗单独设置。</p><div class="setting-range"><input type="range" data-settings-main-scale aria-label="主窗口缩放" min="75" max="125" step="5" value="${state.settings.uiScale}"><output>${state.settings.uiScale}%</output></div></div>`;
+}
+const settingsFonts=[['default','默认字体'],['Microsoft YaHei UI','微软雅黑'],['Noto Sans SC','Noto Sans SC'],['Segoe UI','Segoe UI']];
+function settingsFontRow(){
+ return `<div class="setting-row"><h3>界面字体</h3><p>选择游戏字体或已安装的共享字体，立即生效。</p><select data-settings-font aria-label="界面字体">${options(settingsFonts,state.settings.font)}</select></div>`;
+}
+function renderSettingsAbout(){
+ const addons=[
+  {name:'荔枝启动器',glyph:'about-launcher',summary:'搜索技能、物品与设置，直接施放、使用或打开对应页面。',links:[['新手盒子','https://www.wclbox.com/share/AJKkdJtw8gt'],['网易 DD','https://url.cc.163.com/HoH0Od']]},
+  {name:'荔枝天赋',glyph:'about-talent',summary:'按副本和首领整理 WCL 天赋推荐，也能保存与切换个人方案。',links:[['新手盒子','https://www.wclbox.com/share/AJu72Mjcmed'],['网易 DD','https://url.cc.163.com/w64q1s']]}
+ ];
+ return `<div class="settings-about"><header class="settings-about-brand"><img src="${assetSrc('lychee-logo.png')}" alt=""><div><h2>荔枝组队</h2><p><span>插件版本 <b>1.0.2</b></span><span>作者 <b>FollenFang</b></span></p></div></header><h3 class="settings-about-heading">我的其他插件</h3>${addons.map(addon=>`<article class="settings-about-addon"><span class="settings-addon-icon">${icon(addon.glyph)}</span><div><h3>${addon.name}</h3><p>${addon.summary}</p><div class="settings-addon-links">${addon.links.map(([label,url])=>`<button class="button" data-settings-copy="${url}" data-settings-addon="${addon.name} · ${label}">${label}</button>`).join('')}</div></div></article>`).join('')}</div>`;
+}
 function renderSettings(){
  let content='';
- if(state.settingsSection==='browse')content=selectSetting('defaultSort','默认排序','进入其他活动分类时采用的排序。',[['newest','最新'],['rating','队长评分'],['ilvl','要求装等'],['members','队伍人数']])+switchSetting('rememberFilters','记住各分类的筛选','切换活动后恢复筛选条件；赛季分类默认查看全部活动。')+switchSetting('relations','好友与公会标记','在队伍、申请者和成员提示中显示关系。')+switchSetting('noteMarks','荔枝笔记标记','分别显示推荐、中性和拉黑记录；包含队伍成员。');
- if(state.settingsSection==='notes')content=selectSetting('defaultNote','新记录的默认类型','每次记笔记时仍可选择其他类型。',Object.entries(noteTypes).map(([id,t])=>[id,t.label]))+selectSetting('reminders','再次组队时提醒','遇到已记录玩家时，按你选择的范围提醒。',[['all','全部记录'],['positive','仅推荐'],['caution','仅拉黑'],['off','不提醒']])+switchSetting('history','记录大秘境历史队友','完成后保留活动与成员，便于回顾和补充笔记。');
- if(state.settingsSection==='floating')content=switchSetting('floating','显示悬浮窗','查看申请与招募状态，关闭主窗口后仍然显示。')+switchSetting('floatingLocked','锁定位置','锁定后不能拖动，查看状态和点击入口不受影响。')+
- rangeSetting('floatingScale','悬浮窗缩放','单独调整悬浮窗大小，不影响主窗口。',50,150)+
+ if(state.settingsSection==='general')content=settingsBindingRow()+switchSetting('minimap','显示小地图按钮','左键开关主窗口，右键打开设置；拖动调整位置。')+switchSetting('nativeLFGEntry','接管原生组队眼睛','点击小地图组队眼睛打开荔枝组队；右键仍显示原生队列菜单。');
+ if(state.settingsSection==='interface')content=settingsMainScaleRow()+settingsFontRow()+switchSetting('motion','减少动态效果','关闭开窗位移、Logo 动作和局部过渡。');
+ if(state.settingsSection==='browse')content=selectSetting('defaultSort','默认排序','进入其他活动分类时采用的排序。',[['newest','最新'],['rating','队长评分'],['ilvl','要求装等'],['members','队伍人数']])+switchSetting('rememberFilters','记住各分类的筛选','切换活动后恢复筛选条件；赛季分类默认查看全部活动。')+switchSetting('relations','好友与公会标记','寻队显示队内好友名单；申请者和已入队成员显示关系标记。')+selectSetting('raidMembers','团本成员列表','控制团本悬停提示中何时展开成员。',[['shift','按 Shift 切换'],['alt','按 Alt 切换'],['ctrl','按 Ctrl 切换'],['always','始终展开']]);
+ if(state.settingsSection==='notes')content=selectSetting('defaultNote','新记录的默认类型','每次记笔记时仍可选择其他类型。',Object.entries(noteTypes).map(([id,t])=>[id,t.label]))+switchSetting('noteMarks','荔枝笔记标记','寻队时识别队长；入队后识别全队的推荐、中性和拉黑记录。')+selectSetting('reminders','组队与邀请提醒','收到邀请、邀请玩家或再次组队时，提示符合范围的记录。',[['all','全部记录'],['positive','仅推荐'],['caution','仅拉黑'],['off','不提醒']])+switchSetting('history','记录大秘境历史队友','完成后保留活动与成员，便于回顾和补充笔记。');
+ if(state.settingsSection==='floating')content=switchSetting('floating','显示悬浮窗','查看申请与招募状态，关闭主窗口后仍然显示。')+rangeSetting('floatingScale','悬浮窗缩放','单独调整悬浮窗大小，不影响主窗口。',50,150)+switchSetting('floatingLocked','锁定位置','锁定后不能拖动，查看状态和点击入口不受影响。')+
  '<div class="setting-row"><h3>悬浮窗位置</h3><p>未锁定时拖动荔枝标志，可放在屏幕内任意位置。</p><button class="button secondary setting-reset-position" data-action="reset-floating-position">重置位置</button></div>';
- if(state.settingsSection==='interface')content=switchSetting('motion','减少动态效果','关闭开窗位移、Logo 动作和局部过渡。')+selectSetting('raidMembers','团本成员列表','控制团本悬停提示中何时展开成员。',[['shift','按 Shift 切换展开'],['always','始终展开']]);
- return `<section class="settings-page"><div class="settings-layout"><nav class="settings-nav category-rail surface" aria-label="设置分类">${Object.entries(settingsSections).map(([id,[glyph,label]])=>`<button data-settings-section="${id}" class="category-item ${state.settingsSection===id?'active':''}"><span>${label}</span></button>`).join('')}</nav><div class="settings-main"><div class="page-title"><h1>${settingsSections[state.settingsSection][1]}</h1><button class="button" data-page="${state.lastMain}">${icon('arrow')}返回</button></div><div class="settings-body"><div class="settings-stack">${content}</div></div></div></div></section>`;
+ if(state.settingsSection==='about')content=renderSettingsAbout();
+ return `<section class="settings-page"><div class="settings-layout"><nav class="settings-nav category-rail surface" aria-label="设置分类">${Object.entries(settingsSections).map(([id,[glyph,label]])=>`<button data-settings-section="${id}" class="category-item ${state.settingsSection===id?'active':''}" aria-current="${state.settingsSection===id?'page':'false'}"><span>${label}</span></button>`).join('')}</nav><div class="settings-main"><div class="page-title"><h1>${settingsSections[state.settingsSection][1]}</h1></div><div class="settings-body"><div class="settings-stack">${content}</div></div></div></div></section>`;
 }
+function applyMockSettings(){
+ const font=state.settings.font==='default'?'':`"${state.settings.font}", "Microsoft YaHei UI", sans-serif`;
+ for(const selector of ['#window','#tooltip','#group-context-menu'])$(selector).style.fontFamily=font;
+ fit();
+}
+document.addEventListener('click',event=>{
+ const button=event.target.closest('button');if(!button)return;
+ if(button.hasAttribute('data-settings-keybind')){state.bindingCapture=!state.bindingCapture;renderPage();return;}
+ if(button.dataset.settingsSection||button.dataset.page)state.bindingCapture=false;
+ if(button.dataset.settingsCopy){
+  openModal(`<section class="modal settings-link-modal"><header><h2>复制下载链接</h2><button class="icon-button" data-action="close-modal" aria-label="关闭">${icon('close')}</button></header><p>${esc(button.dataset.settingsAddon)}</p><label for="settings-download-link">下载链接</label><input class="field" id="settings-download-link" value="${esc(button.dataset.settingsCopy)}" readonly><p class="tip-footer">链接已选中，按 Ctrl+C 复制。</p></section>`);
+  const input=$('#settings-download-link');input.focus();input.select();return;
+ }
+ if(button.id==='reset')applyMockSettings();
+});
+document.addEventListener('input',event=>{
+ if(!event.target.hasAttribute('data-settings-main-scale'))return;
+ event.target.nextElementSibling.value=event.target.value+'%';
+});
+document.addEventListener('change',event=>{
+ if(event.target.hasAttribute('data-settings-main-scale')){state.settings.uiScale=Number(event.target.value);applyMockSettings();return;}
+ if(!event.target.hasAttribute('data-settings-font'))return;
+ state.settings.font=event.target.value;applyMockSettings();
+});
+function settingsKey(event){return [...(event.ctrlKey?['Ctrl']:[]),...(event.altKey?['Alt']:[]),...(event.shiftKey?['Shift']:[]),event.key===' '?'Space':event.key.length===1?event.key.toUpperCase():event.key].join('+');}
+document.addEventListener('keydown',event=>{
+ if(state.bindingCapture&&state.page==='settings'&&state.settingsSection==='general'){
+  event.preventDefault();event.stopImmediatePropagation();if(['Control','Alt','Shift','Meta'].includes(event.key))return;
+  if(event.key!=='Escape')state.settings.toggleBinding=settingsKey(event);
+  state.bindingCapture=false;renderPage();return;
+ }
+ if(settingsKey(event)===state.settings.toggleBinding&&!event.target.closest('input,textarea,[contenteditable=true]')){event.preventDefault();event.stopImmediatePropagation();presence(target!==1);}
+},true);
 function previewReminder(){
  const chosen=state.notes.filter(n=>state.settings.reminders==='all'||n.type===state.settings.reminders);
  openModal(`<section class="modal"><header><h2>荔枝组队</h2><button class="icon-button" data-action="close-modal" aria-label="关闭">${icon('close')}</button></header><p>${state.settings.reminders==='off'?'已关闭重逢提醒，本次入队不会显示提示。':'演示：这几位已记录的玩家加入了队伍。'}</p><div class="reminder-preview">${state.settings.reminders==='off'?'':chosen.map(n=>`<div class="reminder-item note-${n.type}"><b>${icon(noteTypes[n.type].icon)}${noteTypes[n.type].label} · ${n.name}-${n.realm}</b><p>${esc(n.reason)}</p></div>`).join('')}</div><footer><button class="button primary" data-action="close-modal">知道了</button></footer></section>`);
 }
-function tipMembers(ids,leader){
- return `<div class="tip-members">${ids.map(id=>{const m=person(id);return `<button type="button" class="tip-member" data-tip-player="${id}" aria-label="查看${m.name}的详情">${classIcon(m,false)}<span class="tip-member-identity"><b style="color:${colorOf(m)}">${id===leader?leaderIcon():''}<span class="tip-member-name">${esc(m.name)}<em class="member-realm">-${esc(m.realm)}</em></span></b><span class="member-tags"><small>${m.spec}</small>${personRelations(id)}${noteBadge(id)}</span></span>${roleIcon(m.role)}</button>`;}).join('')}</div>`;
+function tipMembers(ids,leader,interactive=true,search=false,hideRealm=false){
+ return `<div class="tip-members">${ids.map(id=>{const m=person(id),marks=search?(id===leader?noteBadge(id,true)+factionMark(id):''):factionMark(id)+personRelations(id)+noteBadge(id,true);return `<${interactive?'button type="button"':'div'} class="tip-member" ${interactive?`data-tip-player="${id}" aria-label="查看${m.name}的详情"`:''}>${classIcon(m,false)}<span class="tip-member-identity"><b style="color:${colorOf(m)}">${id===leader?leaderIcon():''}<span class="tip-member-name">${esc(m.name)}${search||hideRealm?'':`<em class="member-realm">-${esc(m.realm)}</em>`}</span></b><span class="member-tags"><small>${m.spec}</small></span></span><span class="identity-marks">${marks}</span>${roleIcon(m.role)}</${interactive?'button':'div'}>`;}).join('')}</div>`;
+}
+function ownRosterTooltip(){
+ const ids=ownPartyIds(),groups=[];for(let i=0;i<ids.length;i+=5)groups.push(ids.slice(i,i+5));
+ return `<h3>当前团队 <small>${ids.length} 人</small></h3><div class="own-roster-groups" style="--roster-columns:${Math.min(3,groups.length)}">${groups.map((members,i)=>`<section><h4>小队 ${i+1}</h4>${tipMembers(members,ids[0],true,false,true)}</section>`).join('')}</div>`;
 }
 function tipNote(id,force=false){
  const n=noteOf(id);return n&&(force||state.settings.noteMarks)?`<div class="tip-note note-${n.type}"><b>${icon(noteTypes[n.type].icon)}荔枝笔记 · ${noteTypes[n.type].label}</b><p>${esc(n.reason||'无理由')}</p><small>${esc(n.classSpec)} · ${n.date}</small></div>`:'';
@@ -643,14 +789,14 @@ function raidBossProgress(g){
 }
 function raidTooltip(g,expanded){
  const a=act(g.activity),leader=person(g.leader),counts=g.counts||['TANK','HEALER','DAMAGER'].map(role=>g.members.filter(id=>person(id).role===role).length);
- const social=state.settings.relations?[['friend','好友'],['guild','同公会']].map(([key,label])=>{const count=g.members.filter(id=>person(id)[key]).length;return count?label+' '+count:'';}).filter(Boolean).join(' · '):'';
+ const toggleKey={shift:'Shift',alt:'Alt',ctrl:'Ctrl'}[state.settings.raidMembers];
  const ordered=[...g.members].sort((x,y)=>x===g.leader?-1:y===g.leader?1:['TANK','HEALER','DAMAGER'].indexOf(person(x).role)-['TANK','HEALER','DAMAGER'].indexOf(person(y).role));
- return `<div class="raid-tip-columns"><div class="raid-tip-main"><header class="raid-tip-heading"><div class="raid-tip-title">${activityArt(a)}<div><h3>${esc(g.title)}</h3><p>${a.name}<span>${difficultyNames[g.difficulty]}</span></p></div></div><div class="raid-tip-leader">${leaderIcon()}<span style="color:${colorOf(leader)}">${leader.name}-${leader.realm}</span></div></header>
+ return `<div class="raid-tip-columns"><div class="raid-tip-main"><header class="raid-tip-heading"><div class="raid-tip-title">${activityArt(a)}<div><h3>${esc(g.title)}</h3><p>${a.name}<span>${difficultyNames[g.difficulty]}</span></p></div></div>${searchLeader(g,'raid-tip-leader')}</header>
  <p class="raid-comment">${esc(g.comment)}</p>
  <div class="raid-summary-line"><span><small>进度</small><b class="good">${g.progress}</b></span><span><small>要求装等</small><b>${g.ilvl||'不限'}</b></span><span><small>人数</small><b>${g.size||g.members.length}/${g.max}</b></span></div>
- <div class="raid-role-line">${roster(g.members,g.max,counts)}${social?`<small>${social}</small>`:''}</div>
- ${expanded?`<section class="raid-tip-roster">${tipMembers(ordered,g.leader)}</section>`:''}
- <p class="raid-tip-footer">${expanded?(state.settings.raidMembers==='always'?'点击成员查看详情':'点击成员查看详情 · 再按 Shift 收起'):`按 <kbd>Shift</kbd> 查看 ${g.members.length} 名成员`}</p></div>${raidBossProgress(g)}</div>`;
+ <div class="raid-role-line">${roster(g.members,g.max,counts)}</div>
+ ${searchRelations(g)}${expanded?`<section class="raid-tip-roster">${tipMembers(ordered,g.leader,false,true)}</section>`:''}
+ ${toggleKey?`<p class="raid-tip-footer">按 <kbd>${toggleKey}</kbd> ${expanded?'收起名单':`查看 ${g.members.length} 名成员`}</p>`:''}</div>${raidBossProgress(g)}</div>`;
 }
 let pendingTipOwner;
 function queueTip(owner,event){
@@ -669,23 +815,26 @@ function showTip(owner,event){
  else if(owner.dataset.tipGroup){
   const g=groups.find(g=>g.id===Number(owner.dataset.tipGroup)),m=person(g.leader),a=act(g.activity),raid=a.kind==='raid';
   expanded=raid&&(tipExpanded||state.settings.raidMembers==='always');isRaid=raid;
-  html=raid?raidTooltip(g,expanded):`<div class="tip-heading">${activityArt(a)}<div><h3>${esc(g.title)}</h3><p class="tip-activity">${a.name} · ${difficultyNames[g.difficulty]||categoryOf(g.category).name}</p></div></div><div class="tip-stats"><div><span>队长评分</span><b>${m.score}</b></div><div><span>要求装等</span><b>${g.ilvl||'不限'}</b></div><div><span>最低评分</span><b>${g.minScore||'不限'}</b></div><div><span>人数</span><b>${g.size||g.members.length}/${g.max||5}</b></div></div><p class="tip-comment">${esc(g.comment)}</p>${tipMembers(g.members,g.leader)}`;
+  html=raid?raidTooltip(g,expanded):`<header class="party-tip-heading"><div class="tip-heading">${activityArt(a)}<div><h3>${esc(g.title)}</h3><p class="tip-activity">${a.name} · ${difficultyNames[g.difficulty]||categoryOf(g.category).name}</p></div></div>${searchLeader(g)}</header><div class="tip-stats"><div><span>队长评分</span><b>${m.score}</b></div><div><span>要求装等</span><b>${g.ilvl||'不限'}</b></div><div><span>最低评分</span><b>${g.minScore||'不限'}</b></div><div><span>人数</span><b>${g.size||g.members.length}/${g.max||5}</b></div></div><p class="tip-comment">${esc(g.comment)}</p>${searchRelations(g)}${tipMembers(g.members,g.leader,false,true)}`;
  }else if(owner.dataset.tipApplicant){
   const a=allApplicants().find(a=>a.id===Number(owner.dataset.tipApplicant));html=`<h3>申请详情</h3><p class="tip-comment top-gap">${esc(a.comment)}</p>${tipMembers(a.ids)}<div class="tip-stats"><div><span>整组最低装等</span><b>${minimum(a,'ilvl')}</b></div><div><span>整组最低评分</span><b>${minimum(a,'score')}</b></div></div>`;
- }else if(owner.dataset.tipMember){html=playerTooltip(owner.dataset.tipMember);}
+ }else if(owner.hasAttribute('data-tip-own-roster')){html=ownRosterTooltip();}
+ else if(owner.dataset.tipOwnMember){html=playerTooltip(owner.dataset.tipOwnMember);}
+ else if(owner.dataset.tipMember){html=playerTooltip(owner.dataset.tipMember);}
  else if(owner.dataset.tipNote){
   const n=noteOf(owner.dataset.tipNote);html=`<h3>${esc(n.name)}-${esc(n.realm)}</h3>${tipNote(n.id,true)}<p class="tip-footer">点击编辑记录。</p>`;
  }
  if(!html)return;
- tipOwner=owner;tip.classList.toggle('expanded',expanded);tip.classList.toggle('raid-tooltip',isRaid);tip.classList.toggle('player-tooltip',!!tipMemberId||!!owner.dataset.tipMember);tip.setAttribute('role',owner.dataset.tipNote?'tooltip':'dialog');tip.setAttribute('aria-label',tipMemberId||owner.dataset.tipMember?'玩家详情':'队伍信息');tip.innerHTML=html;tip.hidden=false;
+ tipOwner=owner;tip.classList.toggle('expanded',expanded);tip.classList.toggle('raid-tooltip',isRaid);tip.classList.toggle('search-tooltip',!!owner.dataset.tipGroup&&!tipMemberId);tip.classList.toggle('own-roster-tooltip',owner.hasAttribute('data-tip-own-roster')&&!tipMemberId);tip.classList.toggle('player-tooltip',!!tipMemberId||!!owner.dataset.tipMember||!!owner.dataset.tipOwnMember);tip.setAttribute('role',owner.dataset.tipNote?'tooltip':'dialog');tip.setAttribute('aria-label',tipMemberId||owner.dataset.tipMember||owner.dataset.tipOwnMember?'玩家详情':'队伍信息');tip.innerHTML=html;tip.hidden=false;
  const frame=$('#fit-frame').getBoundingClientRect(),scale=frame.width/$('#fit-frame').offsetWidth,box=owner.getBoundingClientRect(),width=tip.offsetWidth;
  const topLimit=Math.max(10,(10-frame.top)/scale),bottomLimit=Math.min($('#window').offsetHeight-10,(innerHeight-10-frame.top)/scale);
  tip.style.maxHeight=Math.min(760,bottomLimit-topLimit)+'px';
  const px=((tipPoint?.clientX||box.right)-frame.left)/scale,py=((tipPoint?.clientY||box.top)-frame.top)/scale;
  let x=keepPosition?previous.x:px+18,y=keepPosition?previous.y:py+8;
- if(!keepPosition&&x+width>1150)x=px-width-18;
+ const leftLimit=(10-frame.left)/scale,rightLimit=(innerWidth-10-frame.left)/scale;
+ if(!keepPosition&&x+width>rightLimit)x=px-width-18;
  if(keepPosition&&event?.detail){const cursorX=(event.clientX-frame.left)/scale,cursorY=(event.clientY-frame.top)/scale;x=Math.max(cursorX-width+24,Math.min(x,cursorX-12));y=Math.max(cursorY-tip.offsetHeight+24,Math.min(y,cursorY-12));}
- tip.style.left=Math.max(10,Math.min(1150-width,x))+'px';tip.style.top=Math.max(topLimit,Math.min(bottomLimit-tip.offsetHeight,y))+'px';
+ tip.style.left=Math.max(leftLimit,Math.min(rightLimit-width,x))+'px';tip.style.top=Math.max(topLimit,Math.min(bottomLimit-tip.offsetHeight,y))+'px';
 }
 function scheduleHideTip(){clearTimeout(tipHideTimer);if(!tipPinned)tipHideTimer=setTimeout(hideTip,220);}
 function hideTip(){clearTimeout(tipTimer);clearTimeout(tipHideTimer);pendingTipOwner=null;tipOwner=null;tipPoint=null;tipMemberId=null;tipExpanded=false;tipPinned=false;$('#tooltip').hidden=true;}
@@ -705,12 +854,20 @@ function demoApplicationLimit(){
  $('#application-demo').value='mixed';renderPage();presence(true);showApplicationLimit(2);refreshApplicationCountdowns();
 }
 
+function applicationSettingsModal(enable=false){
+ const selected=state.applyRoles||['DAMAGER'];
+ openModal(`<form class="modal" id="application-settings-form" data-enable="${enable}"><header><h2>申请设置</h2><button type="button" class="icon-button" data-action="close-modal" aria-label="关闭">${icon('close')}</button></header><label>申请职责</label><div class="modal-roles">${['TANK','HEALER','DAMAGER'].map(r=>`<button type="button" class="modal-role ${selected.includes(r)?'active':''}" data-apply-role="${r}" aria-pressed="${selected.includes(r)}">${roleIcon(r)}${roleNames[r]}</button>`).join('')}</div><label for="saved-application-note">申请备注</label><textarea id="saved-application-note" placeholder="简短说明经验或同行情况（选填）">${esc(state.savedApplicationNote||'')}</textarea><footer><button type="button" class="button" data-action="close-modal">取消</button><button class="button primary">${enable?'保存并开启':'保存'}</button></footer></form>`);
+}
+function submitPreviewApplication(id,note){
+ state.apps[id]='applied';state.applicationDeadlines[id]=Date.now()+300000;state.applicationNotes[id]=note;closeModal();renderFindResults();refreshApplicationCountdowns();toast('申请已提交，等待队长处理。');
+}
 function applyModal(id){
  if(state.listing){toast('正在招募，结束招募后可申请其他队伍。');return;}
  if(activeApplication(id))return;
  if(countActive()>=5){showApplicationLimit(id);return;}
  const g=groups.find(g=>g.id===id);
  if((g.size||g.members.length)>=(g.max||5)){toast('这支队伍已满员。');return;}
+ if(state.autoApply){submitPreviewApplication(id,state.savedApplicationNote||'');return;}
  openModal(`<form class="modal" id="apply-form" data-group-id="${id}"><header><h2>申请加入</h2><button type="button" class="icon-button" data-action="close-modal" aria-label="关闭">${icon('close')}</button></header><p>${esc(g.title)}</p><label>选择本次申请的职责</label><div class="modal-roles">${['TANK','HEALER','DAMAGER'].map(r=>`<button type="button" class="modal-role ${r==='DAMAGER'?'active':''}" data-apply-role="${r}" aria-pressed="${r==='DAMAGER'}">${roleIcon(r)}${roleNames[r]}</button>`).join('')}</div><label for="application-note">给队长的备注</label><textarea id="application-note" placeholder="简短说明经验或同行情况（选填）"></textarea><p id="role-message" class="tip-footer"></p><footer><button class="button" type="button" data-action="close-modal">取消</button><button class="button primary">提交申请</button></footer></form>`);
 }
 function transferModal(importing){openModal(`<section class="modal"><header><h2>${importing?'导入记录':'导出记录'}</h2><button class="icon-button" data-action="close-modal" aria-label="关闭">${icon('close')}</button></header><p>${importing?'粘贴 LN- 记录文本，按玩家身份合并。':'导出完整名单，包括记录类型与理由。'}</p><label for="transfer-text">记录文本</label><textarea id="transfer-text" style="height:190px" placeholder="粘贴 LN- 文本">${importing?'':'LN-PROTOTYPE-DEMO · 荔枝笔记演示文本'}</textarea><p class="tip-footer">这里只演示操作流程，演示文本不能导入游戏。</p><footer><button class="button" data-action="close-modal">关闭</button><button class="button primary" data-action="${importing?'demo-import':'select-export'}">${importing?'导入记录':'全选文本'}</button></footer></section>`);}
@@ -743,7 +900,7 @@ function groupMenuAction(action){
   openModal(`<form class="modal" id="group-action-demo"><header><h2>与队长密聊</h2><button type="button" class="icon-button" data-action="close-modal" aria-label="关闭">${icon('close')}</button></header><p>${esc(m.name+'-'+m.realm)}</p><label for="group-action-text">消息</label><textarea id="group-action-text" required placeholder="输入消息"></textarea><p class="tip-footer">网页仅演示此入口，不会发送聊天消息。</p><footer><button type="button" class="button" data-action="close-modal">取消</button><button class="button primary">演示发送</button></footer></form>`);
  }
 }
-document.addEventListener('dblclick',event=>{const row=event.target.closest('[data-result-id]');if(row&&$('#modal').hidden)applyModal(Number(row.dataset.resultId));});
+document.addEventListener('dblclick',event=>{const row=event.target.closest('[data-result-id]');if(row&&!event.target.closest('[data-action],[data-note-person]')&&$('#modal').hidden)applyModal(Number(row.dataset.resultId));});
 document.addEventListener('contextmenu',event=>{
  const row=event.target.closest('[data-result-id],[data-application-id]');if(!row||!$('#modal').hidden)return;
  event.preventDefault();openGroupMenu(Number(row.dataset.resultId||row.dataset.applicationId),event.clientX,event.clientY,row.querySelector('[data-group]'));
@@ -762,6 +919,7 @@ document.addEventListener('click',event=>{
  if(b.dataset.page){navigate(b.dataset.page);return;}
  if(b.dataset.contextAction){groupMenuAction(b.dataset.contextAction);return;}
  if(b.dataset.copyWcl){copyWclLink(b.dataset.copyWcl);return;}
+ if(b.dataset.tipOwnMember){showTip(b,event);tipPinned=true;return;}
  if(b.dataset.tipPlayer){clearTimeout(tipHideTimer);tipExpanded=$('#tooltip').classList.contains('expanded');tipMemberId=b.dataset.tipPlayer;tipPinned=true;showTip(tipOwner,event);return;}
  if(b.dataset.category){if(state.category===b.dataset.category){state.categoryMenuOpen=!state.categoryMenuOpen;if(categoryOf(state.category).season){state.activity='all';state.browseScroll=0;}renderPage();}else{state.categoryMenuOpen=true;changeCategory(b.dataset.category);}return;}
  if(b.dataset.activity){state.activity=b.dataset.activity;if(!difficulties(state.category,state.activity,state.expansion).some(([id])=>id===state.difficulty))state.difficulty='all';state.selected=null;state.browseScroll=0;closeCategoryMenu();renderPage();return;}
@@ -778,7 +936,7 @@ document.addEventListener('click',event=>{
  if(b.dataset.formCategory){readForm();const id=b.dataset.formCategory;state.form.category=id;state.form.expansion=categoryOf(id).expansion?expansionOptions(id)[0][0]:'all';state.form.activity=categoryActivities(id,state.form.expansion)[0].id;state.form.difficulty=id==='season-dungeons'?'keystone':difficulties(id,state.form.activity)[0]?.[0]||'';updateCreationTitle();renderPage();return;}
  if(b.dataset.formActivity){readForm();const a=act(b.dataset.formActivity);state.form.activity=a.id;state.form.category=b.dataset.activityCategory||state.form.category;state.form.expansion=a.expansion||'all';const choices=difficulties(state.form.category,state.form.activity);if(!choices.some(([id])=>id===state.form.difficulty))state.form.difficulty=state.form.category==='season-dungeons'?'keystone':choices[0]?.[0]||'';closeCreationPicker();updateCreationTitle();renderPage();return;}
  if(b.dataset.formDifficulty){readForm();state.form.difficulty=b.dataset.formDifficulty;updateCreationTitle();renderPage();return;}
- if(b.dataset.applyRole){b.closest('.modal-roles').querySelectorAll('[data-apply-role]').forEach(option=>{const selected=option===b;option.classList.toggle('active',selected);option.setAttribute('aria-pressed',selected);});return;}
+ if(b.dataset.applyRole){const selected=b.getAttribute('aria-pressed')==='true';if(selected&&b.closest('.modal-roles').querySelectorAll('[aria-pressed=true]').length===1)return;b.classList.toggle('active',!selected);b.setAttribute('aria-pressed',!selected);return;}
  switch(b.dataset.action){
   case 'continue-limit-application':{const id=Number(b.dataset.id);state.applicationLimitTarget=null;clearTimeout(applicationNoticeTimer);renderApplications();applyModal(id);break;}
   case 'toggle-all-applications':state.showAllApplications=!state.showAllApplications;renderApplications();break;
@@ -803,8 +961,13 @@ document.addEventListener('click',event=>{
   case 'locate-application':{const card=$('#application-'+b.dataset.id);card.scrollIntoView({block:'nearest'});card.classList.remove('highlight');void card.offsetWidth;card.classList.add('highlight');card.querySelector('button').focus({preventScroll:true});break;}
   case 'refresh-search':refreshGroups();break;
   case 'toggle-auto-join':state.settings.autoJoin=!state.settings.autoJoin;renderPage();if(state.settings.autoJoin)autoJoinPending();break;
+  case 'toggle-auto-apply':if(state.autoApply){state.autoApply=false;renderPage();}else applicationSettingsModal(true);break;
+  case 'application-settings':applicationSettingsModal();break;
+  case 'toggle-search-mode':state.searchMode=state.searchMode==='leader'?'group':'leader';state.query='';renderPage();$('#group-query').focus();break;
+  case 'toggle-result-members':state.expandedGroups=state.expandedGroups||{};state.expandedGroups[b.dataset.id]=!state.expandedGroups[b.dataset.id];renderFindResults();break;
   case 'cancel-application':state.apps[b.dataset.id]='cancelled';delete state.applicationDeadlines[b.dataset.id];closeModal();renderFindResults();refreshApplicationCountdowns();toast('已取消申请。');break;
-  case 'accept-invite':state.apps[b.dataset.id]='accepted';closeNativeInvite();if(state.page==='find')renderFindResults();else renderFloatingWidget();toast('已在邀请弹窗中接受。');break;
+  case 'accept-invite':joinPreviewGroup(groups.find(g=>g.id===Number(b.dataset.id)));break;
+  case 'close-join-notice':$('#join-notice').hidden=true;break;
   case 'decline-invite':state.apps[b.dataset.id]='declined';closeNativeInvite();if(state.page==='find')renderFindResults();else renderFloatingWidget();toast('已在邀请弹窗中拒绝。');break;
   case 'edit-listing':state.autoTitle=false;state.form={...state.listing};state.editing=true;renderPage(true);break;
   case 'cancel-edit-listing':state.editing=false;renderPage(true);break;
@@ -836,9 +999,10 @@ document.addEventListener('input',event=>{
 });
 document.addEventListener('change',event=>{
  const el=event.target;
+ if(el.id==='design-demo'){const scene=el.value;el.value='';if(scene)showMockScene(scene);return;}
  if(el.id==='event-demo'){const value=el.value;el.value='';if(value==='applicant')simulateNewApplicant();else if(value==='invite')nativeInvitePreview();return;}
  if(el.id==='note-class'){$('#note-spec').innerHTML=noteSpecOptions(el.value);$('#note-spec').disabled=!el.value;enhanceSelects();return;}
- if(el.id==='party-demo'){if($('#listing-form'))readForm();state.partyMode=el.value;if(state.page==='create')renderPage();}
+ if(el.id==='party-demo'){if($('#listing-form'))readForm();state.joinedMembers=null;state.partyMode=el.value;if(state.page==='create')renderPage();}
  else if(el.id==='application-demo'){
   closeNativeInvite();
   state.listing=null;state.newApplicantIds=[];state.extraApplicants=[];state.selectedApplicant=null;state.editing=false;
@@ -874,14 +1038,22 @@ document.addEventListener('submit',event=>{
   readForm();if(!state.form.title.trim())return;state.floatingRecruitCancelled=false;state.listing={...state.form};$('#application-demo').value='none';state.apps={};state.applicationDeadlines={};state.applicationNotes={};closeNativeInvite();refreshApplicationCountdowns();state.editing=false;state.selectedApplicant=null;renderPage(true);toast('组队已发布，可以开始查看申请。');
  }else if(event.target.id==='group-action-demo'){
   closeModal();toast('已演示密聊流程，未发送消息。');
+ }else if(event.target.id==='application-settings-form'){
+  state.applyRoles=[...event.target.querySelectorAll('[data-apply-role][aria-pressed=true]')].map(el=>el.dataset.applyRole);state.savedApplicationNote=$('#saved-application-note').value;if(event.target.dataset.enable==='true')state.autoApply=true;closeModal();renderPage();
  }else if(event.target.id==='apply-form'){
   if(countActive()>=5){showApplicationLimit(Number(event.target.dataset.groupId));return;}
   if(!$('.modal-role.active')){$('#role-message').textContent='请选择一个职责。';$('#role-message').style.color='var(--gold)';return;}
   const id=event.target.dataset.groupId,note=$('#application-note').value;
-  state.apps[id]='applied';state.applicationDeadlines[id]=Date.now()+300000;state.applicationNotes[id]=note;closeModal();renderFindResults();refreshApplicationCountdowns();toast('申请已提交，等待队长处理。');
+  submitPreviewApplication(id,note);
  }
 });
-const tipSelector='[data-tip-group],[data-tip-applicant],[data-tip-member],[data-tip-note]';
+const tipSelector='[data-tip-group],[data-tip-applicant],[data-tip-member],[data-tip-note],[data-tip-own-roster],[data-tip-own-member]';
+function tipTarget(event){
+ const owner=event.target.closest(tipSelector);if(!owner||event.target.closest('.note-mark-button'))return null;
+ const row=owner.closest('.browse-row,.application-card,.applicant-batch,.own-party-member');
+ if(row){const box=row.getBoundingClientRect();if(event.clientX>box.left+box.width/4)return null;}
+ return owner;
+}
 let floatingDrag,suppressFloatingClick=false;
 document.addEventListener('pointerdown',event=>{
  const handle=event.target.closest('[data-floating-drag]');
@@ -901,7 +1073,12 @@ document.addEventListener('pointerup',finishFloatingDrag);
 document.addEventListener('pointercancel',finishFloatingDrag);
 document.addEventListener('mouseover',event=>{
  if(event.target.closest('#tooltip')){clearTimeout(tipHideTimer);return;}
- const owner=event.target.closest(tipSelector);if(owner&&$('#modal').hidden&&$('#group-context-menu').hidden)queueTip(owner,event);else if(tipOwner||pendingTipOwner)scheduleHideTip();
+ const owner=tipTarget(event);if(owner&&$('#modal').hidden&&$('#group-context-menu').hidden)queueTip(owner,event);else if(tipOwner||pendingTipOwner)scheduleHideTip();
+});
+document.addEventListener('pointermove',event=>{
+ if(floatingDrag||tipPinned||event.buttons)return;
+ if(event.target.closest('#tooltip')){clearTimeout(tipHideTimer);return;}
+ const owner=tipTarget(event);if(owner&&$('#modal').hidden&&$('#group-context-menu').hidden)queueTip(owner,event);else if(tipOwner||pendingTipOwner)scheduleHideTip();
 });
 document.addEventListener('mouseout',event=>{
  const owner=tipOwner||pendingTipOwner;if(!owner)return;
@@ -920,7 +1097,7 @@ document.addEventListener('keydown',event=>{
  if(event.key==='ContextMenu'||event.key==='F10'&&event.shiftKey){const row=event.target.closest('[data-result-id],[data-application-id]');if(row){event.preventDefault();const box=row.getBoundingClientRect();openGroupMenu(Number(row.dataset.resultId||row.dataset.applicationId),box.left+50,box.top+20,row.querySelector('[data-group]'));return;}}
  if(event.key==='Enter'&&event.target.closest('[data-result-id]')){event.preventDefault();applyModal(Number(event.target.closest('[data-result-id]').dataset.resultId));return;}
  if(event.key==='Enter'&&event.target.id==='create-activity-query'){event.preventDefault();$('#creation-activity-list [data-form-activity]')?.click();return;}
- if(event.key==='Shift'&&!shiftDown){shiftDown=true;if(tipOwner?.dataset.tipGroup&&!tipMemberId){tipExpanded=!tipExpanded;showTip(tipOwner);}}
+ if(event.key===({shift:'Shift',alt:'Alt',ctrl:'Control'}[state.settings.raidMembers])&&!event.repeat&&tipOwner?.dataset.tipGroup&&!tipMemberId){event.preventDefault();tipExpanded=!tipExpanded;showTip(tipOwner);}
  if(event.key==='Escape'){if(!$('#tooltip').hidden){event.preventDefault();hideTip();return;}hideTip();if(!$('#native-invite-layer').hidden)closeNativeInvite();else if(!$('#modal').hidden)closeModal();else if(state.categoryMenuOpen)closeCategoryMenu();else if(state.page==='find'&&state.filtersExpanded)setFiltersExpanded(false);else if(state.createPickerOpen){closeCreationPicker();$('[data-action=toggle-creation-picker]').focus();}else presence(false);}
 });
 document.addEventListener('keyup',event=>{if(event.key==='Shift')shiftDown=false;});
@@ -936,8 +1113,8 @@ $('#demo-limit').onclick=demoApplicationLimit;
 const demoScenarios = $('.review-controls');
 demoScenarios.addEventListener('change',()=>{demoScenarios.open=false;});
 demoScenarios.addEventListener('click',event=>{if(event.target.closest('button'))demoScenarios.open=false;});
-$('#close-window').onclick=()=>presence(false);$('#open-window').onclick=()=>presence(true);$('#replay').onclick=()=>presence(false,()=>presence(true));$('#reset').onclick=()=>{clearTimeout(searchTimer);$('#applicant-audio').pause();closeModal();closeNativeInvite();resetState();$('#party-demo').value=state.partyMode;$('#application-demo').value='two';renderPage();refreshApplicationCountdowns();presence(true);toast('演示已重置。');};
-function fit(){const width=state.page==='find'&&state.filtersExpanded?1440:1160,scale=Math.min(1,(innerWidth-32)/width),frame=$('#fit-frame');frame.style.width=width+'px';frame.style.transform=`scale(${scale})`;$('.stage').style.height=(840*scale+46)+'px';$('.stage').style.minHeight='0';frame.style.marginBottom=-(840*(1-scale))+'px';}
+$('#close-window').onclick=()=>presence(false);$('#open-window').onclick=()=>presence(true);$('#replay').onclick=()=>presence(false,()=>presence(true));$('#reset').onclick=()=>{clearTimeout(searchTimer);$('#applicant-audio').pause();closeModal();closeNativeInvite();$('#join-notice').hidden=true;resetState();$('#party-demo').value=state.partyMode;$('#application-demo').value='two';renderPage();refreshApplicationCountdowns();presence(true);toast('演示已重置。');};
+function fit(){const windowWidth=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--window-width')),width=windowWidth+(state.page==='find'&&state.filtersExpanded?280:0),requestedScale=state.settings.uiScale/100,scale=Math.min(requestedScale,(innerWidth-32)/width),frame=$('#fit-frame');frame.style.width=width+'px';frame.style.transform=`scale(${scale})`;$('.stage').style.height=(840*scale+46)+'px';$('.stage').style.minHeight='0';frame.style.marginBottom=-(840*(1-scale))+'px';}
 addEventListener('resize',()=>{hideTip();closeGroupMenu();fit();positionFloatingWidget();});
 renderPage();fit();drawPresence();presence(true);refreshApplicationCountdowns();
 

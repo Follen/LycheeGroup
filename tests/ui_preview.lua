@@ -21,7 +21,7 @@ function G:GetRoster() return {members[1],members[2],members[3]} end
 function G.Results:GetDetails(record)
  if record.details then return record.details end
  local m={};for i=1,record.numMembers or 0 do m[i]=members[i] end
- return {members=m,counts=U:MemberCounts(m),encounters={}}
+ return {members=m,counts=U:MemberCounts(m),encounters={},relationships={bnet={"同路人"},character={"糖霜骑士-晨风号角"},guild={"暮色星河"}}}
 end
 function G:GetHistory() return {{id=1,mapName="艾杰斯亚学院",level=12,completedAt=1792051200,members=members},{id=2,mapName="蕨皮山谷",level=11,completedAt=1791964800,members=members}} end
 local titles={"+12 稳定限时 来输出","+10 打完就走 来治疗","+13 冲分 熟练队","+11 周常 友好交流","+12 补一输出","+9 新人练习 一起打"}
@@ -100,7 +100,7 @@ A:Open("settings");snapshot("设置")
 local raidMembers={}
 for i=1,30 do local member={};for key,value in pairs(members[(i-1)%5+1]) do member[key]=value end;member.nameKey=member.nameKey..i;member.name=member.nameKey;member.isLeader=i==1;member.isSelf=i==1;member.subgroup=math.ceil(i/5);member.unit="raid"..i;member.guid="SampleRaid-"..i;raidMembers[i]=member end
 A:Open("find");A.db.raidMembers="always"
-U.Tooltip:ShowGroup(U.pages.find.results.rows[1],{name="英雄团本 熟练清场",categoryID=3,activityID=1,activity=G.Catalog:GetActivity(1),numMembers=30,maxNumPlayers=30,details={members=raidMembers,counts=U:MemberCounts(raidMembers),encounters={}}});snapshot("团本成员布局")
+U.Tooltip:ShowGroup(U.pages.find.results.rows[1],{name="英雄团本 熟练清场",leaderName=raidMembers[1].name,leaderKey=raidMembers[1].nameKey,categoryID=3,activityID=1,activity=G.Catalog:GetActivity(1),numMembers=30,maxNumPlayers=30,details={members=raidMembers,counts=U:MemberCounts(raidMembers),encounters={},relationships={bnet={"同路人"},character={"糖霜骑士-晨风号角"},guild={"暮色星河"}}}});snapshot("团本成员布局")
 function G:GetRoster() return raidMembers end
 G.listing=nil;A:Open("create");U.pages.create:UsePreset({activityID=1});snapshot("赛季团本增益")
 U.pages.create.groupSummary:Fire("OnEnter");snapshot("当前队伍悬浮名单");U.Tooltip:Hide()

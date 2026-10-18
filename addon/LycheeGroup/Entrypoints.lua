@@ -30,7 +30,7 @@ function A:SyncNativeLFGEntry()
                 end
             end
             if page and A:Open(page) then
-                eye.angerVal = eye.angerVal + LFG_ANGER_INC_VAL
+                -- The stock callback owns its file-local Angry Eye state.
                 return
             end
         end

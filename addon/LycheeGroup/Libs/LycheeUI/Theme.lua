@@ -19,6 +19,9 @@ local T={
  rowAlternate={1,1,1,3/255},rowHover={1,1,1,13/255},pressed={1,1,1,20/255},
  selectHover={0,0,0,.18},selectPressed={0,0,0,.26},
  transparent={0,0,0,0},disabled=RGB("777777"),
+ floatingSurface={0,0,0,.60},floatingHover={.04,.04,.04,.66},
+ positiveHover={.47,.8,.69,.14},positivePressed={.47,.8,.69,.22},
+ negativeHover={.94,.35,.4,.14},negativePressed={.94,.35,.4,.22},
  font=STANDARD_TEXT_FONT,width=1160,height=840,headerHeight=72,
  contentWidth=1128,contentHeight=752,logoSize=44,pageInset=16,mainInset=24,
  sidebarWidth=208,gap=16,contentGap=16,navGap=32,
@@ -26,6 +29,7 @@ local T={
  buttonHeight=40,fieldHeight=44,fieldRadius=4,buttonRadius=20,
  panelRadius=24,windowRadius=28,menuRadius=12,tooltipRadius=16,
  segmentHeight=36,segmentItemHeight=30,switchWidth=44,switchHeight=26,
+ compactHeight=30,compactRadius=8,compactSize=13,compactLineHeight=20,floatingRadius=16,
  scrollWidth=6,scrollGap=12,iconCrop=.06,iconRadius=.22,
  bodySize=14,metaSize=14,titleSize=24,headingSize=18,
  listTitleSize=18,listTitleLineHeight=24,listMetaSize=14,listMetaLineHeight=20,
@@ -36,6 +40,7 @@ T.surfaceHighest=WhiteState(T.surfaceHigh,T.rowHover[4])
 T.surfaceLowHover=WhiteState(T.surfaceLow,T.rowHover[4])
 T.surfaceLowPressed=WhiteState(T.surfaceLow,T.pressed[4])
 T.refreshHover=WhiteState(T.secondaryContainer,T.rowHover[4])
+T.secondaryPressed=WhiteState(T.secondaryContainer,T.pressed[4])
 T.bg=T.surface;T.panel=T.surfaceContainer;T.field=T.surfaceHigh;T.fieldFocus=T.surfaceHigh
 T.raised=T.surfaceHigh;T.hover=T.surfaceHighest;T.surfaceHover=T.rowHover
 T.accent=T.primary;T.selected=T.secondaryContainer;T.border=T.outlineVariant
@@ -43,3 +48,26 @@ T.focusBorder=T.brand;T.notice=T.primaryContainer;T.noticeText=T.onPrimaryContai
 T.selectBackground=T.surface
 Library.Theme=T
 Library.RGB=RGB
+-- Resolve once per context. Explicit tokens win over aliases and derived states.
+function Library.ResolveTheme(overrides)
+ local theme={}
+ for key,value in pairs(T) do theme[key]=value end
+ for key,value in pairs(overrides or {}) do theme[key]=value end
+ local function State(key,base,layer)
+  if overrides and overrides[key]~=nil then return end
+  if theme[base]~=T[base] or theme[layer]~=T[layer] then theme[key]=WhiteState(theme[base],theme[layer][4]) end
+ end
+ State("surfaceHighest","surfaceHigh","rowHover")
+ State("surfaceLowHover","surfaceLow","rowHover")
+ State("surfaceLowPressed","surfaceLow","pressed")
+ State("refreshHover","secondaryContainer","rowHover")
+ State("secondaryPressed","secondaryContainer","pressed")
+ local aliases={bg="surface",panel="surfaceContainer",field="surfaceHigh",fieldFocus="surfaceHigh",
+  raised="surfaceHigh",hover="surfaceHighest",surfaceHover="rowHover",accent="primary",
+  selected="secondaryContainer",border="outlineVariant",focusBorder="brand",notice="primaryContainer",
+  noticeText="onPrimaryContainer",selectBackground="surface"}
+ for key,source in pairs(aliases) do
+  if not overrides or overrides[key]==nil then theme[key]=theme[source] end
+ end
+ return theme
+end

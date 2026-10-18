@@ -128,6 +128,13 @@ function Native:SelectActivity(activityID)
 	end
 end
 
+function Native:GetCreationItemLevelLimit(activityID)
+ local activity=UI:GetGroup().Catalog:GetActivity(activityID)
+ if not activity then return end
+ local average,_,pvp=GetAverageItemLevel()
+ return math.floor(activity.isPvpActivity and pvp or average),activity.isPvpActivity==true
+end
+
 function Native:ValidateCreation(data)
  if self.previewCreation then
   if not data.activityID then return false,L.noActivity end

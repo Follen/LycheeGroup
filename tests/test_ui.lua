@@ -162,7 +162,9 @@ settings:SelectSection("browse");settings.controls.rememberFilters.widget:Fire("
 T.eq(A.db.rememberFilters,false,"shared browse preference writes through Core")
 T.eq(settings.panels.keywords,nil,"keyword filtering has been removed from settings")
 T.eq(settings.keywordInput,nil)
-settings:SelectSection("interface");Pick(settings.controls.raidMembers.widget,"always");T.eq(A.db.raidMembers,"always")
+for _,mode in ipairs({"shift","alt","ctrl","always"}) do
+ Pick(settings.controls.raidMembers.widget,mode);T.eq(A.db.raidMembers,mode,"raid roster controls save the selected display mode")
+end
 T.eq(settings.panels.sounds,nil,"sound settings page is removed");T.eq(settings.controls.applicantTone,nil,"notification tone is not configurable")
 settings:SelectSection("floating");settings.controls.floatingScale.widget.slider:SetValue(125);T.eq(A.db.floatingScale,125)
 U:Hide()
@@ -260,7 +262,7 @@ do
  local point={create.formNotice:GetPoint()};T.eq(point[1],"TOPLEFT");T.eq(point[#point],-44,"the notice appears immediately after the heading")
  T.eq(PointY(create.desc),-56-create.formNotice:GetHeight()-12,"the notice pushes the form content down only while shown")
  T.eq(PointY(create.req),-356-create.formNotice:GetHeight()-12)
- T.eq(create.ilvl.box:GetText(),"220","validation never clamps the user's item level requirement")
+ T.eq(create.ilvl.box:GetText(),"220","validation alone preserves programmatically filled requirements until submission")
  ownLevel=240;create:ValidateForm();T.eq(create.formNotice:IsShown(),false,"unchanged text is revalidated after the player's equipment changes")
  T.eq(PointY(create.desc),-56,"clearing the notice removes its layout space")
  T.eq(PointY(create.req),-356)
@@ -404,6 +406,10 @@ do
   T.eq(header.justify,"RIGHT");T.eq(X(header)+header:GetWidth(),X(value)+value:GetWidth(),"numeric header and value share their right edge")
  end
  T.eq(X(create.applicantHeaders.actions),X(batch.invite));T.eq(create.applicantHeaders.actions:GetWidth(),84)
+ local headings={};for _,header in pairs(create.applicantHeaders) do if header:IsShown() then headings[#headings+1]=header end end
+ table.sort(headings,function(a,b) return X(a)<X(b) end)
+ local labels={};for i,header in ipairs(headings) do labels[i]=header:GetText() end
+ T.same(labels,{"申请者","职责","评分","装等","备注","操作"},"party applicant headings follow the visible data columns")
  T.eq(create.groupSummary:GetWidth(),create.groupStrip:GetWidth()+24,"the hover summary hugs its content with equal padding")
 end
 do
@@ -435,6 +441,10 @@ do
  T.eq(create.sortChoice.value,"newest","changing to raid recruitment clears an unavailable score sort")
  local function X(region) local p={region:GetPoint()};return p[#p-1] end
  T.eq(X(create.applicantHeaders.ilvl)+create.applicantHeaders.ilvl:GetWidth(),X(batch.people[1].ilvl)+batch.people[1].ilvl:GetWidth())
+ local headings={};for _,header in pairs(create.applicantHeaders) do if header:IsShown() then headings[#headings+1]=header end end
+ table.sort(headings,function(a,b) return X(a)<X(b) end)
+ local labels={};for i,header in ipairs(headings) do labels[i]=header:GetText() end
+ T.same(labels,{"申请者","职责","装等","备注","操作"},"raid applicant headings reclaim the score column")
  T.ok(batch.comment:GetWidth()>115,"raid notes use the space released by the score column")
  create.sortChoice:Fire("OnClick","LeftButton")
  for _,item in ipairs(U.context.menu.items) do T.ok(item.value~="score","raid sort menu omits rating") end
@@ -1154,7 +1164,9 @@ do
  local function Geometry(region) local p={region:GetPoint()};return {anchor=p[1],x=p[#p-1],y=p[#p],width=region:GetWidth(),height=region:GetHeight()} end
  local function Render() G:Notify("result",r.id);U.Motion:Tick(.016) end
  local body=target:GetWidth()
- local notePoint={target.noteDot:GetPoint()};T.eq(notePoint[2],target.icon,"the note marker sits on the inset activity icon instead of the row edge")
+ local markPoint={target.marks:GetPoint()};T.eq(markPoint[2],target.meta,"relationship and note icons follow the activity subtitle")
+ T.eq(markPoint[3],"RIGHT");T.eq(markPoint[5],0,"icons share the activity line's vertical center")
+ T.eq(target.noteDot:IsShown(),false,"the old generic note dot is unused")
  T.eq(Geometry(target.leader).x,265,"the leader follows the group title and crown")
  T.eq(target.leader:GetWidth(),87);T.eq(Geometry(target.leaderIcon).x,248)
  T.eq(select(2,target.title:GetFont()),18,"the description column preserves the group title's font size")
@@ -1251,10 +1263,13 @@ end
 do
  local r=G.records[target.key]
  r.bnetFriends=1;r.charFriends=0;G:Notify("result",r.id);U.Motion:Tick(.016)
- T.ok(target.meta:GetText():find("战网好友",1,true),"战网计数显示战网好友标签")
- T.eq(target.meta:GetText():find("角色好友",1,true),nil,"战网好友不冒充角色好友")
+ T.ok(target.marks.icons.bnet:IsShown(),"Battle.net counts show the distinct Battle.net friend icon")
+ T.eq(target.marks.icons.bnet:GetTexture(),"Interface\\AddOns\\LycheeGroup_UI\\Media\\battlenet-friend.tga")
+ T.eq(target.meta:GetText(),r.activityName,"relationship names do not occupy the activity subtitle")
+ T.eq(target.marks.flags.friend,false,"Battle.net friends do not become character friends")
  r.charFriends=1;G:Notify("result",r.id);U.Motion:Tick(.016)
- T.ok(target.meta:GetText():find("角色好友",1,true),"两种好友关系可以同时出现")
+ T.ok(target.marks.icons.friend:IsShown(),"both types of friendship can appear together")
+ T.eq(target.marks.icons.friend:GetTexture(),U.Theme.media.."friend.tga")
  r.bnetFriends=0;r.charFriends=0;G:Notify("result",r.id);U.Motion:Tick(.016)
 end
 do
@@ -1558,17 +1573,36 @@ T.eq(U.Tooltip.interactive.memberButtons[1]:IsEnabled(),false)
 T.eq(U.Tooltip.interactive.memberButtons[1].hover:IsShown(),false,"display-only search members have no action hover")
 U.Tooltip.interactive.memberButtons[1]:Fire("OnLeave")
 T.eq(U.Tooltip.interactive.memberButtons[2].member,raidMembers[2]);T.eq(U.Tooltip.interactive.memberButtons[3].member,raidMembers[3])
-T.ok(U.Tooltip.interactive.memberButtons[2].realm:GetText():find("角色好友",1,true),"Shift 名单直接指出好友成员")
-T.eq((U.Tooltip.interactive.memberButtons[1].name:GetText():gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")),"Raider30-Away");T.eq(U.Tooltip.interactive.memberButtons[1]:GetHeight(),44)
-T.eq(U.Tooltip.interactive.memberButtons[1].name.wrap,true,"long name-realm text stays within its member cell");T.eq(select(2,U.Tooltip.interactive.memberButtons[2].icon:GetPoint()),6,"member cells have equal compact horizontal padding");T.ok(U.Tooltip.interactive.memberButtons[1].name:GetWidth()<U.Tooltip.interactive.memberButtons[1]:GetWidth()-56,"leader crown and role keep their own space")
+T.eq(U.Tooltip.interactive.memberButtons[2].marks:IsShown(),false,"an expanded search roster never attributes relationship names to a member")
+T.eq(U.Tooltip.interactive.memberButtons[2].realm:GetText():find("角色好友",1,true),nil,"relationship labels no longer repeat below member names")
+T.eq(U.Tooltip.interactive.memberButtons[1].name:GetText(),"Raider30");T.eq(U.Tooltip.interactive.leader:GetText(),"Raider30-Away");T.eq(U.Tooltip.interactive.memberButtons[1]:GetHeight(),44)
+T.eq(U.Tooltip.interactive.memberButtons[1].name.wrap,true,"long character names stay within the member cell");T.eq(select(2,U.Tooltip.interactive.memberButtons[2].icon:GetPoint()),6,"member cells have equal compact horizontal padding");T.ok(U.Tooltip.interactive.memberButtons[1].name:GetWidth()<U.Tooltip.interactive.memberButtons[1]:GetWidth()-56,"leader crown and role keep their own space")
 do
  local first=U.Tooltip.interactive.memberButtons[1];local nextRow=U.Tooltip.interactive.memberButtons[4]
- T.eq(first.icon:GetWidth(),24);T.eq(first.role:GetWidth(),12);T.eq(first.faction:GetWidth(),12);T.eq(first.leaderIcon:GetWidth(),10)
+ T.eq(first.icon:GetWidth(),24);T.eq(first.role:GetWidth(),18);T.eq(first.faction:GetWidth(),18);T.eq(first.leaderIcon:GetWidth(),10)
  T.eq(select(2,first.name:GetFont()),14);T.eq(select(2,first.realm:GetFont()),12)
  local role,faction={first.role:GetPoint()},{first.faction:GetPoint()}
  T.eq(role[1],"RIGHT");T.eq(role[2],first.icon);T.eq(role[3],"RIGHT");T.eq(role[5],0,"raid roles share the avatar center")
  T.eq(faction[2],first.role);T.eq(faction[3],"LEFT");T.eq(faction[5],0,"raid faction and role share one centerline")
  local a,b={first:GetPoint()},{nextRow:GetPoint()};T.near(a[#a]-b[#b],46,.001,"compact raid rows retain a two-pixel gap")
+end
+do
+ local row=U.Members:Create(UIParent)
+ local member={name="Member-Away",nameKey="Member-Away",class="MAGE",specName="Frost",assignedRole="HEALER",factionGroup=1}
+ U.Members:Bind(row,member,250,false,true)
+ local bothWidth=row.name:GetWidth()
+ T.eq(row.role:GetHeight(),18);T.eq(row.faction:GetHeight(),18);T.ok(row:IsEnabled(),"larger markers preserve member-row interaction")
+ member.assignedRole=nil;U.Members:Bind(row,member,250,false,true)
+ local faction={row.faction:GetPoint()}
+ T.eq(row.role:IsShown(),false);T.eq(row.faction:IsShown(),true)
+ T.eq(faction[2],row.icon);T.eq(faction[3],"RIGHT");T.eq(faction[5],0,"a faction without a role stays on the shared portrait center")
+ T.eq(row.name:GetWidth(),bothWidth+22,"a missing role releases its eighteen-pixel slot and four-pixel gap")
+ member.assignedRole="DAMAGER";member.factionGroup=nil;U.Members:Bind(row,member,250,false,true)
+ T.eq(row.role:IsShown(),true);T.eq(row.faction:IsShown(),false)
+ T.eq(row.name:GetWidth(),bothWidth+22,"a role without faction uses the same single-marker text boundary")
+ member.assignedRole=nil;U.Members:Bind(row,member,250,false,true)
+ T.eq(row.name:GetWidth(),bothWidth+46,"a reused row without markers returns both slots and the text gap")
+ T.eq(row.role:IsShown(),false);T.eq(row.faction:IsShown(),false);row:Hide()
 end
 T.ok(U.Tooltip.interactive.leaderIcon:IsShown(),"the right-aligned header uses a leader icon beside the name")
 T.ok(U.Tooltip.interactive.memberButtons[1].leaderIcon:IsShown());T.eq(U.Tooltip.interactive.memberButtons[2].leaderIcon:IsShown(),false)
@@ -1603,13 +1637,39 @@ U.Tooltip.interactive.memberButtons[30]:Fire("OnClick");T.eq(U.Tooltip.member,ra
 U.Tooltip.outsideClicks:Fire("OnEvent","GLOBAL_MOUSE_DOWN","LeftButton")
 T.eq(U.Tooltip.interactive:IsShown(),false,"an external click closes pinned details")
 T.eq(U.Tooltip.outsideClicks.events.GLOBAL_MOUSE_DOWN,nil)
+for _,mode in ipairs({"alt","ctrl"}) do
+ local keyName=mode=="alt" and "Alt" or "Ctrl"
+ local leftKey,rightKey="L"..mode:upper(),"R"..mode:upper()
+ U.Tooltip:Hide();A.db.raidMembers=mode;U.Tooltip:ShowGroup(target,raid)
+ T.eq(U.Tooltip.interactive:GetWidth(),640,"a configurable modifier still starts with a raid summary")
+ T.eq(U.Tooltip.interactive.footer:GetText(),"按 "..keyName.." 展开成员名单","the collapsed hint follows the chosen modifier")
+ for _,other in ipairs({"LSHIFT","RSHIFT","LALT","RALT","LCTRL","RCTRL"}) do
+  if other~=leftKey and other~=rightKey then
+   U.Tooltip.interactive:Fire("OnEvent","MODIFIER_STATE_CHANGED",other,1)
+   U.Tooltip.interactive:Fire("OnEvent","MODIFIER_STATE_CHANGED",other,0)
+   T.eq(U.Tooltip.interactive:GetWidth(),640,"unselected modifiers do not toggle the roster")
+  end
+ end
+ U.Tooltip.interactive:Fire("OnEvent","MODIFIER_STATE_CHANGED",leftKey,1)
+ T.eq(U.Tooltip.interactive:GetWidth(),960);T.ok(U.Tooltip.interactive.memberButtons[30]:IsShown())
+ T.eq(U.Tooltip.interactive.footer:GetText(),"按 "..keyName.." 收起名单","the expanded hint uses the same chosen modifier")
+ U.Tooltip.interactive:Fire("OnEvent","MODIFIER_STATE_CHANGED",leftKey,0)
+ T.eq(U.Tooltip.interactive:GetWidth(),960,"releasing the chosen modifier preserves the expanded roster")
+ U.Tooltip.interactive:Fire("OnEvent","MODIFIER_STATE_CHANGED",rightKey,1)
+ T.eq(U.Tooltip.interactive:GetWidth(),640,"the right-side modifier also toggles the roster")
+ T.eq(U.Tooltip.interactive.footer:GetText(),"按 "..keyName.." 展开成员名单")
+ U.Tooltip.interactive:Fire("OnEvent","MODIFIER_STATE_CHANGED",rightKey,0)
+ T.eq(U.Tooltip.interactive:GetWidth(),640)
+end
 U.Tooltip:Hide();A.db.raidMembers="always";U.Tooltip:ShowGroup(target,raid)
 T.eq(U.Tooltip.interactive:GetWidth(),960,"the always setting opens the full roster")
 T.eq(U.Tooltip.interactive.memberButtons[1]:IsEnabled(),false,"returning to search data disables a previously interactive roster row")
 U.Tooltip.interactive.memberButtons[1]:Fire("OnClick");T.eq(U.Tooltip.member,nil)
 T.eq(U.Tooltip.interactive.footer:GetText(),"","always-expanded search rosters have no obsolete member-click hint")
-U.Tooltip.interactive:Fire("OnEvent","MODIFIER_STATE_CHANGED","LSHIFT",1)
-T.eq(U.Tooltip.interactive:GetWidth(),960,"Shift does not collapse the always setting")
+for _,key in ipairs({"LSHIFT","RSHIFT","LALT","RALT","LCTRL","RCTRL"}) do
+ U.Tooltip.interactive:Fire("OnEvent","MODIFIER_STATE_CHANGED",key,1)
+ T.eq(U.Tooltip.interactive:GetWidth(),960,"modifiers do not collapse the always setting")
+end
 A.db.raidMembers="shift"
 A.db.reduceMotion=false
 local tipScroll=U.Tooltip.interactive.scroll
@@ -2073,6 +2133,8 @@ do
  local page,tip=u.pages.create,u.Tooltip
  T.eq(page.buffArea,nil,"non-raid creation builds no buff controls")
  T.ok(page.rosterList:IsShown(),"a small-group activity uses its inline list even before the roster shrinks")
+ T.eq(page.rosterList.rows[1].name:GetText(),"Player1","the current party in Create hides the realm just like its raid roster")
+ T.eq(page.rosterList.rows[1].targetKey,"Roster-1","hiding a roster realm does not change its action identity")
  page:UsePreset({activityID=1})
  page.groupSummary:Fire("OnEnter")
  local view=tip.interactive
@@ -2110,10 +2172,13 @@ do
   for i=1,4 do T.eq(view.memberButtons[i].member,members[i],"party members retain actual unit order") end
   local row=view.memberButtons[1];local role,faction={row.role:GetPoint()},{row.faction:GetPoint()}
   T.ok(row:GetHeight()>44,"complete long names grow a compact member cell")
-  T.eq((row.name:GetText():gsub("|c%x%x%x%x%x%x%x%x",""):gsub("|r","")),first.name)
+  T.eq((row.name:GetText():gsub("|c%x%x%x%x%x%x%x%x",""):gsub("|r","")),first.name:match("^[^-]+"),"current-roster names omit the realm without truncating the character name")
   T.eq(role[2],row.icon);T.eq(role[3],"RIGHT");T.eq(role[5],0,"party roles remain centered on the portrait after name wrapping")
   T.eq(faction[2],row.role);T.eq(faction[5],0,"party faction shares the role and portrait center")
-  T.ok(row.name:GetWidth()+38+6<=row:GetWidth()-6-28,"both identity lines leave space for the faction and role")
+  local portrait,namePoint,metaPoint={row.icon:GetPoint()},{row.name:GetPoint()},{row.realm:GetPoint()}
+  local textBottom=metaPoint[#metaPoint]-math.max(16,row.realm:GetStringHeight())
+  T.near(portrait[#portrait]-12,(namePoint[#namePoint]+textBottom)/2,.001,"portrait and markers center on the complete wrapped identity block")
+  T.ok(row.name:GetWidth()+38+6<=row:GetWidth()-6-40,"both identity lines leave space for the enlarged faction and role")
   T.ok(view.rosterGroupTitles[1]:IsShown(),"a raid activity keeps subgroup headings even with only four current members")
   for subgroup,title in pairs(view.rosterGroupTitles) do if subgroup~=1 then T.eq(title:IsShown(),false,"empty raid subgroup headings are hidden") end end
   tip:Hide();first.name,first.nameKey=name,key;members=all;g:Notify("roster")
@@ -2266,7 +2331,7 @@ do
  SetBinding(";","OPENALLBAGS");SetBinding("M","TOGGLEWORLDMAP")
  a:Open("settings")
  local page=u.pages.settings
- T.eq(page.section,"interface");T.ok(page.frame.events.UPDATE_BINDINGS)
+ T.eq(page.section,"general");T.ok(page.frame.events.UPDATE_BINDINGS)
  T.ok(page.controls.toggleBinding.help:GetText():find("OPENALLBAGS",1,true))
  page.controls.toggleBinding.widget:Fire("OnClick")
  local capture=page.controls.toggleBinding.frame
@@ -2279,7 +2344,7 @@ do
  T.ok(page.bindingNotice:IsShown());T.eq(page.bindingNotice.close:IsShown(),false)
  T.ok(page.bindingNotice.text:GetText():find("OPENALLBAGS",1,true))
  T.ok(page.overwriteBinding:IsShown());T.eq(page.overwriteBinding.label:GetText(),"覆盖")
- T.eq(select(5,page.panels.interface:GetPoint()),-80-page.bindingNotice:GetHeight()-12,"the existing Notice reserves space above the settings rows")
+ T.eq(select(5,page.panels.general:GetPoint()),-80-page.bindingNotice:GetHeight()-12,"the existing Notice reserves space above the settings rows")
  page.cancelBinding:Fire("OnClick")
  T.eq(page.bindingCapture,nil);T.eq(capture.keyboardEnabled,false);T.eq(capture:GetScript("OnKeyDown"),nil)
  T.eq(page.bindingNotice:IsShown(),false);T.eq(page.pendingBindingKey,nil);T.eq(#s.bindingSaves,0)
@@ -2313,11 +2378,11 @@ do
  InCombatLockdown=inCombat
  page:BeginBindingCapture();page:SelectSection("browse")
  T.eq(page.bindingCapture,nil);T.eq(capture.keyboardEnabled,false);T.eq(page.pendingBindingAction,nil)
- page:SelectSection("interface");page:BeginBindingCapture();capture:Hide()
+ page:SelectSection("general");page:BeginBindingCapture();capture:Hide()
  T.eq(page.bindingCapture,nil);T.eq(capture.keyboardEnabled,false);T.eq(capture:GetScript("OnKeyDown"),nil)
  capture:Show();page:BeginBindingCapture();u:Navigate("notes")
  T.eq(page.bindingCapture,nil);T.eq(page.frame.events.PLAYER_REGEN_DISABLED,nil);T.eq(capture.keyboardEnabled,false)
- u:Navigate("settings")
+ u:Navigate("settings",{section="interface"})
  local baseline=math.min(1,(UIParent:GetWidth()-40)/u.Theme.width,(UIParent:GetHeight()-40)/u.Theme.height)
  local floatingScale=a.db.floatingScale
  T.near(u.frame:GetScale(),baseline,.00001)
@@ -2367,7 +2432,7 @@ do
  BeginAt(75);scaleControl:Hide();pressed=false
  T.eq(a.db.uiScale,125,"hiding during a drag cancels the preview without resizing inside OnHide")
  T.eq(scaleControl.valueLabel:GetText(),"125%");T.eq(scaleWrites,2)
- T.eq(scaleControl.scaleDragging,nil);T.eq(scaleControl.pendingScale,nil);T.eq(scaleSlider:GetScript("OnUpdate"),nil)
+ T.eq(scaleControl:IsDragging(),false);T.eq(scaleSlider:GetScript("OnUpdate"),nil)
  scaleControl:Show();scaleControl:SetValue(75)
  T.eq(a.db.uiScale,125,"programmatic control synchronization does not save a setting")
  page:Sync();T.eq(scaleControl:GetValue(),125)
@@ -2383,7 +2448,7 @@ do
  local modal=u:OpenModal("scaleCheck","Test",480,260)
  T.near(modal.frame:GetEffectiveScale(),u.frame:GetEffectiveScale(),.00001)
  modal:Close();BeginAt(100);u:Navigate("notes");pressed=false
- T.eq(scaleControl.scaleDragging,nil);T.eq(scaleSlider:GetScript("OnUpdate"),nil);T.eq(a.db.uiScale,125,"leaving settings clears an unfinished preview")
+ T.eq(scaleControl:IsDragging(),false);T.eq(scaleSlider:GetScript("OnUpdate"),nil);T.eq(a.db.uiScale,125,"leaving settings clears an unfinished preview")
  T.eq(page.frame.events.UPDATE_BINDINGS,nil)
  IsMouseButtonDown=mouseDown
  T.eq(a.db.floatingScale,floatingScale,"main-window scale leaves the floating window's setting unchanged")
@@ -2399,5 +2464,167 @@ do
  u:Hide(true);a:Open("settings");T.near(u.frame:GetScale(),baseline*1.25,.00001)
  UIParent:SetSize(1100,800);u.frame:Fire("OnEvent","DISPLAY_SIZE_CHANGED")
  T.near(u.frame:GetScale(),math.min(1,1060/u.Theme.width,760/u.Theme.height)*1.25,.00001)
+ u:Hide(true)
+end
+
+-- Item-level correction uses the player's highest level and an independent toast.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("zhCN")
+ local a,u,g,clock=fresh.A,fresh.U,fresh.G,fresh.base
+ local original=GetAverageItemLevel;local highest,pvpLevel=400.9,450.7
+ GetAverageItemLevel=function() return highest,200,pvpLevel end
+ a:Open("create");local page=u.pages.create
+ page:UsePreset({activityID=2,generalPlaystyle=2})
+ LFGListFrame.EntryCreation.Name:UserType("Item level test")
+ page.ilvl.box:UserType("999")
+ T.eq(page.ilvl.box:GetText(),"400","manual input clamps to floored highest item level, not equipped level")
+ T.ok(u.toast:IsShown());T.ok(u.toast.text:GetText():find("400",1,true))
+ local toast,timer=u.toast,u.toastTimer
+ clock.AdvanceClock(2);page.ilvl.box:UserType("999")
+ T.eq(u.toast,toast,"repeated corrections reuse one toast")
+ T.eq(timer.cancelled,true,"a replacement toast cancels the old expiration")
+ clock.AdvanceClock(2);T.ok(toast:IsShown(),"the cancelled old expiration does not hide the new message")
+ clock.AdvanceClock(2);T.eq(toast:IsShown(),false);T.eq(u.toastTimer,nil)
+ for _,value in ipairs({"","0","350"}) do page.ilvl.box:UserType(value);T.eq(page.ilvl.box:GetText(),value) end
+ T.eq(u.toastTimer,nil,"empty, zero and valid requirements do not create a toast")
+ local activity=g.Catalog:GetActivity(2);local oldPvp=activity.isPvpActivity
+ activity.isPvpActivity=true;page.ilvl.box:UserType("999")
+ T.eq(page.ilvl.box:GetText(),"450","PvP activities use the third native item-level return")
+ T.ok(toast.text:GetText():find("PvP",1,true));activity.isPvpActivity=oldPvp
+ u:HideToast();page:UsePreset({activityID=2,requiredItemLevel=999,generalPlaystyle=2})
+ T.eq(page.ilvl.box:GetText(),"999","preset population preserves its requirement until an explicit submit")
+ T.eq(u.toastTimer,nil)
+ page:Submit();T.eq(g.published.requiredItemLevel,400,"publish corrects prefilled requirements before dispatch")
+ g.listing.requiredItemLevel=999;page.editListing:Fire("OnClick")
+ T.eq(page.ilvl.box:GetText(),"999","opening an existing listing does not silently edit its requirement")
+ highest=380.8;page:Submit()
+ T.eq(g.updated.requiredItemLevel,380,"editing submission rereads the current highest level after equipment changes")
+ u:ShowToast("Transient correction");page:SetFormError("Persistent form error")
+ T.eq(page.formError:GetText(),"Persistent form error");T.ok(page.formNotice:IsShown())
+ T.eq(select(1,toast:GetPoint()),"BOTTOM","toast overlays the window footer independently of the form notice")
+ local active=u.toastTimer;u:Navigate("notes")
+ T.eq(active.cancelled,true);T.eq(u.toastTimer,nil);T.eq(toast:IsShown(),false,"page changes clear transient feedback")
+ u:ShowToast("Close test");active=u.toastTimer;u:Hide(true)
+ T.eq(active.cancelled,true);T.eq(u.toastTimer,nil);T.eq(toast:IsShown(),false,"closing clears the toast and its sole timer")
+ GetAverageItemLevel=original
+end
+
+-- Native layout rounds scaled heights; a fitting roster must not expose a thumb.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("zhCN")
+ local a,u=fresh.A,fresh.U;a.db.reduceMotion=true;a:Open("create")
+ local members={}
+ for i=1,40 do members[i]={name="Member"..i,nameKey="Member"..i.."-Home",class="MAGE",assignedRole="DAMAGER",subgroup=math.ceil(i/5)} end
+ local twenty={};for i=1,20 do twenty[i]=members[i] end
+ local tip=u.Tooltip;tip:ShowRoster(u.frame,twenty)
+ T.eq(tip.interactive.memberButtons[1].name:GetText(),"Member1","current roster shows character names without realm suffixes")
+ T.eq(tip.interactive.memberButtons[1].targetKey,"Member1-Home","display changes preserve full identity for member actions")
+ tip.interactive.memberButtons[1]:Fire("OnClick")
+ T.eq(tip.interactive.subtitle:GetText(),"Home","personal detail still displays the server")
+ T.eq(tip.member.nameKey,"Member1-Home");tip.interactive.back:Fire("OnClick")
+ tip:Hide()
+ local searchMember={name="浅墨影-白银之手",nameKey="浅墨影-白银之手",class="ROGUE",specName="敏锐",assignedRole="DAMAGER",isBNetFriend=true}
+ local result={id=8720,name="H56",leaderName=searchMember.name,leaderKey=searchMember.nameKey,numMembers=1,maxNumPlayers=5,details={members={searchMember}}}
+ tip:ShowGroup(u.frame,result)
+ local searchRow=tip.interactive.memberButtons[1]
+ T.eq(searchRow.name:GetText(),"浅墨影","search members display the character name when reusing a current-roster row")
+ T.eq(searchRow.memberContext.source,"search");T.eq(searchRow.marks:IsShown(),false,"search relationships are never attributed to a member")
+ T.eq(tip.interactive.leader:GetText(),"浅墨影-白银之手");T.ok(tip.interactive.leaderIcon:IsShown(),"party headers retain the crown and complete leader identity")
+ T.eq(searchMember.name,"浅墨影-白银之手");T.eq(searchMember.nameKey,"浅墨影-白银之手","displaying a roster never mutates search member identity")
+ tip:Hide();tip:ShowRoster(u.frame,twenty)
+ local view=tip.interactive;local getHeight=view.scroll.GetHeight
+ view.scroll.GetHeight=function(self) return getHeight(self)-.00001525879 end
+ tip:ShowRoster(u.frame,twenty)
+ T.ok(view.memberButtons[20]:IsShown(),"all four five-player subgroups remain present")
+ T.eq(view.scrollbar:IsShown(),false,"native fractional height rounding does not create a spurious roster scrollbar")
+ T.eq(select(2,view.scrollbar:GetMinMaxValues()),0)
+ view.scroll:Fire("OnMouseWheel",-1);T.eq(view.scroll:GetVerticalScroll(),0,"a fitting roster cannot acquire a fractional wheel offset")
+ tip:ShowRoster(u.frame,members)
+ T.ok(view.scrollbar:IsShown(),"a genuinely overflowing eight-subgroup roster retains scrolling")
+ view.scrollbar:SetValue(64);tip:RefreshRoster(u.frame,members)
+ T.eq(view.scroll:GetVerticalScroll(),64,"an overflowing roster refresh retains its scroll position")
+ tip:RefreshRoster(u.frame,twenty)
+ T.eq(view.scrollbar:IsShown(),false);T.eq(view.scroll:GetVerticalScroll(),0,"shrinking the pooled roster clears its former scroll position")
+ view.scroll.GetHeight=getHeight;tip:Hide();u:Hide(true)
+end
+-- Search uses native relationship summaries, separate names and leader-only notes.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("zhCN")
+ local a,u,g,s=fresh.A,fresh.U,fresh.G,fresh.S
+ a.db.reduceMotion=true
+ local person={applicantID=81,name="荔枝小月亮-燃烧之刃",nameKey="荔枝小月亮-燃烧之刃",class="PALADIN",specName="神圣",assignedRole="HEALER",factionGroup=0,isBNetFriend=true}
+ local plain={name="Ordinary-Away",nameKey="Ordinary-Away",class="MAGE",assignedRole="DAMAGER",factionGroup=1}
+ a.Notes:Add("荔枝小月亮","燃烧之刃","备注内容",nil,nil,{type="neutral"})
+ local marks=u.Members:CreateMarks(UIParent,true)
+ T.eq(u.Members:BindMarks(marks,person),40)
+ T.eq(marks.icons.bnet:GetTexture(),"Interface\\AddOns\\LycheeGroup_UI\\Media\\battlenet-friend.tga")
+ T.eq(marks.noteButton.icon:GetTexture(),u.Theme.media.."book.tga")
+ local button,nodes=marks.noteButton,#s.nodes
+ u.Members:BindMarks(marks,plain)
+ T.eq(marks:IsShown(),false);T.eq(marks.noteKey,nil);T.eq(button:IsShown(),false)
+ u.Members:BindMarks(marks,person);T.eq(#s.nodes,nodes,"rebinding reuses the textures and note button")
+ person.isCharFriend=true;person.isGuildMate=true
+ T.eq(u.Members:BindMarks(marks,person),84,"all three relationships coexist with the specific note kind")
+ T.eq(marks.icons.friend:GetTexture(),u.Theme.media.."friend.tga");T.eq(marks.icons.guild:GetTexture(),u.Theme.media.."guild.tga")
+ a.db.relations=false;T.eq(u.Members:BindMarks(marks,person),18,"relationship settings leave the enabled note visible")
+ a.db.relations=true;a.db.noteMarks=false;T.eq(u.Members:BindMarks(marks,person),62)
+ T.eq(button:IsShown(),false);T.eq(marks.noteKey,nil)
+ a.db.noteMarks=true;a.db.notesEnabled=false;T.eq(u.Members:BindMarks(marks,person),62)
+ a.db.notesEnabled=true
+ g.db.prefs.find={category="seasonDungeon",categoryPrefs={seasonDungeon={selected=true,difficultyID=8}}}
+ local record={id=1,activityID=2,activity=g.Catalog:GetActivity(2),activityName="Dungeon activity",categoryID=2,name="Known members",leaderName=plain.name,leaderKey=plain.nameKey,numMembers=2,maxNumPlayers=5,age=10,bnetFriends=1,charFriends=1,guildMates=1,details={members={plain,person},counts={HEALER=1,DAMAGER=1},relationships={bnet={"战网昵称"},character={person.name},guild={"公会玩家"}}}}
+ g.records[1]=record;a:Open("find")
+ local row=u.pages.find.results.rows[1]
+ T.ok(row.marks.icons.bnet:IsShown());T.ok(row.marks.icons.friend:IsShown());T.ok(row.marks.icons.guild:IsShown())
+ T.eq(row.marks.icons.neutral,nil,"a member note never marks a search result")
+ T.eq(row.meta:GetText(),record.activityName)
+ u.Tooltip:ShowGroup(row,record)
+ local view=u.Tooltip.interactive
+ T.eq(view.relationshipRows.bnet.names:GetText(),"：战网昵称")
+ T.eq(view.relationshipRows.character.names:GetText(),"："..person.name)
+ T.eq(view.relationshipRows.guild.names:GetText(),"：公会玩家")
+ T.eq(view.relationshipRows.bnet.icon:GetTexture(),u.Members.relationshipTextures.bnet)
+ local related,ordinary
+ for _,entry in ipairs(view.memberButtons) do if entry.member==person then related=entry elseif entry.member==plain then ordinary=entry end end
+ T.eq(related.marks:IsShown(),false);T.eq(ordinary.marks:IsShown(),false,"native group friend totals never label any member, including the leader")
+ T.eq(related.name:GetText(),"荔枝小月亮");T.eq(ordinary.name:GetText(),"Ordinary")
+ person.isBNetFriend=false;person.isCharFriend=false;person.isGuildMate=false;record.bnetFriends=0;record.details.relationships.bnet={};g:Notify("relations")
+ T.eq(row.marks.icons.bnet:IsShown(),false);T.eq(view.relationshipRows.bnet:IsShown(),false,"updated native lists hide the pooled relationship row")
+ a.Notes:Edit(person.nameKey,"Changed",{type="positive"})
+ T.eq(row.marks.icons.positive,nil);T.eq(related.marks:IsShown(),false,"editing an ordinary member note does not expose it before joining")
+ a.Notes:Add("Ordinary","Away","Neutral",nil,nil,{type="neutral"})
+ a.Notes:Add("Caution","Away","Caution",nil,nil,{type="caution"})
+ local caution={nameKey="Caution-Away"};record.details.members[3]=caution
+ record.bnetFriends,record.charFriends,record.guildMates=1,1,1;g:Notify("relations")
+ T.eq(row.marks:GetWidth(),84);T.ok(row.meta:GetWidth()+6+row.marks:GetWidth()<=172)
+ T.ok(ordinary.marks.icons.neutral:IsShown(),"only the leader note appears in the search member list")
+ local point={ordinary.marks:GetPoint()};T.eq(point[2],ordinary.faction);T.eq(point[3],"LEFT");T.eq(point[5],0,"the leader note precedes the faction icon")
+ a.Notes:Edit(plain.nameKey,"Updated leader",{type="positive"})
+ T.ok(row.marks.icons.positive:IsShown());T.eq(row.marks.icons.neutral:IsShown(),false)
+ T.ok(ordinary.marks.icons.positive:IsShown());T.eq(ordinary.marks.icons.neutral:IsShown(),false)
+ T.eq(ordinary.marks.icons.bnet,nil,"summary-only counts stay separate from member identity")
+ a.db.relations=false;g:Notify("relations")
+ T.eq(view.relationshipRows.character:IsShown(),false);T.eq(view.relationshipRows.guild:IsShown(),false)
+ T.eq(row.marks:GetWidth(),18);T.ok(ordinary.marks.icons.positive:IsShown(),"relationship visibility leaves the leader note intact")
+ a.db.relations=true
+ u.Tooltip:Hide();g.listing={activityID=1,name="Raid recruitment"};g.manageApplicants=false
+ person.isBNetFriend=true;g.applicants[81]={id=81,status="applied",displayOrderID=1,activityID=1,members={person}}
+ a:Open("create")
+ local page=u.pages.create;local batch=page.batchPool[1];local applicant=batch.people[1]
+ T.eq(batch.invite:IsShown(),false);T.eq(batch.decline:IsShown(),false)
+ T.eq(applicant.title:GetText(),person.nameKey);T.eq(applicant.meta,nil,"applicants have no generic note text under the name")
+ T.eq(applicant.title.wrap,true);T.ok(applicant.title:GetStringHeight()<=applicant:GetHeight())
+ T.ok(56+applicant.title:GetWidth()+24+6+applicant.marks:GetWidth()<=279,"full name, faction and marks fit the name column")
+ point={applicant.marks:GetPoint()};T.eq(point[2],applicant.faction);T.eq(point[3],"RIGHT");T.eq(point[5],0)
+ a.Notes:Edit(person.nameKey,"Caution",{type="caution"})
+ T.eq(applicant.marks.noteButton.icon:GetTexture(),u.Theme.media.."caution.tga","the pooled note button follows the actual current note type")
+ person.isBNetFriend=false;g:Notify("relations");T.eq(applicant.marks.icons.bnet:IsShown(),false)
+ applicant.marks.noteButton:Fire("OnClick","LeftButton")
+ T.eq(u.page,"notes","a non-manager can open an applicant's existing note")
+ T.eq(u.pages.notes.list.selectedKey,person.nameKey)
+ T.eq(u.pages.notes.eIdentity:GetText(),"荔枝小月亮");T.eq(u.pages.notes.eRealm:GetText(),"燃烧之刃")
+ T.eq(u.pages.notes.typeButtons.caution.active,true)
+ T.eq(g.invitedApplicant,nil);T.eq(g.declinedApplicant,nil)
+ T.eq(applicant.marks.noteKey,nil,"leaving the applicant page releases the clickable player identity")
  u:Hide(true)
 end

@@ -72,7 +72,7 @@ function M:Initialize()
         GameTooltip:SetOwner(button, "ANCHOR_LEFT")
         GameTooltip:AddLine(A.L.brand)
         GameTooltip:AddLine(zh and "左键：打开／关闭荔枝组队" or "Left-click: toggle Lychee LFG", 1, 1, 1)
-        GameTooltip:AddLine(zh and "右键：界面设置" or "Right-click: interface settings", 1, 1, 1)
+        GameTooltip:AddLine(zh and "右键：打开设置" or "Right-click: open settings", 1, 1, 1)
         GameTooltip:Show()
     end)
     button:SetScript("OnLeave", function()
@@ -87,7 +87,7 @@ function M:Initialize()
     button:SetScript("OnClick", function(_, mouseButton)
         if M.suppressClick then return end
         if mouseButton == "RightButton" then
-            A:Open("settings", {section = "interface"})
+            A:Open("settings", {section = "general"})
         elseif mouseButton == "LeftButton" then
             if A.UI and A.UI:IsShown() then A.UI:Hide() else A:Open("find") end
         end

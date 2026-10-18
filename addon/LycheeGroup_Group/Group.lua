@@ -73,7 +73,22 @@ end
 -- ---------------------------------------------------------------- 事件分发
 
 -- 微核心唤醒交接与本包事件帧的共同入口;按事件名转发给具名所有者。
+local function RelationsChanged(g) g.Relations:OnChanged() end
+local function ClubChanged(g,id) g.Relations:OnClubChanged(id) end
 local DISPATCH = {
+	FRIENDLIST_UPDATE = RelationsChanged,
+	BN_FRIEND_LIST_SIZE_CHANGED = RelationsChanged,
+	BN_FRIEND_INFO_CHANGED = RelationsChanged,
+	BN_FRIEND_ACCOUNT_ONLINE = RelationsChanged,
+	BN_FRIEND_ACCOUNT_OFFLINE = RelationsChanged,
+	BN_DISCONNECTED = RelationsChanged,
+	GUILD_ROSTER_UPDATE = RelationsChanged,
+	PLAYER_GUILD_UPDATE = function(g,unit) if G.Public(UnitIsUnit(unit,"player")) then g.Relations:OnChanged();if IsInGuild() then C_GuildInfo.GuildRoster() end end end,
+	CLUB_ADDED = ClubChanged,
+	CLUB_MEMBER_ADDED = ClubChanged,
+	CLUB_MEMBER_REMOVED = ClubChanged,
+	CLUB_MEMBER_UPDATED = ClubChanged,
+	CLUB_MEMBERS_UPDATED = ClubChanged,
 	LFG_LIST_SEARCH_RESULTS_RECEIVED = function(g) g.Search:OnResultsReceived() end,
 	LFG_LIST_SEARCH_RESULT_UPDATED = function(g, resultID) g.Results:QueueUpdate(resultID) end,
 	LFG_LIST_UPDATE_SEARCH_RESULTS = function(g) g.Search:OnResultsUpdated() end,
@@ -141,7 +156,7 @@ function G:HasViews(kind)
 end
 
 -- Subscribe(callback(kind, id)) -> unsubscribe
--- kind: "search"|"results"|"result"|"activities"|"applications"|"application"|"applicationCancelled"|"listing"|"applicants"|"applicant"|"permissions"|"history"
+-- kind: "search"|"results"|"result"|"activities"|"applications"|"application"|"applicationCancelled"|"listing"|"applicants"|"applicant"|"permissions"|"history"|"relations"
 function G:Subscribe(callback)
 	if type(callback) ~= "function" then
 		return function() end
@@ -154,6 +169,7 @@ end
 
 -- Notify 只分发状态变化;Publish 留给招募动作,两者不共用名称。
 function G:Notify(kind, id)
+	if kind=="applications" then self.Game:RefreshRelations() end
 	for callback in pairs(subscribers) do
 		local ok, err = pcall(callback, kind, id)
 		if not ok then

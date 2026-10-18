@@ -101,19 +101,6 @@ local function RelationNames(values)
  end
  return names
 end
-local function MarkRelations(members,names,field)
- for _,name in ipairs(names) do
-  local key=G:RemotePlayerKey(name)
-  local matched
-  for _,member in ipairs(members) do
-   if key and member.nameKey==key or not key and member.name and member.name:match("^[^-]+$")==name or not key and member.name and member.name:match("^([^-]+)-")==name then
-    if matched then matched=nil;break end
-    matched=member
-   end
-  end
-  if matched then matched[field]=true end
- end
-end
 function Results:GetDetails(idOrRecord)
  local record=type(idOrRecord)=="table" and idOrRecord or records[idOrRecord]
  if not record then return nil end
@@ -128,7 +115,9 @@ function Results:GetDetails(idOrRecord)
   local info=Public(C_LFGList.GetSearchResultPlayerInfo(record.id,index))
   if type(info)=="table" then
    local name=Public(info.name)
+   local isLeader=Public(info.isLeader)==true
    local key=G:RemotePlayerKey(name)
+   if not key and isLeader then key=record.leaderKey end
    memberCount=memberCount+1
    local previous=details.members[memberCount]
    if key and previous and previous.nameKey==key and previous~=info then
@@ -139,7 +128,7 @@ function Results:GetDetails(idOrRecord)
    info.name=name;info.nameKey=key
    info.class=Public(info.classFilename);info.localizedClass=Public(info.className)
    info.specName=Public(info.specName);info.assignedRole=Public(info.assignedRole)
-   info.isLeader=Public(info.isLeader)==true
+   info.isLeader=isLeader
    -- Search data identifies the leader's faction, not every remote member's.
    info.factionGroup=info.isLeader and record.leaderFactionGroup or nil
    info.ratingKind=record.ratingKind
@@ -147,7 +136,10 @@ function Results:GetDetails(idOrRecord)
     info.rating=info.isLeader and record.leaderPvpRating or nil
     info.pvpRatingInfo=info.isLeader and record.pvpRatings and record.pvpRatings[1] or nil
    else info.rating=Public(info.dungeonScore);info.pvpRatingInfo=nil end
-   info.isBNetFriend,info.isCharFriend,info.isGuildMate=false,false,false
+   -- Search relationships belong to the group-level native name lists. They
+   -- are never attributed to roster rows, including the leader.
+   info.nativeCharFriend,info.nativeGuildMate=nil,nil
+   info.isBNetFriend,info.isCharFriend,info.isGuildMate,info.isFriend=nil,nil,nil,nil
    details.members[memberCount]=info
   end
  end
@@ -157,9 +149,6 @@ function Results:GetDetails(idOrRecord)
   local bnet,character,guild=C_LFGList.GetSearchResultFriends(record.id)
   local relations={bnet=RelationNames(bnet),character=RelationNames(character),guild=RelationNames(guild)}
   details.relationships=relations
-  MarkRelations(details.members,relations.bnet,"isBNetFriend")
-  MarkRelations(details.members,relations.character,"isCharFriend")
-  MarkRelations(details.members,relations.guild,"isGuildMate")
  end
  local encounters=Public(C_LFGList.GetSearchResultEncounterInfo(record.id))
  if type(encounters)=="table" then
@@ -209,16 +198,12 @@ local function Pass(record,filters,leaderText)
   if filters.healerPresence and (counts.HEALER==nil or (counts.HEALER>0)~=(filters.healerPresence=="present")) then return false end
   if filters.damagePresence and (counts.DAMAGER==nil or (counts.DAMAGER>=3)~=(filters.damagePresence=="present")) then return false end
  end
- if filters.friends and record.bnetFriends+record.charFriends==0 then return false end
- if filters.guild and record.guildMates==0 then return false end
+ if filters.friends and record.bnetFriends+record.charFriends==0 or filters.guild and record.guildMates==0 then return false end
  if filters.notes then
   local exclude=filters.notes=="noCaution"
   if not A.Notes then return exclude end
   local kind=exclude and "caution" or filters.notes
   local found=MatchesNote(record.leaderKey,kind)
-  if not found then
-   for _,member in ipairs(Results:GetDetails(record).members) do if MatchesNote(member.nameKey,kind) then found=true;break end end
-  end
   if exclude and found or not exclude and not found then return false end
  end
  return true

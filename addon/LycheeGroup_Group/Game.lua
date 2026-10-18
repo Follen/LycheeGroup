@@ -25,6 +25,12 @@ local APPLICANT_EVENTS = {
 }
 
 local PERMISSION_EVENTS = { "PARTY_LEADER_CHANGED" }
+local RELATION_EVENTS = {
+ "FRIENDLIST_UPDATE", "BN_FRIEND_LIST_SIZE_CHANGED", "BN_FRIEND_INFO_CHANGED",
+ "BN_FRIEND_ACCOUNT_ONLINE", "BN_FRIEND_ACCOUNT_OFFLINE", "BN_DISCONNECTED",
+ "GUILD_ROSTER_UPDATE", "PLAYER_GUILD_UPDATE", "CLUB_ADDED", "CLUB_MEMBER_ADDED",
+ "CLUB_MEMBER_REMOVED", "CLUB_MEMBER_UPDATED", "CLUB_MEMBERS_UPDATED",
+}
 local ROSTER_EVENTS = { "ACTIVE_PLAYER_SPECIALIZATION_CHANGED", "PLAYER_SPECIALIZATION_CHANGED", "PLAYER_EQUIPMENT_CHANGED", "INSPECT_READY", "PLAYER_REGEN_ENABLED", "UNIT_CONNECTION" }
 
 local RUN_EVENTS = {
@@ -51,11 +57,19 @@ function Game:RefreshSubscriptions()
 	if not frame then return end
 	SetEvents(frame, SEARCH_EVENTS, G:HasViews("search") or G.Search:GetState()=="searching")
 	local listing = C_LFGList.HasActiveEntryInfo()
+	self:RefreshRelations()
 	SetEvents(frame, APPLICANT_EVENTS, listing)
 	SetEvents(frame, PERMISSION_EVENTS, listing or G:HasViews("create"))
 	if self.runTracking or G:HasViews() or listing then frame:RegisterEvent("GROUP_ROSTER_UPDATE") else frame:UnregisterEvent("GROUP_ROSTER_UPDATE") end
 	SetEvents(frame, ROSTER_EVENTS, G:HasViews("create"))
 	G.Roster:SetActive(G:HasViews("create"))
+end
+
+function Game:RefreshRelations()
+ local active=G:HasViews() or C_LFGList.HasActiveEntryInfo() or G.Applications:HasActive()
+ if G.Relations.active==active then return end
+ SetEvents(self.frame,RELATION_EVENTS,active)
+ G.Relations:SetActive(active)
 end
 
 function Game:EnableRunTracking()

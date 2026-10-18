@@ -175,10 +175,10 @@ local function ButtonBase(parent,text,width,action)
  end
  return b
 end
-function C.Button(parent,text,width,action)
+function C.Button(parent,text,width,action,options)
  local b=ButtonBase(parent,text,width,action)
- b.fill=C.Panel(b,T.primary,20);b.fill:Hide()
- b.hover=C.Panel(b,T.rowHover,20);b.hover:Hide()
+ b.fill=C.Panel(b,T.primary,T.buttonRadius);b.fill:Hide()
+ b.hover=C.Panel(b,T.rowHover,T.buttonRadius);b.hover:Hide()
  b.hoverColor=T.rowHover
  function b:RefreshStyle(immediate)
   local enabled=self:IsEnabled()
@@ -188,7 +188,7 @@ function C.Button(parent,text,width,action)
   local darkChoice=self.isChoice and self.surfaceVariant=="dark"
   local fill=self.primary and (pressed and T.primaryPressed or inside and T.primaryHover or T.primary)
    or self.isChoice and (darkChoice and T.surfaceLow or T.selectBackground)
-   or self.active and T.secondaryContainer
+   or self.active and (self.variant=="text" and T.transparent or T.secondaryContainer)
    or colors and (pressed and colors[3] or inside and colors[2] or colors[1]) or T.secondaryContainer
   self.fill:SetShown(self.primary or self.isChoice or self.active or colors~=nil)
   M:Color(self.fill,fill,duration)
@@ -202,13 +202,43 @@ function C.Button(parent,text,width,action)
   local textColor=self.primary and T.onPrimary or self.active and (self.selectedTextColor or T.onSecondaryContainer)
    or inside and (self.hoverTextColor or T.text) or self.textColor or T.text
   UI:Color(self.label,textColor)
-  if self.icon and self.icon.SetSelected then self.icon:SetSelected(self.active,inside) end
+  if self.icon and self.icon.SetSelected and self._iconSelection~=false then self.icon:SetSelected(self.active,inside) end
   if self.focus then self.focusInner:SetColor(darkChoice and T.surfaceLow or T.selectBackground);self.focus:SetShown(self.expanded==true);self.focusInner:SetShown(self.expanded==true) end
  end
  function b:SetPrimary(value) self.primary=value==true;self:RefreshStyle(true) end
  function b:SetActive(value) self.active=value==true;self:RefreshStyle(true) end
- function b:SetSurfaceColors(rest,hover,pressed) self.surfaceColors={rest,hover,pressed or hover};self:RefreshStyle(true) end
+ function b:SetSurfaceColors(rest,hover,pressed) self.surfaceColors=rest and {rest,hover or rest,pressed or hover or rest} or nil;self:RefreshStyle(true) end
  function b:SetTextColors(rest,hover,selected) self.textColor,self.hoverTextColor,self.selectedTextColor=rest,hover,selected;self:RefreshStyle(true) end
+ function b:SetFeedbackColors(hover,pressed) self.hoverColor,self.pressedColor=hover or T.rowHover,pressed;self:RefreshStyle(true) end
+ function b:SetRadius(radius)
+  self.radius=radius;self.fill:SetRadius(radius);self.hover:SetRadius(radius)
+  if self.focus then self.focus:SetRadius(radius);self.focusInner:SetRadius(math.max(0,radius-1)) end
+ end
+ function b:SetLabelStyle(size,lineHeight)
+  self.label:SetFont(T.font,size,"");C.SetLineHeight(self.label,lineHeight,true)
+ end
+ function b:SetVariant(variant)
+  self.variant=variant;self.primary=variant=="primary";self.surfaceColors=nil
+  self.hoverColor,self.pressedColor=T.rowHover,nil
+  self.textColor,self.hoverTextColor,self.selectedTextColor=T.text,T.text,T.onSecondaryContainer
+  self:SetHeight(T.buttonHeight);self:SetRadius(T.buttonRadius);self:SetLabelStyle(14,20)
+  if variant=="compact" then
+   self:SetHeight(T.compactHeight);self:SetRadius(T.compactRadius);self:SetLabelStyle(T.compactSize,T.compactLineHeight);self.textColor=T.muted
+  elseif variant=="tonal" then self.surfaceColors={T.secondaryContainer,T.refreshHover,T.secondaryPressed}
+  elseif variant=="text" then
+   self.surfaceColors={T.transparent,T.transparent,T.transparent};self.textColor,self.hoverTextColor,self.selectedTextColor=T.muted,T.brand,T.brand
+  end
+  self:RefreshStyle(true)
+ end
+ function b:SetStyle(style)
+  if style.variant then self:SetVariant(style.variant) end
+  if style.height then self:SetHeight(style.height) end
+  if style.radius then self:SetRadius(style.radius) end
+  if style.fontSize or style.lineHeight then self:SetLabelStyle(style.fontSize or select(2,self.label:GetFont()),style.lineHeight or self.label:GetHeight()) end
+  if style.surfaceColors then self:SetSurfaceColors(unpack(style.surfaceColors)) end
+  if style.hoverColor or style.pressedColor then self:SetFeedbackColors(style.hoverColor or self.hoverColor,style.pressedColor or self.pressedColor) end
+  if style.textColor or style.hoverTextColor or style.selectedTextColor then self:SetTextColors(style.textColor or self.textColor,style.hoverTextColor or self.hoverTextColor,style.selectedTextColor or self.selectedTextColor) end
+ end
  function b:SetExpanded(value)
   self.expanded=value==true
   if self.expanded and not self.focus then
@@ -219,22 +249,78 @@ function C.Button(parent,text,width,action)
     local layer=region:GetDrawLayer()
     if layer=="ARTWORK" or layer=="OVERLAY" then region:SetParent(self.choiceForeground) end
    end
-   self.focus=C.Panel(self,T.focusBorder,4)
-   self.focusInner=C.Panel(self,T.selectBackground,3,1)
+   self.focus=C.Panel(self,T.focusBorder,self.radius or T.fieldRadius)
+   self.focusInner=C.Panel(self,T.selectBackground,math.max(0,(self.radius or T.fieldRadius)-1),1)
    for _,region in ipairs(self.focus.regions) do region:SetDrawLayer("BACKGROUND",-6) end
    for _,region in ipairs(self.focusInner.regions) do region:SetDrawLayer("BACKGROUND",-5) end
   end
   self:RefreshStyle(true)
  end
  b.hover:SetAlpha(0)
+ if options then b:SetStyle(options) end
  return b
+end
+-- Native buttons stay available to callers; the library owns their appearance.
+function C.IconButton(parent,icon,size,action,options)
+ options=options or {}
+ local button=C.Button(parent,"",size or T.buttonHeight,action,options)
+ button._iconSelection=false
+ button:SetHeight(options.height or size or T.buttonHeight);button.label:Hide()
+ local iconSize=options.iconSize or 20
+ if icon then button.icon=C.Glyph(button,icon,iconSize)
+ else button.icon=C.Icon(button,iconSize) end
+ button.icon:SetPoint("CENTER")
+ return button
+end
+function C.Surface(parent,options)
+ options=options or {}
+ local floating=options.variant=="floating"
+ local surface=CreateFrame("Frame",nil,parent);surface:SetAllPoints(parent);surface:EnableMouse(false)
+ surface:SetFrameLevel(math.max(0,parent:GetFrameLevel()-1))
+ surface.restColor=options.color or (floating and T.floatingSurface or T.panel)
+ surface.hoverColor=options.hoverColor or (floating and T.floatingHover or surface.restColor)
+ surface.fill=C.Panel(surface,surface.restColor,options.radius or (floating and T.floatingRadius or T.panelRadius))
+ function surface:SetHovered(value) self.hovered=value==true;self.fill:SetColor(self.hovered and self.hoverColor or self.restColor) end
+ function surface:SetColors(rest,hover) self.restColor,self.hoverColor=rest,hover or rest;self:SetHovered(self.hovered) end
+ return surface
+end
+function C.CheckMark(parent,color)
+ local mark=CreateFrame("Frame",nil,parent);mark:SetSize(16,20);mark.strokes={}
+ for _,stroke in ipairs({{5,-3,-1,-math.pi/4},{9,1.3,.5,math.pi/4}}) do
+  local line=mark:CreateTexture(nil,"ARTWORK");line:SetSize(stroke[1],1.5)
+  line:SetPoint("CENTER",stroke[2],stroke[3]);line:SetRotation(stroke[4]);mark.strokes[#mark.strokes+1]=line
+ end
+ function mark:SetColor(value) for _,line in ipairs(self.strokes) do line:SetColorTexture(unpack(value)) end end
+ mark:SetColor(color or T.onSecondaryContainer)
+ return mark
+end
+function C.Checkbox(parent,onChange,options)
+ options=options or {}
+ local size=options.size or 32;local boxSize=options.boxSize or 18
+ local check=CreateFrame("CheckButton",nil,parent);check:SetSize(size,size)
+ check.fill=C.Panel(check,T.surfaceHigh,options.radius or 5,(size-boxSize)/2)
+ check.mark=C.CheckMark(check,T.onPrimary);check.mark:SetPoint("CENTER")
+ function check:RefreshStyle()
+  local inside=self:IsEnabled() and self.hovered
+  self.fill:SetColor(self:GetChecked() and (inside and T.primaryHover or T.primary) or (inside and T.secondaryContainer or T.surfaceHigh))
+  self.mark:SetShown(self:GetChecked()==true)
+ end
+ function check:SetValue(value) self:SetChecked(value==true);self:RefreshStyle() end
+ function check:GetValue() return self:GetChecked()==true end
+ function check:SetAvailable(value) self:SetEnabled(value);self:SetAlpha(value and 1 or .38);self:RefreshStyle() end
+ check:SetScript("OnEnter",function(self) self.hovered=true;self:RefreshStyle() end)
+ check:SetScript("OnLeave",function(self) self.hovered=nil;self:RefreshStyle() end)
+ check:SetScript("OnHide",function(self) self.hovered=nil;self:RefreshStyle() end)
+ check:SetScript("OnClick",function(self) if self:IsEnabled() and not UI:IsHiding() then self:RefreshStyle();if onChange then onChange(self:GetValue(),self) end end end)
+ check:SetValue(false)
+ return check
 end
 -- Visual field only: native/registered EditBoxes can be leased into this shell.
 function C.Notice(parent,width,onClose)
  local frame=CreateFrame("Frame",nil,parent);frame:SetSize(width,40);frame.fill=C.Panel(frame,T.notice,12)
  frame.text=C.Text(frame,"",14,T.noticeText,width-52,20);frame.text:SetPoint("LEFT",12,0);frame.text:SetJustifyH("LEFT");frame.text:SetWordWrap(true)
- frame.close=C.Button(frame,"",24,function() if onClose then onClose(frame) else frame:Hide() end end)
- frame.close:SetSize(24,24);frame.close:SetPoint("RIGHT",-8,0);C.Glyph(frame.close,"close",12):SetPoint("CENTER")
+ frame.close=C.IconButton(frame,"close",24,function() if onClose then onClose(frame) else frame:Hide() end end,{iconSize=12})
+ frame.close:SetPoint("RIGHT",-8,0)
  function frame:SetMessage(message,actionWidth)
   message=message or "";self.text:SetWidth(self:GetWidth()-52-(actionWidth or 0));UI:SetText(self.text,message)
   self:SetHeight(math.max(40,math.ceil(self.text:GetStringHeight())+16));self:SetShown(message~="")
@@ -312,17 +398,21 @@ function C.Number(parent,width,height,onChange)
  shell:SetPlaceholder(UI.L.any or (GetLocale()=="zhCN" and "不限" or "Any"))
  return shell
 end
-function C.Choice(parent,width,entries,onChange)
- local b=C.Button(parent,"",width,function(self)
-  UI:OpenMenu(self,type(entries)=="function" and entries() or entries,function(value,label) self:SetValue(value,label);if onChange then onChange(value) end end,{kind="select",selectedValue=self.value})
- end)
- b:SetHeight(T.fieldHeight);b.isChoice=true;b.fill:SetRadius(4);b.hover:SetRadius(4);b.fill:SetColor(T.selectBackground);b.fill:Show()
+function C.ChoiceTrigger(parent,width,action,options)
+ local b=C.Button(parent,"",width,action)
+ b:SetHeight(T.fieldHeight);b.isChoice=true;b:SetRadius(T.fieldRadius);b.fill:SetColor(T.selectBackground);b.fill:Show()
  b.label:ClearAllPoints();b.label:SetPoint("LEFT",14,0);b.label:SetWidth(width-46);b.label:SetWordWrap(false)
  Hook(b,"OnSizeChanged",function(self,value) self.label:SetWidth(math.max(0,value-46)) end)
  for i=1,2 do local arm=b:CreateTexture(nil,"ARTWORK");arm:SetColorTexture(unpack(T.muted));arm:SetSize(5,1.5);arm:SetPoint("CENTER",b,"RIGHT",i==1 and -20 or -16,0);arm:SetRotation(i==1 and -math.pi/4 or math.pi/4) end
  function b:SetValue(value,label) self.value=value;UI:SetText(self.label,label or tostring(value or "")) end
  function b:SetSurfaceVariant(value) self.surfaceVariant=value;self:RefreshStyle(true) end
+ if options then b:SetStyle(options) end
  return b
+end
+function C.Choice(parent,width,entries,onChange)
+ return C.ChoiceTrigger(parent,width,function(self)
+  UI:OpenMenu(self,type(entries)=="function" and entries() or entries,function(value,label) self:SetValue(value,label);if onChange then onChange(value) end end,{kind="select",selectedValue=self.value})
+ end)
 end
 function C.Check(parent,label,onChange)
  local b=ButtonBase(parent,label,180,function(self) self:SetValue(not self.value,true);if onChange then onChange(self.value) end end)
@@ -482,6 +572,22 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover)
    for _,key in ipairs(keys) do if resolve(row.key,key) then self.render(row,row.key);UI:ReleaseRow(row);break end end
   end end
  end
+ function list:SetStyle(style)
+  for _,key in ipairs({"alternateRows","selectionFill","selectionMark","hoverFill","idleTextColor","hoverColor"}) do if style[key]~=nil then self[key]=style[key] end end
+  for _,row in ipairs(self.rows) do
+   if style.rowHeight then row:SetHeight(style.rowHeight) end
+   if style.radius then row.alternate:SetRadius(style.radius);row.selected:SetRadius(style.radius);row.hover:SetRadius(style.radius) end
+   if style.titleSize then row.title:SetFont(T.font,style.titleSize,"") end
+   if style.titleLineHeight then C.SetLineHeight(row.title,style.titleLineHeight,true) end
+   if style.singleLine~=nil then row.meta:SetShown(not style.singleLine) end
+   if style.singleLine~=nil or style.titleX then
+    row.title:ClearAllPoints()
+    if style.singleLine==false then row.title:SetPoint("TOPLEFT",style.titleX or 12,-8) else row.title:SetPoint("LEFT",style.titleX or 12,0) end
+   end
+   if style.titleWidth then row.title:SetWidth(style.titleWidth) end
+  end
+  self:Refresh(true)
+ end
  slider:SetScript("OnValueChanged",function(_,value) if not list.updating then list:SetPixelOffset(value,false) end end)
  list:EnableMouseWheel(true);list:SetScript("OnMouseWheel",function(self,delta) self:SetPixelOffset((self.scrollTarget or self.pixelOffset)-delta*self.rowHeight*2,true) end)
  list:SetScript("OnHide",function(self)
@@ -526,7 +632,7 @@ function C.Columns(list,columns,titleWidth)
   for _,column in ipairs(columns) do
    local size=column.size or T.listMetaSize
    local text=C.Text(row,"",size,T.muted,column.width)
-   C.SetLineHeight(text,column.size and size+6 or T.listMetaLineHeight,true)
+   C.SetLineHeight(text,column.lineHeight or (column.size and size+6 or T.listMetaLineHeight),true)
    text:SetPoint("LEFT",row,"LEFT",column.x,0);text:SetJustifyH(column.align or "RIGHT");text:SetWordWrap(false)
    row.columns[column.key]=text
   end
@@ -617,8 +723,58 @@ function C.Roster(parent,size,gap)
  end
  return frame
 end
-function C.Slider(parent,width,min,max,step,onChange)
+function C.Slider(parent,width,min,max,step,onChange,options)
  local shell=CreateFrame("Frame",nil,parent);shell:SetSize(width,40)
+ if options and options.commitOnRelease then
+  min,max,step=min or 0,max or 100,step or 1
+  local input=CreateFrame("Frame",nil,shell);input:SetSize(width,24);input:SetPoint("CENTER");input:EnableMouse(true)
+  local track=CreateFrame("Frame",nil,input);track:SetHeight(4);track:SetPoint("LEFT");track:SetPoint("RIGHT");C.Panel(track,T.surfaceHigh,2)
+  local progress=CreateFrame("Frame",nil,track);progress:SetHeight(4);progress:SetPoint("LEFT");C.Panel(progress,T.accent,2)
+  local thumb=CreateFrame("Button",nil,input);thumb:SetSize(8,12)
+  local texture=thumb:CreateTexture(nil,"ARTWORK");texture:SetAllPoints();texture:SetTexture(130871);texture:SetVertexColor(unpack(T.accent))
+  local drag
+  function shell:SetValue(value)
+   value=min+math.floor((value-min)/step+.5)*step
+   self.value=math.max(min,math.min(max,value))
+   local x=input:GetWidth()*(self.value-min)/(max-min)
+   progress:SetWidth(x);thumb:ClearAllPoints();thumb:SetPoint("CENTER",input,"LEFT",x,0)
+   if options.onPreview then options.onPreview(self.value) end
+  end
+  function shell:GetValue() return self.value end
+  function shell:IsDragging() return drag~=nil end
+  function input:GetValue() return shell:GetValue() end
+  function input:SetValue(value) shell:SetValue(value) end
+  local function Sample(first)
+   local x=select(1,GetCursorPosition())/drag.scale-drag.left
+   local raw=min+math.max(0,math.min(1,x/drag.width))*(max-min)
+   -- Preserve the current step across small cursor jitter at its boundary.
+   if first or math.abs(raw-shell.value)>=step*.65 then shell:SetValue(raw) end
+  end
+  function shell:FinishDrag(commit)
+   if not drag then return end
+   input:SetScript("OnUpdate",nil)
+   local previous=drag.value;drag=nil
+   if commit then if onChange then onChange(self.value) end
+   else self:SetValue(previous) end
+  end
+  local function Begin(_,button)
+   if button~="LeftButton" or drag then return end
+   drag={scale=input:GetEffectiveScale(),left=input:GetLeft(),width=input:GetWidth(),value=shell.value}
+   Sample(true)
+   input:SetScript("OnUpdate",function()
+    Sample(false)
+    if not IsMouseButtonDown("LeftButton") then shell:FinishDrag(true) end
+   end)
+  end
+  local function Release(_,button)
+   if button=="LeftButton" and drag then Sample(false);shell:FinishDrag(true) end
+  end
+  input:SetScript("OnMouseDown",Begin);input:SetScript("OnMouseUp",Release)
+  thumb:SetScript("OnMouseDown",Begin);thumb:SetScript("OnMouseUp",Release)
+  shell:HookScript("OnHide",function() shell:FinishDrag(false) end)
+  shell.slider,shell.track,shell.thumb,shell.progress=input,track,thumb,progress;shell:SetValue(min)
+  return shell
+ end
  local slider=CreateFrame("Slider",nil,shell);slider:SetPoint("LEFT",0,0);slider:SetPoint("RIGHT",0,0);slider:SetHeight(24)
  slider:SetOrientation("HORIZONTAL");slider:SetMinMaxValues(min or 0,max or 100);slider:SetValueStep(step or 1);slider:SetObeyStepOnDrag(true)
  local track=CreateFrame("Frame",nil,slider);track:SetFrameLevel(slider:GetFrameLevel()-1);track:SetPoint("LEFT");track:SetPoint("RIGHT");track:SetHeight(4);C.Panel(track,T.surfaceHigh,2)
@@ -627,6 +783,8 @@ function C.Slider(parent,width,min,max,step,onChange)
  progress:SetPoint("RIGHT",thumb,"CENTER",0,0)
  function shell:SetValue(value) self.updating=true;slider:SetValue(value);self.updating=false end
  function shell:GetValue() return slider:GetValue() end
+ function shell:IsDragging() return false end
+ function shell:FinishDrag() end
  slider:SetScript("OnValueChanged",function(_,value)
   shell.value=value;if not shell.updating and onChange then onChange(value) end
  end)
@@ -638,10 +796,8 @@ function C.Segmented(parent,width,entries,onChange)
  frame.buttons={}
  local itemWidth=(width-6-math.max(0,#entries-1)*4)/#entries
  for i,entry in ipairs(entries) do
-  local button=C.Button(frame,entry.label or entry[2],itemWidth,function() frame:SetValue(entry.value or entry[1]);if onChange then onChange(frame.value) end end)
-  button:SetHeight(30);button:SetPoint("LEFT",3+(i-1)*(itemWidth+4),0);button.fill:SetRadius(8);button.hover:SetRadius(8)
-  button:SetTextColors(T.muted,T.text,T.onSecondaryContainer)
-  button.label:SetFont(T.font,13,"");C.SetLineHeight(button.label,20,true);button.value=entry.value or entry[1]
+  local button=C.Button(frame,entry.label or entry[2],itemWidth,function() frame:SetValue(entry.value or entry[1]);if onChange then onChange(frame.value) end end,{variant="compact"})
+  button:SetPoint("LEFT",3+(i-1)*(itemWidth+4),0);button.value=entry.value or entry[1]
   if entry.icon then button.icon=C.Glyph(button,entry.icon,14);button.icon:SetPoint("LEFT",10,0);button.label:ClearAllPoints();button.label:SetPoint("LEFT",button.icon,"RIGHT",6,0) end
   frame.buttons[i]=button
  end
@@ -649,15 +805,15 @@ function C.Segmented(parent,width,entries,onChange)
  return frame
 end
 -- Rounded rail entry with a straight 3 x 18 selection mark.
-function C.Navigation(parent,text,width,action,iconName)
- local button=C.Button(parent,text,width,action);button:SetHeight(48);button.fill:SetRadius(24);button.hover:SetRadius(24)
- button.label:SetFont(T.font,16,"");C.SetLineHeight(button.label,22,true)
+function C.Navigation(parent,text,width,action,iconName,options)
+ local button=C.Button(parent,text,width,action,{height=48,radius=24,fontSize=16,lineHeight=22})
  button.label:ClearAllPoints();button.label:SetPoint("LEFT",iconName and 52 or 16,0)
  if iconName then button.icon=C.Glyph(button,iconName,24);button.icon:SetPoint("LEFT",16,0);button.icon:SetSelected(false) end
  button.mark=button:CreateTexture(nil,"ARTWORK");button.mark:SetColorTexture(unpack(T.accent));button.mark:SetSize(3,18);button.mark:SetPoint("LEFT",4,0);button.mark:Hide()
  local setActive=button.SetActive
  function button:SetActive(value) setActive(self,value);M:Selection(self.mark,value==true) end
  button:SetTextColors(T.muted,T.text,T.onSecondaryContainer)
+ if options then button:SetStyle(options) end
  return button
 end
 -- A generic text tooltip, separate from application-specific roster tooltips.
@@ -690,10 +846,10 @@ function C.Modal(parent,width,height,title,onClose)
  local scrim=CreateFrame("Button",nil,parent);scrim:SetAllPoints(parent);scrim:SetFrameStrata("DIALOG")
  scrim:SetFrameLevel(frame:GetFrameLevel());frame:SetFrameLevel(scrim:GetFrameLevel()+1)
  C.Fill(scrim,{0,0,0,.48});scrim:SetScript("OnClick",Close);scrim:Hide();frame.scrim=scrim
- C.Shadow(frame,28);C.Panel(frame,T.surfaceHigh,28)
+ C.Shadow(frame,T.windowRadius);C.Panel(frame,T.surfaceHigh,T.windowRadius)
  frame.title=C.Text(frame,title,24,T.text,(width or 480)-96);C.SetLineHeight(frame.title,32,true);frame.title:SetPoint("TOPLEFT",24,-24);frame.title:SetWordWrap(false)
- frame.close=C.Button(frame,"",40,Close)
- frame.close:SetPoint("TOPRIGHT",-24,-24);frame.close.label:Hide();C.Glyph(frame.close,"close",20):SetPoint("CENTER")
+ frame.close=C.IconButton(frame,"close",40,Close)
+ frame.close:SetPoint("TOPRIGHT",-24,-24)
  frame.content=CreateFrame("Frame",nil,frame);frame.content:SetPoint("TOPLEFT",24,-80);frame.content:SetPoint("BOTTOMRIGHT",-24,24)
  frame:SetScript("OnShow",function() scrim:Show() end)
  frame:SetScript("OnHide",function(self) scrim:Hide();M:FinishPlacement(self) end)

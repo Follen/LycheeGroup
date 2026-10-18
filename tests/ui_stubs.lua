@@ -185,6 +185,7 @@ function S.Install()
  _G.InputBoxInstructions_OnTextChanged=function() end
  _G.IsActivityLockedForCustomText=function() return false end
  _G.GetDifficultyInfo=function(id) return "Difficulty "..id end
+ _G.GetAverageItemLevel=function() return 650,640,660 end
  _G.IsInRaid=function() return false end
  _G.IsShiftKeyDown=function() return false end
  S.cursorX,S.cursorY=960,540

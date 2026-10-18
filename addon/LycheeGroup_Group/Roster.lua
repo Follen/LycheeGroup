@@ -146,7 +146,14 @@ function R:GetCachedSpec(guid)
 end
 
 function R:Get()
- if not self.dirty then return self.members end
+ if not self.dirty then
+  local version=G.Relations:GetVersion()
+  if self.relationsVersion~=version then
+   for _,member in ipairs(self.members) do G.Relations:Apply(member) end
+   self.relationsVersion=version
+  end
+  return self.members
+ end
  local index,seen=0,{}
  EachUnit(function(unit,raidIndex)
   local key,name,realm=A:UnitIdentity(unit)
@@ -182,10 +189,12 @@ function R:Get()
   if member.specID and (not member.assignedRole or member.assignedRole=="NONE") then member.assignedRole=select(5,GetSpecializationInfoByID(member.specID)) end
   local summary=G.Public(C_PlayerInfo.GetPlayerMythicPlusRatingSummary(unit))
   member.dungeonScore=summary and G.Public(summary.currentSeasonScore)
+  G.Relations:Apply(member)
  end)
  for i=#self.members,index+1,-1 do self.members[i]=nil end
  Prune(seen)
  self.dirty=false
+ self.relationsVersion=G.Relations:GetVersion()
  self:Pump()
  return self.members
 end

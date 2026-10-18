@@ -34,6 +34,8 @@ local S = {
 	-- 秘境
 	activeMap = nil,
 	keystoneLevel = 0,
+	social = { friends = {}, bnet = {}, guild = {} },
+	guidNames = {},
 }
 
 S.now=100
@@ -50,8 +52,41 @@ C_SpecializationInfo.GetSpecialization=function() return nil end
 _G.GetAverageItemLevel=function() return 0,0 end
 _G.C_PaperDollInfo={GetInspectItemLevel=function() return nil end}
 _G.C_PlayerInfo={GetPlayerMythicPlusRatingSummary=function() return nil end}
+_G.BNET_CLIENT_WOW="WoW"
+_G.WOW_PROJECT_ID=1
+_G.BNGetNumFriends=function() return #S.social.bnet end
+_G.C_BattleNet={
+ GetFriendNumGameAccounts=function(index) return #S.social.bnet[index].accounts end,
+ GetFriendGameAccountInfo=function(index,account) return S.social.bnet[index].accounts[account] end,
+}
+_G.C_FriendList={
+ IsLegacyFriendSystemEnabled=function() return true end,
+ GetNumFriends=function() S.socialReads=(S.socialReads or 0)+1;return #S.social.friends end,
+ GetFriendInfoByIndex=function(index) return S.social.friends[index] end,
+ ShowFriends=function() end,
+}
+_G.C_Club={
+ GetGuildClubId=function() return S.social.guildID end,
+ GetClubMembers=function() local ids={};for i=1,#S.social.guild do ids[i]=i end;return ids end,
+ GetMemberInfo=function(_,index) return S.social.guild[index] end,
+}
+_G.C_GuildInfo={GuildRoster=function() end}
+_G.IsInGuild=function() return S.social.guildID~=nil end
+_G.GetPlayerInfoByGUID=function(guid)
+ local info=S.guidNames[guid]
+ if info then return "战士","WARRIOR","人类","Human",2,info.name,info.realm end
+end
 _G.Enum={LFGListFilter={CurrentSeason=64,NotCurrentSeason=128,Recommended=1,NotRecommended=2,PvE=4}}
-_G.bit={bor=function(a,b) return a+b end}
+local function Bits(a,b,union)
+ local result,power=0,1
+ while a>0 or b>0 do
+  local x,y=a%2,b%2
+  if union and (x==1 or y==1) or not union and x==1 and y==1 then result=result+power end
+  a,b,power=math.floor(a/2),math.floor(b/2),power*2
+ end
+ return result
+end
+_G.bit={bor=function(a,b) return Bits(a,b,true) end,band=function(a,b) return Bits(a,b,false) end}
 _G.C_EncounterJournal={GetInstanceForGameMap=function() return nil end}
 _G.LE_PARTY_CATEGORY_HOME=1
 _G.UnitIsGroupAssistant=function() return false end
@@ -185,6 +220,7 @@ _G.C_ChallengeMode = {
 Load.addon("LycheeGroup_Group", "Locale.lua")
 Load.addon("LycheeGroup_Group", "Group.lua")
 Load.addon("LycheeGroup_Group", "RaidBuffs.lua")
+Load.addon("LycheeGroup_Group", "Relations.lua")
 Load.addon("LycheeGroup_Group", "Roster.lua")
 Load.addon("LycheeGroup_Group", "Game.lua")
 Load.addon("LycheeGroup_Group", "Catalog.lua")
@@ -315,13 +351,22 @@ do
 	S.results[12].numCharFriends=1;S.results[12].numBNetFriends=1;S.results[12].numGuildMates=1
 	S.friends[12]={character={"治疗者-晨风号角"},bnet={"战网昵称"},guild={"治疗者-晨风号角"}}
 	G.Results:OnResultUpdated(12);details=G:GetResultDetails(12)
-	T.eq(details.members[1].isCharFriend,true,"原生好友名单标记对应成员")
-	T.eq(details.members[1].isGuildMate,true,"同一成员可以同时是好友与公会成员")
-	T.eq(details.members[1].isBNetFriend,false,"战网显示名不能被猜测成任意成员")
-	T.eq(details.relationships.bnet[1],"战网昵称","无法对应角色的原生战网姓名仍完整保留")
+	T.eq(details.members[1].isCharFriend,nil,"寻队角色好友名单不归因给成员或队长")
+	T.eq(details.members[1].isGuildMate,nil,"寻队公会名单也不归因给成员")
+	T.eq(details.members[1].isBNetFriend,nil,"寻队成员不附带战网关系标记")
+	T.same(details.relationships,{bnet={"战网昵称"},character={"治疗者-晨风号角"},guild={"治疗者-晨风号角"}},"三类原生关系姓名独立保留")
+	T.eq(G:GetResult(12).bnetFriends,1);T.eq(G:GetResult(12).charFriends,1);T.eq(G:GetResult(12).guildMates,1)
+	local relationshipReads=S.playerReads
+	G.Search:SetFilters({friends=true});T.same(G:GetResults(),{12},"原生好友聚合计数保留好友筛选")
+	S.results[12].numBNetFriends=0;G.Results:OnResultUpdated(12)
+	T.same(G:GetResults(),{12},"只有角色好友计数时仍命中好友筛选")
+	S.results[12].numCharFriends=0;S.results[12].numBNetFriends=1;G.Results:OnResultUpdated(12)
+	T.same(G:GetResults(),{12},"只有战网好友计数时仍命中好友筛选")
+	G.Search:SetFilters({guild=true});T.same(G:GetResults(),{12},"原生公会聚合计数保留公会筛选")
+	T.eq(S.playerReads,relationshipReads,"原生关系筛选无需扫描成员名单")
 	S.results[12].numCharFriends=0;S.results[12].numBNetFriends=0;S.results[12].numGuildMates=0
 	G.Results:OnResultUpdated(12);details=G:GetResultDetails(12)
-	T.eq(details.members[1].isCharFriend,false,"关系消失后旧成员标记被清除")
+	T.eq(details.members[1].isCharFriend,nil,"名单变化不生成成员关系标记")
 	T.eq(details.relationships,nil)
 	local reads=S.playerReads
 	T.eq(G:GetResultDetails(12),details,"行与提示共用成员快照")
@@ -361,16 +406,33 @@ do
 	local previousNotes=A.Notes
 	A.Notes=nil;G.Search:SetFilters({notes="noCaution"})
 	T.same(G.Results:GetResults(),{13,12,11},"排除拉黑记录在没有笔记时保留所有队伍")
-	local noteRecords={}
-	A.Notes={Find=function(_,key) return noteRecords[key] end}
-	noteRecords["团长甲-晨风号角"]={type="caution"};G.Results:InvalidateView()
-	T.same(G.Results:GetResults(),{13,12},"不含拉黑记录排除拉黑队长")
-	noteRecords["治疗者-晨风号角"]={type="caution"};G.Results:InvalidateView()
-	T.same(G.Results:GetResults(),{13},"不含拉黑记录也排除普通队员命中的队伍")
-	noteRecords["治疗者-晨风号角"]={type="positive"};G.Results:InvalidateView()
-	T.same(G.Results:GetResults(),{13,12},"推荐记录不被拉黑排除条件误杀")
+	local members12,members13,count12,leader12=S.players[12],S.players[13],S.results[12].numMembers,S.results[12].leaderName
+	S.players[12]={{name=leader12,classFilename="WARRIOR",isLeader=true},{name="治疗者-晨风号角",classFilename="PRIEST"}}
+	S.players[13]={{name="身份未公开的队长-银松森林",classFilename="MAGE",isLeader=true}}
+	S.results[12].numMembers=2;G.Results:OnResultUpdated(12);G.Results:OnResultUpdated(13)
+	local noteRecords={["治疗者-晨风号角"]={type="positive"},["身份未公开的队长-银松森林"]={type="positive"}}
+	local noteQueries={}
+	A.Notes={Find=function(_,key) noteQueries[key]=(noteQueries[key] or 0)+1;return noteRecords[key] end}
+	local noteMemberReads=S.playerReads
 	G.Search:SetFilters({notes="positive"})
-	T.same(G.Results:GetResults(),{12},"推荐玩家仍使用包含匹配")
+	T.same(G.Results:GetResults(),{},"只有非队长的推荐笔记不能命中寻队筛选，队长完整身份缺失也不借用成员身份")
+	G.Search:SetFilters({notes="any"});T.same(G.Results:GetResults(),{},"任意笔记筛选也只查询完整身份的队长")
+	noteRecords["治疗者-晨风号角"].type="caution"
+	G.Search:SetFilters({notes="noCaution"});T.same(G.Results:GetResults(),{13,12,11},"非队长拉黑记录不在入队前排除整队")
+	noteRecords["团长甲-晨风号角"]={type="caution"};G.Results:InvalidateView()
+	T.same(G.Results:GetResults(),{13,12},"不含拉黑记录仍排除完整身份命中的拉黑队长")
+	noteRecords[leader12]={type="positive"};G.Search:SetFilters({notes="positive"})
+	T.same(G.Results:GetResults(),{12},"完整身份的推荐队长命中，同行的拉黑记录不改变队长结果")
+	noteRecords[leader12].type="neutral";G.Search:SetFilters({notes="neutral"})
+	T.same(G.Results:GetResults(),{12},"中性笔记使用同一队长范围")
+	G.Search:SetFilters({notes="any"});T.same(G.Results:GetResults(),{12,11},"任意笔记保留不同类型的已知队长")
+	S.results[12].leaderName="团长乙";G.Results:OnResultUpdated(12)
+	G.Search:SetFilters({notes="neutral"});T.same(G.Results:GetResults(),{},"裸名队长不被当成本服完整身份，也不扫描名单补猜")
+	T.eq(S.playerReads,noteMemberReads,"笔记筛选不读取队员详情")
+	T.eq(noteQueries["治疗者-晨风号角"],nil,"寻队不查询非队长的笔记")
+	T.eq(noteQueries["身份未公开的队长-银松森林"],nil,"不使用成员名单推断结果未提供的队长身份")
+	S.players[12],S.players[13],S.results[12].numMembers,S.results[12].leaderName=members12,members13,count12,leader12
+	G.Results:OnResultUpdated(12);G.Results:OnResultUpdated(13)
 	A.Notes=previousNotes
 	G.Search:SetFilters({})
 end
@@ -1707,7 +1769,7 @@ do
  S.friends[9004]={character={"Stable-Away"}}
  G.Results:BeginSearch(20001);S.resultIDs={9004};G.Results:CommitResults(20001)
  local details=G:GetResultDetails(9004);local held,second=details.members[1],details.members[2]
- T.eq(held.rating,1400);T.eq(held.isCharFriend,true)
+ T.eq(held.rating,1400);T.eq(held.isCharFriend,nil,"a full leader identity retains rating data without search relationship attribution")
  S.results[9004].activityIDs={9005};S.results[9004].numCharFriends=0
  S.players[9004]={
   {name="Stable-Away",classFilename="WARRIOR",className="Warrior",specName="Fury",assignedRole="DAMAGER",isLeader=true,lfgRoles=4},
@@ -1716,7 +1778,7 @@ do
  T.ok(details.members[1]==held,"fresh native tables reuse the same explicit identity at the same position")
  T.eq(held.specName,"Fury");T.eq(held.lfgRoles,4,"all native fields survive the copy")
  T.eq(held.areaName,nil,"native fields that disappear do not survive in the reused member")
- T.eq(held.isLeaver,nil);T.eq(held.isCharFriend,false);T.eq(held.ratingKind,"dungeon")
+ T.eq(held.isLeaver,nil);T.eq(held.isCharFriend,nil);T.eq(held.ratingKind,"dungeon")
  T.eq(held.rating,nil);T.eq(held.pvpRatingInfo,nil,"old PvP metadata is cleared when the activity changes")
  S.players[9004][1]=held -- Existing fixtures may return the already normalized object.
  G.Results:OnResultUpdated(9004);G:GetResultDetails(9004)
@@ -1831,6 +1893,185 @@ do
  G.Applicants:Clear();T.eq(G:GetApplicantDungeonScores(member),nil,"a retired member cannot query another applicant")
  C_LFGList.GetApplicantBestDungeonScore,C_LFGList.GetApplicantDungeonScoreForListing=best,current
  S.activeEntry,S.applicants,S.applicantMembers=entry,applicants,members;G.Listing:OnEntryUpdate()
+end
+
+-- Search relationships stay group-level even when local character identities
+-- are complete. Name-only members still do not acquire guessed player keys.
+do
+ local view={};G:Attach(view,"search")
+ S.social.bnet={{accountName="晴昼秋岚",accounts={
+  {clientProgram="WoW",wowProjectID=1,isOnline=true,isInCurrentRegion=true,characterName="浅墨影",realmName="白银之手",playerGuid="Player-Shallow"},
+ }}}
+ S.results[8720]={activityIDs={501},name="H56",leaderName="Lauren-凤凰之神",numMembers=2,numBNetFriends=1,numCharFriends=0,numGuildMates=0}
+ S.players[8720]={{name="Lauren",classFilename="DRUID",specName="恢复",isLeader=true},{name="浅墨影-白银之手",classFilename="ROGUE",specName="敏锐"}}
+ S.friends[8720]={bnet={"晴昼秋岚"}}
+ Fire("BN_FRIEND_INFO_CHANGED",1)
+ G.Results:BeginSearch(23000);S.resultIDs={8720};G.Results:CommitResults(23000)
+ local record=G:GetResult(8720);local details=G:GetResultDetails(8720)
+ T.eq(record.bnetFriends,1,"the result summary knows that this group contains a Battle.net friend")
+ T.eq(details.members[1].nameKey,"Lauren-凤凰之神","the native leader flag uses the full leader identity already supplied by the search result")
+ T.eq(details.members[2].name,"浅墨影-白银之手","the full native name is preserved for the search tooltip")
+ T.eq(details.members[2].nameKey,"浅墨影-白银之手");T.eq(details.members[2].isBNetFriend,nil,"even a known full character identity is not attributed a search relationship")
+ T.same(details.relationships,{bnet={"晴昼秋岚"},character={},guild={}},"the native Battle.net name stays separate from the character roster")
+ S.players[8720][2].name="浅墨影";G.Results:OnResultUpdated(8720);details=G:GetResultDetails(8720)
+ T.eq(details.members[2].nameKey,nil,"name-only data does not acquire a guessed canonical identity")
+ T.eq(details.members[2].isBNetFriend,nil,"name-only search data also has no member relationship attribution")
+ T.eq(details.members[1].isBNetFriend,nil,"the leader has no search relationship attribution either")
+ S.social.bnet[1].accounts[2]={clientProgram="WoW",wowProjectID=1,isOnline=true,isInCurrentRegion=true,characterName="浅墨影",realmName="燃烧之刃"}
+ Fire("BN_FRIEND_INFO_CHANGED",1)
+ T.eq(G:GetResultDetails(8720).members[2].isBNetFriend,nil,"local same-name relationships do not change search member data")
+ S.social.bnet[1].accounts[2]=nil;Fire("BN_FRIEND_INFO_CHANGED",1)
+ S.players[8720][2].name="浅墨影-无关服务器";G.Results:OnResultUpdated(8720)
+ T.eq(G:GetResultDetails(8720).members[2].isBNetFriend,nil,"a different realm also leaves the search member unclassified")
+ S.players[8720][2].name="浅墨影";S.players[8720][3]={name="浅墨影-白银之手",classFilename="ROGUE"};S.results[8720].numMembers=3
+ G.Results:OnResultUpdated(8720);details=G:GetResultDetails(8720)
+ T.eq(details.members[2].isBNetFriend,nil,"duplicate short names do not cause search member attribution")
+ T.eq(details.members[3].isBNetFriend,nil,"a second fully named search member stays unclassified")
+ S.players[8720][3]=nil;S.results[8720].numMembers=2;G.Results:OnResultUpdated(8720)
+ T.eq(G:GetResultDetails(8720).members[2].isBNetFriend,nil,"a new member batch retains no relationship markers")
+ local reads=S.playerReads;S.social.bnet={};Fire("BN_FRIEND_INFO_CHANGED",1)
+ T.eq(G:GetResultDetails(8720).members[2].isBNetFriend,nil,"observer changes do not attribute cached search members")
+ T.eq(S.playerReads,reads,"a relationship update reuses the existing native member snapshot")
+ T.eq(G:GetResult(8720).bnetFriends,1,"native aggregate evidence is preserved independently of local indexes")
+ T.eq(G:GetResultDetails(8720).relationships.bnet[1],"晴昼秋岚","the native name list remains available until the search result changes")
+ S.social.bnet={};S.results[8720],S.players[8720],S.friends[8720]=nil,nil,nil;Fire("BN_FRIEND_INFO_CHANGED",1);G:Detach(view)
+end
+
+-- Relationships belong to the observer, including non-manager applicants.
+do
+ local entry,applicants,applicantMembers=S.activeEntry,S.applicants,S.applicantMembers
+ S.activeEntry=nil;G.Listing:OnEntryUpdate()
+ local view={};G:Attach(view,"search")
+ S.social.bnet={{displayName="浅墨影",accounts={
+  {clientProgram="WoW",wowProjectID=1,isOnline=true,isInCurrentRegion=true,characterName="Other",realmName="Away"},
+  {clientProgram="WoW",wowProjectID=1,isOnline=true,isInCurrentRegion=true,characterName="晴昼秋岚",realmName="燃烧之刃",playerGuid="Player-Bnet"},
+  {clientProgram="WoW",wowProjectID=2,isOnline=true,isInCurrentRegion=true,characterName="Classic",realmName="Away"},
+ }}}
+ S.social.friends={{name="RoleFriend-Away",guid="Player-Friend"}}
+ S.social.guildID=7;S.social.guild={{name="晴昼秋岚-燃烧之刃",guid="Player-Bnet"}}
+ S.results[8701]={activityIDs={502},name="Observer friends",leaderName="Leader-Away",numMembers=3,numBNetFriends=0,numCharFriends=0,numGuildMates=0}
+ S.players[8701]={
+  {name="Leader-Away",classFilename="WARRIOR",isLeader=true},
+  {name="晴昼秋岚-燃烧之刃",classFilename="PRIEST"},
+  {name="浅墨影-Away",classFilename="MAGE"},
+ }
+ G.Results:BeginSearch(23001);S.resultIDs={8701};G.Results:CommitResults(23001)
+ G.Search:SetFilters({friends=true})
+ T.eq(table.concat(G:GetResults(),","),"","search relationship filters use native aggregate evidence without attributing local members")
+ local record=G:GetResult(8701);local details=G:GetResultDetails(8701)
+ T.eq(record.bnetFriends,0,"observer evidence does not rewrite native aggregate counts")
+ T.eq(details.members[2].isBNetFriend,nil,"local Battle.net identities are not attached to search members")
+ T.eq(details.members[2].isGuildMate,nil,"local guild identities are not attached to search members")
+ T.eq(details.members[3].isBNetFriend,nil,"Battle.net nicknames never identify a search roster member")
+ local reads=S.playerReads;G.Search:SetFilters({guild=true});T.eq(table.concat(G:GetResults(),","),"")
+ T.eq(S.playerReads,reads,"relationship filters do not read native members")
+ local notifications=0;local unsub=G:Subscribe(function(kind) if kind=="relations" then notifications=notifications+1 end end)
+ S.social.bnet[1].accounts={};S.social.guild={};Fire("BN_FRIEND_INFO_CHANGED",1);Fire("GUILD_ROSTER_UPDATE",true)
+ T.eq(table.concat(G:GetResults(),","),"","relationship changes invalidate the current filtered result set")
+ T.eq(G:GetResultDetails(8701).members[2].isBNetFriend,nil);T.eq(details.members[2].isGuildMate,nil)
+ T.eq(S.playerReads,reads,"observer changes do not reread unchanged native search members")
+ T.eq(notifications,0);Stubs.AdvanceClock(0)
+ T.eq(notifications,1,"a burst of relationship events produces one display notification")
+ S.social.bnet[1].accounts={{clientProgram="WoW",wowProjectID=1,isOnline=true,isInCurrentRegion=true,characterName="晴昼秋岚",realmName="燃烧之刃"}}
+ Fire("BN_FRIEND_INFO_CHANGED",1)
+ local leader,assistant,inGroup=_G.UnitIsGroupLeader,_G.UnitIsGroupAssistant,_G.IsInGroup
+ _G.UnitIsGroupLeader=function() return false end;_G.UnitIsGroupAssistant=function() return false end
+ _G.IsInGroup=function() return true end
+ S.activeEntry={activityIDs={502}};G.Listing:OnEntryUpdate()
+ S.applicants={[8702]={applicationStatus="applied",numMembers=3,displayOrderID=1}}
+ S.applicantMembers={[8702]={
+  {name="晴昼秋岚",class="PRIEST"},
+  {name="RoleFriend-Away",class="MAGE"},
+  {name="Unknown-Away",class="WARRIOR",relationship="friend"},
+ }}
+ G:RefreshApplicants();local app=G:GetApplicant(8702)
+ T.eq(app.members[1].isBNetFriend,true,"ordinary members get relationships relative to their own Battle.net friends")
+ T.eq(app.members[2].isCharFriend,true)
+ T.eq(app.members[3].isFriend,true,"native generic friendship remains usable without claiming Battle.net attribution")
+ T.eq(app.members[3].isBNetFriend,false);T.eq(app.members[3].isCharFriend,false)
+ local inviteCalls=#S.inviteCalls;T.eq(G:Invite(8702),false);T.eq(#S.inviteCalls,inviteCalls,"relationship display does not grant management permission")
+ local applicantReads=S.applicantInfoReads
+ S.social.bnet[1].accounts={};Fire("BN_FRIEND_INFO_CHANGED",1)
+ T.eq(G:GetApplicant(8702).members[1].isBNetFriend,false,"cached name-only applicants lose a removed Battle.net relationship")
+ S.social.friends={};Fire("FRIENDLIST_UPDATE")
+ T.eq(G:GetApplicant(8702).members[2].isCharFriend,false,"cached applicants lose a removed local relationship")
+ T.eq(S.applicantInfoReads,applicantReads,"relationship changes do not refetch applicant data")
+ local bare={name="RoleFriend",guid="Player-Friend"};S.guidNames["Player-Friend"]={name="RoleFriend",realm="Away"}
+ S.social.friends={{name="RoleFriend",guid="Player-Friend"}};Fire("FRIENDLIST_UPDATE")
+ G.Relations:Apply(bare);T.eq(bare.isCharFriend,true,"a GUID resolves a native bare friend name to its complete realm identity")
+ local sameName={nameKey="RoleFriend-Elsewhere"};G.Relations:Apply(sameName);T.eq(sameName.isCharFriend,false,"a matching bare name on another realm is unrelated")
+ local indexed=S.socialReads;for i=1,20 do G.Relations:Apply(bare) end;T.eq(S.socialReads,indexed,"a stable observer index is shared by every member binding")
+ local fallback={nameKey="Unlisted-Away",relationship="guild"};G.Relations:Apply(fallback);T.eq(fallback.isGuildMate,true,"native guild evidence remains a fallback")
+ S.social.friends[#S.social.friends+1]={name="Unqualified-晨风号角"};Fire("FRIENDLIST_UPDATE")
+ local incomplete={name="Unqualified",realm=""};G.Relations:Apply(incomplete)
+ T.eq(incomplete.isCharFriend,false,"an empty remote realm does not guess a local character identity")
+ S.results[8701].numBNetFriends=1;S.friends[8701]={bnet={"浅墨影"}}
+ G.Results:OnResultUpdated(8701);G.Search:SetFilters({friends=true})
+ T.eq(table.concat(G:GetResults(),","),"8701","unattributable native aggregate evidence remains valid for filtering")
+ details=G:GetResultDetails(8701)
+ T.eq(details.members[3].isBNetFriend,nil,"a native Battle.net display name cannot attribute a same-named unrelated character")
+ local inRaid,partyCount=_G.IsInRaid,_G.GetNumSubgroupMembers
+ _G.IsInRaid=function() return false end;_G.GetNumSubgroupMembers=function() return 1 end
+ Stubs.SetUnit("party1",{name="RoleFriend",realm="Away",class="MAGE",guid="Player-Friend"})
+ G:InvalidateRoster("group")
+ local rosterFriend;for _,member in ipairs(G:GetRoster()) do if member.guid=="Player-Friend" then rosterFriend=member end end
+ T.ok(rosterFriend and rosterFriend.isCharFriend,"the current roster consumes the same observer relationship index")
+ S.social.guild[#S.social.guild+1]={name="本人-晨风号角",guid="P-0"};Fire("GUILD_ROSTER_UPDATE",true)
+ local ownMember;for _,member in ipairs(G:GetRoster()) do if member.isSelf then ownMember=member;break end end
+ T.ok(ownMember and ownMember.isSelf)
+ T.eq(ownMember.isGuildMate,false,"the observer is not shown as their own guildmate")
+ T.eq(ownMember.isBNetFriend,false);T.eq(ownMember.isCharFriend,false);T.eq(ownMember.isFriend,false)
+ Stubs.SetUnit("party1",nil);_G.IsInRaid,_G.GetNumSubgroupMembers=inRaid,partyCount
+ local social=S.social;S.social={friends={},bnet={},guild={}}
+ Fire("FRIENDLIST_UPDATE");S.results[8701].numBNetFriends=0
+ G.Results:BeginSearch(23002);G.Results:CommitResults(23002)
+ local emptyReads=S.playerReads
+ G.Search:SetFilters({friends=true});T.eq(#G:GetResults(),0)
+ T.eq(S.playerReads,emptyReads,"zero native aggregate counts never fetch members to infer a relationship")
+ S.social=social
+ unsub();_G.UnitIsGroupLeader,_G.UnitIsGroupAssistant,_G.IsInGroup=leader,assistant,inGroup
+ S.activeEntry=nil;G.Listing:OnEntryUpdate();G.Applicants:Clear();G:Detach(view)
+ T.eq(#Stubs.FramesWithEvent("BN_FRIEND_INFO_CHANGED"),0,"the final consumer releases relationship events")
+ T.eq(next(G.Relations.names),nil);T.eq(next(G.Relations.guids),nil);T.eq(next(G.Relations.shortNames),nil,"inactive indexes do not retain former friend records or short names")
+ T.eq(G.Relations.timer,nil,"the final consumer cancels a queued relationship repaint")
+ G.Relations:Apply({guid="Player-Friend"});T.ok(next(G.Relations.guids),"a one-off hidden reader can obtain current relationships")
+ Stubs.AdvanceClock(0);T.eq(next(G.Relations.guids),nil);T.eq(G.Relations.timer,nil,"a one-off hidden read releases its index after that frame")
+ S.social={friends={},bnet={},guild={}};S.guidNames={};S.results[8701],S.players[8701],S.friends[8701]=nil,nil,nil
+ S.activeEntry,S.applicants,S.applicantMembers=entry,applicants,applicantMembers;G.Listing:OnEntryUpdate()
+end
+
+-- The search-only note policy does not narrow joined-roster reminders. Use the
+-- production reminder owner and native roster events with a local note lookup.
+do
+ local previousNotes,previousLocale,reminders=A.Notes,A.NotesLocale,A.db.reminders
+ Load.addon("LycheeGroup_Notes","Locale.lua")
+ local noteRecords={
+  ["团长乙-晨风号角"]={name="团长乙",server="晨风号角",reason="队长记录",type="positive"},
+  ["治疗者-银松森林"]={name="治疗者",server="银松森林",reason="同行记录",type="caution"},
+ }
+ A.Notes={L=A.NotesLocale,Records={Find=function(key) return noteRecords[key] end}}
+ Load.addon("LycheeGroup_Notes","RosterReminder.lua")
+ local reminder=A.Notes.RosterReminder
+ local chatBefore=#Stubs.ChatMessages()
+ A.db.reminders="all";reminder.Start()
+ Stubs.SetUnit("party1",{name="团长乙",realm="晨风号角",class="WARRIOR",classID=1,guid="Reminder-Leader"})
+ Stubs.SetUnit("party2",{name="治疗者",realm="银松森林",class="PRIEST",classID=5,guid="Reminder-Member"})
+ Stubs.FireEvent("GROUP_JOINED")
+ T.eq(#Stubs.ChatMessages()-chatBefore,2,"入队后核对全队记录，普通队员不受寻队队长范围限制")
+ local messages=table.concat(Stubs.ChatMessages(),"\n")
+ T.ok(messages:find("团长乙-晨风号角",1,true));T.ok(messages:find("治疗者-银松森林",1,true))
+ T.ok(messages:find("同行记录",1,true),"非队长的提醒仍包含其真实记录理由")
+ G:InvalidateRoster("group")
+ local joinedMember
+ for _,member in ipairs(G:GetRoster()) do if member.nameKey=="治疗者-银松森林" then joinedMember=member end end
+ T.ok(joinedMember,"已入队名单保留非队长完整身份供笔记和详情读取")
+ Stubs.FireEvent("GROUP_ROSTER_UPDATE")
+ T.eq(#Stubs.ChatMessages()-chatBefore,2,"重复队伍事件不重复播报")
+ reminder.Stop();A.db.reminders="positive";reminder.Start()
+ T.eq(#Stubs.ChatMessages()-chatBefore,3,"入队后的全队核对仍遵循原有提醒类型设置")
+ T.ok(Stubs.ChatMessages()[#Stubs.ChatMessages()]:find("团长乙-晨风号角",1,true))
+ reminder.Stop();Stubs.SetUnit("party1",nil);Stubs.SetUnit("party2",nil);G:InvalidateRoster("group")
+ A.Notes,A.NotesLocale,A.db.reminders=previousNotes,previousLocale,reminders
 end
 
 _G.LycheeGroupDB = nil

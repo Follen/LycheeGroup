@@ -7,15 +7,15 @@ local FORM=math.min(700,MAIN-48)
 local CONTENT=MAIN-48
 local BATCH_WIDTH=CONTENT-C.listRightInset
 local columns={
- name={x=12,width=267,align="LEFT"},comment={x=295,width=115,align="LEFT"},
- role={x=422,width=66,align="CENTER"},ilvl={x=500,width=78,align="RIGHT"},
- rating={x=590,width=64,align="RIGHT"},actions={x=BATCH_WIDTH-96,width=84,align="CENTER"},
+ name={x=12,width=267,align="LEFT"},role={x=295,width=66,align="CENTER"},
+ rating={x=373,width=64,align="RIGHT"},ilvl={x=449,width=78,align="RIGHT"},
+ comment={x=539,width=115,align="LEFT"},actions={x=BATCH_WIDTH-96,width=84,align="CENTER"},
 }
 local MEMBER_HEIGHT,MEMBER_STRIDE=56,60
 local FAVORITE_HEIGHT=116
 local noRatingColumns={
- name=columns.name,comment={x=295,width=191,align="LEFT"},
- role={x=498,width=66,align="CENTER"},ilvl={x=576,width=78,align="RIGHT"},
+ name=columns.name,role=columns.role,ilvl={x=373,width=78,align="RIGHT"},
+ comment={x=463,width=191,align="LEFT"},
  rating=columns.rating,actions=columns.actions,
 }
 local applicantSorts={{value="newest",label=L.newest},{value="score",label=L.rating},{value="ilvl",label=L.itemLevel}}
@@ -79,14 +79,6 @@ local function Minimum(app,key)
  end
  return value or -1
 end
-local function FavoriteButton(parent,action)
- local button=C.Button(parent,"",40,action);button:SetSize(40,40)
- button.icon=C.Icon(button,24);button.icon:SetPoint("CENTER")
- button:HookScript("OnEnter",function() P:ShowFavoriteHint(button) end)
- button:HookScript("OnLeave",function() if P.favoriteHint then P.favoriteHint:Hide() end end)
- button:HookScript("OnHide",function() if P.favoriteHint and P.favoriteHint:IsOwned(button) then P.favoriteHint:Hide() end end)
- return button
-end
 function P:Build(parent)
  local root=CreateFrame("Frame",nil,parent);root:SetAllPoints();self.frame=root
  local surface=CreateFrame("Frame",nil,root);surface:SetSize(MAIN,T.contentHeight);surface:SetPoint("TOPLEFT");C.Panel(surface,T.surfaceLow,24);self.surface=surface
@@ -94,18 +86,17 @@ function P:Build(parent)
  self.heading=C.Text(f,L.create,24);C.SetLineHeight(self.heading,32,true);self.heading:SetPoint("TOPLEFT")
  local desc=CreateFrame("Frame",nil,f);desc:SetSize(FORM,324);desc:SetPoint("TOPLEFT",0,-56);self.desc=desc
  self.activityLabel=C.Text(desc,S("活动与难度","Activity and difficulty"),14);C.SetLineHeight(self.activityLabel,20,true);self.activityLabel:SetPoint("TOPLEFT")
- self.pickerTrigger=C.Button(desc,"",340,function() P:TogglePicker() end);self.pickerTrigger.isChoice=true;self.pickerTrigger:SetHeight(52);self.pickerTrigger:SetPoint("TOPLEFT",0,-28);self.pickerTrigger.fill:SetRadius(4);self.pickerTrigger.hover:SetRadius(4);self.pickerTrigger.fill:SetColor(T.selectBackground);self.pickerTrigger.fill:Show()
+ self.pickerTrigger=C.ChoiceTrigger(desc,340,function() P:TogglePicker() end,{height=52});self.pickerTrigger.label:Hide();self.pickerTrigger:SetPoint("TOPLEFT",0,-28)
  self.pickerIcon=C.Icon(self.pickerTrigger,28);self.pickerIcon:SetPoint("LEFT",12,0)
  self.pickerName=C.Text(self.pickerTrigger,"",14,T.text,260);C.SetLineHeight(self.pickerName,20,true);self.pickerName:SetPoint("TOPLEFT",52,-4)
  self.pickerContext=C.Text(self.pickerTrigger,"",14,T.muted,260);C.SetLineHeight(self.pickerContext,20,true);self.pickerContext:SetPoint("TOPLEFT",52,-26)
- C.Glyph(self.pickerTrigger,"chevron",12):SetPoint("RIGHT",-12,0)
  self.difficultyChoice=C.Choice(desc,FORM-352,function() return P:DifficultyItems() end,function(value) form.activityID=value;P:RefreshPicker() end);self.difficultyChoice:SetHeight(36);self.difficultyChoice:SetPoint("TOPLEFT",352,-32)
  self.difficultyGroup=CreateFrame("Frame",nil,desc);self.difficultyGroup:SetSize(FORM-352,36);self.difficultyGroup:SetPoint("TOPLEFT",352,-32);C.Panel(self.difficultyGroup,T.panel,8)
  self.difficultyButtons={}
- for i=1,4 do local b=C.Button(self.difficultyGroup,"",72,function(button) form.activityID=button.value;P:RefreshPicker() end);b:SetHeight(30);b:SetTextColors(T.muted,T.text,T.onSecondaryContainer);b.fill:SetRadius(8);b.hover:SetRadius(8);b.label:SetFont(T.font,13,"");C.SetLineHeight(b.label,20,true);self.difficultyButtons[i]=b end
+ for i=1,4 do self.difficultyButtons[i]=C.Button(self.difficultyGroup,"",72,function(button) form.activityID=button.value;P:RefreshPicker() end,{variant="compact"}) end
  self.difficultyFixedSurface=CreateFrame("Frame",nil,desc);self.difficultyFixedSurface:SetSize(52,38);C.Panel(self.difficultyFixedSurface,T.field,8)
  self.difficultyFixed=C.Text(self.difficultyFixedSurface,"",14,T.muted);C.SetLineHeight(self.difficultyFixed,20,true);self.difficultyFixed:SetPoint("CENTER")
- self.favorite=FavoriteButton(desc,function() UI:GetGroup().Presets:ToggleFavorite(P:FormData()) end);self.favorite:SetPoint("TOPRIGHT",0,-34)
+ self.favorite=C.IconButton(desc,nil,40,function() UI:GetGroup().Presets:ToggleFavorite(P:FormData()) end,{iconSize=24});self.favorite:SetPoint("TOPRIGHT",0,-34)
  self.favoriteIcon=self.favorite.icon
  self.titleLabel=C.Text(desc,L.title,14,T.muted);C.SetLineHeight(self.titleLabel,20,true);self.titleLabel:SetPoint("TOPLEFT",0,-92)
  self.titleShell=Shell(desc,FORM,44,0,-116)
@@ -136,7 +127,10 @@ function P:Build(parent)
   option:ClearAllPoints();option:SetPoint("TOPLEFT",optionX,-112);optionX=optionX+option:GetWidth()+28
  end
  for _,label in ipairs({self.ilvlLabel,self.scoreLabel,self.styleLabel}) do C.SetLineHeight(label,20,true) end
- self.ilvl.box:HookScript("OnTextChanged",function() P:ValidateForm() end);self.score.box:HookScript("OnTextChanged",function() P:ValidateForm() end)
+ self.ilvl.box:HookScript("OnTextChanged",function(_,userInput)
+  if userInput then P:CorrectItemLevel() end
+  P:ValidateForm()
+ end);self.score.box:HookScript("OnTextChanged",function() P:ValidateForm() end)
  local manage=CreateFrame("Frame",nil,surface);manage:SetSize(CONTENT,T.contentHeight-48);manage:SetPoint("TOPLEFT",24,-24);self.manage=manage
  self.sIcon=C.Icon(manage,44);self.sIcon:SetPoint("TOPLEFT",0,-1)
  self.sMeta=C.Text(manage,"",14,T.muted,CONTENT-280);self.sMeta:SetFont(T.font,14,"");C.SetLineHeight(self.sMeta,20,true);self.sMeta:SetPoint("TOPLEFT",56,0);self.sMeta:SetMaxLines(1);self.sMeta:SetWordWrap(false)
@@ -146,10 +140,10 @@ function P:Build(parent)
   state.editing=true;P:PrepareForm(true);P:RefreshMode()
  end);self.editListing:SetPoint("TOPRIGHT",-108,-3);self.editListing:SetHeight(40)
  self.cancelListing=C.Button(manage,S("取消招募","End listing"),100,function() local ok,err=UI:GetGroup():RemoveListing();P:SetManageError(not ok and (err or L.failed) or "") end);self.cancelListing:SetPoint("TOPRIGHT",0,-3);self.cancelListing:SetHeight(40)
- self.listingFavorite=FavoriteButton(manage,function()
+ self.listingFavorite=C.IconButton(manage,nil,40,function()
   local group=UI:GetGroup();local listing=group:GetListing()
   if listing then group.Presets:ToggleFavorite(listing) end
- end);self.listingFavorite:SetPoint("TOPRIGHT",0,-3)
+ end,{iconSize=24});self.listingFavorite:SetPoint("TOPRIGHT",0,-3)
  self.cancelListing:ClearAllPoints();self.cancelListing:SetPoint("RIGHT",self.listingFavorite,"LEFT",-8,0)
  self.cancelListing:SetWidth(FitText(self.cancelListing.label)+34);self.editListing:SetWidth(FitText(self.editListing.label)+34)
  self.editListing:ClearAllPoints();self.editListing:SetPoint("RIGHT",self.cancelListing,"LEFT",-8,0)
@@ -159,14 +153,14 @@ function P:Build(parent)
  self.roleFilters={}
  local filterSurface=CreateFrame("Frame",nil,manage);filterSurface:SetSize(356,36);filterSurface:SetPoint("TOPLEFT",0,-114);C.Panel(filterSurface,T.panel,8);self.roleFilterSurface=filterSurface
  for i,key in ipairs({"ALL","TANK","HEALER","DAMAGER"}) do
-  local b=C.Button(filterSurface,key=="ALL" and L.all or roles[key],84,function() state.role=key~="ALL" and key or nil;P:RefreshApplicants() end);b:SetHeight(30);b:SetTextColors(T.muted,T.text,T.onSecondaryContainer);b.fill:SetRadius(8);b.hover:SetRadius(8);b:SetPoint("TOPLEFT",3+(i-1)*88,-3);b.label:SetFont(T.font,13,"");if key~="ALL" then local roleIcon=C.Icon(b,16);roleIcon:SetPoint("LEFT",12,0);UI:SetRoleIcon(roleIcon,key);b.label:ClearAllPoints();b.label:SetPoint("LEFT",roleIcon,"RIGHT",6,0) end;self.roleFilters[key]=b
+  local b=C.Button(filterSurface,key=="ALL" and L.all or roles[key],84,function() state.role=key~="ALL" and key or nil;P:RefreshApplicants() end,{variant="compact"});b:SetPoint("TOPLEFT",3+(i-1)*88,-3);if key~="ALL" then local roleIcon=C.Icon(b,16);roleIcon:SetPoint("LEFT",12,0);UI:SetRoleIcon(roleIcon,key);b.label:ClearAllPoints();b.label:SetPoint("LEFT",roleIcon,"RIGHT",6,0) end;self.roleFilters[key]=b
  end
  self.sortChoice=C.Choice(manage,144,function() return P.hideApplicantRating and noRatingApplicantSorts or applicantSorts end,function(value) state.sort=value;P:RefreshApplicants() end);self.sortChoice:SetHeight(44);self.sortChoice:SetPoint("TOPRIGHT",0,-110);self.sortChoice:SetValue("newest",L.newest)
  local filterX=3
  for _,key in ipairs({"ALL","TANK","HEALER","DAMAGER"}) do local button=self.roleFilters[key];C.SetLineHeight(button.label,20,true);button:SetWidth(FitText(button.label)+24+(key~="ALL" and 22 or 0));button:ClearAllPoints();button:SetPoint("TOPLEFT",filterX,-3);filterX=filterX+button:GetWidth()+4 end
  filterSurface:SetWidth(filterX-1)
  self.applicantHeaders={}
- for _,h in ipairs({{"name",S("申请者","Applicant")},{"comment",S("申请备注","Application note")},{"role",L.role},{"ilvl",L.itemLevel},{"rating",L.rating},{"actions",S("操作","Actions")}}) do
+ for _,h in ipairs({{"name",S("申请者","Applicant")},{"role",L.role},{"rating",L.rating},{"ilvl",L.itemLevel},{"comment",S("备注","Note")},{"actions",S("操作","Actions")}}) do
   local col=columns[h[1]];local label=C.Header(manage,h[2],col.x,-167,col.width);label:SetJustifyH(col.align);self.applicantHeaders[h[1]]=label
  end
  self.batchScroll=CreateFrame("ScrollFrame",nil,manage);self.batchScroll:SetPoint("TOPLEFT",0,-BATCH_TOP);self.batchScroll:SetSize(BATCH_WIDTH,BATCH_MAX_HEIGHT)
@@ -200,20 +194,12 @@ function P:SetFormError(message)
  self.desc:ClearAllPoints();self.desc:SetPoint("TOPLEFT",0,-56-offset)
  self.req:ClearAllPoints();self.req:SetPoint("TOPLEFT",0,-356-offset)
 end
-function P:ShowFavoriteHint(button)
- if not button:IsEnabled() then return end
- if not self.favoriteHint then self.favoriteHint=C.Tooltip(self.frame,180) end
- self.favoriteHint:SetOwner(button,"ANCHOR_TOP")
- self.favoriteHint:AddLine(button.selected and S("取消收藏","Remove favorite") or S("收藏当前条件","Save current settings"))
- self.favoriteHint:Show()
-end
 function P:RefreshFavoriteState()
  local group=UI:GetGroup()
  local function Update(button,settings)
   local available=settings~=nil and settings.activityID~=nil
   button.selected=available and group.Presets:Find(settings)~=nil or false;button:SetAvailable(available)
   button.icon:SetTexture("Interface\\AddOns\\LycheeGroup_UI\\Media\\favorite-"..(button.selected and "on" or "off")..".tga")
-  if self.favoriteHint and self.favoriteHint:IsOwned(button) then self:ShowFavoriteHint(button) end
  end
  Update(self.favorite,self:FormData());Update(self.listingFavorite,group:GetListing())
 end
@@ -316,7 +302,7 @@ function P:RefreshRosterList()
     if key=="RightButton" then UI.Members:OpenMenu(button,button.member,function() UI.Tooltip:Hide() end)
     else UI.Tooltip:ShowPlayer(button,button.member,button.memberContext) end
    end)
-   row.hoverColor={1,1,1,.028};row.pressedColor={1,1,1,.045}
+   row:SetFeedbackColors({1,1,1,.028},{1,1,1,.045})
    MemberTooltipArea(row,list.clip);list.rows[i]=row
   end
  end
@@ -335,7 +321,7 @@ function P:RefreshRosterList()
    UI:CloseMenuFor(row)
   end
   row.memberContext=A.GroupPresentation.Member("roster")
-  UI.Members:Bind(row,member,list.body:GetWidth(),member.isLeader,true,12,8)
+  UI.Members:BindRoster(row,member,list.body:GetWidth(),member.isLeader,true,12,8)
   row.contentTop=top;row:ClearAllPoints();row:SetPoint("TOPLEFT",0,-top);top=top+row:GetHeight()+4
  end
  for i=#self.roster+1,#list.rows do local row=list.rows[i];HideMemberTooltip(row);UI:CloseMenuFor(row);row:Hide();row.member=nil;row.memberContext=nil end
@@ -444,13 +430,13 @@ function P:BuildBatch(parent)
  UI.drag:AddHandle(f)
  f.comment=C.Text(f,"",14,T.muted,columns.comment.width);f.comment:SetPoint("TOPLEFT",columns.comment.x,-12);f.comment:SetJustifyV("MIDDLE");f.comment:SetWordWrap(true);C.SetLineHeight(f.comment,20)
  f.status=C.Text(f,"",14,T.muted,columns.actions.width);f.status:SetPoint("LEFT",columns.actions.x,0);f.status:SetJustifyH("CENTER");C.SetLineHeight(f.status,20)
- f.invite=C.Button(f,"",40,function(btn) P:ApplicantAction(btn,"Invite") end);f.invite:SetHeight(40);f.invite:SetPoint("LEFT",columns.actions.x,0)
- f.decline=C.Button(f,"",40,function(btn) P:ApplicantAction(btn,"Decline") end);f.decline:SetHeight(40);f.decline:SetPoint("LEFT",columns.actions.x+44,0)
- f.invite.glyph=C.Icon(f.invite,24);f.invite.glyph:SetTexture(T.media.."invite.tga");f.invite.glyph:SetPoint("CENTER")
- f.decline.glyph=C.Icon(f.decline,24);f.decline.glyph:SetTexture(T.media.."decline.tga");f.decline.glyph:SetPoint("CENTER")
+ f.invite=C.IconButton(f,nil,40,function(btn) P:ApplicantAction(btn,"Invite") end,{iconSize=24});f.invite:SetPoint("LEFT",columns.actions.x,0)
+ f.decline=C.IconButton(f,nil,40,function(btn) P:ApplicantAction(btn,"Decline") end,{iconSize=24});f.decline:SetPoint("LEFT",columns.actions.x+44,0)
+ f.invite.glyph=f.invite.icon;f.invite.glyph:SetTexture(T.media.."invite.tga")
+ f.decline.glyph=f.decline.icon;f.decline.glyph:SetTexture(T.media.."decline.tga")
  f:EnableMouse(true);f:SetScript("OnEnter",function(b) b.bg:SetColor(T.rowHover);b.bg:Show() end);f:SetScript("OnLeave",function(b) b.bg:SetColor(T.rowAlternate);b.bg:SetShown(b.alternate==true) end)
  for _,action in ipairs({f.invite,f.decline}) do
-  local color=action==f.invite and T.good or T.accent;action.hoverColor={color[1],color[2],color[3],.12};action.pressedColor={color[1],color[2],color[3],.18}
+  local color=action==f.invite and T.good or T.accent;action:SetFeedbackColors({color[1],color[2],color[3],.12},{color[1],color[2],color[3],.18})
  end
  f.people={}
  return f
@@ -459,9 +445,9 @@ function P:EnsureBatchMembers(f,count)
  for i=#f.people+1,count do
   local row=CreateFrame("Button",nil,f);row:SetSize(columns.actions.x,MEMBER_HEIGHT);row:RegisterForClicks("LeftButtonUp","RightButtonUp")
   row.icon=C.Icon(row,32);row.icon:SetPoint("LEFT",columns.name.x,0)
-  row.title=C.Text(row,"",T.listTitleSize,T.text,227);row.title:SetPoint("TOPLEFT",56,-4);C.SetLineHeight(row.title,T.listTitleLineHeight,true);row.title:SetWordWrap(false)
+  row.title=C.Text(row,"",14,T.text,223);row.title:SetPoint("LEFT",56,0);C.SetLineHeight(row.title,20);row.title:SetWordWrap(true)
   row.faction=C.Icon(row,18);row.faction:SetPoint("LEFT",row.title,"RIGHT",6,0)
-  row.meta=C.Text(row,"",14,T.dim,223);row.meta:SetPoint("TOPLEFT",56,-32);C.SetLineHeight(row.meta,20,true);row.meta:SetWordWrap(false)
+  row.marks=UI.Members:CreateMarks(row,true)
   row.role=C.Icon(row,18)
   row.roles={row.role}
   for slot=2,3 do row.roles[slot]=C.Icon(row,18) end
@@ -470,7 +456,7 @@ function P:EnsureBatchMembers(f,count)
   row:SetScript("OnEnter",function(r) if r.member then r:GetParent().bg:SetColor(T.rowHover);r:GetParent().bg:Show() end end)
   row:SetScript("OnLeave",function(r) local batch=r:GetParent();batch.bg:SetColor(T.rowAlternate);batch.bg:SetShown(batch.alternate==true);UI.Tooltip:LeaveOwner(r) end)
   row:SetScript("OnClick",function(r,button) if button=="RightButton" and r.member and P.batchScroll:IsMouseOver() then P:OpenApplicantMenu(r) end end)
-  row:SetScript("OnHide",function(r) UI:CloseMenuFor(r) end)
+  row:SetScript("OnHide",function(r) UI:CloseMenuFor(r);UI.Members:ClearMarks(r.marks) end)
   MemberTooltipArea(row,self.batchScroll)
   f.people[i]=row
  end
@@ -632,6 +618,16 @@ function P:FormData()
  if form.presetActivityID==form.activityID then data.playstyle,data.newPlayerFriendly,data.questID=form.playstyle,form.newPlayerFriendly,form.questID end
  return data
 end
+function P:CorrectItemLevel()
+ local value=tonumber(self.ilvl.box:GetText())
+ if not value or value<=0 or not form.activityID then return end
+ local limit,pvp=UI.Native:GetCreationItemLevelLimit(form.activityID)
+ if limit and value>limit then
+  self.ilvl.box:SetText(tostring(limit))
+  UI:ShowToast((pvp and S("已将 PvP 装等要求调整为 %d（你的最高 PvP 装等）。","PvP item level requirement adjusted to %d (your highest PvP item level).")
+   or S("已将装等要求调整为 %d（你的最高装等）。","Item level requirement adjusted to %d (your highest item level).")):format(limit))
+ end
+end
 function P:ValidateForm()
  if self.preparing or UI.hiding or not self.formFrame:IsShown() then return end
  self:RefreshFavoriteState()
@@ -695,6 +691,7 @@ function P:Submit()
  if not allowed then self:ShowError(reason);return end
  self.validationSubmitted=true
  if not self:EnsureCreationInput() then return end
+ self:CorrectItemLevel()
  local data=self:FormData();local valid,err=UI.Native:ValidateCreation(data);if not valid then self:SetFormError(err);return end
  self.submitting=true;self.publish:SetAvailable(false)
  local ok,reason;if state.editing then ok,reason=UI:GetGroup():Update(data) else ok,reason=UI:GetGroup():Publish(data) end
@@ -774,16 +771,17 @@ function P:RenderBatches()
     UI:CloseMenuFor(row)
     local m=app.members[i];if row.member~=m then HideMemberTooltip(row) end;row:SetShown(m~=nil);row.member=m
     if m then row.memberContext=self.applicantContext;row:ClearAllPoints();row:SetPoint("TOPLEFT",0,sharedY-(i-1)*MEMBER_STRIDE);UI:SetMemberIcon(row.icon,m);UI:SetText(row.title,m.nameKey or m.name and (m.name..(m.realm and "-"..m.realm or "")) or L.unknown);row.title:SetTextColor(UI:ClassColor(m.class))
-     local faction=UI:SetFactionIcon(row.faction,m);local available=columns.name.x+columns.name.width-56-(faction and 24 or 0)
-     row.title:SetWidth(math.min(available,FitText(row.title)))
-     local relation=A.db.relations and m.relationship and m.relationship~="" and m.relationship or "";local note=A.db.noteMarks~=false and UI:HasNote(m.nameKey);local metadata=relation..(note and (relation~="" and " · " or "")..S("有玩家记录","Player note") or "");UI:SetText(row.meta,metadata);row.meta:SetShown(metadata~="");row.title:ClearAllPoints();row.title:SetPoint("TOPLEFT",56,metadata~="" and -4 or -16)
+     local faction=UI:SetFactionIcon(row.faction,m);local marksWidth=UI.Members:BindMarks(row.marks,m)
+     local available=columns.name.x+columns.name.width-56-(faction and 24 or 0)-(marksWidth>0 and marksWidth+6 or 0)
+     row.title:SetWidth(math.min(available,FitText(row.title)));row.title:SetHeight(0);row.title:SetWordWrap(true)
+     row.marks:ClearAllPoints();row.marks:SetPoint("LEFT",faction and row.faction or row.title,"RIGHT",6,0)
      UpdateApplicantRoles(row,m,layout);UI:SetText(row.ilvl,m.itemLevel and math.floor(m.itemLevel) or "—")
      if row.noRatingLayout~=self.hideApplicantRating then row.noRatingLayout=self.hideApplicantRating;row.ilvl:ClearAllPoints();row.ilvl:SetPoint("LEFT",layout.ilvl.x,0);row.score:SetShown(not self.hideApplicantRating) end
      if self.hideApplicantRating then UI:SetText(row.score,"") else UI:SetScore(row.score,UI:MemberRating(m)) end
     end
    end
  end
- for i=bound+1,#self.batchPool do local f=self.batchPool[i];f:Hide();f.appID=nil;for _,row in ipairs(f.people) do HideMemberTooltip(row);row.member=nil end end
+ for i=bound+1,#self.batchPool do local f=self.batchPool[i];f:Hide();f.appID=nil;for _,row in ipairs(f.people) do HideMemberTooltip(row);UI.Members:ClearMarks(row.marks);row.member=nil end end
 end
 function P:ApplicantAction(btn,method)
  if not btn.targetKey then return end;local ok,err=UI:GetGroup()[method](UI:GetGroup(),btn.targetKey);self:SetManageError(ok==false and (err or L.failed) or "")
@@ -796,11 +794,14 @@ function P:RefreshRoster()
  self.groupStrip:SetWidth(compositionX-20);self.groupSummary:SetWidth(self.groupStrip:GetWidth()+24)
  self:RefreshRosterPresentation()
 end
-function P:OnNotesChanged() self:RefreshRoster();self.boundAppIDs=nil;self:RenderBatches() end
+function P:OnNotesChanged()
+ self:RefreshRoster();self.boundAppIDs=nil;self:RenderBatches()
+ if not UI.Tooltip.sourceRoster then UI.Tooltip:RefreshRelations() end
+end
 function P:Enter(context)
  local group=UI:GetGroup();group:Attach(self,"create");group:RefreshApplicants()
  if not self.unsub then self.unsub=group:Subscribe(function(kind)
-  if kind=="listing" or kind=="permissions" then P:RefreshMode();P:RefreshApplicants() elseif kind=="applicants" or kind=="applicant" then P:RefreshApplicants() elseif kind=="roster" then P:RefreshRoster() elseif kind=="creationPresets" then P:RefreshFavorites() elseif kind=="activities" then if P.formFrame:IsShown() then P:RefreshPicker() else P:RefreshRosterPresentation() end end
+  if kind=="listing" or kind=="permissions" then P:RefreshMode();P:RefreshApplicants() elseif kind=="applicants" or kind=="applicant" then P:RefreshApplicants() elseif kind=="roster" then P:RefreshRoster() elseif kind=="relations" then P:OnNotesChanged() elseif kind=="creationPresets" then P:RefreshFavorites() elseif kind=="activities" then if P.formFrame:IsShown() then P:RefreshPicker() else P:RefreshRosterPresentation() end end
  end) end
  if A.Notes and not self.notesUnsub then self.notesUnsub=A.Notes:Subscribe(function() P:OnNotesChanged() end) end
  self:RefreshRoster();self:RefreshMode();self:RefreshApplicants()

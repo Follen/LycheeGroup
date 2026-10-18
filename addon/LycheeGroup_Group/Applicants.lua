@@ -82,6 +82,7 @@ local function Read(id,activityID)
   member.isLeaver=G.Public(isLeaver)==true
  end
  for i=#record.members,record.numMembers+1,-1 do record.members[i]=nil end
+ record.relationsVersion=G.Relations:ApplyMembers(record.members)
  dirty=true
  return record,isNew
 end
@@ -157,7 +158,16 @@ function Applicants:GetApplicants()
  end
  return ordered
 end
-function Applicants:GetApplicant(id) return records[id] end
+function Applicants:GetApplicant(id)
+ local record=records[id]
+ if record then
+  local version=G.Relations:GetVersion()
+  if record.relationsVersion~=version then
+   record.relationsVersion=G.Relations:ApplyMembers(record.members)
+  end
+ end
+ return record
+end
 -- Read Blizzard's current-dungeon and best-run summaries only on detail hover.
 -- The applicant event invalidates this small snapshot; sorting and row painting do not read it.
 local function DungeonRun(info,activityID)

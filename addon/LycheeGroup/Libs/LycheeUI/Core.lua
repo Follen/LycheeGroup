@@ -1,5 +1,5 @@
 local addonName, private = ...
-local REVISION=16
+local REVISION=17
 local Library=_G.LycheeUI
 private.LycheeUILoad,private.LycheeUILoadVersion=nil,nil
 if Library and Library.version and Library.version>=REVISION then private.LycheeUI=Library;return end
@@ -17,9 +17,7 @@ Context.__index = Context
 -- A context owns its input registry, menus and animation driver. No login state.
 function Library:CreateContext(options)
  options=options or {}
- local theme={}
- for key,value in pairs(self.Theme) do theme[key]=value end
- for key,value in pairs(options.theme or {}) do theme[key]=value end
+ local theme=self.ResolveTheme(options.theme)
  if options.font then theme.font=options.font end
  if options.media then theme.media=options.media elseif options.addon then theme.media=DefaultMedia(options.addon) end
  local context=setmetatable({Theme=theme,options=options,parent=options.parent or UIParent,
@@ -57,6 +55,10 @@ function Context:Hide()
  self.hiding=true;self:CloseMenu();self:ReleaseNativeControls();self:ClearFocus();self.Motion:StopAll()
 end
 function Context:Resume() self.hiding=false end
+function Context:SetWindow(frame,logo,logoButton)
+ self.frame,self.logo,self.logoButton=frame,logo,logoButton
+ self.Motion:CapturePosition()
+end
 function Context:ReleaseRow(row)
  if self.options.onRowRelease then self.options.onRowRelease(row) end
  self:CloseMenuFor(row)

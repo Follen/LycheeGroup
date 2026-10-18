@@ -204,7 +204,7 @@ do
  local nativeCalls,opened,listing,status,battlefield,openOK=0,nil,false,"applied",false,true
  _G.QueueStatusButton=CreateFrame("Button")
  QueueStatusButton.angerVal=0
- _G.LFG_ANGER_INC_VAL=1
+ _G.LFG_ANGER_INC_VAL=nil -- Stock QueueStatus constants are file-local.
  _G.QueueStatus_InActiveBattlefield=function() return battlefield,false end
  _G.IsInLFDBattlefield=function() return false end
  local original=function(_,button) nativeCalls=nativeCalls+1;return button end
@@ -220,8 +220,10 @@ do
  T.eq(opened,nil,"binding does not open or load a page")
  click(QueueStatusButton,"LeftButton")
  T.eq(opened,"find");T.eq(nativeCalls,0)
- listing=true;click(QueueStatusButton,"LeftButton")
+ listing=true;for _=1,4 do click(QueueStatusButton,"LeftButton") end
  T.eq(opened,"create");T.eq(nativeCalls,0)
+ T.eq(QueueStatusButton.angerVal,0,"redirected clicks do not duplicate private native eye animation state")
+ T.eq(_G.LFG_ANGER_INC_VAL,nil,"native entry routing requires no global copy of a stock local constant")
  T.eq(click(QueueStatusButton,"RightButton"),"RightButton");T.eq(nativeCalls,1)
  battlefield=true;opened=nil;click(QueueStatusButton,"LeftButton")
  T.eq(opened,nil);T.eq(nativeCalls,2,"battlefield retains native priority")

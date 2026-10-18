@@ -8,7 +8,7 @@ const mime = {'.png':'image/png', '.jpg':'image/jpeg', '.ogg':'audio/ogg'};
 const assetFiles = [
   ...fs.readdirSync(assetRoot).filter(file => mime[path.extname(file)]),
   ...['search','plus','book','mountain','tower','delve','pvp','flag','chevron','close','refresh','heart','caution','friend','guild','bell','history','arrow',
-      'leader','role-tank-silver','role-healer-flat','role-dps-flat'].map(name => 'icons/'+name+'.png'),
+      'leader','role-tank-silver','role-healer-flat','role-dps-flat','battlenet-friend','faction-horde','faction-alliance','favorite-off','favorite-on','about-launcher','about-talent'].map(name => 'icons/'+name+'.png'),
   'wow/classes.png', 'wow/evoker.jpg', 'sounds/native-application.ogg'
 ];
 const assets = Object.fromEntries(assetFiles.map(file => [file,

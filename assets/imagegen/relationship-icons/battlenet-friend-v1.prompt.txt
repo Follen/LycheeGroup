@@ -1,0 +1,12 @@
+Tool: built-in image_gen (transparent background).
+Status: visual proposal; not connected to the addon.
+References: prototype-v3/assets/icons/friend.png; prototype-v3/assets/icons/guild.png.
+
+Use case: style-transfer
+Asset type: one transparent bitmap UI icon for the LycheeGroup World of Warcraft addon, identifying a Battle.net friend, usable at 18–24 pixels.
+Input images: Image 1 is the existing friend icon and the PRIMARY style and shape reference. Image 2 is the existing guild icon and a SECONDARY style reference. These are existing assets from the same icon family.
+Primary request: Create ONE matching icon combining a SINGLE PERSON silhouette with the recognizable BLUE BLIZZARD BATTLE.NET emblem, the three interlocking curved boomerang/orbit shapes. The person is the main shape; the Battle.net symbol is integrated on the lower-right area of the person's chest as a large clearly readable blue insignia, replacing the red circular dot from Image 1.
+Composition: Reuse the warm ivory foreground person's round head and broad rounded shoulders from Image 1. Remove the second blue-gray person entirely. Center the single person. Make the Battle.net insignia roughly one third of the complete icon width and give it substantial clear negative space so it remains visible when small. The person and blue emblem must form one cohesive compact icon.
+Style: Match the supplied existing raster icon family exactly: soft warm ivory surfaces, simple solid rounded shapes, very subtle smooth shading, restrained depth, clean silhouette, mostly flat front view. The Battle.net insignia uses clear cyan-to-medium blue with the same restrained soft shading. Preserve the distinctive Battle.net three interlocking curved boomerang/orbit emblem, rather than a generic blue circle.
+Canvas/background: square canvas, true transparent background, centered single icon occupying about 80% of width and height, with clean alpha edges.
+Constraints: One person only. No second person, no red dot, no letter B, no text or wordmark, no standalone blue avatar, no frame or badge tile behind the whole icon, no outline box, no checkerboard drawn into the image, no glow, no cast shadow outside the icon. Preserve visual simplicity and small-size readability.

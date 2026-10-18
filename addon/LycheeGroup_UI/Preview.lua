@@ -27,7 +27,8 @@ local function NewProvider(scenario)
  if not activity then return nil,S("当前客户端活动目录尚未就绪，请稍后再打开预览。","The client activity catalog is not ready. Open preview again shortly.") end
  local p={isPreview=true,Catalog=catalog,L=A.Group.L,category=category,activity=activity,db={prefs={}},settings={autoJoin=false},applicationPrefs={},subs={},views={},records={},apps={},applicants={},roster={},filters={},state="done"}
  p.db.prefs.find={category=category}
- p.Results={};p.Applications={};p.Search={categoryKey=category}
+ p.Results={};p.Applications={};p.Search={categoryKey=category};p.Relations={}
+ function p.Relations:Apply(member) return member end
  function p:Subscribe(callback) self.subs[callback]=true;return function() self.subs[callback]=nil end end
  function p:Notify(kind,id) for fn in pairs(self.subs) do fn(kind,id) end end
  p.Presets=A.CreationPresets.New({},function() p:Notify("creationPresets") end)
@@ -85,8 +86,14 @@ local function NewProvider(scenario)
     if pass and f.healerPresence then pass=counts.HEALER~=nil and (counts.HEALER>0)==(f.healerPresence=="present") end
     if pass and f.damagePresence then pass=counts.DAMAGER~=nil and (counts.DAMAGER>=3)==(f.damagePresence=="present") end
    end
-   if pass and f.friends then pass=r.charFriends>0 end
-   if pass and f.guild then pass=r.guildMates>0 end
+   if pass and (f.friends or f.guild) then
+    local friends=r.bnetFriends+r.charFriends>0;local guild=r.guildMates>0
+    for _,member in ipairs(r.details.members) do
+     friends=friends or member.isBNetFriend or member.isCharFriend or member.isFriend
+     guild=guild or member.isGuildMate
+    end
+    if f.friends and not friends or f.guild and not guild then pass=false end
+   end
    if pass and (f.notes and f.notes~="noCaution" or f.personKey and f.personKey~=r.leaderKey) then pass=false end
    if pass then ids[#ids+1]=id end
   end
@@ -138,14 +145,20 @@ local function NewProvider(scenario)
  local names={S("预览坦克","PreviewTank"),S("预览治疗","PreviewHealer"),S("预览法师","PreviewMage"),S("预览萨满","PreviewShaman"),S("预览潜行者","PreviewRogue")}
  local function Member(index)
   local slot=(index-1)%5+1;local name=names[slot]..(index>5 and tostring(index) or "");local realm=S("模拟服务器","PreviewRealm")
-  return {isPreview=true,name=name,realm=realm,nameKey=name.."-"..realm,class=classes[slot],assignedRole=roles[slot],specID=specs[slot],itemLevel=260+slot*3,dungeonScore=2400+slot*135,factionGroup=index%2,relationship=index==3 and S("模拟好友","Sample friend") or ""}
+  local relation=(index-1)%4
+  return {isPreview=true,name=name,realm=realm,nameKey=name.."-"..realm,class=classes[slot],assignedRole=roles[slot],specID=specs[slot],itemLevel=260+slot*3,dungeonScore=2400+slot*135,factionGroup=index%2,isBNetFriend=relation==1,isCharFriend=relation==2,isGuildMate=relation==3,isFriend=false}
  end
  p.recordIDs={};p.applicantIDs={1,2,3};p.emptyIDs={}
  for i=1,6 do
   local members={Member(i),Member(i+1)};members[1].isLeader=true
-  local counts={TANK=0,HEALER=0,DAMAGER=0};for _,m in ipairs(members) do counts[m.assignedRole]=counts[m.assignedRole]+1 end
+  if i==6 then for _,member in ipairs(members) do member.isBNetFriend,member.isCharFriend,member.isGuildMate=false,false,false end end
+  local counts={TANK=0,HEALER=0,DAMAGER=0};local bnet,character,guild=0,0,0
+  for _,m in ipairs(members) do
+   counts[m.assignedRole]=counts[m.assignedRole]+1
+   if m.isBNetFriend then bnet=bnet+1 end;if m.isCharFriend then character=character+1 end;if m.isGuildMate then guild=guild+1 end
+  end
   local id=-9000-i
-  local r={id=id,isPreview=true,name=S("模拟队伍 ","Preview group ")..i,comment=S("本地预览样例：操作不会发送到游戏。","Local preview: actions are never sent to the game."),activity=activity,activityID=activity.id,activityName=activity.name,categoryID=activity.categoryID,numMembers=#members,maxNumPlayers=activity.maxNumPlayers or 5,leaderName=members[1].nameKey,leaderKey=members[1].nameKey,leaderOverallDungeonScore=members[1].dungeonScore,requiredItemLevel=260+i*2,age=i*47,level=activity.isMythicPlusActivity and 8+i or nil,charFriends=i==4 and 1 or 0,bnetFriends=0,guildMates=i==5 and 1 or 0,details={members=members,counts=counts}}
+  local r={id=id,isPreview=true,name=S("模拟队伍 ","Preview group ")..i,comment=S("本地预览样例：操作不会发送到游戏。","Local preview: actions are never sent to the game."),activity=activity,activityID=activity.id,activityName=activity.name,categoryID=activity.categoryID,numMembers=#members,maxNumPlayers=activity.maxNumPlayers or 5,leaderName=members[1].nameKey,leaderKey=members[1].nameKey,leaderOverallDungeonScore=members[1].dungeonScore,requiredItemLevel=260+i*2,age=i*47,level=activity.isMythicPlusActivity and 8+i or nil,charFriends=character,bnetFriends=bnet,guildMates=guild,details={members=members,counts=counts}}
   local profile=A.GroupPresentation.Activity(activity)
   r.ratingKind=profile.kind=="pvp" and "pvp" or "dungeon"
   if profile.kind=="pvp" then r.leaderRating=profile.requirementRatingKind and 1600+i*75 or nil

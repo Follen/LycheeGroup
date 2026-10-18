@@ -55,12 +55,6 @@ end
 local function Active(app) return UI:GetGroup().Applications:IsActive(app.id) end
 local function NameOnly(value) return value and value:match("^[^-]+") or L.unknown end
 local function Detail(record) return UI:GetGroup().Results:GetDetails(record) end
-local function HasNote(record)
- if UI:HasNote(record.leaderKey) then return true end
- if A.db.noteMarks==false then return false end
- for _,member in ipairs(Detail(record).members) do if UI:HasNote(member.nameKey) then return true end end
- return false
-end
 local function ResultTooltipArea(row,list)
  local hover=CreateFrame("Frame",nil,row);hover:SetPoint("TOPLEFT");hover:SetPoint("BOTTOMLEFT");hover:SetWidth(row:GetWidth()*list.tooltipFraction)
  row.tooltipArea=hover
@@ -96,7 +90,7 @@ local function BuildMembers(row,x)
   if row.isParty or not row.key or not row._hitVisible then return end
   row.membersExpanded=not row.membersExpanded;LayoutMembers(row)
  end)
- row.membersButton:SetHeight(24);row.membersButton.fill:SetRadius(6);row.membersButton.hover:SetRadius(6)
+ row.membersButton:SetStyle({height=24,radius=6})
  row.roster=C.Roster(row.membersButton,18,5);row.roster:SetSize(132,20);row.roster:SetPoint("CENTER");RosterColumns(row.roster)
  row.count=C.Text(row,"",14,T.muted,138);C.SetLineHeight(row.count,20,true);row.count:SetPoint("LEFT",x,-13);row.count:SetJustifyH("CENTER");row.count:SetWordWrap(false)
  LayoutMembers(row)
@@ -117,16 +111,14 @@ local function RenderResult(row,id)
  UI:SetText(row.title,r.name or L.unknown)
  UI:SetText(row.description,r.comment and r.comment~="" and r.comment or "—")
  UI:Color(row.description,r.comment and r.comment~="" and T.muted or T.dim)
- local signals=""
- if A.db.relations then
-  if (r.bnetFriends or 0)>0 then signals=signals.."  "..UI:Hex(T.blue)..L.friendBnet.."|r" end
-  if (r.charFriends or 0)>0 then signals=signals.."  "..UI:Hex(T.blue)..L.friendChar.."|r" end
-  if (r.guildMates or 0)>0 then signals=signals.."  "..UI:Hex(T.good)..L.friendGuild.."|r" end
- end
- UI:SetText(row.meta,(r.activityName or L.unknown)..signals)
+ UI:SetText(row.meta,r.activityName or L.unknown)
  UI:SetText(row.leader,NameOnly(r.leaderName))
  UI:SetActivityIcon(row.icon,r.activity or r)
  local d=Detail(r);UpdateMembers(row,id,r,d)
+ local marksWidth=UI.Members:BindGroupMarks(row.marks,r)
+ local activityWidth=FitText(row.meta)
+ row.meta:SetWidth(marksWidth>0 and math.min(activityWidth,RESULT_COLUMNS.title.width-marksWidth-6) or RESULT_COLUMNS.title.width)
+ row.marks:ClearAllPoints();row.marks:SetPoint("LEFT",row.meta,"RIGHT",6,0)
  local leaderClass
  for _,member in ipairs(d.members) do if member.isLeader or r.leaderKey and member.nameKey==r.leaderKey then leaderClass=member.class;break end end
  row.leader:SetTextColor(UI:ClassColor(leaderClass))
@@ -136,7 +128,7 @@ local function RenderResult(row,id)
  else UI:SetScore(row.score,r.leaderRating,r.ratingKind) end
  UI:SetText(row.ilvl,(r.requiredItemLevel or 0)>0 and math.floor(r.requiredItemLevel) or Say("不限","Any"))
  UI:SetText(row.age,UI:AgeText(r.age))
- row.noteDot:SetShown(A.db.noteMarks~=false and HasNote(r)==true);row.noteDot:ClearAllPoints();row.noteDot:SetPoint("TOPRIGHT",row.icon,"TOPRIGHT",3,3)
+ row.noteDot:Hide()
 end
 local function UpdateApplicationStatus(row,app)
  local remaining=app.expiresAt and math.max(0,math.ceil(app.expiresAt-GetTime()))
@@ -211,7 +203,7 @@ function P:Build(parent)
   state.showGlobal=not state.showGlobal
   if not state.showGlobal then P:DismissApplicationNotice() end
   P:RefreshApplications()
- end);self.scopeToggle:SetHeight(32);self.scopeToggle.label:SetFont(T.font,14,"");C.SetLineHeight(self.scopeToggle.label,20,true);self.scopeToggle:SetPoint("LEFT",self.appsBadge,"RIGHT",10,0);self.scopeToggle.fill:SetRadius(16);self.scopeToggle.hover:SetRadius(16)
+ end,{height=32,radius=16});self.scopeToggle:SetPoint("LEFT",self.appsBadge,"RIGHT",10,0)
  self.autoJoin=C.Check(self.applicationPanel,Say("自动进组","Auto join"),function(value) UI:SetGroupSetting("autoJoin",value) end);self.autoJoin.label:SetFont(T.font,14,"");C.SetLineHeight(self.autoJoin.label,20,true);self.autoJoin:SetSize(54+FitText(self.autoJoin.label),26);self.autoJoin:SetPoint("TOPRIGHT",-16,-15);self.autoJoin.track:ClearAllPoints();self.autoJoin.track:SetPoint("RIGHT",0,0);self.autoJoin.label:ClearAllPoints();self.autoJoin.label:SetPoint("RIGHT",self.autoJoin.track,"LEFT",-10,0)
  self.autoApply=C.Check(self.applicationPanel,"",function(value)
   local ok,err=UI.Native:SetAutoApply(value);if not ok then P:SetStatus(err or L.failed) end
@@ -225,7 +217,7 @@ function P:Build(parent)
  function self.applicationSettings:RefreshStyle()
   self.fill:Hide();self.hover:Hide();UI:Color(self.label,self._inside and T.brand or T.muted)
  end
- self.refresh=C.Button(main,"",48,function() P:DoSearch() end);self.refresh:SetSize(48,48);self.refresh.fill:SetRadius(24);self.refresh.hover:SetRadius(24);self.refresh:SetPoint("TOPRIGHT",main,"TOPRIGHT",0,0);self.refresh:SetSurfaceColors(T.selected,T.refreshHover);self.refreshIcon=C.Glyph(self.refresh,"refresh",22);self.refreshIcon:SetPoint("CENTER")
+ self.refresh=C.IconButton(main,"refresh",48,function() P:DoSearch() end,{iconSize=22,radius=24,surfaceColors={T.selected,T.refreshHover}});self.refresh:SetPoint("TOPRIGHT",main,"TOPRIGHT",0,0);self.refreshIcon=self.refresh.icon
  self.appList=C.List(self.applicationPanel,MAIN-32,180,60,function(id,button,row) if button=="RightButton" then P:OpenResultMenu(row,id) end end);self.appList:SetGutter(LIST_GUTTER);self.appList:SetPoint("TOPLEFT",16,-52);self.appList.tooltipFraction=.25
  self.appList.selectionFill=false;self.appList.selectionMark=false;self.appList.hoverFill=false;self.appList.alternateRows=false
  self.limitNotice=C.Notice(main,BODY,function()
@@ -272,6 +264,8 @@ function P:Build(parent)
   row.base=C.Panel(row,T.rowAlternate,12);row.base:Hide()
   row.title:ClearAllPoints();row.title:SetPoint("TOPLEFT",RESULT_COLUMNS.title.x,-12);row.title:SetWidth(RESULT_COLUMNS.title.width);row.title:SetFont(T.font,T.listTitleSize,"");C.SetLineHeight(row.title,T.listTitleLineHeight,true)
   row.meta:ClearAllPoints();row.meta:SetPoint("TOPLEFT",RESULT_COLUMNS.title.x,-40);row.meta:SetWidth(RESULT_COLUMNS.title.width);C.SetLineHeight(row.meta,20,true)
+  row.marks=UI.Members:CreateMarks(row)
+  row:HookScript("OnHide",function(self) UI.Members:ClearMarks(self.marks) end)
   row.description=C.Text(row,"",14,T.muted,RESULT_COLUMNS.description.width,20);row.description:SetPoint("LEFT",RESULT_COLUMNS.description.x,0);row.description:SetHeight(40);row.description:SetMaxLines(2);row.description:SetWordWrap(true);row.description:SetJustifyV("MIDDLE")
   row.leaderIcon=C.Icon(row,12);row.leaderIcon:SetTexture(T.media.."leader.tga");row.leaderIcon:SetPoint("LEFT",RESULT_COLUMNS.leader.x-17,0)
   row.leader=C.Text(row,"",14,T.muted,RESULT_COLUMNS.leader.width);row.leader:SetPoint("LEFT",RESULT_COLUMNS.leader.x,0);C.SetLineHeight(row.leader,20,true);row.leader:SetWordWrap(false)
@@ -283,7 +277,7 @@ function P:Build(parent)
   row:SetScript("OnDoubleClick",function(b,button) if button=="LeftButton" and b.key then P:Apply(b.key) end end)
  end
  self.emptyPanel=CreateFrame("Frame",nil,main);self.emptyPanel:SetSize(MAIN,280);self.emptyPanel:SetPoint("CENTER",0,-12)
- self.busyIcon=C.Icon(self.emptyPanel,44);self.busyIcon:SetTexture(T.media.."lychee-logo.tga");self.busyIcon:SetPoint("TOP",0,-26)
+ self.busyIcon=C.Icon(self.emptyPanel,44);self.busyIcon:SetTexture(T.media.."lychee-logo.tga");self.busyIcon:SetPoint("TOP",self.emptyPanel,"TOP",0,-26)
  self.emptyText=C.Text(self.emptyPanel,L.findEmptyTitle,18,T.text,600);self.emptyText:SetPoint("TOP",0,-90);self.emptyText:SetJustifyH("CENTER")
  self.emptyHelp=C.Text(self.emptyPanel,"",14,T.muted,600);self.emptyHelp:SetPoint("TOP",0,-124);self.emptyHelp:SetJustifyH("CENTER")
  self.start=C.Button(self.emptyPanel,L.searchNow,140,function() if state.browseReady then P:DoSearch() else P:SelectCategory(state.category) end end);self.start:SetPrimary(true);self.start:SetPoint("TOP",self.emptyHelp,"BOTTOM",0,-24)
@@ -357,7 +351,7 @@ end
 function P:BuildPicker()
  local f=CreateFrame("Frame",nil,self.frame);f:SetSize(296,552);f:SetPoint("TOPLEFT",self.rail,"TOPRIGHT",PICKER_GAP,0);f:SetFrameLevel(self.frame:GetFrameLevel()+35);f:EnableMouse(true);C.Panel(f,T.surface,12);self.picker=f
  f.title=C.Text(f,"",14,T.text,220);C.SetLineHeight(f.title,21,true);f.title:SetPoint("TOPLEFT",12,-18)
- local close=C.Button(f,"",40,function() P:ClosePicker() end);close:SetSize(40,40);close:SetPoint("TOPRIGHT",-12,-8);C.Glyph(close,"close",20):SetPoint("CENTER")
+ local close=C.IconButton(f,"close",40,function() P:ClosePicker() end);close:SetPoint("TOPRIGHT",-12,-8)
  self.tierChoice=C.Choice(f,280,function() return P:TierItems() end,function(value)
   state.browseReady=false;UI:GetGroup().Search:EndBrowse()
   state.tier=value or nil;state.groupKey,state.groupKeys=nil,nil;P.draftGroupKeys,P.multiSelectMode=nil,nil;state.difficultyID=nil
@@ -366,7 +360,7 @@ function P:BuildPicker()
  self.tierChoice:SetSurfaceVariant("dark")
  self.difficultySurface=CreateFrame("Frame",nil,f);self.difficultySurface:SetSize(280,36);C.Panel(self.difficultySurface,T.surfaceLow,8)
  self.difficultyButtons={}
- for i=1,12 do local b=C.Button(self.difficultySurface,"",60,function(button) state.difficultyID=button.value or nil;P:RefreshPicker();P.results:SetPixelOffset(0,false);if state.browseReady then P:CommitChoice();P:DoSearch(true) else P:UpdateFilters(true) end end);b:SetHeight(30);b:SetTextColors(T.muted,T.text,T.onSecondaryContainer);b.fill:SetRadius(8);b.hover:SetRadius(8);b.label:SetFont(T.font,13,"");C.SetLineHeight(b.label,20,true);self.difficultyButtons[i]=b end
+ for i=1,12 do self.difficultyButtons[i]=C.Button(self.difficultySurface,"",60,function(button) state.difficultyID=button.value or nil;P:RefreshPicker();P.results:SetPixelOffset(0,false);if state.browseReady then P:CommitChoice();P:DoSearch(true) else P:UpdateFilters(true) end end,{variant="compact"}) end
  self.activities=C.List(f,280,440,48,function(key)
   if P.multiSelectMode and P.keystoneGroups[key] then P:ToggleGroupChoice(key);return end
   state.groupKeys=nil;P.draftGroupKeys,P.multiSelectMode=nil,nil
@@ -376,41 +370,21 @@ function P:BuildPicker()
   if not valid then state.difficultyID=nil end
   P:RefreshPicker();P:CommitChoice();P.results:SetPixelOffset(0,false);P:DoSearch()
  end)
- self.activities.alternateRows=false
+ self.activities:SetStyle({alternateRows=false,rowHeight=44,radius=8,singleLine=true,titleX=48,titleWidth=200,titleSize=16,titleLineHeight=22})
  self.activityIDs={};self.activityMap={}
  for _,row in ipairs(self.activities.rows) do
-  row:SetHeight(44);row.selected:SetRadius(8);row.hover:SetRadius(8);row.alternate:SetRadius(8);row.title:ClearAllPoints();row.title:SetPoint("LEFT",48,0);row.title:SetWidth(200);row.title:SetFont(T.font,16,"");C.SetLineHeight(row.title,22,true);row.meta:Hide();row.icon=C.Icon(row,24);row.icon:SetPoint("LEFT",12,0)
-  local check=CreateFrame("CheckButton",nil,row);check:SetSize(32,32);check:SetPoint("RIGHT",-6,0);row.multiSelect=check
-  check.fill=C.Panel(check,T.surfaceHigh,5,7)
-  check.mark=CreateFrame("Frame",nil,check);check.mark:SetSize(16,20);check.mark:SetPoint("CENTER");check.mark.strokes={}
-  for _,stroke in ipairs({{5,-3,-1,-math.pi/4},{9,1.3,.5,math.pi/4}}) do
-   local line=check.mark:CreateTexture(nil,"ARTWORK");line:SetColorTexture(unpack(T.onPrimary));line:SetSize(stroke[1],1.5)
-   line:SetPoint("CENTER",stroke[2],stroke[3]);line:SetRotation(stroke[4]);check.mark.strokes[#check.mark.strokes+1]=line
-  end
-  function check:RefreshStyle()
-   self.fill:SetColor(self:GetChecked() and (self.hovered and T.primaryHover or T.primary) or (self.hovered and T.secondaryContainer or T.surfaceHigh))
-   self.mark:SetShown(self:GetChecked()==true)
-  end
-  check:SetScript("OnEnter",function(self) self.hovered=true;self:RefreshStyle() end)
-  check:SetScript("OnLeave",function(self) self.hovered=nil;self:RefreshStyle() end)
-  check:SetScript("OnHide",function(self) self.hovered=nil;self:RefreshStyle() end)
-  check:SetScript("OnClick",function()
-   P:ToggleGroupChoice(row.key)
-  end)
+  row.icon=C.Icon(row,24);row.icon:SetPoint("LEFT",12,0)
+  row.multiSelect=C.Checkbox(row,function() P:ToggleGroupChoice(row.key) end);row.multiSelect:SetPoint("RIGHT",-6,0)
  end
- self.multiSelectToggle=CreateFrame("Button",nil,f);self.multiSelectToggle:SetSize(zh and 52 or 96,32)
- self.multiSelectToggle.label=C.Text(self.multiSelectToggle,Say("多选","Multi-select"),14,T.muted);self.multiSelectToggle.label:SetPoint("RIGHT",-6,0)
- self.multiSelectToggle:SetScript("OnEnter",function(button) UI:Color(button.label,T.brand) end)
- self.multiSelectToggle:SetScript("OnLeave",function(button) UI:Color(button.label,P.multiSelectMode and T.brand or T.muted) end)
- self.multiSelectToggle:SetScript("OnClick",function() P:SetMultiSelectMode(not P.multiSelectMode) end)
+ self.multiSelectToggle=C.Button(f,Say("多选","Multi-select"),zh and 52 or 96,function() P:SetMultiSelectMode(not P.multiSelectMode) end,{variant="text",height=32})
+ self.multiSelectToggle.label:ClearAllPoints();self.multiSelectToggle.label:SetPoint("RIGHT",-6,0)
  self.multiSelectToggle:Hide()
  self.pickerConfirm=C.Button(f,Say("确定","Confirm"),280,function()
   state.groupKeys=CopyGroupKeys(P.draftGroupKeys);state.groupKey=nil;P:CommitChoice()
   P.results:SetPixelOffset(0,false);P:DoSearch()
  end);self.pickerConfirm:SetPrimary(true);self.pickerConfirm:SetHeight(40);self.pickerConfirm:Hide()
  f:SetScript("OnEvent",function()
-  local menu=UI.context.menu
-  local insideMenu=menu and menu:IsShown() and menu.anchor==P.tierChoice and menu:IsMouseOver()
+  local insideMenu=UI.context:IsMenuHovered(P.tierChoice)
   if not f:IsMouseOver() and not P.rail:IsMouseOver() and not insideMenu then P:ClosePicker() end
  end)
  f:Hide()
@@ -511,12 +485,12 @@ function P:RefreshPicker()
   local selectable=self.multiSelectMode and multiGroups and multiGroups[key]
   row.multiSelect:SetShown(selectable or false)
   local checked=self.draftGroupKeys or state.groupKeys
-  row.multiSelect:SetChecked(checked and checked[key] or false);row.multiSelect:RefreshStyle()
+  row.multiSelect:SetValue(checked and checked[key] or false)
   row.title:SetWidth(menuWidth-16-C.listRightInset-60-(key==0 and multiGroups and self.multiSelectToggle:GetWidth()+4 or selectable and 32 or 0))
   local toggle=self.multiSelectToggle
   if key==0 then
    toggle:SetParent(row);toggle:ClearAllPoints();toggle:SetPoint("RIGHT",-6,0);toggle:SetShown(multiGroups~=nil)
-   UI:SetText(toggle.label,self.multiSelectMode and Say("返回","Back") or Say("多选","Multi-select"));UI:Color(toggle.label,self.multiSelectMode and T.brand or T.muted)
+   UI:SetText(toggle.label,self.multiSelectMode and Say("返回","Back") or Say("多选","Multi-select"));toggle:SetActive(self.multiSelectMode==true)
   elseif toggle:GetParent()==row then toggle:Hide() end
  end)
  self:PositionPicker()
@@ -888,7 +862,7 @@ function P:OpenResultMenu(anchor,id,cursor)
  end,{cursor=cursor~=false})
 end
 function P:OnNotesChanged()
- if self.frame and self.frame:IsShown() then UI:GetGroup().Results:InvalidateView();self:RefreshResults() end
+ if self.frame and self.frame:IsShown() then UI:GetGroup().Results:InvalidateView();self:RefreshResults();UI.Tooltip:RefreshRelations() end
 end
 function P:WatchNotes()
  if self.notesUnsub then self.notesUnsub();self.notesUnsub=nil end
@@ -933,6 +907,7 @@ function P:Enter(context)
   if kind=="activities" then P:RefreshCategories();P:RefreshPicker();P:UpdateFilters()
   elseif kind=="applicationCancelled" then P:OnApplicationCancelled(id)
   elseif kind=="result" then M:Start(P,RefreshPendingResults)
+  elseif kind=="relations" then P:RefreshResults();UI.Tooltip:RefreshRelations()
   elseif kind=="search" or kind=="results" or kind=="applications" then P:RefreshResults() end
  end) end
  self:WatchNotes();self:RefreshCategories();self:RefreshPicker();self:UpdateFilters();self:SetFiltersOpen(self.filtersOpen)

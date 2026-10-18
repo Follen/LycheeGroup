@@ -4,7 +4,7 @@ local T,L,C=UI.Theme,UI.L,UI.C
 local Members={};UI.Members=Members
 local NAME_SIZE,NAME_HEIGHT=14,18
 local META_SIZE,META_HEIGHT=12,16
-local ICON_SIZE,MARK_SIZE,TEXT_GAP=24,12,8
+local ICON_SIZE,MARK_SIZE,TEXT_GAP=24,18,8
 local zh=GetLocale()=="zhCN"
 local function Say(cn,en) return zh and cn or en end
 
@@ -26,68 +26,164 @@ function Members:Order(members,ordered,leaderKey)
  end end
  return ordered,leader
 end
-local function NoteMark(key)
- if A.db.noteMarks==false or not UI:HasNote(key) then return "" end
- local note=A.Notes:Find(key)
- local color=note.type=="positive" and T.good or note.type=="caution" and T.warning or T.muted
- return " "..UI:Hex(color).."•|r"
+local markOrder={"bnet","friend","guild","positive","neutral","caution"}
+local markTextures={
+ bnet="Interface\\AddOns\\LycheeGroup_UI\\Media\\battlenet-friend.tga",
+ friend=T.media.."friend.tga",guild=T.media.."guild.tga",
+ positive=T.media.."heart.tga",neutral=T.media.."book.tga",caution=T.media.."caution.tga",
+}
+Members.relationshipTextures={bnet=markTextures.bnet,character=markTextures.friend,guild=markTextures.guild}
+function Members:CreateMarks(parent,clickableNote)
+ local frame=CreateFrame("Frame",nil,parent);frame:SetSize(1,MARK_SIZE);frame:EnableMouse(false)
+ frame.icons={};frame.flags={};frame.clickableNote=clickableNote==true;frame:Hide()
+ return frame
+end
+function Members:ClearMarks(frame)
+ for _,icon in pairs(frame.icons) do icon:Hide() end
+ if frame.noteButton then frame.noteButton:Hide() end
+ wipe(frame.flags);frame.noteKey=nil;frame:Hide()
+end
+local function CollectNote(frame,key)
+ if A.db.noteMarks~=false then
+  local note=UI:GetNote(key)
+  if note then frame.flags[note.type]=true;if frame.clickableNote then frame.noteKey=key end end
+ end
+end
+local function CollectMarks(frame,member)
+ local flags=frame.flags
+ if A.db.relations then
+  if member.isBNetFriend then flags.bnet=true end
+  if member.isCharFriend or member.isFriend then flags.friend=true end
+  if member.isGuildMate then flags.guild=true end
+ end
+ CollectNote(frame,Members:Identity(member))
+end
+local function PaintMarks(frame)
+ local count=0
+ for _,kind in ipairs(markOrder) do if frame.flags[kind] then
+  local icon
+  if frame.clickableNote and (kind=="positive" or kind=="neutral" or kind=="caution") then
+   if not frame.noteButton then
+    frame.noteButton=C.IconButton(frame,nil,MARK_SIZE,function()
+     if frame.noteKey and not UI.preview then A:Open("notes",{playerKey=frame.noteKey}) end
+    end,{iconSize=MARK_SIZE,height=MARK_SIZE,radius=4})
+   end
+   icon=frame.noteButton;icon.icon:SetTexture(markTextures[kind])
+  else
+   icon=frame.icons[kind]
+   if not icon then icon=C.Icon(frame,MARK_SIZE);frame.icons[kind]=icon end
+   icon:SetTexture(markTextures[kind])
+  end
+  icon:ClearAllPoints();icon:SetPoint("LEFT",count*(MARK_SIZE+4),0);icon:Show();count=count+1
+ end end
+ local width=count>0 and count*(MARK_SIZE+4)-4 or 0
+ frame:SetWidth(math.max(1,width));frame:SetShown(count>0)
+ return width
+end
+function Members:BindMarks(frame,member)
+ self:ClearMarks(frame);CollectMarks(frame,member)
+ return PaintMarks(frame)
+end
+function Members:BindGroupMarks(frame,record)
+ self:ClearMarks(frame)
+ if A.db.relations then
+  frame.flags.bnet=(record.bnetFriends or 0)>0
+  frame.flags.friend=(record.charFriends or 0)>0
+  frame.flags.guild=(record.guildMates or 0)>0
+ end
+ CollectNote(frame,record.leaderKey)
+ return PaintMarks(frame)
 end
 function Members:Relations(member)
  if not A.db.relations then return "" end
  local labels={}
  if member.isBNetFriend then labels[#labels+1]=UI:Hex(T.blue)..L.friendBnet.."|r" end
  if member.isCharFriend then labels[#labels+1]=UI:Hex(T.blue)..L.friendChar.."|r" end
+ if member.isFriend then labels[#labels+1]=UI:Hex(T.blue)..Say("好友","Friend").."|r" end
  if member.isGuildMate then labels[#labels+1]=UI:Hex(T.good)..L.friendGuild.."|r" end
- if #labels==0 and member.relationship and member.relationship~="" then labels[1]=member.relationship end
  return table.concat(labels," · ")
 end
 local function MemberMeta(member)
- local text=UI:SpecName(member) or member.localizedClass or L.unknown
- local relation=Members:Relations(member)
- return text..(relation~="" and " · "..relation or "")
+ return UI:SpecName(member) or member.localizedClass or L.unknown
 end
-local function LayoutIdentity(icon,title,subtitle,role,faction,width,top,inset)
+local function LayoutIdentity(icon,title,subtitle,role,faction,marks,marksWidth,width,top,inset,search)
  local textX=inset+ICON_SIZE+TEXT_GAP
  role:SetSize(MARK_SIZE,MARK_SIZE);role:SetShown(role:GetTexture()~=nil)
  faction:SetSize(MARK_SIZE,MARK_SIZE)
- local marks=(role:IsShown() and MARK_SIZE or 0)+(faction:IsShown() and MARK_SIZE or 0)+(role:IsShown() and faction:IsShown() and 4 or 0)
- local textWidth=width-textX-inset-(marks>0 and marks+6 or 0)
+ local markWidth,markGroups=marksWidth,marksWidth>0 and 1 or 0
+ if role:IsShown() then markWidth=markWidth+MARK_SIZE;markGroups=markGroups+1 end
+ if faction:IsShown() then markWidth=markWidth+MARK_SIZE;markGroups=markGroups+1 end
+ markWidth=markWidth+math.max(0,markGroups-1)*4
+ local textWidth=width-textX-inset-(markWidth>0 and markWidth+6 or 0)
  title:ClearAllPoints();title:SetPoint("TOPLEFT",textX,-top);title:SetWidth(textWidth);title:SetHeight(0);title:SetWordWrap(true)
  local titleHeight=math.max(NAME_HEIGHT,title:GetStringHeight())
  local subtitleTop=top+titleHeight+2
  role:ClearAllPoints();role:SetPoint("RIGHT",icon,"RIGHT",width-2*inset-ICON_SIZE,0)
+ marks:ClearAllPoints()
  faction:ClearAllPoints()
- if role:IsShown() then faction:SetPoint("RIGHT",role,"LEFT",-4,0) else faction:SetPoint("RIGHT",icon,"RIGHT",width-2*inset-ICON_SIZE,0) end
+ if search then
+  if role:IsShown() then faction:SetPoint("RIGHT",role,"LEFT",-4,0) else faction:SetPoint("RIGHT",icon,"RIGHT",width-2*inset-ICON_SIZE,0) end
+  if faction:IsShown() then marks:SetPoint("RIGHT",faction,"LEFT",-4,0)
+  elseif role:IsShown() then marks:SetPoint("RIGHT",role,"LEFT",-4,0)
+  else marks:SetPoint("RIGHT",icon,"RIGHT",width-2*inset-ICON_SIZE,0) end
+ else
+  if role:IsShown() then marks:SetPoint("RIGHT",role,"LEFT",-4,0) else marks:SetPoint("RIGHT",icon,"RIGHT",width-2*inset-ICON_SIZE,0) end
+  if marksWidth>0 then faction:SetPoint("RIGHT",marks,"LEFT",-4,0)
+  elseif role:IsShown() then faction:SetPoint("RIGHT",role,"LEFT",-4,0)
+  else faction:SetPoint("RIGHT",icon,"RIGHT",width-2*inset-ICON_SIZE,0) end
+ end
  subtitle:ClearAllPoints();subtitle:SetPoint("TOPLEFT",textX,-subtitleTop);subtitle:SetWidth(textWidth);subtitle:SetHeight(0);subtitle:SetWordWrap(true)
  local height=math.max(ICON_SIZE,titleHeight+2+math.max(META_HEIGHT,subtitle:GetStringHeight()))
- -- Long names grow downward without moving the portrait away from the first line.
- local portraitTop=top+(NAME_HEIGHT+2+META_HEIGHT-ICON_SIZE)/2
+ -- Portrait and right-side marks share the complete identity block's center,
+ -- including wrapped names and specialization text.
+ local portraitTop=top+(height-ICON_SIZE)/2
  icon:SetSize(ICON_SIZE,ICON_SIZE);icon:ClearAllPoints();icon:SetPoint("TOPLEFT",inset,-portraitTop)
  return height
 end
 function Members:Create(parent,onClick)
- local button=C.Button(parent,"",250,onClick)
- button:SetHeight(44);button:RegisterForClicks("LeftButtonUp","RightButtonUp");button.fill:SetRadius(8);button.hover:SetRadius(8);button.label:Hide()
+ local button=C.Button(parent,"",250,onClick,{height=44,radius=8})
+ button:RegisterForClicks("LeftButtonUp","RightButtonUp");button.label:Hide()
  button.icon=C.GameIcon(button,ICON_SIZE)
  button.name=C.Text(button,"",NAME_SIZE,T.text);button.name:SetWordWrap(true);C.SetLineHeight(button.name,NAME_HEIGHT)
  button.leaderIcon=C.Icon(button,10);button.leaderIcon:SetTexture(T.media.."leader.tga");button.leaderIcon:SetPoint("TOPRIGHT",button.icon,"TOPRIGHT",3,3);button.leaderIcon:Hide()
  button.realm=C.Text(button,"",META_SIZE,T.dim);button.realm:SetWordWrap(true);C.SetLineHeight(button.realm,META_HEIGHT)
  button.role=C.Icon(button,MARK_SIZE)
  button.faction=C.Icon(button,MARK_SIZE)
+ button.marks=self:CreateMarks(button)
+ button:HookScript("OnHide",function() Members:ClearMarks(button.marks) end)
  return button
 end
-function Members:Bind(button,member,width,isLeader,interactive,inset,padding)
+local function Bind(self,button,member,width,isLeader,interactive,inset,padding,title,search)
  button.member=member;button.targetKey=self:ID(member) or member.name;button:SetWidth(width)
  button:SetEnabled(interactive==true)
  UI:SetMemberIcon(button.icon,member);UI:SetRoleIcon(button.role,member.assignedRole)
  UI:SetFactionIcon(button.faction,member);button.leaderIcon:SetShown(isLeader==true)
- local key,name,realm=self:Identity(member);local r,g,b=UI:ClassColor(member.class)
- UI:SetText(button.name,(name or member.name or L.unknown)..(realm and UI:Hex(T.muted).."-"..realm.."|r" or "")..NoteMark(key));button.name:SetTextColor(r,g,b)
+ local r,g,b=UI:ClassColor(member.class)
+ UI:SetText(button.name,title);button.name:SetTextColor(r,g,b)
  UI:SetText(button.realm,MemberMeta(member))
+ local marksWidth
+ if search then
+  self:ClearMarks(button.marks)
+  if isLeader then CollectNote(button.marks,self:Identity(member)) end
+  marksWidth=PaintMarks(button.marks)
+ else marksWidth=self:BindMarks(button.marks,member) end
  inset,padding=inset or 6,padding or 4
- local height=math.max(44,LayoutIdentity(button.icon,button.name,button.realm,button.role,button.faction,width,padding,inset)+padding*2)
+ local height=math.max(44,LayoutIdentity(button.icon,button.name,button.realm,button.role,button.faction,button.marks,marksWidth,width,padding,inset,search)+padding*2)
  button:SetHeight(height);button:Show()
  return height
+end
+function Members:Bind(button,member,width,isLeader,interactive,inset,padding)
+ local _,name,realm=self:Identity(member)
+ local title=(name or member.name or L.unknown)..(realm and UI:Hex(T.muted).."-"..realm.."|r" or "")
+ return Bind(self,button,member,width,isLeader,interactive,inset,padding,title)
+end
+function Members:BindRoster(button,member,width,isLeader,interactive,inset,padding)
+ local _,name=self:Identity(member)
+ return Bind(self,button,member,width,isLeader,interactive,inset,padding,name or member.name or L.unknown)
+end
+function Members:BindSearch(button,member,width,isLeader,interactive,inset,padding)
+ local _,name=self:Identity(member)
+ return Bind(self,button,member,width,isLeader,interactive,inset,padding,name or member.name or L.unknown,true)
 end
 
 local function RosterPermissions(member)

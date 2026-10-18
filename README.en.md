@@ -45,7 +45,7 @@ The changes in 1.0.2 have passed offline regression checks and have been install
 
 `/lycheegroup` is an alias for `/lg`.
 
-The default main-window key is the English semicolon `;`. It is assigned only when the addon has no binding and the key is free. The first settings category, Interface & Tooltips, lets you change it and scale the whole main window from 75% to 125%.
+The default main-window key is the English semicolon `;`. It is assigned only when the addon has no binding and the key is free. Change it under Access and shortcuts, and adjust the main window from 75% to 125% under Appearance.
 
 ## Development
 
@@ -58,5 +58,7 @@ lua tests/runner.lua
 [`tools/Build-Addon.ps1`](tools/Build-Addon.ps1) builds the addon archive. It syncs the bundled library from a sibling `LycheeUI` source directory by default; use `-LibraryPath` to select another location.
 
 Project documents (in Chinese): [Product](Product.md) · [Design](Desgin.md) · [Architecture](Architecture.md) · [Performance](perfermance.md) · [Documentation and changelog rules](Agents.md). The product document describes the current implementation and in-game validation coverage.
+
+The shared UI library is LycheeUI 1.2.0 (revision 17). See its [integration guide](../LycheeUI/README.md), [API](../LycheeUI/API.md), and [component design specification](../LycheeUI/DESIGN.md).
 
 See the [library notes](addon/LycheeGroup_Group/Libs/README.md) for bundled third-party sources and licenses.

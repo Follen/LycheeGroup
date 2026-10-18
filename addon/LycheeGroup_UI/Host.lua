@@ -13,9 +13,12 @@ function UI:Initialize()
 	-- 按需加载合同:此处不建窗口、不注册事件。
 end
 
+function UI:GetNote(key)
+ if self.preview or not A.db.notesEnabled or not key or not A.Notes then return nil end
+ return A.Notes:Find(key)
+end
 function UI:HasNote(key)
- if self.preview then return false end
-	return A.db.notesEnabled and key and A.Notes and A.Notes:Find(key) ~= nil
+ return self:GetNote(key)~=nil
 end
 
 function UI:OnSettingChanged(key)
@@ -34,7 +37,7 @@ function UI:ApplyFont(path)
  if not self.frame then return end
  self:CloseMenu();self.Tooltip:Hide()
  A.Fonts:ApplyTree(self.frame,path)
- A.Fonts:ApplyTree(self.context.menu,path)
+ A.Fonts:ApplyTree(self.context:GetMenu(),path)
  A.Fonts:ApplyTree(self.Tooltip.interactive,path)
  local x=0
  for _,key in ipairs({"find","create","notes"}) do
@@ -92,12 +95,26 @@ function UI:OpenMenu(anchor,items,onPick,options)
 end
 function UI:CloseMenuFor(anchor) return self.context:CloseMenuFor(anchor) end
 function UI:CloseMenu() return self.context:CloseMenu() end
+function UI:HideToast()
+ if self.toastTimer then self.toastTimer:Cancel();self.toastTimer=nil end
+ if self.toast then self.toast:SetMessage("") end
+end
+function UI:ShowToast(message)
+ self:HideToast()
+ if not self.toast then
+  self.toast=C.Notice(self.frame,480,function() UI:HideToast() end)
+  self.toast:SetPoint("BOTTOM",self.frame,"BOTTOM",0,24)
+  self.toast:SetFrameLevel(self.frame:GetFrameLevel()+20)
+ end
+ self.toast:SetMessage(message)
+ self.toastTimer=C_Timer.NewTimer(4,function() UI:HideToast() end)
+end
 function UI:HandleEscape()
  local page=self.pages[self.page]
  if page and page.CancelBindingCapture and page:CancelBindingCapture() then return end
  if self.activeModal then self:CloseModal()
  elseif self.Tooltip.pinned then self.Tooltip:Hide()
- elseif self.context.menu and self.context.menu:IsShown() then self:CloseMenu()
+ elseif self.context:IsMenuOpen() then self:CloseMenu()
  else
   if page and page.picker and page.picker:IsShown() then page:ClosePicker()
   elseif page and page.filtersOpen then page:SetFiltersOpen(false)
@@ -167,7 +184,6 @@ function UI:Build()
 	C.Shadow(frame,T.windowRadius)
 	C.Panel(frame, T.surface, T.windowRadius)
 	self.frame = frame
-	self.context.frame = frame
 	self.drag=C.Draggable(frame,{onStart=function()
 		if UI.activeModal then return false end
 		UI:CloseMenu();UI.Tooltip:Hide()
@@ -187,7 +203,7 @@ function UI:Build()
 	texture:SetSize(LOGO, LOGO)
 	texture:SetPoint("CENTER", logo, "CENTER", 0, 0)
 	self.logo = texture
-	self.context.logo,self.context.logoButton = texture,logo
+	self.context:SetWindow(frame,texture,logo)
 	-- 空闲时鼠标进入可重播;播放中经过不重启、不叠加。
 	logo:SetScript("OnEnter", function() M:Brand() end)
 
@@ -195,9 +211,7 @@ function UI:Build()
 	C.SetLineHeight(title,28,true)
 	title:SetPoint("LEFT", logo, "RIGHT", 6, 0)
 
-	local close = C.Button(frame, L.close, nil, function() UI:Hide() end)
-	close:SetSize(40,40);close.label:Hide();C.Glyph(close,"close",20):SetPoint("CENTER")
-	close.hoverColor=T.primaryContainer;close.pressedColor=T.primaryContainer
+	local close = C.IconButton(frame,"close",40,function() UI:Hide() end,{hoverColor=T.primaryContainer,pressedColor=T.primaryContainer})
 	close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -PAD, -(NAV_H-40)/2)
 	local settings = C.Button(frame, L.settings, nil, function() A:Open("settings") end)
 	settings:SetSize(math.max(72,settings.label:GetStringWidth()+40),40)
@@ -302,6 +316,7 @@ function UI:Navigate(page, context)
 		if p.Enter then p:Enter(context) end
 		return
 	end
+	self:HideToast()
 	self:CloseMenu()
 	self:CloseModal("navigate")
 	UI.Tooltip:Hide()
@@ -325,6 +340,7 @@ end
 
 -- UI:Hide(immediate):立即阻止输入,整页随 Presence 退场,隐藏后才清内容和页面订阅。
 function UI:Hide(immediate)
+	self:HideToast()
 	if A.Floating then A.Floating:Dismiss() end
 	local frame = self.frame
 	if not frame or not frame:IsShown() or (self.hiding and not immediate) then return end

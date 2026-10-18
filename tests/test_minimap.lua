@@ -42,7 +42,7 @@ A.UI = stub.New("Frame")
 button:Fire("OnClick", "LeftButton")
 T.eq(A.UI:IsShown(), false, "a second left click closes the main window")
 button:Fire("OnClick", "RightButton")
-T.eq(openedPage, "settings"); T.eq(openedContext.section, "interface")
+T.eq(openedPage, "settings"); T.eq(openedContext.section, "general")
 
 local function Position()
     return select(4, button:GetPoint())

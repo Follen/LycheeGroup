@@ -9,7 +9,7 @@ function Library.AttachMenus(UI)
  end
  local function Build()
   menu=CreateFrame("Frame",nil,UI.parent);menu:SetFrameStrata("TOOLTIP");menu:SetFrameLevel(20);menu:SetClampedToScreen(true);menu:EnableMouse(true)
-  C.Shadow(menu,12);menu.fill=C.Panel(menu,T.raised,12);menu.keys={};menu:Hide()
+  C.Shadow(menu,T.menuRadius);menu.fill=C.Panel(menu,T.raised,T.menuRadius);menu.keys={};menu:Hide()
   menu.measure=C.Text(menu,"",16,T.text);menu.measure:Hide()
   local catcher=CreateFrame("Button",nil,UI.parent);catcher:SetAllPoints(UI.parent);catcher:SetFrameStrata("TOOLTIP");catcher:SetFrameLevel(19)
   catcher:RegisterForClicks("AnyDown");catcher:SetScript("OnClick",Close);catcher:Hide();menu.catcher=catcher
@@ -21,17 +21,10 @@ function Library.AttachMenus(UI)
   end,function(row,index)
    local entry=menu.items[index];if UI.options.onMenuHover then UI.options.onMenuHover(row,entry) end
   end)
-  list:SetPoint("TOPLEFT",4,-4);list.selectionMark=false;list.alternateRows=false;menu.list=list
+  list:SetPoint("TOPLEFT",4,-4);list:SetStyle({selectionMark=false,alternateRows=false,singleLine=true,radius=8,titleSize=16,titleLineHeight=22});menu.list=list
   for _,row in ipairs(list.rows) do
-   row.meta:Hide();row.title:SetFont(T.font,16,"");C.SetLineHeight(row.title,22,true);row.title:ClearAllPoints();row.title:SetPoint("LEFT",12,0)
    row.icon=C.Icon(row,20);row.icon:SetPoint("LEFT",12,0)
-   row.selected:SetRadius(8);row.hover:SetRadius(8)
-   row.check=CreateFrame("Frame",nil,row);row.check:SetSize(16,20);row.check:SetPoint("LEFT",8,0)
-   row.check.strokes={}
-   for _,stroke in ipairs({{5,-3,-1,-math.pi/4},{9,1.3,.5,math.pi/4}}) do
-    local line=row.check:CreateTexture(nil,"ARTWORK");line:SetColorTexture(unpack(T.onSecondaryContainer));line:SetSize(stroke[1],1.5)
-    line:SetPoint("CENTER",stroke[2],stroke[3]);line:SetRotation(stroke[4]);row.check.strokes[#row.check.strokes+1]=line
-   end
+   row.check=C.CheckMark(row);row.check:SetPoint("LEFT",8,0)
    row.check:Hide()
   end
   menu:SetScript("OnHide",function(self)
@@ -101,8 +94,12 @@ function Library.AttachMenus(UI)
  end
  function UI:CloseMenu() Close() end
  function UI:CloseMenuFor(anchor) if menu and menu.anchor==anchor then Close() end end
+ function UI:GetMenu() return menu end
+ function UI:GetMenuAnchor() return menu and menu.anchor end
+ function UI:IsMenuOpen(anchor) return menu~=nil and menu:IsShown() and (anchor==nil or menu.anchor==anchor) end
+ function UI:IsMenuHovered(anchor) return self:IsMenuOpen(anchor) and menu:IsMouseOver() end
 end
 -- Commit only after all six definition files completed in manifest order.
 Library.version=private.LycheeUILoadVersion
-Library.versionString="1.1.14"
+Library.versionString="1.2.0"
 private.LycheeUILoad,private.LycheeUILoadVersion=nil,nil

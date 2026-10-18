@@ -3,7 +3,6 @@ local A=_G.LycheeGroup
 local F={};A.Floating=F
 local zh=GetLocale()=="zhCN"
 local C,T
-local cardColor,cardHover={0,0,0,.60},{.04,.04,.04,.66}
 local MEMBER_TEXT_X,MEMBER_TEXT_WIDTH,MEMBER_METRIC_WIDTH=56,168,76
 local MEMBER_NAME_SIZE,MEMBER_NAME_LINE,MEMBER_META_SIZE,MEMBER_META_LINE=16,22,12,16
 local MEMBER_FACTION_SIZE,MEMBER_FACTION_GAP=16,6
@@ -46,12 +45,6 @@ local function ColorScore(t,score,kind)
  elseif kind=="pvp" then t:SetText(math.floor(score));t:SetTextColor(unpack(T.text))
  else t:SetText(math.floor(score));local c=C_ChallengeMode.GetDungeonScoreRarityColor(score);t:SetTextColor(c.r,c.g,c.b) end
 end
-local function Card(parent)
- local bg=CreateFrame("Frame",nil,parent);bg:SetAllPoints();bg:EnableMouse(false)
- bg:SetFrameLevel(math.max(0,parent:GetFrameLevel()-1));bg.fill=C.Panel(bg,cardColor,16)
- function bg:SetHovered(inside) self.fill:SetColor(inside and cardHover or cardColor) end
- bg:Hide();return bg
-end
 function F:HoverRow(row,inside)
  if row.exit then return end
  local card=row.batch or row
@@ -61,14 +54,12 @@ function F:Build()
  if self.frame then return end
  self.context=_G.LycheeUI:CreateContext({font=A.Fonts:GetPath(),reducedMotion=function() return A.db.reduceMotion end})
  C,T=self.context.C,self.context.Theme
- local inviteHover,invitePressed={.47,.8,.69,.14},{.47,.8,.69,.22}
- local cancelHover,cancelPressed={.94,.35,.4,.14},{.94,.35,.4,.22}
  local f=CreateFrame("Frame","LycheeGroupFloating",UIParent);f:SetSize(80,44);f:SetFrameStrata("MEDIUM");f:SetClampedToScreen(true);f:SetMovable(true);f:EnableMouse(false);self.frame=f
  local button=C.Button(f,"",80,function()
   if F.dragging or F.dragClick then F.dragClick=nil;return end
   A:Open(F.recruiting and "create" or "find")
  end)
- button.label:Hide();button:SetHeight(44);button:SetPoint("TOPLEFT");button.fill:SetRadius(22);button.hover:SetRadius(22);button:RegisterForDrag("LeftButton");self.button=button
+ button.label:Hide();button:SetHeight(44);button:SetPoint("TOPLEFT");button:SetRadius(22);button:RegisterForDrag("LeftButton");self.button=button
  local logoAnchor=CreateFrame("Frame",nil,button);logoAnchor:SetSize(38,38);logoAnchor:SetPoint("LEFT",8,0);logoAnchor:EnableMouse(false);self.logoAnchor=logoAnchor
  local art=logoAnchor:CreateTexture(nil,"ARTWORK");art:SetTexture(T.media.."lychee-logo.tga");art:SetTexCoord(0,1,0,1);art:SetSize(38,38);art:SetPoint("CENTER",logoAnchor,"CENTER",0,0);self.logoTexture=art
  self.context.logo,self.context.logoButton=art,logoAnchor;T.logoSize=38
@@ -98,8 +89,7 @@ function F:Build()
   end
   for _,batch in ipairs(F.batches) do batch.exit=nil;batch.exitAlpha=nil;batch.exitTop=nil;batch:EnableMouse(true);batch.applicantID=nil;batch.background:Hide();batch:Hide() end
  end)
- local cancel=C.Button(panel,"",160);cancel:SetHeight(24);cancel:SetPoint("TOPRIGHT",-24,-4);cancel.label:SetFont(T.font,14,"");C.SetLineHeight(cancel.label,20,true);cancel.label:ClearAllPoints();cancel.label:SetPoint("RIGHT");cancel:SetTextColors(T.muted,T.brand);self.cancel=cancel
- local transparent={0,0,0,0};cancel:SetSurfaceColors(transparent,transparent)
+ local cancel=C.Button(panel,"",160,nil,{variant="text",height=24});cancel:SetPoint("TOPRIGHT",-24,-4);cancel.label:ClearAllPoints();cancel.label:SetPoint("RIGHT");self.cancel=cancel
  cancel:HookScript("OnEnter",function() F:CancelHide() end)
  cancel:HookScript("OnLeave",function() F:ScheduleHide() end)
  cancel:SetScript("OnClick",function()
@@ -114,7 +104,7 @@ function F:Build()
  self.thumb=self.scrollBar.thumb
  self.scrollBar:SetScript("OnValueChanged",function(_,value) if not F.syncScroll then F:SetOffset(value,false) end end)
  self.batches={};self.CreateBatch=function(self)
-  local i=#self.batches+1;local batch=CreateFrame("Button",nil,self.body);batch:SetWidth(324);batch.background=Card(batch)
+  local i=#self.batches+1;local batch=CreateFrame("Button",nil,self.body);batch:SetWidth(324);batch.background=C.Surface(batch,{variant="floating"});batch.background:Hide()
   batch:SetScript("OnEnter",function() if batch.exit then return end;F:CancelHide();batch.background:SetHovered(true) end)
   batch:SetScript("OnLeave",function() batch.background:SetHovered(batch:IsMouseOver());F:ScheduleHide() end)
   batch:SetScript("OnClick",function() if batch.applicantID and not batch.exit then A:Open("create",{applicantID=batch.applicantID}) end end)
@@ -123,7 +113,7 @@ function F:Build()
  self.rows={};self.CreateRow=function(self)
   local i=#self.rows+1
   local row=CreateFrame("Button",nil,self.body);row:SetSize(324,48);row:SetFrameLevel(self.body:GetFrameLevel()+3)
-  row.background=Card(row)
+  row.background=C.Surface(row,{variant="floating"});row.background:Hide()
   row.icon=C.GameIcon(row,24);row.icon:SetPoint("TOPLEFT",12,-10);row.icon:SetTexCoord(.06,.94,.06,.94)
   row.name=Text(row,T.listTitleSize,180);row.name:SetPoint("TOPLEFT",40,-7);row.name:SetWordWrap(false)
   row.faction=C.Icon(row,MEMBER_FACTION_SIZE);row.faction:Hide()
@@ -133,9 +123,8 @@ function F:Build()
   row.leader=Text(row,14,196);C.SetLineHeight(row.leader,20);row.leader:SetPoint("TOPLEFT",40,-49);row.leader:SetWordWrap(false)
   row.timer=Text(row,14,56);C.SetLineHeight(row.timer,20,true);row.timer:SetPoint("TOPRIGHT",-4,-53);row.timer:SetJustifyH("RIGHT");row.timer:SetTextColor(unpack(T.muted))
   local function DecisionButton(x,method)
-   local button=C.Button(row,"",32);button.label:Hide();button:SetSize(32,32);button:SetPoint("TOPRIGHT",x,-1)
-   button.hoverColor=method=="Invite" and inviteHover or cancelHover;button.pressedColor=method=="Invite" and invitePressed or cancelPressed
-   button.glyph=C.Icon(button,18);button.glyph:SetTexture(T.media..(method=="Invite" and "invite.tga" or "decline.tga"));button.glyph:SetPoint("CENTER")
+   local button=C.IconButton(row,nil,32,nil,{iconSize=18,hoverColor=method=="Invite" and T.positiveHover or T.negativeHover,pressedColor=method=="Invite" and T.positivePressed or T.negativePressed});button:SetPoint("TOPRIGHT",x,-1)
+   button.glyph=button.icon;button.glyph:SetTexture(T.media..(method=="Invite" and "invite.tga" or "decline.tga"))
    button:HookScript("OnEnter",function() F:CancelHide();F:HoverRow(row,true) end);button:HookScript("OnLeave",function() F:HoverRow(row,false);F:ScheduleHide() end)
    button:HookScript("OnMouseDown",function(self) self.pressedTarget=self.applicantID end)
    button:SetScript("OnClick",function(self)
@@ -155,8 +144,7 @@ function F:Build()
   end
   row.invite=DecisionButton(-29,"Invite");row.invite:Hide()
   row.decline=DecisionButton(-7,"Decline");row.decline:Hide()
-  row.cancel=C.Button(row,"",32);row.cancel.label:Hide();row.cancel:SetSize(32,32);row.cancel:SetPoint("TOPRIGHT",-12,-12);row.cancel:Hide()
-  row.cancel.hoverColor,row.cancel.pressedColor=cancelHover,cancelPressed
+  row.cancel=C.Button(row,"",32,nil,{height=32,hoverColor=T.negativeHover,pressedColor=T.negativePressed});row.cancel.label:Hide();row.cancel:SetPoint("TOPRIGHT",-12,-12);row.cancel:Hide()
   local cross=C.Glyph(row.cancel,"close",16);cross:SetPoint("CENTER");cross:SetColor(T.dim)
   row.cancel:HookScript("OnEnter",function() F:CancelHide();F:HoverRow(row,true);cross:SetColor(T.brand) end)
   row.cancel:HookScript("OnLeave",function() cross:SetColor(T.dim);F:HoverRow(row,false);F:ScheduleHide() end)
@@ -174,7 +162,7 @@ function F:Build()
  end
  for i=1,14 do self:CreateRow();self:CreateBatch() end
  self.emptyCard=CreateFrame("Frame",nil,panel);self.emptyCard:SetSize(324,44);self.emptyCard:SetPoint("TOPLEFT",12,-48)
- self.emptyCard.background=Card(self.emptyCard);self.emptyCard.background:Show()
+ self.emptyCard.background=C.Surface(self.emptyCard,{variant="floating"})
  self.empty=Text(self.emptyCard,14,292);self.empty:SetPoint("CENTER");self.empty:SetJustifyH("CENTER");C.SetLineHeight(self.empty,20,true);self.empty:SetTextColor(unpack(T.muted))
  self.measure=Text(panel,14,300);self.measure:SetWordWrap(true);self.measure:Hide();self.empty:SetText(zh and "暂无申请" or "No applications")
  button:HookScript("OnEnter",function() F:ShowPanel() end);button:HookScript("OnLeave",function() F:ScheduleHide() end)
