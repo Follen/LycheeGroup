@@ -2,7 +2,7 @@
 -- lua tests/ui_preview.lua -> tests/preview-data.js
 local f=dofile("tests/ui_fixture.lua")("zhCN")
 local A,U,G,S=f.A,f.U,f.G,f.S
-UIParent:SetSize(1280,860);A.db.reduceMotion=true
+UIParent:SetSize(1640,1000);A.db.reduceMotion=true
 C_LFGList.GetActivityGroupInfo=function(id) return id==20 and "塞塔里斯神庙" or "尼鲁巴尔王宫" end
 G.Catalog:GetActivity(2).fullName="塞塔里斯神庙（史诗钥石）";G.Catalog:GetActivity(2).name="塞塔里斯神庙（史诗钥石）"
 local nativeDifficultyInfo=GetDifficultyInfo
@@ -23,7 +23,9 @@ function G.Results:GetDetails(record)
  local m={};for i=1,record.numMembers or 0 do m[i]=members[i] end
  return {members=m,counts=U:MemberCounts(m),encounters={},relationships={bnet={"同路人"},character={"糖霜骑士-晨风号角"},guild={"暮色星河"}}}
 end
-function G:GetHistory() return {{id=1,mapName="艾杰斯亚学院",level=12,completedAt=1792051200,members=members},{id=2,mapName="蕨皮山谷",level=11,completedAt=1791964800,members=members}} end
+local historyMembers={}
+for i,member in ipairs(members) do historyMembers[i]={name=names[i],realm=member.realm,class=member.class,specName=member.specName,specID=member.specID,assignedRole=member.assignedRole} end
+function G:GetHistory() return {{id=1,mapName="艾杰斯亚学院",level=12,completedAt=1792051200,members=historyMembers},{id=2,mapName="蕨皮山谷",level=11,completedAt=1791964800,members=historyMembers}} end
 local titles={"+12 稳定限时 来输出","+10 打完就走 来治疗","+13 冲分 熟练队","+11 周常 友好交流","+12 补一输出","+9 新人练习 一起打"}
 for i,title in ipairs(titles) do G.records[i]={id=i,activityID=2,activity=A.Group.Catalog:GetActivity(2),categoryID=2,activityName="Dungeon activity",name=title,leaderName=members[(i-1)%5+1].name,leaderKey=members[(i-1)%5+1].nameKey,numMembers=i%3+2,maxNumPlayers=5,age=i*36,requiredItemLevel=635+i,requiredDungeonScore=2600,leaderOverallDungeonScore=2800+i*83,leaderRating=2800+i*83,requiredRating=2600,level=12,comment="熟练机制，开打前确认路线。打断分配好，沟通友善，争取限时。"} end
 G.apps={{id=2,name=titles[2],status="applied",categoryID=2,result=G.records[2],activityID=2,expiresAt=GetTime()+250},{id=4,name=titles[4],status="invited",categoryID=2,result=G.records[4],activityID=2}};G.state="done"
@@ -37,7 +39,7 @@ local function snapshot(name,root)
  local nodes={}
  for i,n in ipairs(S.nodes) do
   local points={};for _,p in ipairs(n.points) do local point={};for j,v in ipairs(p) do point[j]=type(v)=="table" and {ref=ids[v]} or v end;points[#points+1]=point end
-  nodes[i]={id=i,parent=ids[n.parent],kind=n:GetObjectType(),shown=n.shown,alpha=n.alpha,w=n.w,h=n.h,points=points,all=ids[n.allPoints],text=(n:GetObjectType()=="FontString" or n:GetObjectType()=="EditBox") and n.text or nil,color=n.color,font=n.font,fill=n:GetObjectType()=="Texture" and n.fill or nil,vertex=n.vertex and {unpack(n.vertex)},texture=type(n.texture)~="table" and n.texture or nil,atlas=n.atlas,coords=n.texCoords,justify=n.justify,wrap=n.wrap,maxLines=n.maxLines,spacing=n.spacing,layer=n.layer,backdrop=n.backdropColor,rotation=n.rotation,level=n.level,strata=n.strata,scale=n.scale,thumb=ids[n.thumb],scroll=type(n.scroll)=="number" and n.scroll or nil,scrollChild=ids[n.scrollChild]}
+  nodes[i]={id=i,parent=ids[n.parent],kind=n:GetObjectType(),shown=n.shown,alpha=n.alpha,w=n.w,h=n.h,points=points,all=ids[n.allPoints],text=(n:GetObjectType()=="FontString" or n:GetObjectType()=="EditBox") and n.text or nil,color=n.color,font=n.font,fill=n:GetObjectType()=="Texture" and n.fill or nil,vertex=n.vertex and {unpack(n.vertex)},texture=type(n.texture)~="table" and n.texture or nil,atlas=n.atlas,coords=n.texCoords,justify=n.justify,wrap=n.wrap,maxLines=n.maxLines,spacing=n.spacing,layer=n.layer,backdrop=n.backdropColor,rotation=n.rotation,level=n.level,strata=n.strata,scale=n.scale,clamp=n.clampInsets,thumb=ids[n.thumb],scroll=type(n.scroll)=="number" and n.scroll or nil,scrollChild=ids[n.scrollChild]}
  end
  shots[#shots+1]={name=name,nodes=nodes,root=ids[root or U.frame],menu=U.context.menu and U.context.menu:IsShown() and ids[U.context.menu] or nil,tooltip=U.Tooltip.interactive and U.Tooltip.interactive:IsShown() and ids[U.Tooltip.interactive] or U.Tooltip.frame and U.Tooltip.frame:IsShown() and ids[U.Tooltip.frame] or nil}
 end

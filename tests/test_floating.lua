@@ -33,6 +33,8 @@ local function Position(frame)
  local _,relative,point,x,y=frame:GetPoint();if type(relative)=="number" then return relative,point end;return x,y
 end
 T.eq(A.UI,nil,"hover does not load the UI addon")
+T.eq(F.context.Theme.fontSizeDelta,0,"the floating context does not inherit the main-window font increase")
+T.eq(select(2,F.rows[1].name:GetFont()),16);T.eq(select(2,F.rows[1].meta:GetFont()),18,"floating activity and group titles retain their existing sizes")
 T.eq(F.panel.events.GLOBAL_MOUSE_DOWN,true,"the expanded popup observes global clicks without a full-screen input catcher")
 local entryButtons=0;for _,child in ipairs({F.frame:GetChildren()}) do if child:GetObjectType()=="Button" then entryButtons=entryButtons+1 end end
 T.eq(entryButtons,1,"the collapsed icon and number share one actual button")

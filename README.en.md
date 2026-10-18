@@ -59,6 +59,6 @@ lua tests/runner.lua
 
 Project documents (in Chinese): [Product](Product.md) · [Design](Desgin.md) · [Architecture](Architecture.md) · [Performance](perfermance.md) · [Documentation and changelog rules](Agents.md). The product document describes the current implementation and in-game validation coverage.
 
-The shared UI library is LycheeUI 1.2.0 (revision 17). See its [integration guide](../LycheeUI/README.md), [API](../LycheeUI/API.md), and [component design specification](../LycheeUI/DESIGN.md).
+The shared UI library is LycheeUI 1.2.0 (revision 18). See its [integration guide](../LycheeUI/README.md), [API](../LycheeUI/API.md), and [component design specification](../LycheeUI/DESIGN.md).
 
 See the [library notes](addon/LycheeGroup_Group/Libs/README.md) for bundled third-party sources and licenses.

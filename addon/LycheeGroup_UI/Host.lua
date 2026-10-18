@@ -49,13 +49,17 @@ function UI:ApplyFont(path)
  self.navItems.find:GetParent():SetWidth(x-T.navGap)
  self.settingsButton:SetWidth(math.max(72,self.settingsButton.label:GetStringWidth()+40))
  self._nav=nil;self:UpdateNav()
+ local notes=self.pages.notes
+ if notes.frame then notes:LayoutFont() end
  local settings=self.pages.settings
  if settings.frame then settings:LayoutRows();settings:Sync() end
 end
 
 function UI:FitToScreen()
 	local find = self.pages.find
-	local width = T.width + (find.filterPanel and find.filterPanel:IsShown() and 280 or 0)
+	local filterWidth = find.filterPanel and find.filterPanel:IsShown() and find.filterPanel:GetWidth()+12 or 0
+	local width = T.width + filterWidth
+	self.frame:SetClampRectInsets(0,filterWidth,0,0)
 	local scale = math.min(1, (UIParent:GetWidth() - 40) / width, (UIParent:GetHeight() - 40) / T.height) * A.db.uiScale / 100
 	if self.frame:GetScale() == scale then return end
 	self.frame:SetScale(scale)

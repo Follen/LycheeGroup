@@ -32,6 +32,7 @@ local T={
  compactHeight=30,compactRadius=8,compactSize=13,compactLineHeight=20,floatingRadius=16,
  scrollWidth=6,scrollGap=12,iconCrop=.06,iconRadius=.22,
  bodySize=14,metaSize=14,titleSize=24,headingSize=18,
+ fontSizeDelta=0,lineHeightDelta=0,
  listTitleSize=18,listTitleLineHeight=24,listMetaSize=14,listMetaLineHeight=20,
  media=Library.media,
 }

@@ -1,8 +1,8 @@
 # 荔枝组队 · Lychee LFG 程序架构
 
-更新日期：2026-10-18。
+更新日期：2026-10-19。
 
-状态：2026-10-18。创建收藏、当前队伍两种名单、团本增益、职责筛选、玩家详情和主窗绑定／缩放均已实现。活动与来源显示规则集中到主包 Presentation，内嵌与悬浮成员名单共用 UI.Members；搜索描述列及本轮界面反馈修正已通过完整离线回归和本地布局检查，最新文件已同步到游戏插件目录，尚未重载或完成本轮实机验收。内置 LycheeUI 1.2.0（修订 17）。此前审计与实机结果保留原日期和范围，不代替本轮验收；安装、性能与权限验证边界见 [perfermance.md 第 12 节](perfermance.md#12-当前内存测试与验证状态)。
+状态：2026-10-19。创建收藏、当前队伍两种名单、团本增益、职责筛选、玩家详情和主窗绑定／缩放均已实现；本轮寻队关系与笔记匹配、申请列顺序以及界面排版已接入。活动与来源显示规则集中到主包 Presentation，成员名单共用 UI.Members；主窗和浮窗分别持有共享库 Context。内置 LycheeUI 1.2.0（修订 18），完整离线回归通过，第七项排版修改已安装并作为后续重构的界面基线，最新布局修正待游戏内复核。此前审计与实机结果保留原日期和范围，不代替本轮验收；安装、性能与权限验证边界见 [perfermance.md 第 12 节](perfermance.md#12-当前内存测试与验证状态)。
 
 产品范围见 [Product.md](Product.md)，视觉与动画轨迹见 [Desgin.md](Desgin.md)，资源额度与测量方法见 [perfermance.md](perfermance.md)。
 
@@ -26,7 +26,7 @@ Host 通过 `Context:SetWindow(frame, logo, logoButton)` 接入主窗口并捕�
 
 暴雪 API 的调用条件、频率和事件通过荔枝 Dev 的固定版本源码核实。本地读取与服务器请求分开处理，请求在明确入口合并并尊重原生限流状态，不通过常驻轮询或重试风暴维持同步。
 
-共享组件的外观通过 `Button` 的 options／`SetStyle`、`List:SetStyle` 与导航 options 设置；紧凑选项、图标动作、复选框、自定义选择弹层入口和浮窗底面分别复用库内组件。页面继续持有活动选择、申请目标、收藏状态和成员身份。Context 创建时解析主题覆盖、别名与派生状态；菜单通过 `GetMenu`／`GetMenuAnchor`／`IsMenuOpen`／`IsMenuHovered` 查询，保留原生对象扩展入口。Waiting 和 Busy 捕获调用方当前视觉状态，停止时归还。完整契约见 [LycheeUI API](../LycheeUI/API.md)。
+共享组件的外观通过 `Button` 的 options／`SetStyle`、`List:SetStyle` 与导航 options 设置；紧凑选项、图标动作、复选框、自定义选择弹层入口和浮窗底面分别复用库内组件。页面继续持有活动选择、申请目标、收藏状态和成员身份。Context 创建时解析主题覆盖、别名与派生状态；菜单通过 `GetMenu`／`GetMenuAnchor`／`IsMenuOpen`／`IsMenuHovered` 查询，保留原生对象扩展入口。Waiting 和 Busy 捕获调用方当前视觉状态，停止时归还。完整契约见 [LycheeUI API](../LycheeUI/API.md)。主窗通过 UI.Theme 的 Context 覆盖配置宽度及 `fontSizeDelta`／`lineHeightDelta`，共享 Text、SetFont、SetLineHeight、菜单与原生输入按基准值应用增量一次；浮窗的独立 Context 使用默认零增量。切换字体路径保留已应用的实际字号，Notes 与 Settings 重新测量自身文字布局；原生输入归还时恢复借用前的字体。
 
 ## 2. 四个业务包与共享库
 

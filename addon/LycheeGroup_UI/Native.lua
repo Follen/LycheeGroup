@@ -226,17 +226,17 @@ function Native:SetAutoApply(enabled)
 end
 function Native:BuildApplication()
  if self.applicationModal then return self.applicationModal end
- local modal=UI:OpenModal("application",Say("申请加入","Apply to group"),456,434)
+ local modal=UI:OpenModal("application",Say("申请加入","Apply to group"),512,452)
  local content=modal.content
- modal.group=C.Text(content,"",14,T.muted,408,22);modal.group:SetPoint("TOPLEFT");modal.group:SetWordWrap(true);modal.group:SetMaxLines(2)
+ modal.group=C.Text(content,"",14,T.muted,464,22);modal.group:SetPoint("TOPLEFT");modal.group:SetWordWrap(true);modal.group:SetMaxLines(2)
  modal.roleLabel=C.Text(content,Say("选择申请职责（可多选）","Choose your roles (multiple allowed)"),14,T.muted);C.SetLineHeight(modal.roleLabel,20,true)
  modal.roles={}
  for _,role in ipairs(roleKeys) do
   modal.roles[role]=C.RoleButton(content,role,nil,roleLabels[role],function() Native:SetApplicationRole(role) end)
  end
  modal.noteLabel=C.Text(content,Say("给队长的备注","Note to the leader"),14,T.muted);C.SetLineHeight(modal.noteLabel,20,true)
- modal.note=C.Field(content,408,96,false,"modal")
- modal.error=C.Text(content,"",14,T.warning,408,20);modal.error:SetMaxLines(1)
+ modal.note=C.Field(content,464,112,false,"modal")
+ modal.error=C.Text(content,"",14,T.warning,464,20);modal.error:SetMaxLines(1)
  modal.cancel=C.Button(modal.frame,L.cancel,nil,function() UI:CloseModal() end);modal.cancel:SetWidth(math.max(72,modal.cancel.label:GetStringWidth()+40));modal.cancel:SetHeight(40)
  modal.submit=C.Button(modal.frame,L.apply,112,function() Native:ConfirmApplication() end);modal.submit:SetPrimary(true);modal.submit:SetHeight(40)
  self.applicationModal=modal
@@ -245,20 +245,20 @@ end
 function Native:LayoutApplication()
  local modal=self.applicationModal
  local hasGroup=modal.group:GetText()~=""
- local groupHeight=hasGroup and math.max(22,math.min(44,modal.group:GetStringHeight())) or 0
+ local groupHeight=hasGroup and modal.group:GetStringHeight() or 0
  local groupOffset=hasGroup and groupHeight+20 or 0
  modal.group:SetShown(hasGroup)
  modal.group:SetHeight(groupHeight)
  modal.roleLabel:SetPoint("TOPLEFT",0,-groupOffset)
  local x=0
  for _,role in ipairs(roleKeys) do
-  local button=modal.roles[role];button:SetPoint("TOPLEFT",x,-groupOffset-28);x=x+button:GetWidth()+8
+  local button=modal.roles[role];button:SetPoint("TOPLEFT",x,-groupOffset-32);x=x+button:GetWidth()+8
  end
- modal.noteLabel:SetPoint("TOPLEFT",0,-groupOffset-88)
- modal.note:SetPoint("TOPLEFT",0,-groupOffset-116)
+ modal.noteLabel:SetPoint("TOPLEFT",0,-groupOffset-96)
+ modal.note:SetPoint("TOPLEFT",0,-groupOffset-128)
  local hasError=modal.error:GetText()~=""
- modal.error:SetShown(hasError);modal.error:SetPoint("TOPLEFT",0,-groupOffset-224);modal.error:SetHeight(hasError and 20 or 0)
- modal.frame:SetHeight(392+groupOffset+(hasError and 20 or 0))
+ modal.error:SetShown(hasError);modal.error:SetPoint("TOPLEFT",0,-groupOffset-252);modal.error:SetHeight(hasError and 24 or 0)
+ modal.frame:SetHeight(408+groupOffset+(hasError and 28 or 0))
  modal.submit:SetWidth(math.max(96,modal.submit.label:GetStringWidth()+40));modal.submit:SetPoint("BOTTOMRIGHT",-24,24)
  modal.cancel:SetPoint("RIGHT",modal.submit,"LEFT",-8,0)
 end
@@ -313,12 +313,12 @@ function Native:OpenApplicationSettings(resultID,enableOnSave)
  if not UI.preview then local entry,err=self:Ready();if not entry then return false,err end end
  self:ReleaseApplication()
  local title=resultID and Say("申请加入","Apply to group") or L.applicationSettings
- local modal=self.applicationModal;if modal then UI:OpenModal("application",title,456,434) else modal=self:BuildApplication();modal:SetTitle(title) end
+ local modal=self.applicationModal;if modal then UI:OpenModal("application",title,512,452) else modal=self:BuildApplication();modal:SetTitle(title) end
  local prefs=ApplicationPrefs();local lease={id=resultID,available={},roles={},enableOnSave=enableOnSave}
  for _,role in ipairs(roleKeys) do if prefs.roles and prefs.roles[role] then lease.roles[role]=true end end
  if UI.preview then
   self.previewApplication=lease
-  if not modal.previewNote then modal.previewNote=C.Edit(modal.note,408,96,true,false,"modal");modal.previewNote:SetAllPoints(modal.note) end
+  if not modal.previewNote then modal.previewNote=C.Edit(modal.note,464,112,true,false,"modal");modal.previewNote:SetAllPoints(modal.note) end
   modal.previewNote.box:SetText(prefs.note or "");modal.previewNote:Show();modal.previewNote.box:SetFocus()
  else
   self.applicationLease=lease

@@ -58,11 +58,11 @@ function P:BuildAbout(parent)
  local logo=C.Icon(header,44);logo:SetTexture(T.media.."lychee-logo.tga");logo:SetPoint("TOPLEFT",12,-4)
  self.aboutValues={}
  local name=C.Text(header,"",18,T.text,BODY_WIDTH-84);C.SetLineHeight(name,24,true);name:SetWordWrap(false);name:SetPoint("TOPLEFT",72,-4);self.aboutValues.name=name
- local versionLabel=C.Text(header,L.addonVersion,14,T.muted);C.SetLineHeight(versionLabel,20,true);versionLabel:SetPoint("TOPLEFT",72,-40)
+ local versionLabel=C.Text(header,L.addonVersion,14,T.muted);C.SetLineHeight(versionLabel,20,true);versionLabel:SetPoint("TOPLEFT",72,-44)
  local version=C.Text(header,"",14,T.text,160);C.SetLineHeight(version,20,true);version:SetWordWrap(false);version:SetPoint("TOPLEFT",versionLabel,"TOPRIGHT",8,0);self.aboutValues.version=version
  local authorLabel=C.Text(header,L.addonAuthor,14,T.muted);C.SetLineHeight(authorLabel,20,true);authorLabel:SetPoint("TOPLEFT",version,"TOPRIGHT",24,0)
- local author=C.Text(header,"",14,T.text);C.SetLineHeight(author,20,true);author:SetWordWrap(false);author:SetPoint("TOPLEFT",authorLabel,"TOPRIGHT",8,0);author:SetPoint("TOPRIGHT",header,"TOPRIGHT",-12,-40);self.aboutValues.author=author
- self.otherAddonsHeading=C.Text(parent,L.otherAddons,14,T.muted,BODY_WIDTH-24);C.SetLineHeight(self.otherAddonsHeading,20,true);self.otherAddonsHeading:SetPoint("TOPLEFT",12,-96)
+ local author=C.Text(header,"",14,T.text);C.SetLineHeight(author,20,true);author:SetWordWrap(false);author:SetPoint("TOPLEFT",authorLabel,"TOPRIGHT",8,0);author:SetPoint("TOPRIGHT",header,"TOPRIGHT",-12,-44);self.aboutValues.author=author
+ self.otherAddonsHeading=C.Text(parent,L.otherAddons,14,T.muted,BODY_WIDTH-24);C.SetLineHeight(self.otherAddonsHeading,20,true);self.otherAddonsHeading:SetPoint("TOPLEFT",12,-100)
  local media="Interface\\AddOns\\LycheeGroup_UI\\Media\\"
  local entries={
   {name=L.lycheeLauncher,summary=L.lycheeLauncherHelp,icon=media.."about-launcher.tga",links={{L.newBeeBox,"https://www.wclbox.com/share/AJKkdJtw8gt"},{L.neteaseDD,"https://url.cc.163.com/HoH0Od"}}},
@@ -70,11 +70,11 @@ function P:BuildAbout(parent)
  }
  self.otherAddons={}
  for index,entry in ipairs(entries) do
-  local holder=CreateFrame("Frame",nil,parent);holder:SetSize(BODY_WIDTH,124);UI.drag:AddHandle(holder)
+  local holder=CreateFrame("Frame",nil,parent);holder:SetSize(BODY_WIDTH,148);UI.drag:AddHandle(holder)
   C.Panel(holder,T.rowAlternate,12):SetShown(index%2==0)
   local icon=C.Icon(holder,44);icon:SetTexture(entry.icon);icon:SetPoint("TOPLEFT",12,-12)
   local title=C.Text(holder,entry.name,18,T.text,BODY_WIDTH-84);C.SetLineHeight(title,24,true);title:SetPoint("TOPLEFT",72,-12)
-  local summary=C.Text(holder,entry.summary,14,T.muted,BODY_WIDTH-96);C.SetLineHeight(summary,20);summary:SetWordWrap(true);summary:SetPoint("TOPLEFT",72,-44)
+  local summary=C.Text(holder,entry.summary,14,T.muted,BODY_WIDTH-96);C.SetLineHeight(summary,20);summary:SetWordWrap(true);summary:SetPoint("TOPLEFT",72,-48)
   local row={frame=holder,icon=icon,title=title,summary=summary,links={}}
   for i,link in ipairs(entry.links) do
    local url,identity=link[2],entry.name.." · "..link[1]
@@ -89,17 +89,22 @@ function P:RefreshAbout()
   local text=C_AddOns.GetAddOnMetadata("LycheeGroup",field)
   UI:SetText(self.aboutValues[key],text and text~="" and text or key=="name" and L.reminder or L.metadataMissing)
  end
- local top=128
+ local top=140
  for _,row in ipairs(self.otherAddons) do
-  local height=math.max(124,row.summary:GetStringHeight()+104)
+  local height=math.max(148,row.summary:GetStringHeight()+104)
   row.frame:ClearAllPoints();row.frame:SetPoint("TOPLEFT",0,-top);row.frame:SetHeight(height);top=top+height+12
+  local left=72
+  for _,button in ipairs(row.links) do
+   local width=math.max(120,math.ceil(button.label:GetStringWidth())+32)
+   button:SetWidth(width);button:ClearAllPoints();button:SetPoint("BOTTOMLEFT",left,12);left=left+width+12
+  end
  end
 end
 -- The window-scale control uses a manual track: a native Slider can update its
 -- value before Lua mouse handlers, while its own parent is the thing being scaled.
 local function WindowScaleControl(parent)
  local control
- control=C.Slider(parent,132,75,125,5,function(value) A:SetSetting("uiScale",value) end,{
+ control=C.Slider(parent,156,75,125,5,function(value) A:SetSetting("uiScale",value) end,{
   commitOnRelease=true,
   onPreview=function(value) if control and control.valueLabel then UI:SetText(control.valueLabel,value.."%") end end,
  })
@@ -108,35 +113,35 @@ local function WindowScaleControl(parent)
 end
 
 function P:BuildRow(parent,row,index)
- local holder=CreateFrame("Frame",nil,parent);holder:SetSize(BODY_WIDTH,80);holder:SetPoint("TOPLEFT",0,-(parent.nextRowY or 0));holder:EnableMouse(true)
+ local holder=CreateFrame("Frame",nil,parent);holder:SetSize(BODY_WIDTH,88);holder:SetPoint("TOPLEFT",0,-(parent.nextRowY or 0));holder:EnableMouse(true)
  UI.drag:AddHandle(holder)
  local fill=C.Panel(holder,T.rowAlternate,12);fill:SetShown(index%2==0)
- local controlWidth=184;local content=BODY_WIDTH-24-controlWidth-32;local labelWidth=content/2.3;local helpWidth=content-labelWidth
+ local controlWidth=220;local content=BODY_WIDTH-24-controlWidth-48;local labelWidth=content*.4;local helpWidth=content-labelWidth
  local label=C.Text(holder,row[2],14,T.text,labelWidth);label:SetPoint("LEFT",12,0);label:SetWordWrap(true);C.SetLineHeight(label,20)
- local help=C.Text(holder,row[3],14,T.muted,helpWidth);help:SetPoint("LEFT",28+labelWidth,0);help:SetWordWrap(true);C.SetLineHeight(help,20)
- local rowHeight=math.max(80,label:GetStringHeight()+32,help:GetStringHeight()+32);holder:SetHeight(rowHeight);parent.nextRowY=(parent.nextRowY or 0)+rowHeight
+ local help=C.Text(holder,row[3],14,T.muted,helpWidth);help:SetPoint("LEFT",36+labelWidth,0);help:SetWordWrap(true);C.SetLineHeight(help,20)
+ local rowHeight=math.max(88,label:GetStringHeight()+32,help:GetStringHeight()+32);holder:SetHeight(rowHeight);parent.nextRowY=(parent.nextRowY or 0)+rowHeight
  parent.rows=parent.rows or {};parent.rows[#parent.rows+1]={frame=holder,label=label,help=help}
  local control
  if row[4]=="range" then
   if row[1]=="uiScale" then control=WindowScaleControl(holder)
-  else control=C.Slider(holder,132,row[5] or 50,row[6] or 150,5,function(value)
+  else control=C.Slider(holder,156,row[5] or 50,row[6] or 150,5,function(value)
    value=math.floor(value/5+.5)*5
    local widget=P.controls[row[1]].widget
    UI:SetText(widget.valueLabel,value.."%")
    if not P.syncing then A:SetSetting(row[1],value) end
   end) end
-  control.valueLabel=C.Text(control,"",14,T.muted,40);control.valueLabel:SetPoint("LEFT",control,"RIGHT",12,0);control.valueLabel:SetJustifyH("RIGHT")
-  control:SetPoint("RIGHT",-64,0)
+  control.valueLabel=C.Text(control,"",14,T.muted,52);control.valueLabel:SetPoint("LEFT",control,"RIGHT",12,0);control.valueLabel:SetJustifyH("RIGHT")
+  control:SetPoint("RIGHT",-76,0)
  elseif row[4]=="binding" then
-  control=C.Button(holder,A.L.bindingChange,144,function() P:BeginBindingCapture() end);control:SetPoint("RIGHT",-12,0)
+  control=C.Button(holder,A.L.bindingChange,controlWidth,function() P:BeginBindingCapture() end);control:SetPoint("RIGHT",-12,0)
   holder:HookScript("OnHide",function() if P.bindingCapture==holder then P:CancelBindingCapture(true) end end)
  elseif row[4]=="action" then
-  control=C.Button(holder,S("重置位置","Reset position"),144,function() A.db.floatingPosition=nil;if A.Floating then A.Floating:ResetPosition() end end);control:SetPoint("RIGHT",-12,0)
+  control=C.Button(holder,S("重置位置","Reset position"),controlWidth,function() A.db.floatingPosition=nil;if A.Floating then A.Floating:ResetPosition() end end);control:SetPoint("RIGHT",-12,0)
  elseif row[4] then
   control=C.Choice(holder,controlWidth,function() return type(row[4])=="function" and row[4]() or row[4] end,function(value) A:SetSetting(row[1],value) end);control:SetHeight(44);control:SetPoint("RIGHT",-12,0)
  else
   control=C.Check(holder,"",function(value) A:SetSetting(row[1],value);P:Sync() end)
-  control.track:ClearAllPoints();control.track:SetPoint("RIGHT",-12,0);control.label:ClearAllPoints();control.label:SetPoint("RIGHT",control.track,"LEFT",-12,0);control.label:SetFont(T.font,14,"");control:SetPoint("RIGHT",0,0)
+  control.track:ClearAllPoints();control.track:SetPoint("RIGHT",-12,0);control.label:ClearAllPoints();control.label:SetPoint("RIGHT",control.track,"LEFT",-12,0);C.SetFont(control.label,14);control:SetPoint("RIGHT",0,0)
   control.settingsSwitch=true
   control:HookScript("OnEnter",function(button) UI:Color(button.label,T.text) end)
   control:HookScript("OnLeave",function(button) UI:Color(button.label,T.muted) end)
@@ -149,11 +154,11 @@ function P:ShowBindingNotice(message,conflict)
  if not self.bindingNotice then
   local notice=C.Notice(self.main,BODY_WIDTH);notice:SetPoint("TOPLEFT",PAD,-80);notice.close:Hide()
   self.bindingNotice=notice
-  self.cancelBinding=C.Button(notice,A.L.bindingCancel,80,function() P:CancelBindingCapture() end);self.cancelBinding:SetHeight(28);self.cancelBinding:SetPoint("RIGHT",-12,0)
-  self.overwriteBinding=C.Button(notice,S("覆盖","Overwrite"),96,function() P:TryBinding(P.pendingBindingKey,P.pendingBindingAction) end);self.overwriteBinding:SetHeight(28);self.overwriteBinding:SetPoint("RIGHT",self.cancelBinding,"LEFT",-8,0)
+  self.cancelBinding=C.Button(notice,A.L.bindingCancel,96,function() P:CancelBindingCapture() end);self.cancelBinding:SetHeight(32);self.cancelBinding:SetPoint("RIGHT",-12,0)
+  self.overwriteBinding=C.Button(notice,S("覆盖","Overwrite"),112,function() P:TryBinding(P.pendingBindingKey,P.pendingBindingAction) end);self.overwriteBinding:SetHeight(32);self.overwriteBinding:SetPoint("RIGHT",self.cancelBinding,"LEFT",-8,0)
  end
  self.overwriteBinding:SetShown(conflict==true)
- self.bindingNotice:SetMessage(message,conflict and 184 or 80)
+ self.bindingNotice:SetMessage(message,conflict and 216 or 96)
 end
 
 function P:CancelBindingCapture(skipSync)
@@ -202,7 +207,7 @@ function P:LayoutRows()
   panel:ClearAllPoints();panel:SetPoint("TOPLEFT",self.main,"TOPLEFT",PAD,-80-offset);panel:SetHeight(T.contentHeight-120-offset)
   local top=0
   for _,row in ipairs(panel.rows or {}) do
-   local height=math.max(80,row.label:GetStringHeight()+32,row.help:GetStringHeight()+32)
+   local height=math.max(88,row.label:GetStringHeight()+32,row.help:GetStringHeight()+32)
    row.frame:ClearAllPoints();row.frame:SetPoint("TOPLEFT",0,-top);row.frame:SetHeight(height);top=top+height
   end
   panel.nextRowY=top
@@ -215,7 +220,6 @@ function P:SelectSection(key)
  self.section=key;for id,panel in pairs(self.panels) do panel:SetShown(id==key);self.nav[id]:SetActive(id==key);self.nav[id].mark:SetShown(id==key);UI:Color(self.nav[id].label,id==key and T.text or T.muted) end
  for _,entry in ipairs(sections) do if entry[1]==key then UI:SetText(self.heading,entry[2]);break end end
  self:Sync()
- if key=="about" then self:RefreshAbout() end
  if changed then UI.Motion:Reveal(self.panels[key],"TOPLEFT",self.main,"TOPLEFT",PAD,-80,4,0,.14) end
 end
 function P:Sync()
@@ -234,6 +238,7 @@ function P:Sync()
  end
  self.syncing=nil
  self:LayoutRows()
+ if self.section=="about" then self:RefreshAbout() end
 end
 function P:Enter(context) self.frame:RegisterEvent("UPDATE_BINDINGS");self:SelectSection(context and context.section or self.section) end
 function P:Leave()

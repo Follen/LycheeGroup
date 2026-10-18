@@ -3,6 +3,7 @@ local UI = A.UI
 UI.inputs = {}
 UI.context = _G.LycheeUI:CreateContext({
  font=A.Fonts:GetPath(),
+ theme={width=1299.2,contentWidth=1267.2,fontSizeDelta=3,lineHeightDelta=4},
  parent=UIParent, inputs=UI.inputs, text=UI.L,
  reducedMotion=function() return A.db.reduceMotion end,
  isHiding=function() return UI.hiding end,

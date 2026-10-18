@@ -26,7 +26,7 @@ local function Same(a,b)
 end
 local function ApplyText(saved,theme,color)
  local region=saved.region
- region:SetFont(theme.font,14,"");region:SetTextColor(unpack(color));region:SetShadowOffset(0,0)
+ region:SetFont(theme.font,14+theme.fontSizeDelta,"");region:SetTextColor(unpack(color));region:SetShadowOffset(0,0)
  -- Native setters may normalize font sizes and store colors as floats. The
  -- actual applied values identify our presentation during a foreign handoff.
  saved.applied={font={region:GetFont()},color={region:GetTextColor()},shadow={region:GetShadowOffset()}}

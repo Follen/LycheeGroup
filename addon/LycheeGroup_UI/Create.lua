@@ -3,19 +3,19 @@ local A=_G.LycheeGroup
 local UI=A.UI
 local T,L,C=UI.Theme,UI.L,UI.C
 local MAIN=T.contentWidth-288-16
-local FORM=math.min(700,MAIN-48)
+local FORM=math.min(820,MAIN-48)
 local CONTENT=MAIN-48
 local BATCH_WIDTH=CONTENT-C.listRightInset
 local columns={
- name={x=12,width=267,align="LEFT"},role={x=295,width=66,align="CENTER"},
- rating={x=373,width=64,align="RIGHT"},ilvl={x=449,width=78,align="RIGHT"},
- comment={x=539,width=115,align="LEFT"},actions={x=BATCH_WIDTH-96,width=84,align="CENTER"},
+ name={x=12,width=211,align="LEFT"},role={x=247,width=66,align="CENTER"},
+ rating={x=337,width=76,align="RIGHT"},ilvl={x=437,width=78,align="RIGHT"},
+ comment={x=547,width=BATCH_WIDTH-655,align="LEFT"},actions={x=BATCH_WIDTH-96,width=84,align="CENTER"},
 }
-local MEMBER_HEIGHT,MEMBER_STRIDE=56,60
-local FAVORITE_HEIGHT=116
+local MEMBER_HEIGHT,MEMBER_STRIDE=72,76
+local FAVORITE_HEIGHT=128
 local noRatingColumns={
- name=columns.name,role=columns.role,ilvl={x=373,width=78,align="RIGHT"},
- comment={x=463,width=191,align="LEFT"},
+ name=columns.name,role=columns.role,ilvl={x=337,width=78,align="RIGHT"},
+ comment={x=447,width=BATCH_WIDTH-555,align="LEFT"},
  rating=columns.rating,actions=columns.actions,
 }
 local applicantSorts={{value="newest",label=L.newest},{value="score",label=L.rating},{value="ilvl",label=L.itemLevel}}
@@ -133,8 +133,8 @@ function P:Build(parent)
  end);self.score.box:HookScript("OnTextChanged",function() P:ValidateForm() end)
  local manage=CreateFrame("Frame",nil,surface);manage:SetSize(CONTENT,T.contentHeight-48);manage:SetPoint("TOPLEFT",24,-24);self.manage=manage
  self.sIcon=C.Icon(manage,44);self.sIcon:SetPoint("TOPLEFT",0,-1)
- self.sMeta=C.Text(manage,"",14,T.muted,CONTENT-280);self.sMeta:SetFont(T.font,14,"");C.SetLineHeight(self.sMeta,20,true);self.sMeta:SetPoint("TOPLEFT",56,0);self.sMeta:SetMaxLines(1);self.sMeta:SetWordWrap(false)
- self.sName=C.Text(manage,"",18,T.text,CONTENT-280);C.SetLineHeight(self.sName,24,true);self.sName:SetPoint("TOPLEFT",56,-22);self.sName:SetWordWrap(false)
+ self.sMeta=C.Text(manage,"",14,T.muted,CONTENT-280);C.SetFont(self.sMeta,14);C.SetLineHeight(self.sMeta,20,true);self.sMeta:SetPoint("TOPLEFT",56,0);self.sMeta:SetMaxLines(1);self.sMeta:SetWordWrap(false)
+ self.sName=C.Text(manage,"",18,T.text,CONTENT-280);C.SetLineHeight(self.sName,24,true);self.sName:SetPoint("TOPLEFT",56,-28);self.sName:SetWordWrap(false)
  self.editListing=C.Button(manage,L.edit,80,function()
   local allowed,err=UI:GetGroup():CanManageListing();if not allowed then P:SetManageError(err);return end
   state.editing=true;P:PrepareForm(true);P:RefreshMode()
@@ -173,7 +173,7 @@ function P:Build(parent)
  self.manageNotice=C.Notice(manage,CONTENT,function() P:SetManageError("") end);self.manageNotice:SetPoint("TOPLEFT",0,-162);self.dError=self.manageNotice.text
  local rail=CreateFrame("Frame",nil,root);rail:SetSize(288,T.contentHeight);rail:SetPoint("TOPRIGHT");self.rail=rail
  local favoritesCard=CreateFrame("Frame",nil,rail);favoritesCard:SetSize(288,68);favoritesCard:SetPoint("TOPLEFT");C.Panel(favoritesCard,T.surfaceLow,24);self.favoritesCard=favoritesCard
- self.favoritesToggle=C.Button(favoritesCard,S("收藏","Favorites"),272,function() P.favoritesExpanded=not P.favoritesExpanded;P:RefreshFavorites() end);self.favoritesToggle:SetHeight(36);self.favoritesToggle:SetPoint("TOPLEFT",8,-16);self.favoritesToggle.label:SetFont(T.font,16,"");C.SetLineHeight(self.favoritesToggle.label,22,true);self.favoritesToggle.label:ClearAllPoints();self.favoritesToggle.label:SetPoint("LEFT",12,0)
+ self.favoritesToggle=C.Button(favoritesCard,S("收藏","Favorites"),272,function() P.favoritesExpanded=not P.favoritesExpanded;P:RefreshFavorites() end);self.favoritesToggle:SetHeight(36);self.favoritesToggle:SetPoint("TOPLEFT",8,-16);C.SetFont(self.favoritesToggle.label,16);C.SetLineHeight(self.favoritesToggle.label,22,true);self.favoritesToggle.label:ClearAllPoints();self.favoritesToggle.label:SetPoint("LEFT",12,0)
  self.favoritesChevron=C.Icon(self.favoritesToggle,12);self.favoritesChevron:SetTexture(T.media.."chevron.tga");self.favoritesChevron:SetVertexColor(unpack(T.muted));self.favoritesChevron:SetPoint("RIGHT",-12,0)
  local rosterCard=CreateFrame("Frame",nil,rail);rosterCard:SetSize(288,T.contentHeight-84);rosterCard:SetPoint("TOPLEFT",0,-84);C.Panel(rosterCard,T.surfaceLow,24);self.rosterCard=rosterCard
  self.rosterTitle=C.Text(rosterCard,L.yourGroup,18,nil,nil,24);C.SetLineHeight(self.rosterTitle,24,true);self.rosterTitle:SetPoint("TOPLEFT",20,-20)
@@ -210,11 +210,11 @@ function P:BuildFavorites()
  for _,row in ipairs(list.rows) do
   row:SetScript("OnClick",nil);row:SetScript("OnMouseDown",nil);row:SetScript("OnMouseUp",nil);row.hover:SetRadius(8)
   row.icon=C.GameIcon(row,32);row.icon:SetPoint("TOPLEFT",12,-12)
-  row.title:SetFont(T.font,14,"");C.SetLineHeight(row.title,20,true);row.title:ClearAllPoints();row.title:SetPoint("TOPLEFT",56,-12)
-  row.meta:SetFont(T.font,12,"");C.SetLineHeight(row.meta,18);row.meta:SetHeight(36);row.meta:SetWordWrap(true);row.meta:ClearAllPoints();row.meta:SetPoint("TOPLEFT",56,-36)
+  C.SetFont(row.title,14);C.SetLineHeight(row.title,20,true);row.title:ClearAllPoints();row.title:SetPoint("TOPLEFT",56,-12)
+  C.SetFont(row.meta,12);C.SetLineHeight(row.meta,18);row.meta:SetHeight(44);row.meta:SetWordWrap(true);row.meta:ClearAllPoints();row.meta:SetPoint("TOPLEFT",56,-40)
   row.unavailable=C.Text(row,"",12,T.muted);C.SetLineHeight(row.unavailable,18,true);row.unavailable:SetWordWrap(false);row.unavailable:SetPoint("BOTTOMLEFT",12,17)
   local function Active() return row.key and row._hitVisible and list.clip:IsMouseOver() end
-  row.create=C.Button(row,S("应用","Apply"),72,function() if Active() then P:UsePreset(row.key) end end);row.create:SetHeight(28);row.create:SetPoint("BOTTOMRIGHT",-12,12);row.create.label:SetFont(T.font,12,"");C.SetLineHeight(row.create.label,18,true);row.create:SetSurfaceColors(T.secondaryContainer,T.refreshHover,T.surfaceHighest)
+  row.create=C.Button(row,S("应用","Apply"),72,function() if Active() then P:UsePreset(row.key) end end);row.create:SetHeight(32);row.create:SetPoint("BOTTOMRIGHT",-12,12);C.SetFont(row.create.label,12);C.SetLineHeight(row.create.label,18,true);row.create:SetSurfaceColors(T.secondaryContainer,T.refreshHover,T.surfaceHighest)
   row.remove=C.Button(row,"",28,function() if Active() then UI:GetGroup().Presets:Remove(row.key) end end);row.remove:SetHeight(28);row.remove:SetPoint("TOPRIGHT",-12,-8);C.Glyph(row.remove,"close",12,T.dim):SetPoint("CENTER")
  end
 end
@@ -407,6 +407,9 @@ end
 function P:LayoutApplicantViewport()
  local offset=self.manageNotice:IsShown() and self.manageNotice:GetHeight()+12 or 0
  local layout=self.hideApplicantRating and noRatingColumns or columns
+ -- Balance the visible gaps around item level, accounting for header alignment.
+ local beforeRight=self.hideApplicantRating and layout.role.x+(layout.role.width+self.applicantHeaders.role:GetStringWidth())/2 or layout.rating.x+layout.rating.width
+ layout.ilvl.x=(beforeRight+layout.comment.x+self.applicantHeaders.ilvl:GetStringWidth())/2-layout.ilvl.width
  for key,label in pairs(self.applicantHeaders) do
   label:ClearAllPoints();label:SetPoint("TOPLEFT",layout[key].x,-167-offset);label:SetWidth(layout[key].width)
   label:SetShown(key~="rating" or not self.hideApplicantRating)
@@ -476,22 +479,22 @@ function P:OpenApplicantMenu(row)
  end,{cursor=true})
 end
 function P:BuildPicker(parent)
- local popup=CreateFrame("Frame",nil,parent);popup:SetSize(560,464);popup:SetPoint("TOPLEFT",self.pickerTrigger,"BOTTOMLEFT",0,-8);popup:SetFrameLevel(parent:GetFrameLevel()+30);C.Panel(popup,T.surface,12);popup:EnableMouse(true);popup:Hide();self.picker=popup
- self.pickerSearch=C.Edit(popup,536,44);self.pickerSearch:SetPoint("TOPLEFT",12,-12)
+ local popup=CreateFrame("Frame",nil,parent);popup:SetSize(640,464);popup:SetPoint("TOPLEFT",self.pickerTrigger,"BOTTOMLEFT",0,-8);popup:SetFrameLevel(parent:GetFrameLevel()+30);C.Panel(popup,T.surface,12);popup:EnableMouse(true);popup:Hide();self.picker=popup
+ self.pickerSearch=C.Edit(popup,616,44);self.pickerSearch:SetPoint("TOPLEFT",12,-12)
  self.pickerSearch.box:ClearAllPoints();self.pickerSearch.box:SetPoint("TOPLEFT",36,-4);self.pickerSearch.box:SetPoint("BOTTOMRIGHT",-12,4)
  C.Glyph(self.pickerSearch,"search",16):SetPoint("LEFT",12,0)
  self.pickerSearchHint=C.Text(self.pickerSearch,S("搜索全部活动","Search every activity"),14,T.dim);C.SetLineHeight(self.pickerSearchHint,20,true);self.pickerSearchHint:SetPoint("LEFT",36,0)
  self.pickerClear=C.Button(self.pickerSearch,"",40,function() P.pickerSearch.box:SetText("");P.pickerSearch.box:SetFocus() end);self.pickerClear:SetHeight(40);self.pickerClear:SetPoint("RIGHT",-12,0);C.Glyph(self.pickerClear,"close",20):SetPoint("CENTER");self.pickerClear:Hide()
  self.pickerSearch.box:HookScript("OnTextChanged",function(box) local filled=box:GetText()~="";P.pickerSearchHint:SetShown(not filled);P.pickerClear:SetShown(filled);box:ClearAllPoints();box:SetPoint("TOPLEFT",36,-4);box:SetPoint("BOTTOMRIGHT",filled and -60 or -12,4);P:RefreshPickerRows() end)
- self.pickerCategories=C.List(popup,148,368,64,function(key) P.pickerCategory=key;P.pickerTier=nil;P:RefreshPickerRows() end);self.pickerCategories:SetPoint("TOPLEFT",12,-76)
+ self.pickerCategories=C.List(popup,176,368,64,function(key) P.pickerCategory=key;P.pickerTier=nil;P:RefreshPickerRows() end);self.pickerCategories:SetPoint("TOPLEFT",12,-76)
  self.pickerCategories:SetGutter(0);self.pickerCategories.alternateRows=false
- for _,row in ipairs(self.pickerCategories.rows) do row:SetHeight(60);row.selected:SetRadius(8);row.hover:SetRadius(8);row.alternate:SetRadius(8);row.symbol=C.Icon(row,18);row.symbol:SetPoint("LEFT",12,0);row.title:SetFont(T.font,16,"");row.title:ClearAllPoints();row.title:SetPoint("LEFT",38,0);row.title:SetWidth(98);row.title:SetWordWrap(true);row.title:SetHeight(0);C.SetLineHeight(row.title,22);row.meta:Hide() end
- self.pickerSurface=CreateFrame("Frame",nil,popup);self.pickerSurface:SetSize(376,384);self.pickerSurface:SetPoint("TOPLEFT",172,-68);C.Panel(self.pickerSurface,T.surfaceLow,16)
- self.tierChoice=C.Choice(self.pickerSurface,360,function() return P:TierItems(P.pickerCategory) end,function(value) P.pickerTier=value or nil;P:RefreshPickerRows() end);self.tierChoice:SetHeight(44);self.tierChoice:SetPoint("TOPLEFT",8,-8)
- self.pickerResults=C.List(self.pickerSurface,360,312,44,function(index) P:SelectPickerRow(index) end);self.pickerResults:SetPoint("TOPLEFT",8,-64)
+ for _,row in ipairs(self.pickerCategories.rows) do row:SetHeight(60);row.selected:SetRadius(8);row.hover:SetRadius(8);row.alternate:SetRadius(8);row.symbol=C.Icon(row,18);row.symbol:SetPoint("LEFT",12,0);C.SetFont(row.title,16);row.title:ClearAllPoints();row.title:SetPoint("LEFT",38,0);row.title:SetWidth(126);row.title:SetWordWrap(true);row.title:SetHeight(0);C.SetLineHeight(row.title,22);row.meta:Hide() end
+ self.pickerSurface=CreateFrame("Frame",nil,popup);self.pickerSurface:SetSize(428,384);self.pickerSurface:SetPoint("TOPLEFT",200,-68);C.Panel(self.pickerSurface,T.surfaceLow,16)
+ self.tierChoice=C.Choice(self.pickerSurface,412,function() return P:TierItems(P.pickerCategory) end,function(value) P.pickerTier=value or nil;P:RefreshPickerRows() end);self.tierChoice:SetHeight(44);self.tierChoice:SetPoint("TOPLEFT",8,-8)
+ self.pickerResults=C.List(self.pickerSurface,412,312,44,function(index) P:SelectPickerRow(index) end);self.pickerResults:SetPoint("TOPLEFT",8,-64)
  self.pickerResults.alternateRows=false
- for _,row in ipairs(self.pickerResults.rows) do row.selected:SetRadius(8);row.hover:SetRadius(8);row.alternate:SetRadius(8);row.icon=C.Icon(row,24);row.icon:SetPoint("LEFT",12,0);row.title:ClearAllPoints();row.title:SetPoint("TOPLEFT",48,-3);row.title:SetWidth(286);row.title:SetFont(T.font,16,"");C.SetLineHeight(row.title,22,true);row.meta:ClearAllPoints();row.meta:SetPoint("TOPLEFT",48,-25);row.meta:SetWidth(286) end
- self.pickerEmpty=C.Text(popup,S("没有匹配的活动","No matching activities"),14,T.dim,320);self.pickerEmpty:SetPoint("TOPLEFT",184,-180)
+ for _,row in ipairs(self.pickerResults.rows) do row.selected:SetRadius(8);row.hover:SetRadius(8);row.alternate:SetRadius(8);row.icon=C.Icon(row,24);row.icon:SetPoint("LEFT",12,0);row.title:ClearAllPoints();row.title:SetPoint("TOPLEFT",48,-3);row.title:SetWidth(334);C.SetFont(row.title,16);C.SetLineHeight(row.title,22,true);row.meta:ClearAllPoints();row.meta:SetPoint("TOPLEFT",48,-25);row.meta:SetWidth(334) end
+ self.pickerEmpty=C.Text(popup,S("没有匹配的活动","No matching activities"),14,T.dim,372);self.pickerEmpty:SetPoint("TOPLEFT",212,-180)
  popup:SetScript("OnEvent",function() if not popup:IsMouseOver() and not P.pickerTrigger:IsMouseOver() then P:ClosePicker() end end)
 end
 function P:TogglePicker()
@@ -526,14 +529,14 @@ function P:RefreshPickerRows()
    end
   end
  end
- self.pickerEntries=entries;self.pickerResults:SetWidth(searching and 520 or 360);self.pickerResults:SetGutter(C.listRightInset);self.pickerSurface:SetWidth(searching and 536 or 376);self.pickerSurface:ClearAllPoints();self.pickerSurface:SetPoint("TOPLEFT",searching and 12 or 172,-68)
+ self.pickerEntries=entries;self.pickerResults:SetWidth(searching and 600 or 412);self.pickerResults:SetGutter(C.listRightInset);self.pickerSurface:SetWidth(searching and 616 or 428);self.pickerSurface:ClearAllPoints();self.pickerSurface:SetPoint("TOPLEFT",searching and 12 or 200,-68)
  self.pickerResults:ClearAllPoints();self.pickerResults:SetPoint("TOPLEFT",8,searching and -8 or -64);self.pickerResults:SetViewport(searching and 368 or 312)
- for _,row in ipairs(self.pickerResults.rows) do row:SetWidth((searching and 520 or 360)-C.listRightInset);row.title:SetWidth(searching and 446 or 286);row.meta:SetWidth(searching and 446 or 286) end
+ for _,row in ipairs(self.pickerResults.rows) do row:SetWidth((searching and 600 or 412)-C.listRightInset);row.title:SetWidth(searching and 534 or 334);row.meta:SetWidth(searching and 534 or 334) end
  self.pickerResults.selectedKey=nil
  for index,entry in ipairs(entries) do if entry.category==state.category and entry.group.key==state.group then self.pickerResults.selectedKey=index;break end end
  self.pickerResults:SetItems(indices,function(row,index)
   local entry=entries[index];UI:SetActivityIcon(row.icon,entry.group.activity);UI:SetText(row.title,entry.group.name);UI:SetText(row.meta,entry.context)
-  row.title:ClearAllPoints();row.title:SetPoint("LEFT",48,0);row.title:SetWidth(searching and 302 or 282);C.SetLineHeight(row.title,22,true)
+  row.title:ClearAllPoints();row.title:SetPoint("LEFT",48,0);row.title:SetWidth(searching and 382 or 334);C.SetLineHeight(row.title,22,true)
   row.meta:ClearAllPoints();row.meta:SetPoint("RIGHT",-12,0);row.meta:SetWidth(128);C.SetLineHeight(row.meta,20,true);row.meta:SetJustifyH("RIGHT");row.meta:SetShown(searching)
  end)
  if not showTier then self.pickerResults:ClearAllPoints();self.pickerResults:SetPoint("TOPLEFT",8,-8);self.pickerResults:SetViewport(368) end
@@ -776,7 +779,7 @@ function P:RenderBatches()
      row.title:SetWidth(math.min(available,FitText(row.title)));row.title:SetHeight(0);row.title:SetWordWrap(true)
      row.marks:ClearAllPoints();row.marks:SetPoint("LEFT",faction and row.faction or row.title,"RIGHT",6,0)
      UpdateApplicantRoles(row,m,layout);UI:SetText(row.ilvl,m.itemLevel and math.floor(m.itemLevel) or "—")
-     if row.noRatingLayout~=self.hideApplicantRating then row.noRatingLayout=self.hideApplicantRating;row.ilvl:ClearAllPoints();row.ilvl:SetPoint("LEFT",layout.ilvl.x,0);row.score:SetShown(not self.hideApplicantRating) end
+     if row.noRatingLayout~=self.hideApplicantRating or row.ilvlX~=layout.ilvl.x then row.noRatingLayout=self.hideApplicantRating;row.ilvlX=layout.ilvl.x;row.ilvl:ClearAllPoints();row.ilvl:SetPoint("LEFT",layout.ilvl.x,0);row.score:SetShown(not self.hideApplicantRating) end
      if self.hideApplicantRating then UI:SetText(row.score,"") else UI:SetScore(row.score,UI:MemberRating(m)) end
     end
    end

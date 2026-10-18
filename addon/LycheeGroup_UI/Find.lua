@@ -20,13 +20,14 @@ local HEIGHT=T.contentHeight-48
 local LIST_GUTTER=14
 local BODY=MAIN-LIST_GUTTER
 local APP_BODY=MAIN-32-LIST_GUTTER
-local AGE_WIDTH=zh and 64 or 80
+local AGE_WIDTH=zh and 88 or 96
+local APP_ROW_HEIGHT,RESULT_ROW_HEIGHT=72,84
 local RESULT_COLUMNS={
- title={x=60,width=172},leader={x=265,width=87},
- members={x=368,width=138},ilvl={x=522,width=40},rating={x=574,width=60},
- description={x=650,width=BODY-674-AGE_WIDTH},age={x=BODY-12-AGE_WIDTH,width=AGE_WIDTH},
+ title={x=60,width=210},leader={x=303,width=108},
+ members={x=427,width=138},ilvl={x=581,width=52},rating={x=649,width=76},
+ description={x=741,width=BODY-765-AGE_WIDTH},age={x=BODY-12-AGE_WIDTH,width=AGE_WIDTH},
 }
-local APPLICATION_COLUMNS={title={width=BODY-590},leader={x=BODY-511,width=91}}
+local APPLICATION_COLUMNS={title={width=APP_BODY-599},leader={x=APP_BODY-522,width=120}}
 local state={category="seasonDungeon",searchMode="group",apps={},appIDs={},categoryPrefs={},filters={sort="newest"}}
 local function Category() return UI:GetGroup().Catalog:GetCategory(state.category) end
 local function AllActivitiesLabel(cat)
@@ -173,7 +174,7 @@ function P:Build(parent)
  self.categories=C.List(rail,LEFT,T.contentHeight-136,52,function(key,button,row) P:SelectCategory(key,row) end);self.categories:SetPoint("TOPLEFT",0,-128)
  self.seasonIDs={};self.catIDs={};self.catMap={}
  for _,list in ipairs({self.seasonCategories,self.categories}) do list:SetGutter(0);list.alternateRows=false;list.selectionFill=true;list.idleTextColor=T.muted;for _,row in ipairs(list.rows) do
-  row:SetHeight(48);row.selected:SetRadius(8);row.hover:SetRadius(8);row.alternate:SetRadius(8);row.title:ClearAllPoints();row.title:SetPoint("LEFT",52,0);row.title:SetWidth(116);row.title:SetFont(T.font,T.railFontSize+2,"");row.title:SetWordWrap(true);row.title:SetHeight(0);C.SetLineHeight(row.title,22);row.meta:Hide()
+  row:SetHeight(48);row.selected:SetRadius(8);row.hover:SetRadius(8);row.alternate:SetRadius(8);row.title:ClearAllPoints();row.title:SetPoint("LEFT",52,0);row.title:SetWidth(116);C.SetFont(row.title,T.railFontSize+2);row.title:SetWordWrap(true);row.title:SetHeight(0);C.SetLineHeight(row.title,22);row.meta:Hide()
   row.symbol=C.Icon(row,T.railIconSize);row.symbol:SetPoint("LEFT",16,0);row.chevron=C.Glyph(row,"chevron",12);row.chevron:SetPoint("RIGHT",-16,0)
  end end
  local surface=CreateFrame("Frame",nil,f);surface:SetSize(MAIN+48,T.contentHeight);surface:SetPoint("TOPLEFT",LEFT+T.contentGap,0);C.Panel(surface,T.surfaceLow,24);self.surface=surface
@@ -204,7 +205,7 @@ function P:Build(parent)
   if not state.showGlobal then P:DismissApplicationNotice() end
   P:RefreshApplications()
  end,{height=32,radius=16});self.scopeToggle:SetPoint("LEFT",self.appsBadge,"RIGHT",10,0)
- self.autoJoin=C.Check(self.applicationPanel,Say("自动进组","Auto join"),function(value) UI:SetGroupSetting("autoJoin",value) end);self.autoJoin.label:SetFont(T.font,14,"");C.SetLineHeight(self.autoJoin.label,20,true);self.autoJoin:SetSize(54+FitText(self.autoJoin.label),26);self.autoJoin:SetPoint("TOPRIGHT",-16,-15);self.autoJoin.track:ClearAllPoints();self.autoJoin.track:SetPoint("RIGHT",0,0);self.autoJoin.label:ClearAllPoints();self.autoJoin.label:SetPoint("RIGHT",self.autoJoin.track,"LEFT",-10,0)
+ self.autoJoin=C.Check(self.applicationPanel,Say("自动进组","Auto join"),function(value) UI:SetGroupSetting("autoJoin",value) end);C.SetFont(self.autoJoin.label,14);C.SetLineHeight(self.autoJoin.label,20,true);self.autoJoin:SetSize(54+FitText(self.autoJoin.label),26);self.autoJoin:SetPoint("TOPRIGHT",-16,-15);self.autoJoin.track:ClearAllPoints();self.autoJoin.track:SetPoint("RIGHT",0,0);self.autoJoin.label:ClearAllPoints();self.autoJoin.label:SetPoint("RIGHT",self.autoJoin.track,"LEFT",-10,0)
  self.autoApply=C.Check(self.applicationPanel,"",function(value)
   local ok,err=UI.Native:SetAutoApply(value);if not ok then P:SetStatus(err or L.failed) end
  end);self.autoApply:SetSize(44,26);self.autoApply:SetPoint("RIGHT",self.autoJoin,"LEFT",-20,0);self.autoApply.label:Hide()
@@ -212,13 +213,13 @@ function P:Build(parent)
   if not UI.Native:IsAutoApplyEnabled() then return end
   local ok,err=UI.Native:OpenApplicationSettings();if not ok then P:SetStatus(err or L.failed) end
  end)
- self.applicationSettings:SetHeight(26);self.applicationSettings.label:SetFont(T.font,14,"");C.SetLineHeight(self.applicationSettings.label,20,true)
+ self.applicationSettings:SetHeight(26);C.SetFont(self.applicationSettings.label,14);C.SetLineHeight(self.applicationSettings.label,20,true)
  self.applicationSettings:SetPoint("RIGHT",self.autoApply,"LEFT",-10,0)
  function self.applicationSettings:RefreshStyle()
   self.fill:Hide();self.hover:Hide();UI:Color(self.label,self._inside and T.brand or T.muted)
  end
  self.refresh=C.IconButton(main,"refresh",48,function() P:DoSearch() end,{iconSize=22,radius=24,surfaceColors={T.selected,T.refreshHover}});self.refresh:SetPoint("TOPRIGHT",main,"TOPRIGHT",0,0);self.refreshIcon=self.refresh.icon
- self.appList=C.List(self.applicationPanel,MAIN-32,180,60,function(id,button,row) if button=="RightButton" then P:OpenResultMenu(row,id) end end);self.appList:SetGutter(LIST_GUTTER);self.appList:SetPoint("TOPLEFT",16,-52);self.appList.tooltipFraction=.25
+ self.appList=C.List(self.applicationPanel,MAIN-32,APP_ROW_HEIGHT*3,APP_ROW_HEIGHT,function(id,button,row) if button=="RightButton" then P:OpenResultMenu(row,id) end end);self.appList:SetGutter(LIST_GUTTER);self.appList:SetPoint("TOPLEFT",16,-56);self.appList.tooltipFraction=.25
  self.appList.selectionFill=false;self.appList.selectionMark=false;self.appList.hoverFill=false;self.appList.alternateRows=false
  self.limitNotice=C.Notice(main,BODY,function()
   if state.limitTarget then P:DismissApplicationNotice()
@@ -229,7 +230,7 @@ function P:Build(parent)
  self.continueApplication=C.Button(self.limitNotice,Say("继续申请","Continue application"),150,function()
   if UI:GetGroup().Applications:GetActiveCount()>=5 or not state.limitTarget then return end
   local id,manual=state.limitTarget,state.limitManual;P:DismissApplicationNotice();P:RefreshApplications();P:Apply(id,manual)
- end);self.continueApplication:SetHeight(28);self.continueApplication:SetPoint("RIGHT",-40,0)
+ end);self.continueApplication:SetWidth(FitText(self.continueApplication.label)+24);self.continueApplication:SetHeight(32);self.continueApplication:SetPoint("RIGHT",-40,0)
  self.closeApplicationNotice=self.limitNotice.close
  self.limitNotice:Hide()
  for _,row in ipairs(self.appList.rows) do
@@ -239,34 +240,34 @@ function P:Build(parent)
   row.icon=C.Icon(row,32);row.icon:SetPoint("LEFT",0,0)
   row.leaderIcon=C.Icon(row,12);row.leaderIcon:SetTexture(T.media.."leader.tga");row.leaderIcon:SetPoint("LEFT",APPLICATION_COLUMNS.leader.x-17,0)
   row.leader=C.Text(row,"",14,T.muted,APPLICATION_COLUMNS.leader.width);row.leader:SetPoint("LEFT",APPLICATION_COLUMNS.leader.x,0);C.SetLineHeight(row.leader,20,true);row.leader:SetWordWrap(false)
-  BuildMembers(row,APP_BODY-350)
-  row.status=C.Text(row,"",14,T.dim,108);row.status:SetPoint("LEFT",APP_BODY-188,0);C.SetLineHeight(row.status,20,true);row.status:SetJustifyH("CENTER")
-  row.cancel=C.Button(row,L.cancelApplication,60,function(b)
+  BuildMembers(row,APP_BODY-386)
+  row.status=C.Text(row,"",14,T.dim,112);row.status:SetPoint("LEFT",APP_BODY-224,0);C.SetLineHeight(row.status,20,true);row.status:SetJustifyH("CENTER")
+  row.cancel=C.Button(row,L.cancelApplication,92,function(b)
    local id=b.targetKey;local app=UI:GetGroup():GetApplication(id);if not app then return end
    if not UI:GetGroup().Applications:CanCancel(id) then return end
    local ok,err=UI:GetGroup():Cancel(id)
    if not ok then P:SetStatus(err or L.failed) end
-  end);row.cancel.label:SetFont(T.font,14,"");C.SetLineHeight(row.cancel.label,20,true);row.cancel:SetHeight(30);row.cancel:SetPoint("RIGHT",0,0)
+  end);C.SetFont(row.cancel.label,14);C.SetLineHeight(row.cancel.label,20,true);row.cancel:SetHeight(36);row.cancel:SetPoint("RIGHT",0,0)
   row.cancel:HookScript("OnEnter",function(button) if button:IsEnabled() and button.isCancel then UI:Color(button.label,T.accent) end end)
  end
  self.context=C.Text(main,"",20,T.text,MAIN-180)
  self.resultCount=C.Text(main,"",14,T.dim,132);C.SetLineHeight(self.context,28,true);C.SetLineHeight(self.resultCount,20,true);self.resultCount:SetJustifyH("LEFT")
- self.resultsHeader=CreateFrame("Frame",nil,main);self.resultsHeader:SetSize(BODY,20);self.resultHeadings={}
+ self.resultsHeader=CreateFrame("Frame",nil,main);self.resultsHeader:SetSize(BODY,24);self.resultHeadings={}
  for _,entry in ipairs({{"title",Say("队伍","Group")},{"leader",Say("队长","Leader")},{"members",Say("成员","Members")},{"ilvl",Say("装等","iLvl")},{"rating",Say("评分","Score")},{"description",Say("描述","Description")},{"age",Say("发布","Posted")}}) do
   local key,label=entry[1],entry[2];local column=RESULT_COLUMNS[key]
   local text=C.Text(self.resultsHeader,label,14,T.dim,column.width);C.SetLineHeight(text,20,true);text:SetPoint("TOPLEFT",key=="title" and 12 or column.x,0);text:SetWordWrap(false)
   text:SetJustifyH((key=="title" or key=="description" or key=="leader") and "LEFT" or key=="age" and "RIGHT" or "CENTER");self.resultHeadings[key]=text
  end
- self.results=C.List(main,MAIN,HEIGHT-180,72,function(id,button,row) P:OnResultSelect(id,button,row) end)
+ self.results=C.List(main,MAIN,HEIGHT-180,RESULT_ROW_HEIGHT,function(id,button,row) P:OnResultSelect(id,button,row) end)
  self.results:SetGutter(LIST_GUTTER);self.results.tooltipFraction=.25
  for _,row in ipairs(self.results.rows) do
   ResultTooltipArea(row,self.results)
   row.base=C.Panel(row,T.rowAlternate,12);row.base:Hide()
-  row.title:ClearAllPoints();row.title:SetPoint("TOPLEFT",RESULT_COLUMNS.title.x,-12);row.title:SetWidth(RESULT_COLUMNS.title.width);row.title:SetFont(T.font,T.listTitleSize,"");C.SetLineHeight(row.title,T.listTitleLineHeight,true)
-  row.meta:ClearAllPoints();row.meta:SetPoint("TOPLEFT",RESULT_COLUMNS.title.x,-40);row.meta:SetWidth(RESULT_COLUMNS.title.width);C.SetLineHeight(row.meta,20,true)
+  row.title:ClearAllPoints();row.title:SetPoint("TOPLEFT",RESULT_COLUMNS.title.x,-14);row.title:SetWidth(RESULT_COLUMNS.title.width);C.SetFont(row.title,T.listTitleSize);C.SetLineHeight(row.title,T.listTitleLineHeight,true)
+  row.meta:ClearAllPoints();row.meta:SetPoint("TOPLEFT",RESULT_COLUMNS.title.x,-46);row.meta:SetWidth(RESULT_COLUMNS.title.width);C.SetLineHeight(row.meta,20,true)
   row.marks=UI.Members:CreateMarks(row)
   row:HookScript("OnHide",function(self) UI.Members:ClearMarks(self.marks) end)
-  row.description=C.Text(row,"",14,T.muted,RESULT_COLUMNS.description.width,20);row.description:SetPoint("LEFT",RESULT_COLUMNS.description.x,0);row.description:SetHeight(40);row.description:SetMaxLines(2);row.description:SetWordWrap(true);row.description:SetJustifyV("MIDDLE")
+  row.description=C.Text(row,"",14,T.muted,RESULT_COLUMNS.description.width,20);row.description:SetPoint("LEFT",RESULT_COLUMNS.description.x,0);row.description:SetHeight(48);row.description:SetMaxLines(2);row.description:SetWordWrap(true);row.description:SetJustifyV("MIDDLE")
   row.leaderIcon=C.Icon(row,12);row.leaderIcon:SetTexture(T.media.."leader.tga");row.leaderIcon:SetPoint("LEFT",RESULT_COLUMNS.leader.x-17,0)
   row.leader=C.Text(row,"",14,T.muted,RESULT_COLUMNS.leader.width);row.leader:SetPoint("LEFT",RESULT_COLUMNS.leader.x,0);C.SetLineHeight(row.leader,20,true);row.leader:SetWordWrap(false)
   row.icon=C.Icon(row,36);row.icon:SetPoint("LEFT",12,0)
@@ -300,34 +301,35 @@ function P:Build(parent)
  for _,label in ipairs({self.membersLabel,self.maxMembersLabel,self.roleLabel,self.socialLabel,self.sortLabel}) do C.SetLineHeight(label,20,true) end
 end
 function P:BuildFilters()
-  local f=CreateFrame("Frame",nil,UI.frame);f:SetSize(268,442);f:SetPoint("TOPLEFT",UI.frame,"TOPRIGHT",12,0);f:SetFrameLevel(UI.frame:GetFrameLevel()+5);C.Panel(f,T.panel,28);self.filterPanel=f
+  local f=CreateFrame("Frame",nil,UI.frame);f:SetSize(300,466);f:SetPoint("TOPLEFT",UI.frame,"TOPRIGHT",12,0);f:SetFrameLevel(UI.frame:GetFrameLevel()+5);C.Panel(f,T.panel,28);self.filterPanel=f
  self.filterTitle=C.Text(f,Say("筛选队伍","Filter groups"),20);C.SetLineHeight(self.filterTitle,24,true);self.filterTitle:SetPoint("TOPLEFT",20,-26)
  local close=C.Button(f,"",36,function() P:SetFiltersOpen(false) end);close:SetSize(36,36);close:SetPoint("TOPRIGHT",-20,-20);C.Glyph(close,"close",20):SetPoint("CENTER")
  self.requirementsTitle=C.Text(f,Say("队伍要求","Group requirements"),14,T.text);C.SetLineHeight(self.requirementsTitle,21,true);self.requirementsTitle:SetPoint("TOPLEFT",20,-80)
  local function Changed() if not P.loading then P:UpdateFilters() end end
- self.membersLabel=C.Text(f,Say("队伍人数 ≥","Group size ≥"),14,T.muted,101)
- self.maxMembersLabel=C.Text(f,Say("队伍人数 ≤","Group size ≤"),14,T.muted,101)
- self.fMinMembers=C.Number(f,101,44,Changed);self.fMembers=C.Number(f,101,44,Changed)
- self.roleLabel=C.Text(f,Say("队伍缺少职责","Role needed"),14,T.muted,109)
- self.roleChoice=C.Choice(f,210,{{value=false,label=L.anyRole},{value="TANK",label=L.tank},{value="HEALER",label=L.healer},{value="DAMAGER",label=L.damage}},function(value) state.filters.neededRole=value or nil;P:UpdateFilters() end)
- self.rolePresencePanel=CreateFrame("Frame",nil,f);self.rolePresencePanel:SetSize(228,124)
+ self.membersLabel=C.Text(f,Say("队伍人数 ≥","Group size ≥"),14,T.muted,122)
+ self.maxMembersLabel=C.Text(f,Say("队伍人数 ≤","Group size ≤"),14,T.muted,122)
+ self.fMinMembers=C.Number(f,122,44,Changed);self.fMembers=C.Number(f,122,44,Changed)
+ self.roleLabel=C.Text(f,Say("队伍缺少职责","Role needed"),14,T.muted,260)
+ self.roleChoice=C.Choice(f,260,{{value=false,label=L.anyRole},{value="TANK",label=L.tank},{value="HEALER",label=L.healer},{value="DAMAGER",label=L.damage}},function(value) state.filters.neededRole=value or nil;P:UpdateFilters() end)
+ self.rolePresencePanel=CreateFrame("Frame",nil,f);self.rolePresencePanel:SetSize(260,124)
  self.rolePresenceChoices={}
  local presenceOptions={{"TANK",L.tank,"tankPresence"},{"HEALER",L.healer,"healerPresence"},{"DAMAGER",Say("输出","DPS"),"damagePresence"}}
  for i,option in ipairs(presenceOptions) do
   local role,key=option[1],option[3]
   local icon=C.Icon(self.rolePresencePanel,16);icon:SetPoint("TOPLEFT",0,-10-(i-1)*44);UI:SetRoleIcon(icon,role)
-  local label=C.Text(self.rolePresencePanel,option[2],14,T.muted,48,20);C.SetLineHeight(label,20,true);label:SetPoint("TOPLEFT",22,-8-(i-1)*44)
+  local label=C.Text(self.rolePresencePanel,option[2],14,T.muted,60,20);C.SetLineHeight(label,20,true);label:SetPoint("TOPLEFT",22,-8-(i-1)*44)
   local options={{value="present",label=role=="DAMAGER" and Say("已齐","Full") or Say("已有","Has")},{value="missing",label=Say("缺少","Lacks")}}
-  local choice=C.Segmented(self.rolePresencePanel,156,options,function(value)
+  local choice=C.Segmented(self.rolePresencePanel,174,options,function(value)
    state.filters[key]=state.filters[key]~=value and value or nil;P:UpdateFilters()
   end)
-  choice:SetPoint("TOPLEFT",72,-(i-1)*44);self.rolePresenceChoices[role]=choice
+  choice:SetPoint("TOPLEFT",86,-(i-1)*44);self.rolePresenceChoices[role]=choice
  end
  self.socialLabel=C.Text(f,Say("关系与笔记","Relations and notes"),14,T.muted)
  self.socialChoice=C.Choice(f,210,{{value=false,label=Say("全部关系","All relations")},{value="friend",label=Say("好友在队","Friends in group")},{value="guild",label=Say("同公会成员","Guildmates")},{value="any",label=Say("含笔记记录","With player notes")},{value="positive",label=Say("含推荐玩家","Recommended players")},{value="noCaution",label=Say("不含拉黑记录","Without blocked players")}},function(value) state.social=value or nil;P:UpdateFilters() end);self.socialChoice:SetHeight(44);self.socialChoice:SetPoint("TOPLEFT",20,-474)
  self.sortLabel=C.Text(f,L.sort,14,T.muted)
  self.sortChoice=C.Choice(f,210,{{value="newest",label=L.newest},{value="rating",label=Say("队长评分","Leader rating")},{value="itemLevel",label=Say("要求装等","Required item level")},{value="members",label=L.members}},function(value) state.filters.sort=value;P:UpdateFilters() end);self.sortChoice:SetHeight(44);self.sortChoice:SetPoint("TOPLEFT",20,-560)
- self.clearFilters=C.Button(f,Say("清空筛选","Clear filters"),110,function() P:ClearFilters() end);self.clearFilters:SetPoint("BOTTOMRIGHT",-12,16)
+ self.socialChoice:SetWidth(260);self.sortChoice:SetWidth(260)
+ self.clearFilters=C.Button(f,Say("清空筛选","Clear filters"),132,function() P:ClearFilters() end);self.clearFilters:SetPoint("BOTTOMRIGHT",-12,16)
  f:Hide()
 end
 function P:SetFiltersOpen(open)
@@ -349,7 +351,7 @@ function P:TierItems()
  return items
 end
 function P:BuildPicker()
- local f=CreateFrame("Frame",nil,self.frame);f:SetSize(296,552);f:SetPoint("TOPLEFT",self.rail,"TOPRIGHT",PICKER_GAP,0);f:SetFrameLevel(self.frame:GetFrameLevel()+35);f:EnableMouse(true);C.Panel(f,T.surface,12);self.picker=f
+ local f=CreateFrame("Frame",nil,self.frame);f:SetSize(336,552);f:SetPoint("TOPLEFT",self.rail,"TOPRIGHT",PICKER_GAP,0);f:SetFrameLevel(self.frame:GetFrameLevel()+35);f:EnableMouse(true);C.Panel(f,T.surface,12);self.picker=f
  f.title=C.Text(f,"",14,T.text,220);C.SetLineHeight(f.title,21,true);f.title:SetPoint("TOPLEFT",12,-18)
  local close=C.IconButton(f,"close",40,function() P:ClosePicker() end);close:SetPoint("TOPRIGHT",-12,-8)
  self.tierChoice=C.Choice(f,280,function() return P:TierItems() end,function(value)
@@ -464,7 +466,7 @@ function P:RefreshPicker()
  local total=0
  for i,d in ipairs(diffs) do local button=self.difficultyButtons[i];if button then UI:SetText(button.label,d.name);button.textWidth=FitText(button.label);button.optionWidth=button.textWidth+20;total=total+button.optionWidth end end
  -- Difficulty names remain complete; the native menu grows to its real content width.
- local menuWidth=chooseDifficulty and math.max(296,total+math.max(0,#diffs-1)*4+22) or 296
+ local menuWidth=chooseDifficulty and math.max(336,total+math.max(0,#diffs-1)*4+22) or 336
  self.picker:SetWidth(menuWidth);self.picker.title:SetWidth(menuWidth-76);self.tierChoice:SetWidth(menuWidth-16);self.difficultySurface:SetWidth(menuWidth-16)
  self.activities:SetWidth(menuWidth-16);self.activities:SetGutter(C.listRightInset)
  local extra=chooseDifficulty and (self.difficultySurface:GetWidth()-6-math.max(0,#diffs-1)*4-total)/#diffs or 0
@@ -646,18 +648,18 @@ function P:UpdateFilters(reset)
   self.filterLayout=layout
   local memberY=-113
   self.membersLabel:ClearAllPoints();self.membersLabel:SetPoint("TOPLEFT",20,memberY)
-  self.maxMembersLabel:ClearAllPoints();self.maxMembersLabel:SetPoint("TOPLEFT",129,memberY)
-  self.fMinMembers:ClearAllPoints();self.fMinMembers:SetPoint("TOPLEFT",20,memberY-26)
-  self.fMembers:ClearAllPoints();self.fMembers:SetPoint("TOPLEFT",129,memberY-26)
-  self.roleLabel:ClearAllPoints();self.roleLabel:SetPoint("TOPLEFT",20,memberY-86)
-  self.roleChoice:ClearAllPoints();self.roleChoice:SetPoint("TOPLEFT",20,memberY-112);self.roleChoice:SetHeight(44)
-  self.rolePresencePanel:ClearAllPoints();self.rolePresencePanel:SetPoint("TOPLEFT",20,memberY-112)
-  local socialY=seasonDungeon and -381 or keys and -301 or -207
+  self.maxMembersLabel:ClearAllPoints();self.maxMembersLabel:SetPoint("TOPLEFT",158,memberY)
+  self.fMinMembers:ClearAllPoints();self.fMinMembers:SetPoint("TOPLEFT",20,memberY-32)
+  self.fMembers:ClearAllPoints();self.fMembers:SetPoint("TOPLEFT",158,memberY-32)
+  self.roleLabel:ClearAllPoints();self.roleLabel:SetPoint("TOPLEFT",20,memberY-104)
+  self.roleChoice:ClearAllPoints();self.roleChoice:SetPoint("TOPLEFT",20,memberY-136);self.roleChoice:SetHeight(44)
+  self.rolePresencePanel:ClearAllPoints();self.rolePresencePanel:SetPoint("TOPLEFT",20,memberY-136)
+  local socialY=seasonDungeon and -405 or keys and -325 or -213
   self.socialLabel:ClearAllPoints();self.socialLabel:SetPoint("TOPLEFT",20,socialY)
-  self.socialChoice:ClearAllPoints();self.socialChoice:SetPoint("TOPLEFT",20,socialY-26)
-  self.sortLabel:ClearAllPoints();self.sortLabel:SetPoint("TOPLEFT",20,socialY-86)
-  self.sortChoice:ClearAllPoints();self.sortChoice:SetPoint("TOPLEFT",20,socialY-112)
-  self.filterPanel:SetHeight(seasonDungeon and 616 or keys and 536 or 442)
+  self.socialChoice:ClearAllPoints();self.socialChoice:SetPoint("TOPLEFT",20,socialY-32)
+  self.sortLabel:ClearAllPoints();self.sortLabel:SetPoint("TOPLEFT",20,socialY-104)
+  self.sortChoice:ClearAllPoints();self.sortChoice:SetPoint("TOPLEFT",20,socialY-136)
+  self.filterPanel:SetHeight(-socialY+252)
  end
  if reset then self.results:SetPixelOffset(0,false) end
  local group=state.groupKey and UI:GetGroup().Catalog:GetGroup(state.category,state.groupKey)
@@ -733,12 +735,12 @@ function P:SetStatus(message)
 end
 function P:LayoutResults()
  if not self.results then return end
- local top=148+(self.appsHeight or 0)
+ local top=156+(self.appsHeight or 0)
  local quota=state.limitTarget~=nil
  local available=quota and UI:GetGroup().Applications:GetActiveCount()<5
  self.continueApplication:SetShown(available);self.continueApplication:SetAvailable(available)
  local message=quota and (available and Say("已有空余名额，可以继续申请。","A slot is available. You can continue your application.") or Say("最多同时申请 5 支队伍，请先取消一项申请。","You can apply to five groups at once. Cancel an application to continue.")) or self.statusMessage or ""
- self.limitNotice:SetMessage(message,available and 158 or 0)
+ self.limitNotice:SetMessage(message,available and self.continueApplication:GetWidth()+8 or 0)
  if self.noticeTop~=top then
   M:FinishPlacement(self.limitNotice);self.limitNotice:ClearAllPoints();self.limitNotice:SetPoint("TOPLEFT",self.main,"TOPLEFT",0,-top);self.noticeTop=top
  end
@@ -746,8 +748,8 @@ function P:LayoutResults()
  self.context:ClearAllPoints();self.context:SetPoint("TOPLEFT",12,-top)
  self.resultCount:ClearAllPoints();self.resultCount:SetPoint("LEFT",self.context,"RIGHT",12,0)
  self.resultsHeader:ClearAllPoints();self.resultsHeader:SetPoint("TOPLEFT",0,-top-40)
- local resultsHeight=math.max(72,HEIGHT-top-72)
- self.results:ClearAllPoints();self.results:SetPoint("TOPLEFT",0,-top-72);self.results:SetViewport(resultsHeight)
+ local resultsHeight=math.max(RESULT_ROW_HEIGHT,HEIGHT-top-80)
+ self.results:ClearAllPoints();self.results:SetPoint("TOPLEFT",0,-top-80);self.results:SetViewport(resultsHeight)
  self.emptyPanel:ClearAllPoints();self.emptyPanel:SetPoint("TOP",self.results,"TOP",0,-math.max(8,(resultsHeight-280)/2-40))
 end
 function P:ReadSearchState()
@@ -768,14 +770,14 @@ function P:RefreshApplications()
   if Active(app) and (state.showGlobal or same) then state.apps[app.id]=app;state.appIDs[#state.appIDs+1]=app.id end
  end
  self.appList:SetItems(state.appIDs,UpdateApplication)
- local count=#state.appIDs;local h=math.min(3,count)*60
+ local count=#state.appIDs;local h=math.min(3,count)*APP_ROW_HEIGHT
  local globalCount=UI:GetGroup().Applications:GetActiveCount()
  self.appList:SetShown(count>0);self.appList:SetViewport(math.max(1,h));UI:SetText(self.appsCount,("%d / 5"):format(globalCount))
  UI:Color(self.appsCount,globalCount>=5 and T.warning or T.text)
  UI:SetText(self.appsEmpty,Say("本分类暂无申请","No applications in this category"));C.SetLineHeight(self.appsEmpty,20,true);self.appsEmpty:SetShown(categoryCount==0 and globalCount==0);self.scopeToggle:SetShown(globalCount>categoryCount)
  UI:SetText(self.scopeToggle.label,state.showGlobal and Say("仅看本分类","This category") or Say("查看全部申请","All applications"))
  self.scopeToggle:SetWidth(FitText(self.scopeToggle.label)+24)
- self.appsHeight=h;self.applicationPanel:SetHeight(60+h);self:LayoutResults()
+ self.appsHeight=h;self.applicationPanel:SetHeight(68+h);self:LayoutResults()
  self.autoJoin:SetValue(UI:GetGroupSetting("autoJoin"))
  local ticking=false
  for _,id in ipairs(state.appIDs) do local app=state.apps[id];if app.status=="applied" and app.expiresAt and app.expiresAt>GetTime() then ticking=true;break end end
@@ -786,7 +788,7 @@ end
 function P:ShowApplicationLimit(targetID,manual)
  state.limitTarget,state.limitManual=targetID,manual;state.showGlobal=true
  self:ClosePicker();UI:CloseMenu();UI.Tooltip:Hide();self:RefreshApplications()
- M:Reveal(self.limitNotice,"TOPLEFT",self.main,"TOPLEFT",0,-148-(self.appsHeight or 0),0,7,.20)
+ M:Reveal(self.limitNotice,"TOPLEFT",self.main,"TOPLEFT",0,-156-(self.appsHeight or 0),0,7,.20)
 end
 function P:DismissApplicationNotice()
  state.limitTarget,state.limitManual=nil,nil

@@ -59,6 +59,6 @@ lua tests/runner.lua
 
 项目说明：[产品](Product.md) · [设计](Desgin.md) · [架构](Architecture.md) · [性能](perfermance.md) · [文档与变更记录规则](Agents.md)。当前实现与游戏内验证范围见产品文档。
 
-共享界面库当前为 LycheeUI 1.2.0（修订 17）；开发接入见 [README](../LycheeUI/README.md)、[API](../LycheeUI/API.md) 和 [组件设计规范](../LycheeUI/DESIGN.md)。
+共享界面库当前为 LycheeUI 1.2.0（修订 18）；开发接入见 [README](../LycheeUI/README.md)、[API](../LycheeUI/API.md) 和 [组件设计规范](../LycheeUI/DESIGN.md)。
 
 内置第三方库的来源与许可见[库说明](addon/LycheeGroup_Group/Libs/README.md)。

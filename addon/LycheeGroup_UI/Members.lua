@@ -116,7 +116,7 @@ local function LayoutIdentity(icon,title,subtitle,role,faction,marks,marksWidth,
  markWidth=markWidth+math.max(0,markGroups-1)*4
  local textWidth=width-textX-inset-(markWidth>0 and markWidth+6 or 0)
  title:ClearAllPoints();title:SetPoint("TOPLEFT",textX,-top);title:SetWidth(textWidth);title:SetHeight(0);title:SetWordWrap(true)
- local titleHeight=math.max(NAME_HEIGHT,title:GetStringHeight())
+ local titleHeight=math.max(title:GetLineHeight(),title:GetStringHeight())
  local subtitleTop=top+titleHeight+2
  role:ClearAllPoints();role:SetPoint("RIGHT",icon,"RIGHT",width-2*inset-ICON_SIZE,0)
  marks:ClearAllPoints()
@@ -133,7 +133,7 @@ local function LayoutIdentity(icon,title,subtitle,role,faction,marks,marksWidth,
   else faction:SetPoint("RIGHT",icon,"RIGHT",width-2*inset-ICON_SIZE,0) end
  end
  subtitle:ClearAllPoints();subtitle:SetPoint("TOPLEFT",textX,-subtitleTop);subtitle:SetWidth(textWidth);subtitle:SetHeight(0);subtitle:SetWordWrap(true)
- local height=math.max(ICON_SIZE,titleHeight+2+math.max(META_HEIGHT,subtitle:GetStringHeight()))
+ local height=math.max(ICON_SIZE,titleHeight+2+math.max(subtitle:GetLineHeight(),subtitle:GetStringHeight()))
  -- Portrait and right-side marks share the complete identity block's center,
  -- including wrapped names and specialization text.
  local portraitTop=top+(height-ICON_SIZE)/2
@@ -141,7 +141,7 @@ local function LayoutIdentity(icon,title,subtitle,role,faction,marks,marksWidth,
  return height
 end
 function Members:Create(parent,onClick)
- local button=C.Button(parent,"",250,onClick,{height=44,radius=8})
+ local button=C.Button(parent,"",250,onClick,{height=56,radius=8})
  button:RegisterForClicks("LeftButtonUp","RightButtonUp");button.label:Hide()
  button.icon=C.GameIcon(button,ICON_SIZE)
  button.name=C.Text(button,"",NAME_SIZE,T.text);button.name:SetWordWrap(true);C.SetLineHeight(button.name,NAME_HEIGHT)
@@ -168,7 +168,7 @@ local function Bind(self,button,member,width,isLeader,interactive,inset,padding,
   marksWidth=PaintMarks(button.marks)
  else marksWidth=self:BindMarks(button.marks,member) end
  inset,padding=inset or 6,padding or 4
- local height=math.max(44,LayoutIdentity(button.icon,button.name,button.realm,button.role,button.faction,button.marks,marksWidth,width,padding,inset,search)+padding*2)
+ local height=math.max(56,LayoutIdentity(button.icon,button.name,button.realm,button.role,button.faction,button.marks,marksWidth,width,padding,inset,search)+padding*2)
  button:SetHeight(height);button:Show()
  return height
 end

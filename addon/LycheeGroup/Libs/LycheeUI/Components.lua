@@ -6,7 +6,11 @@ local T,M=UI.Theme,UI.Motion
 local C={listRightInset=T.scrollWidth+T.scrollGap}
 local function Hook(frame,script,callback) frame:HookScript(script,callback) end
 local editLineMeasure
+function C.SetFont(label,size,flags)
+ return label:SetFont(T.font,(size or T.bodySize)+T.fontSizeDelta,flags or "")
+end
 function C.SetLineHeight(label,height,singleLine)
+ height=height+T.lineHeightDelta
  local kind=label:GetObjectType()
  if kind~="FontString" and kind~="EditBox" then error("LycheeUI.SetLineHeight expects a FontString or EditBox, got "..kind,2) end
  label:SetSpacing(0)
@@ -25,7 +29,7 @@ function C.SetLineHeight(label,height,singleLine)
 end
 function C.Text(parent,text,size,color,width,lineHeight)
  local label=parent:CreateFontString(nil,"OVERLAY")
- label:SetFont(T.font,size or T.bodySize,"");label:SetShadowOffset(0,0);label:SetJustifyH("LEFT")
+ C.SetFont(label,size);label:SetShadowOffset(0,0);label:SetJustifyH("LEFT")
  if width then label:SetWidth(width) end
  UI:Color(label,color or T.text);UI:SetText(label,text)
  if lineHeight then C.SetLineHeight(label,lineHeight) end
@@ -215,7 +219,7 @@ function C.Button(parent,text,width,action,options)
   if self.focus then self.focus:SetRadius(radius);self.focusInner:SetRadius(math.max(0,radius-1)) end
  end
  function b:SetLabelStyle(size,lineHeight)
-  self.label:SetFont(T.font,size,"");C.SetLineHeight(self.label,lineHeight,true)
+  C.SetFont(self.label,size);C.SetLineHeight(self.label,lineHeight,true)
  end
  function b:SetVariant(variant)
   self.variant=variant;self.primary=variant=="primary";self.surfaceColors=nil
@@ -234,7 +238,7 @@ function C.Button(parent,text,width,action,options)
   if style.variant then self:SetVariant(style.variant) end
   if style.height then self:SetHeight(style.height) end
   if style.radius then self:SetRadius(style.radius) end
-  if style.fontSize or style.lineHeight then self:SetLabelStyle(style.fontSize or select(2,self.label:GetFont()),style.lineHeight or self.label:GetHeight()) end
+  if style.fontSize or style.lineHeight then self:SetLabelStyle(style.fontSize or select(2,self.label:GetFont())-T.fontSizeDelta,style.lineHeight or self.label:GetHeight()-T.lineHeightDelta) end
   if style.surfaceColors then self:SetSurfaceColors(unpack(style.surfaceColors)) end
   if style.hoverColor or style.pressedColor then self:SetFeedbackColors(style.hoverColor or self.hoverColor,style.pressedColor or self.pressedColor) end
   if style.textColor or style.hoverTextColor or style.selectedTextColor then self:SetTextColors(style.textColor or self.textColor,style.hoverTextColor or self.hoverTextColor,style.selectedTextColor or self.selectedTextColor) end
@@ -362,7 +366,7 @@ function C.Edit(parent,width,height,multiline,search,variant)
  local function Surface(focused,hovered) shell:SetFocused(focused,hovered) end
  local scroll=multiline and CreateFrame("ScrollFrame",nil,shell) or nil
  local box=CreateFrame("EditBox",nil,scroll or shell)
- box:SetFont(T.font,14,"");box:SetShadowOffset(0,0);box:SetTextColor(unpack(T.text));box:SetAutoFocus(false)
+ C.SetFont(box,14);box:SetShadowOffset(0,0);box:SetTextColor(unpack(T.text));box:SetAutoFocus(false)
  box:SetJustifyV(multiline and "TOP" or "MIDDLE");box:SetMultiLine(multiline==true);box:SetMaxLetters(0)
  if scroll then
   scroll:SetPoint("TOPLEFT",12,-10);scroll:SetPoint("BOTTOMRIGHT",-12,10)
@@ -577,7 +581,7 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover)
   for _,row in ipairs(self.rows) do
    if style.rowHeight then row:SetHeight(style.rowHeight) end
    if style.radius then row.alternate:SetRadius(style.radius);row.selected:SetRadius(style.radius);row.hover:SetRadius(style.radius) end
-   if style.titleSize then row.title:SetFont(T.font,style.titleSize,"") end
+   if style.titleSize then C.SetFont(row.title,style.titleSize) end
    if style.titleLineHeight then C.SetLineHeight(row.title,style.titleLineHeight,true) end
    if style.singleLine~=nil then row.meta:SetShown(not style.singleLine) end
    if style.singleLine~=nil or style.titleX then

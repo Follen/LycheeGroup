@@ -48,6 +48,7 @@ function N:IsMouseOver() return self.mouseOver==true end
 function N:UnregisterAllEvents() self.events={} end
 function N:SetScale(v) self.scale=v end
 function N:GetScale() return self.scale or 1 end
+function N:SetClampRectInsets(...) self.clampInsets={...} end
 function N:GetEffectiveScale() return self:GetScale()*(self.parent and self.parent:GetEffectiveScale() or 1) end
 function N:SetAlpha(v) self.alpha=v;if self.kind=="Texture" then self.vertex=self.vertex or {1,1,1,1};self.vertex[4]=v end end
 function N:GetAlpha() return self.alpha end

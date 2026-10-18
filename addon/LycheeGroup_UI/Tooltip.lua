@@ -5,6 +5,7 @@ local Members=UI.Members
 -- A separate tooltip owned by this UI; the global GameTooltip stays untouched.
 local Tip={orderedMembers={},rosterGroupCounts={}}
 local GUTTER=T.scrollWidth
+local PADDING,BOSS_WIDTH,BOSS_GAP=20,240,24
 local function ScrollMaximum(scroll,canvas)
  local overflow=canvas:GetHeight()-scroll:GetHeight()
  -- Match List: native scaled dimensions may differ by a tiny rounding residue.
@@ -125,7 +126,7 @@ end
 function UI:CopyText(title,value,restoreTooltip,identity,fieldLabel)
  local modal=self:OpenModal("copyText",title,560,314)
  if not modal.built then
-  local f=modal.frame;f.help=C.Text(modal.content,"",14,T.muted,512);f.help:SetPoint("TOPLEFT");C.SetLineHeight(f.help,22,true)
+  local f=modal.frame;f.help=C.Text(modal.content,"",14,T.muted,512);f.help:SetPoint("TOPLEFT");C.SetLineHeight(f.help,22);f.help:SetWordWrap(true)
   f.fieldLabel=C.Text(modal.content,Say("角色链接","Character link"),14,T.muted,512);C.SetLineHeight(f.fieldLabel,20,true);f.fieldLabel:SetPoint("TOPLEFT",0,-42)
   f.copyHint=C.Text(modal.content,Say("文本已选中，按 Ctrl+C 复制。","The text is selected. Press Ctrl+C to copy."),14,T.dim,512);C.SetLineHeight(f.copyHint,20,true);f.copyHint:SetPoint("TOPLEFT",0,-126)
   f.field=C.Edit(modal.content,512,44,false,false,"modal");f.field:SetPoint("TOPLEFT",0,-70)
@@ -147,6 +148,13 @@ function UI:CopyText(title,value,restoreTooltip,identity,fieldLabel)
   modal.built=true;self.copyDialog=f
  end
  local f=modal.frame;modal.restoreTooltip=restoreTooltip;UI:SetText(f.fieldLabel,fieldLabel or Say("角色链接","Character link"));UI:SetText(f.help,identity or Say("按 Ctrl+C 复制完整文本。","Press Ctrl+C to copy the complete text."));f.value=value;f.field.box:SetText(value);f.field.box:SetFocus();f.field.box:HighlightText()
+ local labelTop=f.help:GetStringHeight()+16
+ f.fieldLabel:ClearAllPoints();f.fieldLabel:SetPoint("TOPLEFT",0,-labelTop)
+ local fieldTop=labelTop+f.fieldLabel:GetStringHeight()+8
+ f.field:ClearAllPoints();f.field:SetPoint("TOPLEFT",0,-fieldTop)
+ local hintTop=fieldTop+f.field:GetHeight()+12
+ f.copyHint:ClearAllPoints();f.copyHint:SetPoint("TOPLEFT",0,-hintTop)
+ f:SetHeight(math.max(314,104+hintTop+f.copyHint:GetStringHeight()+16+40))
 end
 function Tip:BuildInteractive()
  local f=CreateFrame("Frame",nil,UIParent);f:SetFrameStrata("TOOLTIP");f:SetFrameLevel(2);f:SetClampedToScreen(true);f:EnableMouse(true);C.Shadow(f,16);C.Panel(f,T.raised,16)
@@ -167,9 +175,9 @@ function Tip:BuildInteractive()
    Tip.expanded=not Tip.expanded;Tip:RenderGroup()
   end
  end)
- local scroll=CreateFrame("ScrollFrame",nil,f);scroll:SetPoint("TOPLEFT",16,-16);scroll:SetPoint("BOTTOMRIGHT",-16-GUTTER,16)
+ local scroll=CreateFrame("ScrollFrame",nil,f);scroll:SetPoint("TOPLEFT",PADDING,-PADDING);scroll:SetPoint("BOTTOMRIGHT",-PADDING-GUTTER,PADDING)
  local canvas=CreateFrame("Frame",nil,scroll);canvas:SetSize(360,100);scroll:SetScrollChild(canvas)
- local slider=C.ScrollBar(f);slider:SetPoint("TOPRIGHT",0,-16);slider:SetPoint("BOTTOMRIGHT",0,16);f.scrollbar=slider
+ local slider=C.ScrollBar(f);slider:SetPoint("TOPRIGHT",0,-PADDING);slider:SetPoint("BOTTOMRIGHT",0,PADDING);f.scrollbar=slider
  slider:SetScript("OnValueChanged",function(_,value) if not f.updatingScroll then UI.Motion:Stop(scroll);scroll.scrollTarget=nil;scroll:SetVerticalScroll(value) end end)
  scroll:EnableMouseWheel(true);scroll:SetScript("OnMouseWheel",function(self,delta)
   local maximum=ScrollMaximum(self,canvas);local target=math.max(0,math.min(maximum,(self.scrollTarget or self:GetVerticalScroll())-delta*42))
@@ -218,7 +226,7 @@ function Tip:BuildInteractive()
   elseif Tip.sourceApp then Tip:ShowApplicants(Tip.owner,Tip.sourceApp,true)
   elseif Tip.sourceRoster then Tip:ShowRoster(Tip.owner,Tip.sourceRoster,true,Tip.rosterContext) end
  end)
- f.back:SetHeight(26);f.back.label:SetFont(T.font,14,"");C.SetLineHeight(f.back.label,20,true);f.back.label:ClearAllPoints();f.back.label:SetPoint("LEFT",22,0);UI:Color(f.back.label,T.muted);C.Glyph(f.back,"arrow",14):SetPoint("LEFT",0,0)
+ f.back:SetHeight(32);C.SetFont(f.back.label,14);C.SetLineHeight(f.back.label,20,true);f.back.label:ClearAllPoints();f.back.label:SetPoint("LEFT",22,0);UI:Color(f.back.label,T.muted);C.Glyph(f.back,"arrow",14):SetPoint("LEFT",0,0)
  f.wcl=C.Button(canvas,Say("复制 WCL 链接","Copy WCL link"),170,function()
   local _,name,realm=Members:Identity(Tip.member)
   if UI.preview or not name or not realm or realm=="" then return end
@@ -256,7 +264,7 @@ function Tip:ResetInteractive(owner,width)
  f.icon:ClearAllPoints();f.icon:SetPoint("TOPLEFT")
  f.icon:SetSize(40,40)
  f.title:ClearAllPoints();f.title:SetPoint("TOPLEFT",52,0);UI:Color(f.title,T.text)
- f.title:SetFont(T.font,18,"");C.SetLineHeight(f.title,24);f.title:SetHeight(0)
+ C.SetFont(f.title,18);C.SetLineHeight(f.title,24);f.title:SetHeight(0)
  f.subtitle:ClearAllPoints();f.subtitle:SetPoint("TOPLEFT",52,-28);f.subtitle:SetHeight(0)
  f.summary:ClearAllPoints();f.summary:SetPoint("TOPLEFT",0,-56)
  f.leader:ClearAllPoints();f.leader:SetPoint("TOPLEFT",0,-122);f.leader:SetJustifyH("LEFT");f.leader:SetWordWrap(false);f.leaderIcon:Hide()
@@ -270,7 +278,7 @@ function Tip:ResetInteractive(owner,width)
  f.dungeonTitle:Hide();f.dungeonEmpty:Hide();f.playerFaction:Hide()
  for _,row in ipairs(f.dungeonRows) do row:Hide() end
  f.icon:Show();f.title:Show();f.subtitle:Show();f.summary:Show();f.leader:Show();f.comment:Show()
- f:SetWidth(width);f.canvas:SetWidth(width-32-GUTTER);f.title:SetWidth(width-84-GUTTER);f.subtitle:SetWidth(width-84-GUTTER);f.summary:SetWidth(width-32-GUTTER);f.leader:SetWidth(width-32-GUTTER);f.comment:SetWidth(width-32-GUTTER);f.footer:SetWidth(width-32-GUTTER)
+ f:SetWidth(width);f.canvas:SetWidth(width-2*PADDING-GUTTER);f.title:SetWidth(width-2*PADDING-52-GUTTER);f.subtitle:SetWidth(width-2*PADDING-52-GUTTER);f.summary:SetWidth(width-2*PADDING-GUTTER);f.leader:SetWidth(width-2*PADDING-GUTTER);f.comment:SetWidth(width-2*PADDING-GUTTER);f.footer:SetWidth(width-2*PADDING-GUTTER)
  UI.Motion:Stop(f.scroll);f.scroll.scrollTarget=nil
  f.scroll:SetVerticalScroll(0)
  return f
@@ -281,8 +289,8 @@ function Tip:ShowApplicants(owner,app,keepPinned)
  self.sourceApp=app
  self.record,self.member,self.details,self.sourceRoster,self.rosterMemberID=nil,nil,nil,nil,nil
  self.memberContext,self.rosterContext,self.directPlayer=nil,nil,nil
- local f=self:ResetInteractive(owner,424)
- UI:SetText(f.title,L.applicants);f.icon:Hide();f.subtitle:Hide();f.summary:Hide();f.leader:Hide()
+ local f=self:ResetInteractive(owner,512)
+ UI:SetText(f.title,L.applicants);f.title:ClearAllPoints();f.title:SetPoint("TOPLEFT");f.title:SetWidth(f.canvas:GetWidth());f.icon:Hide();f.subtitle:Hide();f.summary:Hide();f.leader:Hide()
  f.comment:ClearAllPoints();f.comment:SetPoint("TOPLEFT",0,-40);UI:SetText(f.comment,app.comment or "");f.comment:SetHeight(0)
  local top=40+f.comment:GetStringHeight()+14
  self:EnsureMemberButtons(#app.members)
@@ -290,8 +298,8 @@ function Tip:ShowApplicants(owner,app,keepPinned)
  UI:SetText(f.footer,"");self:Place(top)
 end
 function Tip:Place(height)
- local f=self.interactive;local _,scale,topLimit,bottomLimit=Viewport();f:SetScale(scale);f.canvas:SetHeight(height);f:SetHeight(math.min(height+32,math.min(760,bottomLimit-topLimit)))
- f.scroll:SetHeight(f:GetHeight()-32);local maximum=ScrollMaximum(f.scroll,f.canvas)
+ local f=self.interactive;local _,scale,topLimit,bottomLimit=Viewport();f:SetScale(scale);f.canvas:SetHeight(height);f:SetHeight(math.min(height+2*PADDING,math.min(760,bottomLimit-topLimit)))
+ f.scroll:SetHeight(f:GetHeight()-2*PADDING);local maximum=ScrollMaximum(f.scroll,f.canvas)
  f.updatingScroll=true;f.scrollbar:SetMinMaxValues(0,maximum);f.scrollbar:SetValue(math.min(f.scroll:GetVerticalScroll(),maximum));f.updatingScroll=false;f.scrollbar:SetShown(maximum>0)
  self:Position(f)
  self.outsideClicks:SetShown(self.pinned==true);f:Show()
@@ -347,7 +355,7 @@ function Tip:LayoutRosterGroups(members,columns,width,top)
   local title=f.rosterGroupTitles[subgroup]
   if not title then title=C.Text(f.canvas,"",12,T.muted);C.SetLineHeight(title,16,true);f.rosterGroupTitles[subgroup]=title end
   title:ClearAllPoints();title:SetPoint("TOPLEFT",x+6,-rowTop);title:SetWidth(cellWidth-12);UI:SetText(title,Say("小队 %d","Group %d"):format(subgroup));title:Show()
-  local memberTop=rowTop+22
+  local memberTop=rowTop+title:GetLineHeight()+8
   for _,member in ipairs(members) do if (member.subgroup or 1)==subgroup then
    bound=bound+1;local button=f.memberButtons[bound]
    self:BindMember(button,member,cellWidth,member.isLeader)
@@ -373,7 +381,7 @@ function Tip:ShowRoster(owner,members,keepPinned,activityContext)
   self.rosterGroupCounts[subgroup]=self.rosterGroupCounts[subgroup]+1
  end end
  local columns=raid and math.min(3,groups) or 1
- local f=self:ResetInteractive(owner,columns>1 and 752 or 424)
+ local f=self:ResetInteractive(owner,columns==3 and 960 or columns==2 and 660 or 440)
  f.icon:Hide();f.summary:Hide();f.leader:Hide();f.comment:Hide()
  UI:SetText(f.title,L.yourGroup);f.title:ClearAllPoints();f.title:SetPoint("TOPLEFT")
  UI:SetText(f.subtitle,L.rosterCount:format(#members));f.subtitle:ClearAllPoints();f.subtitle:SetPoint("TOPRIGHT",0,-2);f.subtitle:SetWidth(0)
@@ -450,7 +458,7 @@ function Tip:ShowGroup(owner,record)
  self.record,self.member,self.sourceApp,self.sourceRoster,self.rosterMemberID=record,nil,nil,nil,nil
  self.memberContext,self.rosterContext,self.directPlayer=nil,nil,nil
  self.details=UI:GetGroup().Results:GetDetails(record)
- self:ResetInteractive(owner,424);self:RenderGroup()
+ self:ResetInteractive(owner,512);self:RenderGroup()
 end
 function Tip:RenderGroup()
  local record=self.record;if not record then return end
@@ -458,11 +466,11 @@ function Tip:RenderGroup()
  local raid=A.GroupPresentation.Result(record).kind=="raid"
  local expanded=not raid or self.expanded==true or A.db.raidMembers=="always"
  self.expanded=expanded
- local width=raid and (expanded and 960 or 640) or 424
+ local width=raid and (expanded and 1080 or 720) or 512
  local f=self:ResetInteractive(nil,width);f:RegisterEvent("MODIFIER_STATE_CHANGED")
- local mainWidth=raid and width-32-GUTTER-184-20 or width-32-GUTTER
+ local mainWidth=raid and width-2*PADDING-GUTTER-BOSS_WIDTH-BOSS_GAP or width-2*PADDING-GUTTER
  f.title:SetWidth(mainWidth-52-(raid and 152 or 0));f.subtitle:SetWidth(mainWidth-52-(raid and 152 or 0));f.summary:SetWidth(mainWidth);f.comment:SetWidth(mainWidth)
- f.icon:SetSize(40,40);f.title:SetFont(T.font,18,"")
+ f.icon:SetSize(40,40);C.SetFont(f.title,18)
  UI:SetActivityIcon(f.icon,record.activity or record);UI:SetText(f.title,record.name or L.unknown)
  UI:SetText(f.subtitle,record.activityName or L.unknown)
  local titleHeight=math.max(24,f.title:GetStringHeight());f.subtitle:ClearAllPoints();f.subtitle:SetPoint("TOPLEFT",52,-titleHeight-4)
@@ -488,7 +496,8 @@ function Tip:RenderGroup()
   metricTop=commentTop+(record.comment and record.comment~="" and f.comment:GetStringHeight()+16 or 0)
  end
  local membersText=UI:MemberCountText(record)
- local metricHeight=40
+ local metricHeight=0
+ local metricLine=f.metrics[1].title:GetLineHeight()
  local metricX,metricY=0,0
  for i=1,(raid and 3 or 4) do
   local label,value
@@ -500,10 +509,10 @@ function Tip:RenderGroup()
   metric.title:ClearAllPoints();metric.value:ClearAllPoints();metric.title:SetWidth(0);metric.value:SetWidth(0)
   local titleWidth=metric.title:GetStringWidth();local valueWidth=metric.value:GetStringWidth()
   local cellWidth=raid and titleWidth+8+valueWidth or math.max(56,titleWidth,valueWidth)
-  if metricX>0 and metricX+cellWidth>mainWidth then metricX=0;metricY=metricY+(raid and 28 or 54) end
+  if metricX>0 and metricX+cellWidth>mainWidth then metricX=0;metricY=metricY+(raid and metricLine+8 or metricLine*2+12) end
   metric.title:SetPoint("TOPLEFT",metricX,-metricTop-metricY)
-  metric.value:SetPoint("TOPLEFT",metricX+(raid and titleWidth+8 or 0),-metricTop-metricY-(raid and 0 or 22))
-  metricX=metricX+cellWidth+(raid and 24 or 20);metricHeight=metricY+(raid and 20 or 42)
+  metric.value:SetPoint("TOPLEFT",metricX+(raid and titleWidth+8 or 0),-metricTop-metricY-(raid and 0 or metricLine+4))
+  metricX=metricX+cellWidth+(raid and 24 or 20);metricHeight=metricY+(raid and metricLine or metricLine*2+4)
   metric.title:Show();metric.value:Show()
  end
  local top=metricTop+metricHeight+16
@@ -533,18 +542,18 @@ function Tip:RenderGroup()
  end
  if raid and A.db.raidMembers~="always" then
   local hint=expanded and Say("按 %s 收起名单","Press %s to collapse") or Say("按 %s 展开成员名单","Press %s to expand the member list")
-  top=top+12;UI:SetText(f.footer,hint:format(raidModifierLabels[A.db.raidMembers]));f.footer:ClearAllPoints();f.footer:SetPoint("TOPLEFT",0,-top);top=top+20
+  top=top+12;UI:SetText(f.footer,hint:format(raidModifierLabels[A.db.raidMembers]));f.footer:ClearAllPoints();f.footer:SetPoint("TOPLEFT",0,-top);top=top+f.footer:GetStringHeight()
  else UI:SetText(f.footer,"") end
  if raid then
   local list=Bosses(record.activity);local bossTop=32
-  f.bossTitle:ClearAllPoints();f.bossTitle:SetPoint("TOPLEFT",mainWidth+36,0);f.bossTitle:Show()
+  f.bossTitle:ClearAllPoints();f.bossTitle:SetPoint("TOPLEFT",mainWidth+BOSS_GAP,0);f.bossTitle:Show()
   local progress=UI:ProgressText(record,details)
   f.bossCount:ClearAllPoints();f.bossCount:SetPoint("TOPRIGHT",f.canvas,"TOPRIGHT",0,-2);UI:SetText(f.bossCount,progress);UI:Color(f.bossCount,progress=="—" and T.dim or T.good);f.bossCount:SetShown(progress~="—")
   if list and #list>0 and details and details.encounters then
    for index,name in ipairs(list) do
     local row=f.bossRows[index]
     if not row then
-     row=CreateFrame("Frame",nil,f.canvas);row:SetWidth(168)
+     row=CreateFrame("Frame",nil,f.canvas);row:SetWidth(BOSS_WIDTH)
      row.name=C.Text(row,"",14,T.muted,110);C.SetLineHeight(row.name,22);row.name:SetWordWrap(true);row.name:SetPoint("LEFT",0,0)
      row.status=C.Text(row,"",14,T.dim,72);C.SetLineHeight(row.status,22,true);row.status:SetJustifyH("RIGHT");row.status:SetPoint("RIGHT",0,0)
      f.bossRows[index]=row
@@ -553,14 +562,14 @@ function Tip:RenderGroup()
     for _,completed in ipairs(details and details.encounters or {}) do if completed==name then defeated=true;break end end
     UI:SetText(row.name,name)
     UI:SetText(row.status,details and details.encounters and (defeated and Say("已击败","Defeated") or Say("未击败","Not defeated")) or L.unknown)
-    row.status:SetWidth(0);row.name:SetWidth(168-12-row.status:GetStringWidth())
+    row.status:SetWidth(0);row.name:SetWidth(BOSS_WIDTH-12-row.status:GetStringWidth())
     UI:Color(row.status,defeated and T.good or T.dim)
     local height=math.max(36,row.name:GetStringHeight()+16)
-    row:SetHeight(height);row:ClearAllPoints();row:SetPoint("TOPLEFT",mainWidth+36,-bossTop);row:Show();bossTop=bossTop+height
+    row:SetHeight(height);row:ClearAllPoints();row:SetPoint("TOPLEFT",mainWidth+BOSS_GAP,-bossTop);row:Show();bossTop=bossTop+height
    end
   else
    local missing=list and #list>0 and Say("队伍未提供首领进度","This group has not provided boss progress") or Say("暂无首领目录","Boss directory unavailable")
-   f.bossText:ClearAllPoints();f.bossText:SetPoint("TOPLEFT",mainWidth+36,-32);f.bossText:SetWidth(168);UI:SetText(f.bossText,missing);f.bossText:Show()
+   f.bossText:ClearAllPoints();f.bossText:SetPoint("TOPLEFT",mainWidth+BOSS_GAP,-32);f.bossText:SetWidth(BOSS_WIDTH);UI:SetText(f.bossText,missing);f.bossText:Show()
    bossTop=30+f.bossText:GetStringHeight()
   end
   top=math.max(top,bossTop+4)
@@ -575,16 +584,16 @@ function Tip:ShowPlayer(owner,member,context)
  self.record,self.details,self.sourceApp,self.rosterContext=nil,nil,nil,nil
  self.sourceRoster=directRoster and UI:GetGroup():GetRoster() or nil;self.directPlayer=directRoster
  self.memberContext=context;self.rosterMemberID=directRoster and Members:ID(member) or nil
- self:ResetInteractive(owner,376);self:RenderPlayer(member,false)
+ self:ResetInteractive(owner,440);self:RenderPlayer(member,false)
 end
 local function NoteHeader(f,note,top)
  local color=note.type=="positive" and T.good or note.type=="caution" and T.warning or T.muted
  f.noteDivider:ClearAllPoints();f.noteDivider:SetPoint("TOPLEFT",0,-top);f.noteDivider:SetWidth(f.canvas:GetWidth());f.noteDivider:Show()
  local kind=L.types and L.types[note.type]
  f.noteHeading:ClearAllPoints();f.noteHeading:SetPoint("TOPLEFT",24,-top-17);UI:SetText(f.noteHeading,L.notes..(kind and kind~=L.notes and " · "..kind or ""));UI:Color(f.noteHeading,color);f.noteHeading:Show()
- f.noteGlyph:SetTexture(T.media..(note.type=="positive" and "heart" or note.type=="caution" and "caution" or "book")..".tga");f.noteGlyph:SetColor(color);f.noteGlyph:ClearAllPoints();f.noteGlyph:SetPoint("TOPLEFT",0,-top-19);f.noteGlyph:Show()
- f.comment:ClearAllPoints();f.comment:SetPoint("TOPLEFT",0,-top-45);f.comment:SetHeight(0);UI:Color(f.comment,T.text);UI:SetText(f.comment,note.reason~="" and note.reason or L.noReason)
- local dateTop=top+45+math.max(22,f.comment:GetStringHeight())+8
+ f.noteGlyph:SetTexture(T.media..(note.type=="positive" and "heart" or note.type=="caution" and "caution" or "book")..".tga");f.noteGlyph:SetColor(color);f.noteGlyph:ClearAllPoints();f.noteGlyph:SetPoint("LEFT",f.noteHeading,"LEFT",-24,0);f.noteGlyph:Show()
+ f.comment:ClearAllPoints();f.comment:SetPoint("TOPLEFT",0,-top-17-f.noteHeading:GetStringHeight()-12);f.comment:SetHeight(0);UI:Color(f.comment,T.text);UI:SetText(f.comment,note.reason~="" and note.reason or L.noReason)
+ local dateTop=top+17+f.noteHeading:GetStringHeight()+12+math.max(f.comment:GetLineHeight(),f.comment:GetStringHeight())+12
  f.noteDate:ClearAllPoints();f.noteDate:SetPoint("TOPLEFT",0,-dateTop);f.noteDate:SetWidth(f.canvas:GetWidth());UI:SetText(f.noteDate,(note.classSpec and note.classSpec~="" and note.classSpec.." · " or "")..UI:DateText(note.timestamp));f.noteDate:Show()
  return dateTop+math.max(18,f.noteDate:GetStringHeight())
 end
@@ -593,12 +602,12 @@ function Tip:ShowNote(owner,key)
  local note=A.Notes:Find(key);if not note then return end
  self.record,self.member,self.details,self.sourceApp,self.sourceRoster,self.rosterMemberID=nil,nil,nil,nil,nil,nil
  self.memberContext,self.rosterContext,self.directPlayer=nil,nil,nil
- local f=self:ResetInteractive(owner,424)
+ local f=self:ResetInteractive(owner,512)
  f.icon:Hide();f.subtitle:Hide();f.summary:Hide();f.leader:Hide()
  f.title:ClearAllPoints();f.title:SetPoint("TOPLEFT");f.title:SetWidth(f.canvas:GetWidth());UI:SetText(f.title,note.name.."-"..note.server)
- f.title:SetFont(T.font,PLAYER_NAME_SIZE,"");C.SetLineHeight(f.title,PLAYER_NAME_HEIGHT)
+ C.SetFont(f.title,PLAYER_NAME_SIZE);C.SetLineHeight(f.title,PLAYER_NAME_HEIGHT)
  local top=NoteHeader(f,note,math.max(24,f.title:GetStringHeight())+16)+12
- f.footer:ClearAllPoints();f.footer:SetPoint("TOPLEFT",0,-top);UI:SetText(f.footer,Say("点击编辑记录。","Click to edit this note."));self:Place(top+20)
+ f.footer:ClearAllPoints();f.footer:SetPoint("TOPLEFT",0,-top);UI:SetText(f.footer,Say("点击编辑记录。","Click to edit this note."));self:Place(top+f.footer:GetStringHeight())
 end
 function Tip:RenderDungeons(scores,top)
  local f=self.interactive
@@ -639,7 +648,7 @@ function Tip:RenderDungeons(scores,top)
   row.status:ClearAllPoints();row.status:SetPoint("TOPRIGHT");row.status:SetWidth(statusWidth);row.status:SetShown(run~=nil);UI:Color(row.status,run and run.timed and T.good or T.dim)
   local nameX=labelWidth+12+(run and levelWidth+12 or 0)
   row.name:ClearAllPoints();row.name:SetPoint("TOPLEFT",nameX,0);row.name:SetWidth(width-nameX-(run and statusWidth+12 or 0));row.name:SetHeight(0);UI:SetText(row.name,run and run.name or Say("未提供记录","No record available"));UI:Color(row.name,run and T.text or T.dim)
-  local height=math.max(20,row.name:GetStringHeight());row:SetHeight(height);row:Show();top=top+height+(i==1 and 8 or 0)
+  local height=math.max(row.name:GetLineHeight(),row.name:GetStringHeight());row:SetHeight(height);row:Show();top=top+height+(i==1 and 8 or 0)
  end
  return top
 end
@@ -658,13 +667,13 @@ function Tip:RenderPlayer(member,fromGroup,adjustPoint)
  if context.source=="applicant" then
   if context.showDungeonRecords then scores=UI:GetGroup():GetApplicantDungeonScores(member) end
  else scores=member.dungeonScores end
- local f=self:ResetInteractive(nil,scores and 424 or 376);f:UnregisterEvent("MODIFIER_STATE_CHANGED")
+ local f=self:ResetInteractive(nil,scores and 512 or 440);f:UnregisterEvent("MODIFIER_STATE_CHANGED")
  local key,name,realm=Members:Identity(member)
- local top=fromGroup and 42 or 0
+ local top=fromGroup and 48 or 0
  f.back:SetShown(fromGroup==true);f.back:ClearAllPoints();f.back:SetPoint("TOPLEFT");f.back:SetWidth(f.back.label:GetStringWidth()+22)
  UI:SetFactionIcon(f.playerFaction,member);UI:SetRoleIcon(f.playerRole,member.assignedRole)
  UI:SetText(f.title,name or member.name or L.unknown);f.title:SetTextColor(UI:ClassColor(member.class));f.title._color=nil
- f.title:SetFont(T.font,PLAYER_NAME_SIZE,"");C.SetLineHeight(f.title,PLAYER_NAME_HEIGHT)
+ C.SetFont(f.title,PLAYER_NAME_SIZE);C.SetLineHeight(f.title,PLAYER_NAME_HEIGHT)
  UI:SetText(f.subtitle,realm or member.realm or L.unknown);UI:SetMemberIcon(f.icon,member)
  local className=member.localizedClass
  if not className and member.class then for classID=1,GetNumClasses() do local name,token=GetClassInfo(classID);if token==member.class then className=name;break end end end
@@ -683,12 +692,13 @@ function Tip:RenderPlayer(member,fromGroup,adjustPoint)
  f.summary:ClearAllPoints();f.summary:SetPoint("TOPLEFT",identityX,-summaryTop);f.summary:SetWidth(identityWidth);f.summary:SetHeight(0);f.summary:SetWordWrap(true);UI:SetText(f.summary,(className or L.unknown)..(specName and " · "..specName or "")..(relation~="" and " · "..relation or ""))
  local identityBottom=summaryTop+math.max(20,f.summary:GetStringHeight())
  local identityCenter=-(top+identityBottom)/2
+ f.icon:ClearAllPoints();f.icon:SetPoint("LEFT",f.canvas,"TOPLEFT",0,identityCenter)
  f.playerRole:ClearAllPoints();f.playerRole:SetPoint("RIGHT",f.canvas,"TOPRIGHT",0,identityCenter)
  f.playerFaction:ClearAllPoints()
  if f.playerRole:IsShown() then f.playerFaction:SetPoint("RIGHT",f.playerRole,"LEFT",-6,0)
  else f.playerFaction:SetPoint("RIGHT",f.canvas,"TOPRIGHT",0,identityCenter) end
  local metricTop=math.max(top+PLAYER_ICON_SIZE+2,identityBottom)+16
- local columnWidth=context.showRating and (width-16)/2 or width;local metricHeight=20
+ local columnWidth=context.showRating and (width-16)/2 or width;local metricHeight=f.metrics[1].title:GetLineHeight()
  local rating,ratingKind,ratingActivity
  if context.showRating then rating,ratingKind,ratingActivity=UI:MemberRating(member) end
  for i=1,(context.showRating and 2 or 1) do
