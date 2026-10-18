@@ -4,7 +4,7 @@
 
 A group-finding addon for retail World of Warcraft. Find groups, manage recruitment, and keep notes on players you meet, all in one window.
 
-Version **1.0.1** targets retail **12.1.5** (Interface `120105`) and supports Chinese and English. See the [changelog](CHANGELOG.md) (in Chinese) for version changes.
+Version **1.0.2** targets retail **12.1.5** (Interface `120105`) and supports Chinese and English. See the [changelog](CHANGELOG.md) (in Chinese) for version changes.
 
 ## Features
 
@@ -16,7 +16,7 @@ Version **1.0.1** targets retail **12.1.5** (Interface `120105`) and supports Ch
 
 The interface uses native Lua with bundled LycheeUI. Feature modules load on demand; no separate UI library installation is needed.
 
-This unreleased batch has passed offline regression checks and has been installed in the local game addon directory. It has not yet been reloaded or verified in game; see the [product document](Product.md) for coverage.
+The changes in 1.0.2 have passed offline regression checks and have been installed in the local game addon directory. This version has not yet been reloaded or verified in game; see the [product document](Product.md) for coverage.
 
 ## Installation
 
