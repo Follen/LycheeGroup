@@ -1,6 +1,39 @@
 -- Offline interaction coverage for the approved v4.4 layout and native field leasing.
 local f=dofile("tests/ui_fixture.lua")("zhCN")
 local A,U,G,S,Pick=f.A,f.U,f.G,f.S,f.Pick
+do
+ local original=GetSpecializationInfoByID
+ local calls,ready=0,false
+ GetSpecializationInfoByID=function(id)
+  calls=calls+1
+  if id==900002 and not ready then return end
+  return id,"Cached spec "..id,nil,1000000+id
+ end
+ local icon=U.C.GameIcon(UIParent,24)
+ local member={specID=900001,class="WARRIOR"}
+ for _=1,40 do
+  U:SetMemberIcon(icon,member)
+  T.eq(U:SpecName(member),"Cached spec 900001")
+ end
+ T.eq(calls,1,"forty icon/name bindings share one successful specialization lookup")
+ T.eq(icon:GetTexture(),1900001)
+ member.specName="Explicit specialization"
+ T.eq(U:SpecName(member),member.specName,"provider specialization names keep precedence")
+ T.eq(calls,1)
+ member.specName=nil;member.specID=900002
+ T.eq(U:SpecName(member),nil,"unavailable specialization metadata stays absent")
+ U:SetMemberIcon(icon,member)
+ T.eq(calls,3,"missing metadata is retried rather than cached")
+ ready=true
+ T.eq(U:SpecName(member),"Cached spec 900002")
+ U:SetMemberIcon(icon,member)
+ T.eq(calls,4,"recovered metadata is shared with the next icon binding")
+ T.eq(icon:GetTexture(),1900002,"changing specialization replaces the previous icon")
+ member.specID=900001;U:SetMemberIcon(icon,member)
+ T.eq(icon:GetTexture(),1900001,"reusing an earlier specialization restores its own icon")
+ T.eq(calls,4)
+ GetSpecializationInfoByID=original
+end
 -- Delve thumbnails use the native member's UV rectangle, including when it is
 -- offset within the shared 2048x2048 entrance sheet, and remain square.
 do
@@ -1158,13 +1191,14 @@ do
  T.eq(Geometry(find.resultsHeader).y-find.resultsHeader:GetHeight()-Geometry(find.results).y,12,"the single header has a clear gap above the first row")
  local getSpecInfo=GetSpecializationInfoByID
  _G.GetSpecializationInfoByID=function(id) return id,"Spec "..id,nil,200000+id end
- local members={{name="One",nameKey="One-Away",class="WARRIOR",assignedRole="TANK",specID=71}}
+ -- These fixture IDs have not been resolved before this API override.
+ local members={{name="One",nameKey="One-Away",class="WARRIOR",assignedRole="TANK",specID=900071}}
  r.categoryID=2;r.maxNumPlayers=5;r.numMembers=1;r.age=10;r.leaderRating=2500;r.requiredItemLevel=320;r.ratingKind=nil
  r.details={members=members,counts={TANK=1,HEALER=0,DAMAGER=0},encounters={}};Render()
  local roster,count,age,score=Geometry(target.roster),Geometry(target.count),Geometry(target.age),Geometry(target.score)
  T.eq(roster.anchor,"CENTER");T.eq(Geometry(target.membersButton).x,count.x);T.eq(Geometry(target.membersButton).y,0)
  T.eq(target.count:IsShown(),false,"member totals are hidden until the role summary is clicked")
- T.eq(target.roster.slots[1].icon:IsShown(),true);T.eq(target.roster.slots[1].icon:GetTexture(),200071,"a party result shows its member's specialization")
+ T.eq(target.roster.slots[1].icon:IsShown(),true);T.eq(target.roster.slots[1].icon:GetTexture(),1100071,"a party result shows its member's specialization")
  T.eq(target.roster.counts[1].text:IsShown(),false,"party rows use individual specializations rather than aggregate role counts")
  target:Fire("OnClick","LeftButton");T.eq(target.count:IsShown(),false,"ordinary row clicks do not expand member totals")
  target.membersButton:Fire("OnClick");T.eq(target.count:IsShown(),false);T.eq(target.count:GetText(),"","party slots never reveal a redundant N/N counter")
@@ -1177,11 +1211,11 @@ do
   T.eq(slot.icon:IsShown(),i==1,"only the occupied slot shows a specialization")
  end
  T.eq(count.width,138);T.eq(age.width,64)
- members[1]={name="Damage1",class="MAGE",assignedRole="DAMAGER",specID=63}
- members[2]={name="Tank",class="WARRIOR",assignedRole="TANK",specID=71}
- members[3]={name="Damage2",class="MAGE",assignedRole="DAMAGER",specID=62}
- members[4]={name="Healer",class="PRIEST",assignedRole="HEALER",specID=257}
- members[5]={name="Damage3",class="MAGE",assignedRole="DAMAGER",specID=64}
+ members[1]={name="Damage1",class="MAGE",assignedRole="DAMAGER",specID=900063}
+ members[2]={name="Tank",class="WARRIOR",assignedRole="TANK",specID=900071}
+ members[3]={name="Damage2",class="MAGE",assignedRole="DAMAGER",specID=900062}
+ members[4]={name="Healer",class="PRIEST",assignedRole="HEALER",specID=900257}
+ members[5]={name="Damage3",class="MAGE",assignedRole="DAMAGER",specID=900064}
  r.numMembers=5;r.age=99*86400;r.leaderRating=nil;Render()
  T.eq(Geometry(target.roster).x,roster.x,"one to five members share the membership column center")
  T.eq(target.roster:GetWidth(),Geometry(target.roster.slots[5].icon).x+target.roster.slots[5].icon:GetWidth(),"the five visible party slots fill the centered roster frame")
@@ -1189,11 +1223,11 @@ do
  T.same(Geometry(target.age),age,"longer time text does not resize the time column")
  T.same(Geometry(target.score),score,"unknown scores retain the same numeric column")
  T.ok(target.score:GetStringWidth()<=target.score:GetWidth(),"the complete unknown-score label fits")
- for i,spec in ipairs({71,257,63,62,64}) do
+ for i,spec in ipairs({900071,900257,900063,900062,900064}) do
   T.eq(target.roster.slots[i].icon:IsShown(),true)
   T.eq(target.roster.slots[i].icon:GetTexture(),200000+spec,"unordered party members render tank, healer, then damage in stable order")
  end
- T.eq(members[1].specID,63,"rendering preserves provider member order")
+ T.eq(members[1].specID,900063,"rendering preserves provider member order")
  r.categoryID=3;r.maxNumPlayers=40;r.numMembers=40;r.details.counts={TANK=2,HEALER=8,DAMAGER=30};Render()
  T.eq(Geometry(target.roster).x,roster.x,"raid composition shares the membership column center")
  T.eq(target.roster:GetWidth(),132,"raid roles are centered without a trailing column gap")

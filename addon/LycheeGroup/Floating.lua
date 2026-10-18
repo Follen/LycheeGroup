@@ -424,14 +424,23 @@ function F:Render()
  if not self.entries or next(exits) then return end
  local offset=self.scroll:GetVerticalScroll();local bound=0
  local first,last
- for index,entry in ipairs(self.entries) do local top=self.entryTops[index];if top+entry.height>=offset and top<offset+self.scroll:GetHeight() then first=first or index;last=index end end
+ local count=#self.entries;local low,high=1,count
+ while low<=high do
+  local index=math.floor((low+high)/2)
+  if self.entryTops[index]+self.entries[index].height>=offset then first=index;high=index-1 else low=index+1 end
+ end
+ local bottom=offset+self.scroll:GetHeight()
+ if first and self.entryTops[first]<bottom then
+  last=first
+  while last<count and self.entryTops[last+1]<bottom do last=last+1 end
+ else first=nil end
  if self.boundVersion==self.entriesVersion and self.visibleFirst==first and self.visibleLast==last then return end
  self.boundVersion,self.visibleFirst,self.visibleLast=self.entriesVersion,first,last
  local batchCount=0;wipe(boundBatches)
  for _,batch in ipairs(self.batches) do batch.applicantID=nil;batch.background:Hide();batch:Hide() end
- for index,entry in ipairs(self.entries) do
+ for index=first or 1,last or 0 do
+  local entry=self.entries[index]
   local top=self.entryTops[index]
-  if top+entry.height>=offset and top<offset+self.scroll:GetHeight() then
    bound=bound+1;local row=self.rows[bound] or self:CreateRow()
    row.baseTop=top;row.cardOrder=entry.batch and batchCount+1 or bound;row:ClearAllPoints();row:SetPoint("TOPLEFT",0,-top);row:SetHeight(entry.height-(entry.gap or 0));row.background:ClearAllPoints();row.background:SetAllPoints();row.background:Hide();row:Show();row.applicationID=nil;row.applicantID=entry.applicantID;row.application=nil;row.batch=nil
    if entry.batch then
@@ -483,7 +492,6 @@ function F:Render()
    end
    if row:IsMouseOver() then self:HoverRow(row,true) end
    if entry.member then row.score:SetFont(T.font,14,"");row.score:SetWordWrap(false);C.SetLineHeight(row.score,MEMBER_NAME_LINE,true);row.score:ClearAllPoints();row.score:SetPoint("TOPRIGHT",-12,-entry.padTop);row.score:SetWidth(MEMBER_METRIC_WIDTH);row.score:SetJustifyH("RIGHT") end
-  end
  end
  for i=bound+1,#self.rows do local row=self.rows[i];row:Hide();row.faction:Hide();row.faction:SetTexture(nil);row.applicationID=nil;row.applicantID=nil;row.application=nil;row.batch=nil;row.invite:Hide();row.decline:Hide();row.cancel:Hide();row.invite.applicantID=nil;row.decline.applicantID=nil;row.cancel.applicationID=nil end
  self:ApplyCardMotion(self.cardElapsed)

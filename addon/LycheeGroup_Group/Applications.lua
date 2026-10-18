@@ -53,8 +53,8 @@ local function Update(id,status,pending,remaining,groupName)
  if type(remaining)=="number" then record.expiresAt=GetTime()+remaining end
  local result=Active(record) and (G.Results:GetResult(id) or G.Results:Capture(id,record.result,true) or record.result)
  if result then
-  record.result=result;record.activityID=result.activityID;record.categoryID=result.categoryID
-  record.name=result.name;record.leaderName=result.leaderName;record.leaderKey=result.leaderKey;record.activityName=result.activityName
+  record.result=result;record.categoryID=result.categoryID
+  record.name=result.name;record.leaderName=result.leaderName;record.activityName=result.activityName
   record.activityArt=result.activity and result.activity.journalID and select(6,EJ_GetInstanceInfo(result.activity.journalID))
   local activity=result.activity
   record.activityLabel=activity and activity.groupID and activity.groupID>0 and C_LFGList.GetActivityGroupInfo(activity.groupID) or result.activityName

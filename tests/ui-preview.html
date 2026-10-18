@@ -32,7 +32,7 @@ let clip=[x,y,x+w,y+h];for(let p=n.parent;p;p=ns[p-1].parent){const parent=ns[p-
 if(n.rotation)el.style.transform=`rotate(${-n.rotation}rad)`;
 if(n.fill)el.style.background=rgba(n.fill);if(n.backdrop)el.style.background=rgba(n.backdrop);
 if(textKind){el.classList.add('label');if(n.wrap)el.classList.add('multiline');el.innerHTML=styled(n.text);el.style.fontSize=((n.font?.[1]||14)*scale(n))+'px';el.style.color=rgba(n.color)||'#eee';el.style.textAlign=(n.justify||'LEFT').toLowerCase();el.style.justifyContent=n.justify==='RIGHT'?'flex-end':n.justify==='CENTER'?'center':'flex-start';if(n.spacing)el.style.lineHeight=(((n.font?.[1]||14)*1.2+n.spacing)*scale(n))+'px';}
-if(n.texture&&typeof n.texture==='string'&&n.texture.includes('lychee-logo')){el.style.background='url(../addon/LycheeGroup_UI/Media/lychee-logo.png) center/contain no-repeat';}
+if(n.texture&&typeof n.texture==='string'&&n.texture.includes('lychee-logo')){el.style.background='url(../Media/lychee-logo.png) center/contain no-repeat';}
 else if(n.texture&&typeof n.texture==='string'&&n.texture.includes('faction-')){const faction=n.texture.includes('alliance')?'alliance':'horde';el.style.background=`url(../assets/factions/${faction}.png) center/contain no-repeat`;}
 else if(n.texture&&typeof n.texture==='string'&&n.texture.includes('favorite-')){const state=n.texture.includes('favorite-on')?'on':'off';el.style.background=`url(../assets/favorites/favorite-${state}.png) center/contain no-repeat`;}
 else if(n.texture&&typeof n.texture==='string'&&n.texture.includes('rounded-corner')){el.style.background=rgba(n.vertex);const c=n.coords||[0,1,0,1];el.style.borderRadius=c[0]===0?(c[2]===0?'100% 0 0 0':'0 0 0 100%'):(c[2]===0?'0 100% 0 0':'0 0 100% 0');}

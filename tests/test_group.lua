@@ -279,6 +279,14 @@ do
 	G.Results:OnResultUpdated(11)
 	G.Search:SetFilters({leaderText="灵止光"})
 	T.eq(table.concat(G.Results:GetResults(),","),"11","leader search matches a captain's character name")
+	S.results[11].leaderName="Captain-Home"
+	G.Results:OnResultUpdated(11)
+	G.Search:SetFilters({leaderText="  CAPTAIN  "})
+	T.eq(table.concat(G.Results:GetResults(),","),"11","leader search trims the query and ignores English case")
+	G.Search:SetFilters({leaderText=" \t "})
+	T.eq(table.concat(G.Results:GetResults(),","),"13,12,11","blank leader query retains every result including an unknown leader")
+	G.Search:SetFilters({leaderText=42})
+	T.eq(table.concat(G.Results:GetResults(),","),"13,12,11","non-string leader query retains the established unfiltered behavior")
 	S.results[11].leaderName=originalLeaderName
 	G.Results:OnResultUpdated(11)
 	S.results[13].comment="没有团长名时仍可按备注筛选"

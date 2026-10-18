@@ -22,13 +22,23 @@ function UI:CanWhisperFaction(factionGroup)
  return not self.preview and factionGroup~=nil and factionGroup==PLAYER_FACTION_GROUP[UnitFactionGroup("player")]
 end
 local specIcons={}
+local specMetadata={}
+local function Specialization(specID)
+ local cached=specMetadata[specID]
+ if cached then return cached[1],cached[2] end
+ local _,name,_,icon=GetSpecializationInfoByID(specID)
+ -- Only complete native metadata is stable enough to retain; missing data
+ -- must remain retryable when a later binding can resolve it.
+ if name and icon then specMetadata[specID]={name,icon} end
+ return name,icon
+end
 function UI:SpecName(member)
  if member.specName then return member.specName end
- if member.specID and member.specID>0 then return select(2,GetSpecializationInfoByID(member.specID)) end
+ if member.specID and member.specID>0 then local name=Specialization(member.specID);return name end
 end
 function UI:SetMemberIcon(icon,member)
  local spec=member and member.specID
- local texture=spec and spec>0 and select(4,GetSpecializationInfoByID(spec))
+ local texture=spec and spec>0 and select(2,Specialization(spec))
  if not texture and member and member.specName and member.class then
   local entries=specIcons[member.class]
   if not entries then

@@ -54,7 +54,7 @@ addon/
     Theme、Motion、Host、Components、Members、Tooltip、Native、Preview、Find、Create、Notes、Settings、Transfer、Media、Locale
 ```
 
-品牌原始文件保留在 [Media](Media/lychee-logo.png)；共享素材源位于 [LycheeUI/Media](../LycheeUI/Media)，运行时位于主包 `Libs/LycheeUI/Media`，由库主题提供路径。已删除 UI 子包内 27 个无引用旧纹理副本；该子包 Media 保留两张关于页图片、离线预览使用的 PNG，以及产品专用阵营与收藏星标 TGA；收藏 PNG 源图位于 `assets/favorites`，运行素材保留在 UI 子包 Media；阵营高清源图与生成信息位于 [assets/factions](assets/factions/prompts.txt)，无需同步共享库。四个产品包的 TOC `IconTexture` 统一引用主包的 `Media/addon-logo.tga`，与界面和动效使用的共享品牌素材分开维护；素材设计见 [Desgin.md](Desgin.md#1-品牌与语言)。共享库源码位于 `D:/Code/wow/addons/LycheeUI`，与本产品独立。磁盘素材引用不需要加载业务 UI。
+品牌原始文件保留在 [Media](Media/lychee-logo.png)，离线预览直接引用此处 PNG；共享素材源位于 [LycheeUI/Media](../LycheeUI/Media)，运行时位于主包 `Libs/LycheeUI/Media`，由库主题提供路径。已删除 UI 子包内 27 个无引用旧纹理及一张与根目录相同的预览 PNG 副本；该子包 Media 仅保留两张关于页图片，以及产品专用阵营与收藏星标 TGA。收藏 PNG 源图位于 `assets/favorites`，运行素材保留在 UI 子包 Media；阵营高清源图与生成信息位于 [assets/factions](assets/factions/prompts.txt)，无需同步共享库。四个产品包的 TOC `IconTexture` 统一引用主包的 `Media/addon-logo.tga`，与界面和动效使用的共享品牌素材分开维护；素材设计见 [Desgin.md](Desgin.md#1-品牌与语言)。共享库源码位于 `D:/Code/wow/addons/LycheeUI`，与本产品独立。磁盘素材引用不需要加载业务 UI。
 
 运行 `tools/Sync-LycheeUI.ps1` 从独立源码同步内置库，运行 `tools/Build-Addon.ps1` 生成只含四个产品目录的安装包。产品内置副本不包含库 TOC、测试或说明文档，不手工维护第二份源码。其他插件的接入方式和公共接口由共享库 [README](../LycheeUI/README.md) 与 [API.md](../LycheeUI/API.md) 维护。
 
@@ -274,6 +274,8 @@ LycheeUI 提供通用主题、控件、动效、菜单、阴影和弹窗；产�
 难度、活动、资料片与按分类保存的筛选属于搜索状态，不写入创建表单或 `Applications`。Notes 独立持有玩家记录。
 
 活动图片由 UI 的数据适配器解析，再交共享 GameIcon 裁切。普通副本与申请摘要使用 `EJ_GetInstanceInfo` 第六返回值 buttonImage；有目录映射的地下堡使用入口背景 atlas 的场景区域，映射缺失时查询原生冒险指南，再回退分类图。按 mapID 缓存查询结果及无图片结果，滚动重绑不重复查询。
+
+成员专精的名称与图标由同一 UI 适配器按 specID 复用原生成功返回的静态元数据；显式成员专精名仍优先，未取得的结果在下次绑定时重读。缓存不保留成员对象，也不新增监听或预读，容量与成本边界见 [perfermance.md 第 8 节](perfermance.md#8-内存缓存与存档)。
 
 `UI.Members` 在 Components 后加载，集中紧凑成员卡的创建与绑定、身份解析、关系与笔记标记、队长／职责排序以及当前队伍菜单。Create 行内名单与 Tooltip 浮层名单共用其绘制和交互实现，各自持有可复用行。Create 优先用当前招募活动、否则用表单活动取得 Presentation 名单模式：list 在队伍卡内显示原顺序名单，groups 由职责人数区域打开 Roster Tooltip，并按真实 `subgroup` 分组、组内保留原快照顺序。当前人数不参与活动识别，40 人快照不反推为团本，团本活动只剩四人仍保留真实小队分组。切换模式清除旧模式的成员与菜单绑定，收藏区展开或折叠后重新计算名单可用视口。
 

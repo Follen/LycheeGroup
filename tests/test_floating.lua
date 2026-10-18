@@ -339,6 +339,23 @@ do
  applicant.members=many;callback("applicants")
  T.eq(F.count:GetText(),"100");T.ok(F.frame:GetWidth()>80,"the single entry expands to preserve the complete count")
  T.eq(F.button:GetWidth(),F.frame:GetWidth());T.ok(F.count:GetWidth()>=F.count:GetStringWidth());T.eq(F.count.wrap,false,"the complete count stays on one stable line")
+ F:ShowPanel()
+ local tops=F.entryTops
+ local function CheckRange(offset,height)
+  F.scroll:SetHeight(height);F.scroll:SetVerticalScroll(offset);F:Render()
+  local first,last
+  for i,entry in ipairs(F.entries) do if tops[i]+entry.height>=offset and tops[i]<offset+height then first=first or i;last=i end end
+  T.eq(F.visibleFirst,first,"floating range keeps the original inclusive top boundary")
+  T.eq(F.visibleLast,last,"floating range keeps the original exclusive bottom boundary")
+ end
+ local viewport=F.scroll:GetHeight()
+ CheckRange(0,viewport);CheckRange(tops[50],tops[55]-tops[50]);CheckRange(tops[50]+.01,viewport)
+ CheckRange(F.body:GetHeight()-viewport,viewport)
+ local reads=0
+ F.entryTops=setmetatable({},{__index=function(_,index) reads=reads+1;return tops[index] end})
+ F:Render()
+ T.ok(reads<30,"a stable scroll frame locates visible entries without scanning the complete applicant list")
+ F.entryTops=tops;F:Dismiss()
  applicant.members=originalMembers;callback("applicants");T.eq(F.frame:GetWidth(),80)
 end
 A:SetSetting("reduceMotion",false)

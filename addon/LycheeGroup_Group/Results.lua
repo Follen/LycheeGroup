@@ -183,15 +183,12 @@ local function MatchesNote(key,kind)
  return note and (kind=="any" or note.type==kind)
 end
 local function MatchesLeaderText(record,text)
- if type(text)~="string" then return true end
- text=text:lower():match("^%s*(.-)%s*$")
- if text=="" then return true end
  local leader=record.leaderName
  return type(leader)=="string" and leader:lower():find(text,1,true)~=nil
 end
-local function Pass(record,filters)
+local function Pass(record,filters,leaderText)
  if G.Applications:IsActive(record.id) then return false end
- if filters.leaderText and not MatchesLeaderText(record,filters.leaderText) then return false end
+ if leaderText and not MatchesLeaderText(record,leaderText) then return false end
  if filters.category and not G.Catalog:Matches(record.activity,filters.category,filters.groupKey,filters.difficultyID,filters.tier,filters.groupKeys) then return false end
  if filters.personKey then
   local match=record.leaderKey==filters.personKey
@@ -298,7 +295,9 @@ function Results:GetResults()
  if dirty then
   wipe(ids)
   local filters=G.Search:GetFilters()
-  for id,record in pairs(records) do if not record.isDelisted and Pass(record,filters) then ids[#ids+1]=id end end
+  local leaderText=type(filters.leaderText)=="string" and filters.leaderText:lower():match("^%s*(.-)%s*$") or nil
+  if leaderText=="" then leaderText=nil end
+  for id,record in pairs(records) do if not record.isDelisted and Pass(record,filters,leaderText) then ids[#ids+1]=id end end
   sorting=filters.sort or A.db.defaultSort;table.sort(ids,Sort);dirty=false
  end
  return ids
