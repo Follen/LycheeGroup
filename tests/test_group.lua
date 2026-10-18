@@ -153,6 +153,7 @@ _G.C_LFGList = {
 		return ids
 	end,
 	GetApplicantInfo = function(id) S.applicantInfoReads=(S.applicantInfoReads or 0)+1;return S.applicants[id] end,
+	DoesEntryTitleMatchPrebuiltTitle = function() error("Saved settings must not inspect protected listing titles") end,
 	RefreshApplicants = function() S.applicantRefreshCalls=(S.applicantRefreshCalls or 0)+1 end,
 	GetApplicantMemberInfo = function(id, index)
 		local members = S.applicantMembers[id]
@@ -183,12 +184,15 @@ _G.C_ChallengeMode = {
 
 Load.addon("LycheeGroup_Group", "Locale.lua")
 Load.addon("LycheeGroup_Group", "Group.lua")
+Load.addon("LycheeGroup_Group", "RaidBuffs.lua")
 Load.addon("LycheeGroup_Group", "Roster.lua")
 Load.addon("LycheeGroup_Group", "Game.lua")
 Load.addon("LycheeGroup_Group", "Catalog.lua")
+Load.addon("LycheeGroup", "Presentation.lua")
 Load.addon("LycheeGroup_Group", "Search.lua")
 Load.addon("LycheeGroup_Group", "Results.lua")
 Load.addon("LycheeGroup_Group", "Applications.lua")
+Load.addon("LycheeGroup_Group", "CreationPresets.lua")
 Load.addon("LycheeGroup_Group", "Listing.lua")
 Load.addon("LycheeGroup_Group", "Alerts.lua")
 Load.addon("LycheeGroup_Group", "Applicants.lua")
@@ -320,10 +324,20 @@ do
 	T.eq(table.concat(G.Results:GetResults(),","),"13")
 	G.Search:SetFilters({tankPresence="missing",healerPresence="present"})
 	T.eq(table.concat(G.Results:GetResults(),","),"12","缺坦克与已有治疗可组合")
-	G.Search:SetFilters({tankPresence="present",healerPresence="missing",needsDamage=true})
+	G.Search:SetFilters({tankPresence="present",healerPresence="missing",damagePresence="missing"})
 	T.eq(table.concat(G.Results:GetResults(),","),"13","已有坦克、缺治疗、缺输出共同过滤")
-	G.Search:SetFilters({healerPresence="present",needsDamage=true})
+	G.Search:SetFilters({healerPresence="present",damagePresence="missing"})
 	T.eq(#G.Results:GetResults(),0,"已有三名输出的队伍不命中缺输出")
+	G.Search:SetFilters({damagePresence="present"})
+	T.same(G.Results:GetResults(),{12},"恰好三名输出命中已齐，两名输出不命中")
+	S.counts[13].DAMAGER=0;G.Results:OnResultUpdated(13)
+	G.Search:SetFilters({damagePresence="missing"})
+	T.same(G.Results:GetResults(),{13},"零名输出仍命中缺少")
+	S.counts[13].DAMAGER=4;G.Results:OnResultUpdated(13)
+	G.Search:SetFilters({damagePresence="present"})
+	T.same(G.Results:GetResults(),{13,12},"三名以上输出也命中已齐")
+	G.Search:SetFilters({tankPresence="present",healerPresence="missing",damagePresence="present"})
+	T.same(G.Results:GetResults(),{13},"已有坦克、缺治疗、输出已齐仍按 AND 合并")
 	S.counts[13]={TANK=1,DAMAGER=2};G.Results:OnResultUpdated(13)
 	G.Search:SetFilters({healerPresence="missing"})
 	T.eq(#G.Results:GetResults(),0,"未知职责人数不当成缺少该职责")
@@ -333,7 +347,7 @@ do
 	T.same(G.Results:GetResults(),{12},"副本集合只保留所选副本的结果")
 	G.Search:SetFilters({category="seasonDungeon",groupKeys={[20]=true,[-503]=true}})
 	T.same(G.Results:GetResults(),{13,12},"多个副本合并结果并保留统一排序")
-	G.Search:SetFilters({category="seasonDungeon",groupKeys={[-503]=true},needsDamage=true})
+	G.Search:SetFilters({category="seasonDungeon",groupKeys={[-503]=true},damagePresence="missing"})
 	T.same(G.Results:GetResults(),{13},"副本多选与职责条件组合")
 	S.results[13].activityIDs={502};G.Results:OnResultUpdated(13)
 	local previousNotes=A.Notes
@@ -535,6 +549,7 @@ do
  C_LFGList.CreateListing=function() return false end
  C_LFGList.GetNumApplications=function() return 3,activeApplications end
  local ok,reason=G:Publish({activityID=501})
+ T.eq(#G.Presets:Get(),0,"a refused publish does not create a favorite")
  T.eq(ok,false,"native creation refusal is not reported as a successful listing")
  T.eq(reason,"你还有有效的组队申请，处理完成后才能发布组队。","active applications receive a specific creation refusal")
  T.eq(G:GetListing(),nil,"a refused listing does not create a local snapshot")
@@ -545,6 +560,7 @@ do
 end
 
 do
+	local favorite=G.Presets:ToggleFavorite({activityID=501,requiredItemLevel=175})
 	local ok, err = G.Listing:Publish({
 		activityID = 501, requiredItemLevel = 200, isAutoAccept = false,
 		isPrivateGroup = false, isCrossFactionListing = false,
@@ -556,6 +572,8 @@ do
 	T.ok(listing, "发布后存在招募快照")
 	T.eq(listing.activityName, "黑翼之巢")
 	T.eq(listing.name, "原生标题", "标题来自原生快照(不可编程提交)")
+	T.eq(#G.Presets:Get(),1,"publishing never creates another favorite")
+	T.eq(G.Presets:Get()[1],favorite);T.eq(favorite.requiredItemLevel,175,"publishing does not change saved requirements")
 
 	-- 同阵营更新走 UpdateListing。
 	S.activeEntry.generalPlaystyle = 2
@@ -566,6 +584,7 @@ do
 	T.ok(ok, "同阵营更新组队")
 	T.eq(S.createDataHistory[#S.createDataHistory].op, "update", "同阵营走 Update")
 	T.eq(G.Listing:GetListing().requiredItemLevel, 220)
+	T.eq(#G.Presets:Get(),1);T.eq(favorite.requiredItemLevel,175,"native entry events and successful updates do not alter favorites")
 	local updateData = S.createDataHistory[#S.createDataHistory].data
 	T.eq(updateData.generalPlaystyle, 2, "未编辑的原生玩法字段保留")
 	T.eq(updateData.questID, 12345, "未编辑的原生任务字段保留")
@@ -627,6 +646,7 @@ do
 	T.eq(G.Listing:GetListing(), nil)
 	T.eq(G.Applicants:GetCount(), 0, "招募结束清空申请者")
 	T.eq(#Stubs.FramesWithEvent("LFG_LIST_APPLICANT_UPDATED"), 0, "招募结束停止申请者监听")
+	G.Presets:Remove(favorite);T.eq(#G.Presets:Get(),0)
 end
 
 -- ---------------------------------------------------------------- 大秘境历史
@@ -887,18 +907,18 @@ end
 -- ---------------------------------------------------------------- 可用性刷新
 
 do
-	-- 请求属于进入视图,读目录与处理可用性事件都不重新触发请求。
-	T.eq(S.availabilityRequests, 2, "两个视图首次进入时各请求一次")
+	-- 同次会话的视图共享目录请求，读目录与处理可用性事件都不重复请求。
+	T.eq(S.availabilityRequests, 1, "all views share one activity request per session")
 	T.eq(#G:GetActivities("3"), 1, "缓存命中不重复请求")
-	T.eq(S.availabilityRequests, 2, "缓存命中不再请求")
+	T.eq(S.availabilityRequests, 1, "缓存命中不再请求")
 
-	-- 可用性事件清缓存:目录变化后重建并再次请求。
+	-- 可用性事件清缓存，后续读取按最新原生数据重建目录。
 	ACTIVITY[105] = { orderIndex=20, fullName = "旧团本（普通）", shortName = "普通", categoryID = 3, isCurrentRaidActivity = false, maxNumPlayers = 30 }
 	Fire("LFG_LIST_AVAILABILITY_UPDATE")
 	T.eq(#G:GetActivities("3"), 2, "刷新后目录重建")
 	T.eq(G:GetActivities("3")[1].id, 501, "当前团本排在较小 ID 的旧团本之前")
 	T.eq(G:GetActivities("3")[2].name, "旧团本（普通）")
-	T.eq(S.availabilityRequests, 2, "可用性事件重建不产生请求循环")
+	T.eq(S.availabilityRequests, 1, "可用性事件重建不产生请求循环")
 	ACTIVITY[105] = nil
 	Fire("LFG_LIST_AVAILABILITY_UPDATE")
 end
@@ -915,6 +935,10 @@ do
 	G:Detach(searchView)
 	T.ok(G:GetResultCount() > 0, "另一个浏览消费者仍在时保留完整结果")
 	G:Detach(secondView)
+	local requested=S.availabilityRequests
+	local cached=G.Catalog:GetActivities("3")
+	T.eq(Stubs.FireEvent("LFG_LIST_AVAILABILITY_UPDATE"),1,"native activity changes remain observed while the window is closed")
+	T.ok(G.Catalog:GetActivities("3")~=cached,"a hidden native update invalidates the existing catalog")
 	T.eq(#Stubs.FramesWithEvent("GROUP_ROSTER_UPDATE"),0,"无页面且无进行中run时释放队伍监听")
 	T.eq(G:GetResultCount(), 0, "最后一个浏览消费者离开后释放全部搜索结果")
 	T.eq(G.Search:GetState(), "idle", "关闭结束搜索会话")
@@ -944,6 +968,7 @@ do
 	T.eq(G.Applicants:GetCount(), 0)
 
 	G:Attach(searchView, "search")
+	T.eq(S.availabilityRequests,requested,"reopening uses the native activity cache without another global refresh request")
 	T.ok(G.Search:Search("3"), "重开可发起下一轮真实搜索")
 	Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED")
 	T.ok(G:GetResultCount() > 0, "重新建立事件和完整结果")
@@ -961,7 +986,7 @@ T.eq(roster[2].isLeader,true)
 Stubs.SetUnit("party1",nil)
 do
  -- Native raid aliases still identify the local player; inspect data is not self data.
- local player={name="本人",realm="晨风号角",class="PALADIN",classID=2,guid="P-0",role="HEALER"}
+ local player={name="本人",realm="晨风号角",class="PALADIN",classID=2,guid="P-0",role="NONE",subgroup=5}
  local selected,reads,inspectReads=1,0,{}
  local getSpec,getInfo,getInspect=C_SpecializationInfo.GetSpecialization,C_SpecializationInfo.GetSpecializationInfo,C_SpecializationInfo.GetInspectSpecialization
  local groupCount,averageLevel=GetNumGroupMembers,GetAverageItemLevel
@@ -979,6 +1004,8 @@ do
  local members=G:GetRoster()
  T.eq(#members,2);T.eq(members[2].unit,"raid2")
  T.eq(members[2].specID,65,"the player raid alias uses the actual selected player specialization")
+ T.eq(members[2].assignedRole,"HEALER","an unassigned player uses the current specialization role")
+ T.eq(members[2].subgroup,5,"roster subgroup comes from the native raid slot, not the member index")
  T.eq(members[2].itemLevel,248,"the player raid alias also uses equipped player item level")
  T.eq(members[1].specID,nil,"another member without inspect data remains unknown")
  T.same(inspectReads,{"raid1"},"the local raid alias never goes through inspect")
@@ -987,9 +1014,11 @@ do
  local unsubscribe=G:Subscribe(function(kind) if kind=="roster" then refreshed=G:GetRoster() end end)
  selected=2;Fire("ACTIVE_PLAYER_SPECIALIZATION_CHANGED")
  T.eq(refreshed and refreshed[2].specID,66,"the native active-player specialization event refreshes visible roster consumers")
+ T.eq(refreshed[2].assignedRole,"TANK","an unassigned role follows specialization changes")
  T.eq(refreshed[1].specID,nil,"self specialization never fills another member's missing data")
- selected=1;Fire("PLAYER_SPECIALIZATION_CHANGED","player")
+ selected=1;player.role="DAMAGER";Fire("PLAYER_SPECIALIZATION_CHANGED","player")
  T.eq(refreshed[2].specID,65,"the unit specialization event also refreshes the raid-alias player")
+ T.eq(refreshed[2].assignedRole,"DAMAGER","an explicitly assigned role remains authoritative")
  T.eq(#Stubs.FramesWithEvent("ACTIVE_PLAYER_SPECIALIZATION_CHANGED"),1)
  unsubscribe();G:Detach(view)
  T.eq(#Stubs.FramesWithEvent("ACTIVE_PLAYER_SPECIALIZATION_CHANGED"),0,"self specialization tracking stops when the create view leaves")
@@ -1055,6 +1084,39 @@ do
  G:InvalidateRoster()
 end
 
+-- A raid's same-frame library messages publish one fresh, complete roster.
+do
+ local view={}
+ local groupCount,ratingSummary=GetNumGroupMembers,C_PlayerInfo.GetPlayerMythicPlusRatingSummary
+ local reads,updates=0,0
+ GetNumGroupMembers=function() return 40 end
+ C_PlayerInfo.GetPlayerMythicPlusRatingSummary=function() reads=reads+1;return {currentSeasonScore=3000} end
+ Stubs.SetUnit("raid1",{name="本人",realm="晨风号角",class="WARRIOR",guid="P-0"})
+ for i=2,40 do Stubs.SetUnit("raid"..i,{name="广播队友"..i,realm="晨风号角",class="PALADIN",guid="BURST-"..i}) end
+ G:Attach(view,"create");G:GetRoster();reads=0
+ local unsubscribe=G:Subscribe(function(kind) if kind=="roster" then updates=updates+1;G:GetRoster() end end)
+ local function sync(index,spec) for _,callback in pairs(specCallbacks) do callback(spec,"HEALER","MELEE","广播队友"..index) end end
+ for i=2,40 do sync(i,65) end
+ T.eq(G.Roster:GetCachedSpec("BURST-40"),65,"library GUID data is immediately available to non-visual consumers")
+ T.eq(updates,0);T.eq(reads,0,"a burst does not rebuild the roster for each message")
+ Stubs.AdvanceClock(0)
+ T.eq(updates,1);T.eq(reads,40,"39 messages share one complete forty-member refresh")
+ T.eq(G:GetRoster()[40].specID,65)
+ sync(40,70)
+ T.eq(G:GetRoster()[40].specID,70,"an explicit read sees new data before the queued notification")
+ local afterRead=reads;Stubs.AdvanceClock(0)
+ T.eq(reads,afterRead,"publishing an already-read snapshot does not rebuild it again")
+ sync(40,66);local afterUpdate=updates
+ G:Detach(view)
+ T.eq(G.Roster.refreshTimer,nil,"leaving the create view cancels the queued broadcast refresh")
+ Stubs.AdvanceClock(0);T.eq(updates,afterUpdate,"a cancelled refresh cannot notify the hidden view")
+ T.eq(G.Roster:GetCachedSpec("BURST-40"),66,"closing preserves the latest teammate specialization")
+ unsubscribe()
+ for i=1,40 do Stubs.SetUnit("raid"..i,nil) end
+ GetNumGroupMembers,C_PlayerInfo.GetPlayerMythicPlusRatingSummary=groupCount,ratingSummary
+ G:InvalidateRoster()
+end
+
 -- Visiting many rows retains a small detail cache while preserving every result.
 S.results={};S.resultIDs={}
 for id=101,165 do S.results[id]={activityIDs={502},name="Group "..id,numMembers=1};S.resultIDs[#S.resultIDs+1]=id end
@@ -1065,6 +1127,20 @@ for id=101,165 do G:GetResultDetails(id) end
 T.eq(G:GetResultCount(),65)
 T.eq(G:GetResult(101).details,nil,"old member snapshots leave the cache without dropping groups")
 T.ok(G:GetResult(165).details,"recently displayed detail remains reusable")
+do
+ local native=S.counts[165]
+ native.classesByRole={HEALER={PRIEST=1}};native.NOROLE=0
+ local weak=setmetatable({native},{__mode="v"})
+ local reads=S.memberCountReads
+ local counts=G.Results:GetMemberCounts(G:GetResult(165))
+ T.same(counts,{TANK=0,HEALER=1,DAMAGER=0},"role views retain only their three consumed counts")
+ T.eq(G.Results:GetMemberCounts(G:GetResult(165)),counts)
+ T.eq(S.memberCountReads,reads+1,"the reduced role snapshot still reuses its first native read")
+ T.eq(native.classesByRole.HEALER.PRIEST,1,"normalization leaves the native response untouched")
+ S.counts[165]=nil;native=nil;collectgarbage("collect")
+ T.eq(weak[1],nil,"the original native table and its nested class statistics can be collected")
+ S.counts[165]={TANK=0,HEALER=1,DAMAGER=0}
+end
 do
 	local details=G:GetResultDetails(165);local counts=G:GetResult(165).memberCounts;local reads=S.playerReads
 	local infoReads=S.resultReads
@@ -1233,6 +1309,33 @@ T.eq(G.Catalog:Matches(G.Catalog:GetActivity(513),"seasonRaid"),false,"map-zero 
 T.eq(G.Catalog:GetActivity(513).journalID,nil,"map-zero world boss cannot acquire a fake Encounter Journal instance")
 T.eq(journalMapCalls[0],nil,"map-zero activity never reaches GetInstanceForGameMap")
 T.eq(G.Catalog:GetActivity(501).journalID,8111,"positive raid maps still resolve their real Encounter Journal instance")
+-- Raid recruitment checks class coverage within the selected raid size.
+do
+ local buffs=A.RaidBuffs
+ local members={{class="MAGE",subgroup=1},{class="ROGUE",subgroup=4},{class="ROGUE",subgroup=5},{class="WARRIOR",subgroup=6},{class="MONK",subgroup=7},{subgroup=2}}
+ local report=buffs.Get(G.Catalog,506,members)
+ T.eq(report.maxGroup,4);T.eq(report.memberCount,3);T.eq(report.unknown,1)
+ T.eq(report.counts.ROGUE,1);T.eq(report.counts.MONK,nil,"bench groups never cover a missing raid buff")
+ local function Missing(key) for _,entry in ipairs(report.missing) do if entry.key==key then return true end end;return false end
+ T.ok(Missing("poisons"),"one rogue retains the second-poison reminder");T.eq(Missing("intellect"),false)
+ local same=buffs.Get(G.Catalog,505,members,report)
+ T.eq(same,report,"roster refreshes reuse the report");T.eq(report.maxGroup,6);T.eq(report.memberCount,5)
+ T.eq(report.counts.ROGUE,2);T.eq(Missing("poisons"),false);T.eq(Missing("attackPower"),false)
+ T.ok(Missing("physical"),"group seven is excluded from flexible raids too")
+ T.eq(buffs.Get(G.Catalog,106,members,report),nil,"earlier raids in this expansion have no coverage panel")
+ T.eq(buffs.Get(G.Catalog,513,members,report),nil,"world bosses have no coverage panel")
+ T.eq(buffs.Get(G.Catalog,502,members,report),nil,"seasonal dungeons have no coverage panel")
+ T.eq(buffs.Get(G.Catalog,nil,members,report),nil)
+ local complete={}
+ for _,class in ipairs({"WARRIOR","PALADIN","HUNTER","ROGUE","ROGUE","PRIEST","DEATHKNIGHT","SHAMAN","MAGE","WARLOCK","MONK","DRUID","DEMONHUNTER","EVOKER"}) do complete[#complete+1]={class=class} end
+ buffs.Get(G.Catalog,501,complete,report);T.eq(#report.missing,0);T.eq(report.unknown,0)
+ buffs.Get(G.Catalog,501,{},report);T.eq(#report.missing,13);T.eq(next(report.counts),nil,"departed classes do not survive in a reused report")
+ T.eq(report.combatRes,nil);T.eq(report.bloodlust,nil,"coverage has no resurrection or bloodlust counters")
+ local getRoster=G.Roster.Get
+ G.Roster.Get=function() return complete end
+ T.eq(#G:GetRaidBuffs(506).missing,0,"the public service uses the same coverage model")
+ G.Roster.Get=getRoster
+end
 do
  local activities=G.Catalog:GetActivities("seasonRaid")
  local originals,reads={},0
@@ -1356,6 +1459,7 @@ do
  ACTIVITY[999]={fullName="评级战场",shortName="评级",categoryID=9,isPvpActivity=true,isRatedPvpActivity=true,maxNumPlayers=0}
  S.results[999]={activityIDs={999},name="Rated",numMembers=8,age=0,leaderOverallDungeonScore=3123,requiredDungeonScore=2500,requiredPvpRating=1800,leaderPvpRatingInfo={{bracket=4,rating=1620,activityName="评级战场",tier=3},{bracket=1,rating=2400,activityName="2v2",tier=4}}}
  local r=G.Results:Capture(999)
+ T.eq(r.maxNumPlayers,10,"rated battlegrounds recover the native ten-player team size when the activity reports zero")
  T.eq(r.leaderRating,1620,"评级PvP跟随原生首项赛制评分，不取最高竞技分或大秘境分")
  T.eq(r.requiredRating,1800,"PvP要求独立于大秘境要求")
  T.eq(r.pvpRatingActivity,"评级战场")
@@ -1564,6 +1668,26 @@ do
  S.results[9003],S.players[9003],ACTIVITY[9002]=nil,nil,nil
 end
 
+-- Confirmed terminal events still advance status without rebuilding discarded data.
+do
+ ACTIVITY[9901]={categoryID=3,fullName="Terminal audit",maxNumPlayers=30,mapID=0}
+ S.results[9901]={activityIDs={9901},name="Terminal",leaderName="Leader-Away",numMembers=30}
+ S.players[9901]={}
+ for i=1,30 do S.players[9901][i]={name=(i==1 and "Leader" or "Member"..i).."-Away",classFilename="WARRIOR",assignedRole="DAMAGER",isLeader=i==1} end
+ G.Results:BeginSearch(22001);S.applications={9901};S.appStatus[9901]="applied"
+ G.Applications:SyncAll();local record=G:GetApplication(9901)
+ local results,members,counts=S.resultReads,S.playerReads,S.memberCountReads
+ local cancelled=0;local unsub=G:Subscribe(function(kind,id) if kind=="applicationCancelled" and id==9901 then cancelled=cancelled+1 end end)
+ S.appStatus[9901]="cancelled";Fire("LFG_LIST_APPLICATION_STATUS_UPDATED",9901,"cancelled","applied")
+ T.eq(S.resultReads,results,"a confirmed terminal never rereads discarded result metadata")
+ T.eq(S.playerReads,members,"a confirmed terminal never rereads the discarded full roster")
+ T.eq(S.memberCountReads,counts)
+ T.eq(record.status,"cancelled");T.eq(cancelled,1)
+ T.eq(G:GetApplication(9901),nil);T.eq(G.Applications:GetActiveCount(),0)
+ unsub();S.applications={};G.Applications:SyncAll()
+ S.results[9901],S.players[9901],S.appStatus[9901],ACTIVITY[9901]=nil,nil,nil,nil
+end
+
 -- Reuse only a known identity at the same position; tooltip-held identities stay stable.
 do
  ACTIVITY[9004]={fullName="Identity arena",shortName="",categoryID=7,mapID=0,maxNumPlayers=5,isPvpActivity=true,isRatedPvpActivity=true}
@@ -1604,6 +1728,101 @@ do
  T.eq(unknown.specName,"Frost");T.eq(details.members[1].specName,"Fire")
  G.Results:BeginSearch(20002)
  S.results[9004],S.players[9004],S.friends[9004],ACTIVITY[9004],ACTIVITY[9005]=nil,nil,nil,nil,nil
+end
+
+-- Creation settings are saved only by an explicit favorite action.
+do
+ local store,changes={},0
+ local presets=A.CreationPresets.New(store,function() changes=changes+1 end)
+ local data={activityID=502,name="+18 friends",comment="Keep full text",requiredItemLevel=320,requiredDungeonScore=3500,privateGroup=true,isCrossFactionListing=true,autoAccept=false,questID=900,playstyle=2,generalPlaystyle=3,newPlayerFriendly=true}
+ T.eq(presets:Get(),store,"the saved favorites array is the only list")
+ local first=presets:ToggleFavorite(data)
+ T.ok(first);T.eq(changes,1)
+ T.eq(first.favorite,true);T.eq(first.name,nil);T.eq(first.comment,nil);T.eq(first.autoTitle,nil)
+ T.eq(first.privateGroup,true);T.eq(first.questID,900);T.eq(first.generalPlaystyle,3)
+ local form={activityID=502,requiredItemLevel=320,requiredDungeonScore=3500,requiredPvpRating=0,isPrivateGroup=true,isAutoAccept=false,isCrossFactionListing=true,questID=900,playstyle=2,generalPlaystyle=3,newPlayerFriendly=true}
+ T.eq(presets:Find(form),first,"form flags match the normalized listing flags")
+ T.eq(changes,1,"matching does not write or notify")
+ local second=presets:ToggleFavorite({activityID=503})
+ T.eq(presets:Get()[1],second,"a new user favorite is inserted first")
+ data.name="|Ku1|k";data.comment="A different description"
+ T.eq(presets:Find(data),first,"protected or custom text is irrelevant to favorite identity")
+ T.eq(presets:Get()[1],second);T.eq(changes,2,"matching never reorders favorites")
+ T.eq(presets:ToggleFavorite(form),nil,"the same settings cancel the existing favorite")
+ T.eq(#store,1);T.eq(first.favorite,nil)
+ form.requiredItemLevel=325
+ local changed=presets:ToggleFavorite(form)
+ T.eq(presets:Get()[1],changed);T.eq(presets:Find(data),nil,"changed requirements are a different favorite")
+ local basic=presets:ToggleFavorite({activityID=501})
+ local explicitDefaults={activityID=501,requiredItemLevel=0,requiredDungeonScore=0,requiredPvpRating=0,isAutoAccept=false,isPrivateGroup=false,isCrossFactionListing=false,newPlayerFriendly=false,playstyle=0,generalPlaystyle=0,questID=0}
+ T.eq(presets:Find(explicitDefaults),basic,"missing requirements and flags match form defaults")
+ T.eq(presets:ToggleFavorite(explicitDefaults),nil);T.eq(presets:Find({activityID=501}),nil)
+ local restored=A.CreationPresets.New(store,function() end)
+ T.eq(restored:Get()[1],changed);T.eq(restored:Get()[1].requiredItemLevel,325,"favorite order and settings survive a reload")
+ presets:Remove(second);T.eq(#store,1);T.eq(second.favorite,nil)
+ local notified=changes;presets:Remove(second);T.eq(changes,notified,"removing an absent favorite does not notify")
+ T.eq(presets.Record,nil,"there is no automatic recording API")
+ T.eq(presets:ToggleFavorite({activityID=0}),nil)
+ T.eq(presets:ToggleFavorite({activityID=99999999}),nil,"unknown activities cannot be saved")
+ T.eq(changes,notified);T.eq(#store,1)
+ local oldest={activityID=502,name="Old name",comment="Old description",requiredItemLevel=320,favorite=true,inHistory=true,usedAt=1,autoTitle=true}
+ local newest={activityID=502,name="|Ku1|k",comment="|Ku1|k",requiredItemLevel=320,requiredDungeonScore=0,isAutoAccept=false,isPrivateGroup=false,favorite=true,usedAt=7}
+ local other={activityID=503,name="Other activity",favorite=true,inHistory=true,usedAt=6}
+ local legacy={
+  {activityID=501,name="History only",inHistory=true,usedAt=9},oldest,other,newest,
+  {activityID=504,inHistory=true,favorite=false,usedAt=8},
+ }
+ local migrated=A.CreationPresets.New(legacy,function() error("construction must not notify before service registration") end)
+ T.eq(#legacy,2);T.eq(migrated:Get()[1],newest,"migration keeps the newest equivalent favorite")
+ T.eq(migrated:Get()[2],other,"history-only entries are discarded")
+ for _,entry in ipairs(legacy) do
+  T.eq(entry.favorite,true);T.eq(entry.name,nil);T.eq(entry.comment,nil);T.eq(entry.autoTitle,nil);T.eq(entry.inHistory,nil);T.eq(entry.usedAt,nil)
+ end
+ A.CreationPresets.New(legacy,function() end);T.eq(legacy[1],newest);T.eq(legacy[2],other,"migration is stable after timestamps are removed")
+ local secret,wasSecret={},issecretvalue
+ _G.issecretvalue=function(value) return value==secret end
+ T.eq(presets:ToggleFavorite({activityID=secret}),nil,"a secret activity is not saved")
+ local public=presets:ToggleFavorite({activityID=504,requiredItemLevel=secret,name=secret,comment=secret})
+ T.ok(public);T.eq(public.requiredItemLevel,0);T.eq(public.name,nil);T.eq(public.comment,nil)
+ _G.issecretvalue=wasSecret
+end
+-- Remote search members do not inherit their leader's faction.
+do
+ S.results[8011]={activityIDs={502},name="Faction party",leaderName="Leader-Away",leaderFactionGroup=0,numMembers=2}
+ S.players[8011]={{name="Leader-Away",classFilename="MAGE",isLeader=true},{name="Guest-Away",classFilename="WARRIOR"}}
+ local record=G.Results:Capture(8011)
+ local details=G.Results:GetDetails(record)
+ T.eq(details.members[1].factionGroup,0);T.eq(details.members[2].factionGroup,nil,"a cross-faction party's other member is not assumed to match its leader")
+ S.results[8011].leaderFactionGroup=1;S.now=S.now+1;G.Results:Capture(8011,record)
+ T.eq(G.Results:GetDetails(record).members[1].factionGroup,1,"a changed native leader faction invalidates cached member details")
+ S.results[8011],S.players[8011]=nil,nil
+end
+-- Native Mythic+ summaries are lazy, event-invalidated and tied to the exact applicant member.
+do
+ local entry,applicants,members=S.activeEntry,S.applicants,S.applicantMembers
+ local best,current=C_LFGList.GetApplicantBestDungeonScore,C_LFGList.GetApplicantDungeonScoreForListing
+ local reads=0
+ C_LFGList.GetApplicantBestDungeonScore=function(id,index) reads=reads+1;T.eq(id,8001);T.eq(index,1);return {mapName="Best dungeon",bestRunLevel=19,finishedSuccess=false} end
+ C_LFGList.GetApplicantDungeonScoreForListing=function(id,index,activity) reads=reads+1;T.eq(id,8001);T.eq(index,1);T.eq(activity,502);return {mapName="Current dungeon",bestRunLevel=18,finishedSuccess=true} end
+ S.activeEntry={activityIDs={502},name="Mythic listing"};S.applicants={[8001]={applicationStatus="applied",numMembers=2}};S.applicantMembers={[8001]={{name="Alliance-Away",class="MAGE",factionGroup=1},{name="Horde-Away",class="WARRIOR",factionGroup=0}}}
+ G.Listing:OnEntryUpdate();G:RefreshApplicants()
+ local member=G:GetApplicant(8001).members[1]
+ T.eq(member.factionGroup,1);T.eq(G:GetApplicant(8001).members[2].factionGroup,0)
+ T.eq(reads,0,"list refresh does not query dungeon detail APIs")
+ local scores=G:GetApplicantDungeonScores(member)
+ T.eq(reads,2);T.eq(scores.current.level,18);T.eq(scores.current.timed,true);T.eq(scores.best.level,19);T.eq(scores.best.timed,false)
+ T.eq(G:GetApplicantDungeonScores(member),scores);T.eq(reads,2,"reopening unchanged details reuses the snapshot")
+ S.applicantMembers[8001][1].factionGroup=nil;G.Applicants:OnApplicantUpdated(8001)
+ T.eq(member.factionGroup,nil,"missing native faction clears the previous marker")
+ T.ok(G:GetApplicantDungeonScores(member)~=scores);T.eq(reads,4)
+ C_LFGList.GetApplicantBestDungeonScore=function() return nil end
+ C_LFGList.GetApplicantDungeonScoreForListing=function() return {bestRunLevel=0,mapName="Current dungeon"} end
+ G.Applicants:OnApplicantUpdated(8001);scores=G:GetApplicantDungeonScores(member)
+ T.eq(scores.best,nil);T.eq(scores.current,nil,"empty native results remain unavailable, not fabricated level zero")
+ S.activeEntry.activityIDs={501};G.Listing:OnEntryUpdate();G:RefreshApplicants();T.eq(G:GetApplicantDungeonScores(member),nil,"non-key activities do not show Mythic+ summaries")
+ G.Applicants:Clear();T.eq(G:GetApplicantDungeonScores(member),nil,"a retired member cannot query another applicant")
+ C_LFGList.GetApplicantBestDungeonScore,C_LFGList.GetApplicantDungeonScoreForListing=best,current
+ S.activeEntry,S.applicants,S.applicantMembers=entry,applicants,members;G.Listing:OnEntryUpdate()
 end
 
 _G.LycheeGroupDB = nil

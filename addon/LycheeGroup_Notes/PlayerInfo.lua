@@ -14,6 +14,7 @@ local function IsSecret(value)
 end
 
 local function ResolveClass(classID, className, class, specID, text, selected)
+	if selected and not specID and text=="" then return {class=class,classSpec=className} end
 	local textMatch
 	for index = 1, C_SpecializationInfo.GetNumSpecializationsForClassID(classID) do
 		local id, specName = GetSpecializationInfoForClassID(classID, index)
@@ -40,6 +41,7 @@ end
 -- 只解析记录本身的结构或本地化旧文字，不读取当前玩家，不改写历史存档。
 function PlayerInfo.ResolveRecord(record)
 	local text = type(record.classSpec) == "string" and record.classSpec or ""
+	if not record.class and not record.specID and text=="" then return {classSpec=""} end
 	if record.class then
 		for classID = 1, GetNumClasses() do
 			local name, class = GetClassInfo(classID)

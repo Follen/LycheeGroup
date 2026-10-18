@@ -25,6 +25,7 @@ local function Normalize(id,record,invalidateDetails)
  local previousActivity=record and record.activityID
  local previousMembers=record and record.numMembers
  local previousLeader=record and record.leaderKey
+ local previousFaction=record and record.leaderFactionGroup
  local previousRating,previousRatingActivity=record and record.leaderRating,record and record.pvpRatingActivity
  local previousBnet,previousChar,previousGuild=record and record.bnetFriends,record and record.charFriends,record and record.guildMates
  local activityIDs=Public(info.activityIDs)
@@ -34,14 +35,16 @@ local function Normalize(id,record,invalidateDetails)
  record.sampledAt=now
  record.activityID,record.activity=activityID,activity
  record.activityName=activity and activity.name
- record.activityShortName=activity and activity.shortName
  record.categoryID=activity and activity.categoryID
  record.mapID=activity and activity.mapID
  record.difficultyID=activity and activity.difficultyID
  record.maxNumPlayers=activity and activity.maxNumPlayers
+ -- Rated battleground activity 19 reports 0; Blizzard's queue uses this team size.
+ if record.categoryID==9 and record.maxNumPlayers==0 then record.maxNumPlayers=CONQUEST_SIZES[5] end
  record.name,record.comment=Public(info.name),Public(info.comment)
  record.leaderName=Public(info.leaderName)
  record.leaderKey=G:RemotePlayerKey(record.leaderName)
+ record.leaderFactionGroup=Public(info.leaderFactionGroup)
  record.numMembers=Public(info.numMembers) or 0
  record.age=Public(info.age) or 0
  record.requiredItemLevel=Public(info.requiredItemLevel) or 0
@@ -69,16 +72,11 @@ local function Normalize(id,record,invalidateDetails)
  else record.pvpRatings=nil end
  if record.ratingKind=="pvp" then record.leaderRating,record.requiredRating=record.leaderPvpRating,record.requiredPvpRating
  else record.leaderRating,record.requiredRating=record.leaderOverallDungeonScore,record.requiredDungeonScore end
- record.autoAccept=Public(info.autoAccept)==true
  record.isDelisted=Public(info.isDelisted)==true
- record.hasSelf=Public(info.hasSelf)==true
- record.playstyle=Public(info.playstyle)
- record.crossFactionListing=Public(info.crossFactionListing)==true
  record.bnetFriends,record.charFriends,record.guildMates=Public(info.numBNetFriends) or 0,Public(info.numCharFriends) or 0,Public(info.numGuildMates) or 0
- record.partyGUID=Public(info.partyGUID)
  -- Bulk list events retain unchanged snapshots. A specific result event also
  -- covers member/spec/progress changes that do not change the member count.
- if invalidateDetails or previousActivity~=record.activityID or previousMembers~=record.numMembers or previousLeader~=record.leaderKey or previousRating~=record.leaderRating or previousRatingActivity~=record.pvpRatingActivity or previousBnet~=record.bnetFriends or previousChar~=record.charFriends or previousGuild~=record.guildMates then
+ if invalidateDetails or previousActivity~=record.activityID or previousMembers~=record.numMembers or previousLeader~=record.leaderKey or previousFaction~=record.leaderFactionGroup or previousRating~=record.leaderRating or previousRatingActivity~=record.pvpRatingActivity or previousBnet~=record.bnetFriends or previousChar~=record.charFriends or previousGuild~=record.guildMates then
   record.detailsDirty=record.details and true or nil;record.memberCounts=nil
  end
  return record
@@ -88,10 +86,10 @@ function Results:GetMemberCounts(record)
  if record.memberCounts then return record.memberCounts end
  local native=Public(C_LFGList.GetSearchResultMemberCounts(record.id))
  if type(native)~="table" then return nil end
- -- 原生返回值归本次读取所有，清洗后直接持有，不再包一层小表。
- native.TANK,native.HEALER,native.DAMAGER=Public(native.TANK),Public(native.HEALER),Public(native.DAMAGER)
- record.memberCounts=native
- return native
+ -- 展示和筛选只消费三个职责人数，不保留原生嵌套职业统计。
+ local counts={TANK=Public(native.TANK),HEALER=Public(native.HEALER),DAMAGER=Public(native.DAMAGER)}
+ record.memberCounts=counts
+ return counts
 end
 local function RelationNames(values)
  values=Public(values)
@@ -142,6 +140,8 @@ function Results:GetDetails(idOrRecord)
    info.class=Public(info.classFilename);info.localizedClass=Public(info.className)
    info.specName=Public(info.specName);info.assignedRole=Public(info.assignedRole)
    info.isLeader=Public(info.isLeader)==true
+   -- Search data identifies the leader's faction, not every remote member's.
+   info.factionGroup=info.isLeader and record.leaderFactionGroup or nil
    info.ratingKind=record.ratingKind
    if record.ratingKind=="pvp" then
     info.rating=info.isLeader and record.leaderPvpRating or nil
@@ -205,12 +205,12 @@ local function Pass(record,filters)
   local target=filters.neededRole=="DAMAGER" and 3 or 1
   if record.maxNumPlayers~=5 or not counts or not counts[filters.neededRole] or counts[filters.neededRole]>=target then return false end
  end
- if filters.tankPresence or filters.healerPresence or filters.needsDamage then
+ if filters.tankPresence or filters.healerPresence or filters.damagePresence then
   local counts=Results:GetMemberCounts(record)
   if record.maxNumPlayers~=5 or not counts then return false end
   if filters.tankPresence and (counts.TANK==nil or (counts.TANK>0)~=(filters.tankPresence=="present")) then return false end
   if filters.healerPresence and (counts.HEALER==nil or (counts.HEALER>0)~=(filters.healerPresence=="present")) then return false end
-  if filters.needsDamage and (counts.DAMAGER==nil or counts.DAMAGER>=3) then return false end
+  if filters.damagePresence and (counts.DAMAGER==nil or (counts.DAMAGER>=3)~=(filters.damagePresence=="present")) then return false end
  end
  if filters.friends and record.bnetFriends+record.charFriends==0 then return false end
  if filters.guild and record.guildMates==0 then return false end

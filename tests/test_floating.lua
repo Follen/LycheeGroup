@@ -10,11 +10,14 @@ local A=LycheeGroup;A:LoadDB()
 local apps={{id=1,name="A group",status="applied",activityID=1,activityName="A dungeon",leaderName="Leader-Away",expiresAt=130},{id=2,name="An invitation",status="invited",activityID=1}}
 local members={};for i=1,30 do members[i]={name="Player"..i.."-Away",nameKey="Player"..i.."-Away",class="WARRIOR",specID=71,dungeonScore=2000+i,itemLevel=500+i} end
 dofile("addon/LycheeGroup_Group/Group.lua");local resolveSpec=A.Group.ResolveMemberSpec
+dofile("addon/LycheeGroup/Presentation.lua")
 local listing,callback
 local manageApplicants,manageListing=true,true
 local applicant={status="applied",members=members,comment="A shared application note"}
 local G={ResolveMemberSpec=resolveSpec,Applications={GetActiveCount=function() return #apps end,IsActive=function() return true end},GetListing=function() return listing end,GetApplications=function() return apps end,
  GetApplicants=function() return {77} end,GetApplicant=function() return applicant end,Subscribe=function(_,fn) callback=fn;return function() end end}
+local activities={[1]={categoryID=2,maxNumPlayers=5},[2]={categoryID=3,maxNumPlayers=30},[3]={categoryID=4,maxNumPlayers=3}}
+G.Catalog={GetActivity=function(_,id) return activities[id] end}
 function G:GetApplication(id) for _,app in ipairs(apps) do if app.id==id then return app end end end
 function G:CanManageApplicants() return manageApplicants end
 function G:CanManageListing() return manageListing end
@@ -36,6 +39,8 @@ T.eq(entryButtons,1,"the collapsed icon and number share one actual button")
 T.eq(F.frame:GetWidth(),80);T.eq(F.frame:GetHeight(),44);T.eq(F.panel:GetWidth(),348);T.eq(F.scroll:GetWidth(),324)
 T.eq(F.count:GetText(),"1");T.eq(F.rows[1].name:GetText(),"A dungeon");T.eq(F.rows[1].meta:GetText(),"A group");T.eq(F.rows[1].leader:GetText(),"Leader-Away");T.eq(F.rows[1].timer:GetText(),"2:10")
 T.eq(F.rows[1].background:IsShown(),true,"each resting application keeps its own card")
+T.eq(F.rows[1].faction:IsShown(),false,"outbound application cards have no applicant faction marker")
+T.eq(F.rows[1].faction:GetTexture(),nil)
 T.eq(F.panel.background,nil,"the space around application cards has no outer backdrop")
 T.eq(F.frame:IsMouseEnabled(),false,"the outer container adds no second mouse target")
 T.eq(F.count:GetParent(),F.button);T.eq(F.logoTexture:GetParent(),F.logoAnchor);T.eq(F.logoAnchor:GetParent(),F.button)
@@ -107,24 +112,45 @@ apps[2].status="applied";for i=3,5 do apps[i]={id=i,name="Another group",status=
 F:ShowPanel();T.eq(F.scroll:GetHeight(),522,"five padded application cards remain fully visible");T.eq(F.rows[1]:GetHeight(),98);T.eq(F.scrollBar:IsShown(),false,"floating wheel scrolling has no visible track");T.eq(F.rows[5]:IsShown(),true)
 for i=5,3,-1 do apps[i]=nil end;apps[2].status="invited";F.panel:Hide()
 F:ShowPanel()
-listing={name="My listing"};callback("listing");T.eq(F.count:GetText(),"30","recruitment counts individual people");T.eq(F.scroll:GetHeight(),UIParent:GetHeight()/F.frame:GetScale()-F.frame:GetHeight()-48)
+members[1].factionGroup=1;members[2].factionGroup=0
+listing={name="My listing",activityID=1};callback("listing");T.eq(F.count:GetText(),"30","recruitment counts individual people");T.eq(F.scroll:GetHeight(),UIParent:GetHeight()/F.frame:GetScale()-F.frame:GetHeight()-48)
 T.eq(F.context.logo,F.logoTexture,"the applicant reminder animates the original logo through the shared Brand context")
 T.eq(F.entries,workingEntries);T.eq(F.entries[1],firstEntry);T.eq(firstEntry.application,nil,"recruitment reuse clears the previous application reference")
 local batchEntry=F.entries[1].batch
 local comments=0;for _,entry in ipairs(F.entries) do if entry.comment then comments=comments+1 end end;T.eq(comments,1,"one shared comment is displayed at the bottom of its application batch")
 T.eq(F.rows[1].name:GetText(),"Player1-Away","recruitment shows players directly without group-size headings");T.eq(F.rows[1].meta:GetText(),"战士 · Specialization");T.eq(F.rows[1].score:GetText(),"2001")
 T.eq(F.rows[1].itemLevel:GetText(),"装等 501","native item level has its own right-aligned second line")
+do
+ local row=F.rows[1];local faction=row.faction
+ T.eq(faction:GetTexture(),"Interface\\AddOns\\LycheeGroup_UI\\Media\\faction-alliance.tga");T.eq(faction:IsShown(),true)
+ T.eq(F.rows[2].faction:GetTexture(),"Interface\\AddOns\\LycheeGroup_UI\\Media\\faction-horde.tga","native faction zero shows Horde")
+ T.eq(faction:GetWidth(),16);T.eq(faction:GetHeight(),16)
+ local x,y=Position(faction);local nameX,nameY=Position(row.name)
+ T.near(x,nameX+row.name:GetStringWidth()+6,.001,"a short name is followed by its faction with a six-pixel gap")
+ T.eq(y-faction:GetHeight()/2,nameY-11,"the marker centers on the name's first line")
+ T.ok(x+faction:GetWidth()+12<=324-12-row.score:GetWidth(),"identity and faction retain the metric-column gap")
+ T.eq(F.rows[3].faction:IsShown(),false);T.eq(F.rows[3].faction:GetTexture(),nil,"unknown members do not inherit another member's faction")
+ members[1].factionGroup=0;callback("applicants")
+ T.eq(row.faction,faction,"member refreshes reuse the same marker");T.eq(faction:GetTexture(),"Interface\\AddOns\\LycheeGroup_UI\\Media\\faction-horde.tga")
+ members[1].factionGroup=nil;callback("applicants")
+ T.eq(faction:IsShown(),false);T.eq(faction:GetTexture(),nil,"losing known faction clears the old texture")
+ T.eq(row.name:GetWidth(),168,"unknown faction restores the full name width")
+ members[1].factionGroup=1;callback("applicants")
+ T.eq(A.UI,nil,"faction textures do not load the UI addon")
+end
 T.eq(F.rows[1].batch,F.rows[2].batch,"member rows belong to one continuous batch hover area")
 F.rows[1]:Fire("OnEnter");T.eq(F.rows[1].batch.background:IsShown(),true);T.eq(F.rows[1].background:IsShown(),false,"members never draw separate hover bars")
 T.eq(F.rows[1].batch.line,nil,"a party card has no grouping line");T.eq(F.rows[1].batch.background.fill.color[4],.66,"hover highlights the complete application card")
 F.rows[1]:Fire("OnLeave");T.eq(F.rows[1].batch.background.fill.color[4],.60,"leaving the batch restores its resting card")
 F.scroll:SetVerticalScroll(F.entryTops[30]);F:Render()
+T.eq(F.rows[1].faction:IsShown(),false);T.eq(F.rows[1].faction:GetTexture(),nil,"a row rebound to an unknown member clears the previous faction")
 local lastMember;for _,row in ipairs(F.rows) do if row:IsShown() and row.name:GetText()=="Player30-Away" then lastMember=row end end
 T.ok(lastMember,"complete applicant roster stays scrollable after list text grows")
 lastMember:Fire("OnClick");T.eq(A.openedPage,"create");T.eq(A.openedContext.applicantID,77)
 F.scroll:SetVerticalScroll(F.body:GetHeight()-F.scroll:GetHeight());F:Render()
 local actionRow,commentRow;for _,row in ipairs(F.rows) do if row.invite:IsVisible() then actionRow=row end;if row.name:GetText()==applicant.comment then commentRow=row end end
 T.ok(actionRow,"the shared footer keeps one action pair");T.eq(commentRow,actionRow,"the shared comment and the one action pair occupy a single footer")
+T.eq(commentRow.faction:IsShown(),false);T.eq(commentRow.faction:GetTexture(),nil,"a shared footer never inherits an applicant marker")
 T.ok(Position(commentRow.name)+commentRow.name:GetWidth()+12<=324+Position(actionRow.invite)-actionRow.invite:GetWidth(),"the comment leaves a real gap before the invite hit area")
 T.eq(F.rows[1].invite:IsShown(),false,"member rows do not duplicate footer actions")
 T.eq(Position(commentRow.name),Position(F.rows[1].name),"the shared note aligns with the member text column")
@@ -187,13 +213,28 @@ T.eq(F.cancel:IsShown(),false,"assistants still cannot end the leader's listing"
 manageListing=true;callback("permissions");T.eq(F.cancel:IsShown(),true,"the leader regains the end-listing action")
 local rarity=C_ChallengeMode.GetDungeonScoreRarityColor;local rarityCalls=0
 C_ChallengeMode.GetDungeonScoreRarityColor=function(score) rarityCalls=rarityCalls+1;return rarity(score) end
-members[1].ratingKind="pvp";members[1].rating=1820;callback("applicants")
+local metricRow=F.rows[1]
+listing.activityID=2;callback("listing")
+T.eq(F.rows[1],metricRow,"changing the listing activity reuses the visible member row")
+T.eq(metricRow.score:IsShown(),false);T.eq(metricRow.score:GetText(),"","raid recruitment does not show or retain a rating")
+T.eq(metricRow.itemLevel:IsShown(),true);T.eq(metricRow.itemLevel:GetText(),"装等 501")
+T.eq(select(1,metricRow.itemLevel:GetPoint()),"TOPRIGHT");T.eq(Position(metricRow.itemLevel),-12)
+T.eq(select(2,Position(metricRow.itemLevel)),select(2,Position(metricRow.name)),"raid item level moves to the member's first line")
+T.eq(select(2,metricRow.itemLevel:GetFont()),14)
+T.eq(metricRow.faction:IsShown(),true);T.eq(metricRow.faction:GetTexture(),"Interface\\AddOns\\LycheeGroup_UI\\Media\\faction-alliance.tga","raid metrics preserve the member faction marker")
+T.eq(rarityCalls,0,"hidden raid ratings do not calculate dungeon score colors")
+listing.activityID=3;members[1].ratingKind="pvp";members[1].rating=1820;callback("listing")
+T.eq(F.rows[1],metricRow);T.eq(metricRow.score:IsShown(),true,"a reused PvP row restores its rating")
+T.eq(select(2,Position(metricRow.itemLevel)),select(2,Position(metricRow.meta)),"PvP item level returns to the second line")
+T.eq(select(2,metricRow.itemLevel:GetFont()),12)
 T.eq(F.rows[1].score:GetText(),"1820","floating uses the listing's normalized PvP rating instead of its dungeon score")
 T.same(F.rows[1].score.color,F.context.Theme.text,"PvP rating uses neutral text")
 members[1].rating=0;callback("applicants");T.eq(F.rows[1].score:GetText(),"暂无分数","known zero is distinct from missing PvP data")
 members[1].rating=nil;callback("applicants");T.eq(F.rows[1].score:GetText(),"未知分数","missing PvP rating does not fall back to a dungeon score")
 T.eq(rarityCalls,0,"PvP does not request dungeon score rarity colors")
-members[1].ratingKind="dungeon";members[1].rating=members[1].dungeonScore;callback("applicants")
+listing.activityID=2;callback("listing");T.eq(metricRow.score:IsShown(),false,"returning from PvP to raid hides the reused score again")
+listing.activityID=1;members[1].ratingKind="dungeon";members[1].rating=members[1].dungeonScore;callback("listing")
+T.eq(F.rows[1],metricRow);T.eq(metricRow.score:IsShown(),true);T.eq(select(2,Position(metricRow.itemLevel)),select(2,Position(metricRow.meta)),"dungeon row reuse keeps item level on its second line")
 T.eq(F.rows[1].score:GetText(),"2001");T.eq(rarityCalls,1,"dungeon ratings keep their rarity colors")
 C_ChallengeMode.GetDungeonScoreRarityColor=rarity
 T.eq(select(2,F.rows[1].name:GetFont()),16,"floating applicant names use the compact 16/22 typography")
@@ -221,6 +262,9 @@ T.eq(nameY,scoreY,"rating follows the name's first baseline even after wrapping"
 T.eq(metaY,itemY,"item level follows the specialization baseline after the wrapped name")
 local _,wrappedIconY=Position(F.rows[1].icon)
 T.eq(wrappedIconY,nameY,"a wrapped identity keeps the avatar aligned with the first name line")
+local factionX,factionY=Position(F.rows[1].faction)
+T.eq(factionY-F.rows[1].faction:GetHeight()/2,nameY-11,"a wrapped name keeps faction on its first line")
+T.ok(factionX+F.rows[1].faction:GetWidth()+12<=324-12-F.rows[1].score:GetWidth(),"long identities leave room for faction before the score")
 members[1].nameKey=originalKey;callback("applicants")
 local comment=applicant.comment
 applicant.comment="熟练";callback("applicants");T.eq(F.body:GetHeight(),92,"one complete member and a short note fit in a naturally padded 92-pixel card")
@@ -244,6 +288,7 @@ F.panel:Fire("OnEvent","GLOBAL_MOUSE_DOWN","LeftButton");outside:Fire("OnClick",
 T.eq(outsideClicks,1,"the outside click still reaches its original button")
 T.eq(F.panel:IsShown(),false,"an outside click immediately closes an active batch exit")
 T.eq(closingRow.exit,nil,"closing clears the row's exit state");T.eq(closingRow.applicantID,nil)
+T.eq(closingRow.faction:IsShown(),false);T.eq(closingRow.faction:GetTexture(),nil,"closing clears the pooled applicant marker")
 T.eq(F.panel.events.GLOBAL_MOUSE_DOWN,nil);T.eq(F.hideTask,nil)
 T.eq(F.frame:GetScript("OnUpdate"),nil,"closing stops an active batch exit")
 F.panel.mouseOver=true;base.AdvanceClock(.2);F:Tick(.5);callback("applicants")
@@ -265,7 +310,21 @@ T.eq(next(firstEntry),nil,"closing clears every business field from retained ent
 T.eq(next(batchEntry),nil,"closing clears retained batch metadata")
 T.eq(#workingTops,0);T.ok(#workingEntries<=#F.rows,"closed entry shells are bounded by the visible row pool")
 F:ShowPanel();T.eq(F.rows[1]:GetAlpha(),0,"a newly opened card starts below its final position with zero opacity");F:Tick(.08);T.ok(F.rows[1]:GetAlpha()>0 and F.rows[1]:GetAlpha()<1);local entering=F.fade;F.panel:Fire("OnEnter");T.eq(F.fade,entering,"moving into the panel does not restart card entrance")
-F.rows[2].invite:Fire("OnClick");A:SetSetting("reduceMotion",true)
+F.rows[2].invite:Fire("OnClick")
+do
+ local row=F.rows[2];local apply,clear=F.ApplyCardMotion,row.ClearAllPoints
+ local applies,clears=0,0
+ F.ApplyCardMotion=function(self,...) applies=applies+1;apply(self,...) end
+ row.ClearAllPoints=function(self) clears=clears+1;clear(self) end
+ local alpha,top=row.exitAlpha,row.exitTop
+ F:Tick(.01)
+ T.eq(applies,1,"overlapping entrance and exit apply the card state once per tick")
+ T.eq(clears,0,"animated cards update their existing root anchor")
+ T.near(row:GetAlpha(),alpha*(1-.01/.14)^3,.00001,"the exit keeps its original cubic opacity")
+ T.near(select(2,Position(row)),top+6*(1-(1-.01/.14)^3),.00001,"the exit keeps its original six-pixel path")
+ F.ApplyCardMotion,row.ClearAllPoints=apply,clear
+end
+A:SetSetting("reduceMotion",true)
 T.eq(F.panel:IsShown(),false);T.eq(F.frame:GetScript("OnUpdate"),nil,"reduced motion finishes the entrance and last batch exit immediately");T.eq(F.entries,nil)
 applicant.acting=nil;callback("applicants");F:ShowPanel();T.eq(#F.entries,2)
 F.rows[2].decline:Fire("OnClick");T.eq(F.entries,nil,"reduced motion closes the last accepted batch without a display task");T.eq(F.frame:GetScript("OnUpdate"),nil)
@@ -299,7 +358,16 @@ F.context.Motion:Tick(1.22)
 T.eq(F.logoTexture:GetWidth(),38);T.eq(F.logoTexture:GetHeight(),38)
 T.eq(F.context.Motion.driver:GetScript("OnUpdate"),nil,"the shared driver is idle between the 1.386s animation and the next reminder")
 T.eq(F.frame:GetScript("OnUpdate"),nil);T.eq(base.PendingTimers(),1,"only one cancellable replay timer owns the quiet interval")
-F:ShowPanel();F:Tick(.23);F:Dismiss()
+F:ShowPanel()
+do
+ local clock=GetTimePreciseSec;local reads=0
+ _G.GetTimePreciseSec=function() reads=reads+1;return clock() end
+ for i=1,24 do stub.preciseNow=i*.01;F.frame:Fire("OnUpdate",.01) end
+ T.eq(reads,1,"floating reads the native clock only for the first frame of a busy interval")
+ T.eq(F.frame:GetScript("OnUpdate"),nil,"floating stops its driver after its entrance finishes")
+ _G.GetTimePreciseSec=clock;stub.preciseNow=0
+end
+F:Dismiss()
 T.eq(F.attentionTimer,timer,"closing the panel during the quiet interval does not unnecessarily replay the logo")
 queries=0;base.AdvanceClock(2.4)
 T.ok(F.context.Motion.jobs.brand,"the single timer starts the next original Brand animation")
@@ -315,7 +383,7 @@ A:SetSetting("reduceMotion",false);F.context.Motion:Tick(.1);F.frame:Hide()
 T.eq(F.attention,false);T.eq(F.attentionTimer,nil);T.eq(F.logoTexture:GetWidth(),38);T.eq(F.context.Motion.jobs.brand,nil,"hiding the entire entry cancels Brand and the replay timer")
 F.frame:Show();T.ok(F.attention,"showing the entry derives attention again from the pending snapshot")
 listing=nil;callback("listing");T.eq(F.attention,false);T.eq(F.attentionTimer,nil);T.eq(F.logoTexture:GetWidth(),38);T.eq(F.frame:GetScript("OnUpdate"),nil,"ending recruitment stops attention even if outbound applications remain")
-listing={name="My listing"};callback("listing");T.ok(F.attention)
+listing={name="My listing",activityID=1};callback("listing");T.ok(F.attention)
 applicant.pendingStatus="invited";callback("applicants");T.eq(F.attention,false,"only operable applied applicants trigger attention")
 applicant.pendingStatus=nil;callback("applicants");T.ok(F.attention)
 applicant.status="declined";callback("applicants");T.eq(F.attention,false);T.eq(F.attentionTimer,nil);T.eq(select(2,Position(F.logoTexture)),0,"clearing the final pending applicant restores the original logo anchor")

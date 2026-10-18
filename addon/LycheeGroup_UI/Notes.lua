@@ -47,10 +47,13 @@ local function Subscribe()
 	if state.unsub or not (A.Notes and A.Notes.Subscribe) then return end
 	state.unsub = A.Notes:Subscribe(function(kind, key)
 		if not P.frame or not P.frame:IsVisible() then return end
-		if kind == "edit" and state.search == "" and (state.tab==nil or state.tab=="all") then
-			P.list:RefreshKeys({key}, function(id, changed) return id == changed end)
-		else
-			P:RefreshList()
+		P:RefreshCounts()
+		if state.tab~="history" then
+			if kind == "edit" and state.search == "" and (state.tab==nil or state.tab=="all") then
+				P.list:RefreshKeys({key}, function(id, changed) return id == changed end)
+			else
+				P:RefreshList()
+			end
 		end
 		local currentChanged = key == state.editKey
 		if kind == "merge" then
@@ -82,19 +85,12 @@ end
 
 -- ---------------------------------------------------------------- 构建
 
--- Width changes reuse the existing row pool and column FontStrings.
-function P:Layout()
- self.left:SetWidth(326)
- self.list:SetWidth(326)
- self.emptyActions:SetShown(state.panel==nil)
-end
-
 function P:Build(parent)
  local root=CreateFrame("Frame",nil,parent);root:SetAllPoints();self.frame=root
  local rail=CreateFrame("Frame",nil,root);rail:SetSize(RAIL,HEIGHT);rail:SetPoint("TOPLEFT")
  self.tabs={}
  for i,entry in ipairs({{"all",S("全部记录","All notes")},{"positive",S("推荐","Recommended")},{"neutral",S("中性","Neutral")},{"caution",S("拉黑","Blocked")},{"history",L.history}}) do
-  local button=C.Navigation(rail,entry[2],RAIL,function() P:SelectTab(entry[1]) end);button.fill:SetRadius(8);button.hover:SetRadius(8);button:SetPoint("TOPLEFT",0,-12-(i-1)*52-(i==5 and 20 or 0));button:SetHeight(48);button.label:SetFont(T.font,16,"");button.label:ClearAllPoints();button.label:SetPoint("LEFT",52,0);button.label:SetWidth(100);button.label:SetWordWrap(true);button.label:SetHeight(0);C.SetLineHeight(button.label,22)
+  local button=C.Navigation(rail,entry[2],RAIL,function() P:SelectTab(entry[1]) end);button.fill:SetRadius(8);button.hover:SetRadius(8);button:SetPoint("TOPLEFT",0,-12-(i-1)*64-(i==5 and 20 or 0));button:SetHeight(60);button.label:SetFont(T.font,16,"");button.label:ClearAllPoints();button.label:SetPoint("LEFT",52,0);button.label:SetWidth(100);button.label:SetWordWrap(true);button.label:SetHeight(0);C.SetLineHeight(button.label,22)
   local glyph=entry[1]=="all" and "friend" or entry[1]=="positive" and "heart" or entry[1]=="caution" and "caution" or entry[1]=="history" and "history" or "book"
   button.glyph=C.Glyph(button,glyph,24);button.glyph:SetPoint("LEFT",16,0)
   button.icon=button.glyph
@@ -140,8 +136,6 @@ function P:Build(parent)
  end
  local empty=CreateFrame("Frame",nil,self.left);empty:SetSize(CARD_WIDTH,220);empty:SetPoint("TOPLEFT",self.list,"TOPLEFT");self.emptyState=empty
  self.emptyTitle=C.Text(empty,L.notesEmptyTitle,18,T.muted,CARD_WIDTH-24);C.SetLineHeight(self.emptyTitle,24,true);self.emptyTitle:SetPoint("CENTER");self.emptyTitle:SetJustifyH("CENTER")
- self.emptyText=C.Text(empty,"",14,T.muted);self.emptyText:Hide()
- self.emptyActions=CreateFrame("Frame",nil,empty);self.emptyActions:SetSize(1,1);self.emptyActions:Hide()
  self.editorEmpty=C.Text(main,S("选择玩家查看记录","Select a player to view their note"),18,T.dim,DRAWER_W-32);C.SetLineHeight(self.editorEmpty,24,true);self.editorEmpty:SetPoint("CENTER",main,"TOPLEFT",EDITOR_X-MAIN_X+DRAWER_W/2,-WORK_TOP-(HEIGHT-WORK_TOP-PAD)/2);self.editorEmpty:SetJustifyH("CENTER")
  local editor=CreateFrame("Frame",nil,main);editor:SetSize(DRAWER_W,EDITOR_HEIGHT);editor:SetPoint("TOPLEFT",EDITOR_X-MAIN_X,-WORK_TOP);C.Panel(editor,T.container,20);self.editor=editor;editor:Hide()
  local inner=DRAWER_W-32;local half=(inner-12)/2
@@ -184,7 +178,6 @@ function P:Build(parent)
   C.Glyph(row,"chevron",16):SetPoint("RIGHT",-16,0)
  end
  self.historyEmpty=C.Text(self.historyFrame,L.historyEmpty,16,T.dim,BODY_WIDTH);self.historyEmpty:SetPoint("TOP",0,-140);self.historyEmpty:SetJustifyH("CENTER")
- self:Layout()
 end
 function P:ClassItems()
  local items={{value=false,label=L.unknown}};for id=1,GetNumClasses() do local name,token=GetClassInfo(id);if name then items[#items+1]={value=token,label=name} end end;return items
@@ -208,14 +201,15 @@ function P:SetEditorStatus(text,kind)
  UI:SetText(self.eStatus,text)
  UI:Color(self.eStatus,kind=="error" and T.warning or kind=="success" and T.good or T.muted)
 end
-function P:SelectTab(tab)
+function P:SelectTab(tab,skipDefault)
  local changed=state.tab~=nil and state.tab~=tab
  UI.Motion:FinishPlacement(self.left);UI.Motion:FinishPlacement(self.historyFrame)
  state.tab=tab;local history=tab=="history"
  for key,button in pairs(self.tabs) do button:SetActive(key==tab);button.mark:SetShown(key==tab);UI:Color(button.label,key==tab and T.text or T.muted);button.glyph:SetSelected(key==tab) end
- self:CloseTransfer();self:CloseEditor();self.toolbar:SetShown(not history);self.left:SetShown(not history);self.historyFrame:SetShown(history);self.editorEmpty:SetShown(not history)
+ self:CloseTransfer();self:CloseEditor(true);self.toolbar:SetShown(not history);self.left:SetShown(not history);self.historyFrame:SetShown(history);self.editorEmpty:SetShown(not history)
  UI:SetText(self.pageTitle,history and L.history or L.notes)
- if history then self:RefreshHistory() else self:RefreshList();local keys=self.list.ids;if keys and keys[1] then self:OpenEdit(keys[1]) end end
+ self:RefreshCounts()
+ if history then self:RefreshHistory() else self:RefreshList();local keys=self.list.ids;if not skipDefault and keys and keys[1] then self:OpenEdit(keys[1]) end end
  if changed then UI.Motion:Reveal(history and self.historyFrame or self.left,"TOPLEFT",self.main,"TOPLEFT",PAD,history and -76 or -WORK_TOP,4,0,.14) end
 end
 function P:RefreshHistory()
@@ -261,17 +255,19 @@ end
 
 -- ---------------------------------------------------------------- 名单
 
+function P:RefreshCounts()
+	local counts={all=0,positive=0,neutral=0,caution=0}
+ for _,record in pairs(A.Notes.db.records) do counts.all=counts.all+1;counts[record.type or "neutral"]=(counts[record.type or "neutral"] or 0)+1 end
+ for key,button in pairs(self.tabs) do UI:SetText(button.count,key=="history" and (A.Group and A.Group.charDB and #A.Group.charDB.runs or "—") or counts[key]) end
+end
+
 function P:RefreshList()
 	local notes = A.Notes
-	local counts={all=0,positive=0,neutral=0,caution=0}
- for _,record in pairs(notes.db.records) do counts.all=counts.all+1;counts[record.type or "neutral"]=(counts[record.type or "neutral"] or 0)+1 end
- for key,button in pairs(self.tabs) do UI:SetText(button.count,key=="history" and (A.Group and A.Group.charDB and #A.Group.charDB.runs or "—") or counts[key]) end
  local keys = (notes and notes.List and notes:List({ text = state.search, type = state.tab~="all" and state.tab~="history" and state.tab or nil })) or {}
 	self.list.selectedKey = state.editKey
 	self.list:SetItems(keys, RenderNote)
 	self.emptyState:SetShown(#keys == 0)
 	UI:SetText(self.emptyTitle, state.search ~= "" and S("没有匹配的记录","No matching notes") or S("这里还没有记录","No records here yet"))
-	UI:SetText(self.emptyText, state.search ~= "" and L.notesNoMatchHelp or L.notesEmptyHelp)
 	UI:SetText(self.countText, S("%d 条记录","%d notes"):format(#keys))
 	if state.editKey ~= nil then
 		local found = false
@@ -307,6 +303,11 @@ end
 
 -- ---------------------------------------------------------------- 编辑区
 
+local function SelectNote(key)
+ if P.list.selectedKey==key then return end
+ P.list.selectedKey=key;P.list:Refresh(true)
+end
+
 local function ShowEditorChrome(mode)
 	-- mode: "edit" | "add" | "missing";缺失态只显示说明与取消,不呈现可编辑字段。
 	local edit, add, missing = mode == "edit", mode == "add", mode == "missing"
@@ -331,7 +332,6 @@ local function ShowEditorChrome(mode)
  P.eReasonLabel:SetShown(not missing);P.eReason:SetShown(not missing);P.eSave:SetShown(not missing);P.eCancel:SetShown(not missing)
  P.eDelete:SetShown(edit);P.classChoice:SetShown(not missing);P.specChoice:SetShown(not missing);for _,button in pairs(P.typeButtons) do button:SetShown(not missing) end
  P.eStatus:ClearAllPoints();P.eStatus:SetPoint("TOPLEFT",P.editor,"TOPLEFT",16,missing and -76 or -444)
-	P:Layout()
 end
 
 function P:OpenEdit(key)
@@ -347,13 +347,11 @@ function P:OpenEdit(key)
  state.identityEdited=nil;state.identityKey=key;state.legacyClassSpec=r.classSpec
  state.recordClass,state.recordSpec,state.recordType=identity.class,identity.specID,r.type or "neutral";self:SyncSpec()
 	state.draft = nil
-	self.draftHasName = nil
 	ShowEditorChrome("edit")
 	UI:SetText(self.eIdentity,r.name);UI:SetText(self.eRealm,r.server);UI:SetText(self.eDate,S("记录于 ","Recorded ")..UI:DateText(r.timestamp))
 	self.eReason.box:SetText(r.reason or "")
 	UI:SetText(self.eStatus, "")
-	self.list.selectedKey = key
-	self.list:Refresh()
+	SelectNote(key)
 end
 
 function P:OpenAdd(draft)
@@ -368,14 +366,12 @@ function P:OpenAdd(draft)
   local _,snapshot=A.Notes.PlayerInfo.Snapshot(draft.unit);identity=snapshot or identity
  end
  state.legacyClassSpec=nil;state.recordClass,state.recordSpec,state.recordType=identity.class,identity.specID,draft and draft.type or A.db.defaultNote;self:SyncSpec()
-	self.draftHasName = (draft and draft.name) and true or nil
 	ShowEditorChrome("add")
 	UI:SetText(self.eIdentity,draft and draft.name or "");UI:SetText(self.eRealm,draft and draft.realm or "")
 	self.eName.box:SetText(draft and draft.name and (draft.name..(draft.realm and "-"..draft.realm or "")) or "")
 	self.eReason.box:SetText(draft and draft.reason or "")
 	UI:SetText(self.eStatus, "")
-	self.list.selectedKey = nil
-	self.list:Refresh()
+	SelectNote(nil)
 end
 
 -- 定位目标记录不存在:只显示缺失说明与取消,不呈现可编辑字段。
@@ -384,29 +380,24 @@ function P:ShowMissing()
 	CancelPending()
 	state.editKey = nil
 	state.draft = nil
-	self.draftHasName = nil
 	ShowEditorChrome("missing")
 	UI:SetText(self.eIdentity, "")
 	UI:SetText(self.eRealm, "");UI:SetText(self.eDate, "")
 	UI:SetText(self.eStatus, L.missingRecord)
-	self.list.selectedKey = nil
-	self.list:Refresh()
+	SelectNote(nil)
 end
 
-function P:CloseEditor()
+function P:CloseEditor(skipRefresh)
 	CancelPending()
 	state.panel = nil
 	state.editKey = nil
 	state.draft = nil
-	self.draftHasName = nil
 	UI.Motion:FinishPlacement(self.editor)
 	self.editor:Hide();self.editorEmpty:SetShown(state.tab~="history")
 	self.eReason.box:SetText("")
 	self.eName.box:SetText("")
 	UI:SetText(self.eStatus, "")
-	self.list.selectedKey = nil
-	self.list:Refresh()
-	self:Layout()
+	if skipRefresh then self.list.selectedKey=nil else SelectNote(nil) end
 end
 
 function P:Save()
@@ -488,7 +479,6 @@ function P:BuildTransfer(mode)
  local modal=UI:OpenModal("notesTransfer",mode=="import" and S("导入记录","Import notes") or S("导出记录","Export notes"),560,456);self.transferModal=modal;self.transfer=modal.frame
  if modal.built then return end
  local parent=modal.content
- self.tTitle=modal.title
  self.tHint=C.Text(parent,L.importHelp,14,T.muted,512);self.tHint:SetPoint("TOPLEFT");C.SetLineHeight(self.tHint,20,true)
  self.tLabel=C.Text(parent,S("记录文本","Record text"),14,T.muted);C.SetLineHeight(self.tLabel,20,true);self.tLabel:SetPoint("TOPLEFT",0,-40)
  self.tBox=C.Edit(parent,512,192,true,false,"modal");self.tBox:SetPoint("TOPLEFT",0,-68);C.SetLineHeight(self.tBox.box,22)
@@ -517,7 +507,6 @@ function P:OpenTransfer(mode)
 	self.exportButton:SetActive(mode == "export")
 	self.tBox.box:SetText("")
 	UI:SetText(self.tStatus, "")
-	self:Layout()
 	self.tBox.box:SetFocus()
 	UI.Tooltip:Hide()
 end
@@ -532,15 +521,11 @@ function P:CloseTransfer()
 	self.tBox.box:SetText("")
 	self.tBox.box:ClearFocus()
 	UI:SetText(self.tStatus, "")
-	self:Layout()
 end
 
 function P:DoExport()
 	self:OpenTransfer("export")
 	local notes = A.Notes
-	local counts={all=0,positive=0,neutral=0,caution=0}
- for _,record in pairs(notes.db.records) do counts.all=counts.all+1;counts[record.type or "neutral"]=(counts[record.type or "neutral"] or 0)+1 end
- for key,button in pairs(self.tabs) do UI:SetText(button.count,key=="history" and (A.Group and A.Group.charDB and #A.Group.charDB.runs or "—") or counts[key]) end
  local keys = (notes and notes.List and notes:List()) or {}
 	local records = {}
 	for _, key in ipairs(keys) do
@@ -584,10 +569,9 @@ end
 
 function P:Enter(context)
 	Subscribe()
- self:SelectTab(state.tab or "all")
+ self:SelectTab(context and "all" or state.tab or "all",context~=nil)
 	self.searchHint:SetShown(state.search == "" and not self.search.box:HasFocus())
 	if context then
-  if state.tab=="history" then self:SelectTab("all") end
 		if context.playerKey then
 			if A.Notes and A.Notes:Find(context.playerKey) then
 				self:OpenEdit(context.playerKey)
@@ -606,7 +590,7 @@ function P:Leave()
  UI.Motion:FinishPlacement(self.left);UI.Motion:FinishPlacement(self.historyFrame)
 	if state.unsub then state.unsub(); state.unsub = nil end
 	self:CloseTransfer()
-	self:CloseEditor()
+	self:CloseEditor(true)
 	self.list:Clear();self.historyList:Clear();self.runs=nil
  if self.historyModal then self.historyModal:Close() end
  if self.tBox then self.tBox.box:SetText("");UI:SetText(self.tStatus, "") end

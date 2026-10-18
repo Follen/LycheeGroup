@@ -1,0 +1,1905 @@
+{
+  "date": "2026-10-18",
+  "client": "12.1.5.70391",
+  "beforeLibrary": "1.1.11 revision 13",
+  "afterLibrary": "1.1.12 revision 14",
+  "measurement": "Observed alpha, phase and native anchor offsets. FPS CVars were requested at 60; actual frame intervals are retained and were not assumed to be 60Hz. No forced GC.",
+  "failedAttempt": "The first post-reload probe assumed originY was set. Fresh centered windows legitimately use zero as the default. The corrected probe follows that default; the failed report and complete cleanup are retained.",
+  "connectionClosed": true,
+  "runs": [
+    {
+      "request": "ui-presence-before-01",
+      "operation": "LMO-915746c9eb10b7a0dd4d97216a1e34eb",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "report": {
+        "logs": {},
+        "ok": true,
+        "resourcesReleased": true,
+        "result": {
+          "build": "70391",
+          "closedAfter": true,
+          "closing": [
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": 0,
+              "phase": 0.9833333328188885,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": 0,
+              "phase": 0.9642857128665561,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": 0,
+              "phase": 0.9476190456854445,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": 0,
+              "phase": 0.9261904729618913,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": 0,
+              "phase": 0.9071428530095589,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -1.4062501192092896,
+              "phase": 0.8880952330572265,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -1.4062501192092896,
+              "phase": 0.8690476131048941,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -1.4062501192092896,
+              "phase": 0.8499999931525617,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -1.4062501192092896,
+              "phase": 0.8333333259714502,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -2.812500238418579,
+              "phase": 0.8142857060191178,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -2.812500238418579,
+              "phase": 0.7952380860667854,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -2.812500238418579,
+              "phase": 0.776190466114453,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -4.218750476837158,
+              "phase": 0.7571428461621206,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -4.218750476837158,
+              "phase": 0.7380952262097882,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -5.625000476837158,
+              "phase": 0.7166666534862349,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 15.000000596046448,
+              "offsetY": -7.03125,
+              "phase": 0.680952366352791,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -7.03125,
+              "phase": 0.6571428408580168,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -8.437500953674316,
+              "phase": 0.6357142681344635,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -9.84375,
+              "phase": 0.6119047426396893,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 11.00000087171793,
+              "offsetY": -11.250000953674316,
+              "phase": 0.5857142643736942,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -12.65625,
+              "phase": 0.56190473887892,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 11.00000087171793,
+              "offsetY": -14.0625,
+              "phase": 0.5357142606129249,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 11.00000087171793,
+              "offsetY": -15.46875,
+              "phase": 0.5095237823469299,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -16.875001907348633,
+              "phase": 0.4857142568521557,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -18.28125,
+              "phase": 0.4642856841286024,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -19.6875,
+              "phase": 0.4428571114050491,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -21.09375,
+              "phase": 0.4190475859102749,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -23.90625,
+              "phase": 0.3976190131867216,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -25.3125,
+              "phase": 0.3761904404631683,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -26.718751907348633,
+              "phase": 0.354761867739615,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -28.125,
+              "phase": 0.3333332950160617,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -30.9375,
+              "phase": 0.3119047222925084,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -32.34375,
+              "phase": 0.2880951967977342,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -33.750003814697266,
+              "phase": 0.2666666240741809,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -36.5625,
+              "phase": 0.2452380513506276,
+              "shown": true
+            },
+            {
+              "alpha": 0.9960784912109375,
+              "dtMs": 8.00000037997961,
+              "offsetY": -37.968753814697266,
+              "phase": 0.2261904313982952,
+              "shown": true
+            },
+            {
+              "alpha": 0.9764706492424011,
+              "dtMs": 10.000000707805157,
+              "offsetY": -40.781253814697266,
+              "phase": 0.202380905903521,
+              "shown": true
+            },
+            {
+              "alpha": 0.9411765336990356,
+              "dtMs": 9.000000543892384,
+              "offsetY": -43.59375,
+              "phase": 0.18095233317996773,
+              "shown": true
+            },
+            {
+              "alpha": 0.8901961445808411,
+              "dtMs": 9.000000543892384,
+              "offsetY": -45.000003814697266,
+              "phase": 0.15952376045641442,
+              "shown": true
+            },
+            {
+              "alpha": 0.8156863451004028,
+              "dtMs": 10.000000707805157,
+              "offsetY": -47.8125,
+              "phase": 0.13571423496164023,
+              "shown": true
+            },
+            {
+              "alpha": 0.729411780834198,
+              "dtMs": 9.000000543892384,
+              "offsetY": -50.625,
+              "phase": 0.11428566223808694,
+              "shown": true
+            },
+            {
+              "alpha": 0.5921568870544434,
+              "dtMs": 12.000000104308128,
+              "offsetY": -53.437503814697266,
+              "phase": 0.08571423341830567,
+              "shown": true
+            },
+            {
+              "alpha": 0.46666669845581055,
+              "dtMs": 9.000000543892384,
+              "offsetY": -56.25,
+              "phase": 0.06428566069475238,
+              "shown": true
+            },
+            {
+              "alpha": 0.3294117748737335,
+              "dtMs": 9.000000543892384,
+              "offsetY": -59.062503814697266,
+              "phase": 0.04285708797119908,
+              "shown": true
+            },
+            {
+              "alpha": 0.1725490242242813,
+              "dtMs": 9.000000543892384,
+              "offsetY": -61.875,
+              "phase": 0.021428515247645788,
+              "shown": true
+            },
+            {
+              "alpha": 0,
+              "dtMs": 9.000000543892384,
+              "offsetY": -64.6875,
+              "phase": 0,
+              "shown": false
+            }
+          ],
+          "gc": "natural",
+          "jobsAfter": 0,
+          "library": "1.1.11",
+          "limit": 60,
+          "logoAfterClose": {
+            "height": 43.999935150146484,
+            "width": 44,
+            "y": 0
+          },
+          "logoAfterHidden": {
+            "height": 43.999935150146484,
+            "width": 44,
+            "y": 0
+          },
+          "logoBeforeClose": {
+            "height": 43.004390716552734,
+            "width": 45.091590881347656,
+            "y": 0.7468466758728027
+          },
+          "normalClosedJobs": 0,
+          "opening": [
+            {
+              "alpha": 0.2196078598499298,
+              "dtMs": 16.00000075995922,
+              "offsetY": -60.468753814697266,
+              "phase": 0.02753499997890599,
+              "shown": true
+            },
+            {
+              "alpha": 0.38431376218795776,
+              "dtMs": 10.000000707805157,
+              "offsetY": -57.65625,
+              "phase": 0.05134452547368017,
+              "shown": true
+            },
+            {
+              "alpha": 0.5333333611488342,
+              "dtMs": 10.000000707805157,
+              "offsetY": -54.84375,
+              "phase": 0.07515405096845436,
+              "shown": true
+            },
+            {
+              "alpha": 0.6470588445663452,
+              "dtMs": 9.000000543892384,
+              "offsetY": -52.031253814697266,
+              "phase": 0.09658262369200765,
+              "shown": true
+            },
+            {
+              "alpha": 0.7568628191947937,
+              "dtMs": 10.000000707805157,
+              "offsetY": -49.21875,
+              "phase": 0.12039214918678184,
+              "shown": true
+            },
+            {
+              "alpha": 0.8431373238563538,
+              "dtMs": 10.000000707805157,
+              "offsetY": -46.40625,
+              "phase": 0.14420167468155604,
+              "shown": true
+            },
+            {
+              "alpha": 0.9137255549430847,
+              "dtMs": 10.000000707805157,
+              "offsetY": -45.000003814697266,
+              "phase": 0.16801120017633023,
+              "shown": true
+            },
+            {
+              "alpha": 0.9568628072738647,
+              "dtMs": 9.000000543892384,
+              "offsetY": -42.1875,
+              "phase": 0.1894397728998835,
+              "shown": true
+            },
+            {
+              "alpha": 0.988235354423523,
+              "dtMs": 10.000000707805157,
+              "offsetY": -39.375,
+              "phase": 0.2132492983946577,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -37.968753814697266,
+              "phase": 0.23467787111821098,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -35.15625,
+              "phase": 0.2537254910705434,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -33.750003814697266,
+              "phase": 0.27277311102287577,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -32.34375,
+              "phase": 0.2942016837464291,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -29.531251907348633,
+              "phase": 0.31324930369876147,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -28.125,
+              "phase": 0.33229692365109387,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -26.718751907348633,
+              "phase": 0.3537254963746472,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -25.3125,
+              "phase": 0.37277311632697957,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -23.90625,
+              "phase": 0.3942016890505329,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -22.500001907348633,
+              "phase": 0.4156302617740862,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -19.6875,
+              "phase": 0.4370588344976395,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -18.28125,
+              "phase": 0.46086835999241366,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 11.00000087171793,
+              "offsetY": -16.875001907348633,
+              "phase": 0.48705883825840873,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 12.000000104308128,
+              "offsetY": -15.46875,
+              "phase": 0.51563026707819,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 11.00000087171793,
+              "offsetY": -14.0625,
+              "phase": 0.5418207453441851,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 12.000000104308128,
+              "offsetY": -11.250000953674316,
+              "phase": 0.5703921741639664,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 11.00000087171793,
+              "offsetY": -9.84375,
+              "phase": 0.5965826524299614,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -9.84375,
+              "phase": 0.6203921779247357,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -8.437500953674316,
+              "phase": 0.6442017034195099,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -7.03125,
+              "phase": 0.6680112289142841,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 11.00000087171793,
+              "offsetY": -5.625000476837158,
+              "phase": 0.6942017071802792,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 12.000000104308128,
+              "offsetY": -4.218750476837158,
+              "phase": 0.7227731360000604,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 11.00000087171793,
+              "offsetY": -4.218750476837158,
+              "phase": 0.7489636142660555,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -2.812500238418579,
+              "phase": 0.7727731397608297,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 12.000000104308128,
+              "offsetY": -2.812500238418579,
+              "phase": 0.801344568580611,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 12.000000104308128,
+              "offsetY": -1.4062501192092896,
+              "phase": 0.8299159974003922,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -1.4062501192092896,
+              "phase": 0.8537255228951665,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -1.4062501192092896,
+              "phase": 0.8775350483899407,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 11.00000087171793,
+              "offsetY": 0,
+              "phase": 0.9037255266559358,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 11.00000087171793,
+              "offsetY": 0,
+              "phase": 0.9299160049219308,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": 0,
+              "phase": 0.9489636248742632,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": 0,
+              "phase": 0.9703921975978165,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": 0,
+              "phase": 0.9894398175501489,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 11.00000087171793,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 13.000000268220901,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            }
+          ],
+          "quickClosing": [
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -16.875001907348633,
+              "phase": 0.47998431268968567,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -18.28125,
+              "phase": 0.46093669273735327,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -19.6875,
+              "phase": 0.43950812001379996,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -21.09375,
+              "phase": 0.42046050006146757,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -22.500001907348633,
+              "phase": 0.4014128801091352,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -23.90625,
+              "phase": 0.37998430738558187,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -26.718751907348633,
+              "phase": 0.36093668743324947,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -28.125,
+              "phase": 0.3418890674809171,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -29.531251907348633,
+              "phase": 0.32046049475736377,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -30.9375,
+              "phase": 0.29903192203381046,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -33.750003814697266,
+              "phase": 0.27998430208147806,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -35.15625,
+              "phase": 0.26093668212914567,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -36.5625,
+              "phase": 0.23950810940559236,
+              "shown": true
+            },
+            {
+              "alpha": 0.9960784912109375,
+              "dtMs": 8.00000037997961,
+              "offsetY": -39.375,
+              "phase": 0.22046048945325997,
+              "shown": true
+            },
+            {
+              "alpha": 0.9764706492424011,
+              "dtMs": 8.00000037997961,
+              "offsetY": -40.781253814697266,
+              "phase": 0.20141286950092757,
+              "shown": true
+            },
+            {
+              "alpha": 0.9411765336990356,
+              "dtMs": 9.000000543892384,
+              "offsetY": -43.59375,
+              "phase": 0.17998429677737426,
+              "shown": true
+            },
+            {
+              "alpha": 0.8941177129745483,
+              "dtMs": 8.00000037997961,
+              "offsetY": -45.000003814697266,
+              "phase": 0.16093667682504187,
+              "shown": true
+            },
+            {
+              "alpha": 0.8352941870689392,
+              "dtMs": 8.00000037997961,
+              "offsetY": -47.8125,
+              "phase": 0.14188905687270947,
+              "shown": true
+            },
+            {
+              "alpha": 0.7647059559822083,
+              "dtMs": 8.00000037997961,
+              "offsetY": -49.21875,
+              "phase": 0.12284143692037706,
+              "shown": true
+            },
+            {
+              "alpha": 0.6941176652908325,
+              "dtMs": 7.000000216066837,
+              "offsetY": -50.625,
+              "phase": 0.10617476973926554,
+              "shown": true
+            },
+            {
+              "alpha": 0.5843137502670288,
+              "dtMs": 9.000000543892384,
+              "offsetY": -53.437503814697266,
+              "phase": 0.08474619701571225,
+              "shown": true
+            },
+            {
+              "alpha": 0.4901961088180542,
+              "dtMs": 7.000000216066837,
+              "offsetY": -56.25,
+              "phase": 0.06807952983460072,
+              "shown": true
+            },
+            {
+              "alpha": 0.3686274588108063,
+              "dtMs": 8.00000037997961,
+              "offsetY": -57.65625,
+              "phase": 0.04903190988226831,
+              "shown": true
+            },
+            {
+              "alpha": 0.2352941334247589,
+              "dtMs": 8.00000037997961,
+              "offsetY": -60.468753814697266,
+              "phase": 0.029984289929935907,
+              "shown": true
+            },
+            {
+              "alpha": 0.09019608050584793,
+              "dtMs": 8.00000037997961,
+              "offsetY": -63.28125,
+              "phase": 0.010936669977603501,
+              "shown": true
+            },
+            {
+              "alpha": 0,
+              "dtMs": 8.00000037997961,
+              "offsetY": -64.6875,
+              "phase": 0,
+              "shown": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "request": "ui-presence-after-01",
+      "operation": "LMO-4531d7f324fa8b612ef3c1af39a03f98",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "report": {
+        "error": "LycheeMemoryProbe:16: attempt to perform arithmetic on field 'originY' (a nil value)",
+        "logs": {},
+        "ok": false,
+        "resourcesReleased": true
+      }
+    },
+    {
+      "request": "ui-presence-after-02",
+      "operation": "LMO-ea9ee86eb96e6837a2d8a63762818b5a",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "report": {
+        "logs": {},
+        "ok": true,
+        "resourcesReleased": true,
+        "result": {
+          "build": "70391",
+          "closedAfter": true,
+          "closing": [
+            {
+              "alpha": 1,
+              "dtMs": 11.00000087171793,
+              "offsetY": 0,
+              "phase": 0.9753357142686755,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": 0,
+              "phase": 0.9515261887739013,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": 0,
+              "phase": 0.930097616050348,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 11.00000087171793,
+              "offsetY": 0,
+              "phase": 0.9039071377843529,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 11.00000087171793,
+              "offsetY": -1.4062501192092896,
+              "phase": 0.8777166595183579,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -1.4062501192092896,
+              "phase": 0.8539071340235836,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 13.000000268220901,
+              "offsetY": -1.4062501192092896,
+              "phase": 0.8229547524325815,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 11.00000087171793,
+              "offsetY": -2.812500238418579,
+              "phase": 0.7967642741665865,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 11.00000087171793,
+              "offsetY": -2.812500238418579,
+              "phase": 0.7705737959005914,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -4.218750476837158,
+              "phase": 0.7467642704058172,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -4.218750476837158,
+              "phase": 0.7253356976822639,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -5.625000476837158,
+              "phase": 0.7039071249587107,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -7.03125,
+              "phase": 0.6824785522351574,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -7.03125,
+              "phase": 0.6586690267403832,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -8.437500953674316,
+              "phase": 0.6372404540168299,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -9.84375,
+              "phase": 0.6134309285220557,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -11.250000953674316,
+              "phase": 0.5896214030272815,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -11.250000953674316,
+              "phase": 0.5681928303037282,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -12.65625,
+              "phase": 0.546764257580175,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -14.0625,
+              "phase": 0.5253356848566217,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -15.46875,
+              "phase": 0.5039071121330685,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -16.875001907348633,
+              "phase": 0.4824785394095152,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -18.28125,
+              "phase": 0.4610499666859619,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -19.6875,
+              "phase": 0.43962139396240857,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -22.500001907348633,
+              "phase": 0.4158118684676344,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 13.000000268220901,
+              "offsetY": -23.90625,
+              "phase": 0.38485948687663224,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -26.718751907348633,
+              "phase": 0.3610499613818581,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -28.125,
+              "phase": 0.3372404358870839,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -29.531251907348633,
+              "phase": 0.3181928159347515,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -32.34375,
+              "phase": 0.2967642432111982,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -33.750003814697266,
+              "phase": 0.2753356704876449,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -35.15625,
+              "phase": 0.2539070977640916,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -37.968753814697266,
+              "phase": 0.2324785250405383,
+              "shown": true
+            },
+            {
+              "alpha": 0.9647059440612793,
+              "dtMs": 9.000000543892384,
+              "offsetY": -39.375,
+              "phase": 0.21104995231698498,
+              "shown": true
+            },
+            {
+              "alpha": 0.9019608497619629,
+              "dtMs": 8.00000037997961,
+              "offsetY": -42.1875,
+              "phase": 0.19200233236465258,
+              "shown": true
+            },
+            {
+              "alpha": 0.803921639919281,
+              "dtMs": 9.000000543892384,
+              "offsetY": -43.59375,
+              "phase": 0.17057375964109928,
+              "shown": true
+            },
+            {
+              "alpha": 0.6274510025978088,
+              "dtMs": 13.000000268220901,
+              "offsetY": -47.8125,
+              "phase": 0.13962137805009714,
+              "shown": true
+            },
+            {
+              "alpha": 0.4784314036369324,
+              "dtMs": 10.000000707805157,
+              "offsetY": -50.625,
+              "phase": 0.11581185255532295,
+              "shown": true
+            },
+            {
+              "alpha": 0.3333333432674408,
+              "dtMs": 10.000000707805157,
+              "offsetY": -53.437503814697266,
+              "phase": 0.09200232706054876,
+              "shown": true
+            },
+            {
+              "alpha": 0.21176472306251526,
+              "dtMs": 9.000000543892384,
+              "offsetY": -54.84375,
+              "phase": 0.07057375433699546,
+              "shown": true
+            },
+            {
+              "alpha": 0.10196079313755035,
+              "dtMs": 10.000000707805157,
+              "offsetY": -57.65625,
+              "phase": 0.04676422884222128,
+              "shown": true
+            },
+            {
+              "alpha": 0.027450982481241226,
+              "dtMs": 10.000000707805157,
+              "offsetY": -60.468753814697266,
+              "phase": 0.022954703347447092,
+              "shown": true
+            },
+            {
+              "alpha": 0,
+              "dtMs": 9.000000543892384,
+              "offsetY": -63.28125,
+              "phase": 0.0015261306238937983,
+              "shown": true
+            },
+            {
+              "alpha": 0,
+              "dtMs": 10.000000707805157,
+              "offsetY": -64.6875,
+              "phase": 0,
+              "shown": false
+            }
+          ],
+          "gc": "natural",
+          "jobsAfter": 0,
+          "library": "1.1.12",
+          "logoAfterClose": {
+            "height": 42.93703079223633,
+            "width": 45.156192779541016,
+            "y": 0.695591926574707
+          },
+          "logoAfterHidden": {
+            "height": 43.999935150146484,
+            "width": 44,
+            "y": 0
+          },
+          "logoBeforeClose": {
+            "height": 42.93703079223633,
+            "width": 45.156192779541016,
+            "y": 0.695591926574707
+          },
+          "normalClosedJobs": 0,
+          "opening": [
+            {
+              "alpha": 0.06666667014360428,
+              "dtMs": 16.00000075995922,
+              "offsetY": -59.062503814697266,
+              "phase": 0.03809523990466481,
+              "shown": true
+            },
+            {
+              "alpha": 0.2039215862751007,
+              "dtMs": 13.000000268220901,
+              "offsetY": -54.84375,
+              "phase": 0.06904762149566696,
+              "shown": true
+            },
+            {
+              "alpha": 0.3529411852359772,
+              "dtMs": 11.00000087171793,
+              "offsetY": -52.031253814697266,
+              "phase": 0.09523809976166203,
+              "shown": true
+            },
+            {
+              "alpha": 0.529411792755127,
+              "dtMs": 12.000000104308128,
+              "offsetY": -49.21875,
+              "phase": 0.12380952858144328,
+              "shown": true
+            },
+            {
+              "alpha": 0.6901960968971252,
+              "dtMs": 11.00000087171793,
+              "offsetY": -46.40625,
+              "phase": 0.15000000684743836,
+              "shown": true
+            },
+            {
+              "alpha": 0.8549020290374756,
+              "dtMs": 13.000000268220901,
+              "offsetY": -43.59375,
+              "phase": 0.1809523884384405,
+              "shown": true
+            },
+            {
+              "alpha": 0.9647059440612793,
+              "dtMs": 13.000000268220901,
+              "offsetY": -39.375,
+              "phase": 0.21190477002944264,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 13.000000268220901,
+              "offsetY": -36.5625,
+              "phase": 0.24285715162044477,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -33.750003814697266,
+              "phase": 0.26666667711521896,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 11.00000087171793,
+              "offsetY": -32.34375,
+              "phase": 0.29285715538121404,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -29.531251907348633,
+              "phase": 0.3166666808759882,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -28.125,
+              "phase": 0.34047620637076237,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -25.3125,
+              "phase": 0.36428573186553653,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -23.90625,
+              "phase": 0.38571430458908984,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -22.500001907348633,
+              "phase": 0.409523830083864,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 11.00000087171793,
+              "offsetY": -19.6875,
+              "phase": 0.4357143083498591,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 12.000000104308128,
+              "offsetY": -18.28125,
+              "phase": 0.46428573716964033,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 11.00000087171793,
+              "offsetY": -16.875001907348633,
+              "phase": 0.4904762154356354,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 11.00000087171793,
+              "offsetY": -15.46875,
+              "phase": 0.5166666937016304,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 11.00000087171793,
+              "offsetY": -14.0625,
+              "phase": 0.5428571719676255,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 22.00000174343586,
+              "offsetY": -9.84375,
+              "phase": 0.5952381284996157,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 11.00000087171793,
+              "offsetY": -9.84375,
+              "phase": 0.6214286067656107,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -8.437500953674316,
+              "phase": 0.645238132260385,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -7.03125,
+              "phase": 0.6690476577551592,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -5.625000476837158,
+              "phase": 0.6928571832499334,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 11.00000087171793,
+              "offsetY": -5.625000476837158,
+              "phase": 0.7190476615159285,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 11.00000087171793,
+              "offsetY": -4.218750476837158,
+              "phase": 0.7452381397819235,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -2.812500238418579,
+              "phase": 0.7690476652766978,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -2.812500238418579,
+              "phase": 0.790476238000251,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -2.812500238418579,
+              "phase": 0.8119048107238043,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -1.4062501192092896,
+              "phase": 0.8357143362185785,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -1.4062501192092896,
+              "phase": 0.8595238617133527,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -1.4062501192092896,
+              "phase": 0.8785714816656851,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": 0,
+              "phase": 0.9023810071604593,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": 0,
+              "phase": 0.9238095798840126,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": 0,
+              "phase": 0.942857199836345,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 16.00000075995922,
+              "offsetY": 0,
+              "phase": 0.9809524397410098,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 11.00000087171793,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 12.000000104308128,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 11.00000087171793,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            }
+          ],
+          "quickClosing": [
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -18.28125,
+              "phase": 0.474888124708308,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 11.00000087171793,
+              "offsetY": -19.6875,
+              "phase": 0.4486976464423129,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -21.09375,
+              "phase": 0.4272690737187596,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 12.000000104308128,
+              "offsetY": -22.500001907348633,
+              "phase": 0.39869764489897835,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 11.00000087171793,
+              "offsetY": -25.3125,
+              "phase": 0.3725071666329833,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 11.00000087171793,
+              "offsetY": -26.718751907348633,
+              "phase": 0.3463166883669882,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -29.531251907348633,
+              "phase": 0.3248881156434349,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -30.9375,
+              "phase": 0.3034595429198816,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -32.34375,
+              "phase": 0.2820309701963283,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -35.15625,
+              "phase": 0.26060239747277497,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -37.968753814697266,
+              "phase": 0.23679287197800078,
+              "shown": true
+            },
+            {
+              "alpha": 0.9686275124549866,
+              "dtMs": 10.000000707805157,
+              "offsetY": -39.375,
+              "phase": 0.2129833464832266,
+              "shown": true
+            },
+            {
+              "alpha": 0.8823530077934265,
+              "dtMs": 11.00000087171793,
+              "offsetY": -42.1875,
+              "phase": 0.1867928682172315,
+              "shown": true
+            },
+            {
+              "alpha": 0.7372549176216125,
+              "dtMs": 12.000000104308128,
+              "offsetY": -45.000003814697266,
+              "phase": 0.15822143939745026,
+              "shown": true
+            },
+            {
+              "alpha": 0.5372549295425415,
+              "dtMs": 14.000000432133675,
+              "offsetY": -49.21875,
+              "phase": 0.12488810503522722,
+              "shown": true
+            },
+            {
+              "alpha": 0.35686275362968445,
+              "dtMs": 12.000000104308128,
+              "offsetY": -52.031253814697266,
+              "phase": 0.09631667621544596,
+              "shown": true
+            },
+            {
+              "alpha": 0.22352942824363708,
+              "dtMs": 10.000000707805157,
+              "offsetY": -54.84375,
+              "phase": 0.07250715072067176,
+              "shown": true
+            },
+            {
+              "alpha": 0.1098039299249649,
+              "dtMs": 10.000000707805157,
+              "offsetY": -57.65625,
+              "phase": 0.04869762522589758,
+              "shown": true
+            },
+            {
+              "alpha": 0.0313725508749485,
+              "dtMs": 10.000000707805157,
+              "offsetY": -60.468753814697266,
+              "phase": 0.024888099731123395,
+              "shown": true
+            },
+            {
+              "alpha": 0,
+              "dtMs": 10.000000707805157,
+              "offsetY": -63.28125,
+              "phase": 0.0010785742363492098,
+              "shown": true
+            },
+            {
+              "alpha": 0,
+              "dtMs": 12.000000104308128,
+              "offsetY": -64.6875,
+              "phase": 0,
+              "shown": false
+            }
+          ],
+          "requestedFPSLimit": 60,
+          "warmedHere": false
+        }
+      }
+    }
+  ]
+}

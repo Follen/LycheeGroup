@@ -357,6 +357,14 @@ do
 	T.eq(Notes.PlayerInfo.ResolveRecord({classSpec="圣骑士 · 神圣"}).specID,66,"解析现有编辑器保存的文字分隔符")
 	resolved=Notes.PlayerInfo.ResolveRecord({classSpec="未能解析的历史文字"})
 	T.eq(resolved.class,nil);T.eq(resolved.specID,nil);T.eq(resolved.classSpec,"未能解析的历史文字")
+	local getSpec,reads=GetSpecializationInfoForClassID,0
+	GetSpecializationInfoForClassID=function(...) reads=reads+1;return getSpec(...) end
+	for i=1,100 do Notes.PlayerInfo.ResolveRecord({classSpec=""}) end
+	T.eq(reads,0,"unknown records do not scan the specialization catalog")
+	resolved=Notes.PlayerInfo.ResolveRecord({class="PALADIN",classSpec=""})
+	T.eq(resolved.class,"PALADIN");T.eq(resolved.specID,nil);T.eq(resolved.classSpec,"圣骑士")
+	T.eq(reads,0,"a known class without specialization or legacy text needs no specialization scan")
+	GetSpecializationInfoForClassID=getSpec
 	ok,snapshot=Notes:Add("旧文字记录","银松森林","",nil,"圣骑士-神圣")
 	T.ok(ok);T.eq(snapshot.class,"PALADIN");T.eq(snapshot.specID,66,"接收旧字符串的添加入口也存入可靠结构")
 	Notes:Remove("旧文字记录-银松森林")

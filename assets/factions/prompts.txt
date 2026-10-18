@@ -1,0 +1,40 @@
+Faction icon generation record — 2026-10-18
+
+Tool: built-in tools.image_gen__imagegen (one independent call per faction).
+transparent_background: true for both calls.
+No CLI/API fallback or manually drawn replacement was used.
+
+Source PNGs:
+  assets/factions/alliance.png — 1254 x 1254, RGBA
+  assets/factions/horde.png — 1254 x 1254, RGBA
+
+Runtime exports:
+  addon/LycheeGroup_UI/Media/faction-alliance.tga
+  addon/LycheeGroup_UI/Media/faction-horde.tga
+  Both 64 x 64, uncompressed TGA type 2, 32 bits per pixel, 8 alpha bits.
+  ImageMagick performed only resizing and format conversion; alpha preserved.
+  Export command pattern:
+    magick <source.png> -resize 64x64 -depth 8 -alpha on -type TrueColorAlpha -compress None <runtime.tga>
+
+Offline checks:
+  PNG and TGA alpha minima = 0, maxima = 1: actual transparency is present.
+  16 px and 20 px previews on a dark background retain distinct faction silhouettes.
+  No game installation, reload, or in-game visual validation was performed for these assets.
+  Product-specific assets; bundled LycheeUI remains 1.1.14 revision 16.
+
+Exact Alliance prompt:
+Use case: logo-brand
+Asset type: World of Warcraft addon faction icon, high-definition square raster source for a 16–20 pixel UI indicator.
+Primary request: One recognizable World of Warcraft Alliance emblem: the classic proud golden lion head seen straight on, symmetrical face and stylized heraldic mane. Flat solid-color icon, crisp confident silhouette, broad simple shapes and clear negative spaces that remain legible at tiny size. Gold is dominant; only a small amount of deep Alliance blue may define essential facial negative spaces.
+Composition/framing: One centered isolated emblem on a truly transparent background, square canvas, roughly 88 percent of canvas occupied, with even clear outer padding. Complete lion silhouette, no cropping.
+Style/medium: High-definition flat vector-like raster artwork. Simple bold graphic geometry faithful to the recognizable Alliance lion emblem.
+Constraints: Actual transparent alpha background. No text, letters, numbers, watermark, shield, circular border, frame, banner, extra objects, gradients, lighting, shadows, metallic texture, bevels, or 3D effects. Do not draw a generic realistic animal portrait. No white or colored background.
+
+Exact Horde prompt:
+Use case: logo-brand
+Asset type: World of Warcraft addon faction icon, high-definition square raster source for a 16–20 pixel UI indicator.
+Primary request: One instantly recognizable classic World of Warcraft Horde insignia in solid vivid Horde red. Faithfully depict the iconic symmetrical tribal Horde mark: central pointed vertical spear / broad angular arch, two outward rising hooked side horns, characteristic inner cutouts and split lower pointed prongs. Show the classic Horde faction emblem itself.
+Composition/framing: One centered isolated emblem seen straight on, square canvas, approximately 84 percent occupied with even transparent padding. Complete silhouette, no cropping.
+Style/medium: High-definition flat vector-like raster artwork. Bold simple geometry and crisp clean contour, broad solid strokes and generous transparent negative spaces for legibility at 16–20 pixels.
+Color palette: One flat solid red fill, approximately #E53B35; transparent negative spaces.
+Constraints: Actual transparent alpha background. No text, letters, numbers, watermark, shield, circle, border, frame, banner, extra objects, gold trim, black outline, gradients, lighting, shadows, texture, bevels, or 3D effects. No white or colored background.

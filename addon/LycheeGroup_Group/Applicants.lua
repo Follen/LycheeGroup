@@ -51,7 +51,6 @@ local function Read(id,activityID)
  if finished[status] then record.removeAt=record.removeAt or GetTime()+5 else record.removeAt=nil end
  record.numMembers=G.Public(info.numMembers) or 0
  record.comment=G.Public(info.comment)
- record.isNew=G.Public(info.isNew)==true
  record.displayOrderID=G.Public(info.displayOrderID) or 0
  local activity=G.Catalog:GetActivity(activityID)
  local pvp=activity and (activity.isPvpActivity or activity.isRatedPvpActivity)
@@ -59,6 +58,8 @@ local function Read(id,activityID)
  for i=1,record.numMembers do
   local name,class,localizedClass,level,itemLevel,honorLevel,tank,healer,damage,role,relationship,score,pvpItemLevel,factionGroup,raceID,specID,isLeaver=C_LFGList.GetApplicantMemberInfo(id,i)
   local member=record.members[i] or {};record.members[i]=member
+  member.applicantID,member.applicantIndex=id,i
+  member.dungeonScores=nil
   member.name=G.Public(name);member.nameKey=G:RemotePlayerKey(member.name)
   member.class,member.localizedClass=G.Public(class),G.Public(localizedClass)
   member.dungeonScore,member.pvpItemLevel=G.Public(score),G.Public(pvpItemLevel)
@@ -75,6 +76,7 @@ local function Read(id,activityID)
    end
   else member.itemLevel,member.rating=G.Public(itemLevel),member.dungeonScore end
   member.assignedRole,member.specID,member.relationship=G.Public(role),G.Public(specID),G.Public(relationship)
+  member.factionGroup=G.Public(factionGroup)
   local requested=member.requestedRoles or {};member.requestedRoles=requested
   requested.TANK,requested.HEALER,requested.DAMAGER=G.Public(tank)==true,G.Public(healer)==true,G.Public(damage)==true
   member.isLeaver=G.Public(isLeaver)==true
@@ -156,6 +158,28 @@ function Applicants:GetApplicants()
  return ordered
 end
 function Applicants:GetApplicant(id) return records[id] end
+-- Read Blizzard's current-dungeon and best-run summaries only on detail hover.
+-- The applicant event invalidates this small snapshot; sorting and row painting do not read it.
+local function DungeonRun(info,activityID)
+ info=G.Public(info)
+ if type(info)~="table" then return nil end
+ local level,name=G.Public(info.bestRunLevel),G.Public(info.mapName)
+ if not level or level<=0 or not name or name=="" then return nil end
+ return {activityID=activityID,name=name,level=level,timed=G.Public(info.finishedSuccess)==true}
+end
+function Applicants:GetDungeonScores(member)
+ local record=records[member.applicantID]
+ if not record or record.members[member.applicantIndex]~=member then return nil end
+ local activity=G.Catalog:GetActivity(record.activityID)
+ if not activity or not activity.isMythicPlusActivity then return nil end
+ if member.dungeonScores then return member.dungeonScores end
+ local scores={}
+ local id,index=record.id,member.applicantIndex
+ scores.best=DungeonRun(C_LFGList.GetApplicantBestDungeonScore(id,index))
+ scores.current=DungeonRun(C_LFGList.GetApplicantDungeonScoreForListing(id,index,record.activityID),record.activityID)
+ member.dungeonScores=scores
+ return scores
+end
 function Applicants:GetCount()
  local total=0
  for _,record in pairs(records) do if record.status=="applied" and not record.pendingStatus then total=total+1 end end

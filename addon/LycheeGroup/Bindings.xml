@@ -1,0 +1,5 @@
+<Bindings>
+    <Binding name="LYCHEEGROUP_TOGGLE" header="LYCHEEGROUP">
+        LycheeGroup:ToggleWindow();
+    </Binding>
+</Bindings>

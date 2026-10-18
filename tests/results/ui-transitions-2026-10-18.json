@@ -1,0 +1,1532 @@
+{
+  "date": "2026-10-18",
+  "addonVersion": "1.0.1 + unreleased activity-request fix",
+  "client": "12.1.5.70391",
+  "sharedLibrary": "LycheeUI 1.1.11 revision 13",
+  "measurement": "Natural GC, default animation, frame intervals include all client work. Per-method wall time is inclusive; nested calls must not be summed.",
+  "connectionClosed": true,
+  "runs": [
+    {
+      "request": "ui-transitions-before-01",
+      "operation": "LMO-df7048198734550032a73c1592346651",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "report": {
+        "logs": {},
+        "ok": true,
+        "resourcesReleased": true,
+        "result": {
+          "baseline": {
+            "count": 62,
+            "max": 89.00000154972076,
+            "median": 8.00000037997961,
+            "p95": 9.000000543892384
+          },
+          "build": "70391",
+          "closedAfter": true,
+          "cycles": [
+            {
+              "closeSyncMs": 0.06360000371932983,
+              "closed": true,
+              "closing": {
+                "count": 65,
+                "max": 12.000000104308128,
+                "median": 8.00000037997961,
+                "p95": 10.000000707805157
+              },
+              "hold": {
+                "count": 42,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "openSyncMs": 5.948800027370453,
+              "opening": {
+                "count": 30,
+                "max": 302.0000159740448,
+                "median": 8.00000037997961,
+                "p95": 13.000000268220901
+              },
+              "page": "find",
+              "rest": {
+                "count": 30,
+                "max": 10.000000707805157,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "resultsAtOpen": 0
+            },
+            {
+              "closeSyncMs": 0.06629997491836548,
+              "closed": true,
+              "closing": {
+                "count": 66,
+                "max": 11.00000087171793,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "hold": {
+                "count": 41,
+                "max": 19.00000125169754,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "openSyncMs": 2.4032999873161316,
+              "opening": {
+                "count": 66,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "page": "settings",
+              "rest": {
+                "count": 30,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "resultsAtOpen": 0
+            },
+            {
+              "closeSyncMs": 0.06950002908706665,
+              "closed": true,
+              "closing": {
+                "count": 66,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "hold": {
+                "count": 42,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "openSyncMs": 6.019300043582916,
+              "opening": {
+                "count": 35,
+                "max": 263.9999985694885,
+                "median": 8.00000037997961,
+                "p95": 13.000000268220901
+              },
+              "page": "find",
+              "rest": {
+                "count": 30,
+                "max": 11.00000087171793,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "resultsAtOpen": 0
+            },
+            {
+              "closeSyncMs": 0.06559997797012329,
+              "closed": true,
+              "closing": {
+                "count": 65,
+                "max": 11.00000087171793,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "hold": {
+                "count": 41,
+                "max": 12.000000104308128,
+                "median": 8.00000037997961,
+                "p95": 10.000000707805157
+              },
+              "openSyncMs": 2.3163999915122986,
+              "opening": {
+                "count": 66,
+                "max": 10.000000707805157,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "page": "settings",
+              "rest": {
+                "count": 30,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "resultsAtOpen": 0
+            },
+            {
+              "closeSyncMs": 0.06839996576309204,
+              "closed": true,
+              "closing": {
+                "count": 62,
+                "max": 14.000000432133675,
+                "median": 8.00000037997961,
+                "p95": 13.000000268220901
+              },
+              "hold": {
+                "count": 42,
+                "max": 10.000000707805157,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "openSyncMs": 7.186699986457825,
+              "opening": {
+                "count": 29,
+                "max": 302.0000159740448,
+                "median": 8.00000037997961,
+                "p95": 15.000000596046448
+              },
+              "page": "find",
+              "rest": {
+                "count": 30,
+                "max": 14.000000432133675,
+                "median": 8.00000037997961,
+                "p95": 11.00000087171793
+              },
+              "resultsAtOpen": 0
+            },
+            {
+              "closeSyncMs": 0.0810999870300293,
+              "closed": true,
+              "closing": {
+                "count": 66,
+                "max": 13.000000268220901,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "hold": {
+                "count": 42,
+                "max": 11.00000087171793,
+                "median": 8.00000037997961,
+                "p95": 10.000000707805157
+              },
+              "openSyncMs": 3.2824999690055847,
+              "opening": {
+                "count": 60,
+                "max": 18.000001087784767,
+                "median": 8.00000037997961,
+                "p95": 16.00000075995922
+              },
+              "page": "settings",
+              "rest": {
+                "count": 30,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "resultsAtOpen": 0
+            }
+          ],
+          "gc": "natural",
+          "jobsAfter": 0,
+          "limit": 120,
+          "originalBackgroundFPS": "30",
+          "originalFPS": "120",
+          "profile": "0",
+          "scope": "Real Find and Settings controllers; frame intervals include the rest of the client"
+        }
+      }
+    },
+    {
+      "request": "ui-transitions-profile-01",
+      "operation": "LMO-5d56720a94f95613db49bed84c3d14f7",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "report": {
+        "logs": {},
+        "ok": true,
+        "resourcesReleased": true,
+        "result": {
+          "baseline": {
+            "count": 101,
+            "max": 11.00000087171793,
+            "median": 7.000000216066837,
+            "p95": 8.00000037997961
+          },
+          "build": "70391",
+          "closedAfter": true,
+          "costScope": "Inclusive owned method timings; nested calls must not be summed",
+          "costs": {
+            "Catalog.GetActivities": {
+              "calls": 14,
+              "maxMs": 2.610099971294403,
+              "totalMs": 4.694699943065643
+            },
+            "Catalog.GetGroups": {
+              "calls": 14,
+              "maxMs": 13.637700021266937,
+              "totalMs": 25.080400049686432
+            },
+            "Catalog.GetTiers": {
+              "calls": 264,
+              "maxMs": 10.515699982643127,
+              "totalMs": 19.609800338745117
+            },
+            "Catalog.Invalidate": {
+              "calls": 2,
+              "maxMs": 0.057000041007995605,
+              "totalMs": 0.1008000373840332
+            },
+            "Find.Enter": {
+              "calls": 2,
+              "maxMs": 5.252299964427948,
+              "totalMs": 10.39869999885559
+            },
+            "Find.Leave": {
+              "calls": 4,
+              "maxMs": 1.364400029182434,
+              "totalMs": 4.769300043582916
+            },
+            "Find.RefreshCategories": {
+              "calls": 4,
+              "maxMs": 0.6259999871253967,
+              "totalMs": 1.9556999802589417
+            },
+            "Find.RefreshPicker": {
+              "calls": 4,
+              "maxMs": 14.630200028419495,
+              "totalMs": 29.202100038528442
+            },
+            "Find.RefreshResults": {
+              "calls": 16,
+              "maxMs": 0.4240000247955322,
+              "totalMs": 4.560200035572052
+            },
+            "Find.UpdateFilters": {
+              "calls": 6,
+              "maxMs": 0.6784000396728516,
+              "totalMs": 3.256800055503845
+            },
+            "Group.Attach": {
+              "calls": 2,
+              "maxMs": 0.11989998817443848,
+              "totalMs": 0.22259998321533203
+            },
+            "Group.Detach": {
+              "calls": 4,
+              "maxMs": 0.05460000038146973,
+              "totalMs": 0.10990005731582642
+            },
+            "Group.Notify:activities": {
+              "calls": 2,
+              "maxMs": 15.628600001335144,
+              "totalMs": 28.935999989509583
+            },
+            "Group.Notify:results": {
+              "calls": 12,
+              "maxMs": 0.4100000262260437,
+              "totalMs": 3.0903000235557556
+            },
+            "Group.Notify:roster": {
+              "calls": 2,
+              "maxMs": 0.00550001859664917,
+              "totalMs": 0.008000016212463379
+            },
+            "Group.Notify:search": {
+              "calls": 6,
+              "maxMs": 0.4271000027656555,
+              "totalMs": 1.1655999422073364
+            },
+            "Group.OnEvent:LFG_LIST_AVAILABILITY_UPDATE": {
+              "calls": 2,
+              "maxMs": 15.6878000497818,
+              "totalMs": 29.067100048065186
+            },
+            "Group.OnEvent:LFG_LIST_SEARCH_RESULTS_RECEIVED": {
+              "calls": 2,
+              "maxMs": 0.8845999836921692,
+              "totalMs": 1.4645000100135803
+            },
+            "Motion.Tick": {
+              "calls": 689,
+              "maxMs": 1.9745999574661255,
+              "totalMs": 32.930799186229706
+            },
+            "Native.AcquireSearch": {
+              "calls": 13,
+              "maxMs": 0.515999972820282,
+              "totalMs": 1.010599970817566
+            },
+            "Native.ReleaseSearch": {
+              "calls": 6,
+              "maxMs": 0.30889999866485596,
+              "totalMs": 0.6248000264167786
+            },
+            "Search.OnAvailabilityUpdated": {
+              "calls": 2,
+              "maxMs": 15.68180000782013,
+              "totalMs": 29.055999994277954
+            },
+            "Search.OnResultsReceived": {
+              "calls": 2,
+              "maxMs": 0.8798999786376953,
+              "totalMs": 1.4563999772071838
+            },
+            "Search.RequestActivities": {
+              "calls": 2,
+              "maxMs": 0.0731000304222107,
+              "totalMs": 0.120400071144104
+            },
+            "Search.Search": {
+              "calls": 2,
+              "maxMs": 1.429099977016449,
+              "totalMs": 2.7234999537467957
+            },
+            "Search.Submit": {
+              "calls": 2,
+              "maxMs": 1.4229000210762024,
+              "totalMs": 2.711400032043457
+            }
+          },
+          "cycles": [
+            {
+              "closeSyncMs": 0.06199997663497925,
+              "closed": true,
+              "closing": {
+                "count": 80,
+                "max": 9.000000543892384,
+                "median": 7.000000216066837,
+                "p95": 8.00000037997961
+              },
+              "hold": {
+                "count": 42,
+                "max": 93.00000220537186,
+                "median": 7.000000216066837,
+                "p95": 8.00000037997961
+              },
+              "openSyncMs": 5.812299966812134,
+              "opening": {
+                "count": 47,
+                "max": 258.0000162124634,
+                "median": 7.000000216066837,
+                "p95": 9.000000543892384
+              },
+              "page": "find",
+              "rest": {
+                "count": 36,
+                "max": 10.000000707805157,
+                "median": 7.000000216066837,
+                "p95": 8.00000037997961
+              },
+              "resultsAtOpen": 0
+            },
+            {
+              "closeSyncMs": 0.0615999698638916,
+              "closed": true,
+              "closing": {
+                "count": 80,
+                "max": 10.000000707805157,
+                "median": 7.000000216066837,
+                "p95": 8.00000037997961
+              },
+              "hold": {
+                "count": 51,
+                "max": 11.00000087171793,
+                "median": 7.000000216066837,
+                "p95": 8.00000037997961
+              },
+              "openSyncMs": 2.522700011730194,
+              "opening": {
+                "count": 80,
+                "max": 9.000000543892384,
+                "median": 7.000000216066837,
+                "p95": 8.00000037997961
+              },
+              "page": "settings",
+              "rest": {
+                "count": 36,
+                "max": 10.000000707805157,
+                "median": 7.000000216066837,
+                "p95": 9.000000543892384
+              },
+              "resultsAtOpen": 0
+            },
+            {
+              "closeSyncMs": 0.06049996614456177,
+              "closed": true,
+              "closing": {
+                "count": 80,
+                "max": 9.000000543892384,
+                "median": 7.000000216066837,
+                "p95": 8.00000037997961
+              },
+              "hold": {
+                "count": 51,
+                "max": 9.000000543892384,
+                "median": 7.000000216066837,
+                "p95": 8.00000037997961
+              },
+              "openSyncMs": 6.155399978160858,
+              "opening": {
+                "count": 43,
+                "max": 287.00000047683716,
+                "median": 7.000000216066837,
+                "p95": 9.000000543892384
+              },
+              "page": "find",
+              "rest": {
+                "count": 36,
+                "max": 9.000000543892384,
+                "median": 7.000000216066837,
+                "p95": 8.00000037997961
+              },
+              "resultsAtOpen": 0
+            },
+            {
+              "closeSyncMs": 0.059800028800964355,
+              "closed": true,
+              "closing": {
+                "count": 80,
+                "max": 10.000000707805157,
+                "median": 7.000000216066837,
+                "p95": 8.00000037997961
+              },
+              "hold": {
+                "count": 51,
+                "max": 9.000000543892384,
+                "median": 7.000000216066837,
+                "p95": 8.00000037997961
+              },
+              "openSyncMs": 2.372599959373474,
+              "opening": {
+                "count": 80,
+                "max": 9.000000543892384,
+                "median": 7.000000216066837,
+                "p95": 8.00000037997961
+              },
+              "page": "settings",
+              "rest": {
+                "count": 36,
+                "max": 11.00000087171793,
+                "median": 7.000000216066837,
+                "p95": 9.000000543892384
+              },
+              "resultsAtOpen": 0
+            }
+          ],
+          "gc": "natural",
+          "jobsAfter": 0,
+          "limit": 120,
+          "originalBackgroundFPS": "30",
+          "originalFPS": "120",
+          "profile": "0",
+          "scope": "Real Find and Settings controllers; frame intervals include the rest of the client",
+          "slow": [
+            {
+              "cycle": 1,
+              "ms": 5.252299964427948,
+              "name": "Find.Enter",
+              "phase": 0,
+              "stage": "baseline"
+            },
+            {
+              "cycle": 1,
+              "ms": 10.515699982643127,
+              "name": "Catalog.GetTiers",
+              "phase": 0.3163507235946045,
+              "stage": "opening"
+            },
+            {
+              "cycle": 1,
+              "ms": 2.610099971294403,
+              "name": "Catalog.GetActivities",
+              "phase": 0.3163507235946045,
+              "stage": "opening"
+            },
+            {
+              "cycle": 1,
+              "ms": 13.637700021266937,
+              "name": "Catalog.GetGroups",
+              "phase": 0.3163507235946045,
+              "stage": "opening"
+            },
+            {
+              "cycle": 1,
+              "ms": 14.630200028419495,
+              "name": "Find.RefreshPicker",
+              "phase": 0.3163507235946045,
+              "stage": "opening"
+            },
+            {
+              "cycle": 1,
+              "ms": 15.628600001335144,
+              "name": "Group.Notify:activities",
+              "phase": 0.3163507235946045,
+              "stage": "opening"
+            },
+            {
+              "cycle": 1,
+              "ms": 15.68180000782013,
+              "name": "Search.OnAvailabilityUpdated",
+              "phase": 0.3163507235946045,
+              "stage": "opening"
+            },
+            {
+              "cycle": 1,
+              "ms": 15.6878000497818,
+              "name": "Group.OnEvent:LFG_LIST_AVAILABILITY_UPDATE",
+              "phase": 0.3163507235946045,
+              "stage": "opening"
+            },
+            {
+              "cycle": 3,
+              "ms": 5.146400034427643,
+              "name": "Find.Enter",
+              "phase": 0,
+              "stage": "rest"
+            },
+            {
+              "cycle": 3,
+              "ms": 8.878099977970123,
+              "name": "Catalog.GetTiers",
+              "phase": 0.26913262831623713,
+              "stage": "opening"
+            },
+            {
+              "cycle": 3,
+              "ms": 2.0648000240325928,
+              "name": "Catalog.GetActivities",
+              "phase": 0.26913262831623713,
+              "stage": "opening"
+            },
+            {
+              "cycle": 3,
+              "ms": 11.426199972629547,
+              "name": "Catalog.GetGroups",
+              "phase": 0.26913262831623713,
+              "stage": "opening"
+            },
+            {
+              "cycle": 3,
+              "ms": 12.322200000286102,
+              "name": "Find.RefreshPicker",
+              "phase": 0.26913262831623713,
+              "stage": "opening"
+            },
+            {
+              "cycle": 3,
+              "ms": 13.307399988174438,
+              "name": "Group.Notify:activities",
+              "phase": 0.26913262831623713,
+              "stage": "opening"
+            },
+            {
+              "cycle": 3,
+              "ms": 13.374199986457825,
+              "name": "Search.OnAvailabilityUpdated",
+              "phase": 0.26913262831623713,
+              "stage": "opening"
+            },
+            {
+              "cycle": 3,
+              "ms": 13.379299998283386,
+              "name": "Group.OnEvent:LFG_LIST_AVAILABILITY_UPDATE",
+              "phase": 0.26913262831623713,
+              "stage": "opening"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "request": "ui-isolate-availability-01",
+      "operation": "LMO-85ef5953530308dd8ee52bb2a5c5fad4",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "report": {
+        "logs": {},
+        "ok": true,
+        "resourcesReleased": true,
+        "result": {
+          "baseline": {
+            "count": 80,
+            "max": 32.999999821186066,
+            "median": 8.00000037997961,
+            "p95": 9.000000543892384
+          },
+          "build": "70391",
+          "closedAfter": true,
+          "cycles": [
+            {
+              "closeSyncMs": 0.06529998779296875,
+              "closed": true,
+              "closing": {
+                "count": 66,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "hold": {
+                "count": 42,
+                "max": 10.000000707805157,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "openSyncMs": 6.3313000202178955,
+              "opening": {
+                "count": 35,
+                "max": 266.00000262260437,
+                "median": 8.00000037997961,
+                "p95": 10.000000707805157
+              },
+              "page": "find",
+              "rest": {
+                "count": 30,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "resultsAtOpen": 0
+            },
+            {
+              "closeSyncMs": 0.06800001859664917,
+              "closed": true,
+              "closing": {
+                "count": 58,
+                "max": 76.00000500679016,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "hold": {
+                "count": 42,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "openSyncMs": 5.301899969577789,
+              "opening": {
+                "count": 66,
+                "max": 10.000000707805157,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "page": "find",
+              "rest": {
+                "count": 30,
+                "max": 11.00000087171793,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "resultsAtOpen": 0
+            },
+            {
+              "closeSyncMs": 0.06410002708435059,
+              "closed": true,
+              "closing": {
+                "count": 66,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "hold": {
+                "count": 42,
+                "max": 10.000000707805157,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "openSyncMs": 5.501800000667572,
+              "opening": {
+                "count": 31,
+                "max": 301.00002884864807,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "page": "find",
+              "rest": {
+                "count": 30,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "resultsAtOpen": 0
+            }
+          ],
+          "gc": "natural",
+          "intervention": "Reuse the current cached activity catalog during the second open; restore request on the third. All searches and animations remain active.",
+          "jobsAfter": 0,
+          "limit": 120,
+          "originalBackgroundFPS": "30",
+          "originalFPS": "120",
+          "profile": "0",
+          "scope": "Real Find and Settings controllers; frame intervals include the rest of the client"
+        }
+      }
+    },
+    {
+      "request": "ui-isolate-catalog-01",
+      "operation": "LMO-a1aecdeb305f67481631e9e9b632d720",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "report": {
+        "logs": {},
+        "ok": true,
+        "resourcesReleased": true,
+        "result": {
+          "baseline": {
+            "count": 78,
+            "max": 32.999999821186066,
+            "median": 8.00000037997961,
+            "p95": 10.000000707805157
+          },
+          "build": "70391",
+          "closedAfter": true,
+          "cycles": [
+            {
+              "closeSyncMs": 0.07609999179840088,
+              "closed": true,
+              "closing": {
+                "count": 66,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "hold": {
+                "count": 42,
+                "max": 10.000000707805157,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "openSyncMs": 6.045799970626831,
+              "opening": {
+                "count": 26,
+                "max": 326.00000500679016,
+                "median": 8.00000037997961,
+                "p95": 22.00000174343586
+              },
+              "page": "find",
+              "rest": {
+                "count": 30,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "resultsAtOpen": 0
+            },
+            {
+              "closeSyncMs": 0.06880003213882446,
+              "closed": true,
+              "closing": {
+                "count": 56,
+                "max": 89.00000154972076,
+                "median": 8.00000037997961,
+                "p95": 10.000000707805157
+              },
+              "hold": {
+                "count": 42,
+                "max": 10.000000707805157,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "openSyncMs": 5.4896000027656555,
+              "opening": {
+                "count": 36,
+                "max": 255.0000250339508,
+                "median": 8.00000037997961,
+                "p95": 11.00000087171793
+              },
+              "page": "find",
+              "rest": {
+                "count": 30,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "resultsAtOpen": 0
+            },
+            {
+              "closeSyncMs": 0.06859999895095825,
+              "closed": true,
+              "closing": {
+                "count": 66,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "hold": {
+                "count": 42,
+                "max": 11.00000087171793,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "openSyncMs": 5.529799997806549,
+              "opening": {
+                "count": 29,
+                "max": 312.00000643730164,
+                "median": 8.00000037997961,
+                "p95": 12.000000104308128
+              },
+              "page": "find",
+              "rest": {
+                "count": 30,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "resultsAtOpen": 0
+            }
+          ],
+          "gc": "natural",
+          "intervention": "Keep normal native activity requests for every open; skip only our catalog invalidation on the second open and restore it on the third.",
+          "jobsAfter": 0,
+          "limit": 120,
+          "originalBackgroundFPS": "30",
+          "originalFPS": "120",
+          "profile": "0",
+          "scope": "Real Find and Settings controllers; frame intervals include the rest of the client"
+        }
+      }
+    },
+    {
+      "request": "ui-transitions-warm-01",
+      "operation": "LMO-4aff84b247af84babbdb81ce7928bc2c",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "report": {
+        "logs": {},
+        "ok": true,
+        "resourcesReleased": true,
+        "result": {
+          "activityRequested": true,
+          "coldOpenMs": 54.34249997138977,
+          "frameMaxMs": 298.0000078678131,
+          "frames": 242,
+          "groupWasLoaded": false,
+          "idleDescriptionVisible": true,
+          "roleWidths": [
+            47.333335876464844,
+            47.333335876464844
+          ],
+          "settingsBackRemoved": true,
+          "uiWasLoaded": false,
+          "version": "1.0.1"
+        }
+      }
+    },
+    {
+      "request": "ui-transitions-after-01",
+      "operation": "LMO-e1393a2f881685f94649449eaadaca31",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "report": {
+        "logs": {},
+        "ok": true,
+        "resourcesReleased": true,
+        "result": {
+          "baseline": {
+            "count": 80,
+            "max": 34.00000184774399,
+            "median": 8.00000037997961,
+            "p95": 9.000000543892384
+          },
+          "build": "70391",
+          "closedAfter": true,
+          "cycles": [
+            {
+              "closeSyncMs": 0.053899943828582764,
+              "closed": true,
+              "closing": {
+                "count": 66,
+                "max": 10.000000707805157,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "hold": {
+                "count": 42,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "openSyncMs": 6.739499986171722,
+              "opening": {
+                "count": 54,
+                "max": 96.00000083446503,
+                "median": 8.00000037997961,
+                "p95": 13.000000268220901
+              },
+              "page": "find",
+              "rest": {
+                "count": 30,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "resultsAtOpen": 0
+            },
+            {
+              "closeSyncMs": 0.0625,
+              "closed": true,
+              "closing": {
+                "count": 58,
+                "max": 75.00000298023224,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "hold": {
+                "count": 42,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "openSyncMs": 1.7656000256538391,
+              "opening": {
+                "count": 66,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "page": "settings",
+              "rest": {
+                "count": 30,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "resultsAtOpen": 0
+            },
+            {
+              "closeSyncMs": 0.0526999831199646,
+              "closed": true,
+              "closing": {
+                "count": 66,
+                "max": 10.000000707805157,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "hold": {
+                "count": 42,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "openSyncMs": 5.107299983501434,
+              "opening": {
+                "count": 66,
+                "max": 12.000000104308128,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "page": "find",
+              "rest": {
+                "count": 30,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "resultsAtOpen": 0
+            },
+            {
+              "closeSyncMs": 0.05460000038146973,
+              "closed": true,
+              "closing": {
+                "count": 66,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "hold": {
+                "count": 42,
+                "max": 12.000000104308128,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "openSyncMs": 1.9226999878883362,
+              "opening": {
+                "count": 67,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "page": "settings",
+              "rest": {
+                "count": 30,
+                "max": 11.00000087171793,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "resultsAtOpen": 0
+            },
+            {
+              "closeSyncMs": 0.05440002679824829,
+              "closed": true,
+              "closing": {
+                "count": 66,
+                "max": 11.00000087171793,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "hold": {
+                "count": 42,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "openSyncMs": 4.935899972915649,
+              "opening": {
+                "count": 66,
+                "max": 11.00000087171793,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "page": "find",
+              "rest": {
+                "count": 30,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "resultsAtOpen": 0
+            },
+            {
+              "closeSyncMs": 0.054099977016448975,
+              "closed": true,
+              "closing": {
+                "count": 66,
+                "max": 13.000000268220901,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "hold": {
+                "count": 42,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "openSyncMs": 1.890999972820282,
+              "opening": {
+                "count": 66,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "page": "settings",
+              "rest": {
+                "count": 30,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "resultsAtOpen": 0
+            }
+          ],
+          "gc": "natural",
+          "jobsAfter": 0,
+          "limit": 120,
+          "originalBackgroundFPS": "30",
+          "originalFPS": "120",
+          "profile": "0",
+          "scope": "Real Find and Settings controllers; frame intervals include the rest of the client"
+        }
+      }
+    },
+    {
+      "request": "ui-transitions-profile-after-01",
+      "operation": "LMO-45bb0cf140f6db97e2fafd96246cd6e8",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "report": {
+        "logs": {},
+        "ok": true,
+        "resourcesReleased": true,
+        "result": {
+          "baseline": {
+            "count": 80,
+            "max": 32.999999821186066,
+            "median": 8.00000037997961,
+            "p95": 9.000000543892384
+          },
+          "build": "70391",
+          "closedAfter": true,
+          "costScope": "Inclusive owned method timings; nested calls must not be summed",
+          "costs": {
+            "Catalog.GetActivities": {
+              "calls": 12,
+              "maxMs": 0.0054000020027160645,
+              "totalMs": 0.028400123119354248
+            },
+            "Catalog.GetGroups": {
+              "calls": 9,
+              "maxMs": 0.002499997615814209,
+              "totalMs": 0.011499941349029541
+            },
+            "Find.Enter": {
+              "calls": 3,
+              "maxMs": 4.606299996376038,
+              "totalMs": 12.435799956321716
+            },
+            "Find.Leave": {
+              "calls": 6,
+              "maxMs": 1.149399995803833,
+              "totalMs": 5.30840003490448
+            },
+            "Find.RefreshCategories": {
+              "calls": 3,
+              "maxMs": 0.6947999596595764,
+              "totalMs": 2.0037999153137207
+            },
+            "Find.RefreshPicker": {
+              "calls": 3,
+              "maxMs": 0.23080003261566162,
+              "totalMs": 0.6002000570297241
+            },
+            "Find.RefreshResults": {
+              "calls": 21,
+              "maxMs": 0.6378999948501587,
+              "totalMs": 6.101299822330475
+            },
+            "Find.UpdateFilters": {
+              "calls": 6,
+              "maxMs": 0.8877999782562256,
+              "totalMs": 3.433799922466278
+            },
+            "Group.Attach": {
+              "calls": 3,
+              "maxMs": 0.0494999885559082,
+              "totalMs": 0.14209997653961182
+            },
+            "Group.Detach": {
+              "calls": 6,
+              "maxMs": 0.060100018978118896,
+              "totalMs": 0.17529994249343872
+            },
+            "Group.Notify:results": {
+              "calls": 15,
+              "maxMs": 0.6467999815940857,
+              "totalMs": 4.37720000743866
+            },
+            "Group.Notify:roster": {
+              "calls": 3,
+              "maxMs": 0.0046999454498291016,
+              "totalMs": 0.00959998369216919
+            },
+            "Group.Notify:search": {
+              "calls": 9,
+              "maxMs": 0.30489999055862427,
+              "totalMs": 1.282799780368805
+            },
+            "Group.OnEvent:LFG_LIST_SEARCH_RESULTS_RECEIVED": {
+              "calls": 3,
+              "maxMs": 1.0217000246047974,
+              "totalMs": 2.402999997138977
+            },
+            "Host.Hide": {
+              "calls": 6,
+              "maxMs": 0.09450000524520874,
+              "totalMs": 0.3931999206542969
+            },
+            "Host.Show": {
+              "calls": 6,
+              "maxMs": 5.855499982833862,
+              "totalMs": 21.629499912261963
+            },
+            "Motion.Tick": {
+              "calls": 936,
+              "maxMs": 2.024600028991699,
+              "totalMs": 44.49080038070679
+            },
+            "Native.AcquireSearch": {
+              "calls": 12,
+              "maxMs": 0.523900032043457,
+              "totalMs": 1.5027999877929688
+            },
+            "Native.ReleaseSearch": {
+              "calls": 9,
+              "maxMs": 0.36500000953674316,
+              "totalMs": 0.9858999848365784
+            },
+            "Search.OnResultsReceived": {
+              "calls": 3,
+              "maxMs": 1.0169000029563904,
+              "totalMs": 2.390399992465973
+            },
+            "Search.RequestActivities": {
+              "calls": 3,
+              "maxMs": 0.0018000006675720215,
+              "totalMs": 0.004999935626983643
+            },
+            "Search.Search": {
+              "calls": 3,
+              "maxMs": 1.222499966621399,
+              "totalMs": 3.3626999258995056
+            },
+            "Search.Submit": {
+              "calls": 3,
+              "maxMs": 1.2149999737739563,
+              "totalMs": 3.343999981880188
+            },
+            "Settings.Enter": {
+              "calls": 3,
+              "maxMs": 0.24480003118515015,
+              "totalMs": 0.7222000360488892
+            },
+            "Settings.Leave": {
+              "calls": 6,
+              "maxMs": 0.020799994468688965,
+              "totalMs": 0.07069998979568481
+            }
+          },
+          "cycles": [
+            {
+              "closeSyncMs": 0.06310003995895386,
+              "closed": true,
+              "closing": {
+                "count": 66,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "hold": {
+                "count": 42,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "openSyncMs": 5.418599963188171,
+              "opening": {
+                "count": 57,
+                "max": 82.0000022649765,
+                "median": 8.00000037997961,
+                "p95": 11.00000087171793
+              },
+              "page": "find",
+              "rest": {
+                "count": 30,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "resultsAtOpen": 0
+            },
+            {
+              "closeSyncMs": 0.05910003185272217,
+              "closed": true,
+              "closing": {
+                "count": 66,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "hold": {
+                "count": 33,
+                "max": 82.0000022649765,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "openSyncMs": 1.8444000482559204,
+              "opening": {
+                "count": 66,
+                "max": 10.000000707805157,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "page": "settings",
+              "rest": {
+                "count": 30,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "resultsAtOpen": 0
+            },
+            {
+              "closeSyncMs": 0.051299989223480225,
+              "closed": true,
+              "closing": {
+                "count": 66,
+                "max": 10.000000707805157,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "hold": {
+                "count": 42,
+                "max": 12.000000104308128,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "openSyncMs": 5.860300004482269,
+              "opening": {
+                "count": 66,
+                "max": 13.000000268220901,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "page": "find",
+              "rest": {
+                "count": 30,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "resultsAtOpen": 0
+            },
+            {
+              "closeSyncMs": 0.052799999713897705,
+              "closed": true,
+              "closing": {
+                "count": 66,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "hold": {
+                "count": 42,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "openSyncMs": 1.9413999915122986,
+              "opening": {
+                "count": 66,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "page": "settings",
+              "rest": {
+                "count": 30,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "resultsAtOpen": 0
+            },
+            {
+              "closeSyncMs": 0.08809995651245117,
+              "closed": true,
+              "closing": {
+                "count": 66,
+                "max": 10.000000707805157,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "hold": {
+                "count": 42,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "openSyncMs": 4.68560004234314,
+              "opening": {
+                "count": 66,
+                "max": 11.00000087171793,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "page": "find",
+              "rest": {
+                "count": 30,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "resultsAtOpen": 0
+            },
+            {
+              "closeSyncMs": 0.10170000791549683,
+              "closed": true,
+              "closing": {
+                "count": 66,
+                "max": 10.000000707805157,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "hold": {
+                "count": 42,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "openSyncMs": 1.9036999940872192,
+              "opening": {
+                "count": 66,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "page": "settings",
+              "rest": {
+                "count": 30,
+                "max": 9.000000543892384,
+                "median": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "resultsAtOpen": 0
+            }
+          ],
+          "gc": "natural",
+          "jobsAfter": 0,
+          "limit": 120,
+          "originalBackgroundFPS": "30",
+          "originalFPS": "120",
+          "profile": "0",
+          "scope": "Real Find and Settings controllers; frame intervals include the rest of the client",
+          "slow": [
+            {
+              "cycle": 1,
+              "ms": 3.9794999957084656,
+              "name": "Find.Enter",
+              "phase": 0,
+              "stage": "baseline"
+            },
+            {
+              "cycle": 1,
+              "ms": 5.413999974727631,
+              "name": "Host.Show",
+              "phase": 0,
+              "stage": "baseline"
+            },
+            {
+              "cycle": 3,
+              "ms": 4.606299996376038,
+              "name": "Find.Enter",
+              "phase": 0,
+              "stage": "rest"
+            },
+            {
+              "cycle": 3,
+              "ms": 5.855499982833862,
+              "name": "Host.Show",
+              "phase": 0,
+              "stage": "rest"
+            },
+            {
+              "cycle": 3,
+              "ms": 2.024600028991699,
+              "name": "Motion.Tick",
+              "phase": 0,
+              "stage": "closing"
+            },
+            {
+              "cycle": 5,
+              "ms": 3.849999964237213,
+              "name": "Find.Enter",
+              "phase": 0,
+              "stage": "rest"
+            },
+            {
+              "cycle": 5,
+              "ms": 4.680799961090088,
+              "name": "Host.Show",
+              "phase": 0,
+              "stage": "rest"
+            }
+          ],
+          "slowFrames": [
+            {
+              "cycle": 0,
+              "ms": 32.999999821186066,
+              "phase": 0,
+              "stage": "baseline"
+            },
+            {
+              "cycle": 1,
+              "ms": 82.0000022649765,
+              "phase": 0.29388405812261187,
+              "stage": "opening"
+            },
+            {
+              "cycle": 2,
+              "ms": 82.0000022649765,
+              "phase": 1,
+              "stage": "hold"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

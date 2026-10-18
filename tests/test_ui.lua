@@ -175,7 +175,7 @@ do
  T.eq(rosterUpdates,0,"leaving Create releases every roster subscription")
  T.eq(applicantUpdates,0,"leaving Create releases every applicant subscription")
  T.eq(noteUpdates,0,"leaving Create releases every note subscription")
- T.eq(create.rosterList.rows[1].key,nil,"hidden roster rows remain released")
+ T.eq(create.roster,nil,"leaving Create releases the roster snapshot")
  create.RefreshRoster,create.RefreshApplicants,create.OnNotesChanged=refreshRoster,refreshApplicants,notesChanged
  U:Navigate("create")
 end
@@ -191,29 +191,23 @@ end
 T.eq(create.formFrame:GetWidth(),700);T.eq(create.rail:GetWidth(),288)
 T.eq(create.descriptionShell:GetHeight(),80,"native description shell matches one-screen mock")
 T.eq(create.ilvl.placeholder:GetText(),"不限");T.eq(create.ilvl.placeholder:IsShown(),true,"unrestricted item level has an explicit placeholder")
-local rosterRow=create.rosterList.rows[1]
-T.eq(rosterRow.title:GetText(),"Player-Home","current member identity is complete on the first line")
-T.eq(rosterRow.meta:GetText(),"战士 · 未知","the second line contains only class and specialization")
-T.eq(rosterRow.leaderTag:IsShown(),true,"leader marker remains a separate subdued label")
 do
- local clip=create.rosterList.clip;clip.mouseOver=true
- local open,showPlayer=A.Open,U.Tooltip.ShowPlayer;local opens,shows=0,0
- A.Open=function() opens=opens+1 end;U.Tooltip.ShowPlayer=function() shows=shows+1 end
- local selectedKey=create.rosterList.selectedKey
- for _,button in ipairs({"LeftButton","RightButton"}) do rosterRow:Fire("OnMouseDown",button);rosterRow:Fire("OnMouseUp",button);rosterRow:Fire("OnClick",button) end
- A.Open,U.Tooltip.ShowPlayer=open,showPlayer
- T.eq(opens,0,"current-member clicks do not route to Notes");T.eq(shows,0,"current-member clicks do not open a preview tooltip")
- T.eq(create.rosterList.selectedKey,selectedKey,"read-only current-member clicks do not select a row")
- T.eq(rosterRow.tooltipArea:GetWidth(),rosterRow:GetWidth()*.25,"current-member details activate only over the left quarter")
- local width=rosterRow:GetWidth();rosterRow:SetWidth(width-20)
- T.eq(rosterRow.tooltipArea:GetWidth(),rosterRow:GetWidth()*.25,"the quarter-width trigger follows the actual row when its gutter changes")
- rosterRow:SetWidth(width)
- U.Tooltip:Hide();rosterRow:Fire("OnEnter");T.eq(U.Tooltip.owner,nil,"current-member row hover alone does not open player details")
- rosterRow.tooltipArea:Fire("OnEnter");T.eq(U.Tooltip.owner,rosterRow,"current-member identity area opens player details")
- T.eq(rosterRow.tooltipArea.mouseEnabled,false);T.eq(rosterRow.tooltipArea.mouseMotionEnabled,true)
- rosterRow.mouseOver=true;rosterRow.tooltipArea:Fire("OnLeave");U.Motion:Tick(.25)
- T.eq(U.Tooltip.owner,nil,"leaving the roster identity area closes details even while over the row")
- rosterRow.mouseOver=nil;clip.mouseOver=nil
+ local summary=create.groupSummary
+ T.ok(create.rosterList:IsShown(),"small-group activities show current members directly")
+ T.eq(summary:IsShown(),false,"the inline roster replaces the group summary")
+ local row=create.rosterList.rows[1];create.rosterList.clip.mouseOver=true
+ T.eq(row.member,create.roster[1]);T.ok(row.leaderIcon:IsShown())
+ row.tooltipArea:Fire("OnEnter");T.eq(U.Tooltip.member,create.roster[1]);T.eq(U.Tooltip.memberContext.source,"roster")
+ U.Tooltip:Hide();create.rosterList.clip.mouseOver=nil
+ T.eq(summary.mouseEnabled,false);T.eq(summary.mouseMotionEnabled,true)
+ U.Tooltip:ShowRoster(summary,create.roster)
+ local view=U.Tooltip.interactive;local member=view.memberButtons[1]
+ T.eq(U.Tooltip.owner,summary);T.eq(U.Tooltip.sourceRoster,create.roster)
+ T.ok(member.name:GetText():find("Player",1,true));T.eq(member.member,create.roster[1]);T.ok(member.leaderIcon:IsShown())
+ member:Fire("OnClick");T.eq(U.Tooltip.member,create.roster[1]);T.ok(view.back:IsShown())
+ view.back:Fire("OnClick");T.eq(U.Tooltip.member,nil);T.eq(U.Tooltip.sourceRoster,create.roster)
+ U.Tooltip:Hide();U.Tooltip:ShowRoster(summary,create.roster);summary:Fire("OnLeave");U.Motion:Tick(.25)
+ T.eq(U.Tooltip.owner,nil,"leaving the role summary closes an unpinned roster")
 end
 local native=LFGListFrame.EntryCreation
 T.eq(native.Name:GetParent(),create.titleShell,"actual registered title is leased into our UI")
@@ -377,7 +371,7 @@ do
   T.eq(header.justify,"RIGHT");T.eq(X(header)+header:GetWidth(),X(value)+value:GetWidth(),"numeric header and value share their right edge")
  end
  T.eq(X(create.applicantHeaders.actions),X(batch.invite));T.eq(create.applicantHeaders.actions:GetWidth(),84)
- T.eq(create.rosterList.gutter,0,"a fitting roster keeps equal card margins without an empty scrollbar slot")
+ T.eq(create.groupSummary:GetWidth(),create.groupStrip:GetWidth()+24,"the hover summary hugs its content with equal padding")
 end
 do
  local saved=G.applicants[71]
@@ -399,6 +393,25 @@ do
  T.eq(U.Tooltip.interactive.metrics[2].title:GetText(),"3v3");T.eq(U.Tooltip.interactive.metrics[2].value:GetText(),"暂无分数","真实零分与未知评分明确区分")
  U.Tooltip:Hide();G.applicants[71]=saved;G.applicants[72]=nil;Pick(create.sortChoice,"newest");G:Notify("applicants")
 end
+do
+ local listing=G.listing;local oldActivity=listing.activityID
+ Pick(create.sortChoice,"score")
+ listing.activityID=1;G:Notify("listing")
+ T.eq(create.applicantHeaders.rating:IsShown(),false,"raid applicants have no unusable score column")
+ T.eq(batch.people[1].score:IsShown(),false);T.eq(batch.people[1].score:GetText(),"")
+ T.eq(create.sortChoice.value,"newest","changing to raid recruitment clears an unavailable score sort")
+ local function X(region) local p={region:GetPoint()};return p[#p-1] end
+ T.eq(X(create.applicantHeaders.ilvl)+create.applicantHeaders.ilvl:GetWidth(),X(batch.people[1].ilvl)+batch.people[1].ilvl:GetWidth())
+ T.ok(batch.comment:GetWidth()>115,"raid notes use the space released by the score column")
+ create.sortChoice:Fire("OnClick","LeftButton")
+ for _,item in ipairs(U.context.menu.items) do T.ok(item.value~="score","raid sort menu omits rating") end
+ U:CloseMenu()
+ listing.activityID=oldActivity;G:Notify("listing")
+ T.eq(create.applicantHeaders.rating:IsShown(),true);T.eq(batch.people[1].score:IsShown(),true)
+ T.eq(batch.people[1].score:GetText(),"2200");T.eq(batch.comment:GetWidth(),115,"reused dungeon batches restore score space")
+ Pick(create.sortChoice,"score");Pick(create.sortChoice,"newest")
+end
+
 do
  G.manageApplicants,G.manageListing=false,false;G:Notify("permissions")
  T.eq(batch.people[1]:IsShown(),true,"ordinary members retain the complete applicant display")
@@ -435,6 +448,16 @@ do
  local saved=G.applicants;G.applicants={}
  local function Member(index) return {name="Scroll"..index,nameKey="Scroll"..index.."-Away",class="WARRIOR",assignedRole="DAMAGER",itemLevel=600,rating=2000} end
  for id=1,100 do G.applicants[id]={id=id,status="applied",displayOrderID=id,members={Member(id)}} end
+ do
+  local rating=U.MemberRating;local reads=0
+  U.MemberRating=function(self,member) reads=reads+1;return rating(self,member) end
+  G.applicants[10].members[1].rating=nil
+  Pick(create.sortChoice,"score")
+  T.ok(reads<=120,"one hundred batches compute rating once each plus the visible rows, got "..reads)
+  T.eq(create.appIDs[100],10,"unknown rating remains below every known rating")
+  local expected=1;for i=1,99 do if expected==10 then expected=11 end;T.eq(create.appIDs[i],expected,"equal ratings preserve native display order");expected=expected+1 end
+  U.MemberRating=rating;G.applicants[10].members[1].rating=2000;Pick(create.sortChoice,"newest")
+ end
  create:RefreshApplicants();create:SetBatchOffset(0,false);A.db.reduceMotion=false
  local get=G.GetApplicant;local reads,total=0,0
  G.GetApplicant=function(self,id) reads=reads+1;return get(self,id) end
@@ -496,9 +519,10 @@ do
  local cancelStart=notes.editor:GetWidth()-16-notes.eSave:GetWidth()-8-notes.eCancel:GetWidth()
  T.ok(cancelStart-(16+button:GetWidth())>=12,"the destructive action stays separate from Cancel and Save")
  button:Fire("OnEnter");T.same(button.label.color,U.Theme.accent,"the shared hover state makes the destructive action explicit")
- button:Fire("OnLeave");T.same(button.label.color,U.Theme.muted)
+ button:Fire("OnLeave");T.same(button.label.color,{unpack(U.Theme.muted)})
 end
 notes.typeButtons.caution:Fire("OnClick");notes.eReason.box:SetText("A different experience");notes:Save();T.eq(note.type,"caution")
+T.eq(notes.tabs.caution.count:GetText(),"1");T.eq(notes.tabs.positive.count:GetText(),"0","editing a type updates category counts before export or tab changes")
 notes:DoExport();local transferred=assert(U.Transfer.Decode(notes.tBox.box:GetText()));T.eq(transferred[1].type,"caution");T.eq(transferred[1].specID,71)
 notes:CloseTransfer()
 do
@@ -536,14 +560,33 @@ end
 notes:SelectTab("positive");T.eq(#notes.list.ids,0,"note type filtering follows edits")
 notes:SelectTab("history");T.eq(notes.historyFrame:IsShown(),true);T.eq(notes.toolbar:IsShown(),false)
 do
- local list=A.Notes.List;local reads=0
+ local list,setItems=A.Notes.List,notes.list.SetItems;local reads,renders=0,0
+ local saved={type=note.type,class=note.class,specID=note.specID,classSpec=note.classSpec};local savedReason=note.reason
  A.Notes.List=function(...) reads=reads+1;return list(...) end
+ notes.list.SetItems=function(self,ids,render) return setItems(self,ids,function(...) renders=renders+1;return render(...) end) end
  A:Open("notes");T.eq(reads,0,"reentering history does not build the hidden player-note list")
  T.eq(notes.historyFrame:IsShown(),true)
- notes:SelectTab("all");reads=0
+ A.Notes:Edit("Guest-Away","edited while viewing history",{type="positive"})
+ T.eq(reads,0,"record edits while viewing history do not derive a hidden note list")
+ T.eq(renders,0,"record edits while viewing history do not render hidden note rows")
+ T.eq(notes.tabs.positive.count:GetText(),"1","visible category counts still follow edits on the history tab")
+ notes:SelectTab("all");reads=0;renders=0
  A:Open("notes");T.eq(reads,1,"reentering player notes generates its ordered list once")
+ T.eq(renders,1,"reentering notes binds each visible record only once")
  T.eq(notes.left:IsShown(),true);T.ok(notes.list.ids and #notes.list.ids>0)
- notes:SelectTab("history");A.Notes.List=list
+ renders=0;A.Notes:Edit("Guest-Away","updated selected record")
+ T.eq(renders,1,"editing the selected record refreshes only that row")
+ T.eq(notes.eReason.box:GetText(),"updated selected record","the current editor still follows the saved record")
+ local refreshCounts,counts=notes.RefreshCounts,0
+ notes.RefreshCounts=function(self) counts=counts+1;return refreshCounts(self) end
+ notes.search.box:SetText("no matching note");notes:OnSearchChanged()
+ T.eq(#notes.list.ids,0);T.eq(notes.tabs.all.count:GetText(),"1","search filters the displayed list without changing total category counts")
+ notes.search.box:SetText("");notes:OnSearchChanged();T.eq(counts,0,"search input does not rescan category totals")
+ notes.RefreshCounts=refreshCounts
+ renders=0;notes:OpenEdit("Guest-Away");T.eq(renders,0,"opening the same selected record does not rebind the list")
+ A.Notes:Edit("Guest-Away",savedReason,saved);renders=0
+ notes:Leave();T.eq(renders,0,"leaving the page clears rows without a final hidden render")
+ notes:Enter();notes:SelectTab("history");A.Notes.List=list;notes.list.SetItems=setItems
 end
 U:Hide();T.eq(next(G.views),nil,"hidden pages release Group browsing ownership")
 T.eq(notes.runs,nil,"history references release on close")
@@ -576,9 +619,10 @@ do
  local combat=InCombatLockdown;_G.InCombatLockdown=function() return true end
  T.eq(A:Open("find"),true,"Find first opens during combat without protected mouse propagation")
  local page=U.pages.find
- T.eq(G.filters.tankPresence,"present");T.eq(G.filters.healerPresence,"missing");T.eq(G.filters.needsDamage,true,"first entry restores all role-presence fields from fallback filters")
+ T.eq(G.filters.tankPresence,"present");T.eq(G.filters.healerPresence,"missing");T.eq(G.filters.damagePresence,"missing","first entry migrates the saved damage requirement alongside the other role-presence fields")
+ T.eq(G.filters.needsDamage,nil);T.eq(G.db.prefs.find.filters.needsDamage,nil,"migration removes the retired damage field")
  T.eq(page.rolePresenceChoices.TANK.value,"present");T.eq(page.rolePresenceChoices.HEALER.value,"missing");T.eq(page.rolePresenceChoices.DAMAGER.value,"missing")
- page:ClearFilters();T.eq(G.filters.tankPresence,nil);T.eq(G.filters.healerPresence,nil);T.eq(G.filters.needsDamage,nil)
+ page:ClearFilters();T.eq(G.filters.tankPresence,nil);T.eq(G.filters.healerPresence,nil);T.eq(G.filters.damagePresence,nil)
  T.eq(page.picker,nil,"Find keeps the activity popup unbuilt while only results are open")
  T.eq(page.main.keyboardEnabled,nil,"first combat build does not change restricted keyboard propagation")
  T.eq(page.main.events.PLAYER_REGEN_ENABLED,true)
@@ -711,6 +755,7 @@ do
 end
 T.eq(find.rail:GetWidth(),208);T.eq(find.main:GetWidth(),856)
 T.eq(find.filterPanel:GetWidth(),268);T.eq(find.results.rowHeight,72)
+T.eq(find.seasonCategories.rows[1]:GetHeight(),48,"the activity sidebar keeps its original compact row height")
 do
  local countPoint={find.resultCount:GetPoint()}
  T.eq(countPoint[1],"LEFT");T.eq(countPoint[2],find.context);T.eq(countPoint[3],"RIGHT");T.eq(countPoint[4],12)
@@ -801,13 +846,18 @@ do
   error("missing role-presence option "..role..":"..value)
  end
  T.eq(find.rolePresencePanel:IsShown(),true);T.eq(find.roleChoice:IsShown(),false,"seasonal dungeons replace the old one-role menu")
- T.eq(#choices.TANK.buttons,3);T.eq(#choices.HEALER.buttons,3);T.eq(#choices.DAMAGER.buttons,2,"damage exposes only unrestricted and missing")
+ T.eq(#choices.TANK.buttons,2);T.eq(#choices.HEALER.buttons,2);T.eq(#choices.DAMAGER.buttons,2,"each role exposes two mutually exclusive conditions")
+ T.eq(choices.DAMAGER.buttons[1].label:GetText(),"已齐");T.eq(choices.DAMAGER.buttons[2].label:GetText(),"缺少")
  Choose("TANK","present");T.eq(G.filters.tankPresence,"present")
- Choose("TANK","missing");T.eq(G.filters.tankPresence,"missing");T.eq(choices.TANK.buttons[2].active,false);T.eq(choices.TANK.buttons[3].active,true,"tank presence options are mutually exclusive")
+ Choose("TANK","missing");T.eq(G.filters.tankPresence,"missing");T.eq(choices.TANK.buttons[1].active,false);T.eq(choices.TANK.buttons[2].active,true,"tank presence options are mutually exclusive")
+ Choose("TANK","missing");T.eq(G.filters.tankPresence,nil);T.eq(choices.TANK.value,nil,"clicking the selected condition clears that role")
+ T.eq(choices.TANK.buttons[1].active,false);T.eq(choices.TANK.buttons[2].active,false)
+ Choose("TANK","missing")
+ Choose("DAMAGER","present");T.eq(G.filters.damagePresence,"present");Choose("DAMAGER","present");T.eq(G.filters.damagePresence,nil)
  Choose("HEALER","present");Choose("DAMAGER","missing")
- T.eq(G.filters.tankPresence,"missing");T.eq(G.filters.healerPresence,"present");T.eq(G.filters.needsDamage,true,"independent role fields combine in the result filter")
+ T.eq(G.filters.tankPresence,"missing");T.eq(G.filters.healerPresence,"present");T.eq(G.filters.damagePresence,"missing","independent role fields combine in the result filter")
  find:SelectCategory("seasonRaid")
- T.eq(find.rolePresencePanel:IsShown(),false);T.eq(G.filters.tankPresence,nil);T.eq(G.filters.healerPresence,nil);T.eq(G.filters.needsDamage,nil,"seasonal conditions do not leak to raids")
+ T.eq(find.rolePresencePanel:IsShown(),false);T.eq(G.filters.tankPresence,nil);T.eq(G.filters.healerPresence,nil);T.eq(G.filters.damagePresence,nil,"seasonal conditions do not leak to raids")
  find:SelectCategory("seasonDungeon")
  T.eq(choices.TANK.value,"missing");T.eq(choices.HEALER.value,"present");T.eq(choices.DAMAGER.value,"missing","returning restores the category's visible controls")
  local catalog=G.Catalog;local getActivities=catalog.GetActivities
@@ -817,17 +867,39 @@ do
  find:SelectCategory("seasonDungeon");T.eq(G.filters.neededRole,nil);T.eq(G.filters.tankPresence,"missing")
  find:SelectCategory("2");T.eq(find.roleChoice.value,"TANK");T.eq(G.filters.neededRole,"TANK","the original category restores its own role choice")
  find:SelectCategory("seasonDungeon");catalog.GetActivities=getActivities;find.clearFilters:Fire("OnClick")
- for _,role in ipairs({"TANK","HEALER","DAMAGER"}) do T.eq(choices[role].value,"any") end
- T.eq(G.filters.tankPresence,nil);T.eq(G.filters.healerPresence,nil);T.eq(G.filters.needsDamage,nil)
+ for _,role in ipairs({"TANK","HEALER","DAMAGER"}) do T.eq(choices[role].value,nil) end
+ T.eq(G.filters.tankPresence,nil);T.eq(G.filters.healerPresence,nil);T.eq(G.filters.damagePresence,nil)
  find:SelectCategory("seasonRaid");find:SelectCategory("seasonDungeon")
- T.eq(choices.TANK.value,"any");T.eq(choices.HEALER.value,"any");T.eq(choices.DAMAGER.value,"any","cleared conditions do not return after a category switch")
+ T.eq(choices.TANK.value,nil);T.eq(choices.HEALER.value,nil);T.eq(choices.DAMAGER.value,nil,"cleared conditions do not return after a category switch")
+ for _,roles in ipairs({{"TANK","HEALER","DAMAGER"},{"TANK","DAMAGER","HEALER"},{"HEALER","DAMAGER","TANK"}}) do
+  Choose(roles[1],"present");Choose(roles[2],"present")
+  local blocked=choices[roles[3]]
+  T.eq(blocked.buttons[1]:IsEnabled(),false,"two positive role conditions disable the remaining positive choice")
+  T.ok(blocked.buttons[1]:GetAlpha()<1,"the unavailable condition is visibly dimmed")
+  T.eq(blocked.buttons[2]:IsEnabled(),true,"the remaining role can still be missing")
+  Choose(roles[3],"present");T.eq(blocked.value,nil,"clicking the disabled third condition does not change filters")
+  Choose(roles[3],"missing");T.eq(blocked.value,"missing")
+  T.eq(choices[roles[1]].value,"present");T.eq(choices[roles[2]].value,"present","negative choices preserve both positive conditions")
+  Choose(roles[1],"present");T.eq(choices[roles[1]].value,nil)
+  T.eq(blocked.buttons[1]:IsEnabled(),true,"clearing a selected positive condition immediately enables the other role")
+  Choose(roles[3],"present");T.eq(blocked.value,"present");T.eq(blocked.buttons[1]:IsEnabled(),true,"a selected positive condition remains available to clear")
+  find:ClearFilters()
+ end
+ local allPresent={tankPresence="present",healerPresence="present",damagePresence="present"}
+ find:RestoreCategory(allPresent);find:UpdateFilters()
+ T.eq(choices.TANK.value,"present");T.eq(choices.HEALER.value,"present");T.eq(choices.DAMAGER.value,nil,"legacy all-present preferences retain tank and healer without selecting missing damage")
+ T.eq(allPresent.damagePresence,nil);T.eq(G.db.prefs.find.categoryPrefs.seasonDungeon.damagePresence,nil,"normalized preferences no longer save all three positive conditions")
+ T.eq(choices.DAMAGER.buttons[1]:IsEnabled(),false)
+ find:SelectCategory("seasonRaid");find:SelectCategory("seasonDungeon")
+ T.eq(choices.TANK.value,"present");T.eq(choices.HEALER.value,"present");T.eq(choices.DAMAGER.value,nil,"category changes preserve the normalized role conditions")
+ find:ClearFilters()
  for _,role in ipairs({"TANK","HEALER","DAMAGER"}) do
   find:RestoreCategory({neededRole=role});find:UpdateFilters()
   T.eq(choices[role].value,"missing","legacy saved missing-role filters migrate to a visible seasonal choice")
   T.eq(G.filters.neededRole,nil,"the migrated condition has only one active representation")
-  Choose(role,"any")
+  Choose(role,"missing")
   local saved=G.db.prefs.find.categoryPrefs.seasonDungeon
-  T.eq(saved.neededRole,nil);T.eq(saved.tankPresence,nil);T.eq(saved.healerPresence,nil);T.eq(saved.needsDamage,nil,"choosing unrestricted completely removes the legacy condition")
+  T.eq(saved.neededRole,nil);T.eq(saved.tankPresence,nil);T.eq(saved.healerPresence,nil);T.eq(saved.damagePresence,nil);T.eq(saved.needsDamage,nil,"clearing a migrated condition removes both current and retired saved fields")
  end
  find:SelectCategory("seasonRaid");find:SetFiltersOpen(filtersOpen)
 end
@@ -842,8 +914,9 @@ activityRow:Fire("OnMouseDown");activityRow:Fire("OnClick","LeftButton")
 for _,button in ipairs(find.difficultyButtons) do if button.value==1 and button:IsShown() then button:Fire("OnClick") end end
 T.eq(find.searchHint:GetText(),"队伍标题","normal dungeon search uses the native title query")
 T.eq(find.rolePresencePanel:IsShown(),true,"seasonal role-presence choices also work at normal difficulty")
-find.rolePresenceChoices.TANK.buttons[2]:Fire("OnClick");T.eq(G.filters.tankPresence,"present");T.eq(G.filters.neededRole,nil)
+find.rolePresenceChoices.TANK.buttons[1]:Fire("OnClick");T.eq(G.filters.tankPresence,"present");T.eq(G.filters.neededRole,nil)
 find.rolePresenceChoices.TANK.buttons[1]:Fire("OnClick")
+T.eq(G.filters.tankPresence,nil,"clicking the selected seasonal condition clears it at normal difficulty")
 local searchMethod=G.Search.Search;local requestedActivity
 G.Search.Search=function(_,category,id) requestedActivity=id;return true end
 find:DoSearch();T.eq(requestedActivity,3,"a selected seasonal map and normal difficulty request its unique native activity")
@@ -882,6 +955,10 @@ do
  Difficulty(8);T.eq(calls,before,"category and difficulty selection prepare a choice without searching")
  T.eq(Row(201).multiSelect:IsShown(),false);T.eq(Row(202).multiSelect:IsShown(),false,"checkboxes are hidden in the default single-selection view")
  T.eq(find.multiSelectToggle:GetParent(),Row(0));T.eq(find.multiSelectToggle.label:GetText(),"多选")
+ do
+  local togglePoint={find.multiSelectToggle:GetPoint()};local labelPoint={find.multiSelectToggle.label:GetPoint()}
+  T.ok(togglePoint[#togglePoint-1]+labelPoint[#labelPoint-1]<=-12,"multi-selection text keeps twelve pixels inside the activity row")
+ end
  find.multiSelectToggle:Fire("OnClick")
  T.eq(Row(201).multiSelect:IsShown(),true);T.eq(Row(202).multiSelect:IsShown(),true);T.eq(Row(203).multiSelect:IsShown(),false,"entering multi-selection only enables actual keystone rows")
  T.eq(calls,before,"entering multi-selection does not search")
@@ -901,12 +978,13 @@ do
  T.eq(find.context:GetText(),"毒牙·红玉  ·  "..GetDifficultyInfo(8),"multi-selection titles use catalog order and short names")
  T.eq(find.draftGroupKeys,nil);T.eq(find.picker:IsShown(),false)
  find:SelectCategory("seasonDungeon");T.eq(calls,before+1,"reopening the active category never resubmits")
- T.eq(Row(201).multiSelect:IsShown(),false);T.eq(find.pickerConfirm:IsShown(),false,"reopening keeps the confirmed collection while hiding multi-selection controls")
+ T.eq(Row(201).multiSelect:IsShown(),true);T.eq(find.pickerConfirm:IsShown(),true,"reopening visibly restores the confirmed multi-selection")
+ T.eq(find.multiSelectToggle.label:GetText(),"返回")
  T.eq(find.activities.selectedKey,nil);T.eq(Row(0).selected:IsShown(),false,"a confirmed collection never highlights the all-instances single-selection row")
  T.eq(Row(201).multiSelect:GetChecked(),true);T.eq(Row(202).multiSelect:GetChecked(),true)
  T.eq(Row(201).multiSelect.mark:IsShown(),true)
  for _,stroke in ipairs(Row(201).multiSelect.mark.strokes) do T.same(stroke.fill,U.Theme.onPrimary,"the checkbox strokes use the untinted white foreground") end
- find.multiSelectToggle:Fire("OnClick");Row(202):Fire("OnClick","LeftButton")
+ Row(202):Fire("OnClick","LeftButton")
  T.eq(Row(202).multiSelect:GetChecked(),false);T.eq(calls,before+1,"clicking an activity in multi-selection only toggles the draft")
  find.multiSelectToggle:Fire("OnClick")
  T.eq(Row(202).multiSelect:IsShown(),false);T.eq(find.pickerConfirm:IsShown(),false,"cancelling multi-selection hides the draft controls")
@@ -915,24 +993,28 @@ do
  Check(202);find.pickerConfirm:Fire("OnClick")
  T.same(G.filters.groupKeys,{[201]=true});T.eq(lastActivity,nil,"even one checked dungeon uses the complete-search multi-selection path")
  T.eq(find.context:GetText(),"毒牙洞窟  ·  "..GetDifficultyInfo(8),"a one-item collection retains the complete dungeon name")
- find:SelectCategory("seasonDungeon");Row(202):Fire("OnClick","LeftButton")
+ find:SelectCategory("seasonDungeon");find.multiSelectToggle:Fire("OnClick");Row(202):Fire("OnClick","LeftButton")
  T.eq(G.filters.groupKeys,nil);T.eq(G.filters.groupKey,202);T.eq(lastActivity,2002,"the row keeps its original single-selection request")
  local singleCalls=calls
  find:SelectCategory("seasonDungeon");T.eq(find.activities.selectedKey,202);T.eq(G.filters.difficultyID,8);T.eq(calls,singleCalls,"same-category reopening preserves the confirmed single selection and difficulty")
- find:SelectCategory("seasonRaid");find:SelectCategory("seasonDungeon")
+ find:SelectCategory("seasonRaid");singleCalls=calls;find:SelectCategory("seasonDungeon")
  T.eq(G.filters.groupKey,202);T.eq(find.activities.selectedKey,202);T.eq(Row(202).selected:IsShown(),true,"returning from another category restores the seasonal single-selection highlight")
- T.eq(G.filters.difficultyID,8);T.eq(calls,singleCalls,"restoring a confirmed seasonal single selection still waits for an explicit search action")
+ T.eq(G.filters.difficultyID,8);T.eq(calls,singleCalls+1,"returning to a confirmed seasonal single selection resumes its search")
  Row(0):Fire("OnClick","LeftButton");T.eq(G.filters.groupKey,nil);T.eq(G.filters.groupKeys,nil);T.eq(find.context:GetText(),"全部副本  ·  "..GetDifficultyInfo(8))
  find:SelectCategory("seasonDungeon");Check(201);Check(202);find.pickerConfirm:Fire("OnClick")
  local selectedCalls=calls
  G.Search.pending={categoryKey="seasonDungeon"};G.Search.timer=C_Timer.NewTimer(.2,function() calls=calls+100 end)
  find:SelectCategory("seasonRaid");T.eq(G.Search.pending,nil);T.eq(G.Search.timer,nil)
+ selectedCalls=calls
  f.base.AdvanceClock(.3);T.eq(calls,selectedCalls,"switching category cancels delayed native searches")
- find:SelectCategory("seasonDungeon");T.eq(calls,selectedCalls)
+ find:SelectCategory("seasonDungeon");T.eq(calls,selectedCalls+1,"returning to confirmed multi-selection resumes its search")
+ T.eq(find.picker:IsShown(),true,"restoring the search keeps the selection menu open")
+ selectedCalls=calls
  T.same(G.filters.groupKeys,{[201]=true,[202]=true});T.eq(G.filters.difficultyID,8,"category restoration recovers only the confirmed keystone selection")
  T.ok(find.refresh:IsEnabled(),"restoring confirmed dungeons keeps manual refresh available")
  T.ok(not find.emptyPanel:IsShown() or find.emptyText:GetText()~="请选择副本","confirmed dungeons never render the unselected prompt")
  T.eq(Row(201).multiSelect:GetChecked(),true);T.eq(Row(202).multiSelect:GetChecked(),true)
+ T.eq(Row(201).multiSelect:IsShown(),true,"returning to a category visibly restores its confirmed multi-selection")
  T.eq(find.appList.rows[1].key,101,"preparing a browse choice preserves real pinned applications")
  Difficulty(1);T.eq(G.filters.groupKeys,nil);T.eq(Row(201).multiSelect:IsShown(),false);T.eq(calls,selectedCalls,"a non-keystone draft clears the collection without a search")
  find:ClosePicker();find:SelectCategory("seasonDungeon");T.eq(Row(201).multiSelect:GetChecked(),true,"closing the unsubmitted difficulty draft returns to the confirmed collection")
@@ -984,6 +1066,18 @@ find:SelectCategory("seasonDungeon");find:ClosePicker()
 T.eq(find.appList.rows[1].key,101,"applications survive the browse result selection")
 T.eq(find.appList.rows[1].status:GetText(),"5:00")
 do
+ U.Motion:Tick(2)
+ T.eq(U.Motion:Count(),0,"a static application countdown does not keep the animation driver running")
+ local clock,details=now,G.Results.GetDetails;local reads=0
+ G.Results.GetDetails=function(self,...) reads=reads+1;return details(self,...) end
+ now=clock+1;f.base.AdvanceClock(1)
+ T.eq(find.appList.rows[1].status:GetText(),"4:59","the visible countdown still advances once per second")
+ T.eq(reads,0,"countdown ticks do not reread or rebind roster details")
+ U:SetReducedMotion(true);now=clock+2;f.base.AdvanceClock(1)
+ T.eq(find.appList.rows[1].status:GetText(),"4:58","settling animations cannot stop the business countdown")
+ G.Results.GetDetails=details;now=clock;find:RefreshApplications()
+end
+do
  local row=find.appList.rows[1]
  T.ok(row.leaderIcon:IsShown(),"my applications show the leader crown")
  T.eq(row.count:IsShown(),false);row:Fire("OnClick","LeftButton");T.eq(row.count:IsShown(),false)
@@ -1022,25 +1116,45 @@ find:DoSearch();T.eq(G.state,"done")
 local target=find.results.rows[1]
 do
  local r=G.records[target.key]
- local fields={"categoryID","maxNumPlayers","numMembers","leaderRating","ratingKind","age","requiredItemLevel","details"};local saved={}
+ local fields={"categoryID","maxNumPlayers","numMembers","leaderRating","ratingKind","age","requiredItemLevel","details","comment"};local saved={}
  for _,key in ipairs(fields) do saved[key]=r[key] end
  local function Geometry(region) local p={region:GetPoint()};return {anchor=p[1],x=p[#p-1],y=p[#p],width=region:GetWidth(),height=region:GetHeight()} end
  local function Render() G:Notify("result",r.id);U.Motion:Tick(.016) end
  local body=target:GetWidth()
- T.eq(Geometry(target.leader).x,body-495,"the leader leaves room for independent data columns")
- T.eq(target.leader:GetWidth(),91);T.eq(Geometry(target.leaderIcon).x,body-512)
+ local notePoint={target.noteDot:GetPoint()};T.eq(notePoint[2],target.icon,"the note marker sits on the inset activity icon instead of the row edge")
+ T.eq(Geometry(target.leader).x,265,"the leader follows the group title and crown")
+ T.eq(target.leader:GetWidth(),87);T.eq(Geometry(target.leaderIcon).x,248)
+ T.eq(select(2,target.title:GetFont()),18,"the description column preserves the group title's font size")
+ T.eq(target.title:GetWidth(),172)
+ T.eq(target.description:GetWidth(),104);T.eq(target.description:GetHeight(),40)
+ T.eq(Geometry(target.score).x,574);T.eq(target.score:GetWidth(),60)
+ T.eq(Geometry(target.ilvl).x,522);T.eq(Geometry(target.membersButton).x,368)
+ T.eq(Geometry(target.description).x,650);T.eq(Geometry(target.age).x,body-76);T.eq(target.age:GetWidth(),64)
+ T.eq(target.description.maxLines,2);T.eq(target.description.wrap,true);T.eq(select(2,target.description:GetFont()),14)
+ T.eq(find.resultHeadings.description:GetText(),"描述");T.eq(find.resultHeadings.description.justify,"LEFT")
+ T.ok(Geometry(target.title).x+target.title:GetWidth()+16<=Geometry(target.leaderIcon).x)
+ T.eq(Geometry(target.score).x+target.score:GetWidth()+16,Geometry(target.description).x)
+ T.eq(Geometry(target.description).x+target.description:GetWidth()+12,Geometry(target.age).x)
+ T.eq(find.appList.rows[1].description,nil,"outbound applications do not gain a description column")
+ T.eq(find.appList.rows[1].title:GetWidth(),body-590);T.eq(Geometry(find.appList.rows[1].leader).x,body-511,"outbound applications retain their original columns")
+ r.comment="A complete group description that can wrap over two compact lines without shifting member slots or numeric columns";Render()
+ T.eq(target.description:GetText(),r.comment,"search rows display the listing description independently of its title")
+ r.comment="";Render();T.eq(target.description:GetText(),"—","empty descriptions replace any previous row text")
+ r.comment=nil;Render();T.eq(target.description:GetText(),"—")
  T.eq(Geometry(find.resultHeadings.title).x,Geometry(target.icon).x,"the group heading aligns with the activity icon's left edge")
  T.eq(target.ratingLabel,nil,"score labels appear once in the column header")
  T.eq(target.ilvlLabel,nil,"item-level labels do not repeat in every result")
- for key,region in pairs({leader=target.leader,rating=target.score,ilvl=target.ilvl,members=target.count,age=target.age}) do
+ for key,region in pairs({description=target.description,leader=target.leader,rating=target.score,ilvl=target.ilvl,members=target.count,age=target.age}) do
   T.eq(Geometry(region).x,Geometry(find.resultHeadings[key]).x,"data shares its header's column")
   T.eq(region:GetWidth(),find.resultHeadings[key]:GetWidth())
  end
  for _,region in ipairs({target.leader,target.score,target.ilvl,target.age}) do T.eq(Geometry(region).y,0,"single-line values share the row center") end
  T.eq(target.score.justify,"CENTER");T.eq(target.ilvl.justify,"CENTER")
- T.ok(Geometry(target.score).x+target.score:GetWidth()+20<=Geometry(target.ilvl).x)
- T.ok(Geometry(target.ilvl).x+target.ilvl:GetWidth()+20<=Geometry(target.count).x)
- T.ok(Geometry(target.count).x+target.count:GetWidth()+20<=Geometry(target.age).x)
+ T.eq(Geometry(target.leader).x+target.leader:GetWidth()+16,Geometry(target.membersButton).x)
+ T.eq(Geometry(target.membersButton).x+target.membersButton:GetWidth()+16,Geometry(target.ilvl).x)
+ T.eq(Geometry(target.ilvl).x+target.ilvl:GetWidth()+12,Geometry(target.score).x)
+ T.eq(find.resultHeadings.members.justify,"CENTER");T.eq(find.resultHeadings.age.justify,"RIGHT")
+ T.eq(Geometry(find.resultHeadings.members).x+find.resultHeadings.members:GetWidth()/2,Geometry(target.membersButton).x+target.membersButton:GetWidth()/2,"the member heading follows the visual roster center")
  T.eq(Geometry(find.resultsHeader).y-find.resultsHeader:GetHeight()-Geometry(find.results).y,12,"the single header has a clear gap above the first row")
  local getSpecInfo=GetSpecializationInfoByID
  _G.GetSpecializationInfoByID=function(id) return id,"Spec "..id,nil,200000+id end
@@ -1062,7 +1176,7 @@ do
   T.eq(slot.role:GetTexture(),U.Theme.media..({TANK="role-tank",HEALER="role-healer",DAMAGER="role-dps"})[role]..".tga")
   T.eq(slot.icon:IsShown(),i==1,"only the occupied slot shows a specialization")
  end
- T.eq(count.width,138);T.eq(age.width,76)
+ T.eq(count.width,138);T.eq(age.width,64)
  members[1]={name="Damage1",class="MAGE",assignedRole="DAMAGER",specID=63}
  members[2]={name="Tank",class="WARRIOR",assignedRole="TANK",specID=71}
  members[3]={name="Damage2",class="MAGE",assignedRole="DAMAGER",specID=62}
@@ -1070,7 +1184,7 @@ do
  members[5]={name="Damage3",class="MAGE",assignedRole="DAMAGER",specID=64}
  r.numMembers=5;r.age=99*86400;r.leaderRating=nil;Render()
  T.eq(Geometry(target.roster).x,roster.x,"one to five members share the membership column center")
- T.eq(target.roster:GetWidth(),132,"party and raid role summaries use the same width")
+ T.eq(target.roster:GetWidth(),Geometry(target.roster.slots[5].icon).x+target.roster.slots[5].icon:GetWidth(),"the five visible party slots fill the centered roster frame")
  T.same(Geometry(target.count),count,"member totals retain their fixed position")
  T.same(Geometry(target.age),age,"longer time text does not resize the time column")
  T.same(Geometry(target.score),score,"unknown scores retain the same numeric column")
@@ -1332,15 +1446,32 @@ do
  _G.GetSpecialization,_G.GetSpecializationRole=getSpec,getSpecRole
  _G.SetLFGRoles=setRoles
 end
-U.Tooltip:ShowGroup(target,G.records[target.key])
-T.ok(U.Tooltip.interactive:IsShown());T.eq(U.Tooltip.interactive:GetWidth(),424)
-U.Tooltip.interactive.memberButtons[1]:Fire("OnClick")
-T.eq(U.Tooltip.member,members[1],"a member opens inside the shared group tooltip")
-T.ok(U.Tooltip.interactive.back:IsShown());T.ok(U.Tooltip.interactive.comment:GetText():find("A different experience",1,true))
-U.Tooltip.interactive.wcl:Fire("OnClick");T.ok(U.copyDialog.field.box:GetText():find("/Away/Guest",1,true),"WCL link uses the complete known identity")
-T.eq(U.copyDialog.fieldLabel:GetText(),"角色链接","WCL restores its default field label after copying other addon links")
-U.copyDialog:Hide();U.Tooltip.interactive.back:Fire("OnClick");T.eq(U.Tooltip.member,nil)
-U.Tooltip:Hide()
+do
+ local tip=U.Tooltip
+ tip:ShowGroup(target,G.records[target.key])
+ local view=tip.interactive;local member=view.memberButtons[1]
+ T.ok(view:IsShown());T.eq(view:GetWidth(),424)
+ T.eq(member:IsEnabled(),false,"search-result party members are display-only")
+ member:Fire("OnClick")
+ T.eq(tip.member,nil,"clicking a search-result member never opens personal details")
+ T.eq(tip.record,G.records[target.key]);T.ok(not tip.pinned)
+ T.eq(view.back:IsShown(),false);T.eq(view.wcl:IsShown(),false);T.eq(view.note:IsShown(),false)
+ tip:Hide()
+ local app={members=members}
+ tip:ShowApplicants(target,app)
+ T.eq(member:IsEnabled(),true,"reusing the row for applicants restores member interaction")
+ member:Fire("OnClick")
+ T.eq(tip.member,members[1],"an applicant still opens inside the shared tooltip")
+ T.ok(tip.pinned);T.eq(tip.sourceApp,app)
+ T.eq(select(2,view.title:GetFont()),16);T.eq(view.icon:GetWidth(),36,"personal details keep their larger portrait")
+ T.eq(view.playerRole:GetWidth(),16);T.eq(view.playerFaction:GetWidth(),16,"personal detail markers keep their original size")
+ T.ok(view.back:IsShown());T.ok(view.comment:GetText():find("A different experience",1,true))
+ view.wcl:Fire("OnClick");T.ok(U.copyDialog.field.box:GetText():find("/Away/Guest",1,true),"WCL link uses the complete known identity")
+ T.eq(U.copyDialog.fieldLabel:GetText(),"角色链接","WCL restores its default field label after copying other addon links")
+ U.copyDialog:Hide();view.back:Fire("OnClick");T.eq(tip.member,nil);T.eq(tip.sourceApp,app)
+ T.eq(member:IsEnabled(),true,"returning to applicants keeps member details available")
+ tip:Hide()
+end
 do
  local tip=U.Tooltip
  local left,top=U.frame.GetLeft,U.frame.GetTop
@@ -1357,8 +1488,9 @@ do
  U.frame.GetLeft,U.frame.GetTop=left,top;tip:Hide()
 end
 local raidMembers={}
-for i=1,30 do raidMembers[i]={name="Raider"..i.."-Away",nameKey="Raider"..i.."-Away",class="WARRIOR",specID=71,assignedRole="DAMAGER"} end
+for i=1,30 do raidMembers[i]={name="Raider"..i.."-Away",nameKey="Raider"..i.."-Away",class="WARRIOR",specID=71,assignedRole="DAMAGER",subgroup=math.ceil(i/5)} end
 raidMembers[30].isLeader=true;raidMembers[2].assignedRole="TANK";raidMembers[3].assignedRole="HEALER"
+raidMembers[30].factionGroup=1
 raidMembers[2].isCharFriend=true
 local raid={id=800,categoryID=3,activity={mapID=4444,journalID=444},activityName="A native raid",name="Thirty members",comment=string.rep("A complete native description. ",80),leaderName="Raider30-Away",leaderKey="Raider30-Away",numMembers=30,maxNumPlayers=30,details={members=raidMembers,counts={TANK=2,HEALER=6,DAMAGER=22}}}
 local journalReady=false;local journalInstance,journalDifficulty=22,14
@@ -1388,12 +1520,22 @@ T.eq(U.Tooltip.interactive:GetWidth(),960);T.ok(U.Tooltip.interactive.memberButt
 T.eq(#U.Tooltip.interactive.memberButtons,30,"the member pool grows only to the roster actually opened")
 T.eq(U.Tooltip.interactive.memberButtons[1].member,raidMembers[30],"the native raid leader is always first")
 U.Tooltip.interactive.memberButtons[1]:Fire("OnEnter");U.Motion:Tick(.12)
-T.near(U.Tooltip.interactive.memberButtons[1].hover.regions[1]:GetAlpha(),13/255,.001,"expanded members use the shared subtle hover layer")
+T.eq(U.Tooltip.interactive.memberButtons[1]:IsEnabled(),false)
+T.eq(U.Tooltip.interactive.memberButtons[1].hover:IsShown(),false,"display-only search members have no action hover")
 U.Tooltip.interactive.memberButtons[1]:Fire("OnLeave")
 T.eq(U.Tooltip.interactive.memberButtons[2].member,raidMembers[2]);T.eq(U.Tooltip.interactive.memberButtons[3].member,raidMembers[3])
 T.ok(U.Tooltip.interactive.memberButtons[2].realm:GetText():find("角色好友",1,true),"Shift 名单直接指出好友成员")
-T.eq((U.Tooltip.interactive.memberButtons[1].name:GetText():gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")),"Raider30-Away");T.eq(U.Tooltip.interactive.memberButtons[1]:GetHeight(),60)
-T.eq(U.Tooltip.interactive.memberButtons[1].name.wrap,true,"long name-realm text stays within its member cell");T.eq(select(2,U.Tooltip.interactive.memberButtons[2].icon:GetPoint()),8,"member hover has equal horizontal padding");T.ok(U.Tooltip.interactive.memberButtons[1].name:GetWidth()<U.Tooltip.interactive.memberButtons[1]:GetWidth()-56,"leader crown and role keep their own space")
+T.eq((U.Tooltip.interactive.memberButtons[1].name:GetText():gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")),"Raider30-Away");T.eq(U.Tooltip.interactive.memberButtons[1]:GetHeight(),44)
+T.eq(U.Tooltip.interactive.memberButtons[1].name.wrap,true,"long name-realm text stays within its member cell");T.eq(select(2,U.Tooltip.interactive.memberButtons[2].icon:GetPoint()),6,"member cells have equal compact horizontal padding");T.ok(U.Tooltip.interactive.memberButtons[1].name:GetWidth()<U.Tooltip.interactive.memberButtons[1]:GetWidth()-56,"leader crown and role keep their own space")
+do
+ local first=U.Tooltip.interactive.memberButtons[1];local nextRow=U.Tooltip.interactive.memberButtons[4]
+ T.eq(first.icon:GetWidth(),24);T.eq(first.role:GetWidth(),12);T.eq(first.faction:GetWidth(),12);T.eq(first.leaderIcon:GetWidth(),10)
+ T.eq(select(2,first.name:GetFont()),14);T.eq(select(2,first.realm:GetFont()),12)
+ local role,faction={first.role:GetPoint()},{first.faction:GetPoint()}
+ T.eq(role[1],"RIGHT");T.eq(role[2],first.icon);T.eq(role[3],"RIGHT");T.eq(role[5],0,"raid roles share the avatar center")
+ T.eq(faction[2],first.role);T.eq(faction[3],"LEFT");T.eq(faction[5],0,"raid faction and role share one centerline")
+ local a,b={first:GetPoint()},{nextRow:GetPoint()};T.near(a[#a]-b[#b],46,.001,"compact raid rows retain a two-pixel gap")
+end
 T.ok(U.Tooltip.interactive.leaderIcon:IsShown(),"the right-aligned header uses a leader icon beside the name")
 T.ok(U.Tooltip.interactive.memberButtons[1].leaderIcon:IsShown());T.eq(U.Tooltip.interactive.memberButtons[2].leaderIcon:IsShown(),false)
 T.eq(U.Tooltip.interactive.bossRows[1].status:GetText(),"已击败");T.eq(U.Tooltip.interactive.bossRows[2].status:GetText(),"未击败")
@@ -1408,19 +1550,30 @@ U.Tooltip.interactive:Fire("OnEvent","MODIFIER_STATE_CHANGED","RSHIFT",0)
 T.eq(U.Tooltip.interactive:GetWidth(),640,"releasing Shift keeps the summary state")
 U.Tooltip.interactive:Fire("OnEvent","MODIFIER_STATE_CHANGED","LSHIFT",1)
 U.Tooltip.interactive.memberButtons[1]:Fire("OnClick")
-T.eq(U.Tooltip.member,raidMembers[30])
+T.eq(U.Tooltip.member,nil,"expanded raid search members also remain display-only")
+T.eq(U.Tooltip.interactive:GetWidth(),960);T.ok(not U.Tooltip.pinned)
+T.eq(U.Tooltip.interactive.footer:GetText(),"按 Shift 收起名单","search tooltips no longer advertise member detail clicks")
+U.Tooltip:Hide();U.Tooltip:ShowRoster(target,raidMembers)
+T.eq(U.Tooltip.interactive.memberButtons[1]:IsEnabled(),true,"a search member row becomes interactive for the current roster")
+T.eq(U.Tooltip.interactive.memberButtons[1].member,raidMembers[1],"current rosters retain actual subgroup and raid-index order")
+U.Tooltip.interactive.memberButtons[30]:Fire("OnClick");T.eq(U.Tooltip.member,raidMembers[30])
 T.eq(U.Tooltip.outsideClicks:IsMouseEnabled(),false);T.eq(U.Tooltip.outsideClicks:GetScript("OnMouseDown"),nil)
 T.eq(U.Tooltip.outsideClicks.events.GLOBAL_MOUSE_DOWN,true,"pinned details observe global clicks without taking mouse input")
 U.Tooltip.interactive.mouseOver=true;U.Tooltip.outsideClicks:Fire("OnEvent","GLOBAL_MOUSE_DOWN","LeftButton")
 T.eq(U.Tooltip.interactive:IsShown(),true,"an internal click retains pinned details");U.Tooltip.interactive.mouseOver=nil
 U.Tooltip.interactive.back:Fire("OnClick")
-T.eq(U.Tooltip.interactive:GetWidth(),960,"returning from a member preserves the source raid's expanded state")
-T.eq(U.Tooltip.outsideClicks.events.GLOBAL_MOUSE_DOWN,true,"returning to the pinned source group retains outside-click dismissal")
-U.Tooltip:RenderPlayer(raidMembers[30],true);U.Tooltip.outsideClicks:Fire("OnEvent","GLOBAL_MOUSE_DOWN","LeftButton")
+T.eq(U.Tooltip.interactive:GetWidth(),752,"returning from a member preserves the complete current roster")
+T.eq(U.Tooltip.sourceRoster,raidMembers)
+T.eq(U.Tooltip.outsideClicks.events.GLOBAL_MOUSE_DOWN,true,"returning to the pinned roster retains outside-click dismissal")
+U.Tooltip.interactive.memberButtons[30]:Fire("OnClick");T.eq(U.Tooltip.member,raidMembers[30])
+U.Tooltip.outsideClicks:Fire("OnEvent","GLOBAL_MOUSE_DOWN","LeftButton")
 T.eq(U.Tooltip.interactive:IsShown(),false,"an external click closes pinned details")
 T.eq(U.Tooltip.outsideClicks.events.GLOBAL_MOUSE_DOWN,nil)
 U.Tooltip:Hide();A.db.raidMembers="always";U.Tooltip:ShowGroup(target,raid)
 T.eq(U.Tooltip.interactive:GetWidth(),960,"the always setting opens the full roster")
+T.eq(U.Tooltip.interactive.memberButtons[1]:IsEnabled(),false,"returning to search data disables a previously interactive roster row")
+U.Tooltip.interactive.memberButtons[1]:Fire("OnClick");T.eq(U.Tooltip.member,nil)
+T.eq(U.Tooltip.interactive.footer:GetText(),"","always-expanded search rosters have no obsolete member-click hint")
 U.Tooltip.interactive:Fire("OnEvent","MODIFIER_STATE_CHANGED","LSHIFT",1)
 T.eq(U.Tooltip.interactive:GetWidth(),960,"Shift does not collapse the always setting")
 A.db.raidMembers="shift"
@@ -1468,7 +1621,10 @@ find:SetFiltersOpen(true);T.ok(U.Motion.jobs[find.filterPanel]);find:SetFiltersO
 find:SelectCategory("seasonDungeon");T.ok(U.Motion.jobs[find.picker]);find:ClosePicker();T.eq(U.Motion.jobs[find.picker],nil)
 A.db.reduceMotion=false;G.state="searching";find:ReadSearchState();T.ok(U.Motion.jobs[find.busyIcon],"only an active search animates the lychee")
 find:ShowApplicationLimit(102);local closingRecords=G.records
-U:Hide(true);T.eq(next(U.Motion.jobs),nil,"closing releases scroll, tooltip, countdown and waiting jobs")
+local applicationClock=find.countdown
+U:Hide(true);T.eq(next(U.Motion.jobs),nil,"closing releases scroll, tooltip and waiting jobs")
+T.eq(find.countdown,nil,"closing releases the application countdown")
+if applicationClock then T.eq(applicationClock.cancelled,true,"closing cancels the active countdown timer") end
 T.eq(find.limitNotice:IsShown(),false,"leaving clears the pending application notice")
 T.eq(next(G.views),nil)
 local nativeSpecIcon=U.C.Icon(U.frame,24)
@@ -1485,9 +1641,13 @@ U:Hide(true)
 A.db.reduceMotion=false;A:Open("find");G.records=closingRecords;find:RefreshResults();U.Motion:Tick(.5)
 local closingRow=find.results.rows[1];local closingTitle=closingRow.title:GetText()
 T.ok(closingRow.key and closingRow:IsShown(),"close coverage starts from a real populated result row")
+local closingLogoWidth,closingLogoHeight=U.logo:GetWidth(),U.logo:GetHeight()
 U:Hide();T.eq(U.hiding,true);T.eq(closingRow:IsShown(),true,"closing preserves visible row bindings during Presence")
+T.eq(U.logo:GetWidth(),closingLogoWidth,"closing does not snap a visible brand animation to its resting pose")
+T.eq(U.logo:GetHeight(),closingLogoHeight)
 T.eq(closingRow.title:GetText(),closingTitle);T.eq(U.frame:IsShown(),true)
 U.Motion:Tick(.43);T.eq(U.frame:IsShown(),false);T.eq(next(G.views),nil);T.eq(U.Native.searchLease,nil,"the completed close releases browsing and native input ownership")
+T.eq(U.Motion.jobs.brand,nil,"the brand animation stops once the window is hidden")
 A:Open("find");G.records=closingRecords;find:RefreshResults();U.Motion:Tick(.5)
 U:Hide();U.Motion:Tick(.1);U:Show("find");U.Motion:Tick(.5)
 T.eq(U.frame:IsShown(),true,"an interrupted close cannot hide the reopened window");T.eq(U.hiding,nil);T.ok(G.views[find],"the reopened page keeps its live browsing subscription")
@@ -1499,7 +1659,7 @@ for _,page in ipairs({"find","create","notes"}) do
  A:Open(page);T.eq(U.navItems[page].active,true);T.eq(U.underline:IsShown(),true)
  A:Open("settings");T.eq(U.underline:IsShown(),false)
  for _,button in pairs(U.navItems) do T.eq(button.active,false) end
- settings.back:Fire("OnClick");T.eq(U.page,page,"settings returns to the saved business page")
+ U.navItems[page]:Fire("OnClick");T.eq(U.page,page,"the shared navigation leaves settings for any business page")
  T.eq(U.navItems[page].active,true);T.eq(U.underline:IsShown(),true,"returning restores the correct underline")
 end
 U:Hide(true)
@@ -1507,7 +1667,7 @@ U:Hide(true)
 -- navigation and activity choices keep their own compact type role.
 do
  local function Top(region) local point={region:GetPoint()};return -point[#point] end
- for _,row in ipairs({find.results.rows[1],create.rosterList.rows[1],notes.list.rows[1],notes.historyList.rows[1]}) do
+ for _,row in ipairs({find.results.rows[1],notes.list.rows[1],notes.historyList.rows[1]}) do
   T.eq(select(2,row.title:GetFont()),18)
   T.eq(row.title:GetHeight(),24)
   T.ok(Top(row.meta)-Top(row.title)-row.title:GetHeight()>=4,"content title and metadata keep a four-unit gap")
@@ -1519,6 +1679,318 @@ do
  local crownPoint={find.results.rows[1].leaderIcon:GetPoint()}
  T.eq(leaderPoint[1],"LEFT");T.eq(leaderPoint[#leaderPoint],0,"the leader name centers on the complete result row")
  T.eq(crownPoint[1],"LEFT");T.eq(crownPoint[#crownPoint],0,"the leader crown shares the name's center")
+end
+-- Saved settings restore the form without storing, replacing or submitting text.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("zhCN")
+ local a,u,g=fresh.A,fresh.U,fresh.G
+ local nativeActivities=C_LFGList.GetAvailableActivities
+ local outsideSeason=g.Catalog:GetFilter("2")
+ C_LFGList.GetAvailableActivities=function(category,group,flags)
+  if category==2 and flags==outsideSeason then return {} end
+  return nativeActivities(category,group,flags)
+ end
+ g.Catalog:GetActivity(2).shortName=GetDifficultyInfo(8)
+ a.db.reduceMotion=true;a:Open("create")
+ local page=u.pages.create;local entry=LFGListFrame.EntryCreation
+ T.eq(page.favoritesExpanded,nil);T.eq(page.favoritesBody,nil,"collapsed favorites build no row controls")
+ local collapsedHeight=page.rosterCard:GetHeight()
+ T.eq(page.favoritesToggle:GetParent(),page.favoritesCard);T.eq(page.groupSummary:GetParent(),page.rosterCard)
+ local function CardGap() local p={page.rosterCard:GetPoint()};return -p[#p]-page.favoritesCard:GetHeight() end
+ T.eq(CardGap(),16,"the two right-side cards have a transparent gap")
+ page:UsePreset({activityID=2,requiredItemLevel=321,requiredDungeonScore=3400,requiredPvpRating=0,privateGroup=true,autoAccept=true,isCrossFactionListing=true,generalPlaystyle=2})
+ T.eq(page.favorite.selected,false);T.ok(page.favoriteIcon:GetTexture():find("favorite%-off"))
+ page.favorite:Fire("OnClick");T.eq(#g.Presets:Get(),1);T.eq(page.favorite.selected,true);T.ok(page.favoriteIcon:GetTexture():find("favorite%-on"))
+ page.favorite:Fire("OnClick");T.eq(#g.Presets:Get(),0,"clicking the selected star removes the current settings")
+ page.favorite:Fire("OnClick");local saved=g.Presets:Get()[1]
+ page.favoritesToggle:Fire("OnClick");T.ok(page.favoritesBody:IsShown())
+ T.eq(CardGap(),16);T.eq(page.rosterCard:GetHeight(),collapsedHeight,"the roster summary stays compact as its independent card moves down")
+ local list=page.favoritesList
+ T.eq(#list.ids,1);T.eq(page.favoritesEmpty:IsShown(),false)
+ T.eq(list.rows[1].title:GetText(),"Dungeon","a season-only favorite shows its dungeon, not the difficulty from shortName")
+ T.ok(list.rows[1].meta:GetText():find(GetDifficultyInfo(8),1,true),"difficulty shares the conditions line below the activity title")
+ T.ok(list.rows[1].meta:GetText():find("321",1,true));T.ok(list.rows[1].meta:GetText():find("3400",1,true))
+ entry.Name:UserType("My draft");entry.Description.EditBox:UserType("My description")
+ page.ilvl.box:SetText("300");T.eq(page.favorite.selected,false,"changing requirements updates the star state")
+ list.clip.mouseOver=true;list.rows[1].create:Fire("OnClick")
+ T.eq(g.published,nil,"applying saved requirements never publishes")
+ T.eq(page:FormData().requiredItemLevel,321);T.eq(page:FormData().requiredDungeonScore,3400)
+ T.eq(page:FormData().isPrivateGroup,true);T.eq(page:FormData().isAutoAccept,true)
+ T.eq(page.favorite.selected,true)
+ T.eq(entry.Name:GetText(),"My draft");T.eq(entry.Description.EditBox:GetText(),"My description","applying settings preserves the current native text")
+ page:Submit();T.eq(g:GetListing().name,"My draft");T.eq(g:GetListing().comment,"My description")
+ T.eq(g.Presets:Get()[1],saved,"publishing preserves explicitly saved favorites")
+ T.eq(saved.name,nil);T.eq(saved.comment,nil)
+ local activeListing=g:GetListing()
+ T.eq(list.rows[1].create.label:GetText(),"应用")
+ T.eq(list.rows[1].create:IsEnabled(),false)
+ T.eq(list.rows[1].unavailable and list.rows[1].unavailable:GetText(),"结束招募后可应用","a disabled favorite explains the active-recruitment condition beside Apply")
+ T.eq(page.listingFavorite.selected,true,"the active listing has its own favorite state")
+ page.ilvl.box:SetText("399")
+ page.listingFavorite:Fire("OnClick")
+ T.eq(#g.Presets:Get(),0,"the management star removes the listing settings, not the hidden draft")
+ T.eq(page.favoritesEmpty:GetText(),"暂无收藏");T.eq(page.listingFavorite.selected,false)
+ page.listingFavorite:Fire("OnClick");saved=g.Presets:Get()[1]
+ T.eq(saved.requiredItemLevel,321,"saving during recruitment uses the confirmed listing requirements")
+ T.eq(page.listingFavorite.selected,true);T.eq(saved.name,nil);T.eq(saved.comment,nil)
+ T.eq(g:GetListing(),activeListing);T.eq(g.updated,nil,"favoriting never updates or ends recruitment")
+ local published=g.published;page:UsePreset(saved);T.eq(g.published,published,"saved creation does not overwrite a live listing")
+ g:RemoveListing()
+ T.eq(list.rows[1].create:IsEnabled(),true);T.eq(list.rows[1].unavailable:IsShown(),false,"ending recruitment restores Apply and removes the obsolete reason")
+ page:UsePreset(saved)
+ T.eq(g:GetListing(),nil,"reapplying unchanged settings still requires the Publish button")
+ entry.Name:UserType("");entry.Description.EditBox:UserType("")
+ local basic={activityID=2,requiredItemLevel=0,requiredDungeonScore=0,requiredPvpRating=0,privateGroup=false,autoAccept=false,isCrossFactionListing=true,generalPlaystyle=2}
+ page:UsePreset(basic);T.eq(entry.Name:GetText(),"");T.eq(g:GetListing(),nil,"saved activity does not generate a listing title")
+ page.favorite:Fire("OnClick");T.eq(#g.Presets:Get(),2)
+ g.manageListing=false;published=g.published;page:UsePreset(saved);T.eq(g.published,published,"permission loss blocks saved creation through the same business boundary")
+ g.manageListing=true
+ for i=1,20 do g.Presets:ToggleFavorite({activityID=2,requiredItemLevel=280+i}) end
+ T.eq(#list.ids,22);T.ok(#list.rows<=5,"saved entries scroll through three visible rows and two overscan rows")
+ list:SetPixelOffset(21*list.rowHeight,false);T.eq(list.rows[#list.rows].key,nil,"unused pool rows release their entries")
+ page.favoritesToggle:Fire("OnClick");T.eq(page.favoritesBody:IsShown(),false);T.eq(list.rows[1].key,nil)
+ T.eq(page.rosterCard:GetHeight(),collapsedHeight);T.eq(CardGap(),16)
+ page.favoritesToggle:Fire("OnClick");a:Open("find");a:Open("create");T.eq(page.favoritesExpanded,false,"returning to creation starts with favorites collapsed")
+ -- Native summaries and both factions share the production tooltip and applicant rows.
+ g.listing={activityID=2,name="Listing",requiredItemLevel=300}
+ local one={name="Alliance-Away",nameKey="Alliance-Away",class="MAGE",assignedRole="DAMAGER",factionGroup=1,applicantID=91,dungeonScores={current={name="Current dungeon",level=18,timed=true},best={name="Best dungeon",level=19,timed=false}}}
+ local two={name="Horde-Away",nameKey="Horde-Away",class="WARRIOR",assignedRole="TANK",factionGroup=0}
+ g.applicants[91]={id=91,status="applied",activityID=2,members={one,two}};g:Notify("listing");g:Notify("applicants")
+ local batch=page.batchPool[1];T.ok(batch.people[1].faction.texture:find("faction%-alliance"));T.ok(batch.people[2].faction.texture:find("faction%-horde"))
+ local rarity=C_ChallengeMode.GetKeystoneLevelRarityColor;local colorReads=0
+ C_ChallengeMode.GetKeystoneLevelRarityColor=function(level)
+  colorReads=colorReads+1
+  return level==18 and {r=.64,g=.21,b=.93} or {r=1,g=.5,b=0}
+ end
+ u.Tooltip:ShowPlayer(batch.people[1],one)
+ local tip=u.Tooltip.interactive
+ T.eq(select(2,tip.title:GetFont()),16);T.eq(tip.dungeonRows[1].keyLevel:GetText(),"+18");T.eq(tip.dungeonRows[2].status:GetText(),"未限时");T.ok(tip.playerFaction:IsShown())
+ T.eq(tip.dungeonRows[1].label:GetText(),"当前");T.eq(tip.dungeonRows[2].label:GetText(),"最佳")
+ T.same(tip.dungeonRows[1].keyLevel.color,{.64,.21,.93});T.same(tip.dungeonRows[2].keyLevel.color,{1,.5,0},"both levels use native keystone rarity colors")
+ one.dungeonScores.current.timed=false;u.Tooltip:ShowPlayer(batch.people[1],one)
+ T.eq(tip.dungeonRows[1].status:GetText(),"未限时");T.same(tip.dungeonRows[1].keyLevel.color,{.64,.21,.93},"overtime changes status, not level rarity")
+ T.eq(colorReads,2,"unchanged levels reuse each row's applied color")
+ one.dungeonScores.current.level=19;u.Tooltip:ShowPlayer(batch.people[1],one)
+ T.same(tip.dungeonRows[1].keyLevel.color,{1,.5,0},"a recycled level row refreshes its native color");T.eq(colorReads,3)
+ C_ChallengeMode.GetKeystoneLevelRarityColor=rarity
+ u.Tooltip:Hide();u.Tooltip:ShowGroup(page.frame,{name="Party",numMembers=2,maxNumPlayers=5,details={members={one,two}}})
+ T.eq(select(2,tip.memberButtons[1].name:GetFont()),14);T.ok(tip.memberButtons[1].faction:IsShown());T.ok(tip.memberButtons[2].faction:IsShown())
+ two.factionGroup=nil;g:Notify("applicants");T.eq(batch.people[2].faction:IsShown(),false,"reused rows clear a missing faction")
+ u:Hide(true)
+end
+-- Applicant detail scope follows its recruitment activity, and personal markers
+-- share the full identity block's center instead of sitting below the portrait.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("zhCN")
+ local a,u,g=fresh.A,fresh.U,fresh.G
+ a.db.reduceMotion=true
+ local person={applicantID=81,applicantIndex=1,name="RaidGuest-Away",nameKey="RaidGuest-Away",class="MAGE",localizedClass="法师",specName="冰霜",assignedRole="DAMAGER",factionGroup=1,itemLevel=324,dungeonScore=0,subgroup=1}
+ local app={id=81,status="applied",activityID=1,members={person}}
+ g.listing={activityID=1,name="Raid recruitment"};g.applicants[81]=app
+ person.dungeonScores={current={name="Cached dungeon",level=18,timed=true}}
+ local dungeonReads=0
+ g.GetApplicantDungeonScores=function(_,member) dungeonReads=dungeonReads+1;return member.dungeonScores end
+ a:Open("create")
+ local page,tip=u.pages.create,u.Tooltip
+ local row=page.batchPool[1].people[1]
+ page.batchScroll.mouseOver=true;row.tooltipArea:Fire("OnEnter")
+ local view=tip.interactive
+ T.eq(tip.member,person,"the actual applicant identity hover opens its details")
+ T.eq(view.metrics[1].value:GetText(),"324");T.ok(view.metrics[1].value:IsShown())
+ T.eq(view.metrics[2].title:IsShown(),false);T.eq(view.metrics[2].value:IsShown(),false,"raid applicant details have no rating or unrated placeholder")
+ T.eq(dungeonReads,0,"raid applicants never request Mythic+ detail data")
+ T.eq(view.dungeonTitle:IsShown(),false);T.eq(view.dungeonEmpty:IsShown(),false,"raid details do not retain an empty Mythic+ section")
+ app.activityID=2;g:Notify("applicants")
+ T.ok(view.metrics[2].value:IsShown(),"an open applicant detail follows an activity change without reopening")
+ app.activityID=1;g:Notify("applicants");T.eq(view.metrics[2].value:IsShown(),false)
+ dungeonReads=0
+ T.eq(select(2,view.title:GetFont()),16);T.eq(view.icon:GetWidth(),36)
+ T.eq(view.playerRole:GetWidth(),16);T.eq(view.playerFaction:GetWidth(),16)
+ local function CheckIdentity()
+  local title,summary,role,faction={view.title:GetPoint()},{view.summary:GetPoint()},{view.playerRole:GetPoint()},{view.playerFaction:GetPoint()}
+  local bottom=summary[#summary]-math.max(20,view.summary:GetStringHeight())
+  T.eq(role[1],"RIGHT");T.eq(role[2],view.canvas);T.eq(role[3],"TOPRIGHT")
+  T.near(role[5],(title[#title]+bottom)/2,.001,"personal markers center on the complete name, realm and specialization block")
+  T.eq(faction[2],view.playerRole);T.eq(faction[3],"LEFT");T.eq(faction[5],0)
+  T.eq(view.subtitle:GetWidth(),view.title:GetWidth());T.eq(view.summary:GetWidth(),view.title:GetWidth())
+  T.ok(48+view.title:GetWidth()+12<=view.canvas:GetWidth()-38,"all identity text leaves room for both right-side markers")
+ end
+ CheckIdentity()
+ local baseHeight=view:GetHeight()
+ local name,key,spec=person.name,person.nameKey,person.specName
+ local longName,longRealm=string.rep("长名字",8),string.rep("长服务器",6)
+ person.name=longName.."-"..longRealm;person.nameKey=person.name;person.specName=string.rep("专精",10)
+ tip:Hide();tip:ShowPlayer(row,person)
+ T.eq(view.title:GetText(),longName);T.eq(view.subtitle:GetText(),longRealm)
+ T.ok(view.title:GetStringHeight()>22);T.ok(view.subtitle:GetStringHeight()>20);T.ok(view:GetHeight()>baseHeight,"long identity fields grow the detail without overlap")
+ CheckIdentity()
+ person.name,person.nameKey,person.specName=name,key,spec
+ tip:Hide();person.applicantID=nil;tip:ShowApplicants(row,app);view.memberButtons[1]:Fire("OnClick")
+ T.eq(view.metrics[2].value:IsShown(),false,"the applicant-list source also supplies its raid activity")
+ T.eq(dungeonReads,0);T.ok(view.back:IsShown());view.back:Fire("OnClick");T.eq(tip.sourceApp,app)
+ person.applicantID=81;app.activityID=2
+ tip:Hide();tip:ShowPlayer(row,person)
+ T.ok(view.metrics[2].value:IsShown());T.eq(view.metrics[2].value:GetText(),"暂无分数","dungeon zero rating stays visible even while the global listing is a raid")
+ T.eq(dungeonReads,1);T.ok(view.dungeonTitle:IsShown())
+ app.activityID=1;tip:Hide();tip:ShowPlayer(row,person)
+ T.eq(dungeonReads,1);T.eq(view.metrics[2].value:IsShown(),false)
+ for _,record in ipairs(view.dungeonRows) do T.eq(record:IsShown(),false,"raid rendering clears previously visible dungeon rows") end
+ tip:Hide();tip:ShowRoster(page.groupSummary,{person});view.memberButtons[1]:Fire("OnClick")
+ T.eq(tip.sourceRoster[1],person);T.ok(view.metrics[2].value:IsShown(),"the current-roster source retains personal rating during raid recruitment")
+ local inRaid=IsInRaid;_G.IsInRaid=function() return true end
+ tip:Hide();person.applicantID=nil;tip:ShowPlayer(row,person)
+ T.ok(view.metrics[2].value:IsShown(),"merely being in a raid never hides a general player's rating")
+ _G.IsInRaid=inRaid
+ local getActivity=g.Catalog.GetActivity
+ g.Catalog.GetActivity=function(self,id) if id==900 then return {id=900,categoryID=4,isPvpActivity=true,isRatedPvpActivity=true} end;return getActivity(self,id) end
+ person.applicantID=81;app.activityID=900;person.dungeonScores=nil;person.ratingKind="pvp";person.rating=1800;person.pvpRatingInfo={activityName="3v3"}
+ tip:Hide();tip:ShowPlayer(row,person)
+ T.eq(view.metrics[1].title:GetText(),"PvP 装等");T.eq(view.metrics[2].title:GetText(),"3v3");T.eq(view.metrics[2].value:GetText(),"1800")
+ T.ok(view.metrics[2].value:IsShown(),"PvP applicant rating is restored after raid details")
+ person.assignedRole=nil;person.factionGroup=nil;tip:Hide();tip:ShowPlayer(row,person)
+ T.eq(view.playerRole:IsShown(),false);T.eq(view.playerFaction:IsShown(),false)
+ T.eq(view.title:GetWidth(),view.canvas:GetWidth()-48,"unknown markers leave the full identity text width")
+ tip:Hide();g.Catalog.GetActivity=getActivity;u:Hide(true)
+end
+-- The real Listing service must survive delayed native publication, delisting,
+-- and another publish; a mocked UI Publish method cannot cover this contract.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("zhCN")
+ local a,u,g=fresh.A,fresh.U,fresh.G
+ a.db.reduceMotion=true
+ local active,pending
+ local creates,titleChecks=0,0
+ g.Game={RefreshSubscriptions=function() end}
+ dofile("addon/LycheeGroup_Group/Listing.lua")
+ function g:GetListing() return self.Listing:GetListing() end
+ function g:Publish(data) return self.Listing:Publish(data) end
+ function g:Update(data) return self.Listing:Update(data) end
+ function g:RemoveListing() return self.Listing:RemoveListing() end
+ C_LFGList.HasActiveEntryInfo=function() return active~=nil end
+ C_LFGList.GetActiveEntryInfo=function() return active end
+ local function Stage(data)
+  pending={activityIDs=data.activityIDs,name=LFGListFrame.EntryCreation.Name:GetText(),comment=LFGListFrame.EntryCreation.Description.EditBox:GetText(),requiredItemLevel=data.requiredItemLevel,requiredDungeonScore=data.requiredDungeonScore,requiredPvpRating=data.requiredPvpRating,autoAccept=data.isAutoAccept,privateGroup=data.isPrivateGroup,isCrossFactionListing=data.isCrossFactionListing,generalPlaystyle=data.generalPlaystyle,playstyle=data.playstyle}
+  return true
+ end
+ C_LFGList.CreateListing=function(data) creates=creates+1;return Stage(data) end
+ C_LFGList.UpdateListing=Stage
+ C_LFGList.RemoveListing=function() active=nil end
+ C_LFGList.CopyActiveEntryInfoToCreationFields=function()
+  LFGListFrame.EntryCreation.Name:UserType(active.name);LFGListFrame.EntryCreation.Description.EditBox:UserType(active.comment)
+ end
+ C_LFGList.DoesEntryTitleMatchPrebuiltTitle=function()
+  titleChecks=titleChecks+1;error("Saved settings must not inspect protected listing titles")
+ end
+ a:Open("create")
+ local page=u.pages.create;local native=LFGListFrame.EntryCreation
+ page.favoritesToggle:Fire("OnClick")
+ native.Name:UserType("First listing");native.Description.EditBox:UserType("First description")
+ local ok,err=pcall(page.Submit,page)
+ T.ok(ok,"a successful asynchronous create must finish Submit without throwing: "..tostring(err))
+ T.eq(page.submitting,nil);T.eq(creates,1);T.eq(titleChecks,0,"no title comparison runs before a native entry exists")
+ T.eq(#g.Presets:Get(),0,"publishing does not automatically save settings")
+ active,pending=pending,nil;g.Listing:OnEntryUpdate(true)
+ T.eq(#g.Presets:Get(),0);T.eq(page.favoritesEmpty:IsShown(),true,"native confirmation leaves favorites unchanged")
+ T.eq(page.manage:IsShown(),true)
+ local readEntry=C_LFGList.GetActiveEntryInfo;local confirmed=g:GetListing()
+ C_LFGList.GetActiveEntryInfo=function() return nil end
+ g.Listing:OnEntryUpdate(false)
+ T.eq(page.manage:IsShown(),true,"an active listing with temporarily unavailable details stays in management")
+ T.eq(g:GetListing(),confirmed,"retain the confirmed entry until native details return")
+ C_LFGList.GetActiveEntryInfo=readEntry;g.Listing:OnEntryUpdate(false)
+ page.editListing:Fire("OnClick");page.ilvl.box:SetText("321");page.favorite:Fire("OnClick")
+ T.eq(#page.favoritesList.ids,1,"the star saves the current editing requirements")
+ page:Submit()
+ active,pending=pending,nil;g.Listing:OnEntryUpdate(false)
+ T.eq(g.Presets:Get()[1].requiredItemLevel,321);T.eq(#g.Presets:Get(),1,"delayed updates do not add automatic history")
+ page.cancelListing:Fire("OnClick");g.Listing:OnEntryUpdate(false)
+ T.eq(page.formFrame:IsShown(),true);T.eq(page.publish:IsEnabled(),true,"delisting restores an enabled publish button")
+ T.eq(page.submitting,nil,"the previous request does not lock a new listing")
+ native.Name:UserType("Second listing");native.Description.EditBox:UserType("Second description")
+ page.publish:Fire("OnClick");T.eq(creates,2,"the actual publish button can submit a new group after delisting")
+ active,pending=pending,nil;g.Listing:OnEntryUpdate(true)
+ T.eq(g.Presets:Get()[1].requiredItemLevel,321);T.eq(#g.Presets:Get(),1,"republishing changes no favorites")
+ T.eq(titleChecks,0,"creation and update confirmations no longer call native title comparison")
+ T.eq(g.Presets:Get()[1].name,nil);T.eq(g.Presets:Get()[1].comment,nil)
+ u:Hide(true)
+end
+-- Context actions use the clicked identity and the current player's faction.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("zhCN")
+ local a,u,g,base=fresh.A,fresh.U,fresh.G,fresh.base
+ a.db.reduceMotion=true
+ g.db.prefs.find={category="seasonDungeon",categoryPrefs={seasonDungeon={selected=true,difficultyID=8}}}
+ for id=1,2 do g.records[id]={id=id,activityID=2,activity=g.Catalog:GetActivity(2),categoryID=2,name="Group "..id,leaderName="Leader"..id.."-Away",leaderKey="Leader"..id.."-Away",leaderFactionGroup=1,numMembers=1,maxNumPlayers=5,age=10} end
+ g.apps={{id=2,status="applied",categoryID=2,result=g.records[2],expiresAt=GetTime()+300}}
+ local sendTell,tells=ChatFrame_SendTell,{}
+ ChatFrame_SendTell=function(name) tells[#tells+1]=name end
+ local function Item(value)
+  local menu=u.context.menu
+  for i,item in ipairs(menu.items) do if item.value==value then return item,menu.list.rows[i] end end
+  error("missing context action: "..value)
+ end
+ local function Choose(value)
+  local _,row=Item(value);row:Fire("OnMouseDown","LeftButton");row:Fire("OnClick","LeftButton")
+ end
+ a:Open("find")
+ local page=u.pages.find
+ T.eq(page.results.rows[1].key,1);T.eq(page.appList.rows[1].key,2)
+ for _,entry in ipairs({{list=page.results,id=1},{list=page.appList,id=2}}) do
+  entry.list.clip.mouseOver=true
+  for _,case in ipairs({{"Alliance",1,true},{"Alliance",0,false},{"Alliance",false,false},{"Horde",0,true},{"Horde",1,false},{"Neutral",1,false}}) do
+   base.SetUnit("player",{faction=case[1]});g.records[entry.id].leaderFactionGroup=case[2] or nil
+   local row=entry.list.rows[1];row:Fire("OnMouseDown","RightButton");row:Fire("OnClick","RightButton")
+   local item,action=Item("whisper")
+   T.eq(item.disabled,not case[3],"search results and saved applications use both factions")
+   T.eq(action:IsEnabled(),case[3],"unavailable whispers are visibly disabled menu rows")
+   local before=#tells;Choose("whisper")
+   T.eq(#tells,before+(case[3] and 1 or 0),"disabled faction actions cannot open a whisper")
+   if case[3] then T.eq(tells[#tells],"Leader"..entry.id.."-Away") end
+  end
+ end
+ base.SetUnit("player",{faction="Alliance"});g.records[1].leaderFactionGroup=1
+ page:OpenResultMenu(page.results.rows[1],1)
+ g.records[1].leaderFactionGroup=0
+ local before=#tells;Choose("whisper");T.eq(#tells,before,"a faction update before selection is honored")
+ page:OpenResultMenu(page.results.rows[1],1);Choose("copy")
+ T.eq(u.copyDialog.value,"Leader1-Away");T.eq(u.copyDialog.fieldLabel:GetText(),"完整名称")
+ u:CloseModal()
+ g.listing={activityID=2,name="Recruiting",comment=""}
+ local one={name="One-Away",nameKey="One-Away",class="WARRIOR",assignedRole="TANK",factionGroup=1}
+ local two={name="Two-Away",nameKey="Two-Away",class="PALADIN",specID=66,assignedRole="HEALER",factionGroup=0}
+ g.applicants[70]={id=70,status="applied",displayOrderID=1,members={one,two}}
+ a:Open("create")
+ local create=u.pages.create;local row=create.batchPool[1].people[2]
+ u:CloseMenu();row:Fire("OnClick","RightButton")
+ T.eq(u.context.menu:IsShown(),false,"clipped applicant rows cannot open a menu")
+ create.batchScroll.mouseOver=true;row:Fire("OnClick","LeftButton")
+ T.eq(u.context.menu:IsShown(),false,"applicant left clicks retain their existing behavior")
+ row:Fire("OnClick","RightButton")
+ local menu=u.context.menu
+ T.eq(#menu.items,3);T.eq(menu.items[1].label,"密聊");T.eq(menu.items[2].label,"复制名称");T.eq(menu.items[3].label,"拉黑玩家")
+ T.eq(Item("whisper").disabled,true);T.eq(Item("copy").disabled,false);T.eq(Item("block").disabled,false)
+ Choose("whisper");T.eq(#tells,before)
+ Choose("copy");T.eq(u.copyDialog.value,"Two-Away","copy targets the clicked second member, including realm")
+ T.eq(u.copyDialog.fieldLabel:GetText(),"完整名称");u:CloseModal()
+ two.factionGroup=1;g:Notify("applicants");row:Fire("OnClick","RightButton");Choose("whisper")
+ T.eq(tells[#tells],"Two-Away","whisper targets the clicked member rather than the batch leader")
+ two.factionGroup=nil;g:Notify("applicants");row:Fire("OnClick","RightButton")
+ T.eq(Item("whisper").disabled,true,"unknown applicant faction is not treated as the player's faction")
+ two.factionGroup=1;g:Notify("applicants")
+ T.eq(menu:IsShown(),false,"updating applicant data closes the old menu")
+ row:Fire("OnClick","RightButton");create:SetBatchOffset(1,false)
+ T.eq(menu:IsShown(),false,"scrolling closes the applicant menu even within the same pooled batch")
+ row:Fire("OnClick","RightButton");g.applicants[70]=nil;g:Notify("applicants")
+ T.eq(menu:IsShown(),false,"removing the applicant releases its open menu")
+ g.applicants[70]={id=70,status="applied",displayOrderID=1,members={one,two}};g:Notify("applicants")
+ u.preview={provider=g};row:Fire("OnClick","RightButton")
+ T.eq(Item("whisper").disabled,true);T.eq(Item("block").disabled,true);T.eq(Item("copy").disabled,false,"preview names remain copyable without enabling social actions")
+ u:CloseMenu();u.preview=nil
+ row:Fire("OnClick","RightButton");Choose("block")
+ T.eq(u.page,"notes");T.eq(u.pages.notes.eName.box:GetText(),"Two-Away")
+ T.eq(u.pages.notes.typeButtons.caution.active,true,"block opens the existing caution editor for the clicked member")
+ T.eq(a.Notes:Find("Two-Away"),nil,"opening the block editor does not save an unconfirmed note")
+ u:Hide(true);ChatFrame_SendTell=sendTell
 end
 -- A fresh UI instance restores the saved seasonal single selection before any
 -- new search; this also covers the English all-instances label.
@@ -1539,11 +2011,359 @@ end
 for _,choice in ipairs({{groupKeys={[20]=true},difficultyID=8},{selected=true,difficultyID=8}}) do
  local fresh=dofile("tests/ui_fixture.lua")("zhCN")
  fresh.G.db.prefs.find={category="seasonDungeon",categoryPrefs={seasonDungeon=choice}}
+ local search,calls=fresh.G.Search.Search,0
+ fresh.G.Search.Search=function(self,...) calls=calls+1;return search(self,...) end
  fresh.A:Open("find")
  local page=fresh.U.pages.find
  T.eq(fresh.G.searchText,"","restoring a confirmed collection or all-instances choice starts browsing")
  T.ok(page.refresh:IsEnabled(),"restored selection enables refresh")
  T.ok(page.emptyText:GetText()~="请选择副本","restored selection does not ask for another choice")
  T.same(fresh.G.filters.groupKeys,choice.groupKeys)
+ page:SelectCategory("seasonDungeon")
+ T.eq(calls,1,"reopening the restored selection does not send another search")
+ local row;for _,item in ipairs(page.activities.rows) do if item.key==20 then row=item;break end end
+ T.eq(row.multiSelect:IsShown(),choice.groupKeys~=nil,"after reload the selector visibly restores the confirmed multi-selection")
+ T.eq(row.multiSelect:GetChecked(),choice.groupKeys~=nil)
+ T.eq(page.pickerConfirm:IsShown(),choice.groupKeys~=nil,"a restored collection can be edited and confirmed immediately")
  fresh.U:Hide(true)
+end
+-- The role summary owns a live, complete roster and season-raid coverage.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("zhCN")
+ local a,u,g=fresh.A,fresh.U,fresh.G
+ a.db.reduceMotion=true
+ local members={}
+ for i=1,40 do members[i]={guid="Roster-"..i,name="Player"..i.."-Away",nameKey="Player"..i.."-Away",class="WARRIOR",assignedRole=i==1 and "TANK" or "DAMAGER",subgroup=math.ceil(i/5),isLeader=i==40} end
+ g.GetRoster=function() return members end
+ a:Open("create")
+ local page,tip=u.pages.create,u.Tooltip
+ T.eq(page.buffArea,nil,"non-raid creation builds no buff controls")
+ T.ok(page.rosterList:IsShown(),"a small-group activity uses its inline list even before the roster shrinks")
+ page:UsePreset({activityID=1})
+ page.groupSummary:Fire("OnEnter")
+ local view=tip.interactive
+ T.eq(view:GetWidth(),752);T.eq(#view.memberButtons,40);T.ok(view.memberButtons[40]:IsShown())
+ T.eq(view.footer:GetText(),"","current-roster tooltips have no interaction instructions")
+ do
+  local last=view.memberButtons[40];local point={last:GetPoint()}
+  T.near(view.canvas:GetHeight(),-point[#point]+last:GetHeight(),.001,"grouped rosters end at the final member without an empty instruction area")
+ end
+ T.eq(view.memberButtons[1].member,members[1],"the roster tooltip starts with the first actual member of subgroup one")
+ T.eq(view.memberButtons[40].member,members[40]);T.ok(view.memberButtons[40].leaderIcon:IsShown(),"the leader crown remains on its real subgroup member")
+ for group=1,8 do T.eq(view.rosterGroupTitles[group]:GetText(),"小队 "..group);T.ok(view.rosterGroupTitles[group]:IsShown()) end
+ members[5].subgroup,members[6].subgroup=2,1;g:Notify("roster")
+ T.eq(view.memberButtons[5].member,members[6]);T.eq(view.memberButtons[6].member,members[5],"subgroup moves preserve each group's real roster order")
+ members[5].subgroup,members[6].subgroup=1,2;g:Notify("roster")
+ T.ok(view.scrollbar:IsShown());view.scrollbar:SetValue(64);g:Notify("roster")
+ T.eq(view.scroll:GetVerticalScroll(),64,"a roster update preserves the open list position")
+ view.memberButtons[1]:Fire("OnClick");T.eq(tip.rosterMemberID,"Roster-1")
+ local selected=members[1]
+ selected.guid="Roster-new";selected.name="Replacement-Away";selected.nameKey=selected.name
+ members[3]={guid="Roster-1",name="Player1-Away",nameKey="Player1-Away",class="PRIEST",assignedRole="HEALER",subgroup=1,dungeonScore=3200}
+ g:Notify("roster");T.eq(tip.member,members[3],"reused roster slots retain the selected player by GUID")
+ T.eq(view.metrics[2].value:GetText(),"3200")
+ view.wcl:Fire("OnClick");T.eq(tip.owner,nil)
+ members[3].dungeonScore=3300;g:Notify("roster");u.copyDialog:Hide()
+ T.eq(tip.member,members[3]);T.eq(view.metrics[2].value:GetText(),"3300","WCL copy closes onto the latest member snapshot")
+ table.remove(members,3);g:Notify("roster")
+ T.eq(tip.member,nil);T.eq(tip.sourceRoster,members,"a departed selected player returns to the current list")
+ do
+  tip:Hide();local all=members;members={all[1],all[2],all[3],all[4]}
+  local first=members[1];local name,key=first.name,first.nameKey
+  first.name=string.rep("长名字",8).."-Away";first.nameKey=first.name;first.factionGroup=1
+  g:Notify("roster");page.groupSummary:Fire("OnEnter")
+  T.eq(view:GetWidth(),424,"a normal four-player party keeps one compact column")
+  for i=1,4 do T.eq(view.memberButtons[i].member,members[i],"party members retain actual unit order") end
+  local row=view.memberButtons[1];local role,faction={row.role:GetPoint()},{row.faction:GetPoint()}
+  T.ok(row:GetHeight()>44,"complete long names grow a compact member cell")
+  T.eq((row.name:GetText():gsub("|c%x%x%x%x%x%x%x%x",""):gsub("|r","")),first.name)
+  T.eq(role[2],row.icon);T.eq(role[3],"RIGHT");T.eq(role[5],0,"party roles remain centered on the portrait after name wrapping")
+  T.eq(faction[2],row.role);T.eq(faction[5],0,"party faction shares the role and portrait center")
+  T.ok(row.name:GetWidth()+38+6<=row:GetWidth()-6-28,"both identity lines leave space for the faction and role")
+  T.ok(view.rosterGroupTitles[1]:IsShown(),"a raid activity keeps subgroup headings even with only four current members")
+  for subgroup,title in pairs(view.rosterGroupTitles) do if subgroup~=1 then T.eq(title:IsShown(),false,"empty raid subgroup headings are hidden") end end
+  tip:Hide();first.name,first.nameKey=name,key;members=all;g:Notify("roster")
+ end
+ tip:Hide();members={members[1]};g:Notify("roster");page.groupSummary:Fire("OnEnter")
+ T.eq(view:GetWidth(),424);T.eq(view.memberButtons[2]:IsShown(),false)
+ do
+  local last=view.memberButtons[1];local point={last:GetPoint()}
+  T.near(view.canvas:GetHeight(),-point[#point]+last:GetHeight(),.001,"a party roster reserves no footer height")
+  T.near(view:GetHeight()-view.canvas:GetHeight(),32,.001,"the ordinary sixteen-pixel top and bottom surface padding remains")
+ end
+ tip:Hide()
+ page:UsePreset({activityID=1});T.ok(page.buffArea:IsShown());T.eq(page.buffReport.maxGroup,6)
+ T.eq(#page.buffReport.missing,12)
+ local raid=g.Catalog:GetActivity(1);raid.difficultyID=16;page:RefreshPicker()
+ T.eq(page.buffReport.maxGroup,4,"difficulty changes update coverage without a roster event")
+ for i=1,6 do g.Presets:ToggleFavorite({activityID=1,requiredItemLevel=300+i}) end
+ page.favoritesToggle:Fire("OnClick")
+ T.ok(page.buffList.slider:IsShown(),"expanded favorites leave the remaining buffs in a bounded scroll area")
+ local p={page.rosterCard:GetPoint()}
+ T.ok(-p[#p]+page.rosterCard:GetHeight()<=u.Theme.contentHeight,"expanded favorites leave the roster card inside the rail")
+ members={}
+ for _,class in ipairs({"WARRIOR","PALADIN","HUNTER","ROGUE","ROGUE","PRIEST","DEATHKNIGHT","SHAMAN","MAGE","WARLOCK","MONK","DRUID","DEMONHUNTER","EVOKER"}) do members[#members+1]={name=class,nameKey=class.."-Away",class=class,subgroup=1} end
+ g:Notify("roster");T.ok(page.buffComplete:IsShown());T.eq(page.buffList:IsShown(),false)
+ table.remove(members,5);g:Notify("roster")
+ T.eq(page.buffList.rows[1].cells[1].label:GetText(),"毒药仅1人")
+ members[#members+1]={name="Unknown",nameKey="Unknown-Away",subgroup=1};g:Notify("roster")
+ T.eq(page.buffTitle:GetText(),"待确认增益")
+ page:UsePreset({activityID=2});T.eq(page.buffArea:IsShown(),false);T.ok(page.rosterList:IsShown());T.eq(page.groupSummary:IsShown(),false)
+ g.listing={activityID=1,name="Raid listing"};g:Notify("listing");T.ok(page.buffArea:IsShown(),"managed listings use their own raid activity")
+ local matches=g.Catalog.Matches
+ g.Catalog.Matches=function(self,activity,category,...) if category=="seasonRaid" then return false end;return matches(self,activity,category,...) end
+ g:Notify("activities");T.eq(page.buffArea:IsShown(),false,"a catalog refresh can remove outdated season coverage")
+ g.Catalog.Matches=matches
+ u:Hide(true);T.eq(page.roster,nil);T.eq(page.buffReport,nil);T.eq(tip.sourceRoster,nil)
+end
+-- Current-roster actions use native group permissions and never filter by faction.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("zhCN")
+ local a,u,g=fresh.A,fresh.U,fresh.G
+ a.db.reduceMotion=true
+ local saved={}
+ local function Stub(key,value) saved[key]={value=_G[key]};_G[key]=value end
+ local state={leader=true,inspect=true}
+ local guids={player="Self-GUID",party1="Cross-GUID"}
+ local tells,removals,inspections={},{},{}
+ Stub("IsInRaid",function() return state.raid==true end)
+ Stub("IsInGroup",function() return true end)
+ Stub("UnitGUID",function(unit) return guids[unit] end)
+ Stub("UnitIsHumanPlayer",function(unit) return guids[unit]~=nil end)
+ Stub("UnitIsConnected",function() return not state.offline end)
+ Stub("UnitCanCooperate",function() return true end)
+ Stub("UnitCanAttack",function() return false end)
+ Stub("UnitIsDeadOrGhost",function() return state.dead==true end)
+ Stub("UnitIsGroupLeader",function(unit) return unit=="player" and state.leader==true or unit=="party1" and state.targetLeader==true end)
+ Stub("UnitIsGroupAssistant",function(unit) return unit=="player" and state.assistant==true or unit=="party1" and state.targetAssistant==true end)
+ Stub("HasLFGRestrictions",function() return state.restricted==true end)
+ Stub("GetInstanceInfo",function() return "Instance",state.kind or "party" end)
+ Stub("IsInActiveWorldPVP",function() return state.worldPvp==true end)
+ Stub("InCombatLockdown",function() return state.combat==true end)
+ Stub("CanInspect",function() return state.inspect==true end)
+ Stub("ChatFrameUtil",{SendTell=function(name) tells[#tells+1]=name end})
+ Stub("InspectUnit",function(unit) inspections[#inspections+1]=unit end)
+ Stub("C_PartyInfo",{
+  ChallengeModeRestrictionsActive=function() return state.challenge==true end,
+  UninviteUnit=function(...) removals[#removals+1]={count=select("#",...),...} end,
+ })
+ local members={
+  {unit="player",guid=guids.player,name="Self",realm="Home",nameKey="Self-Home",class="WARRIOR",assignedRole="TANK",subgroup=1,isSelf=true,factionGroup=1},
+  {unit="party1",guid=guids.party1,name="Cross",realm="Away",nameKey="Cross-Away",class="PRIEST",assignedRole="HEALER",subgroup=1,factionGroup=0},
+ }
+ g.GetRoster=function() return members end
+ a:Open("create")
+ local tip=u.Tooltip
+ local function Open(index)
+  tip:Hide();tip:ShowRoster(u.frame,members)
+  local row=tip.interactive.memberButtons[index]
+  row:Fire("OnMouseDown","RightButton");row:Fire("OnMouseUp","RightButton");row:Fire("OnClick","RightButton")
+  T.eq(tip.member,nil,"right-click opens actions instead of personal details")
+  T.ok(tip.pinned);T.ok(u.context.menu:IsShown())
+  return u.context.menu
+ end
+ local menu=Open(2)
+ T.eq(#menu.items,3);T.eq(menu.items[1].label,"私聊");T.eq(menu.items[2].label,"移出队伍");T.eq(menu.items[3].label,"查看角色信息")
+ T.same(menu.items[2].color,u.Theme.accent,"the removal action uses the destructive color")
+ T.eq(menu.items[1].disabled,false,"joined cross-faction players can be whispered")
+ menu.list.rows[1]:Fire("OnClick","LeftButton");T.eq(tells[1],"Cross-Away")
+ menu=Open(2);menu.list.rows[2]:Fire("OnClick","LeftButton")
+ T.eq(removals[1][1],"Cross-Away");T.eq(removals[1].count,3);T.eq(removals[1][3],true,"native removal receives the full name and confirmed hardware action")
+ menu=Open(2);menu.list.rows[3]:Fire("OnClick","LeftButton")
+ T.eq(inspections[1],"party1","character information uses the native InspectUnit entry");T.eq(tip.owner,nil)
+ menu=Open(1);for _,item in ipairs(menu.items) do T.eq(item.disabled,true,"self actions remain unavailable") end
+ state.leader=false;menu=Open(2);T.eq(menu.items[2].disabled,true,"ordinary party members cannot remove players")
+ menu.list.rows[2]:Fire("OnClick","LeftButton");T.eq(#removals,1)
+ state.raid=true;state.assistant=true;menu=Open(2);T.eq(menu.items[2].disabled,false,"raid assistants can remove ordinary members")
+ state.targetLeader=true;menu=Open(2);T.eq(menu.items[2].disabled,true,"assistants cannot remove the raid leader")
+ state.targetLeader=false;state.targetAssistant=true;menu=Open(2);T.eq(menu.items[2].disabled,true,"assistants cannot remove other assistants")
+ state.leader=true;menu=Open(2);T.eq(menu.items[2].disabled,false,"the raid leader can remove an assistant")
+ state.raid=false;state.targetAssistant=false;state.assistant=false;state.challenge=true
+ menu=Open(2);T.eq(menu.items[2].disabled,true,"challenge-mode restrictions disable direct party removal")
+ state.challenge=false;state.leader=false;state.restricted=true
+ menu=Open(2);T.ok(menu.items[2].label:find("投票",1,true));T.eq(menu.items[2].disabled,false,"LFG groups use the native vote-removal path")
+ menu.list.rows[2]:Fire("OnClick","LeftButton");T.eq(#removals,2);T.eq(removals[2][1],"Cross-Away")
+ state.kind="pvp";menu=Open(2);T.eq(menu.items[2].disabled,true,"the LFG vote action respects native PvP restrictions")
+ state.kind=nil;state.restricted=false;state.leader=true;state.combat=true
+ menu=Open(2);T.eq(menu.items[3].disabled,true,"combat disables opening native character inspection")
+ state.combat=false;state.inspect=false;menu=Open(2);T.eq(menu.items[3].disabled,true,"native CanInspect determines target availability")
+ state.inspect=true;state.offline=true;menu=Open(2);T.eq(menu.items[1].disabled,true,"offline players cannot receive a tell")
+ state.offline=false;menu=Open(2);state.leader=false;menu.list.rows[2]:Fire("OnClick","LeftButton")
+ T.eq(#removals,2,"removal rechecks permissions when the selected action runs")
+ state.leader=true;menu=Open(2);guids.party1="Replacement-GUID";menu.list.rows[1]:Fire("OnClick","LeftButton")
+ T.eq(#tells,1,"a reused native unit token cannot act on the replacement player")
+ guids.party1=members[2].guid;menu=Open(2);menu.mouseOver=true
+ tip.outsideClicks:Fire("OnEvent","GLOBAL_MOUSE_DOWN","LeftButton")
+ T.ok(tip.interactive:IsShown(),"moving into the roster's action menu keeps the pinned list open")
+ tip:Hide();T.eq(menu:IsShown(),false,"closing the source roster releases its menu")
+ u:Hide(true)
+ for key,entry in pairs(saved) do _G[key]=entry.value end
+end
+-- Binding capture uses Blizzard's binding map, and scale applies to the whole window.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("zhCN")
+ local a,u,g=fresh.A,fresh.U,fresh.G;a.db.reduceMotion=true
+ local one={guid="Inline-1",name="First-Away",nameKey="First-Away",class="MAGE",assignedRole="DAMAGER",dungeonScore=2500,subgroup=1}
+ local two={guid="Inline-2",name="Second-Away",nameKey="Second-Away",class="PRIEST",assignedRole="HEALER",subgroup=1}
+ local members={one,two};g.GetRoster=function() return members end
+ a:Open("create");local page,tip=u.pages.create,u.Tooltip
+ local list=page.rosterList;list.clip.mouseOver=true
+ list.rows[1].tooltipArea:Fire("OnEnter")
+ T.eq(tip.member,one);T.ok(tip.directPlayer);T.eq(tip.interactive.back:IsShown(),false)
+ members={two,one};one.dungeonScore=2600;g:Notify("roster")
+ T.eq(tip.member,one);T.eq(tip.owner,list.rows[2]);T.eq(tip.interactive.metrics[2].value:GetText(),"2600","inline details retain the same player when roster positions move")
+ tip.interactive.wcl:Fire("OnClick");members={one,two};one.dungeonScore=2700;g:Notify("roster");u.copyDialog:Hide()
+ T.eq(tip.member,one);T.eq(tip.owner,list.rows[1]);T.eq(tip.interactive.metrics[2].value:GetText(),"2700")
+ members={two};g:Notify("roster");T.eq(tip.owner,nil,"a departing inline player closes their details")
+ list.rows[1]:Fire("OnClick","RightButton");T.eq(#u.context.menu.items,3,"inline members use the same roster action menu")
+ u:CloseMenu()
+ g.listing={activityID=1,name="Small raid"};g:Notify("listing")
+ T.ok(page.groupSummary:IsShown());T.eq(list:IsShown(),false);T.eq(list.rows[1].member,nil)
+ page.groupSummary:Fire("OnEnter");T.ok(tip.interactive.rosterGroupTitles[1]:IsShown(),"even a one-person raid activity keeps its group presentation")
+ tip:Hide();g.listing.activityID=2;g:Notify("listing")
+ T.ok(list:IsShown());T.eq(page.groupSummary:IsShown(),false);T.eq(list.rows[1].member,two)
+ u:Hide(true);T.eq(list.rows[1].member,nil,"leaving releases inline roster bindings")
+end
+-- Binding capture uses Blizzard's binding map, and scale applies to the whole window.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("zhCN")
+ local a,u,s=fresh.A,fresh.U,fresh.S
+ a.db.reduceMotion=true
+ SetBinding(";","OPENALLBAGS");SetBinding("M","TOGGLEWORLDMAP")
+ a:Open("settings")
+ local page=u.pages.settings
+ T.eq(page.section,"interface");T.ok(page.frame.events.UPDATE_BINDINGS)
+ T.ok(page.controls.toggleBinding.help:GetText():find("OPENALLBAGS",1,true))
+ page.controls.toggleBinding.widget:Fire("OnClick")
+ local capture=page.controls.toggleBinding.frame
+ T.eq(page.bindingCapture,capture);T.eq(capture.keyboardEnabled,true);T.eq(capture.keyboardPropagation,false)
+ T.eq(u.activeModal,nil,"changing a key captures it directly in the settings row")
+ T.ok(page.controls.toggleBinding.help:GetText():find("Esc",1,true))
+ capture:Fire("OnKeyDown","LCTRL");T.eq(page.bindingCapture,capture)
+ capture:Fire("OnKeyDown","SEMICOLON");T.eq(page.pendingBindingAction,"OPENALLBAGS")
+ T.eq(#s.bindingSaves,0);T.eq(s.bindings[";"],"OPENALLBAGS")
+ T.ok(page.bindingNotice:IsShown());T.eq(page.bindingNotice.close:IsShown(),false)
+ T.ok(page.bindingNotice.text:GetText():find("OPENALLBAGS",1,true))
+ T.ok(page.overwriteBinding:IsShown());T.eq(page.overwriteBinding.label:GetText(),"覆盖")
+ T.eq(select(5,page.panels.interface:GetPoint()),-80-page.bindingNotice:GetHeight()-12,"the existing Notice reserves space above the settings rows")
+ page.cancelBinding:Fire("OnClick")
+ T.eq(page.bindingCapture,nil);T.eq(capture.keyboardEnabled,false);T.eq(capture:GetScript("OnKeyDown"),nil)
+ T.eq(page.bindingNotice:IsShown(),false);T.eq(page.pendingBindingKey,nil);T.eq(#s.bindingSaves,0)
+ page:BeginBindingCapture();capture:Fire("OnKeyDown","SEMICOLON");capture:Fire("OnKeyDown","ESCAPE")
+ T.eq(page.bindingCapture,nil);T.eq(page.bindingNotice:IsShown(),false);T.eq(#s.bindingSaves,0)
+ page:BeginBindingCapture();u:HandleEscape()
+ T.eq(page.bindingCapture,nil);T.ok(u:IsShown(),"Escape cancels row capture before closing the window")
+ page:BeginBindingCapture();s.bindingModifiers.ctrl=true
+ capture:Fire("OnKeyDown","G");s.bindingModifiers.ctrl=nil
+ T.eq(page.bindingCapture,nil);T.eq(capture.keyboardEnabled,false);T.eq(s.bindings["CTRL-G"],a.Bindings.action);T.eq(#s.bindingSaves,1)
+ T.ok(page.controls.toggleBinding.help:GetText():find("CTRL-G",1,true));T.eq(u.modals and u.modals.keybinding,nil)
+ SetBinding("CTRL-G");SetBinding("F",a.Bindings.action);page.frame:Fire("OnEvent","UPDATE_BINDINGS")
+ T.ok(page.controls.toggleBinding.help:GetText():find("F",1,true),"the displayed binding follows native changes")
+ page:BeginBindingCapture();capture:Fire("OnKeyDown","M")
+ T.eq(page.pendingBindingAction,"TOGGLEWORLDMAP");T.eq(s.bindings.M,"TOGGLEWORLDMAP")
+ page.overwriteBinding:Fire("OnClick")
+ T.eq(s.bindings.M,a.Bindings.action);T.eq(s.bindings.F,nil);T.eq(page.bindingCapture,nil);T.eq(page.bindingNotice:IsShown(),false)
+ SetBinding("K","TOGGLEWORLDMAP");page:BeginBindingCapture();capture:Fire("OnKeyDown","K")
+ SetBinding("K","OPENALLBAGS");page.overwriteBinding:Fire("OnClick")
+ T.eq(s.bindings.K,"OPENALLBAGS","a changed conflict must be confirmed again")
+ T.eq(page.pendingBindingAction,"OPENALLBAGS");T.ok(page.bindingNotice.text:GetText():find("OPENALLBAGS",1,true))
+ page.cancelBinding:Fire("OnClick")
+ page:BeginBindingCapture()
+ local inCombat=InCombatLockdown;InCombatLockdown=function() return true end
+ local saves=#s.bindingSaves;page.frame:Fire("OnEvent","PLAYER_REGEN_DISABLED")
+ T.eq(page.bindingCapture,nil);T.eq(capture.keyboardEnabled,false);T.eq(#s.bindingSaves,saves)
+ T.eq(page.frame.events.PLAYER_REGEN_DISABLED,nil);T.eq(page.bindingNotice.text:GetText(),a.L.bindingCombat)
+ T.eq(page.overwriteBinding:IsShown(),false)
+ page:BeginBindingCapture();T.eq(page.bindingCapture,nil);T.eq(#s.bindingSaves,saves)
+ page.cancelBinding:Fire("OnClick")
+ InCombatLockdown=inCombat
+ page:BeginBindingCapture();page:SelectSection("browse")
+ T.eq(page.bindingCapture,nil);T.eq(capture.keyboardEnabled,false);T.eq(page.pendingBindingAction,nil)
+ page:SelectSection("interface");page:BeginBindingCapture();capture:Hide()
+ T.eq(page.bindingCapture,nil);T.eq(capture.keyboardEnabled,false);T.eq(capture:GetScript("OnKeyDown"),nil)
+ capture:Show();page:BeginBindingCapture();u:Navigate("notes")
+ T.eq(page.bindingCapture,nil);T.eq(page.frame.events.PLAYER_REGEN_DISABLED,nil);T.eq(capture.keyboardEnabled,false)
+ u:Navigate("settings")
+ local baseline=math.min(1,(UIParent:GetWidth()-40)/u.Theme.width,(UIParent:GetHeight()-40)/u.Theme.height)
+ local floatingScale=a.db.floatingScale
+ T.near(u.frame:GetScale(),baseline,.00001)
+ local scaleControl=page.controls.uiScale.widget;local scaleSlider=scaleControl.slider
+ T.eq(scaleSlider.kind,"Frame","window scaling does not use the native Slider input path")
+ T.eq(scaleControl.thumb.kind,"Button")
+ local mouseDown=IsMouseButtonDown;local pressed=false
+ IsMouseButtonDown=function(button) return button=="LeftButton" and pressed end
+ local dragScale,dragLeft,dragWidth
+ local function Move(value)
+  s.cursorX=(dragLeft+(value-75)/50*dragWidth)*dragScale
+ end
+ local function BeginAt(value,target)
+  dragScale,dragLeft,dragWidth=scaleSlider:GetEffectiveScale(),scaleSlider:GetLeft(),scaleSlider:GetWidth()
+  pressed=true;Move(value);(target or scaleSlider):Fire("OnMouseDown","LeftButton")
+ end
+ local function Release(target)
+  pressed=false;(target or scaleSlider):Fire("OnMouseUp","LeftButton")
+ end
+ local setScale=u.frame.SetScale;local scaleWrites=0
+ u.frame.SetScale=function(frame,value) scaleWrites=scaleWrites+1;return setScale(frame,value) end
+ BeginAt(105)
+ T.eq(scaleControl.valueLabel:GetText(),"105%","the initial track click only previews its snapped value")
+ Move(110);scaleSlider:Fire("OnUpdate",.016)
+ local getLeft,getEffective=scaleSlider.GetLeft,scaleSlider.GetEffectiveScale
+ scaleSlider.GetLeft=function() error("drag must use its captured track origin") end
+ scaleSlider.GetEffectiveScale=function() error("drag must use its captured effective scale") end
+ Move(107.4);scaleSlider:Fire("OnUpdate",.016)
+ T.eq(scaleControl.valueLabel:GetText(),"110%","small boundary jitter keeps the current five-percent step")
+ Move(106.6);scaleSlider:Fire("OnUpdate",.016);T.eq(scaleControl.valueLabel:GetText(),"105%")
+ Move(115);scaleSlider:Fire("OnUpdate",.016)
+ scaleSlider.GetLeft,scaleSlider.GetEffectiveScale=getLeft,getEffective
+ page:Sync()
+ T.eq(scaleWrites,0,"dragging the scale slider keeps its parent and track stable until release")
+ T.eq(a.db.uiScale,100,"drag samples do not repeatedly save or resize the window")
+ T.eq(scaleSlider:GetValue(),115,"an unrelated settings sync preserves the pending drag position")
+ T.eq(page.controls.uiScale.widget.valueLabel:GetText(),"115%")
+ Release()
+ T.eq(scaleWrites,1,"releasing a scale drag applies its final value once")
+ T.eq(a.db.uiScale,115);T.near(u.frame:GetScale(),baseline*1.15,.00001)
+ T.eq(scaleSlider:GetScript("OnUpdate"),nil,"mouse release removes the drag sampler before applying scale")
+ BeginAt(116);Release()
+ T.eq(scaleWrites,1,"another sample in the same five-percent step does not resize again")
+ BeginAt(115);Move(200);pressed=false;scaleSlider:Fire("OnUpdate",.016)
+ T.eq(a.db.uiScale,125,"release outside the control is detected and clamped without a mouse-up event")
+ T.eq(scaleWrites,2);T.eq(scaleSlider:GetScript("OnUpdate"),nil)
+ BeginAt(75);scaleControl:Hide();pressed=false
+ T.eq(a.db.uiScale,125,"hiding during a drag cancels the preview without resizing inside OnHide")
+ T.eq(scaleControl.valueLabel:GetText(),"125%");T.eq(scaleWrites,2)
+ T.eq(scaleControl.scaleDragging,nil);T.eq(scaleControl.pendingScale,nil);T.eq(scaleSlider:GetScript("OnUpdate"),nil)
+ scaleControl:Show();scaleControl:SetValue(75)
+ T.eq(a.db.uiScale,125,"programmatic control synchronization does not save a setting")
+ page:Sync();T.eq(scaleControl:GetValue(),125)
+ u.frame.SetScale=setScale
+ BeginAt(75);Release()
+ T.eq(a.db.uiScale,75);T.near(u.frame:GetScale(),baseline*.75,.00001)
+ T.near(u.settingsButton:GetEffectiveScale(),u.frame:GetEffectiveScale(),.00001)
+ u.Tooltip:ShowRoster(u.frame,fresh.G:GetRoster());local tip=u.Tooltip.interactive
+ T.near(tip:GetScale(),u.frame:GetEffectiveScale()/UIParent:GetEffectiveScale(),.00001)
+ BeginAt(75,scaleControl.thumb);Move(125);scaleSlider:Fire("OnUpdate",.016);Release(scaleControl.thumb)
+ T.eq(a.db.uiScale,125);T.near(u.frame:GetScale(),baseline*1.25,.00001)
+ T.near(tip:GetScale(),u.frame:GetEffectiveScale()/UIParent:GetEffectiveScale(),.00001)
+ local modal=u:OpenModal("scaleCheck","Test",480,260)
+ T.near(modal.frame:GetEffectiveScale(),u.frame:GetEffectiveScale(),.00001)
+ modal:Close();BeginAt(100);u:Navigate("notes");pressed=false
+ T.eq(scaleControl.scaleDragging,nil);T.eq(scaleSlider:GetScript("OnUpdate"),nil);T.eq(a.db.uiScale,125,"leaving settings clears an unfinished preview")
+ T.eq(page.frame.events.UPDATE_BINDINGS,nil)
+ IsMouseButtonDown=mouseDown
+ T.eq(a.db.floatingScale,floatingScale,"main-window scale leaves the floating window's setting unchanged")
+ u:Navigate("find");local find=u.pages.find;find:SetFiltersOpen(true)
+ local expanded=math.min(1,(UIParent:GetWidth()-40)/(u.Theme.width+280),(UIParent:GetHeight()-40)/u.Theme.height)
+ T.near(u.frame:GetScale(),expanded*1.25,.00001,"opening filters keeps the user's chosen scale")
+ find:SetFiltersOpen(false);T.near(u.frame:GetScale(),baseline*1.25,.00001)
+ find:SetFiltersOpen(true)
+ UIParent:SetSize(1100,800);u.frame:Fire("OnEvent","DISPLAY_SIZE_CHANGED")
+ T.near(u.frame:GetScale(),math.min(1,1060/(u.Theme.width+280),760/u.Theme.height)*1.25,.00001,"screen resizing includes the open filter panel")
+ UIParent:SetSize(1280,860);u:Navigate("settings")
+ baseline=math.min(1,1240/u.Theme.width,820/u.Theme.height)
+ u:Hide(true);a:Open("settings");T.near(u.frame:GetScale(),baseline*1.25,.00001)
+ UIParent:SetSize(1100,800);u.frame:Fire("OnEvent","DISPLAY_SIZE_CHANGED")
+ T.near(u.frame:GetScale(),math.min(1,1060/u.Theme.width,760/u.Theme.height)*1.25,.00001)
+ u:Hide(true)
 end

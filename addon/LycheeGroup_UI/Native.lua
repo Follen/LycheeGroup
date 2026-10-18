@@ -84,6 +84,7 @@ function Native:AcquireCreation(owner,title,description)
  local entry,err=self:Ready();if not entry then return false,err end
  self.owner,self.entry=owner,entry
  local name,desc=entry.Name,entry.Description
+ local descriptionChanged=desc.EditBox:GetScript("OnTextChanged")
  name.selectedCategory,name.selectedActivity=entry.selectedCategory,entry.selectedActivity
  desc.selectedCategory,desc.selectedActivity=entry.selectedCategory,entry.selectedActivity
  local function Lost()
@@ -100,7 +101,10 @@ function Native:AcquireCreation(owner,title,description)
  })
  self.descriptionInput=C.NativeInput(description,desc.EditBox,{
   container=desc,onLost=Lost,
-  scripts={OnTabPressed=function() name:SetFocus() end},
+  scripts={
+   OnTabPressed=function() name:SetFocus() end,
+   OnTextChanged=function(box,userInput) if descriptionChanged then descriptionChanged(box,userInput) end;owner:ValidateForm() end,
+  },
  })
  return true
 end

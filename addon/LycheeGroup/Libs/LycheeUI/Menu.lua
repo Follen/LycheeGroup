@@ -104,5 +104,5 @@ function Library.AttachMenus(UI)
 end
 -- Commit only after all six definition files completed in manifest order.
 Library.version=private.LycheeUILoadVersion
-Library.versionString="1.1.11"
+Library.versionString="1.1.14"
 private.LycheeUILoad,private.LycheeUILoadVersion=nil,nil

@@ -20,13 +20,14 @@ local HEIGHT=T.contentHeight-48
 local LIST_GUTTER=14
 local BODY=MAIN-LIST_GUTTER
 local APP_BODY=MAIN-32-LIST_GUTTER
+local AGE_WIDTH=zh and 64 or 80
 local RESULT_COLUMNS={
- title={x=60,width=BODY-590},leader={x=BODY-495,width=91},
- rating={x=BODY-384,width=58},ilvl={x=BODY-306,width=40},
- members={x=BODY-246,width=138},age={x=BODY-88,width=76},
+ title={x=60,width=172},leader={x=265,width=87},
+ members={x=368,width=138},ilvl={x=522,width=40},rating={x=574,width=60},
+ description={x=650,width=BODY-674-AGE_WIDTH},age={x=BODY-12-AGE_WIDTH,width=AGE_WIDTH},
 }
+local APPLICATION_COLUMNS={title={width=BODY-590},leader={x=BODY-511,width=91}}
 local state={category="seasonDungeon",searchMode="group",apps={},appIDs={},categoryPrefs={},filters={sort="newest"}}
-local countdownKey={}
 local function Category() return UI:GetGroup().Catalog:GetCategory(state.category) end
 local function AllActivitiesLabel(cat)
  if cat.id==2 or cat.id==3 then return Say("全部副本","All instances") end
@@ -86,6 +87,7 @@ local function RosterColumns(roster)
 end
 local function LayoutMembers(row)
  row.membersButton:ClearAllPoints();row.membersButton:SetPoint("LEFT",row.membersX,row.membersExpanded and 11 or 0)
+ row.roster:SetWidth(row.isParty and 110 or 132)
  row.count:SetShown(not row.isParty and row.membersExpanded==true)
 end
 local function BuildMembers(row,x)
@@ -113,6 +115,8 @@ end
 local function RenderResult(row,id)
  local r=Record(id);if not r then return end
  UI:SetText(row.title,r.name or L.unknown)
+ UI:SetText(row.description,r.comment and r.comment~="" and r.comment or "—")
+ UI:Color(row.description,r.comment and r.comment~="" and T.muted or T.dim)
  local signals=""
  if A.db.relations then
   if (r.bnetFriends or 0)>0 then signals=signals.."  "..UI:Hex(T.blue)..L.friendBnet.."|r" end
@@ -126,13 +130,34 @@ local function RenderResult(row,id)
  local leaderClass
  for _,member in ipairs(d.members) do if member.isLeader or r.leaderKey and member.nameKey==r.leaderKey then leaderClass=member.class;break end end
  row.leader:SetTextColor(UI:ClassColor(leaderClass))
- if r.categoryID==3 then
+ if A.GroupPresentation.Result(r).groupMetric=="progress" then
   local progress=UI:ProgressText(r,d)
   UI:SetText(row.score,progress);UI:Color(row.score,progress=="—" and T.dim or T.good)
  else UI:SetScore(row.score,r.leaderRating,r.ratingKind) end
  UI:SetText(row.ilvl,(r.requiredItemLevel or 0)>0 and math.floor(r.requiredItemLevel) or Say("不限","Any"))
  UI:SetText(row.age,UI:AgeText(r.age))
- row.noteDot:SetShown(A.db.noteMarks~=false and HasNote(r)==true);row.noteDot:ClearAllPoints();row.noteDot:SetPoint("LEFT",row,"LEFT",5,0)
+ row.noteDot:SetShown(A.db.noteMarks~=false and HasNote(r)==true);row.noteDot:ClearAllPoints();row.noteDot:SetPoint("TOPRIGHT",row.icon,"TOPRIGHT",3,3)
+end
+local function UpdateApplicationStatus(row,app)
+ local remaining=app.expiresAt and math.max(0,math.ceil(app.expiresAt-GetTime()))
+ local status=app.pendingStatus or app.status
+ UI:SetText(row.status,status=="invited" and Say("已收到邀请","Invited") or app.pendingStatus=="applied" and Say("提交中","Submitting") or status=="applied" and (remaining and remaining>0 and ("%d:%02d"):format(math.floor(remaining/60),remaining%60) or L.states.applied) or L.states[status] or status)
+ UI:Color(row.status,UI:StatusColor(status))
+ return status
+end
+local function StopCountdown()
+ if P.countdown then P.countdown:Cancel();P.countdown=nil end
+end
+local function RefreshApplicationClock()
+ local running=false
+ for _,row in ipairs(P.appList.rows) do
+  local app=row.key and state.apps[row.key]
+  if app then
+   UpdateApplicationStatus(row,app)
+   if app.expiresAt and app.expiresAt>GetTime() and app.status=="applied" then running=true end
+  end
+ end
+ if not running then StopCountdown() end
 end
 local function UpdateApplication(row,id)
  local app=UI:GetGroup():GetApplication(id);local r=app and app.result
@@ -143,10 +168,7 @@ local function UpdateApplication(row,id)
  UI:SetText(row.leader,NameOnly(app.leaderName))
  local d=r and Detail(r);UpdateMembers(row,id,r,d)
  local leaderClass;if d then for _,m in ipairs(d.members) do if m.isLeader or r.leaderKey and m.nameKey==r.leaderKey then leaderClass=m.class;break end end end;row.leader:SetTextColor(UI:ClassColor(leaderClass))
- local remaining=app.expiresAt and math.max(0,math.ceil(app.expiresAt-GetTime()))
- local status=app.pendingStatus or app.status
- UI:SetText(row.status,status=="invited" and Say("已收到邀请","Invited") or app.pendingStatus=="applied" and Say("提交中","Submitting") or status=="applied" and (remaining and remaining>0 and ("%d:%02d"):format(math.floor(remaining/60),remaining%60) or L.states.applied) or L.states[status] or status)
- UI:Color(row.status,UI:StatusColor(status))
+ local status=UpdateApplicationStatus(row,app)
  row.cancel.targetKey=id;row.cancel:SetShown(UI:GetGroup().Applications:CanCancel(id))
  row.cancel.isCancel=true
  UI:SetText(row.cancel.label,status=="invited" and L.accept or L.cancelApplication)
@@ -221,10 +243,10 @@ function P:Build(parent)
  for _,row in ipairs(self.appList.rows) do
   ResultTooltipArea(row,self.appList)
   row.base=C.Panel(row,T.rowAlternate,12);row.base:Hide()
-  row.title:ClearAllPoints();row.title:SetPoint("LEFT",44,0);row.title:SetWidth(RESULT_COLUMNS.title.width);C.SetLineHeight(row.title,T.listTitleLineHeight,true);row.meta:Hide()
+  row.title:ClearAllPoints();row.title:SetPoint("LEFT",44,0);row.title:SetWidth(APPLICATION_COLUMNS.title.width);C.SetLineHeight(row.title,T.listTitleLineHeight,true);row.meta:Hide()
   row.icon=C.Icon(row,32);row.icon:SetPoint("LEFT",0,0)
-  row.leaderIcon=C.Icon(row,12);row.leaderIcon:SetTexture(T.media.."leader.tga");row.leaderIcon:SetPoint("LEFT",RESULT_COLUMNS.leader.x-33,0)
-  row.leader=C.Text(row,"",14,T.muted,RESULT_COLUMNS.leader.width);row.leader:SetPoint("LEFT",RESULT_COLUMNS.leader.x-16,0);C.SetLineHeight(row.leader,20,true);row.leader:SetWordWrap(false)
+  row.leaderIcon=C.Icon(row,12);row.leaderIcon:SetTexture(T.media.."leader.tga");row.leaderIcon:SetPoint("LEFT",APPLICATION_COLUMNS.leader.x-17,0)
+  row.leader=C.Text(row,"",14,T.muted,APPLICATION_COLUMNS.leader.width);row.leader:SetPoint("LEFT",APPLICATION_COLUMNS.leader.x,0);C.SetLineHeight(row.leader,20,true);row.leader:SetWordWrap(false)
   BuildMembers(row,APP_BODY-350)
   row.status=C.Text(row,"",14,T.dim,108);row.status:SetPoint("LEFT",APP_BODY-188,0);C.SetLineHeight(row.status,20,true);row.status:SetJustifyH("CENTER")
   row.cancel=C.Button(row,L.cancelApplication,60,function(b)
@@ -238,10 +260,10 @@ function P:Build(parent)
  self.context=C.Text(main,"",20,T.text,MAIN-180)
  self.resultCount=C.Text(main,"",14,T.dim,132);C.SetLineHeight(self.context,28,true);C.SetLineHeight(self.resultCount,20,true);self.resultCount:SetJustifyH("LEFT")
  self.resultsHeader=CreateFrame("Frame",nil,main);self.resultsHeader:SetSize(BODY,20);self.resultHeadings={}
- for _,entry in ipairs({{"title",Say("队伍","Group")},{"leader",Say("队长","Leader")},{"rating",Say("评分","Score")},{"ilvl",Say("装等","iLvl")},{"members",Say("成员","Members")},{"age",Say("发布","Posted")}}) do
+ for _,entry in ipairs({{"title",Say("队伍","Group")},{"leader",Say("队长","Leader")},{"members",Say("成员","Members")},{"ilvl",Say("装等","iLvl")},{"rating",Say("评分","Score")},{"description",Say("描述","Description")},{"age",Say("发布","Posted")}}) do
   local key,label=entry[1],entry[2];local column=RESULT_COLUMNS[key]
   local text=C.Text(self.resultsHeader,label,14,T.dim,column.width);C.SetLineHeight(text,20,true);text:SetPoint("TOPLEFT",key=="title" and 12 or column.x,0);text:SetWordWrap(false)
-  text:SetJustifyH((key=="title" or key=="leader") and "LEFT" or key=="age" and "RIGHT" or "CENTER");self.resultHeadings[key]=text
+  text:SetJustifyH((key=="title" or key=="description" or key=="leader") and "LEFT" or key=="age" and "RIGHT" or "CENTER");self.resultHeadings[key]=text
  end
  self.results=C.List(main,MAIN,HEIGHT-180,72,function(id,button,row) P:OnResultSelect(id,button,row) end)
  self.results:SetGutter(LIST_GUTTER);self.results.tooltipFraction=.25
@@ -250,6 +272,7 @@ function P:Build(parent)
   row.base=C.Panel(row,T.rowAlternate,12);row.base:Hide()
   row.title:ClearAllPoints();row.title:SetPoint("TOPLEFT",RESULT_COLUMNS.title.x,-12);row.title:SetWidth(RESULT_COLUMNS.title.width);row.title:SetFont(T.font,T.listTitleSize,"");C.SetLineHeight(row.title,T.listTitleLineHeight,true)
   row.meta:ClearAllPoints();row.meta:SetPoint("TOPLEFT",RESULT_COLUMNS.title.x,-40);row.meta:SetWidth(RESULT_COLUMNS.title.width);C.SetLineHeight(row.meta,20,true)
+  row.description=C.Text(row,"",14,T.muted,RESULT_COLUMNS.description.width,20);row.description:SetPoint("LEFT",RESULT_COLUMNS.description.x,0);row.description:SetHeight(40);row.description:SetMaxLines(2);row.description:SetWordWrap(true);row.description:SetJustifyV("MIDDLE")
   row.leaderIcon=C.Icon(row,12);row.leaderIcon:SetTexture(T.media.."leader.tga");row.leaderIcon:SetPoint("LEFT",RESULT_COLUMNS.leader.x-17,0)
   row.leader=C.Text(row,"",14,T.muted,RESULT_COLUMNS.leader.width);row.leader:SetPoint("LEFT",RESULT_COLUMNS.leader.x,0);C.SetLineHeight(row.leader,20,true);row.leader:SetWordWrap(false)
   row.icon=C.Icon(row,36);row.icon:SetPoint("LEFT",12,0)
@@ -262,7 +285,7 @@ function P:Build(parent)
  self.emptyPanel=CreateFrame("Frame",nil,main);self.emptyPanel:SetSize(MAIN,280);self.emptyPanel:SetPoint("CENTER",0,-12)
  self.busyIcon=C.Icon(self.emptyPanel,44);self.busyIcon:SetTexture(T.media.."lychee-logo.tga");self.busyIcon:SetPoint("TOP",0,-26)
  self.emptyText=C.Text(self.emptyPanel,L.findEmptyTitle,18,T.text,600);self.emptyText:SetPoint("TOP",0,-90);self.emptyText:SetJustifyH("CENTER")
- self.emptyHelp=C.Text(self.emptyPanel,L.findEmptyHelp,14,T.muted,600);self.emptyHelp:SetPoint("TOP",0,-124);self.emptyHelp:SetJustifyH("CENTER")
+ self.emptyHelp=C.Text(self.emptyPanel,"",14,T.muted,600);self.emptyHelp:SetPoint("TOP",0,-124);self.emptyHelp:SetJustifyH("CENTER")
  self.start=C.Button(self.emptyPanel,L.searchNow,140,function() if state.browseReady then P:DoSearch() else P:SelectCategory(state.category) end end);self.start:SetPrimary(true);self.start:SetPoint("TOP",self.emptyHelp,"BOTTOM",0,-24)
  main:SetScript("OnKeyDown",function(_,key)
   if key=="F10" and IsShiftKeyDown() and state.selected then P:OpenResultMenu(P.results,state.selected,false);return end
@@ -295,15 +318,14 @@ function P:BuildFilters()
  self.roleChoice=C.Choice(f,210,{{value=false,label=L.anyRole},{value="TANK",label=L.tank},{value="HEALER",label=L.healer},{value="DAMAGER",label=L.damage}},function(value) state.filters.neededRole=value or nil;P:UpdateFilters() end)
  self.rolePresencePanel=CreateFrame("Frame",nil,f);self.rolePresencePanel:SetSize(228,124)
  self.rolePresenceChoices={}
- local presenceOptions={{"TANK",L.tank,"tankPresence"},{"HEALER",L.healer,"healerPresence"},{"DAMAGER",Say("输出","DPS"),"needsDamage"}}
+ local presenceOptions={{"TANK",L.tank,"tankPresence"},{"HEALER",L.healer,"healerPresence"},{"DAMAGER",Say("输出","DPS"),"damagePresence"}}
  for i,option in ipairs(presenceOptions) do
   local role,key=option[1],option[3]
   local icon=C.Icon(self.rolePresencePanel,16);icon:SetPoint("TOPLEFT",0,-10-(i-1)*44);UI:SetRoleIcon(icon,role)
   local label=C.Text(self.rolePresencePanel,option[2],14,T.muted,48,20);C.SetLineHeight(label,20,true);label:SetPoint("TOPLEFT",22,-8-(i-1)*44)
-  local options={{value="any",label=Say("不限","Any")},{value="present",label=Say("已有","Has")},{value="missing",label=Say("缺少","Lacks")}}
-  if role=="DAMAGER" then table.remove(options,2) end
+  local options={{value="present",label=role=="DAMAGER" and Say("已齐","Full") or Say("已有","Has")},{value="missing",label=Say("缺少","Lacks")}}
   local choice=C.Segmented(self.rolePresencePanel,156,options,function(value)
-   state.filters[key]=value~="any" and (role=="DAMAGER" and true or value) or nil;P:UpdateFilters()
+   state.filters[key]=state.filters[key]~=value and value or nil;P:UpdateFilters()
   end)
   choice:SetPoint("TOPLEFT",72,-(i-1)*44);self.rolePresenceChoices[role]=choice
  end
@@ -319,8 +341,7 @@ function P:SetFiltersOpen(open)
  self.filtersOpen=open==true
  if not self.filtersOpen then M:FinishPlacement(self.filterPanel) end
  self.filterPanel:SetShown(self.filtersOpen);self:ClosePicker();UI.Tooltip:Hide()
- local width=T.width+(self.filtersOpen and 280 or 0)
- UI.frame:SetScale(math.min(1,(UIParent:GetWidth()-40)/width,(UIParent:GetHeight()-40)/T.height))
+ UI:FitToScreen()
  self.filterToggle:SetActive(self.filtersOpen);self.filterChevron:SetRotation(self.filtersOpen and math.pi or 0);self.filterChevron:SetVertexColor(unpack(self.filtersOpen and T.accent or T.muted))
  if self.filtersOpen and not wasOpen then M:Reveal(self.filterPanel,"TOPLEFT",UI.frame,"TOPRIGHT",12,0,-4,0,.16) end
 end
@@ -348,7 +369,7 @@ function P:BuildPicker()
  for i=1,12 do local b=C.Button(self.difficultySurface,"",60,function(button) state.difficultyID=button.value or nil;P:RefreshPicker();P.results:SetPixelOffset(0,false);if state.browseReady then P:CommitChoice();P:DoSearch(true) else P:UpdateFilters(true) end end);b:SetHeight(30);b:SetTextColors(T.muted,T.text,T.onSecondaryContainer);b.fill:SetRadius(8);b.hover:SetRadius(8);b.label:SetFont(T.font,13,"");C.SetLineHeight(b.label,20,true);self.difficultyButtons[i]=b end
  self.activities=C.List(f,280,440,48,function(key)
   if P.multiSelectMode and P.keystoneGroups[key] then P:ToggleGroupChoice(key);return end
-  state.groupKeys=nil;P.draftGroupKeys=nil
+  state.groupKeys=nil;P.draftGroupKeys,P.multiSelectMode=nil,nil
   state.groupKey=key~=0 and key or nil
   local valid=not state.difficultyID
   for _,activity in ipairs(UI:GetGroup().Catalog:GetActivities(state.category)) do if (not state.groupKey or UI:GetGroup().Catalog:GetGroupKey(state.category,activity)==state.groupKey) and activity.difficultyID==state.difficultyID then valid=true;break end end
@@ -491,11 +512,11 @@ function P:RefreshPicker()
   row.multiSelect:SetShown(selectable or false)
   local checked=self.draftGroupKeys or state.groupKeys
   row.multiSelect:SetChecked(checked and checked[key] or false);row.multiSelect:RefreshStyle()
-  row.title:SetWidth(menuWidth-16-C.listRightInset-60-(key==0 and multiGroups and self.multiSelectToggle:GetWidth() or selectable and 32 or 0))
+  row.title:SetWidth(menuWidth-16-C.listRightInset-60-(key==0 and multiGroups and self.multiSelectToggle:GetWidth()+4 or selectable and 32 or 0))
   local toggle=self.multiSelectToggle
   if key==0 then
-   toggle:SetParent(row);toggle:ClearAllPoints();toggle:SetPoint("RIGHT",-2,0);toggle:SetShown(multiGroups~=nil)
-   UI:SetText(toggle.label,self.multiSelectMode and Say("取消","Cancel") or Say("多选","Multi-select"));UI:Color(toggle.label,self.multiSelectMode and T.brand or T.muted)
+   toggle:SetParent(row);toggle:ClearAllPoints();toggle:SetPoint("RIGHT",-6,0);toggle:SetShown(multiGroups~=nil)
+   UI:SetText(toggle.label,self.multiSelectMode and Say("返回","Back") or Say("多选","Multi-select"));UI:Color(toggle.label,self.multiSelectMode and T.brand or T.muted)
   elseif toggle:GetParent()==row then toggle:Hide() end
  end)
  self:PositionPicker()
@@ -530,9 +551,13 @@ function P:SelectCategory(key,row)
  self.seasonCategories.selectedKey=state.category;self.categories.selectedKey=state.category
  self.seasonCategories:Refresh();self.categories:Refresh()
  if not self.picker then self:BuildPicker() end
- if changed or not self.picker:IsShown() then self.draftGroupKeys,self.multiSelectMode=nil,nil end
+ if changed or not self.picker:IsShown() then
+  self.draftGroupKeys=CopyGroupKeys(state.groupKeys)
+  self.multiSelectMode=self.draftGroupKeys and true or nil
+ end
  self:RefreshPicker();self:UpdateFilters(true)
  if changed or not self.picker:IsShown() then self.picker:Show();self.picker:RegisterEvent("GLOBAL_MOUSE_DOWN");M:Reveal(self.picker,"TOPLEFT",self.rail,"TOPRIGHT",PICKER_GAP,-self.pickerY,0,4,.14) else self:ClosePicker() end
+ if changed and state.browseReady then self:DoSearch(true) end
 end
 function P:RememberCategory()
  if not A.db.rememberFilters then return end
@@ -544,7 +569,7 @@ function P:RememberCategory()
  prefs.minLevel,prefs.maxLevel=nil,nil;prefs.minMembers=self.fMinMembers.box:GetText();prefs.maxMembers=self.fMembers.box:GetText()
  local cat=Category();local seasonDungeon=cat.id==2 and cat.season
  prefs.neededRole=not seasonDungeon and self.roleChoice.value or nil
- prefs.tankPresence,prefs.healerPresence,prefs.needsDamage=state.filters.tankPresence,state.filters.healerPresence,state.filters.needsDamage
+ prefs.tankPresence,prefs.healerPresence,prefs.damagePresence=state.filters.tankPresence,state.filters.healerPresence,state.filters.damagePresence
  prefs.social=state.social;prefs.sort=state.filters.sort
 end
 function P:RestoreCategory(prefs)
@@ -555,9 +580,17 @@ function P:RestoreCategory(prefs)
  self.fMembers.box:SetText(prefs.maxMembers or "")
  local cat=Category();local seasonDungeon=cat and cat.id==2 and cat.season
  local role=not seasonDungeon and prefs.neededRole or nil
- state.filters.tankPresence=seasonDungeon and (prefs.tankPresence or prefs.neededRole=="TANK" and "missing") or nil
- state.filters.healerPresence=seasonDungeon and (prefs.healerPresence or prefs.neededRole=="HEALER" and "missing") or nil
- state.filters.needsDamage=seasonDungeon and (prefs.needsDamage or prefs.neededRole=="DAMAGER") or nil
+ if seasonDungeon then
+  prefs.tankPresence=prefs.tankPresence or prefs.neededRole=="TANK" and "missing" or nil
+  prefs.healerPresence=prefs.healerPresence or prefs.neededRole=="HEALER" and "missing" or nil
+  prefs.damagePresence=prefs.damagePresence or (prefs.needsDamage or prefs.neededRole=="DAMAGER") and "missing" or nil
+  prefs.neededRole=nil
+  if prefs.tankPresence=="present" and prefs.healerPresence=="present" and prefs.damagePresence=="present" then prefs.damagePresence=nil end
+ end
+ prefs.needsDamage=nil
+ state.filters.tankPresence=seasonDungeon and prefs.tankPresence or nil
+ state.filters.healerPresence=seasonDungeon and prefs.healerPresence or nil
+ state.filters.damagePresence=seasonDungeon and prefs.damagePresence or nil
  self.roleChoice:SetValue(role or false,role and ({TANK=L.tank,HEALER=L.healer,DAMAGER=L.damage})[role] or L.anyRole)
  state.social=prefs.social=="caution" and "noCaution" or prefs.social;self.socialChoice:SetValue(state.social or false,state.social and ({friend=L.friendChar,guild=L.friendGuild,any=L.notes,positive=Say("含推荐玩家","Recommended players"),noCaution=Say("不含拉黑记录","Without blocked players")})[state.social] or Say("全部关系","All relations"))
  state.filters.sort=prefs.sort or A.db.defaultSort;self.sortChoice:SetValue(state.filters.sort,L[state.filters.sort] or L.newest)
@@ -623,13 +656,17 @@ function P:UpdateFilters(reset)
  filters.minLevel,filters.maxLevel=nil,nil
  filters.personKey=state.personKey
  filters.minMembers=tonumber(self.fMinMembers.box:GetText());filters.maxMembers=tonumber(self.fMembers.box:GetText());filters.neededRole=not seasonDungeon and keys and self.roleChoice.value or nil
- if not seasonDungeon then filters.tankPresence,filters.healerPresence,filters.needsDamage=nil,nil,nil end
+ if not seasonDungeon then filters.tankPresence,filters.healerPresence,filters.damagePresence=nil,nil,nil end
  filters.friends=state.social=="friend";filters.guild=state.social=="guild";filters.notes=(state.social=="any" or state.social=="positive" or state.social=="noCaution") and state.social or nil
  self.roleChoice:SetShown(keys and not seasonDungeon);self.roleLabel:SetShown(keys or seasonDungeon);self.rolePresencePanel:SetShown(seasonDungeon)
  UI:SetText(self.roleLabel,seasonDungeon and Say("队伍职责","Group roles") or Say("队伍缺少职责","Role needed"))
- self.rolePresenceChoices.TANK:SetValue(filters.tankPresence or "any")
- self.rolePresenceChoices.HEALER:SetValue(filters.healerPresence or "any")
- self.rolePresenceChoices.DAMAGER:SetValue(filters.needsDamage and "missing" or "any")
+ self.rolePresenceChoices.TANK:SetValue(filters.tankPresence)
+ self.rolePresenceChoices.HEALER:SetValue(filters.healerPresence)
+ self.rolePresenceChoices.DAMAGER:SetValue(filters.damagePresence)
+ local presentCount=(filters.tankPresence=="present" and 1 or 0)+(filters.healerPresence=="present" and 1 or 0)+(filters.damagePresence=="present" and 1 or 0)
+ self.rolePresenceChoices.TANK.buttons[1]:SetAvailable(filters.tankPresence=="present" or presentCount<2)
+ self.rolePresenceChoices.HEALER.buttons[1]:SetAvailable(filters.healerPresence=="present" or presentCount<2)
+ self.rolePresenceChoices.DAMAGER.buttons[1]:SetAvailable(filters.damagePresence=="present" or presentCount<2)
  local layout=seasonDungeon and "presence" or keys and "needed" or "basic"
  if self.filterLayout~=layout then
   self.filterLayout=layout
@@ -673,7 +710,7 @@ function P:SavePrefs()
  prefs.filters.selected=choice.selected==true
 end
 function P:ClearFilters()
- self.loading=true;self.fMinMembers.box:SetText("");self.fMembers.box:SetText("");self.roleChoice:SetValue(false,L.anyRole);state.filters.tankPresence,state.filters.healerPresence,state.filters.needsDamage=nil,nil,nil;state.social=nil;self.socialChoice:SetValue(false,Say("全部关系","All relations"));state.filters.sort=A.db.defaultSort;self.sortChoice:SetValue(state.filters.sort,L[state.filters.sort] or L.newest);self.loading=nil;self:UpdateFilters()
+ self.loading=true;self.fMinMembers.box:SetText("");self.fMembers.box:SetText("");self.roleChoice:SetValue(false,L.anyRole);state.filters.tankPresence,state.filters.healerPresence,state.filters.damagePresence=nil,nil,nil;state.social=nil;self.socialChoice:SetValue(false,Say("全部关系","All relations"));state.filters.sort=A.db.defaultSort;self.sortChoice:SetValue(state.filters.sort,L[state.filters.sort] or L.newest);self.loading=nil;self:UpdateFilters()
 end
 function P:OnSearchTextChanged(box,changed)
  local empty=box:GetText()==""
@@ -769,9 +806,8 @@ function P:RefreshApplications()
  local ticking=false
  for _,id in ipairs(state.appIDs) do local app=state.apps[id];if app.status=="applied" and app.expiresAt and app.expiresAt>GetTime() then ticking=true;break end end
  if ticking and not self.countdown then
-  local elapsed=0;self.countdown=true
-  M:Start(countdownKey,function(dt) elapsed=elapsed+dt;if elapsed>=1 then elapsed=elapsed%1;local running=false;for _,row in ipairs(P.appList.rows) do if row.key then UpdateApplication(row,row.key);local app=state.apps[row.key];if app and app.expiresAt and app.expiresAt>GetTime() and app.status=="applied" then running=true end end end;if not running then P.countdown=nil;return true end end end)
- elseif not ticking then M:Stop(countdownKey);self.countdown=nil end
+  self.countdown=C_Timer.NewTicker(1,RefreshApplicationClock)
+ elseif not ticking then StopCountdown() end
 end
 function P:ShowApplicationLimit(targetID,manual)
  state.limitTarget,state.limitManual=targetID,manual;state.showGlobal=true
@@ -789,9 +825,21 @@ end
 function P:RefreshResults()
  M:Stop(self)
  if not self.frame or not self.frame:IsShown() or UI.hiding then return end
+ local raid=Category().id==3
+ if self.raidResultColumns~=raid then
+  self.raidResultColumns=raid
+  local descriptionX=raid and RESULT_COLUMNS.rating.x or RESULT_COLUMNS.description.x
+  local ratingX=raid and RESULT_COLUMNS.description.x+RESULT_COLUMNS.description.width-RESULT_COLUMNS.rating.width or RESULT_COLUMNS.rating.x
+  local function PlaceColumns(rating,description,point)
+   rating:ClearAllPoints();rating:SetPoint(point,ratingX,0)
+   description:ClearAllPoints();description:SetPoint(point,descriptionX,0)
+  end
+  PlaceColumns(self.resultHeadings.rating,self.resultHeadings.description,"TOPLEFT")
+  for _,row in ipairs(self.results.rows) do PlaceColumns(row.score,row.description,"LEFT") end
+ end
  self:RefreshApplications();local ids=state.browseReady and UI:GetGroup():GetResults() or {};self.results:SetItems(ids,RenderResult);UI:SetText(self.resultCount,Say("%d 支队伍","%d groups"):format(#ids))
  local status=UI:GetGroup():GetSearchState();local empty=#ids==0;self.emptyPanel:SetShown(empty)
- self.resultsHeader:SetShown(not empty);UI:SetText(self.resultHeadings.rating,Category().id==3 and Say("进度","Progress") or Say("评分","Score"))
+ self.resultsHeader:SetShown(not empty);UI:SetText(self.resultHeadings.rating,raid and Say("进度","Progress") or Say("评分","Score"))
  if empty then
   local busy=state.browseReady and (status=="searching" or status=="waiting")
   local cat=Category();local instances=cat.id==2 or cat.id==3
@@ -799,7 +847,9 @@ function P:RefreshResults()
   local help=cat.id==9 and Say("从左侧分类中选择要浏览的活动。","Choose an activity from the category list.")
    or Say("选择具体"..(instances and "副本" or "活动").."，或“"..AllActivitiesLabel(cat).."”。","Select an "..(instances and "instance" or "activity").." or choose “"..AllActivitiesLabel(cat).."”.")
   local title=not state.browseReady and prompt or status=="waiting" and L.searchWaitingTitle or status=="searching" and L.searching or status=="failed" and L.searchFailedTitle or status=="idle" and L.findEmptyTitle or UI:GetGroup():GetResultCount()>0 and L.noFilteredResults or L.noResults
-  UI:SetText(self.emptyText,title);UI:SetText(self.emptyHelp,not state.browseReady and help or status=="waiting" and UI:GetGroup():GetSearchError() or status=="searching" and L.searchPendingHelp or status=="failed" and UI:GetGroup():GetSearchError() or status=="idle" and L.findEmptyHelp or L.noResultsHelp)
+  local description=not state.browseReady and help or status=="waiting" and UI:GetGroup():GetSearchError() or status=="searching" and L.searchPendingHelp or status=="failed" and UI:GetGroup():GetSearchError() or status=="idle" and "" or L.noResultsHelp
+  UI:SetText(self.emptyText,title);UI:SetText(self.emptyHelp,description);self.emptyHelp:SetShown(description~="")
+  self.start:ClearAllPoints();self.start:SetPoint("TOP",description~="" and self.emptyHelp or self.emptyText,"BOTTOM",0,-24)
   UI:SetText(self.start.label,state.browseReady and L.searchNow or instances and Say("选择副本","Choose instance") or Say("选择活动","Choose activity"))
   self.start:SetShown(not busy);self.busyIcon:SetShown(busy)
  end
@@ -829,11 +879,11 @@ end
 function P:OpenResultMenu(anchor,id,cursor)
  local r=Record(id);if not r then return end
  local applications=UI:GetGroup().Applications;local active=applications:IsActive(id);local application=UI:GetGroup():GetApplication(id);local invited=application and application.status=="invited"
- UI:OpenMenu(anchor,{{value="apply",label=invited and Say("已收到邀请","Invited") or active and L.cancelApplication or L.editAndApply,disabled=active and not applications:CanCancel(id)},{value="whisper",label=Say("与队长密聊","Whisper leader"),disabled=UI.preview~=nil or not r.leaderName},{value="copy",label=Say("复制完整队长名称","Copy leader name"),disabled=UI.preview~=nil or not r.leaderName},{value="block",label=Say("拉黑队长","Block leader"),disabled=UI.preview~=nil or not r.leaderKey}},function(action)
+ UI:OpenMenu(anchor,{{value="apply",label=invited and Say("已收到邀请","Invited") or active and L.cancelApplication or L.editAndApply,disabled=active and not applications:CanCancel(id)},{value="whisper",label=Say("与队长密聊","Whisper leader"),disabled=not r.leaderName or not UI:CanWhisperFaction(r.leaderFactionGroup)},{value="copy",label=Say("复制完整队长名称","Copy leader name"),disabled=UI.preview~=nil or not r.leaderName},{value="block",label=Say("拉黑队长","Block leader"),disabled=UI.preview~=nil or not r.leaderKey}},function(action)
   local target=Record(id);if not target then return end
   if action=="apply" then if applications:CanCancel(id) then local ok,err=UI:GetGroup():Cancel(id);if not ok then P:SetStatus(err or L.failed) end elseif not applications:IsActive(id) then P:Apply(id,true) end
-  elseif action=="whisper" and not UI.preview then ChatFrame_SendTell(target.leaderName)
-  elseif action=="copy" then UI:CopyText(L.leader,target.leaderName)
+  elseif action=="whisper" and target.leaderName and UI:CanWhisperFaction(target.leaderFactionGroup) then ChatFrame_SendTell(target.leaderName)
+  elseif action=="copy" then UI:CopyText(L.leader,target.leaderName,nil,nil,Say("完整名称","Full name"))
   elseif action=="block" and not UI.preview then local _,n,r=A:PlayerKey(target.leaderKey);A:Open("notes",{add={name=n,realm=r,type="caution"}}) end
  end,{cursor=cursor~=false})
 end
@@ -861,7 +911,7 @@ function P:Enter(context)
   if UI.preview then self.previewSearchBox:SetText(filters.text or "") end
   local saved=state.categoryPrefs[state.category] or filters
   state.groupKey=saved.groupKey;state.difficultyID=saved.difficultyID;state.tier=saved.tier
-  self:RestoreCategory(state.categoryPrefs[state.category] or {groupKey=filters.groupKey,groupKeys=filters.groupKeys,difficultyID=filters.difficultyID,tier=filters.tier,selected=filters.selected,minMembers=filters.minMembers,maxMembers=filters.maxMembers,neededRole=filters.neededRole,tankPresence=filters.tankPresence,healerPresence=filters.healerPresence,needsDamage=filters.needsDamage,sort=filters.sort,social=prefs.social})
+  self:RestoreCategory(state.categoryPrefs[state.category] or {groupKey=filters.groupKey,groupKeys=filters.groupKeys,difficultyID=filters.difficultyID,tier=filters.tier,selected=filters.selected,minMembers=filters.minMembers,maxMembers=filters.maxMembers,neededRole=filters.neededRole,tankPresence=filters.tankPresence,healerPresence=filters.healerPresence,damagePresence=filters.damagePresence,needsDamage=filters.needsDamage,sort=filters.sort,social=prefs.social})
   self.loading=nil
  end
  self:UpdateApplicationSettings()
@@ -898,7 +948,7 @@ function P:Leave()
  self:DismissApplicationNotice()
  if self.unsub then self.unsub();self.unsub=nil end;if self.notesUnsub then self.notesUnsub();self.notesUnsub=nil end
  self.results:Clear();self.appList:Clear();self.seasonCategories:Clear();self.categories:Clear();if self.picker then self.activities:Clear();self:ClosePicker() end;M:FinishPlacement(self.filterPanel);self.filterPanel:Hide()
- M:Stop(countdownKey);self.countdown=nil;M:Waiting(self.busyIcon,false);M:Spin(self.refreshIcon,false);self.busyState=nil
+ StopCountdown();M:Waiting(self.busyIcon,false);M:Spin(self.refreshIcon,false);self.busyState=nil
  wipe(state.apps);wipe(state.appIDs);state.selected=nil
  state.limitTarget=nil;state.showGlobal=nil
  UI:GetGroup():Detach(self);UI:FitToScreen()

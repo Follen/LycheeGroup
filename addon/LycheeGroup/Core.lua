@@ -42,6 +42,7 @@ local DEFAULTS = {
 	floating = true,
 	floatingLocked = false,
 	floatingScale = 130,
+	uiScale = 100,
 }
 
 local initialized = {}
@@ -133,6 +134,10 @@ function A:Open(page, context)
 	end
 	ui:Show(page, context)
 	return true
+end
+
+function A:ToggleWindow()
+	if self.UI and self.UI:IsShown() then self.UI:Hide() else return self:Open("find") end
 end
 
 -- Explicit, session-only UI previews. No preview provider replaces the real Group.

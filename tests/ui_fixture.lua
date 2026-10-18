@@ -4,11 +4,15 @@ local base=dofile("tests/stubs.lua");base.Install({locale=locale,realm="Home"})
 local S=dofile("tests/ui_stubs.lua");S.Install()
 _G.LycheeGroup=nil;_G.LycheeGroupDB=nil;_G.LycheeGroupNotesDB=nil;_G.LibStub=nil
 dofile("addon/LycheeGroup/Core.lua");dofile("addon/LycheeGroup/Locale.lua");dofile("addon/LycheeGroup/Fonts.lua")
-local A=LycheeGroup;A:LoadDB()
+local A=LycheeGroup;A:LoadDB();dofile("addon/LycheeGroup/Bindings.lua")
 for _,file in ipairs({"Locale.lua","Notes.lua","Records.lua","PlayerInfo.lua","RosterReminder.lua"}) do dofile("addon/LycheeGroup_Notes/"..file) end
 A.Notes:Initialize()
 local G={db={prefs={}},subs={},views={},records={},apps={},applicants={},state="idle"}
 A.Group=G
+dofile("addon/LycheeGroup_Group/CreationPresets.lua")
+dofile("addon/LycheeGroup_Group/RaidBuffs.lua")
+dofile("addon/LycheeGroup/Presentation.lua")
+G.db.creationPresets={};G.Presets=A.CreationPresets.New(G.db.creationPresets,function() G:Notify("creationPresets") end)
 function G:Subscribe(fn) self.subs[fn]=true;return function() self.subs[fn]=nil end end
 function G:Notify(kind,id) for fn in pairs(self.subs) do fn(kind,id) end end
 function G:Attach(view,kind) self.views[view]=kind end
@@ -20,6 +24,11 @@ function G:GetResult(id) return self.records[id] end
 function G:GetResultCount() local n=0;for _ in pairs(self.records) do n=n+1 end;return n end
 function G:GetResultDetails(id) return self.records[id] and {members={},counts={TANK=1,HEALER=1,DAMAGER=2},encounters={}} end
 function G:GetRoster() return {{name="Player",nameKey="Player-Home",class="WARRIOR",assignedRole="TANK",isLeader=true}} end
+function G:GetRaidBuffs(activityID)
+ local report=A.RaidBuffs.Get(self.Catalog,activityID,self:GetRoster(),self.buffReport)
+ if report then self.buffReport=report end
+ return report
+end
 function G:GetApplications() return self.apps end
 function G:GetApplication(id) for _,app in ipairs(self.apps) do if app.id==id then return app end end end
 function G:GetApplicants() local ids={};for id in pairs(self.applicants) do ids[#ids+1]=id end;table.sort(ids);return ids end
@@ -28,6 +37,7 @@ function G:GetSearchState() return self.state end
 function G:GetSearchError() return self.error end
 function G:SetFilters(filters) self.filters=filters;self:Notify("results") end
 function G:GetListing() return self.listing end
+function G:GetApplicantDungeonScores(member) return member.dungeonScores end
 function G:CanManageApplicants() if self.manageApplicants==false then return false,"Cannot manage applicants" end;return true end
 function G:CanManageListing() if self.manageListing==false then return false,"Cannot manage listing" end;return true end
 function G:RefreshApplicants() if not self.listing then return false end;self.refreshApplicants=(self.refreshApplicants or 0)+1;self:Notify("applicants");return true end
@@ -65,7 +75,7 @@ function G.Search:Search(category,activityID,mode,text)
 end
 function G:Publish(data)
  self.published=data
- self.listing={activityID=data.activityID,activityIDs={data.activityID},name=LFGListFrame.EntryCreation.Name:GetText(),comment=LFGListFrame.EntryCreation.Description.EditBox:GetText(),generalPlaystyle=data.generalPlaystyle,isCrossFactionListing=data.isCrossFactionListing}
+ self.listing={activityID=data.activityID,activityIDs={data.activityID},name=LFGListFrame.EntryCreation.Name:GetText(),comment=LFGListFrame.EntryCreation.Description.EditBox:GetText(),generalPlaystyle=data.generalPlaystyle,isCrossFactionListing=data.isCrossFactionListing,requiredItemLevel=data.requiredItemLevel,requiredDungeonScore=data.requiredDungeonScore,requiredPvpRating=data.requiredPvpRating,autoAccept=data.isAutoAccept,privateGroup=data.isPrivateGroup,playstyle=data.playstyle,newPlayerFriendly=data.newPlayerFriendly,questID=data.questID}
  self:Notify("listing");return true
 end
 function G:Update(data) self.updated=data;return true end
@@ -93,7 +103,7 @@ C_LFGList={
  ClearCreationTextFields=function() local e=LFGListFrame.EntryCreation;e.Name:UserType("");e.Description.EditBox:UserType("") end,
  CopyActiveEntryInfoToCreationFields=function() local e=LFGListFrame.EntryCreation;e.Name:UserType(G.listing.name);e.Description.EditBox:UserType(G.listing.comment or "") end,
  SetEntryTitle=function(id) LFGListFrame.EntryCreation.Name:UserType(activities[id].fullName);G.autoTitle=activities[id].fullName end,
- DoesEntryTitleMatchPrebuiltTitle=function() return LFGListFrame.EntryCreation.Name:GetText()==G.autoTitle end,
+ DoesEntryTitleMatchPrebuiltTitle=function() error("Saved settings must not inspect protected listing titles") end,
  ClearApplicationTextFields=function() G.clearedApplication=true end,
  ClearSearchTextFields=function() G.searchClears=(G.searchClears or 0)+1;local box=LFGListFrame.SearchPanel.SearchBox;box.text="";box:Fire("OnTextChanged",false) end,
 }
@@ -102,7 +112,7 @@ dofile("addon/LycheeGroup_Group/Locale.lua");G.L=A.GroupLocale;dofile("addon/Lyc
 _G.LycheeUI=nil
 local libraryPrivate={}
 for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Components.lua","Native.lua","Menu.lua"}) do assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/"..file))("LycheeGroup",libraryPrivate) end
-for _,file in ipairs({"Locale.lua","Theme.lua","Motion.lua","Components.lua","Preview.lua","Tooltip.lua","Native.lua","Transfer.lua","Host.lua","Find.lua","Create.lua","Notes.lua","Settings.lua"}) do dofile("addon/LycheeGroup_UI/"..file) end
+for _,file in ipairs({"Locale.lua","Theme.lua","Motion.lua","Components.lua","Members.lua","Preview.lua","Tooltip.lua","Native.lua","Transfer.lua","Host.lua","Find.lua","Create.lua","Notes.lua","Settings.lua"}) do dofile("addon/LycheeGroup_UI/"..file) end
 local U=A.UI;local M,C=U.Motion,U.C
 local Open=A.Open
 function A:Open(page,ctx) self.lastOpen=page;return Open(self,page,ctx) end

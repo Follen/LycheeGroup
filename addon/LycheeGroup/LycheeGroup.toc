@@ -10,6 +10,8 @@
 Libs\LycheeUI\embeds.xml
 Locale.lua
 Core.lua
+Presentation.lua
+Bindings.lua
 Fonts.lua
 Floating.lua
 Minimap.lua

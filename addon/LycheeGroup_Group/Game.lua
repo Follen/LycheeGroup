@@ -8,6 +8,8 @@ local WAKE_EVENTS = {
 	"LFG_LIST_APPLICATION_STATUS_UPDATED",
 	"LFG_LIST_ACTIVE_ENTRY_UPDATE",
 	"CHALLENGE_MODE_START",
+	-- Keep the session catalog current even while all browser windows are closed.
+	"LFG_LIST_AVAILABILITY_UPDATE",
 }
 
 local SEARCH_EVENTS = {
@@ -22,7 +24,6 @@ local APPLICANT_EVENTS = {
 	"LFG_LIST_APPLICANT_UPDATED",
 }
 
-local ACTIVITY_EVENTS = { "LFG_LIST_AVAILABILITY_UPDATE" }
 local PERMISSION_EVENTS = { "PARTY_LEADER_CHANGED" }
 local ROSTER_EVENTS = { "ACTIVE_PLAYER_SPECIALIZATION_CHANGED", "PLAYER_SPECIALIZATION_CHANGED", "PLAYER_EQUIPMENT_CHANGED", "INSPECT_READY", "PLAYER_REGEN_ENABLED", "UNIT_CONNECTION" }
 
@@ -49,7 +50,6 @@ function Game:RefreshSubscriptions()
 	local frame = self.frame
 	if not frame then return end
 	SetEvents(frame, SEARCH_EVENTS, G:HasViews("search") or G.Search:GetState()=="searching")
-	SetEvents(frame, ACTIVITY_EVENTS, G:HasViews())
 	local listing = C_LFGList.HasActiveEntryInfo()
 	SetEvents(frame, APPLICANT_EVENTS, listing)
 	SetEvents(frame, PERMISSION_EVENTS, listing or G:HasViews("create"))

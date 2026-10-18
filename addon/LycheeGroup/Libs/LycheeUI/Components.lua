@@ -74,6 +74,7 @@ function C.Panel(parent,color,radius,inset,layer)
   else region:SetTexture(130871) end
  end
  local placedWidth,placedHeight,placedRadius
+ local paintedR,paintedG,paintedB,paintedAlpha
  local function Place()
   local width,height=parent:GetWidth(),parent:GetHeight()
   if width==placedWidth and height==placedHeight and radius==placedRadius then return end
@@ -93,14 +94,23 @@ function C.Panel(parent,color,radius,inset,layer)
   -- All slices use white image textures and the same vertex tint pipeline.
   -- Mixing SetColorTexture centers with tinted image corners changes RGB
   -- compositing in the client, even when their final alpha is identical.
-  for _,region in ipairs(regions) do region:SetVertexColor(value[1],value[2],value[3],1) end
-  self:SetAlpha(self.alpha)
+  local r,g,b=value[1],value[2],value[3]
+  local composed=self.alpha*(value[4] or 1)
+  if r~=paintedR or g~=paintedG or b~=paintedB then
+   -- Vertex alpha and Texture:SetAlpha share the same native value. Submit
+   -- the final RGBA together instead of resetting alpha and writing it again.
+   for _,region in ipairs(regions) do region:SetVertexColor(r,g,b,composed) end
+   paintedR,paintedG,paintedB,paintedAlpha=r,g,b,composed
+  else self:SetAlpha(self.alpha) end
  end
  function panel:SetColorTexture(...) self:SetColor({...}) end
  function panel:SetAlpha(value)
   self.alpha=value
   local composed=value*(self.color[4] or 1)
-  for _,region in ipairs(regions) do region:SetAlpha(composed) end
+  if composed~=paintedAlpha then
+   for _,region in ipairs(regions) do region:SetAlpha(composed) end
+   paintedAlpha=composed
+  end
  end
  function panel:GetAlpha() return self.alpha end
  function panel:SetShown(value) for _,region in ipairs(regions) do region:SetShown(value) end end
@@ -392,7 +402,7 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover)
   local selected=row.key==list.selectedKey and list.selectionFill~=false
   local hovered=row:IsEnabled() and row._hitVisible and not selected and (row._inside or row._pressed)
   if hovered and list.hoverFill~=false then
-   row.hover:SetColor(row._pressed and T.pressed or T.rowHover);row.hover:Show()
+   row.hover:SetColor(row._pressed and T.pressed or list.hoverColor or T.rowHover);row.hover:Show()
    if immediate then M:Stop(row.hover);row.hover:SetAlpha(1) else M:Alpha(row.hover,1,.10) end
   else M:Stop(row.hover);row.hover:SetAlpha(0);row.hover:Hide() end
   if list.idleTextColor then UI:Color(row.title,selected and T.onSecondaryContainer or hovered and T.text or list.idleTextColor) end
@@ -459,8 +469,8 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover)
  end
  function list:Select(key,locate)
   self.selectedKey=key
-  if locate and self.ids then for i,id in ipairs(self.ids) do if id==key then self:SetPixelOffset((i-1)*self.rowHeight,false);break end end end
-  self:Refresh()
+  if locate and self.ids then for i,id in ipairs(self.ids) do if id==key then self:SetPixelOffset((i-1)*self.rowHeight,false);return end end end
+  self:Refresh(true)
  end
  function list:Clear()
   M:Stop(self);self.scrollTarget=nil;self.ids=nil;self.render=nil;self.selectedKey=nil

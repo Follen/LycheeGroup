@@ -6,6 +6,8 @@ local C,T
 local cardColor,cardHover={0,0,0,.60},{.04,.04,.04,.66}
 local MEMBER_TEXT_X,MEMBER_TEXT_WIDTH,MEMBER_METRIC_WIDTH=56,168,76
 local MEMBER_NAME_SIZE,MEMBER_NAME_LINE,MEMBER_META_SIZE,MEMBER_META_LINE=16,22,12,16
+local MEMBER_FACTION_SIZE,MEMBER_FACTION_GAP=16,6
+local factionTextures={Alliance="Interface\\AddOns\\LycheeGroup_UI\\Media\\faction-alliance.tga",Horde="Interface\\AddOns\\LycheeGroup_UI\\Media\\faction-horde.tga"}
 local entries,tops,batchEntries,boundBatches={},{},{},{}
 local fadeState,scrollState,cancelIDs,exits={},{},{},{}
 local entryCount=0
@@ -91,6 +93,7 @@ function F:Build()
   F.entries=nil;F.entryTops=nil;F.boundVersion=nil;F.fade=nil;F.cardElapsed=nil;F.scrollTween=nil;wipe(exits);F:UpdateDriver();ReleaseEntries()
   for _,row in ipairs(F.rows) do
    row.exit=nil;row.exitAlpha=nil;row.exitTop=nil;row:EnableMouse(true)
+   row.faction:Hide();row.faction:SetTexture(nil)
    row.application=nil;row.applicantID=nil;row.applicationID=nil;row.batch=nil;row.pressedTarget=nil;row.invite.applicantID=nil;row.invite.pressedTarget=nil;row.decline.applicantID=nil;row.decline.pressedTarget=nil;row.cancel.applicationID=nil;row.cancel.pressedTarget=nil
   end
   for _,batch in ipairs(F.batches) do batch.exit=nil;batch.exitAlpha=nil;batch.exitTop=nil;batch:EnableMouse(true);batch.applicantID=nil;batch.background:Hide();batch:Hide() end
@@ -123,6 +126,7 @@ function F:Build()
   row.background=Card(row)
   row.icon=C.GameIcon(row,24);row.icon:SetPoint("TOPLEFT",12,-10);row.icon:SetTexCoord(.06,.94,.06,.94)
   row.name=Text(row,T.listTitleSize,180);row.name:SetPoint("TOPLEFT",40,-7);row.name:SetWordWrap(false)
+  row.faction=C.Icon(row,MEMBER_FACTION_SIZE);row.faction:Hide()
   row.meta=Text(row,14,180);row.meta:SetPoint("TOPLEFT",40,-29);row.meta:SetTextColor(unpack(T.muted));row.meta:SetWordWrap(false)
   row.score=Text(row,14,64);row.score:SetPoint("RIGHT",-7,0);row.score:SetJustifyH("RIGHT")
   row.itemLevel=Text(row,14,76);C.SetLineHeight(row.itemLevel,20,true);row.itemLevel:SetPoint("TOPRIGHT",-8,-28);row.itemLevel:SetJustifyH("RIGHT");row.itemLevel:SetTextColor(unpack(T.muted))
@@ -151,7 +155,7 @@ function F:Build()
   end
   row.invite=DecisionButton(-29,"Invite");row.invite:Hide()
   row.decline=DecisionButton(-7,"Decline");row.decline:Hide()
-  row.cancel=C.Button(row,"",32);row.cancel.label:Hide();row.cancel:SetSize(32,32);row.cancel:SetPoint("TOPRIGHT",-8,-8);row.cancel:Hide()
+  row.cancel=C.Button(row,"",32);row.cancel.label:Hide();row.cancel:SetSize(32,32);row.cancel:SetPoint("TOPRIGHT",-12,-12);row.cancel:Hide()
   row.cancel.hoverColor,row.cancel.pressedColor=cancelHover,cancelPressed
   local cross=C.Glyph(row.cancel,"close",16);cross:SetPoint("CENTER");cross:SetColor(T.dim)
   row.cancel:HookScript("OnEnter",function() F:CancelHide();F:HoverRow(row,true);cross:SetColor(T.brand) end)
@@ -201,7 +205,7 @@ function F:SetAttention(enabled)
  end
 end
 -- Only active panel fades, decisions and scrolls use this driver.
-local function Drive(_,elapsed) F:Tick(elapsed,GetTimePreciseSec()) end
+local function Drive(_,elapsed) F:Tick(elapsed,F.startedAt and GetTimePreciseSec() or nil) end
 function F:UpdateDriver()
  local running=self.fade~=nil or self.cardElapsed~=nil or self.scrollTween~=nil or next(exits)~=nil
  if self.running==running then return end
@@ -213,11 +217,11 @@ local function PositionCard(card,elapsed)
  local exit=card.exit
  if exit then
   local p=1-(1-math.min(1,exit.elapsed/.14))^3
-  card:SetAlpha(card.exitAlpha*(1-p));card:ClearAllPoints();card:SetPoint("TOPLEFT",0,card.exitTop+6*p)
+  card:SetAlpha(card.exitAlpha*(1-p));card:SetPoint("TOPLEFT",0,card.exitTop+6*p)
   return
  end
  local p=not elapsed and 1 or math.max(0,math.min(1,(elapsed-math.min(3,(card.cardOrder or 1)-1)*.018)/.17))
- p=1-(1-p)^3;card:SetAlpha(p);card:ClearAllPoints();card:SetPoint("TOPLEFT",0,-card.baseTop-6*(1-p))
+ p=1-(1-p)^3;card:SetAlpha(p);card:SetPoint("TOPLEFT",0,-card.baseTop-6*(1-p))
 end
 function F:ApplyCardMotion(elapsed)
  for _,batch in ipairs(self.batches) do if batch:IsShown() then PositionCard(batch,elapsed) end end
@@ -272,13 +276,13 @@ function F:Tick(elapsed,now)
   fade.elapsed=fade.elapsed+elapsed;local p=A.db.reduceMotion and 1 or math.min(1,fade.elapsed/(fade.to==1 and .17 or .11));self.panel:SetAlpha(fade.from+(fade.to-fade.from)*(1-(1-p)^3))
   if A.db.reduceMotion or fade.elapsed>=(fade.to==1 and .17 or .11) then self.fade=nil;if fade.to==0 then self.panel:Hide() end end
  end
- if self.cardElapsed then
+ local hadCardMotion=self.cardElapsed~=nil
+ if hadCardMotion then
   self.cardElapsed=self.cardElapsed+elapsed
   if A.db.reduceMotion or self.cardElapsed>=.224 then self.cardElapsed=nil end
-  self:ApplyCardMotion(self.cardElapsed)
  end
+ if hadCardMotion or next(exits) then self:ApplyCardMotion(self.cardElapsed) end
  if next(exits) then
-  self:ApplyCardMotion(self.cardElapsed)
   for id,exit in pairs(exits) do if A.db.reduceMotion or exit.elapsed>=.14 then self:FinishDecision(id,true) end end
  end
  self:UpdateDriver()
@@ -333,6 +337,8 @@ function F:ShowPanel()
  local canCancel=not self.recruiting or group:CanManageListing()
  if group then
   if self.recruiting then
+   local activity=group.Catalog:GetActivity(group:GetListing().activityID)
+   local hideRating=not A.GroupPresentation.Member("applicant",activity).showRating
    for _,id in ipairs(group:GetApplicants()) do
     local app=group:GetApplicant(id)
     if Operable(app) then
@@ -341,15 +347,20 @@ function F:ShowPanel()
      if batch then wipe(batch) else batch={};batchEntries[batchCount]=batch end
      batch.top,batch.applicantID=total,id
      for index,member in ipairs(app.members) do
-      self.measure:SetFont(T.font,MEMBER_NAME_SIZE,"");C.SetLineHeight(self.measure,MEMBER_NAME_LINE);self.measure:SetWidth(MEMBER_TEXT_WIDTH);self.measure:SetText(member.nameKey or member.name or A.L.invalidName)
+      local faction=member.factionGroup and PLAYER_FACTION_GROUP[member.factionGroup]
+      local factionTexture=factionTextures[faction]
+      local nameWidth=MEMBER_TEXT_WIDTH-(factionTexture and MEMBER_FACTION_SIZE+MEMBER_FACTION_GAP or 0)
+      self.measure:SetFont(T.font,MEMBER_NAME_SIZE,"");C.SetLineHeight(self.measure,MEMBER_NAME_LINE);self.measure:SetWidth(nameWidth);self.measure:SetText(member.nameKey or member.name or A.L.invalidName)
       local nameHeight=math.max(MEMBER_NAME_LINE,self.measure:GetStringHeight())
+      local factionX=factionTexture and math.min(nameWidth,self.measure:GetStringWidth())+MEMBER_FACTION_GAP or nil
       local _,spec,icon,class=group:ResolveMemberSpec(member)
       local meta=(class or (zh and "未知职业" or "Unknown class")).." · "..(spec or member.specName or (zh and "未知专精" or "Unknown specialization"))
-      self.measure:SetFont(T.font,MEMBER_META_SIZE,"");C.SetLineHeight(self.measure,MEMBER_META_LINE);self.measure:SetText(meta)
+      self.measure:SetFont(T.font,MEMBER_META_SIZE,"");C.SetLineHeight(self.measure,MEMBER_META_LINE);self.measure:SetWidth(MEMBER_TEXT_WIDTH);self.measure:SetText(meta)
       local metaHeight=math.max(MEMBER_META_LINE,self.measure:GetStringHeight());local pad=index==1 and 12 or 4
       local contentHeight=nameHeight+2+metaHeight
       local height=pad+contentHeight;local entry=AddEntry(total,height);total=total+height
       entry.member,entry.applicantID,entry.padTop,entry.batch,entry.nameHeight,entry.metaText,entry.memberIcon=member,id,pad,batch,nameHeight,meta,icon
+      entry.nameWidth,entry.factionTexture,entry.factionX,entry.hideRating=nameWidth,factionTexture,factionX,hideRating
      end
      if canManage or comment then
       local textWidth=canManage and 180 or 324-MEMBER_TEXT_X-12;local textHeight=0
@@ -431,7 +442,8 @@ function F:Render()
     end
     row.batch=batch;row.cardOrder=batch.cardOrder
    end
-   row.icon:SetShown(entry.member~=nil or entry.application~=nil);row.meta:SetShown(entry.member~=nil or entry.application~=nil);row.score:SetShown(entry.member~=nil);row.itemLevel:SetShown(entry.member~=nil);row.leader:SetShown(entry.application~=nil);row.timer:SetShown(entry.application~=nil)
+   row.icon:SetShown(entry.member~=nil or entry.application~=nil);row.meta:SetShown(entry.member~=nil or entry.application~=nil);row.score:SetShown(entry.member~=nil and not entry.hideRating);row.itemLevel:SetShown(entry.member~=nil);row.leader:SetShown(entry.application~=nil);row.timer:SetShown(entry.application~=nil)
+   row.faction:Hide();row.faction:SetTexture(nil)
    row.name:ClearAllPoints();row.meta:ClearAllPoints();row.name:SetHeight(0);row.name:SetWordWrap(true);row.meta:SetWordWrap(true);row.leader:SetWordWrap(true)
    row.invite:Hide();row.decline:Hide();row.cancel:Hide();row.invite.applicantID=nil;row.decline.applicantID=nil;row.cancel.applicationID=nil
    row.name:SetTextColor(unpack(T.text));row.name:SetFont(T.font,entry.comment and MEMBER_META_SIZE or entry.member and MEMBER_NAME_SIZE or 16,"")
@@ -449,13 +461,14 @@ function F:Render()
     local m=entry.member;local name=m.nameKey or m.name
     local pad=entry.padTop
     row.icon:SetSize(32,32);row.icon:ClearAllPoints();row.icon:SetPoint("TOPLEFT",12,-pad)
-    row.name:SetWidth(MEMBER_TEXT_WIDTH);row.name:SetPoint("TOPLEFT",MEMBER_TEXT_X,-pad);row.name:SetText(name or A.L.invalidName)
+    row.name:SetWidth(entry.nameWidth);row.name:SetPoint("TOPLEFT",MEMBER_TEXT_X,-pad);row.name:SetText(name or A.L.invalidName)
+    if entry.factionTexture then row.faction:SetTexture(entry.factionTexture);row.faction:ClearAllPoints();row.faction:SetPoint("TOPLEFT",MEMBER_TEXT_X+entry.factionX,-pad-(MEMBER_NAME_LINE-MEMBER_FACTION_SIZE)/2);row.faction:Show() end
     row.meta:SetWidth(MEMBER_TEXT_WIDTH);row.meta:SetPoint("TOPLEFT",MEMBER_TEXT_X,-pad-entry.nameHeight-2);row.meta:SetText(entry.metaText)
     local color=m.class and RAID_CLASS_COLORS[m.class];if color then row.name:SetTextColor(color.r,color.g,color.b) end
     MemberIcon(row.icon,m,entry.memberIcon)
-    if m.ratingKind=="pvp" then ColorScore(row.score,m.rating,"pvp") else ColorScore(row.score,m.dungeonScore) end
-    row.itemLevel:SetFont(T.font,MEMBER_META_SIZE,"");C.SetLineHeight(row.itemLevel,MEMBER_META_LINE,true)
-    row.itemLevel:ClearAllPoints();row.itemLevel:SetWidth(MEMBER_METRIC_WIDTH);row.itemLevel:SetPoint("TOPRIGHT",-12,-pad-entry.nameHeight-2);row.itemLevel:SetText((zh and "装等 " or "ilvl ")..(m.itemLevel and math.floor(m.itemLevel) or "—"))
+    if entry.hideRating then row.score:SetText("") elseif m.ratingKind=="pvp" then ColorScore(row.score,m.rating,"pvp") else ColorScore(row.score,m.dungeonScore) end
+    row.itemLevel:SetFont(T.font,entry.hideRating and 14 or MEMBER_META_SIZE,"");C.SetLineHeight(row.itemLevel,entry.hideRating and MEMBER_NAME_LINE or MEMBER_META_LINE,true)
+    row.itemLevel:ClearAllPoints();row.itemLevel:SetWidth(MEMBER_METRIC_WIDTH);row.itemLevel:SetPoint("TOPRIGHT",-12,entry.hideRating and -pad or -pad-entry.nameHeight-2);row.itemLevel:SetText((zh and "装等 " or "ilvl ")..(m.itemLevel and math.floor(m.itemLevel) or "—"))
 
    else
     local app=entry.application;row.applicationID=app.id;row.application=app;row.background:SetHovered(row:IsMouseOver());row.background:Show()
@@ -464,7 +477,7 @@ function F:Render()
     row.score:Show();row.score:SetFont(T.font,14,"");row.score:SetHeight(0);row.score:SetWordWrap(true);C.SetLineHeight(row.score,20);row.score:ClearAllPoints();row.score:SetWidth(entry.detailWidth);row.score:SetTextColor(unpack(T.muted));row.score:SetText(entry.detailText);row.score:SetJustifyH("LEFT")
     row.name:SetWidth(entry.activityWidth);local nameWidth=math.min(entry.activityWidth,row.name:GetStringWidth());row.name:SetWidth(nameWidth);row.score:SetPoint("TOPLEFT",48+nameWidth+6,-12)
     row.meta:SetWidth(224);row.meta:SetPoint("TOPLEFT",48,-16-entry.activityHeight);row.meta:SetText(app.name or "")
-    row.cancel:ClearAllPoints();row.cancel:SetPoint("TOPRIGHT",-8,-7);row.cancel.applicationID=app.id;row.cancel:Show();row.cancel:SetEnabled(not app.pendingStatus)
+    row.cancel:ClearAllPoints();row.cancel:SetPoint("TOPRIGHT",-12,-12);row.cancel.applicationID=app.id;row.cancel:Show();row.cancel:SetEnabled(not app.pendingStatus)
     row.leader:ClearAllPoints();row.leader:SetWidth(196);row.leader:SetPoint("TOPLEFT",48,-20-entry.activityHeight-entry.titleHeight);row.timer:ClearAllPoints();row.timer:SetPoint("TOPRIGHT",-12,-20-entry.activityHeight-entry.titleHeight);row.leader:SetText(app.leaderName or (zh and "队长身份未知" or "Leader unknown"))
     local color=app.leaderClass and RAID_CLASS_COLORS[app.leaderClass];if color then row.leader:SetTextColor(color.r,color.g,color.b) else row.leader:SetTextColor(unpack(T.muted)) end
    end
@@ -472,7 +485,7 @@ function F:Render()
    if entry.member then row.score:SetFont(T.font,14,"");row.score:SetWordWrap(false);C.SetLineHeight(row.score,MEMBER_NAME_LINE,true);row.score:ClearAllPoints();row.score:SetPoint("TOPRIGHT",-12,-entry.padTop);row.score:SetWidth(MEMBER_METRIC_WIDTH);row.score:SetJustifyH("RIGHT") end
   end
  end
- for i=bound+1,#self.rows do local row=self.rows[i];row:Hide();row.applicationID=nil;row.applicantID=nil;row.application=nil;row.batch=nil;row.invite:Hide();row.decline:Hide();row.cancel:Hide();row.invite.applicantID=nil;row.decline.applicantID=nil;row.cancel.applicationID=nil end
+ for i=bound+1,#self.rows do local row=self.rows[i];row:Hide();row.faction:Hide();row.faction:SetTexture(nil);row.applicationID=nil;row.applicantID=nil;row.application=nil;row.batch=nil;row.invite:Hide();row.decline:Hide();row.cancel:Hide();row.invite.applicantID=nil;row.decline.applicantID=nil;row.cancel.applicationID=nil end
  self:ApplyCardMotion(self.cardElapsed)
  self:RefreshClock()
 end

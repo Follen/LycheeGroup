@@ -30,6 +30,7 @@ local function NewProvider(scenario)
  p.Results={};p.Applications={};p.Search={categoryKey=category}
  function p:Subscribe(callback) self.subs[callback]=true;return function() self.subs[callback]=nil end end
  function p:Notify(kind,id) for fn in pairs(self.subs) do fn(kind,id) end end
+ p.Presets=A.CreationPresets.New({},function() p:Notify("creationPresets") end)
  function p:Attach(owner,kind) self.views[owner]=kind end
  function p:Detach(owner) self.views[owner]=nil end
  function p:GetSearchState() return self.state end
@@ -53,8 +54,14 @@ local function NewProvider(scenario)
  function p:CanManageListing() return true end
  function p:RefreshApplicants() if not self.listing then return false end;self:Notify("applicants");return true end
  function p:GetRoster() return self.roster end
+ function p:GetRaidBuffs(activityID)
+  local report=A.RaidBuffs.Get(self.Catalog,activityID,self.roster,self.buffReport)
+  if report then self.buffReport=report end
+  return report
+ end
  function p:GetApplicants() return self.listing and self.applicantIDs or self.emptyIDs end
  function p:GetApplicant(id) return self.applicants[id] end
+ function p:GetApplicantDungeonScores(member) return member.dungeonScores end
  function p:GetResults()
   local ids={};local f=self.filters
   local text=(f.searchMode=="leader" and f.leaderText or f.searchMode=="group" and f.text or ""):lower()
@@ -72,11 +79,11 @@ local function NewProvider(scenario)
    if pass and f.minMembers then pass=r.numMembers>=f.minMembers end
    if pass and f.maxMembers then pass=r.numMembers<=f.maxMembers end
    if pass and f.neededRole then pass=r.maxNumPlayers==5 and counts[f.neededRole]<(f.neededRole=="DAMAGER" and 3 or 1) end
-   if pass and (f.tankPresence or f.healerPresence or f.needsDamage) then
+   if pass and (f.tankPresence or f.healerPresence or f.damagePresence) then
     pass=r.maxNumPlayers==5
     if pass and f.tankPresence then pass=counts.TANK~=nil and (counts.TANK>0)==(f.tankPresence=="present") end
     if pass and f.healerPresence then pass=counts.HEALER~=nil and (counts.HEALER>0)==(f.healerPresence=="present") end
-    if pass and f.needsDamage then pass=counts.DAMAGER~=nil and counts.DAMAGER<3 end
+    if pass and f.damagePresence then pass=counts.DAMAGER~=nil and (counts.DAMAGER>=3)==(f.damagePresence=="present") end
    end
    if pass and f.friends then pass=r.charFriends>0 end
    if pass and f.guild then pass=r.guildMates>0 end
@@ -100,11 +107,26 @@ local function NewProvider(scenario)
   app.status="applied";app.result=r;app.name=r.name;app.categoryID=r.categoryID;app.leaderName=r.leaderName;app.expiresAt=GetTime()+300;app.role=role;app.comment=comment
   self:Notify("applications",id);return true
  end
+ function p:SetApplicantActivity(activityID)
+  local activity=self.Catalog:GetActivity(activityID);local profile=A.GroupPresentation.Activity(activity)
+  for _,app in pairs(self.applicants) do
+   app.activityID=activityID
+   for index,member in ipairs(app.members) do
+    member.applicantID,member.applicantIndex=app.id,index
+    member.ratingKind=profile.kind=="pvp" and "pvp" or "dungeon"
+    if profile.kind=="pvp" then member.rating=profile.requirementRatingKind and 1800+index*75 or nil
+    else member.rating=member.dungeonScore end
+    member.dungeonScores=profile.applicant.showDungeonRecords and {current={name=activity.fullName or activity.name,level=18,timed=true},best={name=activity.fullName or activity.name,level=19,timed=false}} or nil
+   end
+  end
+ end
  function p:Publish(data)
   local name,comment=UI.Native:GetPreviewCreationText()
   local listing=Copy(data);listing.name=name;listing.comment=comment;listing.activityName=self.Catalog:GetActivity(data.activityID).name
   listing.privateGroup=data.isPrivateGroup;listing.isCrossFactionListing=data.isCrossFactionListing;listing.autoAccept=data.isAutoAccept
-  self.listing=listing;self:Notify("listing");return true
+  self.listing=listing
+  self:SetApplicantActivity(data.activityID)
+  self:Notify("listing");return true
  end
  function p:Update(data) return self:Publish(data) end
  function p:RemoveListing() self.listing=nil;self:Notify("listing");return true end
@@ -116,7 +138,7 @@ local function NewProvider(scenario)
  local names={S("预览坦克","PreviewTank"),S("预览治疗","PreviewHealer"),S("预览法师","PreviewMage"),S("预览萨满","PreviewShaman"),S("预览潜行者","PreviewRogue")}
  local function Member(index)
   local slot=(index-1)%5+1;local name=names[slot]..(index>5 and tostring(index) or "");local realm=S("模拟服务器","PreviewRealm")
-  return {isPreview=true,name=name,realm=realm,nameKey=name.."-"..realm,class=classes[slot],assignedRole=roles[slot],specID=specs[slot],itemLevel=260+slot*3,dungeonScore=2400+slot*135,relationship=index==3 and S("模拟好友","Sample friend") or ""}
+  return {isPreview=true,name=name,realm=realm,nameKey=name.."-"..realm,class=classes[slot],assignedRole=roles[slot],specID=specs[slot],itemLevel=260+slot*3,dungeonScore=2400+slot*135,factionGroup=index%2,relationship=index==3 and S("模拟好友","Sample friend") or ""}
  end
  p.recordIDs={};p.applicantIDs={1,2,3};p.emptyIDs={}
  for i=1,6 do
@@ -124,8 +146,9 @@ local function NewProvider(scenario)
   local counts={TANK=0,HEALER=0,DAMAGER=0};for _,m in ipairs(members) do counts[m.assignedRole]=counts[m.assignedRole]+1 end
   local id=-9000-i
   local r={id=id,isPreview=true,name=S("模拟队伍 ","Preview group ")..i,comment=S("本地预览样例：操作不会发送到游戏。","Local preview: actions are never sent to the game."),activity=activity,activityID=activity.id,activityName=activity.name,categoryID=activity.categoryID,numMembers=#members,maxNumPlayers=activity.maxNumPlayers or 5,leaderName=members[1].nameKey,leaderKey=members[1].nameKey,leaderOverallDungeonScore=members[1].dungeonScore,requiredItemLevel=260+i*2,age=i*47,level=activity.isMythicPlusActivity and 8+i or nil,charFriends=i==4 and 1 or 0,bnetFriends=0,guildMates=i==5 and 1 or 0,details={members=members,counts=counts}}
-  r.ratingKind=activity.isPvpActivity and "pvp" or "dungeon"
-  if activity.isPvpActivity then r.leaderRating=activity.isRatedPvpActivity and 1600+i*75 or nil
+  local profile=A.GroupPresentation.Activity(activity)
+  r.ratingKind=profile.kind=="pvp" and "pvp" or "dungeon"
+  if profile.kind=="pvp" then r.leaderRating=profile.requirementRatingKind and 1600+i*75 or nil
   else r.leaderRating=members[1].dungeonScore end
   p.records[id]=r;p.recordIDs[#p.recordIDs+1]=id
   if scenario=="applications" and i<=3 then p.apps[#p.apps+1]={id=id,status=i==1 and "invited" or "applied",name=r.name,result=r,categoryID=r.categoryID,leaderName=r.leaderName,expiresAt=GetTime()+300-i*30} end
@@ -134,6 +157,7 @@ local function NewProvider(scenario)
  p.applicants[1]={id=1,status="applied",displayOrderID=1,comment=S("单人模拟申请，可以治疗。","Single applicant; can heal."),members={Member(4)}}
  p.applicants[2]={id=2,status="applied",displayOrderID=2,comment=S("两位同行，邀请与拒绝作用于整组。","Two friends applying together; actions affect the whole batch."),members={Member(5),Member(6)}}
  p.applicants[3]={id=3,status="applied",displayOrderID=3,comment=S("模拟备注，查看职责、装等和评分。","Sample note; compare role, item level and score."),members={Member(7)}}
+ p:SetApplicantActivity(activity.id)
  if scenario=="applicants" then p.listing={activityID=activity.id,activityName=activity.name,name=S("模拟招募 · 申请者预览","Preview listing · applicants"),comment=S("本地模拟招募，不会发布到游戏。","Local preview listing; never published to the game."),requiredItemLevel=260,requiredDungeonScore=2000,generalPlaystyle=Enum.LFGEntryGeneralPlaystyle.FunRelaxed} end
  return p
 end

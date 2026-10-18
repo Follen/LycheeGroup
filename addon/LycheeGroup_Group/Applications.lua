@@ -51,7 +51,7 @@ local function Update(id,status,pending,remaining,groupName)
  record.status,record.pendingStatus=status,pending
  if finished[status] then record.removeAt=record.removeAt or GetTime()+5 else record.removeAt=nil end
  if type(remaining)=="number" then record.expiresAt=GetTime()+remaining end
- local result=G.Results:GetResult(id) or G.Results:Capture(id,record.result,true) or record.result
+ local result=Active(record) and (G.Results:GetResult(id) or G.Results:Capture(id,record.result,true) or record.result)
  if result then
   record.result=result;record.activityID=result.activityID;record.categoryID=result.categoryID
   record.name=result.name;record.leaderName=result.leaderName;record.leaderKey=result.leaderKey;record.activityName=result.activityName

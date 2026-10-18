@@ -2,9 +2,16 @@ local A = _G.LycheeGroup
 local G,L = A.Group,A.GroupLocale
 local Search={filters={},generation=0,state="idle"}
 G.Search=Search
-function Search:RequestActivities() C_LFGList.RequestAvailableActivities() end
+function Search:RequestActivities()
+ -- Availability belongs to the session, not a page. Repeating this request
+ -- broadcasts a global refresh to every loaded group browser.
+ if self.activitiesRequested then return end
+ self.activitiesRequested=true
+ C_LFGList.RequestAvailableActivities()
+end
 function Search:GetActivities(key) return G.Catalog:GetActivities(key) end
 function Search:OnAvailabilityUpdated()
+ self.activitiesRequested=true
  G.Catalog:Invalidate();G:Notify("activities")
 end
 function Search:CancelTimer()

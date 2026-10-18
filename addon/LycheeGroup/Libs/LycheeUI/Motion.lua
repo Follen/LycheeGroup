@@ -1,19 +1,22 @@
 local _,private=...
 local Library=private.LycheeUILoad
 if not Library then return end
-function Library.CreateMotion(UI)
--- 单一驱动;switches/alphas 记录进行中动画的终值,StopAll 据此落终态不留残影。
-local M = {jobs={}, startTimes={}, switches={}, alphas={}, colors={}, placements={},waiting={},spins={},spinOwners={},tickBuffer={}}
 local function curve(p) return p*(2-p) end
-local function bezier(u,x1,y1,x2,y2)
+local function coefficients(x1,y1,x2,y2)
+ local cx,cy=3*x1,3*y1
+ local bx,by=3*(x2-x1)-cx,3*(y2-y1)-cy
+ return {1-cx-bx,bx,cx,1-cy-by,by,cy}
+end
+local function bezier(u,c)
  if u<=0 then return 0 elseif u>=1 then return 1 end
- local lo,hi,t=0,1,u
- for _=1,16 do
-  local x=3*(1-t)^2*t*x1+3*(1-t)*t*t*x2+t^3
-  if x<u then lo=t else hi=t end
-  t=(lo+hi)/2
+ local ax,bx,cx,ay,by,cy=c[1],c[2],c[3],c[4],c[5],c[6]
+ local t=u
+ -- These fixed brand curves have positive x slopes. Five Newton steps cover
+ -- their full domain; no per-frame powers, search tables or fallback solver.
+ for _=1,5 do
+  t=t-(((ax*t+bx)*t+cx)*t-u)/((3*ax*t+2*bx)*t+cx)
  end
- return 3*(1-t)^2*t*y1+3*(1-t)*t*t*y2+t^3
+ return ((ay*t+by)*t+cy)*t
 end
 -- 品牌五段(与 Desgin §7、主 Lychee brandPoses 一致):段末时间、X/Y 缩放、上移(原图单位)、缩放与位移 bezier。
 local poses={
@@ -23,20 +26,41 @@ local poses={
  {1.092,.990,1.012,1,.16,.7,.30,1,.16,.7,.30,1},
  {1.386,1,1,0,.20,.7,.30,1,.20,.7,.30,1},
 }
-local function Drive(_, elapsed) M:Tick(elapsed,GetTimePreciseSec()) end
+-- Immutable curve data is compiled once and shared by all window contexts.
+for index,pose in ipairs(poses) do
+ local previous=poses[index-1]
+ pose.start=previous and previous[1] or 0
+ pose.inverseDuration=1/(pose[1]-pose.start)
+ pose.x,pose.y,pose.offset=previous and previous[2] or 1,previous and previous[3] or 1,previous and previous[4] or 0
+ pose.dx,pose.dy,pose.dOffset=pose[2]-pose.x,pose[3]-pose.y,pose[4]-pose.offset
+ pose.scaleCurve=coefficients(pose[5],pose[6],pose[7],pose[8])
+ if pose.dOffset~=0 then
+  local same=pose[5]==pose[9] and pose[6]==pose[10] and pose[7]==pose[11] and pose[8]==pose[12]
+  pose.moveCurve=same and pose.scaleCurve or coefficients(pose[9],pose[10],pose[11],pose[12])
+ end
+end
+function Library.CreateMotion(UI)
+-- 单一驱动;switches/alphas 记录进行中动画的终值,StopAll 据此落终态不留残影。
+local M = {jobs={}, startTimes={}, switches={}, alphas={}, colors={}, placements={},waiting={},spins={},spinOwners={},tickBuffer={}}
+local function Drive(_, elapsed)
+ M:Tick(elapsed,next(M.startTimes) and GetTimePreciseSec() or nil)
+end
 function M:Start(key, job)
  if not self.driver then self.driver=CreateFrame("Frame") end
  self.jobs[key]=job
  self.startTimes[key]=GetTimePreciseSec()
- if not self.driver:GetScript("OnUpdate") then self.driver:SetScript("OnUpdate",Drive) end
- self.driver:Show()
+ if not self.running then
+  self.running=true;self.driver:SetScript("OnUpdate",Drive);self.driver:Show()
+ end
 end
 function M:Stop(key)
  self.jobs[key]=nil
  self.startTimes[key]=nil
  if self.spins[key] then key:SetRotation(0);self.spins[key]=nil end
  self.switches[key]=nil;self.alphas[key]=nil;self.colors[key]=nil
- if not next(self.jobs) and self.driver then self.driver:SetScript("OnUpdate",nil);self.driver:Hide() end
+ if self.running and not next(self.jobs) then
+  self.running=false;self.driver:SetScript("OnUpdate",nil);self.driver:Hide()
+ end
 end
 
 -- refresh-spin: 900ms linear clockwise, only while the caller is busy.
@@ -70,7 +94,7 @@ function M:Reveal(region,point,parent,relative,x,y,dx,dy,duration)
  self:Start(region,function(dt)
   elapsed=math.min(duration or .18,elapsed+dt)
   local p=curve(elapsed/(duration or .18))
-  region:ClearAllPoints();region:SetPoint(point,parent,relative,x+(dx or 0)*(1-p),y+(dy or 0)*(1-p))
+  region:SetPoint(point,parent,relative,x+(dx or 0)*(1-p),y+(dy or 0)*(1-p))
   region:SetAlpha(.35+.65*p)
   if p==1 then self.placements[region]=nil;return true end
  end)
@@ -97,11 +121,12 @@ function M:Waiting(region,enabled)
  self.waiting[region]=enabled and true or nil
  local size=44
  if not enabled or UI:IsReducedMotion() then region:SetSize(size,size);region:SetAlpha(1);region:ClearAllPoints();region:SetPoint("TOP",0,-26);return end
- local elapsed=0
+ local elapsed,placed=0,false
  self:Start(region,function(dt)
   elapsed=(elapsed+dt)%1.2;local wave=.5-.5*math.cos(elapsed/1.2*math.pi*2)
   region:SetSize(size*(1+.035*wave),size*(1-.025*wave));region:SetAlpha(.65+.35*wave)
-  region:ClearAllPoints();region:SetPoint("TOP",0,-26+wave*3)
+  if not placed then region:ClearAllPoints();placed=true end
+  region:SetPoint("TOP",0,-26+wave*3)
  end)
 end
 function M:Count() local count=0;for _ in pairs(self.jobs) do count=count+1 end;return count end
@@ -183,7 +208,9 @@ function M:SetPresence(p)
   local pixelScale=frame:GetEffectiveScale()
   local offset=math.floor(-64*(1-curve(p))*pixelScale+.5)/pixelScale
   local x,y=self.originX or 0,(self.originY or 0)+offset
-  local alpha=curve(math.min(1,p*.42/.10))
+  local u=math.min(1,p*.42/.10)
+  -- Zero slope at both ends keeps the final visible frame close to transparent.
+  local alpha=u*u*(3-2*u)
   if self.lastX~=x or self.lastY~=y then
    frame:SetPoint(self.anchorPoint or "CENTER",self.anchorRelative or UI.parent,self.anchorRelativePoint or "CENTER",x,y)
    self.lastX,self.lastY=x,y
@@ -209,24 +236,22 @@ end
 -- 变换只作用于图标自身(枢轴 64,103,原图 128),不移动父容器、命中区或标题。
 function M:Brand()
  if self.jobs.brand or UI:IsReducedMotion() then return end
- local elapsed=0
+ local elapsed,segment=0,1
+ local logo=UI.logo
+ logo:ClearAllPoints();logo:SetPoint("CENTER",UI.logoButton,"CENTER",0,0)
  self:Start("brand",function(dt)
   elapsed=elapsed+dt
   if elapsed>=1.386 then self:StopBrand();return true end
-  local start,sx,sy,offset=0,1,1,0
-  for _,pose in ipairs(poses) do
-   if elapsed<=pose[1] then
-    local u=(elapsed-start)/(pose[1]-start)
-    local s=bezier(u,pose[5],pose[6],pose[7],pose[8])
-    local m=bezier(u,pose[9],pose[10],pose[11],pose[12])
-    local x,y=sx+(pose[2]-sx)*s,sy+(pose[3]-sy)*s
-    local size=UI.Theme.logoSize
-    UI.logo:SetSize(size*x,size*y)
-    UI.logo:ClearAllPoints();UI.logo:SetPoint("CENTER",UI.logoButton,"CENTER",0,size/128*(39*(y-1)+offset+(pose[4]-offset)*m))
-    return false
-   end
-   start,sx,sy,offset=pose[1],pose[2],pose[3],pose[4]
-  end
+  while elapsed>poses[segment][1] do segment=segment+1 end
+  local pose=poses[segment]
+  local u=(elapsed-pose.start)*pose.inverseDuration
+  local s=bezier(u,pose.scaleCurve)
+  local m=pose.moveCurve and pose.moveCurve~=pose.scaleCurve and bezier(u,pose.moveCurve) or s
+  local x,y=pose.x+pose.dx*s,pose.y+pose.dy*s
+  local size=UI.Theme.logoSize
+  logo:SetSize(size*x,size*y)
+  logo:SetPoint("CENTER",UI.logoButton,"CENTER",0,size/128*(39*(y-1)+pose.offset+pose.dOffset*m))
+  return false
  end)
 end
 -- 开关滑块:180ms 位置反馈;终值入册供 StopAll 落位。
@@ -238,12 +263,13 @@ function M:Switch(region,from,to)
   region:ClearAllPoints();region:SetPoint("LEFT",region:GetParent(),"LEFT",to,0);region._slideX=to
   return
  end
- local elapsed=0
+ local elapsed,placed=0,false
  self.switches[region]=to
  self:Start(region,function(dt)
   elapsed=math.min(.18,elapsed+dt)
   region._slideX=from+(to-from)*curve(elapsed/.18)
-  region:ClearAllPoints();region:SetPoint("LEFT",region:GetParent(),"LEFT",region._slideX,0)
+  if not placed then region:ClearAllPoints();placed=true end
+  region:SetPoint("LEFT",region:GetParent(),"LEFT",region._slideX,0)
   if elapsed==.18 then self.switches[region]=nil;return true end
  end)
 end
@@ -253,7 +279,7 @@ function M:StopAll()
  for region in pairs(self.waiting) do region:SetSize(44,44);region:SetAlpha(1);region:ClearAllPoints();region:SetPoint("TOP",0,-26);self.waiting[region]=nil end
  for region,target in pairs(self.placements) do region:ClearAllPoints();region:SetPoint(unpack(target));region:SetAlpha(1);self.placements[region]=nil end
  for key in pairs(self.jobs) do self.jobs[key]=nil;self.startTimes[key]=nil end
- if self.driver then self.driver:SetScript("OnUpdate",nil);self.driver:Hide() end
+ if self.running then self.running=false;self.driver:SetScript("OnUpdate",nil);self.driver:Hide() end
  for region,to in pairs(self.switches) do
   region:ClearAllPoints();region:SetPoint("LEFT",region:GetParent(),"LEFT",to,0);region._slideX=to
  end

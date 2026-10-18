@@ -56,6 +56,7 @@ do
 	T.eq(A.db.askReason, true, "默认询问理由")
 	T.eq(A.db.reduceMotion, false, "默认完整动效")
 	T.eq(A.db.nativeLFGEntry, true, "默认从原生眼睛进入荔枝组队")
+	T.eq(A.db.uiScale, 100, "主窗口缩放以当前尺寸 100% 为默认值")
 	T.eq(A.db.schema, 1)
 end
 
@@ -63,10 +64,11 @@ do
 	-- 已存在的存档值不被默认值覆盖。
 	_G.LycheeGroupDB = nil
 	A.db = nil
-	_G.LycheeGroupDB = { notesEnabled = false }
+	_G.LycheeGroupDB = { notesEnabled = false, uiScale = 115 }
 	A:LoadDB()
 	T.eq(A.db.notesEnabled, false, "保留已有值")
 	T.eq(A.db.askReason, true, "缺失项补默认")
+	T.eq(A.db.uiScale, 115, "保存的主窗口比例不被默认值覆盖")
 	T.eq(A.db.keywordFilters,nil,"fresh settings do not recreate keyword filters")
 end
 
@@ -233,6 +235,88 @@ do
  T.eq(nativeCalls,5,"failed product opening leaves the native entry available")
  A.Open,C_LFGList.HasActiveEntryInfo,C_LFGList.GetApplications,C_LFGList.GetApplicationInfo=oldOpen,oldActive,oldApplications,oldInfo
  _G.QueueStatusButton,_G.QueueStatus_InActiveBattlefield,_G.IsInLFDBattlefield,_G.LFG_ANGER_INC_VAL=nil,nil,nil,nil
+end
+
+-- Native binding writes keep scope and require explicit conflict replacement.
+do
+ local savedGlobals={}
+ local names={"C_KeyBindings","GetBindingKey","GetBindingAction","GetBindingText","GetCurrentBindingSet","SetBinding","SaveBindings","InCombatLockdown","UnitGUID"}
+ for _,name in ipairs(names) do savedGlobals[name]=_G[name] end
+ local oldDB=A.db;A.db={}
+ local assigned,order,writes,saves={}, {},0,{}
+ local scope,combat,reject=1,false,false
+ C_KeyBindings={GetBindingContextForAction=function(action) T.eq(action,"LYCHEEGROUP_TOGGLE");return 7 end}
+ GetBindingAction=function(key,_,context) T.eq(context,7);return assigned[key] or "" end
+ GetBindingKey=function(action,_,context)
+  T.eq(context,7)
+  local keys={};for _,key in ipairs(order) do if assigned[key]==action then keys[#keys+1]=key end end
+  return unpack(keys)
+ end
+ GetBindingText=function(key) return key end
+ GetCurrentBindingSet=function() return scope end
+ SetBinding=function(key,action,context)
+  T.eq(context,7);writes=writes+1
+  if reject then return false end
+  for i=#order,1,-1 do if order[i]==key then table.remove(order,i) end end
+  assigned[key]=action;if action then order[#order+1]=key end
+  return true
+ end
+ SaveBindings=function(value) saves[#saves+1]=value end
+ InCombatLockdown=function() return combat end
+ UnitGUID=function() return "Player-binding-test" end
+ Load.addon("LycheeGroup","Bindings.lua")
+ local B=A.Bindings
+ local function Reset(bindings)
+  assigned,order,writes,saves={}, {},0,{}
+  A.db.bindingDefaultScopes=nil
+  for _,entry in ipairs(bindings or {}) do assigned[entry[1]]=entry[2];order[#order+1]=entry[1] end
+ end
+ B:InitializeDefault()
+ T.eq(assigned[";"],B.action,"free half-width semicolon becomes the default")
+ T.eq(saves[1],1,"default saves the active account scope")
+ assigned[";"]=nil;B:InitializeDefault()
+ T.eq(assigned[";"],nil,"an intentionally removed default is not recreated")
+ Reset({{";","OPENALLBAGS"}});B:InitializeDefault()
+ T.eq(assigned[";"],"OPENALLBAGS","occupied semicolon keeps its original action")
+ T.eq(writes,0);T.eq(B:Conflict(";"),"OPENALLBAGS")
+ Reset({{"ALT-G",B.action}});B:InitializeDefault()
+ T.eq(assigned[";"],nil,"existing addon binding prevents default initialization")
+ T.eq(B:Text(),"ALT-G")
+ scope=2;Reset();B:InitializeDefault()
+ T.eq(saves[1],2,"character binding scope is not switched to account")
+ T.ok(A.db.bindingDefaultScopes["character:Player-binding-test"])
+ Reset();combat=true;B:InitializeDefault()
+ T.eq(writes,0,"default initialization does not write during combat")
+ combat=false;Stubs.FireEvent("PLAYER_REGEN_ENABLED")
+ T.eq(assigned[";"],B.action,"default initialization resumes once after combat")
+ T.eq(#Stubs.FramesWithEvent("PLAYER_REGEN_ENABLED"),0)
+ Reset({{"ALT-G",B.action},{"CTRL-G",B.action},{"M","TOGGLEWORLDMAP"}})
+ local ok,reason,conflict=B:SetKey("M")
+ T.eq(ok,false);T.eq(reason,"conflict");T.eq(conflict,"TOGGLEWORLDMAP")
+ T.eq(writes,0,"conflict detection leaves both actions unchanged")
+ ok,reason=B:SetKey("M","OPENALLBAGS")
+ T.eq(ok,false);T.eq(reason,"conflict","changed conflict must be confirmed again")
+ ok=B:SetKey("M","TOGGLEWORLDMAP")
+ T.eq(ok,true);T.eq(assigned.M,B.action);T.eq(assigned["ALT-G"],nil)
+ T.eq(assigned["CTRL-G"],B.action,"secondary Blizzard binding is preserved")
+ local first,second=B:Keys();T.eq(first,"M");T.eq(second,"CTRL-G")
+ T.eq(saves[1],2)
+ local before=writes;combat=true;ok,reason=B:SetKey("F")
+ T.eq(ok,false);T.eq(reason,"combat");T.eq(writes,before)
+ combat=false;reject=true;ok,reason=B:SetKey("F")
+ T.eq(ok,false);T.eq(reason,"failed");T.eq(assigned.M,B.action,"failed write keeps prior binding")
+ for _,name in ipairs(names) do _G[name]=savedGlobals[name] end
+ A.db=oldDB
+end
+
+do
+ local oldUI,oldOpen=A.UI,A.Open
+ local shown,hidden,opened=false,0,0
+ A.UI={IsShown=function() return shown end,Hide=function() hidden=hidden+1;shown=false end}
+ A.Open=function(_,page) T.eq(page,"find");opened=opened+1;shown=true;return true end
+ A:ToggleWindow();T.eq(opened,1)
+ A:ToggleWindow();T.eq(hidden,1,"binding closes the current main window")
+ A.UI,A.Open=oldUI,oldOpen
 end
 
 _G.LycheeGroupDB = nil

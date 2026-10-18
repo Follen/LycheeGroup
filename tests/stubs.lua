@@ -292,6 +292,7 @@ function Stubs.Install(overrides)
 	local function Pack(...) return {n=select("#",...),...} end
 
 	local env = {
+		CONQUEST_SIZES = {1,1,2,3,10},
 		GetLocale = function() return locale end,
 		GetRealmName = function() return realm end,
 		GetNormalizedRealmName = function() return (realm:gsub("%s+", "")) end,
@@ -305,6 +306,8 @@ function Stubs.Install(overrides)
 		UnitIsUnit = UnitIsUnit,
 		UnitIsPlayer = UnitIsPlayer,
 		UnitClassBase = UnitClassBase,
+		UnitFactionGroup = function(unit) return units[unit] and units[unit].faction or "Alliance" end,
+		PLAYER_FACTION_GROUP = { [0]="Horde",[1]="Alliance",Horde=0,Alliance=1 },
 		UnitGroupRolesAssigned = function(unit) return units[unit] and units[unit].role or "NONE" end,
 		UnitIsGroupLeader = function(unit) return units[unit] and units[unit].leader == true end,
 		GetNumSubgroupMembers = function() local n=0;for key in pairs(units) do if key:match("^party%d+$") then n=n+1 end end;return n end,
@@ -316,11 +319,16 @@ function Stubs.Install(overrides)
 			end
 		end,
 		GetNumGroupMembers = GetNumGroupMembers,
+		GetRaidRosterInfo = function(index) local unit=units["raid"..index];if unit then return unit.name,0,unit.subgroup or 1 end end,
 		IsInGroup = IsInGroup,
 		IsInRaid = IsInRaid,
 		GetNumClasses = GetNumClasses,
 		GetClassInfo = GetClassInfo,
 		GetSpecializationInfoForClassID = GetSpecializationInfoForClassID,
+		GetSpecializationInfoByID = function(id)
+			local roles={[65]="HEALER",[66]="TANK",[70]="DAMAGER",[71]="DAMAGER",[72]="DAMAGER",[73]="TANK"}
+			return id,"Specialization",nil,100000+id,roles[id]
+		end,
 		GetInspectSpecialization = GetInspectSpecialization,
 		NotifyInspect = NotifyInspect,
 		time = Now,

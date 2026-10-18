@@ -25,6 +25,8 @@ function G:Initialize()
 	db.prefs = db.prefs or {}
 
 	self.db = db
+ db.creationPresets=db.creationPresets or {}
+ self.Presets=A.CreationPresets.New(db.creationPresets,function() G:Notify("creationPresets") end)
 
 	local charDB = _G.LycheeGroupCharacterDB
 	if type(charDB) ~= "table" then
@@ -208,12 +210,14 @@ function G:RemoveListing() return self.Listing:RemoveListing() end
 function G:GetApplicants() return self.Applicants:GetApplicants() end
 function G:RefreshApplicants() return self.Applicants:RequestRefresh() end
 function G:GetApplicant(id) return self.Applicants:GetApplicant(id) end
+function G:GetApplicantDungeonScores(member) return self.Applicants:GetDungeonScores(member) end
 function G:Invite(id) return self.Applicants:Invite(id) end
 function G:Decline(id) return self.Applicants:Decline(id) end
 function G:GetHistory() return self.History:GetHistory() end
 function G:GetActiveRun() return self.History:GetActiveRun() end
 function G:InvalidateRoster(reason,unit) self.Roster:Invalidate(reason,unit) end
 function G:GetRoster() return self.Roster:Get() end
+function G:GetRaidBuffs(activityID) return self.Roster:GetRaidBuffs(activityID) end
 
 -- LFG remote names without a realm do not establish a complete player identity.
 function G:RemotePlayerKey(name)

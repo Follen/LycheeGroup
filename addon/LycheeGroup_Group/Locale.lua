@@ -8,7 +8,6 @@ A.GroupLocale = {
 	invalidAction = choose("当前状态无法执行此操作。", "This action is not available right now."),
 	actionBusy = choose("上一个操作仍在等待游戏确认。", "The previous action is still awaiting confirmation."),
 	invalidActivity = choose("请选择有效的活动。", "Choose a valid activity."),
-	invalidIdentity = choose("玩家名字与服务器不完整。", "The player's name and realm are incomplete."),
 	callbackError = choose("界面回调出错:%s", "Interface callback error: %s"),
 
 	-- 搜索

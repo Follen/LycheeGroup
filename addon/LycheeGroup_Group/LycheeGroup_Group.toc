@@ -14,12 +14,14 @@ Locale.lua
 Libs\LibStub\LibStub.lua
 Libs\LibSpecialization\LibSpecialization.lua
 Group.lua
+RaidBuffs.lua
 Roster.lua
 Game.lua
 Catalog.lua
 Search.lua
 Results.lua
 Applications.lua
+CreationPresets.lua
 Listing.lua
 Alerts.lua
 Applicants.lua

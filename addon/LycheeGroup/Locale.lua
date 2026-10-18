@@ -26,4 +26,18 @@ A.L = {
 	removeRecord = choose("取消记录", "Remove note"),
 	removed = choose("已移除 %s 的记录。", "Removed the note for %s."),
 	cmdUsage = choose("用法:/lg [find|create|notes|settings] 或 /lg note <玩家名> [理由]", "Usage: /lg [find|create|notes|settings] or /lg note <player> [reason]"),
+	bindingToggle = choose("打开／关闭荔枝组队", "Toggle Lychee LFG"),
+	bindingCurrent = choose("当前按键：%s", "Current key: %s"),
+	bindingUnbound = choose("未绑定", "Not bound"),
+	bindingChange = choose("修改按键", "Change key"),
+	bindingListen = choose("按下新按键，可使用组合键。Esc 取消。", "Press a new key or key combination. Esc cancels."),
+	bindingConflict = choose("%s 已用于“%s”。要替换此按键吗？", "%s is bound to “%s”. Replace this binding?"),
+	bindingDefaultConflict = choose("默认分号已用于“%s”，已保留原绑定。", "The default semicolon is bound to “%s”; its binding was kept."),
+	bindingReplace = choose("替换", "Replace"),
+	bindingCancel = choose("取消", "Cancel"),
+	bindingCombat = choose("战斗中无法修改按键，请脱战后重试。", "Key bindings cannot be changed in combat. Try again afterward."),
+	bindingFailed = choose("无法保存此按键，请选择其他按键。", "Could not save this binding. Choose another key."),
 }
+
+BINDING_HEADER_LYCHEEGROUP = A.L.reminder
+BINDING_NAME_LYCHEEGROUP_TOGGLE = A.L.bindingToggle

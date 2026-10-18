@@ -122,7 +122,7 @@ end
 
 local EVENTS = {
   "LFG_LIST_SEARCH_RESULTS_RECEIVED", "LFG_LIST_SEARCH_RESULT_UPDATED",
-  "LFG_LIST_UPDATE_SEARCH_RESULTS", "LFG_LIST_SEARCH_FAILED", "LFG_LIST_AVAILABILITY_UPDATE",
+  "LFG_LIST_UPDATE_SEARCH_RESULTS", "LFG_LIST_SEARCH_FAILED",
   "LFG_LIST_APPLICANT_LIST_UPDATED", "LFG_LIST_APPLICANT_UPDATED",
   "GROUP_ROSTER_UPDATE", "CHALLENGE_MODE_COMPLETED", "CHALLENGE_MODE_RESET", "PLAYER_ENTERING_WORLD",
 }
@@ -133,18 +133,21 @@ local function ObserveClosedOwners()
   if m then for _ in pairs(m.jobs) do jobs = jobs + 1 end end
   local state = { uiShown = ui and ui:IsShown() or false, uiHiding = ui and ui.hiding == true or false,
     motionJobs = jobs, motionOnUpdate = m and m.driver and m.driver:GetScript("OnUpdate") ~= nil or false,
+    applicationCountdown = ui and ui.pages.find.countdown ~= nil or false,
+    rosterTimer = g and (g.Roster.timer ~= nil or g.Roster.refreshTimer ~= nil) or false,
     nativeInputBorrowed = ui and ui.Native and ui.Native.owner ~= nil or false,
     groupViews = g and g:HasViews() or false, results = g and g:GetResultCount() or 0,
     applications = g and #g:GetApplications() or 0, applicants = g and g.Applicants:GetCount() or 0,
     activeListing = C_LFGList.HasActiveEntryInfo(), activeChallenge = C_ChallengeMode.IsChallengeModeActive(),
     searchState = g and g:GetSearchState() or "unloaded", extraGroupEvents = {},
+    catalogUpdatesSubscribed = g and g.Game.frame:IsEventRegistered("LFG_LIST_AVAILABILITY_UPDATE") or false,
     expectedNotesReminder = A.db.notesEnabled and A.db.notesHasRecords,
   }
   local frame = g and g.Game.frame
   for _, event in ipairs(EVENTS) do
     if frame and frame:IsEventRegistered(event) then state.extraGroupEvents[#state.extraGroupEvents + 1] = event end
   end
-  state.knownOwnersIdle = not state.uiShown and not state.uiHiding and jobs == 0 and not state.motionOnUpdate
+  state.knownOwnersIdle = not state.uiShown and not state.uiHiding and jobs == 0 and not state.motionOnUpdate and not state.applicationCountdown and not state.rosterTimer
     and not state.nativeInputBorrowed and not state.groupViews and state.results == 0 and state.applications == 0
     and state.applicants == 0 and not state.activeListing and not state.activeChallenge and #state.extraGroupEvents == 0
   return state

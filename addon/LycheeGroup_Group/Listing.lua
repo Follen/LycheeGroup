@@ -10,7 +10,9 @@ local snapshot
 local function NormalizeEntry()
 	if not C_LFGList.HasActiveEntryInfo() then return nil end
 	local data = C_LFGList.GetActiveEntryInfo()
-	if type(data) ~= "table" then return nil end
+	-- An active entry can be waiting for its refreshed details; only native
+	-- inactive state ends the last confirmed listing.
+	if type(data) ~= "table" then return snapshot end
 	local activityID = type(data.activityIDs) == "table" and data.activityIDs[1] or nil
 	local activityName
 	if activityID then
@@ -23,8 +25,6 @@ local function NormalizeEntry()
 		activityName = activityName,
 		name = data.name,
 		comment = data.comment,
-		voiceChat = data.voiceChat,
-		duration = data.duration,
 		requiredItemLevel = data.requiredItemLevel,
 		requiredDungeonScore = data.requiredDungeonScore,
 		requiredPvpRating = data.requiredPvpRating,
@@ -130,7 +130,7 @@ function Listing:RemoveListing()
 	return true
 end
 
--- LFG_LIST_ACTIVE_ENTRY_UPDATE(created):事件确认后刷新快照。
+-- LFG_LIST_ACTIVE_ENTRY_UPDATE also confirms asynchronous listing edits.
 function Listing:OnEntryUpdate()
 	snapshot = NormalizeEntry()
 	G.Game:RefreshSubscriptions()

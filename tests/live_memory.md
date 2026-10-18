@@ -1,5 +1,27 @@
 # 游戏内内存探针
 
+2026-10-18 的 LycheeUI 1.1.14 八轮审计后，复用下面的 Presence 与动效计时探针；[新结果](results/ui-audit-2026-10-18.json)单独保存，未覆盖 1.1.12／1.1.13 历史报告。离线调用数、原生轨迹和客户端整体帧时分别解释，完整范围见[本轮记录](../perfermance.md#2026-10-18-四轮动画与四轮全仓审计)。
+
+`live_ui_motion_profile.lua` 对设置页执行“正常四轮 → 固定坐标四轮 → 正常四轮”的有界开关对照，用于区分坐标更新与其他帧耗时。UI 未构建时先预热设置页，要求主窗关闭、无战斗／Preview／弹窗且启用默认动画和原生 AddOn profiler。初始两秒包含探针启动与临时 FPS 切换，不能当作干净后台基线。它记录 `LastTime` 应用／插件指标、Motion Tick 计时及观察器成本；临时包装自有方法可能使分包 CPU 归属转移到探针槽，单包零值不得解释为零成本。探针在完成、失败或取消时恢复原方法、FPS、隐藏页面并移除观察器。只在诊断对照中固定坐标，不修改正式动画或业务设置；不做主动 GC。结果与剩余长帧边界见[动画计算与锚点更新优化](../perfermance.md#2026-10-18-动画计算与锚点更新优化)。
+
+```powershell
+lycheedev live execute --project D:\Code\wow\addons\LycheeGroup --session <CON-id> --file tests/live_ui_motion_profile.lua --request lycheegroup-ui-motion-01 --budget-seconds 32 --wait-seconds 35 --policy observation --format json
+```
+
+`live_ui_presence.lua` 针对主窗消失瞬间记录原生透明度、相位、纵向偏移和逐帧间隔，并检查 Logo 尚在变形时关闭是否跳回原形。要求主窗关闭、无战斗／Preview／弹窗且保留默认动画；UI 未加载时先创建设置页并立即关闭作为准备，不将这一步当作首开性能测量。正式过程打开设置页、等待品牌动作结束、正常关闭，再打开并在约 210ms 时关闭一次。它临时将前后台 FPS CVar 设为 60，但以实测 `dtMs` 为准，不假定客户端一定按该帧率运行；完成、失败或取消后恢复原值和原隐藏页面，移除观察器。下面的 `<CON-id>` 使用已建立的连接，每次独立测量指定新的 request。轨迹数据证明状态变化，不能代替目视体验或整场景 CPU 验收。[本轮轨迹与失败记录](results/ui-presence-2026-10-18.json)对应[主窗淡出收尾修正](../perfermance.md#2026-10-18-主窗淡出收尾修正)。
+
+当前脚本在快速关闭后另加一轮中途反向：完全打开，关闭约 150ms 后立即重开，比较位置、透明度和 Logo 形状，再验证旧退场回调不会关闭新窗口。新增场景的 [1.1.13 结果](results/ui-motion-2026-10-18.json)单独保存，不改写此前 1.1.12 的历史报告。
+
+```powershell
+lycheedev live execute --project D:\Code\wow\addons\LycheeGroup --session <CON-id> --file tests/live_ui_presence.lua --request lycheegroup-ui-presence-01 --budget-seconds 14 --wait-seconds 30 --policy observation --format json
+```
+
+`live_ui_transitions.lua` 单独测量真实寻队、设置页的进出场帧时，不刷新内存计数。先正常打开两个页面使其完成加载，再关闭主窗；保留默认动画，退出战斗、Preview 和弹窗。探针交替打开两个页面各三次，调用正常搜索和关闭入口，不提交申请或招募。它用一个有界 `OnUpdate` 观察帧间隔，记录同步开关调用、进场、停留、退场和静置的中位数、P95 与最大值；帧时包含整个客户端工作，不能全部归给荔枝组队。运行期间把前后台帧率上限临时设为 120，结束、失败或取消时恢复原值、原隐藏页面并移除观察器；不修改 profiling 或主动 GC。关窗后的 `jobsAfter=0` 仅覆盖共享动画调度器。首次加载成本需要单独记录，不能用这个预热探针代替。结果见[真实页面进出场测量](../perfermance.md#2026-10-18-真实页面进出场测量)。
+
+```powershell
+lycheedev live execute --project D:\Code\wow\addons\LycheeGroup --session <CON-id> --file tests/live_ui_transitions.lua --request lycheegroup-ui-transitions-01 --budget-seconds 22 --wait-seconds 30 --policy observation --format json
+```
+
 `live_compare.lua` 用于荔枝组队与集合石的同场景 CPU／内存比较。只修改开头的 `targetName`，分别使用 `lychee` 和 `meetingstone`；另一轮使用独立文件和 request，避免改动仍待完成的请求源码。运行前两边主窗关闭、原生搜索框为空、没有组队／申请／招募／战斗／大秘境。先记录 `scriptProfile` 原值，启用计量并通过 LycheeDev 重载；两轮结束后恢复原值并再次重载。探针每轮至少预热 10 秒、正式采样 60 秒，采用 95 秒执行预算，记录 6 次真实搜索、120 次滚动、1 秒间隔内存样本以及 CPU 起止差值。它临时统一帧率上限，结束、失败或取消时恢复窗口、相关筛选、历史和帧率设置；没有主动 GC。结果和计量边界见[同场景比较](../perfermance.md#2026-10-18-与集合石的同场景比较)。
 
 2026-10-18 当前四包安装使用 `live_memory_scenarios.lua`，LycheeUI 内置成本计入 `LycheeGroup`。最新前后结果见[性能文档第 12 节](../perfermance.md#12-当前内存测试与验证状态)。下面其他探针保留了 2026-10-17 独立 LycheeUI 的五包统计口径；再次执行前须按实际安装核对 `packages` 和加载检查，不将已取消的独立库包视为加载失败，也不把旧五包读数直接用于新版本。
@@ -51,6 +73,8 @@ lycheedev live disconnect <CON-id> --project D:\Code\wow\addons\LycheeGroup --wa
 - `luaHeapKB`、`luaHeapAfterRefreshKB` 是整个客户端 Lua 堆，包含其他插件、测试源码和预分配报告对象；不能把它们的增量归给荔枝组队。探针不报告进程内存、原生纹理内存、累计分配或没有采到的峰值，也不设置未经测量的达标门槛。
 - `loadedAtStart`、`pageBuiltAtStart` 决定哪些首次打开实际是冷路径。`coreOnlyAtStart=true` 要求当前 Lua 会话中五包只有主包已加载；`businessPagesUnloadedAtStart=true` 表示 Group、Notes、LycheeGroup_UI 尚未加载，允许 LycheeUI 已加载。默认启用浮窗时通常是核心加共享库，不能把业务页面未开等同于仅核心。保持实际设置，不为冷态关闭默认功能；测试无法卸载已加载的包或撤回首次加载成本。
 - `initialClosedOwners`、`closedOwnersBeforeCleanup`、`closedOwnersAfterCleanup` 记录初始、清理前后已知所有者：动画任务和驱动、Group 视图、搜索结果、申请、申请者及额外事件。只检查本产品已有对象，不扫描整个游戏 Frame，也不能证明所有未知 timer 都为零。启用且有记录时，笔记提醒是预期后台业务。
+- `catalogUpdatesSubscribed` 单列 Group 加载后保留的原生活动目录事件；该事件用于失效缓存，没有定时器，不计入应随页面释放的 `extraGroupEvents`。旧报告没有此字段，保留原测量口径。
+- `applicationCountdown` 记录寻队页按秒展示 ticker；`rosterTimer` 覆盖创建页的广播合并与串行检视 timer。两者均计入 `knownOwnersIdle`，不因展示任务移出动画驱动而漏报；旧报告保持原字段与范围。
 - `checks` 单独给出清理前空闲状态、探针资源释放和原隐藏页面恢复结果。LycheeDev 的 `report.ok` 表示探针执行结果；判断残留还要查看这些字段。清理前结果保留，即使清理过程随后停止了测试产生的动画。
 
 一个 ticker、两个包装回调和最多 32 个预分配样本组成全部测试驱动。完成、报错、取消或超时都会取消 ticker、撤销测试事件和脚本，并恢复原来的隐藏页面。五包加载及正常页面创建留下的可复用对象如实保留；申请、招募和笔记提醒不被测试清理。若测试期间出现真实业务、战斗或切出世界，探针会停止，需先处理原请求的失败与清理结果。

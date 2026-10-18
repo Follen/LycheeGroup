@@ -22,7 +22,7 @@ function N:Fire(k,...) Fire(self,k,...) end
 function N:RegisterEvent(k) self.events[k]=true end
 function N:UnregisterEvent(k) self.events[k]=nil end
 function N:GetParent() return self.parent end
-function N:GetChildren() local children={};for _,child in ipairs(self.children) do if child._objectType~="Texture" and child._objectType~="FontString" then children[#children+1]=child end end;return unpack(children) end
+function N:GetChildren() local children={};for _,child in ipairs(self.children) do if child._objectType~="Texture" and child._objectType~="MaskTexture" and child._objectType~="FontString" then children[#children+1]=child end end;return unpack(children) end
 function N:SetParent(parent) if self.parent then for i,n in ipairs(self.parent.children) do if n==self then table.remove(self.parent.children,i);break end end end;self.parent=parent;parent.children[#parent.children+1]=self end
 function N:Show() local was=self.shown;self.shown=true;if not was then Fire(self,"OnShow") end end
 function N:Hide() local was=self.shown;self.shown=false;if was then Fire(self,"OnHide") end end
@@ -49,7 +49,7 @@ function N:UnregisterAllEvents() self.events={} end
 function N:SetScale(v) self.scale=v end
 function N:GetScale() return self.scale or 1 end
 function N:GetEffectiveScale() return self:GetScale()*(self.parent and self.parent:GetEffectiveScale() or 1) end
-function N:SetAlpha(v) self.alpha=v end
+function N:SetAlpha(v) self.alpha=v;if self.kind=="Texture" then self.vertex=self.vertex or {1,1,1,1};self.vertex[4]=v end end
 function N:GetAlpha() return self.alpha end
 function N:SetFont(...) self.font={...};if self._objectType~="Font" then return true end end
 function N:GetFont() return unpack(self.font) end
@@ -82,7 +82,7 @@ function N:GetRegions() local regions={};for _,child in ipairs(self.children) do
 function N:SetColorTexture(...) self.fill={...} end
 function N:SetDrawLayer(layer,sublevel) self.layer=layer;self.sublevel=sublevel end
 function N:GetDrawLayer() return self.layer,self.sublevel or 0 end
-function N:SetVertexColor(...) self.vertex={...} end
+function N:SetVertexColor(r,g,b,a) self.vertex={r,g,b,a or 1};self.alpha=a or 1 end
 function N:SetRotation(radians) self.rotation=radians end
 function N:SetTexture(v) self.texture=v;self.atlas=nil end
 function N:GetTexture() return self.texture end
@@ -93,7 +93,7 @@ function N:SetJustifyH(v) self.justify=v end
 function N:SetJustifyV(v) self.justifyV=v end
 function N:SetWordWrap(v) self.wrap=v end
 function N:SetFrameLevel(v) self.level=v end
-function N:GetFrameLevel() return self.level or 1 end
+function N:GetFrameLevel() return self.level or (self.parent and self.parent:GetFrameLevel()+1 or 0) end
 function N:SetEnabled(v) self.enabled=v end
 function N:IsEnabled() return self.enabled end
 function N:Enable() self:SetEnabled(true) end
@@ -111,7 +111,7 @@ function N:GetVerticalScroll() return self.scroll or 0 end
 function N:SetVerticalScroll(v) self.scroll=v end
 function N:GetVerticalScrollRange() return 100 end
 function N:SetScrollChild(v) self.scrollChild=v end
-function N:CreateMaskTexture(name,layer) return self:CreateTexture(name,layer) end
+function N:CreateMaskTexture(name,layer) local mask=S.New("MaskTexture",name,self);mask.layer=layer;return mask end
 function N:AddMaskTexture(mask) self.mask=mask end
 function N:RemoveMaskTexture(mask) if self.mask==mask then self.mask=nil end end
 function N:SetDesaturated(value) self.desaturated=value end
@@ -147,6 +147,25 @@ function S.Install()
  _G.CreateFont=function(name) return S.New("Font",name) end
  _G.UIParent=S.New("Frame");UIParent:SetSize(1920,1080)
  _G.UISpecialFrames={};_G.InCombatLockdown=function() return false end
+ S.bindings={};S.bindingOrder={};S.bindingSaves={};S.bindingScope=1;S.bindingModifiers={}
+ _G.C_KeyBindings={GetBindingContextForAction=function() return 0 end}
+ _G.GetBindingKey=function(action)
+  local keys={};for _,key in ipairs(S.bindingOrder) do if S.bindings[key]==action then keys[#keys+1]=key end end;return unpack(keys)
+ end
+ _G.GetBindingAction=function(key) return S.bindings[key] or "" end
+ _G.GetBindingText=function(key) return key end
+ _G.GetBindingName=function(action) return _G["BINDING_NAME_"..action] or action end
+ _G.GetCurrentBindingSet=function() return S.bindingScope end
+ _G.SetBinding=function(key,action)
+  for i=#S.bindingOrder,1,-1 do if S.bindingOrder[i]==key then table.remove(S.bindingOrder,i) end end
+  S.bindings[key]=action;if action then S.bindingOrder[#S.bindingOrder+1]=key end;return true
+ end
+ _G.SaveBindings=function(scope) S.bindingSaves[#S.bindingSaves+1]=scope end
+ _G.GetConvertedKeyOrButton=function(key) return key=="SEMICOLON" and ";" or key end
+ _G.IsKeyPressIgnoredForBinding=function(key) return key=="LCTRL" or key=="RCTRL" or key=="LALT" or key=="RALT" or key=="LSHIFT" or key=="RSHIFT" end
+ _G.CreateKeyChordStringUsingMetaKeyState=function(key)
+  local mods=S.bindingModifiers;return (mods.ctrl and "CTRL-" or "")..(mods.alt and "ALT-" or "")..(mods.shift and "SHIFT-" or "")..key
+ end
  _G.STANDARD_TEXT_FONT="font"
  _G.LOCALIZED_CLASS_NAMES_MALE={WARRIOR="战士",PALADIN="圣骑士",PRIEST="牧师",MAGE="法师",DRUID="德鲁伊"}
  _G.GetTime=function() return 0 end
@@ -176,7 +195,7 @@ function S.Install()
  _G.EJ_SelectTier=function() end
  _G.EJ_GetInstanceByIndex=function() return nil end
  _G.bit={bor=function(a,b) return a+b end}
- _G.C_ChallengeMode={GetDungeonScoreRarityColor=function() return {r=.2,g=.7,b=.9,WrapTextInColorCode=function(_,text) return "|cff33b3e6"..text.."|r" end} end}
+ _G.C_ChallengeMode={GetDungeonScoreRarityColor=function() return {r=.2,g=.7,b=.9,WrapTextInColorCode=function(_,text) return "|cff33b3e6"..text.."|r" end} end,GetKeystoneLevelRarityColor=function() return {r=1,g=.5,b=0} end}
  _G.C_AddOns={LoadAddOn=function() return true end,IsAddOnLoaded=function() return true end}
  _G.LFGListFrame=S.New("Frame",nil,UIParent)
  local searchPanel=S.New("Frame",nil,LFGListFrame);searchPanel:Hide();LFGListFrame.SearchPanel=searchPanel

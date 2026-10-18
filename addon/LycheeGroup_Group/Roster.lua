@@ -1,5 +1,5 @@
 -- 当前队伍专精：LibSpecialization 优先；缺失时串行检视。
--- 没有轮询。计时器只用于一次通信等待、检视节流和当前请求超时。
+-- 没有轮询。计时器用于合并同帧专精广播、一次通信等待、检视节流和当前请求超时。
 local A=_G.LycheeGroup
 local G=A.Group
 local R={members={},dirty=true,librarySpecs={},inspected={},attempted={},changed={}}
@@ -8,7 +8,7 @@ local LIBRARY_WAIT,INSPECT_INTERVAL,INSPECT_TIMEOUT=1,2,5
 local lastInspect=-math.huge
 
 local function EachUnit(callback)
- if IsInRaid() then for i=1,GetNumGroupMembers() do callback("raid"..i) end
+ if IsInRaid() then for i=1,GetNumGroupMembers() do callback("raid"..i,i) end
  else callback("player");for i=1,GetNumSubgroupMembers() do callback("party"..i) end end
 end
 local function Positive(value)
@@ -17,6 +17,13 @@ local function Positive(value)
 end
 local function CancelTimer()
  if R.timer then R.timer:Cancel();R.timer=nil end
+end
+local function CancelRefresh()
+ if R.refreshTimer then R.refreshTimer:Cancel();R.refreshTimer=nil end
+end
+local function Refresh()
+ G:Notify("roster")
+ if R.active then R:Get() end
 end
 local function Prune(seen)
  for _,cache in ipairs({R.librarySpecs,R.inspected,R.attempted,R.changed}) do
@@ -48,17 +55,25 @@ function R:OnLibrarySpec(specID,name)
  self.librarySpecs[matched]=specID;self.changed[matched]=nil
  if self.pending and self.pending.guid==matched then CancelTimer();self.pending=nil
  elseif not self.pending then CancelTimer() end
- self:Invalidate()
+ self.dirty=true
+ if self.active then
+  if not self.refreshTimer then
+   self.refreshTimer=C_Timer.NewTimer(0,function() R.refreshTimer=nil;Refresh() end)
+  end
+ else
+  Refresh()
+ end
 end
 
 function R:SetActive(active)
  if self.active==active then return end
  self.active=active;self.dirty=true
- CancelTimer();self.pending=nil;wipe(self.attempted)
+ CancelTimer();CancelRefresh();self.pending=nil;wipe(self.attempted)
  if active then self.libraryWaitUntil=GetTime()+LIBRARY_WAIT end
 end
 
 function R:Invalidate(reason,unit)
+ CancelRefresh()
  if reason=="spec" and unit and not G.Public(UnitIsUnit(unit,"player")) then
   local guid=G.Public(UnitGUID(unit))
   if guid then
@@ -68,8 +83,7 @@ function R:Invalidate(reason,unit)
   wipe(self.attempted)
  end
  self.dirty=true
- G:Notify("roster")
- if self.active then self:Get() end
+ Refresh()
 end
 
 function R:Pump()
@@ -134,15 +148,18 @@ end
 function R:Get()
  if not self.dirty then return self.members end
  local index,seen=0,{}
- EachUnit(function(unit)
+ EachUnit(function(unit,raidIndex)
   local key,name,realm=A:UnitIdentity(unit)
   if not key then return end
   index=index+1
   local member=self.members[index] or {};self.members[index]=member
   member.unit,member.name,member.realm,member.nameKey=unit,name,realm,key
+  member.subgroup=raidIndex and G.Public(select(3,GetRaidRosterInfo(raidIndex))) or 1
   local guid=G.Public(UnitGUID(unit));member.guid=guid
   if guid then seen[guid]=true end
   member.class=G.Public(UnitClassBase(unit))
+  local faction=G.Public(UnitFactionGroup(unit))
+  member.factionGroup=faction and PLAYER_FACTION_GROUP[faction] or nil
   member.assignedRole=G.Public(UnitGroupRolesAssigned(unit))
   member.isLeader=G.Public(UnitIsGroupLeader(unit))==true
   member.isSelf=G.Public(UnitIsUnit(unit,"player"))==true
@@ -162,6 +179,7 @@ function R:Get()
    member.itemLevel=Positive(C_PaperDollInfo.GetInspectItemLevel(unit)) or cached and cached.itemLevel
   end
   member.specID=Positive(spec);member.specSource=source
+  if member.specID and (not member.assignedRole or member.assignedRole=="NONE") then member.assignedRole=select(5,GetSpecializationInfoByID(member.specID)) end
   local summary=G.Public(C_PlayerInfo.GetPlayerMythicPlusRatingSummary(unit))
   member.dungeonScore=summary and G.Public(summary.currentSeasonScore)
  end)
@@ -170,4 +188,10 @@ function R:Get()
  self.dirty=false
  self:Pump()
  return self.members
+end
+
+function R:GetRaidBuffs(activityID)
+ local report=A.RaidBuffs.Get(G.Catalog,activityID,self:Get(),self.buffReport)
+ if report then self.buffReport=report end
+ return report
 end

@@ -10,6 +10,17 @@ function UI:MemberHasRole(member,role)
  if member.requestedRoles then return member.requestedRoles[role]==true end
  return member.assignedRole==role
 end
+local factionTextures={Alliance="Interface\\AddOns\\LycheeGroup_UI\\Media\\faction-alliance.tga",Horde="Interface\\AddOns\\LycheeGroup_UI\\Media\\faction-horde.tga"}
+function UI:SetFactionIcon(icon,member)
+ local faction=member.factionGroup and PLAYER_FACTION_GROUP[member.factionGroup]
+ local texture=factionTextures[faction]
+ icon:SetShown(texture~=nil)
+ if texture then icon:SetTexture(texture) end
+ return texture~=nil
+end
+function UI:CanWhisperFaction(factionGroup)
+ return not self.preview and factionGroup~=nil and factionGroup==PLAYER_FACTION_GROUP[UnitFactionGroup("player")]
+end
 local specIcons={}
 function UI:SpecName(member)
  if member.specName then return member.specName end

@@ -19,6 +19,10 @@ function UI:HasNote(key)
 end
 
 function UI:OnSettingChanged(key)
+	if key == "uiScale" then
+		if self.frame then self:FitToScreen() end
+		return
+	end
 	if key ~= "notesEnabled" then return end
 	UI.Tooltip:Hide()
 	local page = self.page and self.pages[self.page]
@@ -47,8 +51,14 @@ function UI:ApplyFont(path)
 end
 
 function UI:FitToScreen()
-	local scale = math.min(1, (UIParent:GetWidth() - 40) / T.width, (UIParent:GetHeight() - 40) / T.height)
+	local find = self.pages.find
+	local width = T.width + (find.filterPanel and find.filterPanel:IsShown() and 280 or 0)
+	local scale = math.min(1, (UIParent:GetWidth() - 40) / width, (UIParent:GetHeight() - 40) / T.height) * A.db.uiScale / 100
+	if self.frame:GetScale() == scale then return end
 	self.frame:SetScale(scale)
+	self:CloseMenu()
+	local tooltip = self.Tooltip
+	if tooltip.interactive and tooltip.interactive:IsShown() then tooltip:Place(tooltip.interactive.canvas:GetHeight()) end
 end
 
 -- ---------------------------------------------------------------- 共用格式化
@@ -83,11 +93,12 @@ end
 function UI:CloseMenuFor(anchor) return self.context:CloseMenuFor(anchor) end
 function UI:CloseMenu() return self.context:CloseMenu() end
 function UI:HandleEscape()
+ local page=self.pages[self.page]
+ if page and page.CancelBindingCapture and page:CancelBindingCapture() then return end
  if self.activeModal then self:CloseModal()
  elseif self.Tooltip.pinned then self.Tooltip:Hide()
  elseif self.context.menu and self.context.menu:IsShown() then self:CloseMenu()
  else
-  local page=self.pages[self.page]
   if page and page.picker and page.picker:IsShown() then page:ClosePicker()
   elseif page and page.filtersOpen then page:SetFiltersOpen(false)
   else self:Hide() end
@@ -267,7 +278,7 @@ end
 
 -- UI:Show(page, context):未建窗先建;页面 140ms 过渡;开窗播放品牌动作一次。
 function UI:Show(page, context)
-	if not self.frame then self:Build() end
+	if not self.frame then self:Build() else self:FitToScreen() end
 	local wasHidden = self.hiding or not self.frame:IsShown()
 	-- 快速重开:递增令牌使旧退场回调失效,旧回调不能关新窗。
 	self.exitToken = (self.exitToken or 0) + 1
@@ -286,7 +297,6 @@ function UI:Navigate(page, context)
  if self.preview and page~="find" and page~="create" then self:StopPreview(false);self:Show(page,context);return end
 	if A.Floating then A.Floating:Dismiss() end
 	if not self.pages[page] then page = "find" end
-	if page ~= "settings" then self.mainPage = page end
 	if self.page == page then
 		local p = self.pages[page]
 		if p.Enter then p:Enter(context) end
@@ -330,11 +340,11 @@ function UI:Hide(immediate)
 	if self.copyDialog then self.copyDialog:Hide() end
 	for _, input in ipairs(self.inputs or {}) do input:ClearFocus() end
 	if self.Native then self.Native:ClearFocus() end
-	M:StopBrand()
 	local function done()
 		if UI.exitToken ~= token then return end
 		UI.finishHide = nil
 		UI.frame:Hide()
+		M:StopBrand()
 		if closingPage then
 			if closingPage.Leave then closingPage:Leave() end
 			if closingPage.frame then M:FinishPlacement(closingPage.frame) end

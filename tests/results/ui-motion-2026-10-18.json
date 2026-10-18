@@ -1,0 +1,1952 @@
+{
+  "date": "2026-10-18",
+  "client": "12.1.5.70391",
+  "sourceCommit": "18c6d677b605b312f3d813d498404631fb941977",
+  "beforeLibrary": "1.1.12 revision 14",
+  "afterLibrary": "1.1.13 revision 15",
+  "connectionClosed": true,
+  "measurement": "Settings ABA: four normal cycles, four fixed-anchor diagnostic cycles, four normal cycles. First two seconds are startup/idle, not a clean background baseline. No forced GC or scriptProfile change. A separate final presence trace requests 60FPS and exercises rapid reopening.",
+  "attribution": "LastTime is a client frame metric. Temporary owned method wrappers and probe-driven entry may attribute work to the probe slot; zero per-package lychee readings do not mean zero target CPU. Bracketed Tick times include all currently scheduled motion jobs and completion work. Frame timings include the entire application and waiting.",
+  "offline": {
+    "lua": "5.1",
+    "scheduledTicksPerVariant": 50100,
+    "beforeMs": 229,
+    "afterMs": 41,
+    "nativeGeometry": "replaced with scalar sinks; not native rendering",
+    "trajectorySamples": 1386,
+    "maximumDifferenceFromPriorUIUnits": 0.000145019,
+    "referenceRegression": "1385 samples at 1ms intervals; every scale and pivot value differs by less than 0.00001 UI unit from a 24-step bisection reference"
+  },
+  "runs": [
+    {
+      "request": "ui-motion-profile-01",
+      "operation": "LMO-769a4c21d8d6a5e6c3afe28e1200ab5e",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "report": {
+        "logs": {},
+        "ok": true,
+        "resourcesReleased": true,
+        "result": {
+          "build": "70391",
+          "calls": [
+            {
+              "cycle": 1,
+              "kind": "open",
+              "mode": "normalA",
+              "ms": 3.3914999961853027
+            },
+            {
+              "cycle": 1,
+              "kind": "close",
+              "mode": "normalA",
+              "ms": 0.05710005760192871
+            },
+            {
+              "cycle": 2,
+              "kind": "open",
+              "mode": "normalA",
+              "ms": 0.5530999898910522
+            },
+            {
+              "cycle": 2,
+              "kind": "close",
+              "mode": "normalA",
+              "ms": 0.06760001182556152
+            },
+            {
+              "cycle": 3,
+              "kind": "open",
+              "mode": "normalA",
+              "ms": 0.6062999963760376
+            },
+            {
+              "cycle": 3,
+              "kind": "close",
+              "mode": "normalA",
+              "ms": 0.061100006103515625
+            },
+            {
+              "cycle": 4,
+              "kind": "open",
+              "mode": "normalA",
+              "ms": 0.8792999982833862
+            },
+            {
+              "cycle": 4,
+              "kind": "close",
+              "mode": "normalA",
+              "ms": 0.06679999828338623
+            },
+            {
+              "cycle": 1,
+              "kind": "open",
+              "mode": "fixedAnchor",
+              "ms": 0.7794000506401062
+            },
+            {
+              "cycle": 1,
+              "kind": "close",
+              "mode": "fixedAnchor",
+              "ms": 0.0746999979019165
+            },
+            {
+              "cycle": 2,
+              "kind": "open",
+              "mode": "fixedAnchor",
+              "ms": 0.4487999677658081
+            },
+            {
+              "cycle": 2,
+              "kind": "close",
+              "mode": "fixedAnchor",
+              "ms": 0.07489997148513794
+            },
+            {
+              "cycle": 3,
+              "kind": "open",
+              "mode": "fixedAnchor",
+              "ms": 0.4721999764442444
+            },
+            {
+              "cycle": 3,
+              "kind": "close",
+              "mode": "fixedAnchor",
+              "ms": 0.07889997959136963
+            },
+            {
+              "cycle": 4,
+              "kind": "open",
+              "mode": "fixedAnchor",
+              "ms": 0.6051999926567078
+            },
+            {
+              "cycle": 4,
+              "kind": "close",
+              "mode": "fixedAnchor",
+              "ms": 0.07780003547668457
+            },
+            {
+              "cycle": 1,
+              "kind": "open",
+              "mode": "normalB",
+              "ms": 0.6743999719619751
+            },
+            {
+              "cycle": 1,
+              "kind": "close",
+              "mode": "normalB",
+              "ms": 0.08520001173019409
+            },
+            {
+              "cycle": 2,
+              "kind": "open",
+              "mode": "normalB",
+              "ms": 0.6477000117301941
+            },
+            {
+              "cycle": 2,
+              "kind": "close",
+              "mode": "normalB",
+              "ms": 0.05870002508163452
+            },
+            {
+              "cycle": 3,
+              "kind": "open",
+              "mode": "normalB",
+              "ms": 1.048799991607666
+            },
+            {
+              "cycle": 3,
+              "kind": "close",
+              "mode": "normalB",
+              "ms": 0.0559999942779541
+            },
+            {
+              "cycle": 4,
+              "kind": "open",
+              "mode": "normalB",
+              "ms": 1.037600040435791
+            },
+            {
+              "cycle": 4,
+              "kind": "close",
+              "mode": "normalB",
+              "ms": 0.06769996881484985
+            }
+          ],
+          "closed": true,
+          "gc": "natural",
+          "groups": {
+            "fixedAnchor_closing": {
+              "allAddons": {
+                "count": 264,
+                "max": 0.8393,
+                "mean": 0.16384166666666666,
+                "p50": 0.1015,
+                "p95": 0.47740000000000005
+              },
+              "application": {
+                "count": 264,
+                "max": 11,
+                "mean": 8.340909090909092,
+                "p50": 8,
+                "p95": 9
+              },
+              "dev": {
+                "count": 264,
+                "max": 0.6288,
+                "mean": 0.011078030303030307,
+                "p50": 0.0067,
+                "p95": 0.0114
+              },
+              "frames": {
+                "count": 264,
+                "max": 11.00000087171793,
+                "mean": 8.340909526768057,
+                "p50": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "lychee": {
+                "count": 264,
+                "max": 0,
+                "mean": 0,
+                "p50": 0,
+                "p95": 0
+              }
+            },
+            "fixedAnchor_opening": {
+              "allAddons": {
+                "count": 264,
+                "max": 1.2801,
+                "mean": 0.19713106060606062,
+                "p50": 0.1353,
+                "p95": 0.44720000000000004
+              },
+              "application": {
+                "count": 264,
+                "max": 11,
+                "mean": 8.340909090909092,
+                "p50": 8,
+                "p95": 9
+              },
+              "dev": {
+                "count": 264,
+                "max": 0.4174,
+                "mean": 0.012854545454545452,
+                "p50": 0.0079,
+                "p95": 0.012700000000000001
+              },
+              "frames": {
+                "count": 264,
+                "max": 11.00000087171793,
+                "mean": 8.340909526768057,
+                "p50": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "lychee": {
+                "count": 264,
+                "max": 0,
+                "mean": 0,
+                "p50": 0,
+                "p95": 0
+              }
+            },
+            "fixedAnchor_rest": {
+              "allAddons": {
+                "count": 168,
+                "max": 1.3597000000000001,
+                "mean": 0.11075119047619049,
+                "p50": 0.07740000000000001,
+                "p95": 0.2707
+              },
+              "application": {
+                "count": 168,
+                "max": 9,
+                "mean": 8.339285714285714,
+                "p50": 8,
+                "p95": 9
+              },
+              "dev": {
+                "count": 168,
+                "max": 0.5051,
+                "mean": 0.012954166666666671,
+                "p50": 0.0089,
+                "p95": 0.0154
+              },
+              "frames": {
+                "count": 168,
+                "max": 9.000000543892384,
+                "mean": 8.339286149878587,
+                "p50": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "lychee": {
+                "count": 168,
+                "max": 0,
+                "mean": 0,
+                "p50": 0,
+                "p95": 0
+              }
+            },
+            "idle": {
+              "allAddons": {
+                "count": 207,
+                "max": 10.186,
+                "mean": 0.16166811594202898,
+                "p50": 0.082,
+                "p95": 0.2716
+              },
+              "application": {
+                "count": 207,
+                "max": 132,
+                "mean": 9.681159420289855,
+                "p50": 8,
+                "p95": 9
+              },
+              "dev": {
+                "count": 207,
+                "max": 9.932500000000001,
+                "mean": 0.06280338164251208,
+                "p50": 0.009600000000000001,
+                "p95": 0.0196
+              },
+              "frames": {
+                "count": 207,
+                "max": 131.99999928474426,
+                "mean": 9.681159877870682,
+                "p50": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "lychee": {
+                "count": 207,
+                "max": 0,
+                "mean": 0,
+                "p50": 0,
+                "p95": 0
+              }
+            },
+            "normalA_closing": {
+              "allAddons": {
+                "count": 264,
+                "max": 1.2454,
+                "mean": 0.18373484848484847,
+                "p50": 0.11320000000000001,
+                "p95": 0.5074000000000001
+              },
+              "application": {
+                "count": 264,
+                "max": 12,
+                "mean": 8.344696969696969,
+                "p50": 8,
+                "p95": 9
+              },
+              "dev": {
+                "count": 264,
+                "max": 0.9293,
+                "mean": 0.014842045454545453,
+                "p50": 0.007,
+                "p95": 0.0151
+              },
+              "frames": {
+                "count": 264,
+                "max": 12.000000104308128,
+                "mean": 8.344697402649079,
+                "p50": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "lychee": {
+                "count": 264,
+                "max": 0,
+                "mean": 0,
+                "p50": 0,
+                "p95": 0
+              }
+            },
+            "normalA_opening": {
+              "allAddons": {
+                "count": 264,
+                "max": 3.9263000000000003,
+                "mean": 0.213314393939394,
+                "p50": 0.1351,
+                "p95": 0.49110000000000004
+              },
+              "application": {
+                "count": 264,
+                "max": 10,
+                "mean": 8.348484848484848,
+                "p50": 8,
+                "p95": 9
+              },
+              "dev": {
+                "count": 264,
+                "max": 0.41700000000000004,
+                "mean": 0.011227651515151512,
+                "p50": 0.0076,
+                "p95": 0.014100000000000001
+              },
+              "frames": {
+                "count": 264,
+                "max": 10.000000707805157,
+                "mean": 8.348485285585577,
+                "p50": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "lychee": {
+                "count": 264,
+                "max": 0,
+                "mean": 0,
+                "p50": 0,
+                "p95": 0
+              }
+            },
+            "normalA_rest": {
+              "allAddons": {
+                "count": 168,
+                "max": 0.9008,
+                "mean": 0.12234523809523813,
+                "p50": 0.0915,
+                "p95": 0.2953
+              },
+              "application": {
+                "count": 168,
+                "max": 9,
+                "mean": 8.339285714285714,
+                "p50": 8,
+                "p95": 9
+              },
+              "dev": {
+                "count": 168,
+                "max": 0.43460000000000004,
+                "mean": 0.016573809523809525,
+                "p50": 0.0111,
+                "p95": 0.0183
+              },
+              "frames": {
+                "count": 168,
+                "max": 9.000000543892384,
+                "mean": 8.339286149878587,
+                "p50": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "lychee": {
+                "count": 168,
+                "max": 0,
+                "mean": 0,
+                "p50": 0,
+                "p95": 0
+              }
+            },
+            "normalB_closing": {
+              "allAddons": {
+                "count": 303,
+                "max": 0.7631,
+                "mean": 0.15375214521452146,
+                "p50": 0.10880000000000001,
+                "p95": 0.384
+              },
+              "application": {
+                "count": 303,
+                "max": 27,
+                "mean": 7.316831683168317,
+                "p50": 7,
+                "p95": 9
+              },
+              "dev": {
+                "count": 303,
+                "max": 0.5567,
+                "mean": 0.010369306930693068,
+                "p50": 0.0064,
+                "p95": 0.015300000000000001
+              },
+              "frames": {
+                "count": 303,
+                "max": 27.000000700354576,
+                "mean": 7.31683196038893,
+                "p50": 7.000000216066837,
+                "p95": 9.000000543892384
+              },
+              "lychee": {
+                "count": 303,
+                "max": 0,
+                "mean": 0,
+                "p50": 0,
+                "p95": 0
+              }
+            },
+            "normalB_opening": {
+              "allAddons": {
+                "count": 302,
+                "max": 1.4179000000000002,
+                "mean": 0.17002549668874173,
+                "p50": 0.10360000000000001,
+                "p95": 0.453
+              },
+              "application": {
+                "count": 302,
+                "max": 19,
+                "mean": 7.33112582781457,
+                "p50": 7,
+                "p95": 9
+              },
+              "dev": {
+                "count": 302,
+                "max": 0.45940000000000003,
+                "mean": 0.009422516556291395,
+                "p50": 0.0058000000000000005,
+                "p95": 0.012100000000000001
+              },
+              "frames": {
+                "count": 302,
+                "max": 19.00000125169754,
+                "mean": 7.331126115118332,
+                "p50": 7.000000216066837,
+                "p95": 9.000000543892384
+              },
+              "lychee": {
+                "count": 302,
+                "max": 0,
+                "mean": 0,
+                "p50": 0,
+                "p95": 0
+              }
+            },
+            "normalB_rest": {
+              "allAddons": {
+                "count": 195,
+                "max": 0.6355000000000001,
+                "mean": 0.08129128205128207,
+                "p50": 0.055900000000000005,
+                "p95": 0.165
+              },
+              "application": {
+                "count": 195,
+                "max": 13,
+                "mean": 7.276923076923077,
+                "p50": 7,
+                "p95": 9
+              },
+              "dev": {
+                "count": 195,
+                "max": 0.42660000000000003,
+                "mean": 0.012322051282051289,
+                "p50": 0.007,
+                "p95": 0.014
+              },
+              "frames": {
+                "count": 195,
+                "max": 13.000000268220901,
+                "mean": 7.276923340769151,
+                "p50": 7.000000216066837,
+                "p95": 9.000000543892384
+              },
+              "lychee": {
+                "count": 195,
+                "max": 0,
+                "mean": 0,
+                "p50": 0,
+                "p95": 0
+              }
+            }
+          },
+          "jobs": 0,
+          "library": "1.1.12",
+          "metric": "LastTime",
+          "observer": {
+            "count": 2399,
+            "maxMs": 0.06040000915527344,
+            "sumMs": 18.956400215625763
+          },
+          "spikes": [
+            {
+              "allAddonMs": 10.186,
+              "appMs": 33,
+              "cycle": 0,
+              "devMs": 9.932500000000001,
+              "dtMs": 32.999999821186066,
+              "lycheeMs": 0,
+              "mode": "normalA",
+              "stage": "idle",
+              "top": [
+                {
+                  "addOnName": "Lychee Dev",
+                  "metricValue": 9.932500000000001
+                },
+                {
+                  "addOnName": "ExwindTools",
+                  "metricValue": 0.1474
+                },
+                {
+                  "addOnName": "MeetingStone",
+                  "metricValue": 0.024900000000000002
+                },
+                {
+                  "addOnName": "HandyNotes",
+                  "metricValue": 0.016800000000000002
+                },
+                {
+                  "addOnName": "EXBoss",
+                  "metricValue": 0.0103
+                }
+              ]
+            },
+            {
+              "allAddonMs": 0.1942,
+              "appMs": 132,
+              "cycle": 0,
+              "devMs": 0.020900000000000002,
+              "dtMs": 131.99999928474426,
+              "lycheeMs": 0,
+              "mode": "normalA",
+              "stage": "idle",
+              "top": [
+                {
+                  "addOnName": "Lychee Dev Slot 17",
+                  "metricValue": 0.030000000000000002
+                },
+                {
+                  "addOnName": "EllesmereUI",
+                  "metricValue": 0.029400000000000003
+                },
+                {
+                  "addOnName": "Lychee Dev",
+                  "metricValue": 0.020900000000000002
+                },
+                {
+                  "addOnName": "HandyNotes",
+                  "metricValue": 0.020800000000000003
+                },
+                {
+                  "addOnName": "EllesmereUIUnitFrames",
+                  "metricValue": 0.018000000000000002
+                }
+              ]
+            },
+            {
+              "allAddonMs": 1.0269000000000001,
+              "appMs": 110,
+              "cycle": 0,
+              "devMs": 0.0166,
+              "dtMs": 110.00000685453415,
+              "lycheeMs": 0,
+              "mode": "normalA",
+              "stage": "idle",
+              "top": [
+                {
+                  "addOnName": "EllesmereUIActionBars",
+                  "metricValue": 0.3124
+                },
+                {
+                  "addOnName": "RurutiaSA_Class",
+                  "metricValue": 0.2666
+                },
+                {
+                  "addOnName": "RurutiaSA_Trinkets",
+                  "metricValue": 0.22760000000000002
+                },
+                {
+                  "addOnName": "RurutiaSuite",
+                  "metricValue": 0.0417
+                },
+                {
+                  "addOnName": "ExwindCore",
+                  "metricValue": 0.0302
+                }
+              ]
+            }
+          ],
+          "tick": {
+            "count": 1468,
+            "maxMs": 1.0885000228881836,
+            "sumMs": 114.92229908704758
+          }
+        }
+      }
+    },
+    {
+      "request": "ui-motion-profile-after-01",
+      "operation": "LMO-b6f2b549a2a333105807aa1e0b861233",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "report": {
+        "logs": {},
+        "ok": true,
+        "resourcesReleased": true,
+        "result": {
+          "build": "70391",
+          "calls": [
+            {
+              "cycle": 1,
+              "kind": "open",
+              "mode": "normalA",
+              "ms": 1.3725000023841858
+            },
+            {
+              "cycle": 1,
+              "kind": "close",
+              "mode": "normalA",
+              "ms": 0.04769998788833618
+            },
+            {
+              "cycle": 2,
+              "kind": "open",
+              "mode": "normalA",
+              "ms": 0.4240000247955322
+            },
+            {
+              "cycle": 2,
+              "kind": "close",
+              "mode": "normalA",
+              "ms": 0.04309999942779541
+            },
+            {
+              "cycle": 3,
+              "kind": "open",
+              "mode": "normalA",
+              "ms": 0.46699994802474976
+            },
+            {
+              "cycle": 3,
+              "kind": "close",
+              "mode": "normalA",
+              "ms": 0.03909999132156372
+            },
+            {
+              "cycle": 4,
+              "kind": "open",
+              "mode": "normalA",
+              "ms": 0.4526999592781067
+            },
+            {
+              "cycle": 4,
+              "kind": "close",
+              "mode": "normalA",
+              "ms": 0.044799983501434326
+            },
+            {
+              "cycle": 1,
+              "kind": "open",
+              "mode": "fixedAnchor",
+              "ms": 0.5245000123977661
+            },
+            {
+              "cycle": 1,
+              "kind": "close",
+              "mode": "fixedAnchor",
+              "ms": 0.047200024127960205
+            },
+            {
+              "cycle": 2,
+              "kind": "open",
+              "mode": "fixedAnchor",
+              "ms": 0.3166000247001648
+            },
+            {
+              "cycle": 2,
+              "kind": "close",
+              "mode": "fixedAnchor",
+              "ms": 0.0437999963760376
+            },
+            {
+              "cycle": 3,
+              "kind": "open",
+              "mode": "fixedAnchor",
+              "ms": 0.3050000071525574
+            },
+            {
+              "cycle": 3,
+              "kind": "close",
+              "mode": "fixedAnchor",
+              "ms": 0.04309999942779541
+            },
+            {
+              "cycle": 4,
+              "kind": "open",
+              "mode": "fixedAnchor",
+              "ms": 0.34630000591278076
+            },
+            {
+              "cycle": 4,
+              "kind": "close",
+              "mode": "fixedAnchor",
+              "ms": 0.04119998216629028
+            },
+            {
+              "cycle": 1,
+              "kind": "open",
+              "mode": "normalB",
+              "ms": 0.4302999973297119
+            },
+            {
+              "cycle": 1,
+              "kind": "close",
+              "mode": "normalB",
+              "ms": 0.07249999046325684
+            },
+            {
+              "cycle": 2,
+              "kind": "open",
+              "mode": "normalB",
+              "ms": 0.5020999908447266
+            },
+            {
+              "cycle": 2,
+              "kind": "close",
+              "mode": "normalB",
+              "ms": 0.04399996995925903
+            },
+            {
+              "cycle": 3,
+              "kind": "open",
+              "mode": "normalB",
+              "ms": 0.4456999897956848
+            },
+            {
+              "cycle": 3,
+              "kind": "close",
+              "mode": "normalB",
+              "ms": 0.040199995040893555
+            },
+            {
+              "cycle": 4,
+              "kind": "open",
+              "mode": "normalB",
+              "ms": 0.4390000104904175
+            },
+            {
+              "cycle": 4,
+              "kind": "close",
+              "mode": "normalB",
+              "ms": 0.038900017738342285
+            }
+          ],
+          "closed": true,
+          "gc": "natural",
+          "groups": {
+            "fixedAnchor_closing": {
+              "allAddons": {
+                "count": 264,
+                "max": 0.6034,
+                "mean": 0.10517462121212125,
+                "p50": 0.0787,
+                "p95": 0.24200000000000002
+              },
+              "application": {
+                "count": 264,
+                "max": 9,
+                "mean": 8.337121212121213,
+                "p50": 8,
+                "p95": 9
+              },
+              "dev": {
+                "count": 264,
+                "max": 0.3975,
+                "mean": 0.00956287878787879,
+                "p50": 0.0059,
+                "p95": 0.0105
+              },
+              "frames": {
+                "count": 264,
+                "max": 9.000000543892384,
+                "mean": 8.337121647359295,
+                "p50": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "lychee": {
+                "count": 264,
+                "max": 0,
+                "mean": 0,
+                "p50": 0,
+                "p95": 0
+              }
+            },
+            "fixedAnchor_opening": {
+              "allAddons": {
+                "count": 264,
+                "max": 1.2713,
+                "mean": 0.12811325757575756,
+                "p50": 0.0911,
+                "p95": 0.3094
+              },
+              "application": {
+                "count": 264,
+                "max": 10,
+                "mean": 8.333333333333334,
+                "p50": 8,
+                "p95": 9
+              },
+              "dev": {
+                "count": 264,
+                "max": 0.5242,
+                "mean": 0.010028787878787884,
+                "p50": 0.0058000000000000005,
+                "p95": 0.0106
+              },
+              "frames": {
+                "count": 264,
+                "max": 10.000000707805157,
+                "mean": 8.333333767950535,
+                "p50": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "lychee": {
+                "count": 264,
+                "max": 0,
+                "mean": 0,
+                "p50": 0,
+                "p95": 0
+              }
+            },
+            "fixedAnchor_rest": {
+              "allAddons": {
+                "count": 168,
+                "max": 0.6539,
+                "mean": 0.10579166666666669,
+                "p50": 0.0815,
+                "p95": 0.2364
+              },
+              "application": {
+                "count": 168,
+                "max": 9,
+                "mean": 8.333333333333334,
+                "p50": 8,
+                "p95": 9
+              },
+              "dev": {
+                "count": 168,
+                "max": 0.5476,
+                "mean": 0.017036904761904767,
+                "p50": 0.0105,
+                "p95": 0.0158
+              },
+              "frames": {
+                "count": 168,
+                "max": 9.000000543892384,
+                "mean": 8.333333767950535,
+                "p50": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "lychee": {
+                "count": 168,
+                "max": 0,
+                "mean": 0,
+                "p50": 0,
+                "p95": 0
+              }
+            },
+            "idle": {
+              "allAddons": {
+                "count": 223,
+                "max": 33.532900000000005,
+                "mean": 0.25660717488789236,
+                "p50": 0.0809,
+                "p95": 0.2747
+              },
+              "application": {
+                "count": 223,
+                "max": 86,
+                "mean": 8.968609865470851,
+                "p50": 8,
+                "p95": 9
+              },
+              "dev": {
+                "count": 223,
+                "max": 33.3769,
+                "mean": 0.16365291479820626,
+                "p50": 0.010100000000000001,
+                "p95": 0.0164
+              },
+              "frames": {
+                "count": 223,
+                "max": 86.0000029206276,
+                "mean": 8.9686103081623,
+                "p50": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "lychee": {
+                "count": 223,
+                "max": 0.1797,
+                "mean": 0.001214798206278027,
+                "p50": 0,
+                "p95": 0
+              }
+            },
+            "normalA_closing": {
+              "allAddons": {
+                "count": 264,
+                "max": 1.1266,
+                "mean": 0.1435291666666667,
+                "p50": 0.1072,
+                "p95": 0.33240000000000003
+              },
+              "application": {
+                "count": 264,
+                "max": 9,
+                "mean": 8.333333333333334,
+                "p50": 8,
+                "p95": 9
+              },
+              "dev": {
+                "count": 264,
+                "max": 0.5254,
+                "mean": 0.011377272727272734,
+                "p50": 0.007,
+                "p95": 0.0143
+              },
+              "frames": {
+                "count": 264,
+                "max": 9.000000543892384,
+                "mean": 8.333333767950535,
+                "p50": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "lychee": {
+                "count": 264,
+                "max": 0,
+                "mean": 0,
+                "p50": 0,
+                "p95": 0
+              }
+            },
+            "normalA_opening": {
+              "allAddons": {
+                "count": 264,
+                "max": 1.5399,
+                "mean": 0.12104810606060604,
+                "p50": 0.0893,
+                "p95": 0.28040000000000004
+              },
+              "application": {
+                "count": 264,
+                "max": 22,
+                "mean": 8.386363636363637,
+                "p50": 8,
+                "p95": 9
+              },
+              "dev": {
+                "count": 264,
+                "max": 0.3839,
+                "mean": 0.01005681818181819,
+                "p50": 0.0057,
+                "p95": 0.010400000000000001
+              },
+              "frames": {
+                "count": 264,
+                "max": 22.00000174343586,
+                "mean": 8.386364076145444,
+                "p50": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "lychee": {
+                "count": 264,
+                "max": 0,
+                "mean": 0,
+                "p50": 0,
+                "p95": 0
+              }
+            },
+            "normalA_rest": {
+              "allAddons": {
+                "count": 168,
+                "max": 0.7731,
+                "mean": 0.11745595238095238,
+                "p50": 0.0949,
+                "p95": 0.248
+              },
+              "application": {
+                "count": 168,
+                "max": 104,
+                "mean": 8.898809523809524,
+                "p50": 8,
+                "p95": 9
+              },
+              "dev": {
+                "count": 168,
+                "max": 0.5354,
+                "mean": 0.01732142857142858,
+                "p50": 0.011600000000000001,
+                "p95": 0.0177
+              },
+              "frames": {
+                "count": 168,
+                "max": 104.00000214576721,
+                "mean": 8.898809967961695,
+                "p50": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "lychee": {
+                "count": 168,
+                "max": 0,
+                "mean": 0,
+                "p50": 0,
+                "p95": 0
+              }
+            },
+            "normalB_closing": {
+              "allAddons": {
+                "count": 264,
+                "max": 0.6715,
+                "mean": 0.11350416666666673,
+                "p50": 0.0878,
+                "p95": 0.2519
+              },
+              "application": {
+                "count": 264,
+                "max": 9,
+                "mean": 8.333333333333334,
+                "p50": 8,
+                "p95": 9
+              },
+              "dev": {
+                "count": 264,
+                "max": 0.5146000000000001,
+                "mean": 0.00995795454545455,
+                "p50": 0.0058000000000000005,
+                "p95": 0.012
+              },
+              "frames": {
+                "count": 264,
+                "max": 9.000000543892384,
+                "mean": 8.333333767950535,
+                "p50": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "lychee": {
+                "count": 264,
+                "max": 0,
+                "mean": 0,
+                "p50": 0,
+                "p95": 0
+              }
+            },
+            "normalB_opening": {
+              "allAddons": {
+                "count": 264,
+                "max": 1.0288000000000002,
+                "mean": 0.13398181818181815,
+                "p50": 0.1018,
+                "p95": 0.2791
+              },
+              "application": {
+                "count": 264,
+                "max": 11,
+                "mean": 8.340909090909092,
+                "p50": 8,
+                "p95": 9
+              },
+              "dev": {
+                "count": 264,
+                "max": 0.403,
+                "mean": 0.011219318181818188,
+                "p50": 0.0064,
+                "p95": 0.011000000000000001
+              },
+              "frames": {
+                "count": 264,
+                "max": 11.00000087171793,
+                "mean": 8.340909526768057,
+                "p50": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "lychee": {
+                "count": 264,
+                "max": 0,
+                "mean": 0,
+                "p50": 0,
+                "p95": 0
+              }
+            },
+            "normalB_rest": {
+              "allAddons": {
+                "count": 168,
+                "max": 1.1434,
+                "mean": 0.11103214285714284,
+                "p50": 0.07930000000000001,
+                "p95": 0.2386
+              },
+              "application": {
+                "count": 168,
+                "max": 9,
+                "mean": 8.333333333333334,
+                "p50": 8,
+                "p95": 9
+              },
+              "dev": {
+                "count": 168,
+                "max": 0.39540000000000003,
+                "mean": 0.012797619047619049,
+                "p50": 0.0097,
+                "p95": 0.015700000000000002
+              },
+              "frames": {
+                "count": 168,
+                "max": 9.000000543892384,
+                "mean": 8.333333767950535,
+                "p50": 8.00000037997961,
+                "p95": 9.000000543892384
+              },
+              "lychee": {
+                "count": 168,
+                "max": 0,
+                "mean": 0,
+                "p50": 0,
+                "p95": 0
+              }
+            }
+          },
+          "jobs": 0,
+          "library": "1.1.13",
+          "metric": "LastTime",
+          "observer": {
+            "count": 2311,
+            "maxMs": 0.2646000385284424,
+            "sumMs": 17.01190012693405
+          },
+          "spikes": [
+            {
+              "allAddonMs": 33.532900000000005,
+              "appMs": 33,
+              "cycle": 0,
+              "devMs": 33.3769,
+              "dtMs": 32.999999821186066,
+              "lycheeMs": 0,
+              "mode": "normalA",
+              "stage": "idle",
+              "top": [
+                {
+                  "addOnName": "Lychee Dev",
+                  "metricValue": 33.3769
+                },
+                {
+                  "addOnName": "EllesmereUIQoL",
+                  "metricValue": 0.059500000000000004
+                },
+                {
+                  "addOnName": "MeetingStone",
+                  "metricValue": 0.022600000000000002
+                },
+                {
+                  "addOnName": "HandyNotes",
+                  "metricValue": 0.0158
+                },
+                {
+                  "addOnName": "KeystoneLoot",
+                  "metricValue": 0.0105
+                }
+              ]
+            },
+            {
+              "allAddonMs": 0.21030000000000001,
+              "appMs": 48,
+              "cycle": 0,
+              "devMs": 0.0089,
+              "dtMs": 48.00000041723251,
+              "lycheeMs": 0,
+              "mode": "normalA",
+              "stage": "idle",
+              "top": [
+                {
+                  "addOnName": "ExwindTools",
+                  "metricValue": 0.0918
+                },
+                {
+                  "addOnName": "Lychee Dev Slot 03",
+                  "metricValue": 0.041
+                },
+                {
+                  "addOnName": "HandyNotes",
+                  "metricValue": 0.012
+                },
+                {
+                  "addOnName": "Lychee Dev",
+                  "metricValue": 0.0089
+                },
+                {
+                  "addOnName": "KeystoneLoot",
+                  "metricValue": 0.0085
+                }
+              ]
+            },
+            {
+              "allAddonMs": 0.1486,
+              "appMs": 86,
+              "cycle": 0,
+              "devMs": 0.0184,
+              "dtMs": 86.0000029206276,
+              "lycheeMs": 0,
+              "mode": "normalA",
+              "stage": "idle",
+              "top": [
+                {
+                  "addOnName": "Lychee Dev Slot 03",
+                  "metricValue": 0.0269
+                },
+                {
+                  "addOnName": "MeetingStone",
+                  "metricValue": 0.019200000000000002
+                },
+                {
+                  "addOnName": "KeystoneLoot",
+                  "metricValue": 0.019100000000000002
+                },
+                {
+                  "addOnName": "Lychee Dev",
+                  "metricValue": 0.0184
+                },
+                {
+                  "addOnName": "HandyNotes",
+                  "metricValue": 0.0176
+                }
+              ]
+            },
+            {
+              "allAddonMs": 0.1312,
+              "appMs": 104,
+              "cycle": 1,
+              "devMs": 0.0177,
+              "dtMs": 104.00000214576721,
+              "lycheeMs": 0,
+              "mode": "normalA",
+              "stage": "rest",
+              "top": [
+                {
+                  "addOnName": "Lychee Dev Slot 03",
+                  "metricValue": 0.0284
+                },
+                {
+                  "addOnName": "HandyNotes",
+                  "metricValue": 0.0188
+                },
+                {
+                  "addOnName": "Lychee Dev",
+                  "metricValue": 0.0177
+                },
+                {
+                  "addOnName": "KeystoneLoot",
+                  "metricValue": 0.0111
+                },
+                {
+                  "addOnName": "MeetingStone",
+                  "metricValue": 0.0105
+                }
+              ]
+            }
+          ],
+          "tick": {
+            "count": 1404,
+            "maxMs": 0.4650999903678894,
+            "sumMs": 37.72329866886139
+          },
+          "warmedHere": true
+        }
+      }
+    },
+    {
+      "request": "ui-motion-presence-after-01",
+      "operation": "LMO-80dfc3d8b98799684d278ce82bd16881",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "report": {
+        "logs": {},
+        "ok": true,
+        "resourcesReleased": true,
+        "result": {
+          "afterReverse": {
+            "alpha": 1,
+            "dtMs": 17.000000923871994,
+            "offsetY": -8.437500953674316,
+            "phase": 0.6428571242306917,
+            "shown": true
+          },
+          "beforeReverse": {
+            "alpha": 1,
+            "dtMs": 17.000000923871994,
+            "offsetY": -8.437500953674316,
+            "phase": 0.6428571242306917,
+            "shown": true
+          },
+          "build": "70391",
+          "closedAfter": true,
+          "closing": [
+            {
+              "alpha": 1,
+              "dtMs": 16.00000075995922,
+              "offsetY": 0,
+              "phase": 0.9619047600953352,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": 0,
+              "phase": 0.9214285674194496,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": -1.4062501192092896,
+              "phase": 0.8809523747435639,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 16.00000075995922,
+              "offsetY": -1.4062501192092896,
+              "phase": 0.8428571348388991,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": -2.812500238418579,
+              "phase": 0.8023809421630135,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": -4.218750476837158,
+              "phase": 0.7619047494871278,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 16.00000075995922,
+              "offsetY": -4.218750476837158,
+              "phase": 0.723809509582463,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": -7.03125,
+              "phase": 0.6833333169065774,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": -8.437500953674316,
+              "phase": 0.6428571242306917,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 16.00000075995922,
+              "offsetY": -9.84375,
+              "phase": 0.604761884326027,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": -12.65625,
+              "phase": 0.5642856916501413,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": -14.0625,
+              "phase": 0.5238094989742557,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 16.00000075995922,
+              "offsetY": -16.875001907348633,
+              "phase": 0.48571425906959087,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": -19.6875,
+              "phase": 0.44523806639370517,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": -22.500001907348633,
+              "phase": 0.40476187371781946,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 16.00000075995922,
+              "offsetY": -25.3125,
+              "phase": 0.3666666338131547,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": -29.531251907348633,
+              "phase": 0.32619044113726897,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": -32.34375,
+              "phase": 0.28571424846138327,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 16.00000075995922,
+              "offsetY": -36.5625,
+              "phase": 0.24761900855671845,
+              "shown": true
+            },
+            {
+              "alpha": 0.9529412388801575,
+              "dtMs": 17.000000923871994,
+              "offsetY": -40.781253814697266,
+              "phase": 0.20714281588083275,
+              "shown": true
+            },
+            {
+              "alpha": 0.7843137979507446,
+              "dtMs": 17.000000923871994,
+              "offsetY": -45.000003814697266,
+              "phase": 0.16666662320494705,
+              "shown": true
+            },
+            {
+              "alpha": 0.5607843399047852,
+              "dtMs": 16.00000075995922,
+              "offsetY": -49.21875,
+              "phase": 0.12857138330028223,
+              "shown": true
+            },
+            {
+              "alpha": 0.30980393290519714,
+              "dtMs": 17.000000923871994,
+              "offsetY": -53.437503814697266,
+              "phase": 0.08809519062439652,
+              "shown": true
+            },
+            {
+              "alpha": 0.10588236153125763,
+              "dtMs": 17.000000923871994,
+              "offsetY": -57.65625,
+              "phase": 0.04761899794851082,
+              "shown": true
+            },
+            {
+              "alpha": 0.003921568859368563,
+              "dtMs": 16.00000075995922,
+              "offsetY": -63.28125,
+              "phase": 0.00952375804384601,
+              "shown": true
+            },
+            {
+              "alpha": 0,
+              "dtMs": 17.000000923871994,
+              "offsetY": -64.6875,
+              "phase": 0,
+              "shown": false
+            }
+          ],
+          "finalClosed": true,
+          "finalClosedJobs": 0,
+          "gc": "natural",
+          "jobsAfter": 0,
+          "library": "1.1.13",
+          "logoAfterClose": {
+            "height": 43.21526336669922,
+            "width": 44.88957977294922,
+            "y": 0.907187819480896
+          },
+          "logoAfterHidden": {
+            "height": 43.999935150146484,
+            "width": 44,
+            "y": 0
+          },
+          "logoAfterReverse": {
+            "height": 44.371917724609375,
+            "width": 43.747501373291016,
+            "y": 1.60958993434906
+          },
+          "logoBeforeClose": {
+            "height": 43.21526336669922,
+            "width": 44.88957977294922,
+            "y": 0.907187819480896
+          },
+          "logoBeforeReverse": {
+            "height": 44.371917724609375,
+            "width": 43.747501373291016,
+            "y": 1.60958993434906
+          },
+          "normalClosedJobs": 0,
+          "opening": [
+            {
+              "alpha": 0.062745101749897,
+              "dtMs": 17.000000923871994,
+              "offsetY": -59.062503814697266,
+              "phase": 0.036902857079569786,
+              "shown": true
+            },
+            {
+              "alpha": 0.2352941334247589,
+              "dtMs": 16.00000075995922,
+              "offsetY": -54.84375,
+              "phase": 0.0749980969842346,
+              "shown": true
+            },
+            {
+              "alpha": 0.4784314036369324,
+              "dtMs": 17.000000923871994,
+              "offsetY": -50.625,
+              "phase": 0.1154742896601203,
+              "shown": true
+            },
+            {
+              "alpha": 0.7254902124404907,
+              "dtMs": 17.000000923871994,
+              "offsetY": -45.000003814697266,
+              "phase": 0.155950482336006,
+              "shown": true
+            },
+            {
+              "alpha": 0.9098039865493774,
+              "dtMs": 16.00000075995922,
+              "offsetY": -42.1875,
+              "phase": 0.19404572224067082,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": -37.968753814697266,
+              "phase": 0.23452191491655652,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": -33.750003814697266,
+              "phase": 0.27499810759244225,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 16.00000075995922,
+              "offsetY": -29.531251907348633,
+              "phase": 0.31309334749710704,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": -26.718751907348633,
+              "phase": 0.35356954017299275,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": -23.90625,
+              "phase": 0.39404573284887845,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 16.00000075995922,
+              "offsetY": -21.09375,
+              "phase": 0.43214097275354324,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": -18.28125,
+              "phase": 0.47261716542942894,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": -15.46875,
+              "phase": 0.5130933581053146,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 16.00000075995922,
+              "offsetY": -12.65625,
+              "phase": 0.5511885980099794,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": -11.250000953674316,
+              "phase": 0.5916647906858652,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": -8.437500953674316,
+              "phase": 0.6321409833617508,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 16.00000075995922,
+              "offsetY": -7.03125,
+              "phase": 0.6702362232664156,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": -5.625000476837158,
+              "phase": 0.7107124159423013,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": -4.218750476837158,
+              "phase": 0.7511886086181869,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 16.00000075995922,
+              "offsetY": -2.812500238418579,
+              "phase": 0.7892838485228517,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": -1.4062501192092896,
+              "phase": 0.8297600411987374,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": -1.4062501192092896,
+              "phase": 0.870236233874623,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 16.00000075995922,
+              "offsetY": 0,
+              "phase": 0.9083314737792878,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": 0,
+              "phase": 0.9488076664551734,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": 0,
+              "phase": 0.9892838591310591,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 16.00000075995922,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 16.00000075995922,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 16.00000075995922,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 16.00000075995922,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            }
+          ],
+          "quickClosing": [
+            {
+              "alpha": 1,
+              "dtMs": 71.00000232458115,
+              "offsetY": -15.46875,
+              "phase": 0.5010338342149875,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": -18.28125,
+              "phase": 0.4605576415391018,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 16.00000075995922,
+              "offsetY": -21.09375,
+              "phase": 0.422462401634437,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": -23.90625,
+              "phase": 0.3819862089585513,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": -28.125,
+              "phase": 0.3415100162826656,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 16.00000075995922,
+              "offsetY": -30.9375,
+              "phase": 0.3034147763780008,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 17.000000923871994,
+              "offsetY": -35.15625,
+              "phase": 0.2629385837021151,
+              "shown": true
+            },
+            {
+              "alpha": 0.988235354423523,
+              "dtMs": 17.000000923871994,
+              "offsetY": -39.375,
+              "phase": 0.2224623910262294,
+              "shown": true
+            },
+            {
+              "alpha": 0.8705883026123047,
+              "dtMs": 16.00000075995922,
+              "offsetY": -42.1875,
+              "phase": 0.18436715112156457,
+              "shown": true
+            },
+            {
+              "alpha": 0.6549019813537598,
+              "dtMs": 17.000000923871994,
+              "offsetY": -46.40625,
+              "phase": 0.14389095844567887,
+              "shown": true
+            },
+            {
+              "alpha": 0.40392160415649414,
+              "dtMs": 17.000000923871994,
+              "offsetY": -52.031253814697266,
+              "phase": 0.10341476576979317,
+              "shown": true
+            },
+            {
+              "alpha": 0.18431372940540314,
+              "dtMs": 16.00000075995922,
+              "offsetY": -56.25,
+              "phase": 0.06531952586512835,
+              "shown": true
+            },
+            {
+              "alpha": 0.0313725508749485,
+              "dtMs": 17.000000923871994,
+              "offsetY": -60.468753814697266,
+              "phase": 0.024843333189242645,
+              "shown": true
+            },
+            {
+              "alpha": 0,
+              "dtMs": 17.000000923871994,
+              "offsetY": -64.6875,
+              "phase": 0,
+              "shown": false
+            }
+          ],
+          "reopened": {
+            "alpha": 1,
+            "dtMs": 17.000000923871994,
+            "offsetY": 0,
+            "phase": 1,
+            "shown": true
+          },
+          "requestedFPSLimit": 60,
+          "warmedHere": false
+        }
+      }
+    }
+  ]
+}
