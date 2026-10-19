@@ -515,8 +515,7 @@ function Tip:RenderGroup()
  f.icon:SetSize(40,40);C.SetFont(f.title,18)
  UI:SetActivityIcon(f.icon,record.activity or record);UI:SetText(f.title,record.name or L.unknown)
  UI:SetText(f.subtitle,record.activityName or L.unknown)
- local titleHeight=math.max(24,f.title:GetStringHeight());f.subtitle:ClearAllPoints();f.subtitle:SetPoint("TOPLEFT",52,-titleHeight-4)
- local headerHeight=math.max(40,titleHeight+4+math.max(18,f.subtitle:GetStringHeight()))
+ local headerHeight
  UI:SetText(f.leader,record.leaderName or L.unknown)
  local leader
  for _,member in ipairs(details and details.members or {}) do if member.isLeader or record.leaderKey and member.nameKey==record.leaderKey then leader=member;break end end
@@ -526,7 +525,7 @@ function Tip:RenderGroup()
   f.leader:SetWidth(leaderWidth-18);f.leader:SetWordWrap(true);f.leader:SetJustifyH("LEFT");f.leader:ClearAllPoints();f.leader:SetPoint("TOPRIGHT",f.canvas,"TOPLEFT",mainWidth,-4)
   f.leaderIcon:ClearAllPoints();f.leaderIcon:SetPoint("CENTER",f.leader,"TOPLEFT",-11,-f.leader:GetLineHeight()/2);f.leaderIcon:Show()
   f.title:SetWidth(mainWidth-leaderWidth-16-52);f.subtitle:SetWidth(mainWidth-leaderWidth-16-52)
-  titleHeight=math.max(24,f.title:GetStringHeight());f.subtitle:ClearAllPoints();f.subtitle:SetPoint("TOPLEFT",52,-titleHeight-4)
+  local titleHeight=math.max(24,f.title:GetStringHeight());f.subtitle:ClearAllPoints();f.subtitle:SetPoint("TOPLEFT",52,-titleHeight-4)
   headerHeight=math.max(40,titleHeight+4+math.max(18,f.subtitle:GetStringHeight()),f.leader:GetStringHeight()+4)
  end
  f.summary:Hide()
@@ -718,7 +717,7 @@ function Tip:RenderPlayer(member,fromGroup,adjustPoint)
  C.SetFont(f.title,PLAYER_NAME_SIZE);C.SetLineHeight(f.title,PLAYER_NAME_HEIGHT)
  UI:SetText(f.subtitle,realm or member.realm or L.unknown);UI:SetMemberIcon(f.icon,member)
  local className=member.localizedClass
- if not className and member.class then for classID=1,GetNumClasses() do local name,token=GetClassInfo(classID);if token==member.class then className=name;break end end end
+ if not className and member.class then local _,name=A.Specializations:Class(member.class);className=name end
  local specName=UI:SpecName(member)
  local relation=Members:Relations(member)
  local width=f.canvas:GetWidth();local identityX=PLAYER_ICON_SIZE+IDENTITY_GAP

@@ -120,6 +120,9 @@ function Search:OnSearchFailed(reason)
   self.error=L.searchThrottled:format(self.backoff)
   self.pending=self.pending or self.request
   self:SchedulePending(self.backoff)
+ elseif self.pending then
+  -- This failure ends the in-flight request, not the user's newer choice.
+  self.backoff=nil;self.error=nil;self:SchedulePending(0)
  else
   self.state,self.error,self.pending="failed",reason=="timeout" and L.searchTimeout or L.searchFailed,nil
  end

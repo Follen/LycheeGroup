@@ -133,7 +133,7 @@ _G.LycheeUI=nil
 local libraryPrivate={}
 for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Components.lua","Native.lua","Menu.lua"}) do assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/"..file))("LycheeGroup",libraryPrivate) end
 for _,file in ipairs({"Locale.lua","Theme.lua","Motion.lua","Components.lua","Members.lua","Preview.lua","Tooltip.lua","Native.lua","Application.lua","Transfer.lua","Host.lua","Find.lua","Create.lua","Notes.lua","Settings.lua"}) do dofile("addon/LycheeGroup_UI/"..file) end
-local U=A.UI;local M,C=U.Motion,U.C
+local U=A.UI;local C=U.C
 local Open=A.Open
 function A:Open(page,ctx) self.lastOpen=page;return Open(self,page,ctx) end
 function A:Ensure(module) return self[module] end

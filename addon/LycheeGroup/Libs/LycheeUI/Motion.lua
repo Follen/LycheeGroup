@@ -155,16 +155,29 @@ end
 function M:Rect(region,x,y,width,height,duration)
  local state=self.rects[region]
  if not state then
-  state={region=region,parent=region:GetParent()};self.rects[region]=state
+  state={region=region};self.rects[region]=state
   state.step=function(dt)
    state.elapsed=math.min(state.duration,state.elapsed+dt)
    local p=curve(state.elapsed/state.duration)
    PlaceRect(state,state.fromX+(state.toX-state.fromX)*p,state.fromY+(state.toY-state.fromY)*p,state.fromWidth+(state.toWidth-state.fromWidth)*p,state.fromHeight+(state.toHeight-state.fromHeight)*p)
    return state.elapsed==state.duration
   end
-  region:ClearAllPoints()
  end
  local scale=region:GetEffectiveScale()
+ local parent=region:GetParent()
+ local point,anchor,relative,currentX,currentY=region:GetPoint()
+ if state.parent~=parent or point~="TOPLEFT" or anchor~=parent or relative~="TOPLEFT" or region:GetNumPoints()~=1 then
+  self:Stop(state);state.parent=parent;state.x,state.y,state.width,state.height=nil,nil,nil,nil
+  region:ClearAllPoints()
+ elseif state.x then
+  -- Callers may re-layout a reusable region between transitions. Reconcile at
+  -- the entry point; animation ticks still write only changed physical pixels.
+  currentX,currentY=Pixel(currentX,scale),Pixel(currentY,scale)
+  local currentWidth,currentHeight=Pixel(region:GetWidth(),scale),Pixel(region:GetHeight(),scale)
+  if state.x~=currentX or state.y~=currentY or state.width~=currentWidth or state.height~=currentHeight then
+   self:Stop(state);state.x,state.y,state.width,state.height=currentX,currentY,currentWidth,currentHeight
+  end
+ end
  x,y,width,height=Pixel(x,scale),Pixel(y,scale),Pixel(width,scale),Pixel(height,scale)
  local same=state.toX==x and state.toY==y and state.toWidth==width and state.toHeight==height
  if same and duration~=0 and not UI:IsReducedMotion() and (self.jobs[state] or (state.x==x and state.y==y and state.width==width and state.height==height)) then return end

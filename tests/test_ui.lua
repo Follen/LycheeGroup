@@ -1792,12 +1792,21 @@ do
  T.eq(buttons[40].member,raidMembers[40]);T.ok(buttons[40]:IsVisible(),"the full forty-player roster remains accessible")
  local nodes=#S.nodes;U.Tooltip:Hide()
  local hides,widths=0,{};local hide=buttons[1].Hide;local view=U.Tooltip.interactive;local setWidth=view.SetWidth
+ local titleReads,subtitleReads=0,0
+ local titleHeight,subtitleHeight=view.title.GetStringHeight,view.subtitle.GetStringHeight
+ local subtitlePoint,metricPoint,canvasHeight={view.subtitle:GetPoint()},{view.metrics[1].title:GetPoint()},view.canvas:GetHeight()
+ view.title.GetStringHeight=function(self) titleReads=titleReads+1;return titleHeight(self) end
+ view.subtitle.GetStringHeight=function(self) subtitleReads=subtitleReads+1;return subtitleHeight(self) end
  for _,button in ipairs(buttons) do button.Hide=function(self) hides=hides+1;return hide(self) end end
  view.SetWidth=function(self,width) widths[#widths+1]=width;return setWidth(self,width) end
  U.Tooltip:ShowGroup(target,raid)
  T.eq(hides,40,"one hover clears the warm member pool only once");T.same(widths,{1080},"the raid goes directly to its final width")
+ T.eq(titleReads,1,"the group title is measured only at its final width")
+ T.eq(subtitleReads,1,"the group subtitle is measured only at its final width")
+ T.same({view.subtitle:GetPoint()},subtitlePoint);T.same({view.metrics[1].title:GetPoint()},metricPoint);T.eq(view.canvas:GetHeight(),canvasHeight,"removing provisional measurements preserves the complete layout")
  T.eq(U.Tooltip.owner,target);T.eq(buttons[40].member,raidMembers[40]);T.ok(buttons[40]:IsVisible())
  for _,button in ipairs(buttons) do button.Hide=hide end;view.SetWidth=setWidth
+ view.title.GetStringHeight,view.subtitle.GetStringHeight=titleHeight,subtitleHeight
  T.eq(#S.nodes,nodes,"reopening a roster reuses its native object high-water mark");T.eq(buttons[1],first)
  U.Tooltip:Hide();T.eq(buttons[40].member,nil,"closing clears newly grown member bindings too")
  for i=40,31,-1 do raidMembers[i]=nil end
@@ -2247,6 +2256,53 @@ do
  T.eq(g.Presets:Get()[1].requiredItemLevel,321);T.eq(#g.Presets:Get(),1,"republishing changes no favorites")
  T.eq(titleChecks,0,"creation and update confirmations no longer call native title comparison")
  T.eq(g.Presets:Get()[1].name,nil);T.eq(g.Presets:Get()[1].comment,nil)
+ u:Hide(true)
+end
+-- A failed cross-faction recreation keeps the edited draft through native
+-- removal events, whether they arrive during the call or afterwards.
+for _,synchronous in ipairs({false,true}) do
+ local fresh=dofile("tests/ui_fixture.lua")("zhCN")
+ local a,u,g=fresh.A,fresh.U,fresh.G
+ a.db.reduceMotion=true
+ local active={activityIDs={2},name="Existing listing",comment="Existing description",isCrossFactionListing=true}
+ local reject=true
+ local submitted
+ g.Game={RefreshSubscriptions=function() end}
+ dofile("addon/LycheeGroup_Group/Listing.lua")
+ function g:GetListing() return self.Listing:GetListing() end
+ function g:Publish(data) return self.Listing:Publish(data) end
+ function g:Update(data) return self.Listing:Update(data) end
+ function g:RemoveListing() return self.Listing:RemoveListing() end
+ C_LFGList.HasActiveEntryInfo=function() return active~=nil end
+ C_LFGList.GetActiveEntryInfo=function() return active end
+ C_LFGList.RemoveListing=function() active=nil;if synchronous then g.Listing:OnEntryUpdate(false) end end
+ C_LFGList.CreateListing=function(data)
+  submitted=data
+  if reject then return false end
+  active={activityIDs=data.activityIDs,name=LFGListFrame.EntryCreation.Name:GetText(),comment=LFGListFrame.EntryCreation.Description.EditBox:GetText(),isCrossFactionListing=data.isCrossFactionListing}
+  return true
+ end
+ C_LFGList.CopyActiveEntryInfoToCreationFields=function()
+  LFGListFrame.EntryCreation.Name:UserType(active.name);LFGListFrame.EntryCreation.Description.EditBox:UserType(active.comment)
+ end
+ g.Listing:Restore();a:Open("create")
+ local page,native=u.pages.create,LFGListFrame.EntryCreation
+ page.editListing:Fire("OnClick");page.crossFaction:Fire("OnClick")
+ native.Name:UserType("Edited listing");native.Description.EditBox:UserType("Edited description")
+ page.ilvl.box:SetText("123");page:Submit()
+ T.eq(submitted.isCrossFactionListing,false)
+ g.Listing:OnEntryUpdate(false)
+ T.eq(g:GetListing(),nil,"failed recreation publishes the native removal")
+ T.eq(page:FormData().isCrossFactionListing,false,"failed recreation preserves the explicit cross-faction choice")
+ T.eq(page:FormData().requiredItemLevel,123)
+ T.eq(native.Name:GetText(),"Edited listing");T.eq(native.Description.EditBox:GetText(),"Edited description")
+ T.eq(page.formError:GetText(),a.GroupLocale.updateFailed,"late removal confirmation keeps the submission error")
+ T.eq(page.publish:IsEnabled(),true,"the retained draft can be published again")
+ reject=false;page:Submit()
+ T.eq(submitted.isCrossFactionListing,false,"retry uses the original edited choice")
+ T.eq(page.manage:IsShown(),true)
+ page.cancelListing:Fire("OnClick");g.Listing:OnEntryUpdate(false)
+ T.eq(page:FormData().isCrossFactionListing,true,"explicitly ending the next listing restores the new-listing default")
  u:Hide(true)
 end
 -- Context actions use the clicked identity and the current player's faction.
@@ -2807,7 +2863,27 @@ do
  T.eq(tip.interactive.memberButtons[1].targetKey,"Member1-Home","display changes preserve full identity for member actions")
  tip.interactive.memberButtons[1]:Fire("OnClick")
  T.eq(tip.interactive.subtitle:GetText(),"Home","personal detail still displays the server")
- T.eq(tip.member.nameKey,"Member1-Home");tip.interactive.back:Fire("OnClick")
+ T.eq(tip.member.nameKey,"Member1-Home")
+ do
+  local person=tip.member;local class=person.class;person.class="PALADIN"
+  tip:RenderPlayer(person,true)
+  local view=tip.interactive;local summary,height,metricPoint=view.summary:GetText(),view:GetHeight(),{view.metrics[1].title:GetPoint()}
+  a.Specializations:Class(person.class)
+  local getClass,getCount,classReads,countReads=GetClassInfo,GetNumClasses,0,0
+  GetClassInfo=function(id) classReads=classReads+1;return getClass(id) end
+  GetNumClasses=function() countReads=countReads+1;return getCount() end
+  for _=1,20 do tip:RenderPlayer(person,true) end
+  GetClassInfo,GetNumClasses=getClass,getCount
+  T.eq(classReads,0,"warmed roster details reuse the core class metadata")
+  T.eq(countReads,0,"warmed details do not enumerate the class directory again")
+  T.eq(view.summary:GetText(),summary);T.eq(view:GetHeight(),height);T.same({view.metrics[1].title:GetPoint()},metricPoint)
+  person.localizedClass="Explicit class";tip:RenderPlayer(person,true)
+  T.eq(view.summary:GetText(),"Explicit class","provider-localized class names keep precedence")
+  person.localizedClass=nil;person.class="UNKNOWN";tip:RenderPlayer(person,true)
+  T.eq(view.summary:GetText(),u.L.unknown,"unknown class tokens retain the existing display")
+  person.class=class
+ end
+ tip.interactive.back:Fire("OnClick")
  tip:Hide()
  local searchMember={name="浅墨影-白银之手",nameKey="浅墨影-白银之手",class="ROGUE",specName="敏锐",assignedRole="DAMAGER",isBNetFriend=true}
  local result={id=8720,name="H56",leaderName=searchMember.name,leaderKey=searchMember.nameKey,numMembers=1,maxNumPlayers=5,details={members={searchMember}}}

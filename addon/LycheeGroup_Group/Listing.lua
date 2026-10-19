@@ -96,8 +96,9 @@ function Listing:Update(data)
 	end
 	local createData = BuildCreateData(data, current)
 	local success
-	if data.isCrossFactionListing ~= nil and current.isCrossFactionListing ~= nil
-		and data.isCrossFactionListing ~= current.isCrossFactionListing then
+	local recreate = data.isCrossFactionListing ~= nil and current.isCrossFactionListing ~= nil
+		and data.isCrossFactionListing ~= current.isCrossFactionListing
+	if recreate then
 		-- 跨阵营变更不能原地更新:先下架再创建,同一调用链内完成以保持合法时序。
 		pcall(C_LFGList.RemoveListing)
 		success = Create(createData)
@@ -105,12 +106,14 @@ function Listing:Update(data)
 		local ok, updated = pcall(C_LFGList.UpdateListing, createData)
 		success = ok and updated and true or false
 	end
-	if not success then
-		return false, L.updateFailed
+	-- Recreation can remove the old entry even when Create fails. Publish that
+	-- state before returning, while the caller still owns the submission draft.
+	if success or recreate then
+		snapshot = NormalizeEntry()
+		G.Game:RefreshSubscriptions()
+		G:Notify("listing")
 	end
-	snapshot = NormalizeEntry()
-	G.Game:RefreshSubscriptions()
-	G:Notify("listing")
+	if not success then return false, L.updateFailed end
 	return true
 end
 

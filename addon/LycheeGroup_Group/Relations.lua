@@ -36,6 +36,7 @@ local function Add(flag,name,realm,guid)
 end
 
 function R:GetVersion()
+ if self.active and not self.dirty then return self.version end
  local now=GetTime()
  -- A hidden one-off reader can request a fresh snapshot without owning events.
  -- Within one frame it shares that snapshot with the rest of its member batch.

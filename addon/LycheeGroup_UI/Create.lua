@@ -641,13 +641,14 @@ end
 function P:OnCreationInputLost()
  self.publish:SetAvailable(false)
 end
-function P:ValidateForm()
+function P:ValidateForm(preserveSubmissionError)
  if self.preparing or UI.hiding or not self.formFrame:IsShown() then return end
+ if not preserveSubmissionError then state.submissionError=nil end
  self:RefreshFavoriteState()
  local ok,err=UI:GetGroup():CanManageListing()
  self.publish:SetAvailable(ok==true and not self.submitting)
  if ok and self.validationSubmitted then ok,err=UI.Native:ValidateCreation(self:FormData()) end
- self:SetFormError(err or "")
+ self:SetFormError(err or state.submissionError or "")
 end
 function P:EnsureCreationInput()
  local allowed,reason=UI:GetGroup():CanManageListing()
@@ -661,7 +662,7 @@ function P:EnsureCreationInput()
  return true
 end
 function P:PrepareForm(editing)
- self.validationSubmitted=nil
+ self.validationSubmitted=nil;state.submissionError=nil
  local allowed,reason=UI:GetGroup():CanManageListing()
  if not allowed then UI.Native:ReleaseCreation();self.publish:SetAvailable(false);self:SetFormError(reason);return end
  self.preparing=true
@@ -680,14 +681,14 @@ function P:PrepareForm(editing)
 end
 function P:RefreshMode()
  local group=UI:GetGroup();local listing=group:GetListing();local canManage=group:CanManageListing()
- if state.hadListing and not listing then form.crossFaction=true;self:RefreshPicker() end
+ if state.hadListing and not listing and not self.submitting then form.crossFaction=true;self:RefreshPicker() end
  state.hadListing=listing~=nil
  if not listing or not canManage then state.editing=false end
  self.editListing:SetShown(listing~=nil and canManage);self.cancelListing:SetShown(listing~=nil and canManage)
  local editing=state.editing or not listing;self.formFrame:SetShown(editing);self.manage:SetShown(not editing);self.formCancel:SetShown(state.editing)
  if editing then
   UI:SetText(self.heading,state.editing and L.update or L.create);UI:SetText(self.publish.label,state.editing and L.update or L.publish)
-  if not canManage then UI.Native:ReleaseCreation() elseif UI.Native.owner~=self then self:PrepareForm(false) end;self:ValidateForm()
+  if not canManage then UI.Native:ReleaseCreation() elseif UI.Native.owner~=self then self:PrepareForm(false) end;self:ValidateForm(true)
  else
   UI.Native:ReleaseCreation();UI:SetText(self.sName,listing.name or L.currentListing)
   local act=UI:GetGroup().Catalog:GetActivity(listing.activityID);UI:SetActivityIcon(self.sIcon,act)
@@ -710,7 +711,7 @@ function P:Submit()
  local ok,reason;if state.editing then ok,reason=UI:GetGroup():Update(data) else ok,reason=UI:GetGroup():Publish(data) end
  self.submitting=nil
  if ok then self.validationSubmitted=nil;state.editing=false;self:RefreshMode()
- else self:ValidateForm();self:SetFormError(reason or L.failed) end
+ else self:ValidateForm();state.submissionError=reason or L.failed;self:SetFormError(state.submissionError) end
 end
 function P:RefreshApplicants()
  if UI.hiding then return end

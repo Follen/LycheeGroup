@@ -1695,7 +1695,6 @@ do
 end
 
 -- The last journal tier is the observed season subset, not another expansion.
-local nativeAvailable=C_LFGList.GetAvailableActivities
 local raidIDs={105,106,501,505,506,507,508,509,510,511,512,513}
 local selectedTier=2
 local raidJournals={{8101},{8102,8111,8112,8113,8199},{8199,8111,8112,8113}}
@@ -2484,7 +2483,12 @@ do
  S.social.friends={{name="RoleFriend",guid="Player-Friend"}};Fire("FRIENDLIST_UPDATE")
  G.Relations:Apply(bare);T.eq(bare.isCharFriend,true,"a GUID resolves a native bare friend name to its complete realm identity")
  local sameName={nameKey="RoleFriend-Elsewhere"};G.Relations:Apply(sameName);T.eq(sameName.isCharFriend,false,"a matching bare name on another realm is unrelated")
- local indexed=S.socialReads;for i=1,20 do G.Relations:Apply(bare) end;T.eq(S.socialReads,indexed,"a stable observer index is shared by every member binding")
+ local indexed=S.socialReads;local clock,clockReads=GetTime,0
+ GetTime=function() clockReads=clockReads+1;return clock() end
+ for i=1,20 do G.Relations:Apply(bare) end
+ GetTime=clock
+ T.eq(S.socialReads,indexed,"a stable observer index is shared by every member binding")
+ T.eq(clockReads,0,"an active unchanged relationship index needs no frame clock reads")
  local fallback={nameKey="Unlisted-Away",relationship="guild"};G.Relations:Apply(fallback);T.eq(fallback.isGuildMate,true,"native guild evidence remains a fallback")
  S.social.friends[#S.social.friends+1]={name="Unqualified-晨风号角"};Fire("FRIENDLIST_UPDATE")
  local incomplete={name="Unqualified",realm=""};G.Relations:Apply(incomplete)
@@ -2557,6 +2561,24 @@ do
  T.ok(Stubs.ChatMessages()[#Stubs.ChatMessages()]:find("团长乙-晨风号角",1,true))
  reminder.Stop();Stubs.SetUnit("party1",nil);Stubs.SetUnit("party2",nil);G:InvalidateRoster("group")
  A.Notes,A.NotesLocale,A.db.reminders=previousNotes,previousLocale,reminders
+end
+
+-- Failure belongs to the request that was in flight, not the newer queued choice.
+do
+ local view={};G:Attach(view,"search")
+ G.Search:EndBrowse();G.Search:OnResultsReceived()
+ for _,reason in ipairs({"timeout","failed"}) do
+  local calls=#S.searchCalls
+  T.ok(G.Search:Search("3",501))
+  T.ok(G.Search:Search("seasonDungeon",502))
+  G.Search:OnSearchFailed(reason)
+  T.eq(G.Search:GetState(),"waiting","a failed old search preserves the newer queued request")
+  Stubs.AdvanceClock(0)
+  T.eq(#S.searchCalls,calls+2,"the latest queued choice is submitted once after the old failure")
+  T.eq(S.searchCalls[#S.searchCalls].categoryID,2)
+  G.Search:OnResultsReceived()
+ end
+ G:Detach(view)
 end
 
 _G.LycheeGroupDB = nil

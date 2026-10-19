@@ -1,0 +1,253 @@
+{
+  "schema": "lycheegroup.serial-audit.v1",
+  "date": "2026-10-20",
+  "baselineCommit": "e59b45e",
+  "requested": {
+    "architecture": 3,
+    "performance": 3,
+    "hygiene": 3,
+    "scope": "whole repository, including shared LycheeUI integration",
+    "execution": "serial; fix and verify each round before starting the next"
+  },
+  "invariants": [
+    "Preserve business behavior and UI/UX",
+    "Later rounds exclude previously confirmed findings",
+    "Do not count speculative or repeated findings"
+  ],
+  "status": "partial",
+  "completion": {
+    "recordedFindingsFixed": true,
+    "requestedFullRepositoryRoundsComplete": false,
+    "reason": "These nine sequential finding/fix passes relied too heavily on confirming and fixing a new issue as their stopping condition. Their depth does not establish completion of the requested nine full-repository audits; the recorded fixes and verification remain valid.",
+    "scopeMeaning": "Per-pass scope entries list examined areas, not evidence of exhaustive coverage."
+  },
+  "rounds": [
+    {
+      "id": "architecture-1",
+      "status": "findings_fixed",
+      "scope": "Whole-repository loading, dependencies, service state ownership, event handoff and view lifetime",
+      "finding": "A non-throttled failure of the in-flight search cleared a newer user request already held in pending.",
+      "fix": "Continue the latest queued request through the existing scheduler; retain failure without retry when no newer request exists.",
+      "verification": {
+        "command": "lua tests/runner.lua group",
+        "before": "Expected waiting after A timeout with queued B, got failed; native submission count remained 1",
+        "after": "1674 assertions passed; timeout and generic failure submit B exactly once; existing no-pending failure and close cancellation cases pass"
+      },
+      "newRelativeToPreviousRounds": true
+    },
+    {
+      "id": "architecture-2",
+      "status": "findings_fixed",
+      "scope": "Whole-repository callback, cancellation, native-input, preview and snapshot ownership; public shared-component layout contracts",
+      "finding": "Rect retained its first parent and cached geometry after a caller reparented or re-laid out the region; even a zero-duration request could leave the wrong parent, position and size.",
+      "fix": "Reconcile current parent, anchor and pixel geometry at Rect entry; preserve the existing per-frame write suppression and reusable state.",
+      "verification": {
+        "commands": [
+          "lua tests/run.lua",
+          "tools/Sync-LycheeUI.ps1",
+          "lua tests/runner.lua ui preview floating"
+        ],
+        "before": "New current-parent regression failed",
+        "after": "553 shared assertions and 3464 product assertions passed, including reparent, same-target reset and animation from caller-updated geometry"
+      },
+      "newRelativeToPreviousRounds": true
+    },
+    {
+      "id": "architecture-3",
+      "status": "findings_fixed",
+      "scope": "Whole-repository cross-package data models, callback order, native listing state and UI draft ownership",
+      "finding": "Cross-faction recreation could remove the old listing and fail to create its replacement; the later removal event then reset the edited cross-faction choice and cleared the failure message.",
+      "fix": "Publish the actual listing state before Update returns even when recreation fails; retain the in-progress draft and keep submission errors across passive mode refreshes. Explicitly ending a listing still resets the next draft default.",
+      "verification": {
+        "command": "lua tests/runner.lua ui group preview",
+        "before": "Actual Listing plus UI fixture failed: retained cross-faction value expected false, got true",
+        "after": "4767 assertions passed; synchronous and delayed removal events preserve title, description, item level, cross-faction choice and error; retry and subsequent explicit ending remain correct"
+      },
+      "newRelativeToPreviousRounds": true
+    },
+    {
+      "id": "performance-1",
+      "status": "findings_fixed",
+      "scope": "Whole-repository service event/cache costs, result and application notifications, Notes, Floating and shared List/Panel/Motion/Native; tooltip layout writes",
+      "finding": "RenderGroup measured the title and subtitle heights and positioned the subtitle before unconditionally repeating all three operations at the final leader-adjusted width.",
+      "fix": "Remove the provisional measurements and placement; retain the final layout, complete member list, update timing and motion.",
+      "verification": {
+        "command": "lua tests/runner.lua ui",
+        "passed": 2923,
+        "workload": "40-member warmed tooltip; independent pre-fix fixture repeated opening 10 times",
+        "before": {
+          "titleHeightReads": 20,
+          "subtitleHeightReads": 20,
+          "subtitleClearPoints": 30,
+          "subtitleSetPoint": 30
+        },
+        "afterPerOpen": {
+          "titleHeightReads": 1,
+          "subtitleHeightReads": 1,
+          "subtitleClearPoints": 2,
+          "subtitleSetPoint": 2
+        },
+        "coverage": [
+          "Regression failed before fix with expected 1 title-height read, got 2",
+          "All members retained",
+          "Warm subtitle/metric anchors and canvas height unchanged",
+          "Existing expanded, collapsed and scrolling cases pass"
+        ]
+      },
+      "newRelativeToPreviousRounds": true
+    },
+    {
+      "id": "performance-2",
+      "status": "findings_fixed",
+      "scope": "Whole-repository batched reads, member and relation binding, service invalidation and hidden-reader lifetimes; core/static metadata and shared component work",
+      "finding": "Every active clean relation-version query called GetTime even though the current time is used only by dirty rebuilds or inactive per-frame snapshots. Member binding and applicant lookup repeatedly entered this path.",
+      "fix": "Return the existing version immediately for an active clean index; keep the original dirty and inactive paths. No new cache, scheduling or behavior change.",
+      "verification": {
+        "command": "lua tests/runner.lua group",
+        "passed": 1675,
+        "before": "Existing 20-member-binding regression counted 20 clock reads",
+        "after": "Same actual Apply path counted 0 clock reads and unchanged social-directory reads",
+        "independentWorkload": {
+          "stableVersionQueries": 100,
+          "clockReadsBefore": 100,
+          "clockReadsAfter": 0,
+          "dirtyRebuilds": 1,
+          "hiddenSameFrameQueries": 2,
+          "hiddenSameFrameRebuilds": 1,
+          "hiddenNextFrameRebuilds": 1,
+          "relationshipFlagsUnchanged": true
+        },
+        "coverage": [
+          "Friend/guild event invalidation",
+          "Active listing and create-view ownership",
+          "Hidden same-frame sharing and cleanup",
+          "Roster/applicant relationship markers and permission boundaries"
+        ]
+      },
+      "newRelativeToPreviousRounds": true
+    },
+    {
+      "id": "performance-3",
+      "status": "findings_fixed",
+      "scope": "Whole-repository directory/string/geometry costs and cleanup; core specialization consumers, Notes/Transfer, roster and tooltip metadata, shared controls",
+      "finding": "Player tooltips without localizedClass enumerated the entire class directory on every render; ordinary roster snapshots provide only the class token. The core already owns a reusable class directory.",
+      "fix": "Use Specializations:Class only for the existing localized-class fallback; preserve provider names, unknown values and initial metadata loading. No additional cache.",
+      "verification": {
+        "command": "lua tests/runner.lua ui notes",
+        "passed": 3312,
+        "before": "20 repeated actual detail renders counted 40 GetClassInfo calls, regression expected 0",
+        "after": "GetClassInfo and GetNumClasses both 0 after warmup; existing text/height/metric-anchor comparisons pass",
+        "independentWorkload": {
+          "warmedPaladinDetailOpens": 100,
+          "GetClassInfoBefore": 200,
+          "GetClassInfoAfter": 0,
+          "GetNumClassesBefore": 100,
+          "GetNumClassesAfter": 0,
+          "textAndGeometryEqual": true
+        },
+        "coverage": [
+          "Explicit localized class wins",
+          "Unknown token remains unknown",
+          "Existing shared cache handles incomplete directory recovery",
+          "No change to refresh timing or motion"
+        ]
+      },
+      "rejectedCandidate": "Caching successful Delve atlas results would change the existing available/unavailable/available fallback behavior; kept the original path and tests.",
+      "newRelativeToPreviousRounds": true
+    },
+    {
+      "id": "hygiene-1",
+      "status": "findings_fixed",
+      "scope": "Whole-repository package manifests and load closure, service entry points, private UI state, shared APIs, build/sync boundaries and documentation",
+      "findings": [
+        "Navigation labels no longer have an alpha-animation producer; their OnHide callback still stopped a nonexistent task and wrote the existing alpha value.",
+        "The canonical shared-library README simultaneously stated the current unlocked state and a stale frozen state."
+      ],
+      "fix": "Remove only the unused navigation-label cleanup; replace the stale frozen claim with the current maintenance-scope reference to .lock.",
+      "verification": {
+        "command": "lua tests/runner.lua ui",
+        "passed": 2933,
+        "coverage": [
+          "Full reference search finds no navigation-label alpha-animation producer",
+          "Independent offline navigation and hover fixture counted zero label animation starts with alpha remaining 1",
+          "Existing navigation, underline, menu and close lifecycle regressions pass",
+          "README and .lock consistently describe the unlocked source; referenced .lock exists"
+        ]
+      },
+      "newRelativeToPreviousRounds": true
+    },
+    {
+      "id": "hygiene-2",
+      "status": "findings_fixed",
+      "scope": "Whole-repository local references, public and fixture consumers, package load manifests, media paths, sync/build scripts and document links",
+      "findings": [
+        "The group fixture retained nativeAvailable after its restore/use path had been removed; only its declaration remained.",
+        "The UI fixture bound Motion to a local M that it never read or exported."
+      ],
+      "fix": "Delete the unused nativeAvailable declaration and remove only M from the UI fixture's alias declaration; preserve all fixtures and assertions.",
+      "verification": {
+        "commands": ["lua tests/runner.lua group", "luac -p tests/ui_fixture.lua"],
+        "groupAssertionsPassed": 1675,
+        "coverage": [
+          "Whole-repository/reference searches confirm both locals have no consumers",
+          "The removed expressions only read ordinary fixture table fields",
+          "All 53 TOC/XML load references exist",
+          "Canonical and embedded runtime file sets and bytes match, including 36 media files",
+          "Current maintained documentation has no missing local-link targets"
+        ]
+      },
+      "newRelativeToPreviousRounds": true
+    },
+    {
+      "id": "hygiene-3",
+      "status": "findings_fixed",
+      "scope": "Whole-repository private-field consumers, dynamic WoW/XML globals, shared component options, migration paths, current specifications and package/tool/test boundaries",
+      "finding": "The current design parameter table still specified result/application row heights of 84/40, contradicting its current-status section, detailed layout text and the implemented 76/36 constants.",
+      "fix": "Correct the current table to 76/36. Keep runtime behavior, layout and historical evidence unchanged.",
+      "verification": {
+        "method": "Compare the edited table with Find.lua row constants and their C.List call sites, the detailed design section, and the existing UI row-height assertion.",
+        "runtimeChanges": false,
+        "retainedCandidates": [
+          "Shared Motion and List consumer fields",
+          "Dynamic member-mark keys and metatable/options contracts",
+          "Persisted-value migration cleanup",
+          "WoW slash-command and binding globals"
+        ]
+      },
+      "newRelativeToPreviousRounds": true
+    }
+  ],
+  "limits": [
+    "Offline fixtures do not establish live API permissions, event order, rendering or whole-client performance."
+  ],
+  "finalIntegration": {
+    "product": {
+      "command": "lua tests/runner.lua",
+      "modulesPassed": 9,
+      "assertionsPassed": 5946,
+      "modulesFailed": 0
+    },
+    "sharedLibrary": {
+      "command": "lua tests/run.lua",
+      "directory": "../LycheeUI",
+      "assertionsPassed": 553,
+      "executedAfter": "architecture-2",
+      "runtimeSourceChangedSinceVerification": false
+    },
+    "layout": {
+      "command": "lua tests/ui_preview.lua",
+      "comparison": "SHA-256 of each complete scene serialized with sorted JSON keys, against the pre-audit baseline",
+      "scenes": 36,
+      "equal": 36,
+      "changed": [],
+      "coverage": "Offline widget-tree geometry, text, colors, visibility and control state; not native engine pixels"
+    },
+    "librarySynchronization": {
+      "runtimeFiles": 43,
+      "sourceLockHashesMatch": true,
+      "embeddedFileSetAndBytesMatch": true
+    },
+    "liveValidationPerformed": false,
+    "gameInstallationChanged": false
+  }
+}

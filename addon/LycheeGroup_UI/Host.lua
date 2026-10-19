@@ -189,7 +189,6 @@ local function BuildNavButton(nav, page, x)
 	-- 当前页暖白、其余次要灰;悬停只变前景,不移动下划线。
 	b:SetScript("OnEnter", function(self) UI:Color(self.label, T.text);self.icon:SetSelected(self.active,true) end)
 	b:SetScript("OnLeave", function(self) UI:Color(self.label, self.active and T.text or T.muted);self.icon:SetSelected(self.active) end)
-	b:SetScript("OnHide",function(self) M:Stop(self.label);self.label:SetAlpha(1) end)
 	b:SetScript("OnClick", function() A:Open(page) end)
 	return b
 end
