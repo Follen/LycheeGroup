@@ -31,6 +31,14 @@ function UI:HasNote(key)
  return self:GetNote(key)~=nil
 end
 
+function UI:OnNotesReady()
+ if self.preview or self.hiding or not self:IsShown() then return end
+ local page=self.page and self.pages[self.page]
+ if page and page.WatchNotes and page.frame:IsVisible() then
+  if page:WatchNotes() then page:OnNotesChanged() end
+ end
+end
+
 function UI:OnSettingChanged(key)
 	if key == "language" then
 		if self.pages.settings.frame then self.pages.settings:Sync() end
@@ -42,8 +50,7 @@ function UI:OnSettingChanged(key)
 	end
 	if key ~= "notesEnabled" then return end
 	UI.Tooltip:Hide()
-	local page = self.page and self.pages[self.page]
-	if page and page.OnNotesChanged and not self.hiding then page:OnNotesChanged() end
+	self:OnNotesReady()
 end
 
 function UI:ApplyFont(path)
@@ -216,7 +223,6 @@ function UI:Build()
 	local logo = CreateFrame("Button", nil, frame)
 	logo:SetSize(LOGO, LOGO)
 	logo:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD+8, -(NAV_H-LOGO)/2)
-	self.logoButton = logo
 	self.drag:AddHandle(logo)
 	local texture = logo:CreateTexture(nil, "ARTWORK")
 	texture:SetTexture(T.media .. "lychee-logo.tga")

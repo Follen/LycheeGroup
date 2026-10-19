@@ -220,8 +220,9 @@ function Tip:BuildInteractive()
  scroll:EnableMouseWheel(true);scroll:SetScript("OnMouseWheel",function(self,delta)
   local maximum=ScrollMaximum(self,canvas);local target=math.max(0,math.min(maximum,(self.scrollTarget or self:GetVerticalScroll())-delta*42))
   self.scrollTarget=target;UI.Motion:Stop(self)
-  if A.db.reduceMotion then self:SetVerticalScroll(target);f.updatingScroll=true;slider:SetValue(target);f.updatingScroll=false;return end
-  local from,elapsed=self:GetVerticalScroll(),0
+  local from=self:GetVerticalScroll()
+  if A.db.reduceMotion or target==from then self.scrollTarget=nil;self:SetVerticalScroll(target);f.updatingScroll=true;slider:SetValue(target);f.updatingScroll=false;return end
+  local elapsed=0
   UI.Motion:Start(self,function(dt)
    elapsed=math.min(.14,elapsed+dt);local p=elapsed/.14;p=p*(2-p);local value=from+(target-from)*p
    self:SetVerticalScroll(value);f.updatingScroll=true;slider:SetValue(value);f.updatingScroll=false
@@ -625,13 +626,13 @@ function Tip:ShowPlayer(owner,member,context)
  self:ClearSource()
  self.sourceRoster=directRoster and UI:GetGroup():GetRoster() or nil;self.directPlayer=directRoster
  self.memberContext=context
- self:ResetInteractive(owner,440);self:RenderPlayer(member,false)
+ if owner then self:CaptureOwner(owner) end
+ self:RenderPlayer(member,false)
 end
 local function NoteHeader(f,note,top)
  local color=note.type=="positive" and T.good or note.type=="caution" and T.warning or T.muted
  f.noteDivider:ClearAllPoints();f.noteDivider:SetPoint("TOPLEFT",0,-top);f.noteDivider:SetWidth(f.canvas:GetWidth());f.noteDivider:Show()
- local kind=L.types and L.types[note.type]
- f.noteHeading:ClearAllPoints();f.noteHeading:SetPoint("TOPLEFT",24,-top-17);UI:SetText(f.noteHeading,L.notes..(kind and kind~=L.notes and " · "..kind or ""));UI:Color(f.noteHeading,color);f.noteHeading:Show()
+ f.noteHeading:ClearAllPoints();f.noteHeading:SetPoint("TOPLEFT",24,-top-17);UI:SetText(f.noteHeading,L.notes);UI:Color(f.noteHeading,color);f.noteHeading:Show()
  f.noteGlyph:SetTexture(T.media..(note.type=="positive" and "heart" or note.type=="caution" and "caution" or "book")..".tga");f.noteGlyph:SetColor(color);f.noteGlyph:ClearAllPoints();f.noteGlyph:SetPoint("LEFT",f.noteHeading,"LEFT",-24,0);f.noteGlyph:Show()
  f.comment:ClearAllPoints();f.comment:SetPoint("TOPLEFT",0,-top-17-f.noteHeading:GetStringHeight()-12);f.comment:SetHeight(0);UI:Color(f.comment,T.text);UI:SetText(f.comment,note.reason~="" and note.reason or L.noReason)
  local dateTop=top+17+f.noteHeading:GetStringHeight()+12+math.max(f.comment:GetLineHeight(),f.comment:GetStringHeight())+12

@@ -151,6 +151,7 @@ function Library.AttachNative(context)
   options=options or {}
   local container=options.container or box
   local lease=NewLease(context,container,shell,options)
+  local originalBoxParent=box:GetParent()
   lease.box,lease.shell=box,shell
   lease.boxParent=container==box and shell or box:GetParent()
   local font=TextStyle(box);local insets={box:GetTextInsets()};local width=box:GetWidth()
@@ -222,15 +223,31 @@ function Library.AttachNative(context)
    if shell.box==box then shell.box=ordinary;if ordinary then ordinary:SetShown(ordinaryShown) end end
    shell:SetFocused(false)
   end
-  if ordinary and ordinary~=box then ordinary:ClearFocus();ordinary:Hide() end
+  if ordinary and ordinary~=box then
+   ordinary:ClearFocus();if not lease.active then return lease end
+   if container:GetParent()~=lease.layout.parent or box:GetParent()~=originalBoxParent or options.owner and not options.owner:IsOwned() then lease:Release();return lease end
+  end
   shell.box=box
-  container:SetParent(shell);container:ClearAllPoints()
+  if ordinary and ordinary~=box then
+   ordinary:Hide();if not lease.active then return lease end
+   if container:GetParent()~=lease.layout.parent or box:GetParent()~=originalBoxParent or options.owner and not options.owner:IsOwned() then lease:Release();return lease end
+  end
+  container:SetParent(shell)
+  if not lease:IsOwned() then lease:Release();return lease end
+  container:ClearAllPoints()
   local pad=options.padding or {10,7,10,7}
   container:SetPoint("TOPLEFT",shell,"TOPLEFT",pad[1],-pad[2]);container:SetPoint("BOTTOMRIGHT",shell,"BOTTOMRIGHT",-pad[3],pad[4])
+  if not lease:IsOwned() then lease:Release();return lease end
   container:SetSize(shell:GetWidth()-pad[1]-pad[3],shell:GetHeight()-pad[2]-pad[4])
-  if container~=box then box:SetWidth(shell:GetWidth()-(options.contentInset or 36)) end
+  if not lease:IsOwned() then lease:Release();return lease end
+  if container~=box then
+   box:SetWidth(shell:GetWidth()-(options.contentInset or 36))
+   if not lease:IsOwned() then lease:Release();return lease end
+  end
   context.inputs[#context.inputs+1]=box
-  container:Show();lease:RefreshStyle();shell:SetFocused(box:HasFocus())
+  container:Show()
+  if not lease:IsOwned() then lease:Release();return lease end
+  lease:RefreshStyle();shell:SetFocused(box:HasFocus())
   return lease
  end
 
@@ -247,9 +264,17 @@ function Library.AttachNative(context)
    for _,region in ipairs(fill.regions) do region._lycheeNativeArt=true end
   end
   lease.fill=fill;fill:SetColor(T.accent);fill:SetAlpha(1);fill:Show()
+  function lease:finish(owned)
+   M:Stop(fill);fill:Hide()
+   RestoreText(font,owned)
+   if owned then label:SetAlpha(alpha) end
+   if owned or button:GetAlpha()==(button:IsEnabled() and 1 or .38) then button:SetAlpha(buttonAlpha) end
+   if owned or options.text and button:GetText()==options.text then button:SetText(text) end
+  end
   ApplyText(font,T,T.onPrimary)
   if options.text then button:SetText(options.text) end
   button:SetSize(math.max(options.minWidth or 96,label:GetStringWidth()+40),40)
+  if not lease:IsOwned() then lease:Release();return lease end
   local inside,pressed
   local function Surface(immediate)
    if not lease:IsOwned() then lease:Release();return end
@@ -264,14 +289,8 @@ function Library.AttachNative(context)
   lease:Bind(button,"OnEnable",function(b,previous,...) if previous then previous(b,...) end;Surface(true) end)
   lease:Bind(button,"OnDisable",function(b,previous,...) if previous then previous(b,...) end;pressed=nil;Surface(true) end)
   Surface(true)
-  function lease:finish(owned)
-   M:Stop(fill);fill:Hide()
-   RestoreText(font,owned)
-   if owned then label:SetAlpha(alpha) end
-   if owned or button:GetAlpha()==(button:IsEnabled() and 1 or .38) then button:SetAlpha(buttonAlpha) end
-   if owned or options.text and button:GetText()==options.text then button:SetText(text) end
-  end
   button:Show()
+  if not lease:IsOwned() then lease:Release() end
   return lease
  end
 end

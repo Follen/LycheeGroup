@@ -30,17 +30,20 @@ function S:Class(token)
  end
  if entry then return entry.id,entry.name end
 end
-function S:Find(token,name)
+function S:Find(token,nameOrID)
  local classID=self:Class(token)
  if not classID then return end
  local entries=byClassName[classID]
  if not entries then entries={};byClassName[classID]=entries end
- local entry=entries[name]
+ local entry=entries[nameOrID]
  if entry then return entry.id,entry.name,entry.icon end
  for index=1,C_SpecializationInfo.GetNumSpecializationsForClassID(classID) do
   local id,label,_,icon=GetSpecializationInfoForClassID(classID,index)
-  local found=Remember(id,label,icon)
-  if found then entries[label]=found end
-  if label==name then return id,label,icon end
+  Remember(id,label,icon)
+  if id and label and icon then
+   local found={id=id,name=label,icon=icon}
+   entries[label]=found;entries[id]=found
+  end
+  if id==nameOrID or label==nameOrID then return id,label,icon end
  end
 end

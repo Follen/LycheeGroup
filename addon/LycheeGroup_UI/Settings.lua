@@ -130,7 +130,7 @@ function P:BuildRow(parent,row,index)
    value=math.floor(value/5+.5)*5
    local widget=P.controls[row[1]].widget
    UI:SetText(widget.valueLabel,value.."%")
-   if not P.syncing then A:SetSetting(row[1],value) end
+   A:SetSetting(row[1],value)
   end) end
   control.valueLabel=C.Text(control,"",14,T.muted,52);control.valueLabel:SetPoint("LEFT",control,"RIGHT",12,0);control.valueLabel:SetJustifyH("RIGHT")
   control:SetPoint("RIGHT",-76,0)
@@ -225,7 +225,6 @@ function P:SelectSection(key)
  if changed then UI.Motion:Reveal(self.panels[key],"TOPLEFT",self.main,"TOPLEFT",PAD,-80,4,0,.14) end
 end
 function P:Sync()
- self.syncing=true
  for key,entry in pairs(self.controls) do
   local c,row=entry.widget,entry.definition
   local value=A:GetSetting(key)
@@ -239,7 +238,6 @@ function P:Sync()
   elseif row[4] then local label;local choices=type(row[4])=="function" and row[4]() or row[4];for _,choice in ipairs(choices) do if choice.value==value then label=choice.label;break end end;c:SetValue(value,label)
   else c:SetValue(value==true);UI:SetText(c.label,value and S("已开启","On") or S("已关闭","Off"));c:SetWidth(math.ceil(c.label:GetStringWidth())+c.track:GetWidth()+36);UI:Color(c.label,c._inside and T.text or T.muted) end
  end
- self.syncing=nil
  self.reloadLanguage:SetShown(A:NeedsLanguageReload())
  self:LayoutRows()
  if self.section=="about" then self:RefreshAbout() end

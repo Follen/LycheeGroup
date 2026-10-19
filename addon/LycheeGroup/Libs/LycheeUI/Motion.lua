@@ -130,8 +130,18 @@ function M:Reveal(region,point,parent,relative,x,y,dx,dy,duration)
   end
  end
  local active=self.jobs[region]==state.step
+ local currentPoint,currentParent,currentRelative,currentX,currentY=region:GetPoint()
  local sameAnchor=active and state[1]==point and state[2]==parent and state[3]==relative
- if sameAnchor and state[4]==x and state[5]==y and duration~=0 and not UI:IsReducedMotion() then return end
+  and currentPoint==point and currentParent==parent and currentRelative==relative and region:GetNumPoints()==1
+ local relaid=false
+ if sameAnchor then
+  -- Reconcile caller layout at the public entry; ticks retain the pixel cache.
+  local scale=region:GetEffectiveScale()
+  currentX,currentY=Pixel(currentX,scale),Pixel(currentY,scale)
+  relaid=state.x~=currentX or state.y~=currentY
+  state.x,state.y=currentX,currentY
+ end
+ if sameAnchor and not relaid and state[4]==x and state[5]==y and duration~=0 and not UI:IsReducedMotion() then return end
  local fromX,fromY,fromAlpha=x+(dx or 0),y+(dy or 0),.35
  if sameAnchor then fromX,fromY,fromAlpha=state.x,state.y,region:GetAlpha() end
  self:Stop(region)

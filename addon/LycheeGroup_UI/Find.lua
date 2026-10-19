@@ -168,7 +168,6 @@ local function UpdateApplication(row,id)
  local leaderClass;if d then for _,m in ipairs(d.members) do if m.isLeader or r.leaderKey and m.nameKey==r.leaderKey then leaderClass=m.class;break end end end;row.leader:SetTextColor(UI:ClassColor(leaderClass))
  local status=UpdateApplicationStatus(row,app)
  row.cancel.targetKey=id;row.cancel:SetShown(UI:GetGroup().Applications:CanCancel(id))
- row.cancel.isCancel=true
  UI:SetText(row.cancel.label,status=="invited" and L.accept or L.cancelApplication)
 end
 function P:Build(parent)
@@ -240,7 +239,6 @@ function P:Build(parent)
  self.limitNotice:Hide()
  for _,row in ipairs(self.appList.rows) do
   ResultTooltipArea(row,self.appList)
-  row.base=C.Panel(row,T.rowAlternate,12);row.base:Hide()
   row.title:ClearAllPoints();row.title:SetPoint("LEFT",APPLICATION_COLUMNS.title.x,0);row.title:SetWidth(APPLICATION_COLUMNS.title.width);C.SetFont(row.title,15);C.SetLineHeight(row.title,20,true);row.meta:Hide()
   row.icon=C.Icon(row,24);row.icon:SetPoint("LEFT",0,0)
   row.leaderIcon=C.Icon(row,12);row.leaderIcon:SetTexture(T.media.."leader.tga");row.leaderIcon:SetPoint("LEFT",APPLICATION_COLUMNS.leader.x-17,0)
@@ -253,7 +251,7 @@ function P:Build(parent)
    local ok,err=UI:GetGroup():Cancel(id)
    if not ok then P:SetStatus(err or L.failed) end
   end);C.SetFont(row.cancel.label,14);C.SetLineHeight(row.cancel.label,20,true);row.cancel:SetStyle({height=28,radius=14});row.cancel:SetPoint("RIGHT",0,0)
-  row.cancel:HookScript("OnEnter",function(button) if button:IsEnabled() and button.isCancel then UI:Color(button.label,T.accent) end end)
+  row.cancel:HookScript("OnEnter",function(button) if button:IsEnabled() then UI:Color(button.label,T.accent) end end)
  end
  self.context=C.Text(main,"",20,T.text,MAIN-180)
  self.resultCount=C.Text(main,"",14,T.dim,132);C.SetLineHeight(self.context,28,true);C.SetLineHeight(self.resultCount,20,true);self.resultCount:SetJustifyH("LEFT")
@@ -267,7 +265,6 @@ function P:Build(parent)
  self.results:SetGutter(LIST_GUTTER);self.results.tooltipFraction=.25
  for _,row in ipairs(self.results.rows) do
   ResultTooltipArea(row,self.results)
-  row.base=C.Panel(row,T.rowAlternate,12);row.base:Hide()
   row.title:ClearAllPoints();row.title:SetPoint("TOPLEFT",RESULT_COLUMNS.title.x,-10);row.title:SetWidth(RESULT_COLUMNS.title.width);C.SetFont(row.title,T.listTitleSize);C.SetLineHeight(row.title,T.listTitleLineHeight,true)
   row.meta:ClearAllPoints();row.meta:SetPoint("TOPLEFT",RESULT_COLUMNS.title.x,-42);row.meta:SetWidth(RESULT_COLUMNS.title.width);C.SetLineHeight(row.meta,20,true)
   row.marks=UI.Members:CreateMarks(row)
@@ -917,11 +914,14 @@ function P:OpenResultMenu(anchor,id,cursor)
  end,{cursor=cursor~=false})
 end
 function P:OnNotesChanged()
- if self.frame and self.frame:IsShown() then UI:GetGroup().Results:InvalidateView();self:RefreshResults(true) end
+ if self.frame and self.frame:IsVisible() and not UI.hiding then UI:GetGroup().Results:InvalidateView();self:RefreshResults(true) end
 end
 function P:WatchNotes()
+ local wanted=not UI.preview and A.db.notesEnabled==true and A.Notes~=nil
+ if (self.notesUnsub~=nil)==wanted then return false end
  if self.notesUnsub then self.notesUnsub();self.notesUnsub=nil end
- if A.db.notesEnabled and A.Notes then self.notesUnsub=A.Notes:Subscribe(function() P:OnNotesChanged() end) end
+ if wanted then self.notesUnsub=A.Notes:Subscribe(function() P:OnNotesChanged() end) end
+ return true
 end
 function P:EnsureSearchInput()
  return self:SyncSearchInputMode()
@@ -995,13 +995,13 @@ end
 
 -- Preview owns a separate page state; real preferences are restored on exit.
 function P:BeginPreview(provider)
- self.liveState={state=state,loaded=self.loaded,restored=self.restoredInitial}
+ self.liveState={state=state}
  state={category=provider.category,searchMode="group",apps={},appIDs={},categoryPrefs={},filters={sort="newest"},browseReady=true}
  self.loaded,self.restoredInitial=nil,nil
 end
 function P:EndPreview()
  local saved=self.liveState;if not saved then return end
- state=saved.state;self.loaded,self.restoredInitial=saved.loaded,saved.restored
+ state=saved.state
  self.liveState=nil
  -- Rebind the visible controls from the restored real preferences on next entry.
  self.loaded=nil;self.restoredInitial=nil

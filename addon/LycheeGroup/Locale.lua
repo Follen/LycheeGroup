@@ -23,7 +23,6 @@ function A:InitializeLocale()
 		viewNote = choose("查看记录", "View note"),
 		loadFailed = choose("无法加载模块:%s。请检查插件安装。", "Could not load module: %s. Check the addon installation."),
 		openFailed = choose("无法打开界面:%s。", "Could not open the interface: %s."),
-		selfRecord = choose("不能记录自己。", "You cannot record yourself."),
 		invalidName = choose("没有可记录的玩家。", "No player to record."),
 		recorded = choose("已记录 %s。", "Recorded %s."),
 		recordFailed = choose("记录失败:%s。", "Could not record: %s."),

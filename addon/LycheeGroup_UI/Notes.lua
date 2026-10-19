@@ -150,7 +150,7 @@ function P:Build(parent)
  self.specChoice=C.Choice(editor,half,function() return P:SpecItems() end,function(value) DraftChanged();state.identityEdited=true;state.legacyClassSpec=nil;state.recordSpec=value or nil;P:SyncSpec() end);self.specChoice:SetPoint("TOPLEFT",28+half,-172);self.specChoice:SetHeight(44)
  self.typeLabel=C.Text(editor,S("记录类型","Note type"),14,T.muted);C.SetLineHeight(self.typeLabel,20,true)
  self.typeSwitch=CreateFrame("Frame",nil,editor);self.typeSwitch:SetSize(inner,36);self.typeSwitch:SetPoint("TOPLEFT",16,-228);C.Panel(self.typeSwitch,T.surfaceLow,8)
- self.typeButtons={};for i,entry in ipairs(NOTE_TYPES) do local w=(inner-14)/3;local button=C.Button(self.typeSwitch,entry.label,w,function() DraftChanged();state.recordType=entry.key;P:SyncSpec() end,{variant="compact",textColor=T.text});button:SetPoint("TOPLEFT",3+(i-1)*(w+4),-3);button.label:ClearAllPoints();button.label:SetPoint("CENTER",10,0);button.icon=C.Glyph(button,entry.key=="positive" and "heart" or entry.key=="caution" and "caution" or "book",14);button.icon:SetPoint("CENTER",-(button.label:GetStringWidth()+6)/2,0);self.typeButtons[entry.key]=button end
+ self.typeButtons={};for i,entry in ipairs(NOTE_TYPES) do local w=(inner-14)/3;local button=C.Button(self.typeSwitch,entry.label,w,function() DraftChanged();state.recordType=entry.key;P:SyncType() end,{variant="compact",textColor=T.text});button:SetPoint("TOPLEFT",3+(i-1)*(w+4),-3);button.label:ClearAllPoints();button.label:SetPoint("CENTER",10,0);button.icon=C.Glyph(button,entry.key=="positive" and "heart" or entry.key=="caution" and "caution" or "book",14);button.icon:SetPoint("CENTER",-(button.label:GetStringWidth()+6)/2,0);self.typeButtons[entry.key]=button end
  self.eReasonLabel=C.Text(editor,L.reason,14,T.muted);self.eReasonLabel:SetPoint("TOPLEFT",16,-276);C.SetLineHeight(self.eReasonLabel,20,true)
  self.eReason=C.Edit(editor,inner,112,true);self.eReason:SetPoint("TOPLEFT",16,-300);self.eReason:SetPlaceholder(S("写下当时发生的事","Describe what happened"));C.SetLineHeight(self.eReason.box,20)
  self.eReason.box:HookScript("OnTextChanged",DraftChanged)
@@ -185,13 +185,26 @@ function P:SpecItems()
  if classID then for index=1,C_SpecializationInfo.GetNumSpecializationsForClassID(classID) do local id,name=GetSpecializationInfoForClassID(classID,index);if id then items[#items+1]={value=id,label=name} end end end
  return items
 end
+function P:SyncType()
+ for key,b in pairs(self.typeButtons) do b:SetActive(key==state.recordType) end
+end
 function P:SyncSpec()
- local className=L.unknown;for _,item in ipairs(self:ClassItems()) do if item.value==state.recordClass then className=item.label end end
- local specName=L.unknown;for _,item in ipairs(self:SpecItems()) do if item.value==state.recordSpec then specName=item.label end end
+ local className,specName=L.unknown,L.unknown
+ if state.recordClass then
+  local classID,label=A.Specializations:Class(state.recordClass)
+  if classID then
+   className=label
+   if state.recordSpec then local id,name=A.Specializations:Find(state.recordClass,state.recordSpec);if id then specName=name end end
+  else
+   -- A class token can be available before its localized label. Keep the
+   -- existing specialization lookup for that incomplete directory response.
+   for _,item in ipairs(self:SpecItems()) do if item.value==state.recordSpec then specName=item.label end end
+  end
+ end
  self.classChoice:SetValue(state.recordClass,className);self.specChoice:SetValue(state.recordSpec,specName)
  self.specChoice:SetAvailable(state.recordClass~=nil)
  UI:SetMemberIcon(self.eAvatar,{class=state.recordClass,specID=state.recordSpec});self.eIdentity:SetTextColor(UI:ClassColor(state.recordClass))
- for key,b in pairs(self.typeButtons) do b:SetActive(key==state.recordType) end
+ self:SyncType()
  state.classSpec=state.recordClass and (className..(state.recordSpec and " · "..specName or "")) or state.legacyClassSpec or ""
 end
 function P:SetEditorStatus(text,kind)
@@ -566,7 +579,7 @@ end
 function P:DoImport()
 	local notes = A.Notes
 	if not notes or not notes.Merge then return end
-	local records, err = UI.Transfer.Decode(self.tBox.box:GetText() or "")
+	local records = UI.Transfer.Decode(self.tBox.box:GetText() or "")
 	if not records then
 		UI:SetText(self.tStatus, L.invalidData)
 		return

@@ -49,14 +49,14 @@ local function CollectNote(frame,key)
   if note then frame.flags[note.type]=true;if frame.clickableNote then frame.noteKey=key end end
  end
 end
-local function CollectMarks(frame,member)
+local function CollectMarks(frame,member,key)
  local flags=frame.flags
  if A.db.relations then
   if member.isBNetFriend then flags.bnet=true end
   if member.isCharFriend or member.isFriend then flags.friend=true end
   if member.isGuildMate then flags.guild=true end
  end
- CollectNote(frame,Members:Identity(member))
+ CollectNote(frame,key)
 end
 local function PaintMarks(frame)
  local count=0
@@ -81,7 +81,7 @@ local function PaintMarks(frame)
  return width
 end
 function Members:BindMarks(frame,member)
- self:ClearMarks(frame);CollectMarks(frame,member)
+ self:ClearMarks(frame);CollectMarks(frame,member,self:Identity(member))
  return PaintMarks(frame)
 end
 function Members:BindGroupMarks(frame,record)
@@ -146,7 +146,7 @@ function Members:Create(parent,onClick)
  button:HookScript("OnHide",function() Members:ClearMarks(button.marks) end)
  return button
 end
-local function Bind(self,button,member,width,isLeader,interactive,inset,padding,title,search)
+local function Bind(self,button,member,key,width,isLeader,interactive,inset,padding,title,search)
  button.member=member;button.targetKey=self:ID(member) or member.name;button:SetWidth(width)
  button:SetEnabled(interactive==true)
  UI:SetMemberIcon(button.icon,member);UI:SetRoleIcon(button.role,member.assignedRole)
@@ -154,29 +154,28 @@ local function Bind(self,button,member,width,isLeader,interactive,inset,padding,
  local r,g,b=UI:ClassColor(member.class)
  UI:SetText(button.name,title);button.name:SetTextColor(r,g,b)
  UI:SetText(button.realm,MemberMeta(member))
- local marksWidth
+ self:ClearMarks(button.marks)
  if search then
-  self:ClearMarks(button.marks)
-  if isLeader then CollectNote(button.marks,self:Identity(member)) end
-  marksWidth=PaintMarks(button.marks)
- else marksWidth=self:BindMarks(button.marks,member) end
+  if isLeader then CollectNote(button.marks,key) end
+ else CollectMarks(button.marks,member,key) end
+ local marksWidth=PaintMarks(button.marks)
  inset,padding=inset or 6,padding or 4
  local height=math.max(56,LayoutIdentity(button.icon,button.name,button.realm,button.role,button.faction,button.marks,marksWidth,width,padding,inset)+padding*2)
  button:SetHeight(height);button:Show()
  return height
 end
 function Members:Bind(button,member,width,isLeader,interactive,inset,padding)
- local _,name,realm=self:Identity(member)
+ local key,name,realm=self:Identity(member)
  local title=(name or member.name or L.unknown)..(realm and UI:Hex(T.muted).."-"..realm.."|r" or "")
- return Bind(self,button,member,width,isLeader,interactive,inset,padding,title)
+ return Bind(self,button,member,key,width,isLeader,interactive,inset,padding,title)
 end
 function Members:BindRoster(button,member,width,isLeader,interactive,inset,padding)
- local _,name=self:Identity(member)
- return Bind(self,button,member,width,isLeader,interactive,inset,padding,name or member.name or L.unknown)
+ local key,name=self:Identity(member)
+ return Bind(self,button,member,key,width,isLeader,interactive,inset,padding,name or member.name or L.unknown)
 end
 function Members:BindSearch(button,member,width,isLeader,interactive,inset,padding)
- local _,name=self:Identity(member)
- return Bind(self,button,member,width,isLeader,interactive,inset,padding,name or member.name or L.unknown,true)
+ local key,name=self:Identity(member)
+ return Bind(self,button,member,key,width,isLeader,interactive,inset,padding,name or member.name or L.unknown,true)
 end
 
 local function RosterPermissions(member)

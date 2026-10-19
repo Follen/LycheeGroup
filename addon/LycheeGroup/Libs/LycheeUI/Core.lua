@@ -1,5 +1,5 @@
 local addonName, private = ...
-local REVISION=20
+local REVISION=21
 local Library=_G.LycheeUI
 private.LycheeUILoad,private.LycheeUILoadVersion=nil,nil
 if Library and Library.version and Library.version>=REVISION then private.LycheeUI=Library;return end
@@ -57,6 +57,7 @@ end
 function Context:Resume() self.hiding=false end
 function Context:SetWindow(frame,logo,logoButton)
  self.frame,self.logo,self.logoButton=frame,logo,logoButton
+ self.Motion.lastAlpha=nil
  self.Motion:CapturePosition()
 end
 function Context:ReleaseRow(row)

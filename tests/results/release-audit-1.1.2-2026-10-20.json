@@ -1,0 +1,281 @@
+{
+  "schema": "lycheegroup.release-audit.v1",
+  "date": "2026-10-20",
+  "release": "1.1.2",
+  "baseline": "0aeafd0",
+  "status": "static_audit_complete_runtime_pending",
+  "scope": {
+    "product": "D:/Code/wow/addons/LycheeGroup",
+    "canonicalLibrary": "D:/Code/wow/addons/LycheeUI",
+    "core": [
+      "addon/LycheeGroup/Locale.lua",
+      "addon/LycheeGroup/Core.lua",
+      "addon/LycheeGroup/Entrypoints.lua",
+      "addon/LycheeGroup/Specializations.lua",
+      "addon/LycheeGroup/Presentation.lua",
+      "addon/LycheeGroup/Bindings.lua",
+      "addon/LycheeGroup/Fonts.lua",
+      "addon/LycheeGroup/Floating.lua",
+      "addon/LycheeGroup/Minimap.lua"
+    ],
+    "group": [
+      "addon/LycheeGroup_Group/Locale.lua",
+      "addon/LycheeGroup_Group/Group.lua",
+      "addon/LycheeGroup_Group/Game.lua",
+      "addon/LycheeGroup_Group/Catalog.lua",
+      "addon/LycheeGroup_Group/Search.lua",
+      "addon/LycheeGroup_Group/Results.lua",
+      "addon/LycheeGroup_Group/Roster.lua",
+      "addon/LycheeGroup_Group/Relations.lua",
+      "addon/LycheeGroup_Group/History.lua",
+      "addon/LycheeGroup_Group/Listing.lua",
+      "addon/LycheeGroup_Group/Applications.lua",
+      "addon/LycheeGroup_Group/Applicants.lua",
+      "addon/LycheeGroup_Group/Alerts.lua",
+      "addon/LycheeGroup_Group/CreationPresets.lua",
+      "addon/LycheeGroup_Group/RaidBuffs.lua"
+    ],
+    "notes": [
+      "addon/LycheeGroup_Notes/Locale.lua",
+      "addon/LycheeGroup_Notes/Notes.lua",
+      "addon/LycheeGroup_Notes/Records.lua",
+      "addon/LycheeGroup_Notes/RosterReminder.lua",
+      "addon/LycheeGroup_Notes/PlayerInfo.lua"
+    ],
+    "ui": [
+      "addon/LycheeGroup_UI/Locale.lua",
+      "addon/LycheeGroup_UI/Theme.lua",
+      "addon/LycheeGroup_UI/Motion.lua",
+      "addon/LycheeGroup_UI/Components.lua",
+      "addon/LycheeGroup_UI/Members.lua",
+      "addon/LycheeGroup_UI/Preview.lua",
+      "addon/LycheeGroup_UI/Tooltip.lua",
+      "addon/LycheeGroup_UI/Native.lua",
+      "addon/LycheeGroup_UI/Application.lua",
+      "addon/LycheeGroup_UI/Transfer.lua",
+      "addon/LycheeGroup_UI/Host.lua",
+      "addon/LycheeGroup_UI/Find.lua",
+      "addon/LycheeGroup_UI/Create.lua",
+      "addon/LycheeGroup_UI/Notes.lua",
+      "addon/LycheeGroup_UI/Settings.lua"
+    ],
+    "shared": [
+      "D:/Code/wow/addons/LycheeUI/Core.lua",
+      "D:/Code/wow/addons/LycheeUI/Theme.lua",
+      "D:/Code/wow/addons/LycheeUI/Motion.lua",
+      "D:/Code/wow/addons/LycheeUI/Components.lua",
+      "D:/Code/wow/addons/LycheeUI/Native.lua",
+      "D:/Code/wow/addons/LycheeUI/Menu.lua"
+    ],
+    "supporting": "Four product TOCs and recursive XML load closure, two unchanged third-party Lua libraries and their contracts/licenses, three build/sync/font tools, current formal documentation, test entrypoints, runtime media, canonical .lock and embedded library.",
+    "notDeleted": "Historical investigations, raw measurements, public APIs/assets not currently consumed by the product, and unrelated ignored workspace resources."
+  },
+  "process": "Each stage covers its complete scope. Confirmed findings are fixed and relevant behavior verified before the next stage. Repeat architecture, performance and hygiene until each scope completes a cycle with no new actionable finding. Core, Group, Notes and shared scopes froze after their clean A3/P3/H3 cycle; the UI-only P3 repair was followed by a complete UI A4/P4/H4 cycle. Unchanged frozen scopes were not falsely counted as re-audited in A4/P4/H4.",
+  "stages": [
+    {
+      "id": "A1",
+      "type": "architecture",
+      "status": "fixed",
+      "coverage": "all",
+      "findings": [
+        "Create activity popup outside-click handling now includes the independent tier menu.",
+        "Late Notes module readiness attaches only the visible consuming page and refreshes its marks.",
+        "Changing the shared Context window invalidates its alpha write cache.",
+        "Navigation hiding stops and settles child selection motion.",
+        "Switch hiding stops and settles its knob motion.",
+        "Segmented selection preserves the valid boolean false value.",
+        "Native input/button acquisition honors synchronous release, context hide and control handoff callbacks."
+      ]
+    },
+    {
+      "id": "P1",
+      "type": "performance",
+      "status": "fixed",
+      "coverage": "all",
+      "findings": [
+        "Floating boundary wheel input no longer starts zero-displacement scrolling.",
+        "List scrolling skips unchanged native visibility, hit-inset, mouse and range writes.",
+        "List content shrink ends a clamped zero-displacement scroll immediately.",
+        "Five-member roster updates skip unchanged role-badge geometry.",
+        "Notes known class/spec resolution reuses successful class-aware metadata without mixing generic API labels.",
+        "Cold enabling of Notes subscribes and refreshes the visible consumer once.",
+        "Player tooltip opening performs one interactive reset.",
+        "Note-type changes update only type controls, preserving class/spec selections and text.",
+        "Member binding resolves the stable identity once within the same binding call; click-time revalidation remains."
+      ]
+    },
+    {
+      "id": "H1",
+      "type": "hygiene",
+      "status": "fixed",
+      "coverage": "all",
+      "findings": [
+        "Removed unused core selfRecord locale key; Notes retains its independent active text.",
+        "Removed two never-shown Find row panels, totaling 98 native texture regions in the preview.",
+        "Removed Preview loaded/restored values immediately overwritten on return.",
+        "Removed redundant Settings syncing state already covered by the Slider silent-set contract.",
+        "Removed Tooltip type-title branch with no data source.",
+        "Removed 22 unconsumed UI locale keys; dynamic navigation, sorting and shared text keys retained.",
+        "Removed unused Notes import error local.",
+        "Removed overridden UI/shared test no-ops, duplicate mouse method, unused hooks field and unused motion assignment.",
+        "Removed unused shared row _dotX reset while retaining the public noteDot extension.",
+        "Corrected the shared DESIGN current revision declaration."
+      ]
+    },
+    {
+      "id": "A2",
+      "type": "architecture",
+      "status": "fixed",
+      "coverage": "all",
+      "findings": [
+        "NativeInput honors parent-only handoff from the ordinary field's acquisition-time focus/hide callback.",
+        "Reveal reconciles displayed placement after caller relayout before retargeting or applying an immediate endpoint."
+      ],
+      "rejectedCandidates": [
+        "LibSpecialization Ambiguate none preserves foreign realms; no roster identity mismatch was established.",
+        "Missing records in a manually damaged schema-2/3 DB has no demonstrated valid historical generation path; no speculative recovery layer added.",
+        "Notes subscriber cancellation reentrancy has no triggering current consumer; no callback framework added."
+      ]
+    },
+    {
+      "id": "P2",
+      "type": "performance",
+      "status": "fixed",
+      "coverage": "all",
+      "findings": [
+        "Shared icon state skips unchanged desaturation, RGB and alpha setters while correcting external style changes and float32 readback.",
+        "Note editor labels reuse class-aware metadata instead of allocating two complete menus on each open, with the original incomplete-class fallback.",
+        "Applicant list wheel input stops immediately when the clamped target equals its displayed position.",
+        "Interactive tooltip wheel input stops immediately when the clamped target equals its displayed position."
+      ]
+    },
+    {
+      "id": "H2",
+      "type": "hygiene",
+      "status": "fixed",
+      "coverage": "all",
+      "findings": [
+        "Removed the unconsumed Create page activity reference; local activity and form selection remain.",
+        "Removed the unused product UI logoButton alias; the shared Context retains the real logo button and animation anchor.",
+        "Removed the always-true private application cancel isCancel field and its redundant hover condition; enabled-state checks remain."
+      ]
+    },
+    {
+      "id": "A3",
+      "type": "architecture",
+      "status": "clean",
+      "coverage": "all",
+      "findings": []
+    },
+    {
+      "id": "P3",
+      "type": "performance",
+      "status": "fixed",
+      "coverage": "all",
+      "findings": [
+        "Create form/manage notices skip duplicate geometry and applicant rebinding only when hidden both before and after SetMessage; visible error updates and appearance/disappearance retain their full layout."
+      ]
+    },
+    {
+      "id": "H3",
+      "type": "hygiene",
+      "status": "clean",
+      "coverage": "all",
+      "findings": []
+    },
+    {
+      "id": "A4",
+      "type": "architecture",
+      "status": "clean",
+      "coverage": "ui: all 15 runtime files and direct supporting contracts/callers",
+      "findings": []
+    },
+    {
+      "id": "P4",
+      "type": "performance",
+      "status": "clean",
+      "coverage": "ui: all 15 runtime files and direct supporting contracts/callers",
+      "findings": []
+    },
+    {
+      "id": "H4",
+      "type": "hygiene",
+      "status": "clean",
+      "coverage": "ui: all 15 runtime files, direct tests, current documentation and loading/assets",
+      "findings": []
+    }
+  ],
+  "verification": {
+    "productAfterP1": {
+      "command": "lua tests/runner.lua",
+      "modules": 9,
+      "assertions": 6085,
+      "failed": 0
+    },
+    "uiAfterH1": {
+      "command": "lua tests/runner.lua ui preview",
+      "assertions": 3240,
+      "failed": 0
+    },
+    "sharedAfterH1": {
+      "command": "lua tests/run.lua",
+      "assertions": 602,
+      "failed": 0
+    },
+    "sharedAfterP2": {
+      "command": "lua tests/run.lua",
+      "assertions": 633,
+      "failed": 0
+    },
+    "productAfterP2": {
+      "command": "lua tests/runner.lua",
+      "modules": 9,
+      "assertions": 6122,
+      "failed": 0
+    },
+    "uiAfterH2": {
+      "command": "lua tests/runner.lua ui preview",
+      "assertions": 3272,
+      "failed": 0
+    },
+    "uiAfterP3": {
+      "command": "lua tests/runner.lua ui preview",
+      "assertions": 3276,
+      "failed": 0,
+      "laterCodeChanges": false
+    },
+    "layout": {
+      "scenes": 36,
+      "matchedBeforeHygiene": 36,
+      "matchedAfterHygiene": 36,
+      "matchedAfterP2": 36,
+      "matchedAfterH2": 36,
+      "matchedAfterP3": 36,
+      "removedNodesPerScene": 98,
+      "representationCheck": "The first post-P2 raw-storage comparison matched 3/36 scenes. Every remaining mismatch resolved to an omitted white Texture tint versus explicitly stored [1,1,1,1], because SetIconState correctly skipped that unchanged write. Resolving only this existing getter default restored 36/36; no color, position or layout tolerance was added.",
+      "method": "Before H1 all snapshots were byte-equivalent after canonical JSON serialization to the pre-goal baseline. After H1, remove only explicitly hidden Texture leaves without incoming node/anchor/scroll references, renumber every node and reference, and compare every remaining property. After P2, additionally resolve an absent Texture vertex-tint field to its existing getter default [1,1,1,1]; omitting the unchanged white setter no longer creates that optional stub field. All 36 scenes match.",
+      "limits": "Offline widget-tree equivalence does not establish native pixels, hardware hit testing, secure operations or all scales."
+    },
+    "manifests": {
+      "runtimeLua": 52,
+      "missing": 0,
+      "orphaned": 0,
+      "productTOCs": 4,
+      "sharedRuntimeFiles": 43
+    }
+  },
+  "runtime": {
+    "status": "not_started",
+    "previousKnownLimit": "The 1.1.1 mixed real-data/event workload sampled 27.070 MB, exceeding the 20 MB target. That historical failure is retained and is not overwritten by offline verification."
+  },
+  "versionConsistency": {
+    "libraryVersion": "1.2.0",
+    "revision": 21,
+    "status": "matched_43_runtime_files",
+    "externalGit": false
+  },
+  "limits": [
+    "No absolute claim that all possible bugs, client states or third-party interactions are absent.",
+    "No result truncation, refresh delay increase, motion reduction, forced collection in business code, or GC policy change introduced."
+  ]
+}

@@ -178,7 +178,9 @@ function P:Build(parent)
  self:RefreshFavorites()
 end
 function P:SetFormError(message)
+ local wasShown=self.formNotice:IsShown()
  self.formNotice:SetMessage(message)
+ if not wasShown and not self.formNotice:IsShown() then return end
  local offset=self.formNotice:IsShown() and self.formNotice:GetHeight()+12 or 0
  self.desc:ClearAllPoints();self.desc:SetPoint("TOPLEFT",0,-56-offset)
  self.req:ClearAllPoints();self.req:SetPoint("TOPLEFT",0,-356-offset)
@@ -420,7 +422,10 @@ function P:LayoutApplicantViewport()
  self.boundAppIDs=nil;self:SetBatchOffset(self.batchScroll:GetVerticalScroll(),false)
 end
 function P:SetManageError(message)
- self.manageNotice:SetMessage(message);self:LayoutApplicantViewport()
+ local wasShown=self.manageNotice:IsShown()
+ self.manageNotice:SetMessage(message)
+ if not wasShown and not self.manageNotice:IsShown() then return end
+ self:LayoutApplicantViewport()
 end
 function P:ShowError(message)
  if self.formFrame:IsShown() then self:SetFormError(message) else self:SetManageError(message) end
@@ -493,7 +498,7 @@ function P:BuildPicker(parent)
  self.pickerResults.alternateRows=false
  for _,row in ipairs(self.pickerResults.rows) do row.selected:SetRadius(8);row.hover:SetRadius(8);row.alternate:SetRadius(8);row.icon=C.Icon(row,24);row.icon:SetPoint("LEFT",12,0);row.title:ClearAllPoints();row.title:SetPoint("TOPLEFT",48,-3);row.title:SetWidth(334);C.SetFont(row.title,16);C.SetLineHeight(row.title,22,true);row.meta:ClearAllPoints();row.meta:SetPoint("TOPLEFT",48,-25);row.meta:SetWidth(334) end
  self.pickerEmpty=C.Text(popup,S("没有匹配的活动","No matching activities"),14,T.dim,372);self.pickerEmpty:SetPoint("TOPLEFT",212,-180)
- popup:SetScript("OnEvent",function() if not popup:IsMouseOver() and not P.pickerTrigger:IsMouseOver() then P:ClosePicker() end end)
+ popup:SetScript("OnEvent",function() if not popup:IsMouseOver() and not P.pickerTrigger:IsMouseOver() and not UI.context:IsMenuHovered(P.tierChoice) then P:ClosePicker() end end)
 end
 function P:TogglePicker()
  if not self.picker then self:BuildPicker(self.frame) end
@@ -602,7 +607,7 @@ function P:RefreshPicker()
   end
  end
  if not segments then self.difficultySelection:Clear() end
- local act=form.activityID and UI:GetGroup().Catalog:GetActivity(form.activityID);self.activity=act
+ local act=form.activityID and UI:GetGroup().Catalog:GetActivity(form.activityID)
  local categoryInfo=cat and C_LFGList.GetLfgCategoryInfo(cat.id)
  self.hasPlaystyle=categoryInfo and categoryInfo.showPlaystyleDropdown==true
  self.playstyle:SetShown(self.hasPlaystyle);self.styleLabel:SetShown(self.hasPlaystyle)
@@ -745,8 +750,9 @@ function P:SetBatchOffset(value,animate)
  local function Apply(offset)
   P.batchScroll:SetVerticalScroll(offset);P.syncBatchScroll=true;P.batchSlider:SetValue(offset);P.syncBatchScroll=nil;P:RenderBatches()
  end
- if not animate or A.db.reduceMotion then Apply(target);self.batchScrollTarget=nil;return end
- local from,elapsed=self.batchScroll:GetVerticalScroll(),0
+ local from=self.batchScroll:GetVerticalScroll()
+ if not animate or A.db.reduceMotion or target==from then Apply(target);self.batchScrollTarget=nil;return end
+ local elapsed=0
  UI.Motion:Start(self.batchScroll,function(dt)
   elapsed=math.min(.14,elapsed+dt);local p=elapsed/.14;p=1-(1-p)^3;Apply(from+(target-from)*p)
   if elapsed==.14 then P.batchScrollTarget=nil;return true end
@@ -810,15 +816,23 @@ function P:RefreshRoster()
  self:RefreshRosterPresentation()
 end
 function P:OnNotesChanged()
+ if not self.frame or not self.frame:IsVisible() or UI.hiding then return end
  self:RefreshRoster();self.boundAppIDs=nil;self:RenderBatches()
  if not UI.Tooltip.sourceRoster then UI.Tooltip:RefreshRelations() end
+end
+function P:WatchNotes()
+ local wanted=not UI.preview and A.db.notesEnabled==true and A.Notes~=nil
+ if (self.notesUnsub~=nil)==wanted then return false end
+ if self.notesUnsub then self.notesUnsub();self.notesUnsub=nil end
+ if wanted then self.notesUnsub=A.Notes:Subscribe(function() P:OnNotesChanged() end) end
+ return true
 end
 function P:Enter(context)
  local group=UI:GetGroup();group:Attach(self,"create");group:RefreshApplicants()
  if not self.unsub then self.unsub=group:Subscribe(function(kind)
   if kind=="listing" or kind=="permissions" then P:RefreshMode();P:RefreshApplicants() elseif kind=="applicants" or kind=="applicant" then P:RefreshApplicants() elseif kind=="roster" then P:RefreshRoster() elseif kind=="relations" then P:OnNotesChanged() elseif kind=="creationPresets" then P:RefreshFavorites() elseif kind=="activities" then if P.formFrame:IsShown() then P:RefreshPicker() else P:RefreshRosterPresentation() end end
  end) end
- if A.Notes and not self.notesUnsub then self.notesUnsub=A.Notes:Subscribe(function() P:OnNotesChanged() end) end
+ self:WatchNotes()
  self:RefreshRoster();self:RefreshMode();self:RefreshApplicants()
  if context and context.applicantID then for i,id in ipairs(self.appIDs) do if id==context.applicantID then self:SetBatchOffset(self.batchTops[i],false);break end end end
 end

@@ -4,7 +4,7 @@ local S={nodes={}}
 local N={};N.__index=N
 local function Fire(self,event,...) local f=self.scripts[event];if f then f(self,...) end end
 function S.New(kind,name,parent)
- local n=setmetatable({kind=kind,_objectType=kind,parent=parent,children={},shown=true,enabled=true,alpha=1,points={},scripts={},hooks={},events={},text="",w=0,h=0,font={"font",14,""}},N)
+ local n=setmetatable({kind=kind,_objectType=kind,parent=parent,children={},shown=true,enabled=true,alpha=1,points={},scripts={},events={},text="",w=0,h=0,font={"font",14,""}},N)
  S.nodes[#S.nodes+1]=n;if parent then parent.children[#parent.children+1]=n end
  if name then _G[name]=n end
  return n
@@ -44,7 +44,6 @@ function N:GetRight() return self:GetWidth() end
 function N:GetLeft() return 0 end
 function N:GetBottom() return 0 end
 function N:GetTop() return self:GetHeight() end
-function N:IsMouseOver() return self.mouseOver==true end
 function N:UnregisterAllEvents() self.events={} end
 function N:SetScale(v) self.scale=v end
 function N:GetScale() return self.scale or 1 end
@@ -84,6 +83,7 @@ function N:SetColorTexture(...) self.fill={...} end
 function N:SetDrawLayer(layer,sublevel) self.layer=layer;self.sublevel=sublevel end
 function N:GetDrawLayer() return self.layer,self.sublevel or 0 end
 function N:SetVertexColor(r,g,b,a) self.vertex={r,g,b,a or 1};self.alpha=a or 1 end
+function N:GetVertexColor() return unpack(self.vertex or {1,1,1,1}) end
 function N:SetRotation(radians) self.rotation=radians end
 function N:SetTexture(v) self.texture=v;self.atlas=nil end
 function N:GetTexture() return self.texture end
@@ -116,10 +116,11 @@ function N:CreateMaskTexture(name,layer) local mask=S.New("MaskTexture",name,sel
 function N:AddMaskTexture(mask) self.mask=mask end
 function N:RemoveMaskTexture(mask) if self.mask==mask then self.mask=nil end end
 function N:SetDesaturated(value) self.desaturated=value end
+function N:IsDesaturated() return self.desaturated==true end
 function N:CreateTexture(name,layer) local n=S.New("Texture",name,self);n.layer=layer;return n end
 function N:CreateFontString(name,layer) local n=S.New("FontString",name,self);n.layer=layer;return n end
 function N:SetBackdropColor(...) self.backdropColor={...} end
-for _,k in ipairs({"SetMovable","RegisterForDrag","StartMoving","StopMovingOrSizing","SetMaxLetters","SetMultiLine","SetAutoFocus","SetBackdrop","SetBackdropBorderColor","SetCursorPosition","HighlightText","SetNumeric","SetTextInsets","RegisterForClicks","EnableMouse","EnableMouseWheel","EnableKeyboard","SetPropagateKeyboardInput","SetPropagateMouseClicks","SetPropagateMouseMotion","SetOrientation","SetValueStep","SetObeyStepOnDrag","SetThumbTexture","SetFrameStrata","SetClampedToScreen","SetHitRectInsets"}) do N[k]=function() end end
+for _,k in ipairs({"SetMovable","RegisterForDrag","StartMoving","StopMovingOrSizing","SetMaxLetters","SetMultiLine","SetAutoFocus","SetBackdrop","SetBackdropBorderColor","SetCursorPosition","HighlightText","SetNumeric","RegisterForClicks","EnableMouseWheel","SetOrientation","SetValueStep","SetObeyStepOnDrag","SetThumbTexture","SetClampedToScreen"}) do N[k]=function() end end
 function N:SetShadowOffset(x,y) self.shadowOffset={x,y} end
 function N:SetTextInsets(...) self.textInsets={...} end
 function N:GetTextInsets() return unpack(self.textInsets or {0,0,0,0}) end
@@ -129,6 +130,8 @@ function N:GetFrameStrata() return self.strata or "MEDIUM" end
 function N:EnableMouse(value) self.mouseEnabled=value;self.mouseMotionEnabled=value end
 function N:EnableMouseMotion(value) self.mouseMotionEnabled=value end
 function N:IsMouseEnabled() return self.mouseEnabled==true end
+function N:SetHitRectInsets(left,right,top,bottom) self.hitRect={left,right,top,bottom} end
+function N:GetHitRectInsets() if self.hitRect then return unpack(self.hitRect) end;return 0,0,0,0 end
 function N:EnableKeyboard(value) self.keyboardEnabled=value end
 function N:SetPropagateKeyboardInput(value)
  assert(not InCombatLockdown(),"keyboard propagation is configured outside combat")

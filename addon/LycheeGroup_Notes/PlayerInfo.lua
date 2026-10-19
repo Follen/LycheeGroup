@@ -15,6 +15,10 @@ end
 
 local function ResolveClass(classID, className, class, specID, text, selected)
 	if selected and not specID and text=="" then return {class=class,classSpec=className} end
+	if specID then
+		local id, specName = A.Specializations:Find(class, specID)
+		if id then return {class=class, specID=id, classSpec=className .. "-" .. specName} end
+	end
 	local textMatch
 	for index = 1, C_SpecializationInfo.GetNumSpecializationsForClassID(classID) do
 		local id, specName = GetSpecializationInfoForClassID(classID, index)

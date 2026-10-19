@@ -64,6 +64,6 @@ For the local widget-tree preview, run `lua tests/ui_preview.lua`, then open [`t
 
 Project documents (in Chinese): [Product](Product.md) · [Design](Desgin.md) · [Architecture](Architecture.md) · [Performance](perfermance.md) · [Documentation and changelog rules](Agents.md). The product document describes the current implementation and in-game validation coverage.
 
-The working tree bundles LycheeUI 1.2.0 (revision 20, unpublished maintenance), with shared selection and menu transitions. The user has lifted the freeze recorded in [.lock](../LycheeUI/.lock); the published 1.1.1 package uses revision 19. See the [integration guide](../LycheeUI/README.md), [API](../LycheeUI/API.md), and [component design specification](../LycheeUI/DESIGN.md).
+The working tree bundles LycheeUI 1.2.0 (revision 21, unpublished maintenance), with shared selection and menu transitions. The user has lifted the freeze recorded in [.lock](../LycheeUI/.lock); the published 1.1.1 package uses revision 19. See the [integration guide](../LycheeUI/README.md), [API](../LycheeUI/API.md), and [component design specification](../LycheeUI/DESIGN.md).
 
 See the [library notes](addon/LycheeGroup_Group/Libs/README.md) for bundled third-party sources and licenses.

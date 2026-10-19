@@ -321,7 +321,19 @@ T.eq(F.panel:IsShown(),false,"an explicitly hovered empty listing can also be cl
 applicant.acting=nil;callback("applicants");T.eq(F.panel:IsShown(),false,"a closed empty listing stays closed when applicants return")
 F:ShowPanel();T.eq(#F.entries,2,"an operable native record can return after explicit hover")
 F:Tick(.23);T.eq(F.panel:GetAlpha(),1,"expanded panel finishes its finite fade")
-F:SetOffset(0,true);T.ok(F.scrollTween);local scrollState=F.scrollTween;F:SetOffset(11,true);T.eq(F.scrollTween,scrollState,"a new scroll target reuses the finite tween state");F:SetOffset(0,true);F:Tick(.2);T.eq(F.scroll:GetVerticalScroll(),0);T.eq(F.scrollTween,nil,"completed scrolling removes its tween")
+do
+ F:SetOffset(0,false)
+ local render=F.Render;local renders=0
+ F.Render=function(self,...) renders=renders+1;return render(self,...) end
+ for _=1,10 do
+  F.scroll:Fire("OnMouseWheel",1)
+  for _=1,15 do if F.frame:GetScript("OnUpdate") then F.frame:Fire("OnUpdate",.01) end end
+ end
+ F.Render=render
+ T.eq(renders,0,"wheel input at the upper boundary does not render motion with no displacement")
+ T.eq(F.scroll:GetVerticalScroll(),0);T.eq(F.frame:GetScript("OnUpdate"),nil)
+end
+F:SetOffset(11,true);T.ok(F.scrollTween);local scrollState=F.scrollTween;F:Tick(.03);T.ok(F.scroll:GetVerticalScroll()>0 and F.scroll:GetVerticalScroll()<11,"a real scroll retains its intermediate position");F:SetOffset(22,true);T.eq(F.scrollTween,scrollState,"a new scroll target reuses the finite tween state");F:Tick(.2);T.eq(F.scroll:GetVerticalScroll(),22);T.eq(F.scrollTween,nil,"completed scrolling removes its tween");F:SetOffset(0,true);F:Tick(.2);T.eq(F.scroll:GetVerticalScroll(),0)
 F:Fade(false);T.ok(F.fade);T.eq(F.fade,fadeState,"fade direction changes reuse the finite fade state");F:Tick(.2);T.eq(F.panel:IsShown(),false);T.ok(F.attention and F.attentionTimer,"closing only the popup preserves the pending-applicant reminder")
 T.eq(F.frame:GetScript("OnUpdate"),nil,"collapsed attention does not keep the panel driver running")
 T.eq(next(firstEntry),nil,"closing clears every business field from retained entry shells")

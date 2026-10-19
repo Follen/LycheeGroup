@@ -119,7 +119,10 @@ function C.Panel(parent,color,radius,inset,layer)
   end
  end
  function panel:GetAlpha() return self.alpha end
- function panel:SetShown(value) for _,region in ipairs(regions) do region:SetShown(value) end end
+ function panel:SetShown(value)
+  value=not not value
+  for _,region in ipairs(regions) do if region:IsShown()~=value then region:SetShown(value) end end
+ end
  function panel:IsShown() return regions[1]:IsShown() end
  function panel:Show() self:SetShown(true) end
  function panel:Hide() self:SetShown(false) end
@@ -459,6 +462,11 @@ function C.Check(parent,label,onChange)
   if animate and old~=nil then M:Switch(knob,old and 21 or 5,x) else M:Stop(knob);knob:ClearAllPoints();knob:SetPoint("LEFT",track,"LEFT",x,0);knob._slideX=x end
  end
  b:SetValue(false);b.track=track;b.knob=knob
+ Hook(b,"OnHide",function(self)
+  M:Stop(knob)
+  local x=self.value and 21 or 5
+  if knob._slideX~=x then knob:ClearAllPoints();knob:SetPoint("LEFT",track,"LEFT",x,0);knob._slideX=x end
+ end)
  return b
 end
 
@@ -520,7 +528,7 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover)
  end
  local function Release(row)
   if row.pressedKey then row.pressCancelled=true end
-  row.key=nil;row.noteDot:Hide();row.alternate:Hide();row._dotX=nil;row.hover:Hide();row.hover:SetAlpha(0)
+  row.key=nil;row.noteDot:Hide();row.alternate:Hide();row.hover:Hide();row.hover:SetAlpha(0)
   row._inside=nil;row._pressed=nil
   M:Stop(row.selected);M:Stop(row.mark);M:Stop(row.hover)
   row.selected._selMotion=nil;row.selected:SetAlpha(0);row.selected:Hide()
@@ -548,7 +556,12 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover)
   local selectionRow,selectionY
   if self.offset~=math.floor((self.pixelOffset or 0)/self.rowHeight) then self.pixelOffset=self.offset*self.rowHeight end
   self.pixelOffset=math.max(0,math.min(self.pixelOffset or 0,maximum));self.offset=math.floor(self.pixelOffset/self.rowHeight)
-  self.updating=true;slider:SetMinMaxValues(0,maximum);slider:SetValue(self.pixelOffset);self.updating=false;slider:SetShown(maximum>0)
+  if self.scrollTarget and self.pixelOffset==maximum and self.scrollTarget>maximum then M:Stop(self);self.scrollTarget=maximum end
+  self.updating=true
+  local minimum,currentMaximum=slider:GetMinMaxValues()
+  if minimum~=0 or currentMaximum~=maximum then slider:SetMinMaxValues(0,maximum) end
+  slider:SetValue(self.pixelOffset);self.updating=false
+  if slider:IsShown()~=(maximum>0) then slider:SetShown(maximum>0) end
   clip:SetVerticalScroll(self.pixelOffset-self.offset*self.rowHeight)
   for i,row in ipairs(self.rows) do
    local absolute=self.offset+i
@@ -556,7 +569,7 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover)
    local rebound=row.key~=key
    if rebound then Release(row);row.key=key;if UI.CloseMenuFor then UI:CloseMenuFor(self) end end
    row.alternate:SetShown(key~=nil and self.alternateRows~=false and absolute%2==0)
-   row:SetShown(key~=nil)
+   if row:IsShown()~=(key~=nil) then row:SetShown(key~=nil) end
    if key and self.render then
     if rebound or not positionOnly then self.render(row,key) end
     local selected=key==self.selectedKey
@@ -572,9 +585,10 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover)
    local top=(i-1)*self.rowHeight-(self.pixelOffset-self.offset*self.rowHeight)
    local cropTop=math.min(rowHeight,math.max(0,-top))
    local cropBottom=math.min(rowHeight-cropTop,math.max(0,top+rowHeight-self:GetHeight()))
-   row:SetHitRectInsets(0,0,cropTop,cropBottom)
+   local left,right,previousTop,previousBottom=row:GetHitRectInsets()
+   if left~=0 or right~=0 or previousTop~=cropTop or previousBottom~=cropBottom then row:SetHitRectInsets(0,0,cropTop,cropBottom) end
    row._hitVisible=key~=nil and cropTop+cropBottom<rowHeight
-   row:EnableMouse(row._hitVisible)
+   if row:IsMouseEnabled()~=row._hitVisible then row:EnableMouse(row._hitVisible) end
    if row._inside and (not row._hitVisible or not clip:IsMouseOver() or not row:IsMouseOver()) then Leave(row) end
   end
   if self.indicator then
@@ -753,6 +767,17 @@ function C.Roster(parent,size,gap)
   local text=C.Text(frame,"",14,T.text,22);C.SetLineHeight(text,20,true);text:SetPoint("LEFT",icon,"RIGHT",3,0)
   frame.counts[i]={icon=icon,text=text,role=role}
  end
+ local function PlaceRole(slot,large)
+  local role=slot.role
+  local extent=large and size or 10
+  if role:GetWidth()~=extent or role:GetHeight()~=extent then role:SetSize(extent,extent) end
+  local anchor=large and "CENTER" or "BOTTOMRIGHT"
+  local offsetX,offsetY=large and 0 or 1,large and 0 or -1
+  local point,parent,relative,x,y=role:GetPoint()
+  if role:GetNumPoints()~=1 or point~=anchor or parent~=slot.icon or relative~=anchor or x~=offsetX or y~=offsetY then
+   role:ClearAllPoints();role:SetPoint(anchor,slot.icon,anchor,offsetX,offsetY)
+  end
+ end
  function frame:Update(members,counts,maximum,fixedRoles)
   local party=maximum==5
   for _,item in ipairs(self.counts) do item.icon:SetShown(not party);item.text:SetShown(not party);if not party then UI:SetText(item.text,counts and counts[item.role] or "—") end end
@@ -767,7 +792,7 @@ function C.Roster(parent,size,gap)
       present=present+1
       used=used+1;local slot=self.slots[used]
       slot.icon:Show();slot.role:Hide();UI:SetMemberIcon(slot.icon,member);slot.icon:SetAlpha(1)
-      slot.role:SetSize(10,10);slot.role:ClearAllPoints();slot.role:SetPoint("BOTTOMRIGHT",slot.icon,"BOTTOMRIGHT",1,-1)
+      PlaceRole(slot,false)
       if member.assignedRole and member.assignedRole~="NONE" then UI:SetRoleIcon(slot.role,member.assignedRole);slot.role:Show() end
      end
     end
@@ -780,7 +805,7 @@ function C.Roster(parent,size,gap)
      local role=rank==1 and "TANK" or rank==2 and "HEALER" or "DAMAGER"
      for i=1,missing do
       used=used+1;local slot=self.slots[used]
-      slot.icon:Hide();slot.role:SetSize(size,size);slot.role:ClearAllPoints();slot.role:SetPoint("CENTER",slot.icon,"CENTER",0,0)
+      slot.icon:Hide();PlaceRole(slot,true)
       UI:SetRoleIcon(slot.role,role);slot.role:Show()
      end
     end
@@ -864,8 +889,9 @@ function C.Segmented(parent,width,entries,onChange)
  frame.buttons={};frame.selection=C.Selection(frame)
  local itemWidth=(width-6-math.max(0,#entries-1)*4)/#entries
  for i,entry in ipairs(entries) do
-  local button=C.Button(frame,entry.label or entry[2],itemWidth,function() frame:SetValue(entry.value or entry[1]);if onChange then onChange(frame.value) end end,{variant="compact",selectionFill=false})
-  button:SetPoint("LEFT",3+(i-1)*(itemWidth+4),0);button.value=entry.value or entry[1]
+  local value=entry.value;if value==nil then value=entry[1] end
+  local button=C.Button(frame,entry.label or entry[2],itemWidth,function() frame:SetValue(value);if onChange then onChange(frame.value) end end,{variant="compact",selectionFill=false})
+  button:SetPoint("LEFT",3+(i-1)*(itemWidth+4),0);button.value=value
   if entry.icon then button.icon=C.Glyph(button,entry.icon,14);button.icon:SetPoint("LEFT",10,0);button.label:ClearAllPoints();button.label:SetPoint("LEFT",button.icon,"RIGHT",6,0) end
   frame.buttons[i]=button
  end
@@ -889,6 +915,7 @@ function C.Navigation(parent,text,width,action,iconName,options)
  button.mark=button:CreateTexture(nil,"ARTWORK");button.mark:SetColorTexture(unpack(T.accent));button.mark:SetSize(3,18);button.mark:SetPoint("LEFT",4,0);button.mark:Hide()
  local setActive=button.SetActive
  function button:SetActive(value) setActive(self,value);M:Selection(self.mark,value==true) end
+ Hook(button,"OnHide",function(self) M:Selection(self.mark,self.active==true,0) end)
  button:SetTextColors(T.muted,T.text,T.onSecondaryContainer)
  if options then button:SetStyle(options) end
  return button
@@ -959,7 +986,13 @@ function Library.Context:SetGameAtlas(icon,name)
 end
 function Library.Context:SetIconState(icon,selected,hovered)
  icon=icon._lycheeTexture or icon
- icon:SetDesaturated(not selected);icon:SetVertexColor(selected and 1 or hovered and .98 or .9,selected and 1 or hovered and .98 or .9,selected and 1 or hovered and .98 or .9)
- icon:SetAlpha(selected and 1 or hovered and .9 or .72)
+ local gray=not selected
+ if icon:IsDesaturated()~=gray then icon:SetDesaturated(gray) end
+ local value=selected and 1 or hovered and .98 or .9
+ local r,g,b=icon:GetVertexColor()
+ -- Native float32 readback need not equal the original Lua color literal.
+ if math.abs(r-value)>.000001 or math.abs(g-value)>.000001 or math.abs(b-value)>.000001 then icon:SetVertexColor(value,value,value) end
+ local alpha=selected and 1 or hovered and .9 or .72
+ if math.abs(icon:GetAlpha()-alpha)>.000001 then icon:SetAlpha(alpha) end
 end
 

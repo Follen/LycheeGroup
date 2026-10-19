@@ -401,12 +401,45 @@ do
 		T.eq(Notes.PlayerInfo.ResolveRecord(record).class,nil,"an incomplete class directory is not treated as a permanent match")
 		ready=true
 		T.eq(Notes.PlayerInfo.ResolveRecord(record).specID,66,"class metadata recovers when the native directory becomes available")
+		Load.addon("LycheeGroup", "Specializations.lua")
+		local getSpecializationCount=C_SpecializationInfo.GetNumSpecializationsForClassID
+		local specsReady=false
+		C_SpecializationInfo.GetNumSpecializationsForClassID=function(classID)
+			if classID==2 and not specsReady then return 0 end
+			return getSpecializationCount(classID)
+		end
+		T.eq(Notes.PlayerInfo.ResolveRecord(record).specID,nil,"missing specialization metadata remains unresolved")
+		specsReady=true
+		T.eq(Notes.PlayerInfo.ResolveRecord(record).specID,66,"specialization metadata can recover on a later read")
+		C_SpecializationInfo.GetNumSpecializationsForClassID=getSpecializationCount
+		Load.addon("LycheeGroup", "Specializations.lua")
+		T.eq(A.Specializations:Get(66),"Specialization","the generic ID lookup may cache its own label")
+		local afterIDLookup=Notes.PlayerInfo.ResolveRecord({class="PALADIN",specID=66,classSpec=""})
+		T.eq(afterIDLookup.classSpec,"圣骑士-神圣","structured resolution keeps the per-class catalog label after an ID lookup")
+		local winsByID=Notes.PlayerInfo.ResolveRecord({class="PALADIN",specID=66,classSpec="圣骑士-惩戒"})
+		T.eq(winsByID.specID,66,"a valid structured specialization takes priority over legacy text")
+		T.eq(winsByID.classSpec,"圣骑士-神圣")
+		local fallsBackToText=Notes.PlayerInfo.ResolveRecord({class="PALADIN",specID=71,classSpec="圣骑士-神圣"})
+		T.eq(fallsBackToText.specID,66,"a specialization ID from another class falls back to matching legacy text")
 		classReads=0
+		Notes.PlayerInfo.ResolveRecord(record) -- Warm the shared class/name directory before measuring repeated row binding.
+		local getSpecializationInfo=GetSpecializationInfoForClassID
+		local countReads,infoReads=0,0
+		C_SpecializationInfo.GetNumSpecializationsForClassID=function(...) countReads=countReads+1;return getSpecializationCount(...) end
+		GetSpecializationInfoForClassID=function(...) infoReads=infoReads+1;return getSpecializationInfo(...) end
 		for i=1,100 do
 			local identity=Notes.PlayerInfo.ResolveRecord(record)
 			T.eq(identity.class,"PALADIN");T.eq(identity.specID,66)
 		end
 		T.eq(classReads,0,"repeated note bindings reuse the shared class directory")
+		T.eq(countReads,0,"repeated structured rows reuse the shared specialization directory")
+		T.eq(infoReads,0,"repeated structured rows reuse the shared specialization entry")
+		C_SpecializationInfo.GetNumSpecializationsForClassID=getSpecializationCount
+		GetSpecializationInfoForClassID=getSpecializationInfo
+		local rejectsWrongClass=Notes.PlayerInfo.ResolveRecord({class="WARRIOR",specID=66,classSpec="战士-武器"})
+		T.eq(rejectsWrongClass.class,"WARRIOR");T.eq(rejectsWrongClass.specID,71,"an ID belonging to another class falls back to matching legacy text")
+		local rejectsWrongClassID=Notes.PlayerInfo.ResolveRecord({class="WARRIOR",specID=66,classSpec=""})
+		T.eq(rejectsWrongClassID.class,"WARRIOR");T.eq(rejectsWrongClassID.specID,nil,"an ID belonging to another class is not accepted")
 		T.eq(record.classSpec,"","display resolution does not rewrite the stored snapshot")
 		GetClassInfo, A.Specializations=getClass, savedMetadata
 	end

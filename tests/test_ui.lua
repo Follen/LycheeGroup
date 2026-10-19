@@ -172,7 +172,16 @@ for _,mode in ipairs({"shift","alt","ctrl","always"}) do
  Pick(settings.controls.raidMembers.widget,mode);T.eq(A.db.raidMembers,mode,"raid roster controls save the selected display mode")
 end
 T.eq(settings.panels.sounds,nil,"sound settings page is removed");T.eq(settings.controls.applicantTone,nil,"notification tone is not configurable")
-settings:SelectSection("floating");settings.controls.floatingScale.widget.slider:SetValue(125);T.eq(A.db.floatingScale,125)
+settings:SelectSection("floating")
+do
+ local setSetting=A.SetSetting;local writes=0
+ function A:SetSetting(...) writes=writes+1;return setSetting(self,...) end
+ settings:Sync();T.eq(writes,0,"synchronizing silent slider values never writes settings")
+ settings.controls.floatingScale.widget.slider:SetValue(125)
+ A.SetSetting=setSetting
+ T.eq(writes,1,"a native slider action commits exactly once without a page synchronization guard")
+ T.eq(A.db.floatingScale,125)
+end
 U:Hide()
 local stockNameBorder=CreateFrame("Frame",nil,LFGListFrame.EntryCreation.Name);stockNameBorder:SetAlpha(.6);LFGListFrame.EntryCreation.Name.NineSlice=stockNameBorder
 -- Exact shape observed in the live native-art probe: an anonymous child Frame
@@ -259,6 +268,15 @@ T.eq(create.publish:IsEnabled(),true,"publish remains clickable so an incomplete
 create.publish:Fire("OnClick");T.eq(create.validationSubmitted,true);T.ok(create.formError:GetText()~="","blank publish validates at the user's request");T.eq(G.published,nil)
 native.Name:UserType("Corrected title");T.eq(create.formError:GetText(),"","correcting the submitted field clears its error")
 do
+ local reanchors=0;local clear=create.desc.ClearAllPoints
+ for _,frame in ipairs({create.desc,create.req}) do frame.ClearAllPoints=function(self,...) reanchors=reanchors+1;return clear(self,...) end end
+ for i=1,20 do native.Name:UserType("Corrected title "..i) end
+ for _,frame in ipairs({create.desc,create.req}) do frame.ClearAllPoints=clear end
+ T.eq(reanchors,0,"valid title input does not reflow form containers while the notice remains hidden")
+ T.eq(create.formNotice:IsShown(),false)
+ native.Name:UserType("Corrected title")
+end
+do
  local function PointY(region) local points={region:GetPoint()};return points[#points] end
  local validator=native.ItemLevel.validateFunc;local ownLevel=200;local warning="要求的物品等级高于你自己的物品等级。"
  native.ItemLevel.validateFunc=function(_,value) if tonumber(value)>ownLevel then return warning end end
@@ -332,11 +350,28 @@ do
  create.pickerCategory="2";create.pickerTier=2;create:RefreshPickerRows()
  T.eq(create.tierChoice:IsShown(),true,"多个有效资料片仍保留范围选择")
  T.eq(#create.pickerEntries,1)
+ local tiers={{id=1,name="First"},{id=2,name="Second"}}
+ for i=3,11 do groups[i]={key="tier"..i,name="Tier "..i,tier=i,activity=source.activity};tiers[i]={id=i,name="Tier "..i} end
+ catalog.GetTiers=function() return tiers end
+ create:RefreshPickerRows();create.tierChoice:Fire("OnClick")
+ local menu=U.context.menu
+ T.ok(menu:GetHeight()>picker:GetHeight()-120,"the expansion submenu extends below the activity popup")
+ menu.mouseOver=true
+ picker:Fire("OnEvent","GLOBAL_MOUSE_DOWN","LeftButton")
+ T.eq(picker:IsShown(),true,"clicking the expansion submenu outside Create's popup keeps its owner open")
+ menu.list:SetPixelOffset(100000,false)
+ local choice;for _,row in ipairs(menu.list.rows) do if row.key and menu.items[row.key].value==11 then choice=row;break end end
+ T.ok(choice,"the last expansion remains selectable in the scrolled submenu")
+ choice:Fire("OnClick","LeftButton");menu.mouseOver=nil
+ T.eq(create.pickerTier,11);T.eq(#create.pickerEntries,1)
+ for i=11,3,-1 do groups[i]=nil end
  groups[2]=nil;create:RefreshPickerRows()
  T.eq(create.tierChoice:IsShown(),false,"单一有效范围不显示只有全部和自身的下拉")
  T.eq(create.pickerTier,nil,"隐藏下拉同时清除已失效的范围条件")
  T.eq(#create.pickerEntries,1,"清除隐藏范围后唯一活动仍可浏览")
- catalog.GetGroups,catalog.GetTiers=getGroups,getTiers;create:ClosePicker()
+ catalog.GetGroups,catalog.GetTiers=getGroups,getTiers
+ picker:Fire("OnEvent","GLOBAL_MOUSE_DOWN","LeftButton")
+ T.eq(picker:IsShown(),false,"a click outside both Create's popup and its expansion submenu still closes the popup")
 end
 create:TogglePicker();create.pickerSearch.box:SetText("Dungeon")
 T.eq(#create.pickerEntries,2,"one dungeon group has distinct seasonal and original contexts")
@@ -484,7 +519,16 @@ do
  T.eq(create.manage:IsShown(),true);T.eq(native.Name:GetParent(),native)
  G.manageListing=true;G:Notify("permissions")
 end
-batch.invite:Fire("OnClick");T.eq(G.invitedApplicant,71);T.eq(batch.invite:IsShown(),false,"inflight invitation removes duplicate actions")
+do
+ create.manageNotice.close:Fire("OnClick")
+ local layout=create.LayoutApplicantViewport;local layouts=0
+ create.LayoutApplicantViewport=function(self,...) layouts=layouts+1;return layout(self,...) end
+ batch.invite:Fire("OnClick")
+ create.LayoutApplicantViewport=layout
+ T.eq(G.invitedApplicant,71);T.eq(batch.invite:IsShown(),false,"inflight invitation removes duplicate actions")
+ T.eq(layouts,1,"the synchronous invitation update is not rebound again by an already hidden notice")
+ T.eq(create.manageNotice:IsShown(),false)
+end
 for id=72,84 do G.applicants[id]={id=id,status="applied",displayOrderID=id,comment="",members=G.applicants[71].members} end
 G:Notify("applicants");T.eq(create.batchSlider:IsShown(),true,"the full applicant list exposes a scrollbar when it overflows")
 T.eq(create.batchBody:GetWidth(),create.manage:GetWidth()-U.C.listRightInset,"applicant content leaves the shared six-plus-twelve scrollbar gutter")
@@ -577,7 +621,22 @@ do
  button:Fire("OnEnter");T.same(button.label.color,U.Theme.accent,"the shared hover state makes the destructive action explicit")
  button:Fire("OnLeave");T.same(button.label.color,{unpack(U.Theme.muted)})
 end
+do
+ local classLabel,specLabel=notes.classChoice.label:GetText(),notes.specChoice.label:GetText()
+ local avatar,reason=notes.eAvatar:GetTexture(),notes.eReason.box:GetText()
+ local getClass,getSpec,classReads,specReads=GetClassInfo,GetSpecializationInfoForClassID,0,0
+ GetClassInfo=function(...) classReads=classReads+1;return getClass(...) end
+ GetSpecializationInfoForClassID=function(...) specReads=specReads+1;return getSpec(...) end
+ for i=1,20 do notes.typeButtons[i%2==0 and "caution" or "positive"]:Fire("OnClick") end
+ GetClassInfo,GetSpecializationInfoForClassID=getClass,getSpec
+ T.eq(classReads,0,"changing only note type does not reread the class directory")
+ T.eq(specReads,0,"changing only note type does not reread the specialization directory")
+ T.eq(notes.classChoice.label:GetText(),classLabel);T.eq(notes.specChoice.label:GetText(),specLabel)
+ T.eq(notes.eAvatar:GetTexture(),avatar);T.eq(notes.eReason.box:GetText(),reason)
+ T.eq(notes.typeButtons.caution.active,true);T.eq(notes.typeButtons.positive.active,false)
+end
 notes.typeButtons.caution:Fire("OnClick");notes.eReason.box:SetText("A different experience");notes:Save();T.eq(note.type,"caution")
+T.eq(note.class,"WARRIOR");T.eq(note.specID,71,"saving the new type preserves the chosen specialization")
 T.eq(notes.tabs.caution.count:GetText(),"1");T.eq(notes.tabs.positive.count:GetText(),"0","editing a type updates category counts before export or tab changes")
 notes:DoExport();local transferred=assert(U.Transfer.Decode(notes.tBox.box:GetText()));T.eq(transferred[1].type,"caution");T.eq(transferred[1].specID,71)
 notes:CloseTransfer()
@@ -2921,6 +2980,31 @@ do
  T.eq(u.Members:BindMarks(marks,person),40)
  T.eq(marks.icons.bnet:GetTexture(),"Interface\\AddOns\\LycheeGroup_UI\\Media\\battlenet-friend.tga")
  T.eq(marks.noteButton.icon:GetTexture(),u.Theme.media.."book.tga")
+ do
+  local row=u.Members:Create(UIParent)
+  local identity=u.Members.Identity;local identities=0
+  u.Members.Identity=function(self,member) identities=identities+1;return identity(self,member) end
+  local unknown={name="Unknown",class="MAGE"};local counts={}
+  for _,method in ipairs({"Bind","BindRoster","BindSearch"}) do
+   identities=0
+   for _=1,5 do u.Members[method](u.Members,row,person,250,true,true) end
+   counts[method]=identities
+   T.eq(row.marks.flags.neutral,true,"all member binding paths preserve the leader's existing note")
+   identities=0;u.Members[method](u.Members,row,unknown,250,true,true)
+   counts[method.."Unknown"]=identities
+   T.eq(row.name:GetText(),"Unknown");T.eq(row.marks.flags.neutral,nil,"an unknown realm never inherits the previous member's note")
+  end
+  identities=0;u.Members:BindMarks(marks,person);local publicReads=identities
+  identities=0;u.Members:BindMarks(marks,unknown);local unknownReads=identities
+  u.Members.Identity=identity
+  for _,method in ipairs({"Bind","BindRoster","BindSearch"}) do
+   T.eq(counts[method],5,method.." resolves each member identity only once")
+   T.eq(counts[method.."Unknown"],1,"a resolved nil identity is not resolved again")
+  end
+  T.eq(publicReads,1,"direct mark binding still resolves its own identity")
+  T.eq(unknownReads,1);T.eq(marks.noteKey,nil)
+  u.Members:BindMarks(marks,person);row:Hide()
+ end
  local button,nodes=marks.noteButton,#s.nodes
  u.Members:BindMarks(marks,plain)
  T.eq(marks:IsShown(),false);T.eq(marks.noteKey,nil);T.eq(button:IsShown(),false)
@@ -3339,4 +3423,215 @@ do
  p:SelectCategory("seasonRaid");a.db.reduceMotion=true;u:SetReducedMotion(true)
  T.eq(m:Count(),0);T.eq(p.picker:GetAlpha(),1,"reduce motion settles an active secondary menu immediately")
  u:Hide(true);T.eq(m:Count(),0,"closing the host leaves no local motion jobs")
+end
+
+-- A visible consumer joins Notes when its real command first loads the service.
+do
+ local function LateNotes(pageName,settings)
+  local fresh=dofile("tests/ui_fixture.lua")("enUS",nil,settings)
+  local a,u,g=fresh.A,fresh.U,fresh.G
+  a.db.reduceMotion=true
+  local notes=a.Notes;a.Notes=nil
+  local person={name="LateNote-Away",nameKey="LateNote-Away",class="MAGE",assignedRole="DAMAGER",isLeader=true}
+  g.records[8101]={id=8101,name="Late note group",leaderName=person.name,leaderKey=person.nameKey,activity=g.Catalog:GetActivity(2),activityID=2,activityName="Dungeon",categoryID=2,maxNumPlayers=5,numMembers=1,charFriends=0,bnetFriends=0,guildMates=0,details={members={person},counts={TANK=0,HEALER=0,DAMAGER=1}}}
+  if pageName=="create" then g.listing={activityID=2,name="Late note listing"};g.applicants[81]={id=81,status="applied",activityID=2,displayOrderID=1,members={person}} end
+  a.charPrefs.find={category="seasonDungeon",filters={selected=true}}
+  -- Keep the focused Group/UI providers, but exercise Core's actual Notes loader
+  -- and Entrypoints' module-ready handoff and direct-recording command.
+  local fixtureEnsure=a.Ensure
+  dofile("addon/LycheeGroup/Core.lua")
+  local coreEnsure=a.Ensure
+  function a:Ensure(module) if module=="Notes" then return coreEnsure(self,module) end;return fixtureEnsure(self,module) end
+  local loaded,load=C_AddOns.IsAddOnLoaded,C_AddOns.LoadAddOn
+  local loads=0
+  C_AddOns.IsAddOnLoaded=function(name) if name=="LycheeGroup_Notes" then return a.Notes~=nil,a.Notes~=nil end;return loaded(name) end
+  C_AddOns.LoadAddOn=function(name) if name=="LycheeGroup_Notes" then loads=loads+1;a.Notes=notes;return true end;return load(name) end
+  dofile("addon/LycheeGroup/Entrypoints.lua")
+  a:Open(pageName)
+  local page=u.pages[pageName];local row
+  if pageName=="create" then row=page.batchPool[1].people[1]
+  else for _,candidate in ipairs(page.results.rows) do if candidate.key==8101 then row=candidate;break end end end
+  assert(row)
+  return a,u,g,page,row,function() return loads end,notes
+ end
+ for _,pageName in ipairs({"find","create"}) do
+  local a,u,g,page,row,loads,notes=LateNotes(pageName,{notesEnabled=false})
+  T.eq(notes:Add("LateNote","Away","Existing before loading"),true)
+  local changes,subscriptions=0,0
+  local changed,subscribe=page.OnNotesChanged,notes.Subscribe
+  function page:OnNotesChanged() changes=changes+1;return changed(self) end
+  function notes:Subscribe(callback) subscriptions=subscriptions+1;return subscribe(self,callback) end
+  a:SetSetting("notesEnabled",true)
+  T.eq(loads(),1,"enabling cold Notes loads the service once")
+  T.eq(changes,1,"cold enabling Notes refreshes the visible "..pageName.." consumer once")
+  T.eq(subscriptions,1,"module readiness and setting notification share one Notes subscription")
+  T.ok(page.notesUnsub);T.eq(row.marks.flags.neutral,true,"cold enabling reveals existing notes immediately")
+  u:Hide(true);T.eq(page.notesUnsub,nil)
+ end
+ for _,pageName in ipairs({"find","create"}) do
+  local a,u,g,page,row,loads=LateNotes(pageName)
+  T.eq(a.Notes,nil,"opening "..pageName.." does not eagerly load Notes");T.eq(loads(),0)
+  local changes=0;local changed=page.OnNotesChanged
+  page.OnNotesChanged=function(self) changes=changes+1;return changed(self) end
+  T.eq(a:RecordPlayer("LateNote","Away",nil,"First command note"),true)
+  T.eq(loads(),1);T.ok(page.notesUnsub,"the first Notes load subscribes the visible "..pageName.." page")
+  T.eq(row.marks.flags.neutral,true,"the first direct record updates the already visible member marker")
+  local before=changes
+  a:Ensure("Notes");T.eq(loads(),1);T.eq(changes,before,"an already-ready module does not repeat the handoff")
+  a:SetSetting("notesEnabled",false)
+  T.eq(page.notesUnsub,nil);T.eq(row.marks.flags.neutral,nil,"disabling notes removes visible markers immediately")
+  before=changes;a:RecordPlayer("LateNote","Away",nil,"Recorded while disabled")
+  T.eq(changes,before,"disabled automatic notes do not redraw the consumer")
+  a:SetSetting("notesEnabled",true)
+  T.ok(page.notesUnsub);T.eq(row.marks.flags.neutral,true,"reenabling notes restores the current record")
+  a:SetSetting("defaultNote","caution");before=changes
+  a:RecordPlayer("LateNote","Away",nil,"Changed after enabling")
+  T.eq(changes,before+1,"reenabling installs exactly one Notes subscription")
+  T.eq(row.marks.flags.caution,true);T.eq(row.marks.flags.neutral,nil)
+  a:Open("settings");T.eq(page.notesUnsub,nil)
+  before=changes;a:RecordPlayer("LateNote","Away",nil,"Recorded after leaving")
+  T.eq(changes,before,"leaving releases the Notes consumer")
+  u:Hide(true)
+ end
+ for _,pageName in ipairs({"find","create"}) do
+  local a,u,g,page,row=LateNotes(pageName)
+  a.db.reduceMotion=false;u.Motion:Tick(.5);u:Hide()
+  local changes=0;local changed=page.OnNotesChanged
+  page.OnNotesChanged=function(self) changes=changes+1;return changed(self) end
+  a:RecordPlayer("LateNote","Away",nil,"Recorded during closing")
+  T.eq(changes,0,"a first Notes load during exit does not redraw "..pageName)
+  T.eq(page.notesUnsub,nil);u.Motion:Tick(.5)
+  a:Open(pageName);T.ok(page.notesUnsub);T.eq(row.marks.flags.neutral,true,"reopening binds the note written while closing")
+  u:Hide(true);T.eq(page.notesUnsub,nil)
+ end
+ for _,scenario in ipairs({"applications","applicants"}) do
+  local fresh=dofile("tests/ui_fixture.lua")("enUS")
+  local a,u=fresh.A,fresh.U;a.db.reduceMotion=true
+  dofile("addon/LycheeGroup/Entrypoints.lua")
+  local subscriptions=0;local subscribe=a.Notes.Subscribe
+  function a.Notes:Subscribe(callback) subscriptions=subscriptions+1;return subscribe(self,callback) end
+  T.eq(a:Preview(scenario),true)
+  T.eq(subscriptions,0,"preview never subscribes its page to real player notes")
+  local page=u.pages[u.page];local changes=0;local changed=page.OnNotesChanged
+  page.OnNotesChanged=function(self) changes=changes+1;return changed(self) end
+  a:OnModuleReady("Notes");a:SetSetting("notesEnabled",false);a:SetSetting("notesEnabled",true)
+  T.eq(subscriptions,0);T.eq(changes,0,"real Notes readiness and settings do not refresh the preview provider")
+  u:Hide(true)
+ end
+end
+
+-- A direct current-roster hover needs only the final player-detail reset.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("enUS")
+ local a,u,g=fresh.A,fresh.U,fresh.G;a.db.reduceMotion=true
+ local members={}
+ for i=1,40 do members[i]={guid="Player-detail-"..i,name="Member"..i,nameKey="Member"..i.."-Away",class="WARRIOR",assignedRole="DAMAGER",isLeader=i==1} end
+ function g:GetRoster() return members end
+ g.listing={activityID=2,name="Current listing"};a:Open("create")
+ local page,tip=u.pages.create,u.Tooltip;tip:ShowRoster(page.groupSummary,members);tip:Hide()
+ local row=page.rosterList.rows[1];page.rosterList.clip.mouseOver=true;row.tooltipArea:Fire("OnEnter")
+ local view=tip.interactive
+ local title,summary,width,height=view.title:GetText(),view.summary:GetText(),view:GetWidth(),view:GetHeight()
+ local metricPoint={view.metrics[1].title:GetPoint()};tip:Hide()
+ local reset,setWidth=tip.ResetInteractive,view.SetWidth;local resets,hides,widths=0,0,{}
+ local hide=view.memberButtons[1].Hide
+ tip.ResetInteractive=function(self,...) resets=resets+1;return reset(self,...) end
+ view.SetWidth=function(self,value) widths[#widths+1]=value;return setWidth(self,value) end
+ for _,button in ipairs(view.memberButtons) do button.Hide=function(self) hides=hides+1;return hide(self) end end
+ row.tooltipArea:Fire("OnEnter")
+ T.eq(resets,1,"a current-member hover resets the detail surface once")
+ T.eq(hides,40,"a player hover clears the forty-member warm pool only once")
+ T.same(widths,{440},"a direct roster player goes straight to the final width")
+ T.eq(view.title:GetText(),title);T.eq(view.summary:GetText(),summary);T.eq(view:GetWidth(),width);T.eq(view:GetHeight(),height)
+ T.same({view.metrics[1].title:GetPoint()},metricPoint)
+ T.eq(tip.owner,row);T.eq(tip.member,members[1]);T.eq(tip.pinned,false)
+ local x,y=tip.pointX,tip.pointY
+ tip:ShowPlayer(nil,members[1],row.memberContext)
+ T.eq(tip.owner,row,"a nil owner retains the previously captured owner")
+ T.eq(tip.pointX,x);T.eq(tip.pointY,y);T.eq(resets,2)
+ tip.ResetInteractive,view.SetWidth=reset,setWidth
+ for _,button in ipairs(view.memberButtons) do button.Hide=hide end
+ u:Hide(true)
+end
+
+-- Editor labels reuse the class-matched metadata already needed by the record.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("enUS")
+ local a,u,pick=fresh.A,fresh.U,fresh.Pick;a.db.reduceMotion=true
+ a.Notes:Add("Label","Away","same reason",nil,"",{class="PALADIN",specID=66,type="neutral"})
+ a:Open("notes",{playerKey="Label-Away"});local page=u.pages.notes
+ local className,specName=page.classChoice.label:GetText(),page.specChoice.label:GetText()
+ local getClass,getSpec=GetClassInfo,GetSpecializationInfoForClassID;local classes,specs=0,0
+ GetClassInfo=function(...) classes=classes+1;return getClass(...) end
+ GetSpecializationInfoForClassID=function(...) specs=specs+1;return getSpec(...) end
+ for _=1,20 do page:OpenEdit("Label-Away") end
+ GetClassInfo,GetSpecializationInfoForClassID=getClass,getSpec
+ T.eq(classes,0,"reopening a known note does not rebuild the class menu for its selected label")
+ T.eq(specs,0,"reopening a known note reuses its class-matched specialization label")
+ T.eq(page.classChoice.label:GetText(),className);T.eq(page.specChoice.label:GetText(),specName)
+ T.eq(page.eReason.box:GetText(),"same reason")
+ pick(page.classChoice,"WARRIOR");T.eq(page.classChoice.label:GetText(),select(1,getClass(1)));T.eq(page.specChoice.label:GetText(),u.L.unknown)
+ pick(page.specChoice,72);T.eq(page.specChoice.value,72);T.ok(page.specChoice.label:GetText()~=u.L.unknown)
+ for _,identity in ipairs({{class="WARRIOR",specID=66},{class="PALADIN",specID=999999},{class="UNKNOWN",specID=66},{}}) do
+  page:OpenAdd(identity);T.eq(page.specChoice.label:GetText(),u.L.unknown,"invalid, other-class and absent specializations remain unknown")
+ end
+ u:Hide(true)
+end
+do
+ local fresh=dofile("tests/ui_fixture.lua")("enUS")
+ local a,u=fresh.A,fresh.U;a.db.reduceMotion=true
+ local getClass,getSpec=GetClassInfo,GetSpecializationInfoForClassID
+ -- Keep the token even if the class label is temporarily missing.
+ GetClassInfo=function(index) local name,token,id=getClass(index);if token=="PALADIN" then name=nil end;return name,token,id end
+ a:Open("notes",{add={class="PALADIN",specID=66}});local page=u.pages.notes
+ T.eq(page.classChoice.label:GetText(),u.L.unknown);T.ok(page.specChoice.label:GetText()~=u.L.unknown,"a missing class label does not discard an available specialization label")
+ GetClassInfo=getClass;page:OpenAdd({class="PALADIN",specID=66})
+ T.eq(page.classChoice.label:GetText(),select(1,getClass(2)),"an incomplete class directory is retried")
+ u:Hide(true)
+ fresh=dofile("tests/ui_fixture.lua")("enUS");a,u=fresh.A,fresh.U;a.db.reduceMotion=true
+ getSpec=GetSpecializationInfoForClassID
+ GetSpecializationInfoForClassID=function() return end
+ a:Open("notes",{add={class="PALADIN",specID=70}});page=u.pages.notes
+ T.eq(page.specChoice.label:GetText(),u.L.unknown)
+ GetSpecializationInfoForClassID=getSpec;page:OpenAdd({class="PALADIN",specID=70})
+ T.ok(page.specChoice.label:GetText()~=u.L.unknown,"a missing specialization is retried after recovery")
+ u:Hide(true)
+end
+
+-- Rejected wheel movement applies its clamped position once, without a driver.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("enUS")
+ local a,u,g=fresh.A,fresh.U,fresh.G;a.db.reduceMotion=true
+ local member={name="Wheel",nameKey="Wheel-Away",class="WARRIOR",assignedRole="DAMAGER"}
+ g.listing={activityID=2,name="Wheel listing"}
+ g.applicants[1]={id=1,status="applied",displayOrderID=1,members={member}}
+ a:Open("create");local page=u.pages.create;a.db.reduceMotion=false
+ local calls=0;local render=page.RenderBatches
+ page.RenderBatches=function(self,...) calls=calls+1;return render(self,...) end
+ page.batchScroll:Fire("OnMouseWheel",1)
+ T.eq(u.Motion.jobs[page.batchScroll],nil,"a fitting applicant list does not animate a zero-distance wheel")
+ for _=1,14 do u.Motion:Tick(.01) end
+ T.eq(calls,1,"a fitting applicant wheel has no later render ticks")
+ for id=2,20 do g.applicants[id]={id=id,status="applied",displayOrderID=id,members={member}} end
+ page:RefreshApplicants();page:SetBatchOffset(0,false)
+ page.batchScroll:Fire("OnMouseWheel",-1);T.ok(u.Motion.jobs[page.batchScroll])
+ page.batchScroll:Fire("OnMouseWheel",1)
+ T.eq(u.Motion.jobs[page.batchScroll],nil,"an immediate opposite wheel cancels movement back to the current position")
+ T.eq(page.batchScrollTarget,nil);T.eq(page.batchScroll:GetVerticalScroll(),0)
+ page.batchScroll:Fire("OnMouseWheel",-1);u.Motion:Tick(.2);T.eq(page.batchScroll:GetVerticalScroll(),56)
+ page:SetBatchOffset(page.batchBody:GetHeight(),false);local bottom=page.batchScroll:GetVerticalScroll()
+ page.batchScroll:Fire("OnMouseWheel",-1);T.eq(u.Motion.jobs[page.batchScroll],nil);T.eq(page.batchScroll:GetVerticalScroll(),bottom)
+ page.RenderBatches=render
+ u.Tooltip:ShowPlayer(page.batchPool[1].people[1],member,page.applicantContext)
+ local view=u.Tooltip.interactive;view.scroll:Fire("OnMouseWheel",1)
+ T.eq(u.Motion.jobs[view.scroll],nil,"a fitting player tooltip has no idle wheel animation")
+ local members={};for i=1,40 do members[i]={name="Wheel"..i,nameKey="Wheel"..i.."-Away",class="WARRIOR",assignedRole="DAMAGER"} end
+ u.Tooltip:ShowRoster(u.frame,members);view.scroll:Fire("OnMouseWheel",1)
+ T.eq(u.Motion.jobs[view.scroll],nil,"the top of an overflowing tooltip does not animate outward")
+ view.scroll:Fire("OnMouseWheel",-1);T.ok(u.Motion.jobs[view.scroll]);view.scroll:Fire("OnMouseWheel",1)
+ T.eq(u.Motion.jobs[view.scroll],nil);T.eq(view.scroll.scrollTarget,nil)
+ view.scroll:Fire("OnMouseWheel",-1);u.Motion:Tick(.2);T.eq(view.scroll:GetVerticalScroll(),42)
+ local maximum=select(2,view.scrollbar:GetMinMaxValues());view.scrollbar:SetValue(maximum)
+ view.scroll:Fire("OnMouseWheel",-1);T.eq(u.Motion.jobs[view.scroll],nil);T.eq(view.scroll:GetVerticalScroll(),maximum)
+ u:Hide(true)
 end

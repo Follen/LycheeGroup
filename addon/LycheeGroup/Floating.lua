@@ -247,7 +247,9 @@ function F:Fade(show)
 end
 function F:SetOffset(value,animate)
  if next(exits) then return end
- if animate and not A.db.reduceMotion then scrollState.from,scrollState.to,scrollState.elapsed=self.scroll:GetVerticalScroll(),value,0;self.scrollTween=scrollState
+ local current=self.scroll:GetVerticalScroll()
+ if value==current then self.scrollTween=nil;self:UpdateDriver();return end
+ if animate and not A.db.reduceMotion then scrollState.from,scrollState.to,scrollState.elapsed=current,value,0;self.scrollTween=scrollState
  else self.scrollTween=nil;self.scroll:SetVerticalScroll(value);self.syncScroll=true;self.scrollBar:SetValue(value);self.syncScroll=nil;self:Render() end
  self:UpdateDriver()
 end
