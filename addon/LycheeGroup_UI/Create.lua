@@ -80,8 +80,9 @@ function P:Build(parent)
  self.pickerContext=C.Text(self.pickerTrigger,"",14,T.muted,260);C.SetLineHeight(self.pickerContext,20,true);self.pickerContext:SetPoint("TOPLEFT",52,-26)
  self.difficultyChoice=C.Choice(desc,FORM-352,function() return P:DifficultyItems() end,function(value) form.activityID=value;P:RefreshPicker() end);self.difficultyChoice:SetHeight(36);self.difficultyChoice:SetPoint("TOPLEFT",352,-32)
  self.difficultyGroup=CreateFrame("Frame",nil,desc);self.difficultyGroup:SetSize(FORM-352,36);self.difficultyGroup:SetPoint("TOPLEFT",352,-32);C.Panel(self.difficultyGroup,T.panel,8)
+ self.difficultySelection=C.Selection(self.difficultyGroup)
  self.difficultyButtons={}
- for i=1,4 do self.difficultyButtons[i]=C.Button(self.difficultyGroup,"",72,function(button) form.activityID=button.value;P:RefreshPicker() end,{variant="compact"}) end
+ for i=1,4 do self.difficultyButtons[i]=C.Button(self.difficultyGroup,"",72,function(button) form.activityID=button.value;P:RefreshPicker() end,{variant="compact",selectionFill=false}) end
  self.difficultyFixedSurface=CreateFrame("Frame",nil,desc);self.difficultyFixedSurface:SetSize(52,38);C.Panel(self.difficultyFixedSurface,T.field,8)
  self.difficultyFixed=C.Text(self.difficultyFixedSurface,"",14,T.muted);C.SetLineHeight(self.difficultyFixed,20,true);self.difficultyFixed:SetPoint("CENTER")
  self.favorite=C.IconButton(desc,nil,40,function() UI:GetGroup().Presets:ToggleFavorite(P:FormData()) end,{iconSize=24});self.favorite:SetPoint("TOPRIGHT",0,-34)
@@ -485,6 +486,7 @@ function P:BuildPicker(parent)
  self.pickerCategories=C.List(popup,176,368,64,function(key) P.pickerCategory=key;P.pickerTier=nil;P:RefreshPickerRows() end);self.pickerCategories:SetPoint("TOPLEFT",12,-76)
  self.pickerCategories:SetGutter(0);self.pickerCategories.alternateRows=false
  for _,row in ipairs(self.pickerCategories.rows) do row:SetHeight(60);row.selected:SetRadius(8);row.hover:SetRadius(8);row.alternate:SetRadius(8);row.symbol=C.Icon(row,18);row.symbol:SetPoint("LEFT",12,0);C.SetFont(row.title,16);row.title:ClearAllPoints();row.title:SetPoint("LEFT",38,0);row.title:SetWidth(126);row.title:SetWordWrap(true);row.title:SetHeight(0);C.SetLineHeight(row.title,22);row.meta:Hide() end
+ self.pickerCategories:SetStyle({selectionMotion=true,radius=8})
  self.pickerSurface=CreateFrame("Frame",nil,popup);self.pickerSurface:SetSize(428,384);self.pickerSurface:SetPoint("TOPLEFT",200,-68);C.Panel(self.pickerSurface,T.surfaceLow,16)
  self.tierChoice=C.Choice(self.pickerSurface,412,function() return P:TierItems(P.pickerCategory) end,function(value) P.pickerTier=value or nil;P:RefreshPickerRows() end);self.tierChoice:SetHeight(44);self.tierChoice:SetPoint("TOPLEFT",8,-8)
  self.pickerResults=C.List(self.pickerSurface,412,312,44,function(index) P:SelectPickerRow(index) end);self.pickerResults:SetPoint("TOPLEFT",8,-64)
@@ -497,7 +499,8 @@ function P:TogglePicker()
  if not self.picker then self:BuildPicker(self.frame) end
  if self.picker:IsShown() then self:ClosePicker();return end
  self.pickerTrigger:SetExpanded(true)
- self.pickerCategory=state.category;self.pickerTier=state.tier;self.picker:Show();UI.Motion:Reveal(self.picker,"TOPLEFT",self.pickerTrigger,"BOTTOMLEFT",0,-8,0,4,.14);self.picker:RegisterEvent("GLOBAL_MOUSE_DOWN");self:RefreshPickerRows();self.pickerSearch.box:SetFocus()
+ self.pickerCategory=state.category;self.pickerTier=state.tier;self.picker:Show();self.picker:RegisterEvent("GLOBAL_MOUSE_DOWN");self:RefreshPickerRows();self.pickerSearch.box:SetFocus()
+ UI.Motion:Reveal(self.picker,"TOPLEFT",self.pickerTrigger,"BOTTOMLEFT",0,-8,0,8,.16)
 end
 function P:ClosePicker()
  if not self.picker then return end
@@ -590,7 +593,15 @@ function P:RefreshPicker()
  self.difficultyFixedSurface:ClearAllPoints();self.difficultyFixedSurface:SetPoint("LEFT",self.pickerTrigger,"RIGHT",12,0);self.difficultyFixedSurface:SetWidth(sideWidth);self.difficultyFixedSurface:SetShown(#variants==1)
  self.difficultyChoice:SetShown(#variants>1 and not segments);self.difficultyGroup:SetShown(segments);self.difficultyFixed:SetShown(#variants==1);UI:SetText(self.difficultyFixed,label)
  local x=3
- for i,b in ipairs(self.difficultyButtons) do local entry=variants[i];b:SetShown(entry~=nil and segments);if entry then b.value=entry.value;b:SetWidth(b._desiredWidth);b:ClearAllPoints();b:SetPoint("LEFT",x,0);x=x+b._desiredWidth+4;b:SetActive(entry.value==form.activityID) end end
+ for i,b in ipairs(self.difficultyButtons) do
+  local entry=variants[i];b:SetShown(entry~=nil and segments)
+  if entry then
+   b.value=entry.value;b:SetWidth(b._desiredWidth);b:ClearAllPoints();b:SetPoint("LEFT",x,0);b:SetActive(entry.value==form.activityID)
+   if segments and b.active then self.difficultySelection:Select(x,-3,b:GetWidth(),b:GetHeight(),self.frame:IsVisible()) end
+   x=x+b._desiredWidth+4
+  end
+ end
+ if not segments then self.difficultySelection:Clear() end
  local act=form.activityID and UI:GetGroup().Catalog:GetActivity(form.activityID);self.activity=act
  local categoryInfo=cat and C_LFGList.GetLfgCategoryInfo(cat.id)
  self.hasPlaystyle=categoryInfo and categoryInfo.showPlaystyleDropdown==true

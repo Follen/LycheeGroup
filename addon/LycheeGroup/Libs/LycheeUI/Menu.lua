@@ -31,7 +31,7 @@ function Library.AttachMenus(UI)
    row.check:Hide()
   end
   menu:SetScript("OnHide",function(self)
-   M:Stop(self);self:SetAlpha(1);self.catcher:Hide();self.list:Clear()
+   M:FinishPlacement(self);self:SetAlpha(1);self.catcher:Hide();self.list:Clear()
    local owner=self.anchor;self.anchor,self.items,self.onPick=nil,nil,nil
    for i=#self.keys,1,-1 do self.keys[i]=nil end
    if owner and owner.isChoice then owner:SetExpanded(false) end
@@ -96,7 +96,9 @@ function Library.AttachMenus(UI)
    local alignRight=(parentRight-right)/anchorScale<width+8
    menu:SetPoint((above and "BOTTOM" or "TOP")..(alignRight and "RIGHT" or "LEFT"),anchor,(above and "TOP" or "BOTTOM")..(alignRight and "RIGHT" or "LEFT"),0,above and 8 or -8)
   end
-  menu.catcher:Show();menu:Show();M:Alpha(menu,1,.12,.25)
+  menu.catcher:Show();menu:Show()
+  local point,parent,relative,x,y=menu:GetPoint()
+  M:Reveal(menu,point,parent,relative,x,y,0,point:find("BOTTOM") and -8 or 8,.16)
   self.menu=menu
  end
  function UI:CloseMenu() Close() end

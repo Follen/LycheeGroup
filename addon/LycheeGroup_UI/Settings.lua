@@ -219,7 +219,7 @@ function P:SelectSection(key)
  local changed=self.section~=key
  if changed then self:CancelBindingCapture(true) end
  for _,panel in pairs(self.panels) do UI.Motion:FinishPlacement(panel) end
- self.section=key;for id,panel in pairs(self.panels) do panel:SetShown(id==key);self.nav[id]:SetActive(id==key);self.nav[id].mark:SetShown(id==key);UI:Color(self.nav[id].label,id==key and T.text or T.muted) end
+ self.section=key;for id,panel in pairs(self.panels) do panel:SetShown(id==key);self.nav[id]:SetActive(id==key);UI:Color(self.nav[id].label,id==key and T.text or T.muted) end
  for _,entry in ipairs(sections) do if entry[1]==key then UI:SetText(self.heading,entry[2]);break end end
  self:Sync()
  if changed then UI.Motion:Reveal(self.panels[key],"TOPLEFT",self.main,"TOPLEFT",PAD,-80,4,0,.14) end

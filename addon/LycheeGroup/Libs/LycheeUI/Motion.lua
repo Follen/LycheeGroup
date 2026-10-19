@@ -41,7 +41,33 @@ for index,pose in ipairs(poses) do
 end
 function Library.CreateMotion(UI)
 -- 单一驱动;switches/alphas 记录进行中动画的终值,StopAll 据此落终态不留残影。
-local M = {jobs={}, jobIds={}, nextJobId=0, startTimes={}, switches={}, alphas={}, colors={}, placements={},waiting={},busy={},spins={},spinOwners={},tickBuffer={}}
+local M = {jobs={}, jobIds={}, nextJobId=0, startTimes={}, switches={}, alphas={}, colors={}, placements={},reveals={},rects={},selections={},waiting={},busy={},spins={},spinOwners={},tickBuffer={}}
+local function Pixel(value,scale) return math.floor(value*scale+.5)/scale end
+local function PlaceReveal(state,x,y,alpha)
+ local region=state.region
+ local scale=region:GetEffectiveScale()
+ x,y=Pixel(x,scale),Pixel(y,scale)
+ if state.x~=x or state.y~=y then
+  region:SetPoint(state[1],state[2],state[3],x,y);state.x,state.y=x,y
+ end
+ if region:GetAlpha()~=alpha then region:SetAlpha(alpha) end
+end
+local function PlaceRect(state,x,y,width,height)
+ local region=state.region
+ local scale=region:GetEffectiveScale()
+ x,y,width,height=Pixel(x,scale),Pixel(y,scale),Pixel(width,scale),Pixel(height,scale)
+ if state.x~=x or state.y~=y then
+  region:SetPoint("TOPLEFT",state.parent,"TOPLEFT",x,y);state.x,state.y=x,y
+ end
+ if state.width~=width or state.height~=height then
+  region:SetSize(width,height);state.width,state.height=width,height
+ end
+end
+local function PlaceSelection(state,alpha)
+ local region=state.region
+ if region:GetAlpha()~=alpha then region:SetAlpha(alpha) end
+ if alpha==0 and not region._selMotion then region:Hide() end
+end
 local function RestoreWaiting(region,saved)
  region:SetSize(saved.width,saved.height);region:SetAlpha(saved.alpha)
  region:ClearAllPoints();if saved.point[1] then region:SetPoint(unpack(saved.point)) end
@@ -58,7 +84,9 @@ function M:Start(key, job)
   self.running=true;self.driver:SetScript("OnUpdate",Drive);self.driver:Show()
  end
 end
-function M:Stop(key)
+function M:Stop(key,keepRect)
+ local rect=not keepRect and self.rects[key]
+ if rect then self:Stop(rect) end
  self.jobs[key]=nil
  self.jobIds[key]=nil
  self.startTimes[key]=nil
@@ -91,26 +119,68 @@ end
 
 -- One owner moves and fades; child geometry and hit targets are not animated.
 function M:Reveal(region,point,parent,relative,x,y,dx,dy,duration)
- self:FinishPlacement(region)
- local placement={point,parent,relative,x,y}
- self.placements[region]=placement
- region:ClearAllPoints()
- if duration==0 or UI:IsReducedMotion() then region:SetPoint(point,parent,relative,x,y);region:SetAlpha(1);self.placements[region]=nil;return end
- region:SetPoint(point,parent,relative,x+(dx or 0),y+(dy or 0));region:SetAlpha(.35)
- local elapsed=0
+ local state=self.reveals[region]
+ if not state then
+  state={region=region};self.reveals[region]=state
+  state.step=function(dt)
+   state.elapsed=math.min(state.duration,state.elapsed+dt)
+   local p=curve(state.elapsed/state.duration)
+   PlaceReveal(state,state.fromX+(state[4]-state.fromX)*p,state.fromY+(state[5]-state.fromY)*p,state.fromAlpha+(1-state.fromAlpha)*p)
+   if state.elapsed==state.duration then self.placements[region]=nil;return true end
+  end
+ end
+ local active=self.jobs[region]==state.step
+ local sameAnchor=active and state[1]==point and state[2]==parent and state[3]==relative
+ if sameAnchor and state[4]==x and state[5]==y and duration~=0 and not UI:IsReducedMotion() then return end
+ local fromX,fromY,fromAlpha=x+(dx or 0),y+(dy or 0),.35
+ if sameAnchor then fromX,fromY,fromAlpha=state.x,state.y,region:GetAlpha() end
+ self:Stop(region)
+ state[1],state[2],state[3],state[4],state[5]=point,parent,relative,x,y
+ if not sameAnchor then region:ClearAllPoints();state.x,state.y=nil,nil end
+ if duration==0 or UI:IsReducedMotion() then PlaceReveal(state,x,y,1);return end
+ state.fromX,state.fromY,state.fromAlpha=fromX,fromY,fromAlpha
+ state.elapsed,state.duration=0,duration or .18
+ PlaceReveal(state,fromX,fromY,fromAlpha)
+ self.placements[region]=state
  self.alphas[region]=1
- self:Start(region,function(dt)
-  elapsed=math.min(duration or .18,elapsed+dt)
-  local p=curve(elapsed/(duration or .18))
-  region:SetPoint(point,parent,relative,x+(dx or 0)*(1-p),y+(dy or 0)*(1-p))
-  region:SetAlpha(.35+.65*p)
-  if p==1 then self.placements[region]=nil;return true end
- end)
+ self:Start(region,state.step)
 end
 function M:FinishPlacement(region)
  local target=self.placements[region]
- if target then region:ClearAllPoints();region:SetPoint(unpack(target));region:SetAlpha(1);self.placements[region]=nil end
+ if target then PlaceReveal(target,target[4],target[5],1) end
  self:Stop(region)
+end
+-- Passive highlight geometry owns a separate job key, so its opacity/color
+-- transition can run on the same region without cancelling the movement.
+function M:Rect(region,x,y,width,height,duration)
+ local state=self.rects[region]
+ if not state then
+  state={region=region,parent=region:GetParent()};self.rects[region]=state
+  state.step=function(dt)
+   state.elapsed=math.min(state.duration,state.elapsed+dt)
+   local p=curve(state.elapsed/state.duration)
+   PlaceRect(state,state.fromX+(state.toX-state.fromX)*p,state.fromY+(state.toY-state.fromY)*p,state.fromWidth+(state.toWidth-state.fromWidth)*p,state.fromHeight+(state.toHeight-state.fromHeight)*p)
+   return state.elapsed==state.duration
+  end
+  region:ClearAllPoints()
+ end
+ local scale=region:GetEffectiveScale()
+ x,y,width,height=Pixel(x,scale),Pixel(y,scale),Pixel(width,scale),Pixel(height,scale)
+ local same=state.toX==x and state.toY==y and state.toWidth==width and state.toHeight==height
+ if same and duration~=0 and not UI:IsReducedMotion() and (self.jobs[state] or (state.x==x and state.y==y and state.width==width and state.height==height)) then return end
+ self:Stop(state)
+ state.toX,state.toY,state.toWidth,state.toHeight=x,y,width,height
+ if not state.x or duration==0 or UI:IsReducedMotion() or (state.x==x and state.y==y and state.width==width and state.height==height) then
+  PlaceRect(state,x,y,width,height);return
+ end
+ state.fromX,state.fromY,state.fromWidth,state.fromHeight=state.x,state.y,state.width,state.height
+ state.elapsed,state.duration=0,duration or .18
+ self:Start(state,state.step)
+end
+function M:FinishRect(region)
+ local state=self.rects[region]
+ if not state then return end
+ PlaceRect(state,state.toX,state.toY,state.toWidth,state.toHeight);self:Stop(state)
 end
 function M:Busy(region,enabled)
  self:Stop(region)
@@ -154,12 +224,12 @@ function M:Tick(elapsed,now)
    -- task existed. Only its first driver tick needs this lifetime clamp.
    local dt=now and started and math.max(0,math.min(elapsed,now-started)) or elapsed
    local finished=job(dt)
-   if finished and self.jobIds[key]==jobId then self:Stop(key) end
+   if finished and self.jobIds[key]==jobId then self:Stop(key,true) end
   end
  end
 end
 function M:Alpha(region,target,duration,initial,finished)
- self:Stop(region)
+ self:Stop(region,true)
  local from=initial or region:GetAlpha()
  if duration==0 or UI:IsReducedMotion() or from==target then
   self.alphas[region]=nil
@@ -183,7 +253,7 @@ end
 -- Surface transitions share the finite driver and reuse one color per transition.
 function M:Color(panel,target,duration)
  if duration and not UI:IsReducedMotion() and self.colors[panel]==target then return end
- self:Stop(panel)
+ self:Stop(panel,true)
  local from=panel.color
  if UI:IsReducedMotion() or not duration or from==target then panel:SetColor(target);return end
  local elapsed,value=0,{}
@@ -197,15 +267,29 @@ function M:Color(panel,target,duration)
  end)
 end
 -- 选择反馈:100ms 局部过渡;取消后彻底隐藏,不留半透明残影。
-function M:Selection(region,selected)
- if region._selMotion==selected then return end
- region._selMotion=selected
- if selected then
-  region:Show()
-  self:Alpha(region,1,.10,0)
- else
-  self:Alpha(region,0,.10,nil,function() if region._selMotion~=true then region:Hide() end end)
+function M:Selection(region,selected,duration)
+ local state=self.selections[region]
+ if not state then
+  state={region=region};self.selections[region]=state
+  state.step=function(dt)
+   state.elapsed=math.min(state.duration,state.elapsed+dt)
+   local p=curve(state.elapsed/state.duration)
+   PlaceSelection(state,state.from+(state.target-state.from)*p)
+   return state.elapsed==state.duration
+  end
  end
+ if region._selMotion==selected and duration~=0 and not UI:IsReducedMotion() then return end
+ local from=region:IsShown() and region:GetAlpha() or 0
+ if selected and (not region:IsShown() or region._selMotion==nil) then from=0 end
+ region._selMotion=selected
+ self:Stop(region,true)
+ state.target=selected and 1 or 0
+ if selected then region:Show() end
+ if duration==0 or UI:IsReducedMotion() or from==state.target then PlaceSelection(state,state.target);return end
+ state.from,state.elapsed,state.duration=from,0,duration or .10
+ PlaceSelection(state,from)
+ self.alphas[region]=state.target
+ self:Start(region,state.step)
 end
 -- 主窗轨迹:420ms、终点下方 64 进入;前 100ms 完成透明渐入;关闭精确倒放,中途反向从当前相位连续继续。
 function M:CapturePosition()
@@ -288,7 +372,9 @@ function M:StopAll()
  for texture in pairs(self.spins) do texture:SetRotation(0);self.spins[texture]=nil end
  for region,saved in pairs(self.waiting) do RestoreWaiting(region,saved);self.waiting[region]=nil end
  for region,alpha in pairs(self.busy) do region:SetAlpha(alpha);self.busy[region]=nil end
- for region,target in pairs(self.placements) do region:ClearAllPoints();region:SetPoint(unpack(target));region:SetAlpha(1);self.placements[region]=nil end
+ for region,target in pairs(self.placements) do PlaceReveal(target,target[4],target[5],1);self.placements[region]=nil end
+ for _,state in pairs(self.rects) do if self.jobs[state] then PlaceRect(state,state.toX,state.toY,state.toWidth,state.toHeight) end end
+ for region,state in pairs(self.selections) do if self.jobs[region]==state.step then PlaceSelection(state,state.target) end end
  for key in pairs(self.jobs) do self.jobs[key]=nil;self.jobIds[key]=nil;self.startTimes[key]=nil end
  if self.running then self.running=false;self.driver:SetScript("OnUpdate",nil);self.driver:Hide() end
  for region,to in pairs(self.switches) do

@@ -8,6 +8,7 @@ local M, C = UI.Motion, UI.C
 local PAD = T.pageInset
 local LOGO = T.logoSize
 local NAV_H = T.headerHeight
+local PAGE_ORDER = {find=1,create=2,notes=3,settings=4}
 
 function UI:Initialize()
 	-- 按需加载合同:此处不建窗口、不注册事件。
@@ -57,6 +58,7 @@ function UI:ApplyFont(path)
   local button=self.navItems[key]
   button:SetWidth(button.label:GetStringWidth()+38)
   button:ClearAllPoints();button:SetPoint("TOPLEFT",button:GetParent(),"TOPLEFT",x,0)
+  button.navX=x
   x=x+button:GetWidth()+T.navGap
  end
  self.navItems.find:GetParent():SetWidth(x-T.navGap)
@@ -179,6 +181,7 @@ local function BuildNavButton(nav, page, x)
 	label:SetPoint("LEFT",34,0)
 	b:SetWidth(label:GetStringWidth() + 38)
 	b:SetPoint("TOPLEFT", nav, "TOPLEFT", x, 0)
+	b.navX=x
 	b.label = label
 	local icon=C.Glyph(b,page=="find" and "search" or page=="create" and "plus" or "book",22)
 	icon:SetPoint("LEFT",4,0)
@@ -255,6 +258,7 @@ function UI:Build()
 	end
 	nav:SetWidth(x-T.navGap)
 	self.underline = underline
+	nav:HookScript("OnHide",function() M:FinishRect(underline) end)
 
 	-- 内容区容器:页面在此创建并复用。
 	local content = CreateFrame("Frame", nil, frame)
@@ -297,18 +301,17 @@ function UI:UpdateNav()
 		UI:Color(btn.label, btn.active and T.text or T.muted)
 		btn.icon:SetSelected(btn.active)
 	end
+	local animate=self.underline:IsShown()
 	self.underline:SetShown(item~=nil)
-	if not item then return end
+	if not item then M:FinishRect(self.underline);return end
 	local label = item.label
 	local u = self.underline
-	u:ClearAllPoints()
-	u:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -5)
-	u:SetWidth(label:GetStringWidth())
+	M:Rect(u,item.navX+34,-(NAV_H+label:GetHeight())/2-5,label:GetStringWidth(),3,animate and .18 or 0)
 end
 
 -- ---------------------------------------------------------------- 路由
 
--- UI:Show(page, context):未建窗先建;页面 140ms 过渡;开窗播放品牌动作一次。
+-- UI:Show(page, context):未建窗先建;页面 180ms 过渡;开窗播放品牌动作一次。
 function UI:Show(page, context)
 	if not self.frame then self:Build() else self:FitToScreen() end
 	local wasHidden = self.hiding or not self.frame:IsShown()
@@ -329,6 +332,7 @@ function UI:Navigate(page, context)
  if self.preview and page~="find" and page~="create" then self:StopPreview(false);self:Show(page,context);return end
 	if A.Floating then A.Floating:Dismiss() end
 	if not self.pages[page] then page = "find" end
+	local previous=self.page
 	if self.page == page then
 		local p = self.pages[page]
 		if p.Enter then p:Enter(context) end
@@ -353,7 +357,8 @@ function UI:Navigate(page, context)
 	p.frame:ClearAllPoints();p.frame:SetPoint("TOPLEFT",self.content,"TOPLEFT",0,0)
 	self:UpdateNav()
 	p:Enter(context)
-	M:Reveal(p.frame,"TOPLEFT",self.content,"TOPLEFT",0,0,4,0,.18)
+	local direction=previous and PAGE_ORDER[page]<PAGE_ORDER[previous] and -1 or 1
+	M:Reveal(p.frame,"TOPLEFT",self.content,"TOPLEFT",0,0,direction*(previous and 32 or 4),0,.18)
 end
 
 -- UI:Hide(immediate):立即阻止输入,整页随 Presence 退场,隐藏后才清内容和页面订阅。

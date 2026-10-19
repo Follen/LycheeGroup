@@ -1007,7 +1007,9 @@ do
 end
 A.charPrefs.rememberFilters=rememberBounds
 T.eq(find.filterToggle.label:GetText(),"筛选","the filter arrow is texture art rather than an unsupported font glyph")
-for _,r in ipairs(find.seasonCategories.rows) do if r.key=="seasonRaid" then T.eq(r.selected:IsShown(),true,"category selection has a tonal background and vertical marker");T.eq(r.mark:IsShown(),true) end end
+T.eq(find.seasonCategories.indicator:IsShown(),true,"category selection shares one moving tonal background and vertical marker")
+T.eq(find.seasonCategories.indicator.mark:IsShown(),true)
+T.eq(find.seasonCategories.indicator:GetWidth(),find.seasonCategories.rows[1]:GetWidth())
 
 
 find:SelectCategory("seasonDungeon")
@@ -3190,4 +3192,75 @@ do
   end
   u:Hide(true)
  end
+end
+
+-- Exercise the actual routing, popup layout and selection entry points together.
+do
+ local f=dofile("tests/ui_fixture.lua")("zhCN")
+ local a,u,g=f.A,f.U,f.G
+ a.db.reduceMotion=false;a:Open("find");local m=u.Motion;m:Tick(2)
+ local firstX=select(4,u.underline:GetPoint())
+ u:Navigate("create")
+ T.eq(select(4,u.pages.create.frame:GetPoint()),32,"forward navigation slides the entire page from the right")
+ T.eq(select(4,u.underline:GetPoint()),firstX,"navigation input commits before the underline moves")
+ m:Tick(.08);local middleX=select(4,u.underline:GetPoint())
+ T.ok(middleX>firstX,"the underline passes through an intermediate horizontal position")
+ u:Navigate("find")
+ T.eq(select(4,u.pages.find.frame:GetPoint()),-32,"backward navigation slides the entire page from the left")
+ T.eq(select(4,u.underline:GetPoint()),middleX,"a rapid navigation reversal keeps the current underline position")
+ m:Tick(.2);T.eq(select(4,u.underline:GetPoint()),firstX)
+ u:Navigate("notes");m:Tick(.2);u:Navigate("find");m:Tick(.2)
+ local label=u.navItems.find.label;local stringWidth=label.GetStringWidth
+ label.GetStringWidth=function(self) return stringWidth(self)+40 end
+ u:ApplyFont(u.Theme.font);u:Navigate("create");m:Tick(.2)
+ T.near(select(4,u.underline:GetPoint()),select(4,u.navItems.create:GetPoint())+34,.51,"font relayout updates the underline's destination with its navigation item")
+ label.GetStringWidth=stringWidth;u:ApplyFont(u.Theme.font);u:Navigate("find");m:Tick(.2)
+
+ local p=u.pages.find
+ p:SelectCategory("seasonDungeon")
+ T.ok(p.picker:GetAlpha()<1,"the secondary menu enters as one animated container")
+ local opened=m.jobIds[p.picker]
+ p:RefreshPicker()
+ T.eq(m.jobIds[p.picker],opened,"refreshing the same popup geometry continues its entry animation")
+ local point={p.activities:GetPoint()};local left=point[#point-1]
+ T.eq(p.picker:GetWidth()-left-p.activities.rows[1]:GetWidth(),left,"a non-scrolling activity highlight has equal side padding")
+ T.eq(p.activities.gutter,0)
+ local groups=g.Catalog.GetGroups
+ local source=groups(g.Catalog,"seasonDungeon")[1]
+ local overflow={};for i=1,12 do overflow[i]={key=700+i,name="Overflow "..i,activity=source.activity,tier=source.tier} end
+ g.Catalog.GetGroups=function() return overflow end
+ p:RefreshPicker();T.eq(p.activities.gutter,u.C.listRightInset);T.eq(p.activities.slider:IsShown(),true)
+ g.Catalog.GetGroups=groups;p:RefreshPicker()
+ T.eq(p.activities.gutter,0,"shrinking the list removes the scrollbar reservation again")
+ m:Tick(.2)
+ local selection=p.difficultySelection
+ local fromX=select(4,selection:GetPoint())
+ for _,button in ipairs(p.difficultyButtons) do if button:IsShown() and not button.active then button:Fire("OnClick");break end end
+ T.eq(select(4,selection:GetPoint()),fromX,"difficulty commits immediately while its shared background begins at the old position")
+ m:Tick(.08);T.ok(select(4,selection:GetPoint())~=fromX,"difficulty has a visible intermediate selection position")
+ p:SetFiltersOpen(true)
+ T.ok(p.filterPanel:GetAlpha()<1 and select(4,p.filterPanel:GetPoint())<12,"the filter panel slides in from its window edge")
+ local roles=p.rolePresenceChoices.TANK
+ roles.buttons[1]:Fire("OnClick");m:Tick(.2)
+ T.eq(roles.buttons[1].fill:IsShown(),false,"role options do not cover their moving shared background with opaque button fills")
+ local roleX=select(4,roles.selection:GetPoint())
+ roles.buttons[2]:Fire("OnClick");m:Tick(.08)
+ T.ok(select(4,roles.selection:GetPoint())>roleX,"role-filter refresh and availability synchronization retain the segment animation")
+ p.socialChoice:Fire("OnClick")
+ local menu=u.context:GetMenu()
+ T.ok(menu:IsShown() and menu:GetAlpha()<1,"ordinary dropdowns use the same finite reveal")
+ u:CloseMenu();T.eq(m.placements[menu],nil,"closing a dropdown removes its pending placement")
+ m:Tick(.2)
+ p:SelectCategory("seasonRaid");m:Tick(.2);p:SelectCategory("seasonDungeon");m:Tick(.2)
+ local nodes=#f.S.nodes
+ for _=1,8 do
+  u:Navigate("create");m:Tick(.2);u:Navigate("notes");m:Tick(.2);u:Navigate("find");m:Tick(.2)
+  p:SelectCategory("seasonRaid");m:Tick(.2);p:SelectCategory("seasonDungeon");m:Tick(.2)
+  p:SetFiltersOpen(true);p.socialChoice:Fire("OnClick");m:Tick(.2);u:CloseMenu();p:SetFiltersOpen(false);m:Tick(.2)
+ end
+ T.eq(#f.S.nodes,nodes,"warmed page, sidebar, popup and dropdown transitions reuse their native objects")
+ T.eq(m:Count(),0,"settled UI transitions leave no frame driver")
+ p:SelectCategory("seasonRaid");a.db.reduceMotion=true;u:SetReducedMotion(true)
+ T.eq(m:Count(),0);T.eq(p.picker:GetAlpha(),1,"reduce motion settles an active secondary menu immediately")
+ u:Hide(true);T.eq(m:Count(),0,"closing the host leaves no local motion jobs")
 end

@@ -202,7 +202,7 @@ function P:SelectTab(tab,skipDefault)
  local changed=state.tab~=nil and state.tab~=tab
  UI.Motion:FinishPlacement(self.left);UI.Motion:FinishPlacement(self.historyFrame)
  state.tab=tab;local history=tab=="history"
- for key,button in pairs(self.tabs) do button:SetActive(key==tab);button.mark:SetShown(key==tab);UI:Color(button.label,key==tab and T.text or T.muted);button.glyph:SetSelected(key==tab) end
+ for key,button in pairs(self.tabs) do button:SetActive(key==tab);UI:Color(button.label,key==tab and T.text or T.muted);button.glyph:SetSelected(key==tab) end
  self:CloseTransfer();self:CloseEditor(true);self.toolbar:SetShown(not history);self.left:SetShown(not history);self.historyFrame:SetShown(history);self.editorEmpty:SetShown(not history)
  UI:SetText(self.pageTitle,history and L.history or L.notes)
  self:RefreshCounts()

@@ -2,7 +2,7 @@
 
 更新日期：2026-10-20。
 
-状态：当前版本为 1.1.1，基于 1.1.0（提交 `b21bbc3`）维护，内置冻结的 LycheeUI 1.2.0（修订 19）。活动与来源显示规则由主包 Presentation 管理，成员名单共用 UI.Members，主窗和浮窗分别持有共享库 Context。1.0.6 发布前产品与组件库串行审计的范围、修复与验证见[审计记录](tests/results/serial-audit-1.0.5-2026-10-19.json)；该轮源码安装重载后，完成有限的页面、控件归还、菜单和关闭清理检查。此前以 `2b74449` 为基线的重构及实机检查保留为历史证据，该轮独立完成的 36 个布局场景对照与运行时范围见 [perfermance.md 第 12 节](perfermance.md#12-当前内存测试与验证状态)。历史真实列表自然内存峰值仍超过 20 MB，完整性能验收尚未通过。
+状态：当前发布版本为 1.1.1；工作区基于该版本（提交 `44d96da`）维护，内置 LycheeUI 1.2.0（修订 20，未发布维护），共享库已按用户要求解除冻结。活动与来源显示规则由主包 Presentation 管理，成员名单共用 UI.Members，主窗和浮窗分别持有共享库 Context。1.0.6 发布前产品与组件库串行审计的范围、修复与验证见[审计记录](tests/results/serial-audit-1.0.5-2026-10-19.json)；该轮源码安装重载后，完成有限的页面、控件归还、菜单和关闭清理检查。此前以 `2b74449` 为基线的重构及实机检查保留为历史证据，该轮独立完成的 36 个布局场景对照与运行时范围见 [perfermance.md 第 12 节](perfermance.md#12-当前内存测试与验证状态)。历史真实列表自然内存峰值仍超过 20 MB，完整性能验收尚未通过。
 
 产品范围见 [Product.md](Product.md)，视觉与动画轨迹见 [Desgin.md](Desgin.md)，资源额度与测量方法见 [perfermance.md](perfermance.md)。
 
@@ -29,6 +29,8 @@ Host 通过 `Context:SetWindow(frame, logo, logoButton)` 接入主窗口并捕�
 共享组件的外观通过 `Button` 的 options／`SetStyle`、`List:SetStyle` 与导航 options 设置；紧凑选项、图标动作、复选框、自定义选择弹层入口和浮窗底面分别复用库内组件。页面继续持有活动选择、申请目标、收藏状态和成员身份。Context 创建时解析主题覆盖、别名与派生状态；菜单通过 `GetMenu`／`GetMenuAnchor`／`IsMenuOpen`／`IsMenuHovered` 查询，保留原生对象扩展入口。Waiting 和 Busy 捕获调用方当前视觉状态，停止时归还。完整契约见 [LycheeUI API](../LycheeUI/API.md)。主窗通过 UI.Theme 的 Context 覆盖配置宽度及 `fontSizeDelta`／`lineHeightDelta`，共享 Text、SetFont、SetLineHeight、菜单与原生输入按基准值应用增量一次；浮窗的独立 Context 使用默认零增量。切换字体路径保留已应用的实际字号，Notes 与 Settings 重新测量自身文字布局；原生输入归还时恢复借用前的字体。
 
 ## 2. 四个业务包与共享库
+
+顶部路由按页面顺序决定整页横向进入方向，旧页按原有 Leave 生命周期释放，新页复用原 Frame。下划线调用共享 `Motion:Rect`；难度、职责分段与可选列表导航使用 `C.Selection`，页面只提供目标几何和业务选中值。共享 `Reveal` 负责菜单及筛选容器的有限入场，同目标刷新继续已有任务。每个 Context 复用自身的几何、显隐与选择状态，隐藏列表直接更新终态；不复制页面、列表或业务数据来播放动画。
 
 四个业务包与独立共享库的运行职责如下；本轮离线回归已覆盖共享库加载与产品适配。
 

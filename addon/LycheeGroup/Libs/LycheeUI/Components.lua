@@ -77,13 +77,15 @@ function C.Panel(parent,color,radius,inset,layer)
   if i>=4 then region.corner=true;region:SetTexture(T.media.."rounded-corner.tga")
   else region:SetTexture(130871) end
  end
- local placedWidth,placedHeight,placedRadius
+ local placedRadius
  local paintedR,paintedG,paintedB,paintedAlpha
  local function Place()
   local width,height=parent:GetWidth(),parent:GetHeight()
-  if width==placedWidth and height==placedHeight and radius==placedRadius then return end
-  placedWidth,placedHeight,placedRadius=width,height,radius
   local r=math.max(0,math.min(radius,(width-inset*2)/2,(height-inset*2)/2))
+  -- The slices already stretch with their parent; only a changed corner
+  -- radius needs new geometry while a selection indicator changes width.
+  if r==placedRadius then return end
+  placedRadius=r
   for _,region in ipairs(regions) do region:ClearAllPoints() end
   regions[1]:SetPoint("TOPLEFT",inset+r,-inset);regions[1]:SetPoint("BOTTOMRIGHT",-inset-r,inset)
   for i,side in ipairs(panelSides) do
@@ -173,6 +175,7 @@ local function ButtonBase(parent,text,width,action)
  end)
  b:SetScript("OnHide",function(self) if self.pressedKey then self.pressCancelled=true end;self.expanded=nil;Reset(self);if UI.CloseMenuFor then UI:CloseMenuFor(self) end end)
  function b:SetAvailable(available)
+  if self:IsEnabled()==available then return end
   self:SetEnabled(available);self:SetAlpha(available and 1 or .38)
   if not available then self._inside=nil;self._pressed=nil;UI:CloseMenuFor(self) end
   self:RefreshStyle(true)
@@ -194,8 +197,17 @@ function C.Button(parent,text,width,action,options)
    or self.isChoice and (darkChoice and T.surfaceLow or T.selectBackground)
    or self.active and (self.variant=="text" and T.transparent or T.secondaryContainer)
    or colors and (pressed and colors[3] or inside and colors[2] or colors[1]) or T.secondaryContainer
-  self.fill:SetShown(self.primary or self.isChoice or self.active or colors~=nil)
-  M:Color(self.fill,fill,duration)
+  local permanent=self.primary or self.isChoice or colors~=nil
+  local selected=self.active and self.selectionFill~=false
+  if permanent then
+   self.fill._selMotion=nil;self.fill:Show();self.fill:SetAlpha(1)
+   M:Color(self.fill,fill,duration)
+  else
+   self.fill:SetColor(fill)
+   if immediate then
+    M:Stop(self.fill);self.fill._selMotion=selected==true;self.fill:SetShown(selected);self.fill:SetAlpha(selected and 1 or 0)
+   else M:Selection(self.fill,selected==true,.14) end
+  end
   local hovered=(not (self.primary or self.isChoice or self.active or colors) or self.isChoice and not self.expanded) and (pressed or inside)
   if hovered then
    local state=self.isChoice and not darkChoice and (pressed and T.selectPressed or T.selectHover)
@@ -210,7 +222,10 @@ function C.Button(parent,text,width,action,options)
   if self.focus then self.focusInner:SetColor(darkChoice and T.surfaceLow or T.selectBackground);self.focus:SetShown(self.expanded==true);self.focusInner:SetShown(self.expanded==true) end
  end
  function b:SetPrimary(value) self.primary=value==true;self:RefreshStyle(true) end
- function b:SetActive(value) self.active=value==true;self:RefreshStyle(true) end
+ function b:SetActive(value)
+  value=value==true;if self.active==value then return end
+  self.active=value;self:RefreshStyle(not self:IsVisible())
+ end
  function b:SetSurfaceColors(rest,hover,pressed) self.surfaceColors=rest and {rest,hover or rest,pressed or hover or rest} or nil;self:RefreshStyle(true) end
  function b:SetTextColors(rest,hover,selected) self.textColor,self.hoverTextColor,self.selectedTextColor=rest,hover,selected;self:RefreshStyle(true) end
  function b:SetFeedbackColors(hover,pressed) self.hoverColor,self.pressedColor=hover or T.rowHover,pressed;self:RefreshStyle(true) end
@@ -235,6 +250,7 @@ function C.Button(parent,text,width,action,options)
   self:RefreshStyle(true)
  end
  function b:SetStyle(style)
+  if style.selectionFill~=nil then self.selectionFill=style.selectionFill end
   if style.variant then self:SetVariant(style.variant) end
   if style.height then self:SetHeight(style.height) end
   if style.radius then self:SetRadius(style.radius) end
@@ -242,9 +258,11 @@ function C.Button(parent,text,width,action,options)
   if style.surfaceColors then self:SetSurfaceColors(unpack(style.surfaceColors)) end
   if style.hoverColor or style.pressedColor then self:SetFeedbackColors(style.hoverColor or self.hoverColor,style.pressedColor or self.pressedColor) end
   if style.textColor or style.hoverTextColor or style.selectedTextColor then self:SetTextColors(style.textColor or self.textColor,style.hoverTextColor or self.hoverTextColor,style.selectedTextColor or self.selectedTextColor) end
+  if style.selectionFill~=nil then self:RefreshStyle(true) end
  end
  function b:SetExpanded(value)
-  self.expanded=value==true
+  value=value==true;if self.expanded==value then return end
+  self.expanded=value
   if self.expanded and not self.focus then
    -- Keep the label and arrow above surface batches when focus slices toggle.
    self.choiceForeground=CreateFrame("Frame",nil,self);self.choiceForeground:SetAllPoints(self)
@@ -458,6 +476,31 @@ end
 
 -- Pixel virtual list: one clipped viewport, visible rows plus two spare rows.
 -- offset stays an integer row index for older page callers; pixelOffset owns motion.
+-- One passive visual layer moves; labels and button hit rectangles stay fixed.
+function C.Selection(parent,options)
+ options=options or {}
+ local frame=CreateFrame("Frame",nil,parent);frame:SetFrameLevel(parent:GetFrameLevel()+1);frame:EnableMouse(false)
+ frame.fill=C.Panel(frame,options.color or T.secondaryContainer,options.radius or 8)
+ if options.mark then
+  frame.mark=frame:CreateTexture(nil,"ARTWORK");frame.mark:SetColorTexture(unpack(T.accent));frame.mark:SetSize(3,T.selectionMarkHeight);frame.mark:SetPoint("LEFT",4,0)
+ end
+ frame:Hide()
+ function frame:Select(x,y,width,height,animate)
+  local visible=self:IsShown()
+  if animate==false then
+   M:Stop(self);self._selMotion=true;self:SetAlpha(1);self:Show()
+  else M:Selection(self,true,.14) end
+  M:Rect(self,x,y,width,height,visible and animate~=false and .16 or 0)
+ end
+ function frame:Clear(animate)
+  if animate and self:IsShown() then
+   if self._selMotion~=false then M:Stop(self);M:Selection(self,false,.14) end
+  else M:FinishRect(self);M:Stop(self);self._selMotion=nil;self:Hide() end
+ end
+ frame:SetScript("OnHide",function(self) M:FinishRect(self);M:Stop(self);self._selMotion=nil end)
+ Hook(parent,"OnHide",function() frame:Clear() end)
+ return frame
+end
 function C.List(parent,width,height,rowHeight,onSelect,onHover)
  local list=CreateFrame("Frame",nil,parent);list:SetSize(width,height)
  list.rows={};list.offset=0;list.pixelOffset=0;list.rowHeight=rowHeight or 64;list.viewportHeight=height;list.gutter=C.listRightInset
@@ -502,6 +545,7 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover)
  end
  function list:Refresh(positionOnly)
   local ids=self.ids;local maximum=MaxOffset()
+  local selectionRow,selectionY
   if self.offset~=math.floor((self.pixelOffset or 0)/self.rowHeight) then self.pixelOffset=self.offset*self.rowHeight end
   self.pixelOffset=math.max(0,math.min(self.pixelOffset or 0,maximum));self.offset=math.floor(self.pixelOffset/self.rowHeight)
   self.updating=true;slider:SetMinMaxValues(0,maximum);slider:SetValue(self.pixelOffset);self.updating=false;slider:SetShown(maximum>0)
@@ -516,7 +560,9 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover)
    if key and self.render then
     if rebound or not positionOnly then self.render(row,key) end
     local selected=key==self.selectedKey
-    M:Selection(row.selected,selected and self.selectionFill~=false);M:Selection(row.mark,selected and self.selectionMark~=false)
+    local duration=not self:IsVisible() and 0 or nil
+    M:Selection(row.selected,selected and self.selectionFill~=false and not self.selectionMotion,duration);M:Selection(row.mark,selected and self.selectionMark~=false and not self.selectionMotion,duration)
+    if selected then selectionRow,selectionY=row,-(i-1)*self.rowHeight end
     Highlight(row,true)
     if row.symbol then UI:SetIconState(row.symbol,selected,row._inside==true) end
    end
@@ -530,6 +576,15 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover)
    row._hitVisible=key~=nil and cropTop+cropBottom<rowHeight
    row:EnableMouse(row._hitVisible)
    if row._inside and (not row._hitVisible or not clip:IsMouseOver() or not row:IsMouseOver()) then Leave(row) end
+  end
+  if self.indicator then
+   if self.selectionMotion and selectionRow then
+    local animate=self:IsVisible() and (self.indicatorKey~=self.selectedKey or self.indicatorOffset==self.offset)
+    self.indicator:Select(0,selectionY,selectionRow:GetWidth(),selectionRow:GetHeight(),animate)
+    self.indicator.fill:SetShown(self.selectionFill~=false)
+    self.indicator.mark:SetShown(self.selectionMark~=false)
+   else self.indicator:Clear(self:IsVisible() and self.indicatorOffset==self.offset) end
+   self.indicatorKey,self.indicatorOffset=self.selectedKey,self.offset
   end
  end
  local scrollFrom,scrollElapsed=0,0
@@ -557,6 +612,7 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover)
   for _,row in ipairs(list.rows) do row:SetWidth(width) end
  end
  function list:SetGutter(width)
+  if self.gutter==width then return end
   self.gutter=width;clip:SetPoint("BOTTOMRIGHT",-width,0);ResizeContent()
   self:Refresh()
  end
@@ -567,6 +623,7 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover)
  end
  function list:Clear()
   M:Stop(self);self.scrollTarget=nil;self.ids=nil;self.render=nil;self.selectedKey=nil
+  if self.indicator then self.indicator:Clear();self.indicatorKey=nil end
   for _,row in ipairs(self.rows) do Release(row);row:Hide();UI:SetText(row.title,"");UI:SetText(row.meta,"") end
   slider:Hide()
  end
@@ -576,6 +633,11 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover)
   end end
  end
  function list:SetStyle(style)
+  if style.selectionMotion~=nil then
+   self.selectionMotion=style.selectionMotion
+   if style.selectionMotion and not self.indicator then self.indicator=C.Selection(canvas,{radius=style.radius or 8,mark=true}) end
+  end
+  if self.indicator and style.radius then self.indicator.fill:SetRadius(style.radius) end
   for _,key in ipairs({"alternateRows","selectionFill","selectionMark","hoverFill","idleTextColor","hoverColor"}) do if style[key]~=nil then self[key]=style[key] end end
   for _,row in ipairs(self.rows) do
    if style.rowHeight then row:SetHeight(style.rowHeight) end
@@ -595,12 +657,14 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover)
  list:EnableMouseWheel(true);list:SetScript("OnMouseWheel",function(self,delta) self:SetPixelOffset((self.scrollTarget or self.pixelOffset)-delta*self.rowHeight*2,true) end)
  list:SetScript("OnHide",function(self)
   M:Stop(self);self.scrollTarget=nil
+  if self.indicator then self.indicator:Clear();self.indicatorKey=nil end
   for _,row in ipairs(self.rows) do
    M:Stop(row.hover);row.hover:Hide();M:Stop(row.selected);M:Stop(row.mark)
    local selected=row.key~=nil and row.key==self.selectedKey
    row.selected:SetAlpha(selected and 1 or 0);row.mark:SetAlpha(selected and 1 or 0)
   end
  end)
+ list:SetScript("OnShow",function(self) self:Refresh(true) end)
  for i=1,list.poolCapacity do
   local row=CreateFrame("Button",nil,canvas);row:SetSize(width-C.listRightInset,list.rowHeight);row:SetPoint("TOPLEFT",0,-(i-1)*list.rowHeight)
   row.alternate=C.Panel(row,T.rowAlternate,12)
@@ -797,15 +861,24 @@ function C.Slider(parent,width,min,max,step,onChange,options)
 end
 function C.Segmented(parent,width,entries,onChange)
  local frame=CreateFrame("Frame",nil,parent);frame:SetSize(width,T.segmentHeight);C.Panel(frame,T.surfaceContainer,8)
- frame.buttons={}
+ frame.buttons={};frame.selection=C.Selection(frame)
  local itemWidth=(width-6-math.max(0,#entries-1)*4)/#entries
  for i,entry in ipairs(entries) do
-  local button=C.Button(frame,entry.label or entry[2],itemWidth,function() frame:SetValue(entry.value or entry[1]);if onChange then onChange(frame.value) end end,{variant="compact"})
+  local button=C.Button(frame,entry.label or entry[2],itemWidth,function() frame:SetValue(entry.value or entry[1]);if onChange then onChange(frame.value) end end,{variant="compact",selectionFill=false})
   button:SetPoint("LEFT",3+(i-1)*(itemWidth+4),0);button.value=entry.value or entry[1]
   if entry.icon then button.icon=C.Glyph(button,entry.icon,14);button.icon:SetPoint("LEFT",10,0);button.label:ClearAllPoints();button.label:SetPoint("LEFT",button.icon,"RIGHT",6,0) end
   frame.buttons[i]=button
  end
- function frame:SetValue(value) self.value=value;for _,button in ipairs(self.buttons) do button:SetActive(button.value==value) end end
+ function frame:SetValue(value)
+  self.value=value
+  local selected
+  for i,button in ipairs(self.buttons) do
+   button:SetActive(button.value==value)
+   if button.active then selected=button;self.selection:Select(3+(i-1)*(itemWidth+4),-(self:GetHeight()-button:GetHeight())/2,button:GetWidth(),button:GetHeight(),self:IsVisible()) end
+  end
+  if not selected then self.selection:Clear() end
+ end
+ frame:HookScript("OnShow",function(self) self:SetValue(self.value) end)
  return frame
 end
 -- Rounded rail entry with a straight 3 x 18 selection mark.

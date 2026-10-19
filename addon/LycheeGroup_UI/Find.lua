@@ -182,7 +182,7 @@ function P:Build(parent)
  for _,list in ipairs({self.seasonCategories,self.categories}) do list:SetGutter(0);list.alternateRows=false;list.selectionFill=true;list.idleTextColor=T.muted;for _,row in ipairs(list.rows) do
   row:SetHeight(list.rowHeight-4);row.selected:SetRadius(8);row.hover:SetRadius(8);row.alternate:SetRadius(8);row.title:ClearAllPoints();row.title:SetPoint("LEFT",52,0);row.title:SetWidth(116);C.SetFont(row.title,T.railFontSize+2);row.title:SetWordWrap(true);row.title:SetHeight(0);C.SetLineHeight(row.title,22);row.meta:Hide()
   row.symbol=C.Icon(row,T.railIconSize);row.symbol:SetPoint("LEFT",16,0);row.chevron=C.Glyph(row,"chevron",12);row.chevron:SetPoint("RIGHT",-16,0)
- end end
+ end;list:SetStyle({selectionMotion=true,radius=8}) end
  local surface=CreateFrame("Frame",nil,f);surface:SetSize(MAIN+48,T.contentHeight);surface:SetPoint("TOPLEFT",LEFT+T.contentGap,0);C.Panel(surface,T.surfaceLow,24);self.surface=surface
  local main=CreateFrame("Frame",nil,surface);main:SetSize(MAIN,HEIGHT);main:SetPoint("TOPLEFT",24,-24);self.main=main
  self.searchInputRight=SEARCH_RIGHT
@@ -330,7 +330,6 @@ function P:BuildFilters()
    state.filters[key]=state.filters[key]~=value and value or nil;P:UpdateFilters()
   end)
   choice:SetPoint("TOPLEFT",86,-(i-1)*40);self.rolePresenceChoices[role]=choice
-  for _,button in ipairs(choice.buttons) do button:SetSurfaceColors(T.surface,T.surfaceLow,T.surfaceLowPressed) end
  end
  self.hideZeroScore=C.Check(f,Say("过滤队长 0 分队伍","Hide 0-score leaders"),function(value) state.filters.hideZeroScore=value or nil;P:UpdateFilters() end)
  self.hideZeroScore:SetSize(260,26);self.hideZeroScore:SetPoint("TOPLEFT",20,-348)
@@ -362,7 +361,7 @@ function P:SetFiltersOpen(open)
  self.filterPanel:SetShown(self.filtersOpen);self:ClosePicker();UI.Tooltip:Hide()
  UI:FitToScreen()
  self.filterToggle:SetActive(self.filtersOpen);self.filterChevron:SetRotation(self.filtersOpen and math.pi or 0);self.filterChevron:SetVertexColor(unpack(self.filtersOpen and T.accent or T.muted))
- if self.filtersOpen and not wasOpen then M:Reveal(self.filterPanel,"TOPLEFT",UI.frame,"TOPRIGHT",12,0,-4,0,.16) end
+ if self.filtersOpen and not wasOpen then M:Reveal(self.filterPanel,"TOPLEFT",UI.frame,"TOPRIGHT",12,0,-8,0,.18) end
 end
 function P:TierItems()
  local catalog=UI:GetGroup().Catalog;local used
@@ -384,8 +383,9 @@ function P:BuildPicker()
  end);self.tierChoice:SetHeight(44);self.tierChoice:SetPoint("TOPLEFT",8,-64)
  self.tierChoice:SetSurfaceVariant("dark")
  self.difficultySurface=CreateFrame("Frame",nil,f);self.difficultySurface:SetSize(280,36);C.Panel(self.difficultySurface,T.surfaceLow,8)
+ self.difficultySelection=C.Selection(self.difficultySurface)
  self.difficultyButtons={}
- for i=1,12 do self.difficultyButtons[i]=C.Button(self.difficultySurface,"",60,function(button) state.difficultyID=button.value or nil;P:RefreshPicker();P.results:SetPixelOffset(0,false);if state.browseReady then P:CommitChoice();P:DoSearch(true) else P:UpdateFilters(true) end end,{variant="compact"}) end
+ for i=1,12 do self.difficultyButtons[i]=C.Button(self.difficultySurface,"",60,function(button) state.difficultyID=button.value or nil;P:RefreshPicker();P.results:SetPixelOffset(0,false);if state.browseReady then P:CommitChoice();P:DoSearch(true) else P:UpdateFilters(true) end end,{variant="compact",selectionFill=false}) end
  self.activities=C.List(f,280,440,48,function(key)
   if P.multiSelectMode and P.keystoneGroups[key] then P:ToggleGroupChoice(key);return end
   state.groupKeys=nil;P.draftGroupKeys,P.multiSelectMode=nil,nil
@@ -418,8 +418,10 @@ function P:PositionPicker()
  local top=8
  for i,key in ipairs(self.seasonIDs) do if key==state.category then top=8+(i-1)*52 end end
  for i,key in ipairs(self.catIDs) do if key==state.category then top=128+(i-1)*52 end end
- self.pickerY=math.max(10,math.min(top,T.contentHeight-self.picker:GetHeight()-10))
- self.picker:ClearAllPoints();self.picker:SetPoint("TOPLEFT",self.rail,"TOPRIGHT",PICKER_GAP,-self.pickerY)
+ local y=math.max(10,math.min(top,T.contentHeight-self.picker:GetHeight()-10))
+ if M.placements[self.picker] then M:Reveal(self.picker,"TOPLEFT",self.rail,"TOPRIGHT",PICKER_GAP,-y,0,8,.16)
+ elseif self.pickerY~=y then self.picker:SetPoint("TOPLEFT",self.rail,"TOPRIGHT",PICKER_GAP,-y) end
+ self.pickerY=y
 end
 function P:ClosePicker()
  self.draftGroupKeys,self.multiSelectMode=nil,nil
@@ -491,18 +493,25 @@ function P:RefreshPicker()
  -- Difficulty names remain complete; the native menu grows to its real content width.
  local menuWidth=chooseDifficulty and math.max(336,total+math.max(0,#diffs-1)*4+22) or 336
  self.picker:SetWidth(menuWidth);self.picker.title:SetWidth(menuWidth-76);self.tierChoice:SetWidth(menuWidth-16);self.difficultySurface:SetWidth(menuWidth-16)
- self.activities:SetWidth(menuWidth-16);self.activities:SetGutter(C.listRightInset)
+ self.activities:SetWidth(menuWidth-16)
  local extra=chooseDifficulty and (self.difficultySurface:GetWidth()-6-math.max(0,#diffs-1)*4-total)/#diffs or 0
  local x=3
  for i,button in ipairs(self.difficultyButtons) do
   local d=diffs[i];button:SetShown(chooseDifficulty and d~=nil)
-  if d then button:ClearAllPoints();button:SetPoint("LEFT",x,0);button:SetWidth(button.optionWidth+extra);button.value=d.id;button:SetActive(state.difficultyID==d.id or not state.difficultyID and not d.id);x=x+button:GetWidth()+4 end
+  if d then
+   button:ClearAllPoints();button:SetPoint("LEFT",x,0);button:SetWidth(button.optionWidth+extra);button.value=d.id;button:SetActive(state.difficultyID==d.id or not state.difficultyID and not d.id)
+   if chooseDifficulty and button.active then self.difficultySelection:Select(x,-3,button:GetWidth(),button:GetHeight(),self.picker:IsVisible()) end
+   x=x+button:GetWidth()+4
+  end
  end
+ if not chooseDifficulty then self.difficultySelection:Clear() end
  if chooseDifficulty then top=top+48 end;wipe(self.activityIDs);wipe(self.activityMap)
  if cat.id~=9 then self.activityIDs[#self.activityIDs+1]=0 end
  for _,group in ipairs(UI:GetGroup().Catalog:GetGroups(state.category)) do if not state.tier or group.tier==state.tier then self.activityMap[group.key]=group;self.activityIDs[#self.activityIDs+1]=group.key end end
  local confirm=self.multiSelectMode and next(self.draftGroupKeys)~=nil
- self.activities:ClearAllPoints();self.activities:SetPoint("TOPLEFT",8,-top);local listHeight=math.min(440,math.max(1,#self.activityIDs*48-4));self.activities:SetViewport(listHeight);self.picker:SetHeight(top+listHeight+(confirm and 64 or 8))
+ local contentHeight=math.max(1,#self.activityIDs*48-4);local listHeight=math.min(440,contentHeight)
+ self.activities:SetGutter(contentHeight>listHeight and C.listRightInset or 0)
+ self.activities:ClearAllPoints();self.activities:SetPoint("TOPLEFT",8,-top);self.activities:SetViewport(listHeight);self.picker:SetHeight(top+listHeight+(confirm and 64 or 8))
  self.pickerConfirm:SetShown(confirm);self.pickerConfirm:SetWidth(menuWidth-16);self.pickerConfirm:ClearAllPoints();self.pickerConfirm:SetPoint("TOPLEFT",8,-top-listHeight-8)
  if state.groupKeys then self.activities.selectedKey=nil else self.activities.selectedKey=state.groupKey or 0 end
  self.activities:SetItems(self.activityIDs,function(row,key)
@@ -511,7 +520,7 @@ function P:RefreshPicker()
   row.multiSelect:SetShown(selectable or false)
   local checked=self.draftGroupKeys or state.groupKeys
   row.multiSelect:SetValue(checked and checked[key] or false)
-  row.title:SetWidth(menuWidth-16-C.listRightInset-60-(key==0 and multiGroups and self.multiSelectToggle:GetWidth()+4 or selectable and 32 or 0))
+  row.title:SetWidth(row:GetWidth()-60-(key==0 and multiGroups and self.multiSelectToggle:GetWidth()+4 or selectable and 32 or 0))
   local toggle=self.multiSelectToggle
   if key==0 then
    toggle:SetParent(row);toggle:ClearAllPoints();toggle:SetPoint("RIGHT",-6,0);toggle:SetShown(multiGroups~=nil)
@@ -556,7 +565,7 @@ function P:SelectCategory(key,row)
   self.multiSelectMode=self.draftGroupKeys and true or nil
  end
  self:RefreshPicker();self:UpdateFilters(true)
- if changed or not self.picker:IsShown() then self.picker:Show();self.picker:RegisterEvent("GLOBAL_MOUSE_DOWN");M:Reveal(self.picker,"TOPLEFT",self.rail,"TOPRIGHT",PICKER_GAP,-self.pickerY,0,4,.14) else self:ClosePicker() end
+ if changed or not self.picker:IsShown() then self.picker:Show();self.picker:RegisterEvent("GLOBAL_MOUSE_DOWN");M:Reveal(self.picker,"TOPLEFT",self.rail,"TOPRIGHT",PICKER_GAP,-self.pickerY,0,8,.16) else self:ClosePicker() end
  if changed and state.browseReady then self:DoSearch(true) end
 end
 function P:RememberCategory()
