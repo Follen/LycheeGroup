@@ -68,7 +68,7 @@ function M:Initialize()
     button:SetScript("OnEnter", function()
         background:SetVertexColor(unpack(theme.surfaceLowHover))
         if M.dragging then return end
-        local zh = GetLocale() == "zhCN"
+        local zh = A:GetLocale() == "zhCN"
         GameTooltip:SetOwner(button, "ANCHOR_LEFT")
         GameTooltip:AddLine(A.L.brand)
         GameTooltip:AddLine(zh and "左键：打开／关闭荔枝组队" or "Left-click: toggle Lychee LFG", 1, 1, 1)

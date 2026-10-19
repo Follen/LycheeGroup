@@ -3,16 +3,17 @@ local A=_G.LycheeGroup
 local UI=A.UI
 local C,T,L=UI.C,UI.Theme,UI.L
 local P={section="general"};UI.pages.settings=P
-local zh=GetLocale()=="zhCN"
+local zh=A:GetLocale()=="zhCN"
 local function S(cn,en) return zh and cn or en end
-local sections={{"general",S("入口与快捷键","Access and shortcuts")},{"interface",S("界面外观","Appearance")},{"browse",S("队伍与成员","Groups and members")},{"notes",S("笔记与提醒","Notes and reminders")},{"floating",S("悬浮窗","Floating window")},{"about",L.about}}
-local types={{value="positive",label=S("推荐","Recommended")},{value="neutral",label=S("中性","Neutral")},{value="caution",label=S("拉黑","Blocked")}}
+local sections={{"general",S("入口与快捷键","Access & shortcuts")},{"interface",S("界面与外观","Appearance")},{"browse",S("队伍与成员","Groups & members")},{"notes",S("笔记与提醒","Notes and reminders")},{"floating",S("悬浮窗","Floating window")},{"about",L.about}}
+local types={{value="positive",label=S("推荐","Positive")},{value="neutral",label=S("中性","Neutral")},{value="caution",label=S("拉黑","Blocked")}}
 local definitions={
  general={{"toggleBinding",A.L.bindingToggle,"","binding"},
  {"minimap",S("显示小地图按钮","Show minimap button"),S("左键开关主窗口，右键打开设置；拖动调整位置。","Left-click toggles the window; right-click opens settings. Drag to reposition.")},
  {"nativeLFGEntry",S("接管原生组队眼睛","Use the native LFG eye"),S("点击小地图组队眼睛打开荔枝组队；右键仍显示原生队列菜单。","Open Lychee LFG from the minimap eye; right-click keeps the native queue menu.")}},
- interface={{"uiScale",S("主窗口缩放","Main window scale"),S("等比调整整个主窗口，当前基准大小为 100%；悬浮窗单独设置。","Scale the entire main window; its baseline size is 100%. The floating window has a separate setting."),"range",75,125},
- {"font",S("界面字体","Interface font"),S("选择游戏字体或已安装的共享字体，立即生效。","Choose a game or installed shared font. Changes apply immediately."),function() return A.Fonts:Choices() end},
+ interface={{"language",S("界面语言","Interface language"),S("仅改变插件文字，重载界面后生效。","Change addon text. Reload the UI to apply."),{{value="auto",label=S("跟随游戏","Game language")},{value="zhCN",label="简体中文"},{value="enUS",label="English"}}},
+ {"uiScale",S("主窗口缩放","Main window scale"),S("等比调整整个主窗口，当前基准大小为 100%；悬浮窗单独设置。","Scale the entire main window; its baseline size is 100%. The floating window has a separate setting."),"range",75,125},
+ {"font",S("界面字体","Interface font"),S("默认使用荔枝字体，也可选择游戏或共享字体，立即生效。","Use LycheeFont, a game font or an installed shared font. Changes apply immediately."),function() return A.Fonts:Choices() end},
  {"reduceMotion",L.reduceMotion,S("关闭开窗位移、Logo 动作和局部过渡。","Disable window movement, logo animation and local transitions.")}},
  browse={
  {"defaultSort",S("默认排序","Default sorting"),S("本角色进入其他活动分类时采用的排序。","Default sorting for this character's activity categories."),{{value="newest",label=L.newest},{value="rating",label=L.leaderRating},{value="itemLevel",label=L.requiredItemLevel},{value="members",label=L.members}}},
@@ -51,6 +52,7 @@ function P:Build(parent)
  end
  local reset={"resetPosition",S("悬浮窗位置","Floating window position"),S("未锁定时拖动荔枝标志，可放在屏幕内任意位置。","Drag the lychee logo to position the window when unlocked."),"action"}
  self:BuildRow(self.panels.floating,reset,4)
+ self.reloadLanguage=C.Button(self.panels.interface,S("重载界面","Reload UI"),220,function() C_UI.Reload() end)
  self:BuildAbout(self.panels.about)
 end
 function P:BuildAbout(parent)
@@ -212,6 +214,7 @@ function P:LayoutRows()
   end
   panel.nextRowY=top
  end
+ self.reloadLanguage:ClearAllPoints();self.reloadLanguage:SetPoint("TOPRIGHT",0,-self.panels.interface.nextRowY-16)
 end
 function P:SelectSection(key)
  local changed=self.section~=key
@@ -238,6 +241,7 @@ function P:Sync()
   else c:SetValue(value==true);UI:SetText(c.label,value and S("已开启","On") or S("已关闭","Off"));c:SetWidth(math.ceil(c.label:GetStringWidth())+c.track:GetWidth()+36);UI:Color(c.label,c._inside and T.text or T.muted) end
  end
  self.syncing=nil
+ self.reloadLanguage:SetShown(A:NeedsLanguageReload())
  self:LayoutRows()
  if self.section=="about" then self:RefreshAbout() end
 end

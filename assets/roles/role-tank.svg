@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Broad shoulders, curved sides and an early taper keep the shield legible at 16 px. -->
+  <path fill="#edf0f2" d="M4 8Q32-1 60 8L57 29C55 43 44 55 32 62C20 55 9 43 7 29Z"/>
+  <path fill="#64747f" d="M9 12Q32 5 55 12L52 28C50 39 42 49 32 56C22 49 14 39 12 28Z"/>
+  <path fill="#aebbc4" d="M13 15Q22 12 30 12V50C22 43 17 36 16 27Z"/>
+  <path fill="#93a4af" d="M34 12Q43 12 51 15L48 27C47 36 42 43 34 50Z"/>
+</svg>

@@ -1,0 +1,13 @@
+Tool: built-in image_gen
+Reference: Media/lychee-logo.png
+
+Use case: compositing
+Asset type: 16:9 horizontal brand campaign poster, one finished raster image.
+Primary request: Build a completely redesigned contemporary graphic poster from the provided lychee brand mark. Art-direct it like an independent design studio's bold visual identity campaign: typographic, fresh, confident, restrained.
+Input image: The original transparent lychee logo is the brand asset to preserve and integrate. Keep its recognizable jagged red lychee silhouette, two green leaves, dark red curved side and scattered spots. Do not use the previous fantasy poster as a reference.
+Canvas: horizontal 16:9, ideally 1920x1080.
+Composition: asymmetrical editorial layout with generous margins and carefully balanced negative space. Text occupies the left 46 percent. A single dramatically oversized original lychee mark anchors the right half, taking up about 65 percent of the canvas height; its full visible silhouette and leaves remain inside the frame. The mark is clean, flat, sharply rendered, with its original proportions. Avoid a boxed-in or thumbnail appearance. The title and mark form one assertive diagonal visual rhythm.
+Background and palette: a uniform soft warm-white paper field, near #F6F3ED, with almost imperceptible fine paper grain. Use the logo's own raspberry red and green as the only strong colors. Typography is ink-black. Excellent clean separation and plenty of untouched white space.
+Typography and exact Chinese copy: Set the title as two deliberate left-aligned lines, first line “荔枝” at an exceptionally large scale in heavy contemporary Chinese sans-serif with a distinctive broad, confident shape; second line “魔兽世界插件” in a smaller but still bold sans-serif. Together these read “荔枝魔兽世界插件”. Set the download information “DD，盒子可下载” as a modest but clearly legible left-aligned footer, aligned precisely with the title's left edge. All words must be exactly correct. Use disciplined spacing and a real typography hierarchy. Keep all characters fully visible.
+Design quality: polished 2D graphic design, exceptionally strong scale contrast, optically aligned edges, considered white space, crisp silhouette. The lychee itself is the visual idea. This should feel like a designed brand poster.
+Constraints: only one logo and the specified Chinese copy. No extra labels or slogans, no English brand title, no dates, no fake UI, no QR codes, no platform logos, no website mockup. No fantasy landscapes, runes, gold, fire, magical rings, extruded 3D lettering, metallic lettering, glow, gradients, decorative borders, drop shadows, or floating geometric decoration. No photograph of a poster. Output the artwork edge to edge.

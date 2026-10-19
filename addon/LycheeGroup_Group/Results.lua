@@ -4,6 +4,8 @@ local G = A.Group
 local Results={gen=0}
 G.Results=Results
 local records,ids,detailQueue,pendingIDs={},{},{},{}
+-- Exact native title keys live only for this login; never serialize or parse them.
+local blockedTitles,blockedTitleCount={},0
 local pendingBulk,committing
 local updateVersion=0
 -- Keep recently visited rows across filter/sort/scroll changes. The old 16-entry
@@ -178,9 +180,11 @@ local function MatchesLeaderText(record,text)
  return type(leader)=="string" and leader:lower():find(text,1,true)~=nil
 end
 local function Pass(record,filters,leaderText)
+ if blockedTitles[record.name] then return false end
  if G.Applications:IsActive(record.id) then return false end
  if leaderText and not MatchesLeaderText(record,leaderText) then return false end
  if filters.category and not G.Catalog:Matches(record.activity,filters.category,filters.groupKey,filters.difficultyID,filters.tier,filters.groupKeys) then return false end
+ if filters.hideZeroScore and (record.leaderOverallDungeonScore or 0)<1 then return false end
  if filters.personKey then
   local match=record.leaderKey==filters.personKey
   if not match then for _,member in ipairs(Results:GetDetails(record).members) do if member.nameKey==filters.personKey then match=true;break end end end
@@ -213,6 +217,8 @@ end
 local sorting
 local function Sort(a,b)
  local x,y=records[a],records[b]
+ local xf,yf=x.bnetFriends+x.charFriends>0,y.bnetFriends+y.charFriends>0
+ if xf~=yf then return xf end
  local av,bv
  if sorting=="rating" then av,bv=x.leaderRating or -1,y.leaderRating or -1
  elseif sorting=="members" then av,bv=x.numMembers,y.numMembers
@@ -222,6 +228,19 @@ local function Sort(a,b)
  return a<b
 end
 function Results:InvalidateView() dirty=true end
+function Results:BlockTitle(title)
+ if title==nil or blockedTitles[title] then return false end
+ blockedTitles[title]=true;blockedTitleCount=blockedTitleCount+1
+ self:InvalidateView();G:Notify("results")
+ return true
+end
+function Results:ClearBlockedTitles()
+ if blockedTitleCount==0 then return false end
+ wipe(blockedTitles);blockedTitleCount=0
+ self:InvalidateView();G:Notify("results")
+ return true
+end
+function Results:GetBlockedTitleCount() return blockedTitleCount end
 local function FinishUpdates(version)
  for id,queued in pairs(pendingIDs) do if queued<=version then pendingIDs[id]=nil end end
  if pendingBulk and pendingBulk<=version then pendingBulk=nil end

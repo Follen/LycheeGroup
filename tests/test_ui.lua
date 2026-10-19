@@ -671,14 +671,19 @@ do
  local scripts={};for _,event in ipairs(events) do scripts[event]=box:GetScript(event) end
  box:UserType("Old native activity token")
  local remember=A.charPrefs.rememberFilters;A.charPrefs.rememberFilters=true
- G.prefs.find={filters={text="Old saved local query",minLevel=12,maxLevel=99,tankPresence="present",healerPresence="missing",needsDamage=true}}
+ G.prefs.find={filters={text="Old saved local query",minLevel=12,maxLevel=99,tankPresence="present",healerPresence="missing",needsDamage=true,hideZeroScore=true}}
  local combat=InCombatLockdown;_G.InCombatLockdown=function() return true end
  T.eq(A:Open("find"),true,"Find first opens during combat without protected mouse propagation")
  local page=U.pages.find
  T.eq(G.filters.tankPresence,"present");T.eq(G.filters.healerPresence,"missing");T.eq(G.filters.damagePresence,"missing","first entry migrates the saved damage requirement alongside the other role-presence fields")
  T.eq(G.filters.needsDamage,nil);T.eq(G.prefs.find.filters.needsDamage,nil,"migration removes the retired damage field")
  T.eq(page.rolePresenceChoices.TANK.value,"present");T.eq(page.rolePresenceChoices.HEALER.value,"missing");T.eq(page.rolePresenceChoices.DAMAGER.value,"missing")
+ T.eq(page.hideZeroScore.value,true);T.eq(G.filters.hideZeroScore,true,"the saved seasonal score filter is restored on first entry")
+ T.eq(page.filterCount,4);T.eq(page.filterToggle.label:GetText(),"筛选 4","restored conditions remain visible while the panel is closed")
+ T.eq(page.clearFilters:IsEnabled(),true)
  page:ClearFilters();T.eq(G.filters.tankPresence,nil);T.eq(G.filters.healerPresence,nil);T.eq(G.filters.damagePresence,nil)
+ T.eq(G.filters.hideZeroScore,nil);T.eq(page.hideZeroScore.value,false,"clear filters resets the score switch")
+ T.eq(page.filterCount,0);T.eq(page.filterStatus:GetText(),"未启用条件");T.eq(page.clearFilters:IsEnabled(),false,"reset is unavailable when the filters and sort are already at their defaults")
  T.eq(page.picker,nil,"Find keeps the activity popup unbuilt while only results are open")
  T.eq(page.main.keyboardEnabled,nil,"first combat build does not change restricted keyboard propagation")
  T.eq(page.main.events.PLAYER_REGEN_ENABLED,true)
@@ -711,7 +716,7 @@ do
  T.eq(box:GetText(),"");T.ok(G.searchClears>0,"leader search and first native lease discard stale native activity tokens")
  T.eq(page.searchHint:GetText(),"队伍标题或钥石范围，如 12-15")
  T.eq(page.fMinLevel,nil);T.eq(page.fMaxLevel,nil,"unsupported local level range inputs are not created")
- T.eq(page.filterPanel:GetHeight(),657,"seasonal role-presence rows fit alongside size, relations and sorting")
+ T.eq(page.filterPanel:GetHeight(),582,"seasonal controls fit in the compact filter panel")
  local revision=U.Native.searchLease.revision
  box:UserType("12-15");T.eq(U.Native.searchLease.revision,revision+1,"each native edit distinguishes a newer query without parsing it")
  T.eq(G.filters.text,nil);T.eq(G.filters.leaderText,nil);T.eq(G.filters.minLevel,nil);T.eq(G.filters.maxLevel,nil,"native range text is never copied into local result filters")
@@ -720,7 +725,12 @@ do
  T.eq(G.searchText,"12-15","Enter submits the text already owned by the native input")
  page:SelectCategory("seasonDungeon");T.eq(box:GetText(),"12-15","searches within the category preserve the player's native query")
  page.fMembers.box:SetText("5")
+ page.hideZeroScore:Fire("OnClick");T.eq(G.prefs.find.categoryPrefs.seasonDungeon.hideZeroScore,true)
+ page.fMinMembers.box:SetText("1");T.eq(page.filterCount,2,"the two player bounds count as one range condition alongside the score switch")
+ page.fMinMembers.box:SetText("");T.eq(page.filterToggle.label:GetText(),"筛选 2")
  page:SelectCategory("seasonRaid");T.eq(box:GetText(),"","switching category clears incompatible native text and activity tokens")
+ T.eq(page.hideZeroScore:IsShown(),false);T.eq(G.filters.hideZeroScore,nil,"the seasonal score filter does not affect other categories")
+ T.eq(page.filterCount,0);T.eq(page.filterPanel:GetHeight(),376,"categories without role conditions use the shorter layout")
  T.eq(page.searchHint:GetText(),"队伍标题","raid search returns to title mode without a key-range hint")
  T.eq(page.searchModeToggle:IsShown(),true);T.eq(page.search.box,box)
  T.eq(G.filters.maxMembers,nil,"a category without saved conditions does not inherit the dungeon member limit")
@@ -728,6 +738,9 @@ do
  page.search.box:UserType("Heroic");page.refresh:Fire("OnClick");T.eq(G.searchMode,"group");T.eq(G.searchText,"Heroic")
  page.searchClear:Fire("OnClick");T.eq(page.search.box:GetText(),"");T.eq(G.searchText,"")
  page:SelectCategory("seasonDungeon")
+ T.eq(page.hideZeroScore:IsShown(),true);T.eq(page.hideZeroScore.value,true);T.eq(G.filters.hideZeroScore,true,"returning to seasonal dungeons restores the score preference")
+ T.eq(page.filterCount,2,"the summary follows the restored category conditions")
+ page.hideZeroScore:Fire("OnClick")
  page.activities.rows[1]:Fire("OnClick","LeftButton")
  local clears=G.searchClears
  box:UserType("12-15");box:SetFocus();U:Hide(true)
@@ -873,7 +886,7 @@ local difficultyWidth,count=0,0
 for _,button in ipairs(find.difficultyButtons) do if button:IsShown() then difficultyWidth=difficultyWidth+button:GetWidth();count=count+1;T.ok(button:GetWidth()>=button.textWidth+20,"difficulty labels retain their full natural width") end end
 T.near(difficultyWidth+math.max(0,count-1)*4+6,find.difficultySurface:GetWidth(),.001,"difficulty buttons fill the available row without a trailing empty strip")
 local membersAnchor={find.fMembers:GetPoint()}
-T.eq(membersAnchor[#membersAnchor],-145,"non-dungeon filters close the hidden key-level row")
+T.eq(membersAnchor[#membersAnchor],-128,"member bounds stay near the filter header in every category")
 T.ok(find.fMembers.placeholder and find.fMembers.placeholder:IsShown(),"an empty numeric filter visibly says unrestricted")
 T.eq(find.fMembers.increase,nil,"numeric filters have no stepper arrows")
 find.activities.rows[1]:Fire("OnClick","LeftButton")
@@ -893,6 +906,14 @@ find.fMinMembers.box:SetText("3");T.eq(G.filters.maxMembers,4)
 find:SelectCategory("seasonDungeon");T.eq(G.filters.minMembers,nil,"a category without a minimum stays unrestricted")
 find:SelectCategory("seasonRaid");T.eq(G.filters.minMembers,3);T.eq(G.filters.maxMembers,4,"both bounds restore with their category")
 find:ClearFilters();T.eq(G.filters.minMembers,nil);T.eq(G.filters.maxMembers,nil)
+do
+ local wasOpen=find.filtersOpen;find:SetFiltersOpen(true)
+ Pick(find.sortChoice,"members")
+ T.eq(find.filterCount,0);T.eq(find.filterStatus:GetText(),"已更改排序");T.eq(find.clearFilters:IsEnabled(),true,"sorting alone enables reset without inflating the filter count")
+ find.clearFilters:Fire("OnClick")
+ T.eq(G.filters.sort,A:GetSetting("defaultSort"));T.eq(find.clearFilters:IsEnabled(),false,"reset restores the configured default sort")
+ find:SetFiltersOpen(wasOpen)
+end
 do
  find:SelectCategory("seasonDungeon")
  local filtersOpen=find.filtersOpen;find:SetFiltersOpen(true)
@@ -1234,6 +1255,8 @@ do
   T.eq(slot.role:IsShown(),true,"empty party slots retain a role placeholder")
   T.eq(slot.role:GetTexture(),U.Theme.media..({TANK="role-tank",HEALER="role-healer",DAMAGER="role-dps"})[role]..".tga")
   T.eq(slot.icon:IsShown(),i==1,"only the occupied slot shows a specialization")
+  T.eq(slot.role.desaturated,i~=1,"only empty seasonal dungeon roles use grayscale")
+  T.same(slot.role.vertex,i==1 and {1,1,1,1} or {.7,.7,.7,1},"missing roles are darker while occupied roles retain their colors")
  end
  T.eq(count.width,138);T.eq(age.width,88)
  members[1]={name="Damage1",class="MAGE",assignedRole="DAMAGER",specID=900063}
@@ -1251,6 +1274,8 @@ do
  for i,spec in ipairs({900071,900257,900063,900062,900064}) do
   T.eq(target.roster.slots[i].icon:IsShown(),true)
   T.eq(target.roster.slots[i].icon:GetTexture(),200000+spec,"unordered party members render tank, healer, then damage in stable order")
+  T.eq(target.roster.slots[i].role.desaturated,false,"a filled slot restores its colored role icon")
+  T.same(target.roster.slots[i].role.vertex,{1,1,1,1},"recycled slots restore normal brightness")
  end
  T.eq(members[1].specID,900063,"rendering preserves provider member order")
  r.categoryID=3;r.maxNumPlayers=40;r.numMembers=40;r.details.counts={TANK=2,HEALER=8,DAMAGER=30};Render()
@@ -2766,6 +2791,91 @@ do
  T.eq(g.invitedApplicant,nil);T.eq(g.declinedApplicant,nil)
  T.eq(applicant.marks.noteKey,nil,"leaving the applicant page releases the clickable player identity")
  u:Hide(true)
+end
+
+-- Title blocking follows the clicked row and leaves active applications intact.
+for _,locale in ipairs({"zhCN","enUS"}) do
+ local fresh=dofile("tests/ui_fixture.lua")(locale)
+ local a,u,g=fresh.A,fresh.U,fresh.G
+ a.db.reduceMotion=true
+ g.prefs.find={category="seasonDungeon",categoryPrefs={seasonDungeon={selected=true,difficultyID=8}}}
+ for id=1,4 do g.records[id]={id=id,activityID=2,activity=g.Catalog:GetActivity(2),categoryID=2,name=id==3 and "Different title" or "Repeated title",leaderName="Leader"..id.."-Home",numMembers=1,maxNumPlayers=5,age=10} end
+ local application={id=4,status="applied",categoryID=2,result=g.records[4],expiresAt=GetTime()+300}
+ g.apps={application}
+ a:Open("find")
+ local page=u.pages.find
+ local function ChooseBlock()
+  local menu=u.context.menu
+  for i,item in ipairs(menu.items) do if item.value=="blockTitle" then
+   T.eq(item.label,locale=="zhCN" and "屏蔽相同标题队伍" or "Block groups with this title")
+   local row=menu.list.rows[i];row:Fire("OnMouseDown","LeftButton");row:Fire("OnClick","LeftButton");return
+  end end
+  error("missing title-block menu action")
+ end
+ page.results.clip.mouseOver=true
+ local row=page.results.rows[1];row:Fire("OnMouseDown","RightButton");row:Fire("OnClick","RightButton")
+ ChooseBlock()
+ T.same(page.results.ids,{3},"right-click blocking removes every matching result")
+ T.eq(g.Results:GetBlockedTitleCount(),1)
+ T.same(page.appList.ids,{4});T.eq(g:GetApplication(4),application);T.eq(g.cancelled,nil,"blocking never cancels or removes an application")
+ page:ClearFilters();T.same(page.results.ids,{3},"ordinary filter clearing preserves the separate title blocks")
+ u:Hide(true);a:Open("find")
+ T.same(page.results.ids,{3},"closing and reopening Find keeps session title blocks")
+ u:Hide(true)
+end
+
+-- The settings pill centers its complete icon/label group, including after font changes.
+for _,locale in ipairs({"zhCN","enUS"}) do
+ local fresh=dofile("tests/ui_fixture.lua")(locale)
+ fresh.A.db.reduceMotion=true;fresh.A:Open("settings")
+ local u=fresh.U;local button=u.settingsButton
+ local function CheckSettingsPadding()
+  local iconPoint={button.icon:GetPoint()};local textPoint={button.label:GetPoint()}
+  local left=iconPoint[#iconPoint-1]
+  local right=button:GetWidth()-textPoint[#textPoint-1]-button.label:GetStringWidth()
+  T.near(left,right,.01,"settings icon and label have equal outer padding")
+ end
+ CheckSettingsPadding();u:ApplyFont(u.Theme.font);CheckSettingsPadding()
+ button:Fire("OnEnter");CheckSettingsPadding();button:Fire("OnLeave")
+ fresh.A:Open("find")
+ local page=u.pages.find
+ local function CenterOffset(region)
+  local point={region:GetPoint()};local offset=point[#point]
+  return point[1]:find("TOP") and offset-region:GetHeight()/2 or offset
+ end
+ T.near(CenterOffset(page.appsTitle),-page.applicationPanel:GetHeight()/2,.01,"the empty application header centers its title")
+ T.near(CenterOffset(page.autoJoin),CenterOffset(page.appsTitle),.01,"both switches share the title's vertical center")
+ u:ApplyFont(u.Theme.font)
+ T.near(CenterOffset(page.autoJoin),CenterOffset(page.appsTitle),.01,"changing typeface preserves header alignment")
+ T.near(page.autoJoin:GetWidth(),math.ceil(page.autoJoin.label:GetStringWidth())+56,.01,"font changes update the complete auto-join label width")
+ u:Hide(true)
+end
+
+-- English layout uses the addon locale even on a Chinese client.
+for _,locale in ipairs({"enUS","zhCN"}) do
+ local fresh=dofile("tests/ui_fixture.lua")("zhCN",nil,{language=locale})
+ local a,u=fresh.A,fresh.U;a.db.reduceMotion=true;a:Open("find")
+ local page=u.pages.find
+ local any=locale=="zhCN" and "不限" or "Any"
+ T.eq(page.fMinMembers.placeholder:GetText(),any,"numeric placeholders follow the addon language")
+ T.eq(page.fMembers.placeholder:GetText(),any)
+ for _,row in ipairs(page.seasonCategories.rows) do
+  if row.key and locale=="enUS" then T.ok(row:GetHeight()>=row.title:GetStringHeight()+16,"two-line season categories retain eight units of vertical padding") end
+ end
+ a:Open("create");T.eq(u.pages.create.ilvl.placeholder:GetText(),any);T.eq(u.pages.create.score.placeholder:GetText(),any)
+ a:Open("notes")
+ local notes=u.pages.notes
+ for _,button in pairs(notes.tabs) do T.ok(button.label:GetStringWidth()<=button.label:GetWidth(),"complete note navigation labels fit beside their counts") end
+ local function CheckAddPadding()
+  local button=notes.addButton
+  T.ok(button:GetWidth()>=button.label:GetStringWidth()+56,"the add label, icon, gap and outer padding all fit")
+  local iconPoint={button.icon:GetPoint()};local labelPoint={button.label:GetPoint()}
+  local left=iconPoint[#iconPoint-1];local textX=labelPoint[#labelPoint-1]
+  T.eq(textX-left-button.icon:GetWidth(),8,"the add icon stays eight units from its label")
+  T.ok(left>=16,"the add icon has full outer padding")
+  T.near(button:GetWidth()-textX-button.label:GetStringWidth(),left,1,"the complete add button content is centered")
+ end
+ CheckAddPadding();u:ApplyFont(u.Theme.font);CheckAddPadding();u:Hide(true)
 end
 
 -- Character defaults survive a new UI session; only confirmed, available roles are saved.

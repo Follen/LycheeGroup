@@ -46,7 +46,7 @@ See the [product document](Product.md) for implementation and verification cover
 
 `/lycheegroup` is an alias for `/lg`.
 
-The default main-window key is the English semicolon `;`. It is assigned only when the addon has no binding and the key is free. Change it under Access and shortcuts, and adjust the main window from 75% to 125% under Appearance.
+The default main-window key is the English semicolon `;`. It is assigned only when the addon has no binding and the key is free. Change it under Access & shortcuts. Under Appearance, adjust the main window from 75% to 125%, choose the game language, Simplified Chinese or English (applied after reloading), and select a font. The bundled LycheeFont uses the complete YaHei font for the Chinese UI and Inter for the English UI; game and shared fonts remain available.
 
 ## Development
 

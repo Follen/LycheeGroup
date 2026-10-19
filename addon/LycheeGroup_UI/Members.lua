@@ -5,7 +5,7 @@ local Members={};UI.Members=Members
 local NAME_SIZE,NAME_HEIGHT=14,18
 local META_SIZE,META_HEIGHT=12,16
 local ICON_SIZE,MARK_SIZE,TEXT_GAP=24,18,8
-local zh=GetLocale()=="zhCN"
+local zh=A:GetLocale()=="zhCN"
 local function Say(cn,en) return zh and cn or en end
 
 function Members:Identity(member)

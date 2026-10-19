@@ -4,7 +4,7 @@ local A=_G.LycheeGroup
 local UI=A.UI
 local Application={};UI.Application=Application
 local T,L,C=UI.Theme,UI.L,UI.C
-local zh=GetLocale()=="zhCN"
+local zh=A:GetLocale()=="zhCN"
 local function Say(cn,en) return zh and cn or en end
 
 function Application:ClearFocus()

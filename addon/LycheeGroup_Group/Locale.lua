@@ -1,6 +1,6 @@
 -- 组队业务文案:错误文本与供 UI 呈现的业务字符串;仅构造当前语言一份。
 local A = _G.LycheeGroup
-local zh = GetLocale() == "zhCN"
+local zh = A:GetLocale() == "zhCN"
 local function choose(cn, en) return zh and cn or en end
 
 A.GroupLocale = {

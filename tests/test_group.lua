@@ -6,6 +6,7 @@ Stubs.SetUnit("player", { name = "本人", realm = "晨风号角", class = "WARR
 
 Load.addon("LycheeGroup", "Locale.lua")
 Load.addon("LycheeGroup", "Core.lua")
+LycheeGroup:LoadDB() -- Core ADDON_LOADED precedes every LoD package.
 Load.addon("LycheeGroup", "Specializations.lua")
 
 -- ---------------------------------------------------------------- LFG/秘境替身
@@ -332,6 +333,20 @@ do
 	-- newest 排序:age 升序 → 13,12,11。
 	local ids = G.Results:GetResults()
 	T.eq(table.concat(ids, ","), "13,12,11", "默认最新在前")
+	do
+		S.results[12].leaderOverallDungeonScore=0;G.Results:OnResultUpdated(12)
+		local reads,players,counts,searches=S.resultReads,S.playerReads,S.memberCountReads,#S.searchCalls
+		G.Search:SetFilters({category="seasonDungeon",hideZeroScore=true})
+		T.same(G.Results:GetResults(),{},"zero and missing leader scores are excluded like MeetingStone")
+		T.eq(S.resultReads,reads);T.eq(S.playerReads,players);T.eq(S.memberCountReads,counts);T.eq(#S.searchCalls,searches,"score filtering uses the existing result snapshot")
+		S.results[12].leaderOverallDungeonScore=1;G.Results:OnResultUpdated(12)
+		T.same(G.Results:GetResults(),{12},"the threshold includes a leader with exactly one point and responds to updates")
+		G.Search:SetFilters({category="seasonDungeon",hideZeroScore=true,maxMembers=3})
+		T.same(G.Results:GetResults(),{},"score filtering combines with the other conditions")
+		G.Search:SetFilters({category="seasonDungeon"})
+		T.same(G.Results:GetResults(),{13,12},"turning score filtering off restores unknown scores")
+		S.results[12].leaderOverallDungeonScore=1800;G.Results:OnResultUpdated(12);G.Search:SetFilters({})
+	end
 
 	-- 队长姓名是可公开读取的普通字符串，可以由统一搜索文本本地匹配。
 	local nativeTitle=setmetatable({}, {__index=function() error("native result text must not be parsed") end})
@@ -341,6 +356,9 @@ do
 	T.eq(table.concat(G.Results:GetResults(),","),"13,12,11","legacy local text and level filters do not hide native search results")
 	T.eq(G.Results:GetResult(12).name,nativeTitle,"native display text is retained without parsing")
 	T.eq(G.Results:GetResult(12).level,nil,"key level is not guessed from the title")
+	T.ok(G.Results:BlockTitle(nativeTitle))
+	T.eq(table.concat(G.Results:GetResults(),","),"13,11","exact native title keys are matched without inspecting or converting them")
+	G.Results:ClearBlockedTitles()
 	S.results[12].name,S.results[12].comment="+10 旋云","限时"
 	G.Results:OnResultUpdated(12)
 	G.Search:SetFilters({})
@@ -366,6 +384,51 @@ do
 	G.Search:SetFilters({leaderText="仍可按备注"})
 	T.eq(table.concat(G.Results:GetResults(),","),"","leader mode ignores descriptions when leaderName is nil")
 	G.Search:SetFilters({})
+
+	do
+		local title=S.results[12].name
+		local original=S.results[11].name
+		S.results[11].name=title;G.Results:OnResultUpdated(11)
+		local reads,memberReads,searches=S.resultReads,S.memberCountReads,#S.searchCalls
+		local notices=notifications.results
+		T.ok(G.Results:BlockTitle(title))
+		T.same(G.Results:GetResults(),{13},"blocking one title hides every exact match")
+		T.eq(G.Results:GetCount(),3,"title blocking keeps the complete result snapshot")
+		T.eq(G.Results:BlockTitle(title),false);T.eq(G.Results:BlockTitle(nil),false)
+		T.eq(G.Results:GetBlockedTitleCount(),1);T.eq(notifications.results,notices+1,"one new title invalidates the view once")
+		T.eq(S.resultReads,reads);T.eq(S.memberCountReads,memberReads);T.eq(#S.searchCalls,searches,"blocking only filters existing records")
+		G.Search:SetFilters({leaderText="团长甲"})
+		T.ok(G.Results:ClearBlockedTitles());T.same(G.Results:GetResults(),{11},"clearing title blocks preserves the other filters")
+		T.eq(S.resultReads,reads);T.eq(S.memberCountReads,memberReads)
+		G.Search:SetFilters({});G.Results:BlockTitle(title)
+		S.results[14]={searchResultID=14,activityIDs={502},name=title,numMembers=1,age=1}
+		S.resultIDs={11,12,13,14}
+		G.Results:BeginSearch(G.Results.gen);G.Results:CommitResults(G.Results.gen)
+		T.same(G.Results:GetResults(),{13},"new searches also hide newly received groups with a blocked title")
+		S.results[14].name=title.." ";G.Results:OnResultUpdated(14)
+		T.same(G.Results:GetResults(),{14,13},"title blocking uses the full exact title, including spaces")
+		G.Results:ClearBlockedTitles();notices=notifications.results
+		T.eq(G.Results:ClearBlockedTitles(),false);T.eq(notifications.results,notices,"clearing an empty set does not refresh the view")
+		T.eq(G.Results:GetBlockedTitleCount(),0)
+		S.results[11].name=original;S.results[14]=nil;S.resultIDs={11,12,13}
+		G.Results:BeginSearch(G.Results.gen);G.Results:CommitResults(G.Results.gen)
+	end
+
+	-- 好友优先作为所有常用排序的第一关键字。
+	do
+		S.results[11].numBNetFriends=1;S.results[12].numCharFriends=1;S.results[13].numGuildMates=1
+		for id=11,13 do G.Results:OnResultUpdated(id) end
+		local reads,memberReads,playerReads=S.resultReads,S.memberCountReads,S.playerReads
+		for sort,expected in pairs({newest={12,11,13},rating={11,12,13},itemLevel={11,12,13},members={11,12,13}}) do
+			G.Search:SetFilters({sort=sort})
+			T.same(G.Results:GetResults(),expected,"friend groups precede other groups while retaining the chosen sort within both sets")
+		end
+		T.eq(S.resultReads,reads);T.eq(S.memberCountReads,memberReads);T.eq(S.playerReads,playerReads,"friend priority uses aggregate counts without looking up leaders or members")
+		S.results[11].numBNetFriends=0;S.results[12].numCharFriends=0
+		G.Results:OnResultUpdated(11);G.Results:OnResultUpdated(12);G.Search:SetFilters({})
+		T.same(G.Results:GetResults(),{13,12,11},"native friend-count changes update priority, and guild membership alone gives no priority")
+		S.results[13].numGuildMates=0;G.Results:OnResultUpdated(13)
+	end
 
 	-- 规范化字段与身份。
 	local record = G.Results:GetResult(11)
@@ -1648,14 +1711,14 @@ T.ok(G.Catalog:Matches(G.Catalog:GetActivity(504),"2"))
 T.ok(G.Catalog:Matches(G.Catalog:GetActivity(504),"seasonDungeon"),"the same native group retains all variants in each eligible context")
 do
  local group=G.Catalog:GetGroup("seasonDungeon",20)
- local map,locale=group.activity.mapID,GetLocale
- group.activity.mapID=2993;GetLocale=function() return "zhCN" end
+ local map,locale=group.activity.mapID,A.locale
+ group.activity.mapID=2993;A.locale="zhCN"
  T.eq(G.Catalog:GetGroupShortName("seasonDungeon",20),"毒牙","Chinese multi-dungeon labels use the requested short names")
- GetLocale=function() return "enUS" end
- T.eq(G.Catalog:GetGroupShortName("seasonDungeon",20),"AoF","English clients use an English abbreviation")
+ A.locale="enUS"
+ T.eq(G.Catalog:GetGroupShortName("seasonDungeon",20),"AoF","English addon language uses an English abbreviation independently of the client")
  group.activity.mapID=2521
  T.eq(G.Catalog:GetGroupShortName("seasonDungeon",20),"RLP")
- group.activity.mapID=map;GetLocale=locale
+ group.activity.mapID=map;A.locale=locale
  T.eq(G.Catalog:GetGroupShortName("seasonDungeon",20),group.name,"unmapped future dungeons retain their actual catalog name")
 end
 

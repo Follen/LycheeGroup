@@ -76,7 +76,9 @@ addon/
 
 主配置 `uiScale` 保存主窗百分比。Settings 使用共享 `C.Slider(...,{commitOnRelease=true,onPreview=...})`，库负责手动轨道、固定拖动尺度、步长及采样生命周期；页面只格式化百分比，在提交回调中保存设置。松手先停止采样再提交，隐藏或离页调用 `FinishDrag(false)` 取消预览并恢复拖动前值。Host.FitToScreen 将其乘到既有屏幕适配比例，设置变更、重开、筛选侧栏开合或屏幕变化时应用；侧栏展开时统一计入屏幕适配宽度；模态窗口继承父窗尺度，Tooltip 按既有相对比例重新定位。浮窗仍由 Floating 的独立比例控制，主窗缩放不重写 `floatingScale`。
 
-核心 `Fonts` 解析 `A.db.font`，提供默认字体、游戏可用字体和现有 LibSharedMedia 注册字体。新建主窗与浮窗 Context 使用所选路径；设置改变时只遍历本插件持有的 UI 树与浮窗，保留字号、标记和行高，不修改全局 FontObject 或其他插件控件。此服务不为枚举字体加载 Group、Notes 或业务页面。
+核心在 `ADDON_LOADED` 收到自身存档后，由 `LoadDB` 初始化 `Locale`，将账号语言设置中的“跟随游戏”解析为 `zhCN` 或 `enUS` 并固定本次运行语言；各包通过 `A:GetLocale()` 构建当前语言文本。核心字体选项在枚举时、浮窗在构建时读取该值，不能在源码加载时提前决定语言。修改设置只保存下次启动选择，重载前已加载与后加载的包继续使用同一种语言。Locale 随各自业务包加载，不新增独立语言 LoD 包。
+
+核心 `Fonts` 解析 `A.db.font`：`default` 经 `GetDefaultPath` 按本次运行的 `A:GetLocale()` 选择主包 `Media/Fonts/LycheeFont-zhCN.ttf` 或 `LycheeFont-enUS.ttf`；中文文件完整保留原字体，英文文件以 Inter 为主并补全中文玩家名所需字形。`game` 指向游戏默认字体，其他值保留原有游戏字体或 LibSharedMedia 路径。语言改动随重载一起更新默认字体，已有自选路径不变。内置字体的来源、授权和构建见 [Fonts/README.md](addon/LycheeGroup/Media/Fonts/README.md)。新建主窗与浮窗 Context 使用所选路径；设置改变时只遍历本插件持有的 UI 树与浮窗，保留字号、标记和行高，不修改全局 FontObject 或其他插件控件。Find、Notes 与 Settings 重新测量相关文字布局。此服务不为枚举字体加载 Group、Notes 或业务页面。
 
 主包 TOC 随自身加载内置库函数定义；WoW 的 `LoadAddOn` 以 AddOn 为单位，不提供本项目可用的任意包内 Lua 文件加载接口。浮窗启用时才创建其 Context 和控件，此路径不加载 LycheeGroup_UI。关闭浮窗不能卸载已经加载的库定义；库成本归主包计入当前四包总量。此前独立库五包测量保留为历史口径，不直接与新布局的主包数字比较。
 
@@ -117,7 +119,7 @@ flowchart LR
 | 所有者 | 权威状态 | 消费方式 |
 | --- | --- | --- |
 | Group.Search | 当前条件、搜索请求和代次 | 发起搜索，只提交当前相关结果 |
-| Group.Results | 当前完整合法结果、必要元数据与搜索代次 | 按身份读取，筛选／排序产生 ID 顺序，不深拷贝全库 |
+| Group.Results | 当前完整合法结果、必要元数据、搜索代次与本次登录的屏蔽标题集合 | 按身份读取，筛选／排序产生 ID 顺序，不深拷贝全库 |
 | Group.Applications | 所有分类已提交申请与邀请状态、原生到期时刻、终态展示清理和单个自动接受中的邀请 | 全局五项额度；独立于页面寿命，实际结果驱动状态 |
 | Group.Listing / Applicants | 当前招募与申请者、各成员全部 requestedRoles、assignedRole／specID、终态展示清理 | 报名职责独立于分配职责和当前专精；更新具体记录，原生仍活动但详情暂缺时保留最后确认的招募快照，原生确认结束后清理所属数据 |
 | Group.CreationPresets | 账号级 `Group.db.creationPresets` 收藏数组 | UI 通过 Find／ToggleFavorite／Remove 匹配、切换和移除条件；Listing 不写入收藏 |
@@ -135,6 +137,10 @@ flowchart LR
 | 各页面 | 活动单选／多选草稿、滚动、可见行身份 | 确认后提交搜索选择，订阅所需变更，不另建业务状态机 |
 
 [Host.lua](addon/LycheeGroup_UI/Host.lua) 持有 `UI:GetGroup()` 和组队设置访问入口；显式模拟开启时选择 [Preview.lua](addon/LycheeGroup_UI/Preview.lua) 的独立内存 provider，否则返回真实 `A.Group`。Preview 按正式接口的聚合关系计数、队长查询规范化和有效申请状态筛选。页面与提示经同一入口读取组队数据；真实 Group 服务、原生登记输入对象和 SavedVariables 不被替换或写入。模拟命令与退出行为见 [Product.md 第 5.2 节](Product.md#52-显式模拟入口)，分配及释放边界见 [perfermance.md](perfermance.md)。
+
+`Results:BlockTitle`、`ClearBlockedTitles` 和 `GetBlockedTitleCount` 管理独立于搜索快照的标题集合。键直接使用现有记录的原生标题值，不解析、规范化或序列化；仅改变结果视图，不删除记录或修改 Applications。新增标题或清除非空集合时使视图失效并发送一次 results 通知。Find 的右键菜单经 provider 调用屏蔽；Preview 持有自己的同接口集合，不影响真实服务或 SavedVariables。刷新、分类切换和 EndBrowse 只释放搜索快照，标题集合保留到当前 Lua 会话结束；清除与计数接口用于服务管理，筛选栏不创建对应控件。
+
+Results 的排序器先比较记录已有的 `bnetFriends + charFriends > 0`，再比较当前排序键、发布时间和结果 ID；关系计数仍由原生结果更新链失效，不依赖本地 Relations 或成员详情。Preview 使用相同的好友优先规则，Applications 的独立排序保持原有职责。
 
 `PlayerKey` 统一名字和服务器的规范化与键构造，`UnitIdentity` 在原生单位读取边界过滤未知、非玩家和受限身份；两者不持有全服玩家缓存。远程 LFG 的 `RemotePlayerKey` 只接受原生明确的完整身份，不把裸名猜成本服玩家。记录写入确认单位仍对应该身份，异步专精完成确认 GUID。Group 的专精解析优先已知 specID，否则只在已知职业内精确匹配原生专精名；未知保留未知，不为图标编造字段。当前队伍以 `UnitIsUnit(unit,"player")` 识别自身的 `raidN` 等别名，自身使用当前专精接口与平均装等。
 
@@ -163,7 +169,7 @@ flowchart LR
 | 笔记记录变化 | 发布受影响 `playerKey` 与版本，刷新命中行 | 本次局部更新完成 |
 | 专精结果 | 只完成当前目标、当前请求 | 完成、失效、取消或超时，不循环检视全队 |
 | 界面显示／隐藏 | 建立／撤销页面订阅，清绑定，完成有限退出动画 | 退出终态移除驱动 |
-| 语言或显示配置变化 | 相关文案／布局失效 | 受影响展示更新完成 |
+| 显示配置变化 | 相关布局失效；语言选择在重载后重新构建文本 | 受影响展示更新完成 |
 
 此表是责任合同，具体原生事件名、返回值与权限须按目标客户端固定源码核实。只有实际等待无法用事件完成时才使用有截止时间的单次任务，不以通用轮询器代替事件接入。
 
@@ -180,6 +186,8 @@ Find 的可见申请倒计时由页面持有一个按秒 ticker，只刷新状�
 Find 一级分类打开选择器；切回已有有效确认选择的分类时，经现有 Search 调度器重新搜索并保留选择器；待选状态的资料片／难度变更只更新目录，选择具体活动、key 0 的分类全部项或确认多选后才调用搜索。已确认活动的难度变更可更新搜索，资料片变更则清除活动并回到待选状态。页面用 confirmedChoice 保存已确认的单选／多选、难度与资料片，草稿不改写该快照；分类切换取消待请求，未确认关闭时恢复该快照。快照及分类偏好保存 selected 标记以区分明确选择全部活动与尚未选择；旧单选／多选可由有效 groupKey／groupKeys 恢复确认状态。恢复目录后同步 browseReady，失效的具体选择不扩成全部活动；首次进入继续使用现有搜索入口；未确认选择或只展开当前分类时不提交新搜索。全部项使用分类对应“全部副本／任务／竞技场／竞技场练习赛／战场／地下堡／自定义活动”及英文名称；评级战场 categoryID 9 只有一个真实项，单独不提供全部项，仍由点击该项启动搜索，不把此例外推广到其他单项分类。史诗钥石多选草稿由页面持有；打开选择器时从已确认的 groupKeys 复制草稿并恢复多选模式，关闭丢弃草稿，单选与全部项清除多选模式。确认时一次搜索当前分类与难度的候选，再以 `filters.groupKeys` 集合本地过滤所选活动组；普通行单选与其他难度沿用单一 groupKey。`Catalog:GetGroupShortName` 维护中英文活动组简称，页面按目录顺序生成多选标题，不以翻译后的显示文字作为身份。
 
 赛季地下城的职责组合条件由 Find 持有，`tankPresence`、`healerPresence`、`damagePresence` 各取 `present`／`missing`，无筛选时为 nil。Results 读取实际职责人数并以 AND 合并；具体人数规则见 [Product.md](Product.md#5-主要流程)。Find 在恢复分类偏好时迁移旧 `needsDamage` 并清除该字段，清空筛选同步清除三项；普通分类的 `neededRole` 保持原路径。Preview 消费相同条件并模拟同一组合关系，不以角色当前专精决定结果。
+
+Find 的 `hideZeroScore` 开关仅在赛季地下城传入 Results，并随该角色的分类偏好保存、恢复和清空。Results 直接比较规范化记录已有的 `leaderOverallDungeonScore`，不请求额外评分或成员数据；Preview 使用相同字段和判定。筛选只重建待选 ID 视图，不改变 Applications。
 
 Catalog 按分类保存活动 ID 成员集合，与该分类目录共同失效，匹配结果时不重复遍历完整活动数组。Applications 重新读取原生快照时复用自己的结果对象；成员详情仍按更新读取，同一位置且完整身份相同的成员复用表并清除旧字段，换人、重排或身份未知时保留旧引用的身份。详情数组清除多余尾项，不以少读原生数据换取分配下降。
 

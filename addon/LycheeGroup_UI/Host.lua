@@ -31,6 +31,10 @@ function UI:HasNote(key)
 end
 
 function UI:OnSettingChanged(key)
+	if key == "language" then
+		if self.pages.settings.frame then self.pages.settings:Sync() end
+		return
+	end
 	if key == "uiScale" then
 		if self.frame then self:FitToScreen() end
 		return
@@ -56,8 +60,9 @@ function UI:ApplyFont(path)
   x=x+button:GetWidth()+T.navGap
  end
  self.navItems.find:GetParent():SetWidth(x-T.navGap)
- self.settingsButton:SetWidth(math.max(72,self.settingsButton.label:GetStringWidth()+40))
+ self.settingsButton:SetWidth(self.settingsButton.label:GetStringWidth()+52)
  self._nav=nil;self:UpdateNav()
+ self.pages.find:LayoutFont()
  local notes=self.pages.notes
  if notes.frame then notes:LayoutFont() end
  local settings=self.pages.settings
@@ -227,9 +232,9 @@ function UI:Build()
 	local close = C.IconButton(frame,"close",40,function() UI:Hide() end,{hoverColor=T.primaryContainer,pressedColor=T.primaryContainer})
 	close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -PAD, -(NAV_H-40)/2)
 	local settings = C.Button(frame, L.settings, nil, function() A:Open("settings") end)
-	settings:SetSize(math.max(72,settings.label:GetStringWidth()+40),40)
-	settings.label:ClearAllPoints();settings.label:SetPoint("LEFT",36,0)
-	C.Glyph(settings,"settings",20):SetPoint("LEFT",8,0)
+	settings:SetSize(settings.label:GetStringWidth()+52,40)
+	settings.label:ClearAllPoints();settings.label:SetPoint("LEFT",40,0)
+	settings.icon=C.Glyph(settings,"settings",20);settings.icon:SetPoint("LEFT",12,0)
 	self.settingsButton=settings
 	settings:SetTextColors(T.muted,T.text,T.onSecondaryContainer)
 	settings:SetPoint("TOPRIGHT", close, "TOPLEFT", -4, 0)

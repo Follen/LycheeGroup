@@ -30,6 +30,7 @@ local DEFAULTS = {
 	minimap = true,
 	minimapAngle = 225,
 	font = "default",
+	language = "auto",
 	autoJoin = false,
 	relations = true,
 	noteMarks = true,
@@ -64,6 +65,7 @@ function A:LoadDB()
 	raw.schema = DEFAULTS.schema
 	raw.keywordFilters = nil
 	self.db = raw
+	self:InitializeLocale()
 	local prefs = _G.LycheeGroupPrefsDB
 	if type(prefs) ~= "table" then
 		prefs = {}

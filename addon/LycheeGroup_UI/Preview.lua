@@ -1,7 +1,7 @@
 -- Explicit local preview. No provider methods call a native group action or save data.
 local A=_G.LycheeGroup
 local UI=A.UI
-local zh=GetLocale()=="zhCN"
+local zh=A:GetLocale()=="zhCN"
 local function S(cn,en) return zh and cn or en end
 local function Active(app)
  if not app then return false end
@@ -38,6 +38,16 @@ local function NewProvider(scenario)
  function p.Results:GetDetails(record) if type(record)=="number" then record=p.records[record] end;return record.details end
  function p.Results:GetMemberCounts(record) return self:GetDetails(record).counts end
  function p.Results:InvalidateView() end
+ local blockedTitles,blockedTitleCount={},0
+ function p.Results:BlockTitle(title)
+  if title==nil or blockedTitles[title] then return false end
+  blockedTitles[title]=true;blockedTitleCount=blockedTitleCount+1;p:Notify("results");return true
+ end
+ function p.Results:ClearBlockedTitles()
+  if blockedTitleCount==0 then return false end
+  wipe(blockedTitles);blockedTitleCount=0;p:Notify("results");return true
+ end
+ function p.Results:GetBlockedTitleCount() return blockedTitleCount end
  function p:GetResult(id) return self.records[id] end
  function p:GetResultCount() return #self.recordIDs end
  function p:GetApplications() return self.apps end
@@ -67,7 +77,7 @@ local function NewProvider(scenario)
   if minLevel then minLevel,maxLevel=tonumber(minLevel),tonumber(maxLevel) end
   for _,id in ipairs(self.recordIDs) do
    local r=self.records[id];local counts=r.details.counts
-   local pass=not self.Applications:IsActive(id) and self.Catalog:Matches(r.activity,f.category or self.category,f.groupKey,f.difficultyID,f.tier,f.groupKeys)
+   local pass=not blockedTitles[r.name] and not self.Applications:IsActive(id) and self.Catalog:Matches(r.activity,f.category or self.category,f.groupKey,f.difficultyID,f.tier,f.groupKeys)
    if pass and text~="" then
     if f.searchMode=="group" and minLevel then pass=r.level and r.level>=minLevel and r.level<=maxLevel
     elseif f.searchMode=="leader" then
@@ -77,6 +87,7 @@ local function NewProvider(scenario)
    end
    if pass and f.minMembers then pass=r.numMembers>=f.minMembers end
    if pass and f.maxMembers then pass=r.numMembers<=f.maxMembers end
+   if pass and f.hideZeroScore then pass=(r.leaderOverallDungeonScore or 0)>=1 end
    if pass and f.neededRole then pass=r.maxNumPlayers==5 and counts[f.neededRole]<(f.neededRole=="DAMAGER" and 3 or 1) end
    if pass and (f.tankPresence or f.healerPresence or f.damagePresence) then
     pass=r.maxNumPlayers==5
@@ -93,6 +104,8 @@ local function NewProvider(scenario)
   end
   table.sort(ids,function(a,b)
    local x,y=self.records[a],self.records[b];local key=f.sort=="rating" and "leaderRating" or f.sort=="itemLevel" and "requiredItemLevel" or f.sort=="members" and "numMembers"
+   local xf,yf=x.bnetFriends+x.charFriends>0,y.bnetFriends+y.charFriends>0
+   if xf~=yf then return xf end
    if key and x[key]~=y[key] then return x[key]>y[key] end
    return x.age<y.age
   end)

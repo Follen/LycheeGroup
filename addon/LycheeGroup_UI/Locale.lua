@@ -1,7 +1,7 @@
 local A = _G.LycheeGroup
 local UI = {pages = {}}
 A.UI = UI
-local zh = GetLocale() == "zhCN"
+local zh = A:GetLocale() == "zhCN"
 local function choose(cn, en) return zh and cn or en end
 UI.L = {
  brand=choose("|cffD53C49荔枝|r组队", "|cffD53C49Lychee|r LFG"),
@@ -26,7 +26,7 @@ UI.L = {
  applicants=choose("申请者", "Applicants"), applications=choose("我的申请", "My applications"), results=choose("队伍", "Groups"),
  noSelection=choose("选择一项查看详情", "Select an entry to view details"), noResults=choose("没有符合条件的队伍", "No matching groups"), noApplicants=choose("暂无申请者", "No applicants yet"),
  idle=choose("选择活动并搜索队伍", "Choose an activity and search"), searching=choose("正在搜索…", "Searching…"), stale=choose("条件已改变；点击搜索更新队伍", "Conditions changed; search to update groups"),
- empty=choose("暂无记录", "No records yet"), unknown=choose("未知", "Unknown"), noReason=choose("无理由", "No reason"),
+ empty=choose("暂无记录", "No records yet"), unknown=choose("未知", "Unknown"), noReason=choose("无理由", "No reason"), any=choose("不限", "Any"),
  add=choose("添加记录", "Add player"), edit=choose("编辑", "Edit"), delete=choose("删除", "Delete"), save=choose("保存", "Save"), cancel=choose("取消", "Cancel"),
  reason=choose("记录理由", "Reason"), recordedSpec=choose("记录时职业／专精", "Class / specialization when recorded"), recordedAt=choose("记录时间", "Recorded"),
  import=choose("导入", "Import"), export=choose("导出", "Export"), transferHint=choose("粘贴 LN- 记录文本，或生成导出文本后全选复制。", "Paste LN- records, or generate an export and select all to copy."),

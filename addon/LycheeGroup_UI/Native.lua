@@ -28,7 +28,7 @@ function Native:AcquireSearch(owner,shell)
  local hide={}
  for _,region in ipairs({box.Instructions,box.clearButton,panel.AutoCompleteFrame}) do hide[#hide+1]=region end
  lease=C.NativeInput(shell,box,{
-  padding={52,4,238,4},textInsets={0,0,0,0},hide=hide,
+  padding={52,4,owner.searchInputRight,4},textInsets={0,0,0,0},hide=hide,
   onLost=function(control)
    search:ReleaseInput(control)
    if Native.searchLease==control then

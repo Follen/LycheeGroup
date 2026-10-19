@@ -32,7 +32,7 @@ local function MemberTooltipArea(row,clip)
 end
 local state={category="seasonDungeon",editing=false,sort="newest"}
 local form={crossFaction=true}
-local zh=GetLocale()=="zhCN"
+local zh=A:GetLocale()=="zhCN"
 local function S(cn,en) return zh and cn or en end
 -- Measure unconstrained text: recycled labels may still carry the previous row width.
 local function FitText(label)

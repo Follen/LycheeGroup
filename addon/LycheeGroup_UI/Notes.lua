@@ -21,9 +21,9 @@ local WORK_TOP = 128
 local CARD_WIDTH=LIST_WIDTH-C.listRightInset
 local CARD_INSET=12
 local CARD_RIGHT_INSET=12
-local zh=GetLocale()=="zhCN"
+local zh=A:GetLocale()=="zhCN"
 local function S(cn,en) return zh and cn or en end
-local NOTE_TYPES={{key="positive",label=S("推荐","Recommended")},{key="neutral",label=S("中性","Neutral")},{key="caution",label=S("拉黑","Blocked")}}
+local NOTE_TYPES={{key="positive",label=S("推荐","Positive")},{key="neutral",label=S("中性","Neutral")},{key="caution",label=S("拉黑","Blocked")}}
 local ROW_HEIGHT = 100
 local LIST_HEIGHT = HEIGHT - WORK_TOP - 32 - PAD
 local EDITOR_HEIGHT = math.min(620, HEIGHT - WORK_TOP - PAD)
@@ -89,8 +89,8 @@ function P:Build(parent)
  local root=CreateFrame("Frame",nil,parent);root:SetAllPoints();self.frame=root
  local rail=CreateFrame("Frame",nil,root);rail:SetSize(RAIL,HEIGHT);rail:SetPoint("TOPLEFT")
  self.tabs={}
- for i,entry in ipairs({{"all",S("全部记录","All notes")},{"positive",S("推荐","Recommended")},{"neutral",S("中性","Neutral")},{"caution",S("拉黑","Blocked")},{"history",L.history}}) do
-  local button=C.Navigation(rail,entry[2],RAIL,function() P:SelectTab(entry[1]) end,nil,{height=60,radius=8});button:SetPoint("TOPLEFT",0,-12-(i-1)*64-(i==5 and 20 or 0));button.label:ClearAllPoints();button.label:SetPoint("LEFT",52,0);button.label:SetWidth(100);button.label:SetWordWrap(true);button.label:SetHeight(0);C.SetLineHeight(button.label,22)
+ for i,entry in ipairs({{"all",S("全部记录","All notes")},{"positive",S("推荐","Positive")},{"neutral",S("中性","Neutral")},{"caution",S("拉黑","Blocked")},{"history",S("历史队友","History")}}) do
+  local button=C.Navigation(rail,entry[2],RAIL,function() P:SelectTab(entry[1]) end,nil,{height=60,radius=8});button:SetPoint("TOPLEFT",0,-12-(i-1)*64-(i==5 and 20 or 0));button.label:ClearAllPoints();button.label:SetPoint("LEFT",52,0);button.label:SetWidth(100);button.label:SetWordWrap(false);C.SetLineHeight(button.label,22,true)
   local glyph=entry[1]=="all" and "friend" or entry[1]=="positive" and "heart" or entry[1]=="caution" and "caution" or entry[1]=="history" and "history" or "book"
   button.glyph=C.Glyph(button,glyph,24);button.glyph:SetPoint("LEFT",16,0)
   button.icon=button.glyph
@@ -104,7 +104,8 @@ function P:Build(parent)
  self.search.box:HookScript("OnTextChanged",function() P:OnSearchChanged() end)
  self.search.box:HookScript("OnEditFocusGained",function() P.searchHint:Hide() end)
  self.search.box:HookScript("OnEditFocusLost",function() P.searchHint:SetShown(P.search.box:GetText()=="") end)
- self.addButton=C.Button(self.toolbar,L.add,120,function() P:OpenAdd() end);self.addButton:SetPrimary(true);self.addButton:SetPoint("RIGHT");self.addButton.label:ClearAllPoints();self.addButton.label:SetPoint("CENTER",12,0);C.Glyph(self.addButton,"plus",16):SetPoint("CENTER",-self.addButton.label:GetStringWidth()/2-4,0)
+ self.addButton=C.Button(self.toolbar,L.add,120,function() P:OpenAdd() end);self.addButton:SetPrimary(true);self.addButton:SetPoint("RIGHT");self.addButton.label:ClearAllPoints();self.addButton.label:SetPoint("LEFT",40,0)
+ self.addButton.icon=C.Glyph(self.addButton,"plus",16);self.addButton.icon:SetPoint("LEFT",16,0);self.addButton:SetWidth(math.ceil(self.addButton.label:GetStringWidth())+56)
  self.exportButton=C.Button(self.toolbar,L.export,72,function() P:DoExport() end);self.exportButton:SetWidth(self.exportButton.label:GetStringWidth()+34);self.exportButton:SetPoint("RIGHT",self.addButton,"LEFT",-8,0)
  self.importButton=C.Button(self.toolbar,L.import,72,function() P:OpenTransfer("import") end);self.importButton:SetWidth(self.importButton.label:GetStringWidth()+34);self.importButton:SetPoint("RIGHT",self.exportButton,"LEFT",-8,0)
  self.left=CreateFrame("Frame",nil,main);self.left:SetSize(LIST_WIDTH,HEIGHT-WORK_TOP-PAD);self.left:SetPoint("TOPLEFT",PAD,-WORK_TOP)
@@ -275,6 +276,7 @@ function P:OnSearchChanged()
 end
 
 function P:LayoutFont()
+ self.addButton:SetWidth(math.ceil(self.addButton.label:GetStringWidth())+56)
  self.importButton:SetWidth(math.ceil(self.importButton.label:GetStringWidth())+34)
  self.exportButton:SetWidth(math.ceil(self.exportButton.label:GetStringWidth())+34)
  self.eDelete:SetWidth(math.max(96,math.ceil(self.eDelete.label:GetStringWidth())+32))

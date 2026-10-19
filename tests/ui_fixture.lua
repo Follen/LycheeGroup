@@ -1,13 +1,16 @@
 -- Shared offline UI fixtures; no game client is contacted.
-return function(locale,preferences)
+return function(locale,preferences,settings)
 local base=dofile("tests/stubs.lua");base.Install({locale=locale,realm="Home"})
 local S=dofile("tests/ui_stubs.lua");S.Install()
-_G.LycheeGroup=nil;_G.LycheeGroupDB=nil;_G.LycheeGroupPrefsDB=preferences;_G.LycheeGroupNotesDB=nil;_G.LibStub=nil
+_G.LycheeGroup=nil;_G.LycheeGroupDB=nil;_G.LycheeGroupPrefsDB=nil;_G.LycheeGroupNotesDB=nil;_G.LibStub=nil
 dofile("addon/LycheeGroup/Core.lua");dofile("addon/LycheeGroup/Specializations.lua");dofile("addon/LycheeGroup/Locale.lua");dofile("addon/LycheeGroup/Fonts.lua")
+-- WoW restores SavedVariables after executing the addon's files.
+_G.LycheeGroupDB=settings;_G.LycheeGroupPrefsDB=preferences
 local A=LycheeGroup;A:LoadDB();dofile("addon/LycheeGroup/Bindings.lua")
 for _,file in ipairs({"Locale.lua","Notes.lua","Records.lua","PlayerInfo.lua","RosterReminder.lua"}) do dofile("addon/LycheeGroup_Notes/"..file) end
 A.Notes:Initialize()
 local G={db={prefs={}},prefs=A.charPrefs,subs={},views={},records={},apps={},applicants={},state="idle"}
+local blockedTitles,blockedTitleCount={},0
 A.Group=G
 dofile("addon/LycheeGroup_Group/CreationPresets.lua")
 dofile("addon/LycheeGroup_Group/RaidBuffs.lua")
@@ -22,7 +25,7 @@ function G:OnSettingChanged(key,value)
 end
 function G:GetActivities() return {{id=1,name="Raid activity",fullName="A full raid activity name"}} end
 function G:GetHistory() return {} end
-function G:GetResults() local ids={};for id in pairs(self.records) do if not self.Applications:IsActive(id) then ids[#ids+1]=id end end;table.sort(ids);return ids end
+function G:GetResults() local ids={};for id,record in pairs(self.records) do if not blockedTitles[record.name] and not self.Applications:IsActive(id) then ids[#ids+1]=id end end;table.sort(ids);return ids end
 function G:GetResult(id) return self.records[id] end
 function G:GetResultCount() local n=0;for _ in pairs(self.records) do n=n+1 end;return n end
 function G:GetResultDetails(id) return self.records[id] and {members={},counts={TANK=1,HEALER=1,DAMAGER=2},encounters={}} end
@@ -63,6 +66,15 @@ function G.Search:ReleaseInput(lease) if self.inputLease==lease then self.inputL
 G.Results={}
 function G.Results:GetDetails(record) return record.details or {members={},counts={TANK=1,HEALER=1,DAMAGER=2},encounters={}} end
 function G.Results:InvalidateView() end
+function G.Results:BlockTitle(title)
+ if title==nil or blockedTitles[title] then return false end
+ blockedTitles[title]=true;blockedTitleCount=blockedTitleCount+1;G:Notify("results");return true
+end
+function G.Results:ClearBlockedTitles()
+ if blockedTitleCount==0 then return false end
+ wipe(blockedTitles);blockedTitleCount=0;G:Notify("results");return true
+end
+function G.Results:GetBlockedTitleCount() return blockedTitleCount end
 G.Applications={}
 function G.Applications:IsActive(id)
  local app=G:GetApplication(id);if not app then return false end

@@ -15,7 +15,7 @@ UI.context = _G.LycheeUI:CreateContext({
  end,
 })
 UI.Theme = UI.context.Theme
-UI.brandText = GetLocale()=="zhCN" and "|cffE87983荔枝|r 组队" or "|cffE87983Lychee|r LFG"
+UI.brandText = A:GetLocale()=="zhCN" and "|cffE87983荔枝|r 组队" or "|cffE87983Lychee|r LFG"
 function UI:SetText(region,text) return self.context:SetText(region,text) end
 function UI:Color(region,color) return self.context:Color(region,color) end
 function UI:Hex(color) return self.context:Hex(color) end
@@ -31,8 +31,8 @@ function UI:ScoreColor(score)
  return color
 end
 function UI:SetScore(region,score,kind)
- if type(score)~="number" or score<0 then self:SetText(region,GetLocale()=="zhCN" and "未知分数" or "Unknown");self:Color(region,self.Theme.dim);return end
- if score==0 then self:SetText(region,GetLocale()=="zhCN" and "暂无分数" or "Unrated");self:Color(region,self.Theme.muted);return end
+ if type(score)~="number" or score<0 then self:SetText(region,A:GetLocale()=="zhCN" and "未知分数" or "Unknown");self:Color(region,self.Theme.dim);return end
+ if score==0 then self:SetText(region,A:GetLocale()=="zhCN" and "暂无分数" or "Unrated");self:Color(region,self.Theme.muted);return end
  self:SetText(region,math.floor(score))
  if kind=="pvp" then self:Color(region,self.Theme.text);return end
  if region._score~=score or region._color~=nil then
@@ -41,8 +41,8 @@ function UI:SetScore(region,score,kind)
  end
 end
 function UI:ScoreText(score,kind)
- if type(score)~="number" or score<0 then return GetLocale()=="zhCN" and "未知分数" or "Unknown" end
- if score==0 then return GetLocale()=="zhCN" and "暂无分数" or "Unrated" end
+ if type(score)~="number" or score<0 then return A:GetLocale()=="zhCN" and "未知分数" or "Unknown" end
+ if score==0 then return A:GetLocale()=="zhCN" and "暂无分数" or "Unrated" end
  if kind=="pvp" then return tostring(math.floor(score)) end
  return self:ScoreColor(score):WrapTextInColorCode(tostring(math.floor(score)))
 end

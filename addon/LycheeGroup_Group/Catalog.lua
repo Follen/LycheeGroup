@@ -168,7 +168,7 @@ end
 function Catalog:GetGroupShortName(key,groupKey)
  local group=self:GetGroup(key,groupKey)
  local names=dungeonAbbreviations[group.activity.mapID]
- return names and names[GetLocale()=="zhCN" and 1 or 2] or group.name
+ return names and names[A:GetLocale()=="zhCN" and 1 or 2] or group.name
 end
 function Catalog:Matches(activity,key,groupKey,difficultyID,tier,groupKeys)
  if not activity then return false end

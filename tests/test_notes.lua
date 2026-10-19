@@ -11,6 +11,7 @@ Stubs.SetUnit("player", { name = "本人", realm = "晨风号角", class = "WARR
 
 Load.addon("LycheeGroup", "Locale.lua")
 Load.addon("LycheeGroup", "Core.lua")
+LycheeGroup:LoadDB() -- Core ADDON_LOADED precedes every LoD package.
 Load.addon("LycheeGroup_Notes", "Locale.lua")
 Load.addon("LycheeGroup_Notes", "Notes.lua")
 Load.addon("LycheeGroup_Notes", "Records.lua")

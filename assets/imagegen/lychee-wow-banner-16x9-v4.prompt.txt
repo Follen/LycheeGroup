@@ -1,0 +1,17 @@
+Tool: built-in image_gen
+Reference: user's attached v3 poster
+
+Use case: precise-object-edit
+Edit target: the supplied warm-white 16:9 Lychee poster.
+User feedback: the contents were shrunk too far. The red Chinese title “荔枝” is already good and should be kept. Adjust the other elements to a balanced middle size.
+
+Make this measured layout revision:
+1. PRESERVE the exact current visible size, font, weight, letter spacing, shapes and lychee-red color of the two-character title “荔枝”. Do not enlarge or shrink these two characters. You may reposition this title together with the text block as specified below.
+2. Enlarge the single lychee graphic by approximately 30 percent in BOTH width and height relative to the supplied image. Its visible height including the green leaves should be approximately 50 percent of the image height, rather than the current 38 percent. Maintain all original proportions and details. Do not make it huge.
+3. Enlarge “魔兽世界插件” by approximately 30 percent, retaining the same dark-gray bold sans-serif style and exact wording.
+4. Enlarge “DD，盒子可下载” by approximately 30 percent, retaining the same gray sans-serif style and exact wording.
+5. Give the slightly larger content a carefully aligned, wider composition. On a 1672 x 941 reference canvas: put the left edge of the three text lines at about x=300; keep the title roughly 350 px wide and 164 px high, positioned around y=305; put the subtitle around y=500 and the download line around y=630. Place the logo centered around x=1145 and y=475 with a visible height of about 470 px and its natural width of about 420 px. The gap between text and logo must remain generous and they must not overlap. Scale these coordinates proportionally if the output dimensions differ.
+6. The overall composition should span approximately 63 percent of canvas width, with substantial but not excessive margins. Balance the text block against the logo, aligned as one centered visual group.
+
+Preserve: the 16:9 landscape aspect ratio, the pale warm-white paper background, the current minimal flat graphic style, the unchanged title size and color, the recognizable red lychee with two green leaves, and all existing words.
+Only change the sizes of the logo and supporting text, and reposition for balanced spacing. No new colors, new fonts, extra objects, lines, labels, ornaments, badges, framing, gradients, shadows, scenery, or textures. Do not uniformly scale the whole composition. In particular, the red “荔枝” title must remain the same size as in the input.

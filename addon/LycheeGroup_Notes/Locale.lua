@@ -1,7 +1,7 @@
 -- 玩家记录包文案:仅本包业务(提醒模板、Add 错误)所需的 zhCN/enUS 字符串。
 -- 本文件先于 Notes.lua 加载,表挂在 A.NotesLocale,由 Notes.lua 转挂到 Notes.L。
 local A = _G.LycheeGroup
-local zh = GetLocale() == "zhCN"
+local zh = A:GetLocale() == "zhCN"
 local function choose(cn, en) return zh and cn or en end
 
 A.NotesLocale = {

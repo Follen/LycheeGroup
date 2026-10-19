@@ -1,0 +1,28 @@
+Tool: built-in image_gen
+Reference: lychee-wow-banner-16x9-v2.png and Media/lychee-logo.png
+
+Size and spacing revision:
+Use case: compositing
+Edit target: Image 1 is the current warm-white 16:9 poster. Image 2 is the original lychee logo for preserving the brand mark.
+Requested change: Reduce BOTH the lettering and the lychee logo substantially and give the composition much more breathing room. This is a precise scale-and-spacing revision. Keep the warm-white background, flat graphic style, black sans-serif typography, original red-and-green logo, wording, and left-text/right-logo arrangement.
+
+Canvas: landscape 16:9, preferably exactly 1920 x 1080. Keep the full canvas size. Do not crop or zoom in on the revised composition.
+Layout at 1920 x 1080:
+- Keep all content inside a restrained central composition, roughly x=360 to x=1510 and y=330 to y=750. Leave large uninterrupted margins on all four sides.
+- Text block left-aligned at approximately x=360.
+- “荔枝” on the first line at approximately y=345, around 145 px tall, reduced to roughly 40 percent of its previous linear size. Use the same clean heavy sans-serif character style, with comfortable spacing.
+- “魔兽世界插件” on the next line around y=540, approximately 50 px tall. This line is clearly subordinate to “荔枝”.
+- “DD，盒子可下载” below at approximately y=675, approximately 30 px tall, medium weight. Preserve exactly this wording and Chinese comma.
+- The single lychee logo sits to the right, centered around x=1280, y=540. Its total VISIBLE height INCLUDING its leaves should be only about 420 px, approximately 39 percent of canvas height, and its width follows the original aspect ratio. This is about HALF the previous visible logo's linear size. Keep the full logo comfortably inside the canvas.
+- Balance the logo with the entire text block, separated by ample blank space. Keep broad blank space above and below. Resist filling the image with the logo or lettering.
+
+Invariants: the same pale warm-white background with barely perceptible paper grain; one recognizable brand logo with its original jagged red silhouette, green leaves, curved darker-red half and spots; exactly the same three text lines. Clear reading and an understated, considered composition.
+Avoid: oversized lettering, an oversized logo, cropping, extra ornaments, extra text, new colors, borders, badges, gradients, fantasy elements, 3D effects, glow, shadows, or a photograph/mockup. Deliver one complete flat poster with visibly smaller content and generous negative space.
+
+Final text color revision:
+Use case: precise-object-edit
+Edit the supplied 16:9 warm-white lychee poster. Make ONLY a typography color adjustment.
+1. Change the large two-character title “荔枝” from black to a solid muted lychee red, hex #C84353. No gradient, glow, outline, or shadow.
+2. Set the subtitle “魔兽世界插件” to dark warm gray #3C3735.
+3. Set “DD，盒子可下载” to medium dark warm gray #625B57, still easy to read.
+Preserve EVERYTHING else exactly: the newly reduced text sizes, font shapes and weights, precise text positions and line spacing, smaller red lychee logo with green leaves on the right, logo colors, logo size and position, wide empty margins, warm-white background, 16:9 canvas and minimal flat style. Do not enlarge anything. Do not move anything. Do not add any decorative elements or text. The result should have lychee-red branding with calm gray supporting copy.

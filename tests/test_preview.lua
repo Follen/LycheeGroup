@@ -36,9 +36,9 @@ T.eq(find.search.box,find.previewSearchBox,"preview keeps its own ordinary searc
 T.eq(U.Native.searchLease,nil);T.eq(nativeSearch:GetParent(),LFGListFrame.SearchPanel)
 find.search.box:SetText("Preview group 2");T.eq(preview.filters.text,"Preview group 2","preview group mode uses simulated title filtering")
 find.search.box:SetText("12-15")
-T.same(preview:GetResults(),{preview.recordIDs[4],preview.recordIDs[5],preview.recordIDs[6]},"preview simulates group-mode keystone range filtering")
+T.same(preview:GetResults(),{preview.recordIDs[5],preview.recordIDs[4],preview.recordIDs[6]},"preview combines group-mode keystone range filtering with friend priority")
 find.search.box:SetText("12-13")
-T.same(preview:GetResults(),{preview.recordIDs[4],preview.recordIDs[5]},"preview range includes both bounds and excludes higher levels")
+T.same(preview:GetResults(),{preview.recordIDs[5],preview.recordIDs[4]},"preview range includes both bounds and excludes higher levels")
 find.search.box:SetText(preview.records[preview.recordIDs[4]].name)
 T.same(preview:GetResults(),{preview.recordIDs[4]},"preview simulates native group-name matching")
 find.search.box:SetText("描述检索样例")
@@ -60,10 +60,49 @@ find.fMembers.box:SetText("3");find.fMinMembers.box:SetText("3")
 T.same(preview:GetResults(),{preview.recordIDs[5]},"preview applies inclusive minimum and maximum independently")
 find.fMinMembers.box:SetText("4");T.eq(preview.filters.maxMembers,3);T.eq(#preview:GetResults(),0,"a contradictory range honestly has no results")
 find:ClearFilters();T.eq(preview.filters.minMembers,nil);T.eq(preview.filters.maxMembers,nil)
+do
+ local zero,unknown=preview.records[preview.recordIDs[4]],preview.records[preview.recordIDs[5]]
+ local zeroScore,unknownScore=zero.leaderOverallDungeonScore,unknown.leaderOverallDungeonScore
+ zero.leaderOverallDungeonScore=0;unknown.leaderOverallDungeonScore=nil
+ T.eq(find.hideZeroScore.value,false,"score filtering is off by default")
+ Click(find.hideZeroScore)
+ T.same(preview:GetResults(),{preview.recordIDs[6]},"preview excludes both zero and missing leader scores")
+ T.eq(#find.appList.ids,3,"score filtering leaves existing applications visible")
+ Click(find.hideZeroScore);T.eq(#preview:GetResults(),3,"turning the switch off restores filtered groups")
+ zero.leaderOverallDungeonScore=zeroScore;unknown.leaderOverallDungeonScore=unknownScore
+end
 local beforeNoteFilter=preview:GetResults()
 preview:SetFilters({notes="noCaution"})
 T.same(preview:GetResults(),beforeNoteFilter,"preview groups without player notes pass the blocked-player exclusion")
 find:ClearFilters()
+do
+ local first,second=preview.records[preview.recordIDs[4]],preview.records[preview.recordIDs[5]]
+ local secondName=second.name;second.name=first.name
+ T.ok(preview.Results:BlockTitle(first.name))
+ T.same(preview:GetResults(),{preview.recordIDs[6]},"preview uses its own exact-title block set")
+ T.eq(G.Results:GetBlockedTitleCount(),0,"preview never blocks titles in the real provider")
+ T.eq(#find.appList.ids,3,"title blocks preserve pinned applications")
+ T.eq(find.clearBlockedTitles,nil,"the removed clear-title button stays absent")
+ preview.Results:ClearBlockedTitles()
+ T.eq(preview.Results:GetBlockedTitleCount(),0);T.eq(#preview:GetResults(),3)
+ second.name=secondName
+end
+do
+ local saved={}
+ for i=4,6 do
+  local r=preview.records[preview.recordIDs[i]]
+  saved[i]={r.bnetFriends,r.charFriends};r.bnetFriends,r.charFriends=0,0
+ end
+ preview.records[preview.recordIDs[6]].charFriends=1
+ preview:SetFilters({sort="newest"})
+ T.same(preview:GetResults(),{preview.recordIDs[6],preview.recordIDs[4],preview.recordIDs[5]},"preview puts character-friend groups first")
+ preview.records[preview.recordIDs[4]].bnetFriends=1
+ T.same(preview:GetResults(),{preview.recordIDs[4],preview.recordIDs[6],preview.recordIDs[5]},"Battle.net and character friends have the same priority")
+ preview:SetFilters({sort="itemLevel"})
+ T.same(preview:GetResults(),{preview.recordIDs[6],preview.recordIDs[4],preview.recordIDs[5]},"preview sorts within the friend and other groups")
+ for i=4,6 do local r=preview.records[preview.recordIDs[i]];r.bnetFriends,r.charFriends=unpack(saved[i]) end
+ find:ClearFilters()
+end
 do
  local members=captainRecord.details.members
  local saved={captainRecord.bnetFriends,captainRecord.charFriends,captainRecord.guildMates}

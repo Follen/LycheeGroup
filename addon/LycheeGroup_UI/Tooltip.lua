@@ -112,7 +112,7 @@ function Tip:Hide()
  self.pointX,self.pointY,self.positionX,self.positionY,self.expanded,self.adjustPoint=nil,nil,nil,nil,nil,nil
 end
 
-local zh=GetLocale()=="zhCN"
+local zh=A:GetLocale()=="zhCN"
 local function Say(cn,en) return zh and cn or en end
 local bosses={}
 local function Bosses(activity)

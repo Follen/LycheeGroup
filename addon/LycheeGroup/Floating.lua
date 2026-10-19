@@ -1,7 +1,7 @@
 -- Shared LycheeUI visuals; the LycheeGroup UI/business pages stay unloaded until opened.
 local A=_G.LycheeGroup
 local F={};A.Floating=F
-local zh=GetLocale()=="zhCN"
+local zh
 local C,T
 local MEMBER_TEXT_X,MEMBER_TEXT_WIDTH,MEMBER_METRIC_WIDTH=56,168,76
 local MEMBER_NAME_SIZE,MEMBER_NAME_LINE,MEMBER_META_SIZE,MEMBER_META_LINE=16,22,12,16
@@ -52,6 +52,7 @@ function F:HoverRow(row,inside)
 end
 function F:Build()
  if self.frame then return end
+ zh=A:GetLocale()=="zhCN"
  self.context=_G.LycheeUI:CreateContext({font=A.Fonts:GetPath(),reducedMotion=function() return A.db.reduceMotion end})
  C,T=self.context.C,self.context.Theme
  local f=CreateFrame("Frame","LycheeGroupFloating",UIParent);f:SetSize(80,44);f:SetFrameStrata("MEDIUM");f:SetClampedToScreen(true);f:SetMovable(true);f:EnableMouse(false);self.frame=f
