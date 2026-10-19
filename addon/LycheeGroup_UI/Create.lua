@@ -26,21 +26,9 @@ local function HideMemberTooltip(row)
  if UI.Tooltip:IsOwned(row) then UI.Tooltip:Hide() end
 end
 local function MemberTooltipArea(row,clip)
- local area=CreateFrame("Frame",nil,row);area:SetPoint("TOPLEFT");area:SetPoint("BOTTOMLEFT");area:SetWidth(row:GetWidth()*.25)
- row.tooltipArea=area
- row:HookScript("OnSizeChanged",function(_,width) area:SetWidth(width*.25) end)
- area:SetScript("OnEnter",function()
-  if not row:IsEnabled() or not row.member or row._hitVisible==false or not clip:IsMouseOver() then return end
-  local enter=row:GetScript("OnEnter");if enter then enter(row) end
-  UI.Tooltip:ShowPlayer(row,row.member,row.memberContext)
- end)
- area:SetScript("OnLeave",function()
-  if not row:IsMouseOver() then local leave=row:GetScript("OnLeave");if leave then leave(row) end end
-  UI.Tooltip:LeaveOwner(row)
- end)
- area:SetScript("OnHide",function() HideMemberTooltip(row) end)
- -- Retail enables clicks when hover scripts are assigned; narrow input last.
- area:EnableMouse(false);area:EnableMouseMotion(true)
+ UI:BindTooltipArea(row,.25,function()
+  return row:IsEnabled() and row.member and row._hitVisible~=false and clip:IsMouseOver()
+ end,function() UI.Tooltip:ShowPlayer(row,row.member,row.memberContext) end)
 end
 local state={category="seasonDungeon",editing=false,sort="newest"}
 local form={crossFaction=true}
@@ -307,17 +295,15 @@ function P:RefreshRosterList()
   end
  end
  -- A slot can be reused while the same person moves elsewhere in the roster.
- local tip=UI.Tooltip;local saved=UI.activeModal and UI.activeModal.restoreTooltip
+ local tip=UI.Tooltip
  for i,member in ipairs(self.roster) do
-  local id=UI.Members:ID(member)
-  if tip.directPlayer and id==tip.rosterMemberID then tip.owner=list.rows[i] end
-  if saved and saved.directPlayer and id==saved.rosterMemberID then saved.owner=list.rows[i] end
+  tip:RebindRosterOwner(UI.Members:ID(member),list.rows[i])
  end
  local top=0
  for i,member in ipairs(self.roster) do
   local row=list.rows[i]
   if row.member~=member then
-   if not (tip.directPlayer and tip.owner==row and UI.Members:ID(member)==tip.rosterMemberID) then HideMemberTooltip(row) end
+   tip:HideRosterOwner(row,UI.Members:ID(member))
    UI:CloseMenuFor(row)
   end
   row.memberContext=A.GroupPresentation.Member("roster")
@@ -631,6 +617,9 @@ function P:CorrectItemLevel()
    or S("已将装等要求调整为 %d（你的最高装等）。","Item level requirement adjusted to %d (your highest item level).")):format(limit))
  end
 end
+function P:OnCreationInputLost()
+ self.publish:SetAvailable(false)
+end
 function P:ValidateForm()
  if self.preparing or UI.hiding or not self.formFrame:IsShown() then return end
  self:RefreshFavoriteState()
@@ -704,7 +693,6 @@ function P:Submit()
 end
 function P:RefreshApplicants()
  UI.Motion:Stop(self.batchScroll);self.batchScrollTarget=nil
- local tip=UI.Tooltip;local refreshMember=false
  local group=UI:GetGroup()
  local listing=group:GetListing();local activity=listing and group.Catalog:GetActivity(listing.activityID)
  self.applicantContext=A.GroupPresentation.Member("applicant",activity);self.hideApplicantRating=not self.applicantContext.showRating
@@ -712,7 +700,7 @@ function P:RefreshApplicants()
  local sortKey=state.sort~="newest" and (state.sort=="score" and "rating" or "itemLevel")
  local values=sortKey and {}
  local ids={};for _,id in ipairs(group:GetApplicants()) do
-  local app=group:GetApplicant(id);local match=not state.role;for _,m in ipairs(app.members) do if state.role and UI:MemberHasRole(m,state.role) then match=true end;if m==tip.member then refreshMember=true end end
+  local app=group:GetApplicant(id);local match=not state.role;for _,m in ipairs(app.members) do if state.role and UI:MemberHasRole(m,state.role) then match=true end end
   if match then ids[#ids+1]=id;if sortKey then values[id]=Minimum(app,sortKey) end end
  end
  table.sort(ids,function(a,b)
@@ -725,7 +713,7 @@ function P:RefreshApplicants()
  self.batchBody:SetHeight(math.max(1,top));self:LayoutApplicantViewport()
  self.empty:SetShown(#ids==0);UI:SetText(self.appCount,L.applicantCount:format(#ids))
  for key,b in pairs(self.roleFilters) do b:SetActive((state.role or "ALL")==key) end;self:RenderBatches()
- if refreshMember and tip.member then tip:RenderPlayer(tip.member,tip.pinned) end
+ UI.Tooltip:RefreshApplicant()
 end
 function P:SetBatchOffset(value,animate)
  UI:CloseMenu()

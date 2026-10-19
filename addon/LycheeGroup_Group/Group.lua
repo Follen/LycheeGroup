@@ -7,11 +7,22 @@ A.Group = G
 local L = A.GroupLocale
 G.L = L
 
+function G.Public(value)
+ if issecretvalue and issecretvalue(value) then return nil end
+ return value
+end
+
 local views = {}
 local subscribers = {}
 local applicantPermission, listingPermission
 
 -- ---------------------------------------------------------------- 存档与生命周期
+
+local function CopyPreferences(source)
+ local copy={}
+ for key,value in pairs(source) do copy[key]=type(value)=="table" and CopyPreferences(value) or value end
+ return copy
+end
 
 -- Initialize 由微核心 Ensure 调用一次;LoD 包此刻两份存档必然已装载。
 function G:Initialize()
@@ -22,9 +33,12 @@ function G:Initialize()
 		_G.LycheeGroupGroupDB = db
 	end
 	db.schema = 1
-	db.prefs = db.prefs or {}
 
 	self.db = db
+ self.prefs=A.charPrefs
+ -- Keep the old account snapshot as the seed for characters not opened yet.
+ -- Each character gets its own nested tables once; future edits never alias it.
+ if not self.prefs.find then self.prefs.find=CopyPreferences(db.prefs and db.prefs.find or {}) end
  db.creationPresets=db.creationPresets or {}
  self.Presets=A.CreationPresets.New(db.creationPresets,function() G:Notify("creationPresets") end)
 
@@ -68,6 +82,13 @@ function G:Restore()
 	G.History:Restore()
 	G.Game:RefreshSubscriptions()
 	self:RefreshPermissions()
+end
+
+function G:OnSettingChanged(key,value)
+ if key=="history" then
+  if value then self.History:Restore() else self.History:Discard() end
+ end
+ if key=="autoJoin" and value then self.Applications:TryAutoJoin() end
 end
 
 -- ---------------------------------------------------------------- 事件分发
@@ -169,7 +190,6 @@ end
 
 -- Notify 只分发状态变化;Publish 留给招募动作,两者不共用名称。
 function G:Notify(kind, id)
-	if kind=="applications" then self.Game:RefreshRelations() end
 	for callback in pairs(subscribers) do
 		local ok, err = pcall(callback, kind, id)
 		if not ok then
@@ -243,21 +263,15 @@ end
 
 -- Small native specialization resolver shared by lightweight consumers. It never
 -- infers a specialization from a role or matches a name across other classes.
-local classIDs
 function G:ResolveMemberSpec(member)
- if not classIDs then
-  classIDs={}
-  for index=1,GetNumClasses() do local name,token,id=GetClassInfo(index);if token then classIDs[token]={id=id or index,name=name} end end
- end
- local class=member.class and classIDs[member.class]
+ local classID,className
+ if member.class then classID,className=A.Specializations:Class(member.class) end
  local specID=member.specID
  local specName,icon
- if specID and specID>0 then local _;_,specName,_,icon=GetSpecializationInfoByID(specID)
- elseif class and member.specName then
-  for index=1,C_SpecializationInfo.GetNumSpecializationsForClassID(class.id) do
-   local id,name,_,image=GetSpecializationInfoForClassID(class.id,index)
-   if name==member.specName then specID,specName,icon=id,name,image;break end
-  end
+ if specID and specID>0 then specName,icon=A.Specializations:Get(specID)
+ elseif classID and member.specName then
+  local id,name,image=A.Specializations:Find(member.class,member.specName)
+  if name then specID,specName,icon=id,name,image end
  end
- return specID,specName,icon,member.localizedClass or class and class.name
+ return specID,specName,icon,member.localizedClass or className
 end

@@ -20,14 +20,18 @@ local report={schema="lycheegroup.heroic-memory.v1",packages=packages,units="KB"
  scenario={requestedRaid="烈毒之渊",difficultyID=15,nativeHeroicSearches=6,minimumSearchSpacingSeconds=8,
   scrollIntervalSeconds=.15,sampleIntervalSeconds=.5,gcPolicy="natural until closed_final; one separate diagnostic collection",
   input="normal page/list/tooltip controllers; no hardware hit-testing claim"},
- settings={reduceMotion=A.db.reduceMotion,rememberFilters=A.db.rememberFilters,raidMembers=A.db.raidMembers,scriptProfile=GetCVar("scriptProfile")},
+ settings={reduceMotion=A.db.reduceMotion,rememberFilters=A.charPrefs.rememberFilters,raidMembers=A.db.raidMembers,scriptProfile=GetCVar("scriptProfile")},
  samples={},queries={},peaks={},checks={},operations={wheel=0,reversals=0,scrollableTicks=0,groupTips=0,memberTips=0,tipWheel=0,filterSort=0},
  nativeEvents={bulk=0,result=0},maximum={results=0,filtered=0,scrollOffset=0,members=0},peakBytes=0}
-for i=1,256 do report.samples[i]={addonKB={0,0,0,0,0},loaded={false,false,false,false,false}} end
+for i=1,256 do
+ local row={addonKB={},loaded={}}
+ for packageIndex=1,#packages do row.addonKB[packageIndex],row.loaded[packageIndex]=0,false end
+ report.samples[i]={addonKB=row.addonKB,loaded=row.loaded}
+end
 local used,ui,g,page,ticker,eventFrame,cleaned=0
 local oldPage=A.UI and A.UI.page
 local oldMain=A.UI and A.UI.mainPage
-local oldRemember=A.db.rememberFilters
+local oldRemember=A.charPrefs.rememberFilters
 local oldShown,oldFilters={},{}
 if A.UI then for key,p in pairs(A.UI.pages) do oldShown[key]=p.frame and p.frame:IsShown() or false end end
 local oldPrefs,prefsSaved
@@ -37,11 +41,11 @@ local function Cleanup()
  if eventFrame then eventFrame:UnregisterAllEvents();eventFrame:SetScript("OnEvent",nil);eventFrame:Hide() end
  if ui then
   ui:Hide(true);ui.Motion:StopAll()
-  if prefsSaved then g.Search:SetFilters(oldFilters);g.db.prefs.find=oldPrefs;page.loaded=nil;page.restoredInitial=nil end
+  if prefsSaved then g.Search:SetFilters(oldFilters);g.prefs.find=oldPrefs;page.loaded=nil;page.restoredInitial=nil end
   for key,p in pairs(ui.pages) do if p.frame then p.frame:SetShown(oldShown[key]==true) end end
   ui.page,ui.mainPage=oldPage,oldMain
  end
- A.db.rememberFilters=oldRemember
+ A.charPrefs.rememberFilters=oldRemember
 end
 assert(probe:Async(115));assert(probe:OnCleanup(Cleanup))
 assert(probe:Guard(function() return not InCombatLockdown() and not C_ChallengeMode.IsChallengeModeActive() and not C_LFGList.HasActiveEntryInfo() and #C_LFGList.GetApplications()==0 end,
@@ -69,7 +73,7 @@ local function Sample(tag,collected)
 end
 Sample("before_any_business_load")
 local ok,why=A:Ensure("Group");if not ok then return probe:Fail("load_group_"..tostring(why)) end
-g=A.Group;oldPrefs=g.db.prefs.find;prefsSaved=true
+g=A.Group;oldPrefs=g.prefs.find;prefsSaved=true
 for key,value in pairs(g.Search:GetFilters()) do oldFilters[key]=value end
 local target
 for _,activity in ipairs(g.Catalog:GetActivities("seasonRaid")) do
@@ -81,8 +85,8 @@ for _,key in ipairs({"settings","notes","create"}) do
  local opened,err=A:Open(key);if not opened then return probe:Fail("warm_"..key.."_"..tostring(err)) end
  ui=A.UI;page=ui.pages.find;Sample("first_"..key);ui:Hide(true)
 end
-A.db.rememberFilters=true
-g.db.prefs.find={category="seasonRaid",categoryPrefs={seasonRaid={difficultyID=15}}}
+A.charPrefs.rememberFilters=true
+g.prefs.find={category="seasonRaid",categoryPrefs={seasonRaid={difficultyID=15}}}
 page.loaded=nil;page.restoredInitial=nil
 local opened,err=A:Open("find");if not opened then return probe:Fail("open_find_"..tostring(err)) end
 report.firstSearchGeneration=g.Search:GetGeneration()
@@ -147,9 +151,9 @@ local function Finish()
  report.checks.pageAndPoolReused=page.frame==originalFrame and #page.results.rows==originalPool
  report.checks.knownOwnersIdle=not ui:IsShown() and not g:HasViews() and g:GetResultCount()==0 and not g.Results.updatePending
   and g.Game.frame:GetScript("OnUpdate")==nil and not g.Search.timer and not g.Search.pending and next(ui.Motion.jobs)==nil
- report.checks.allFiveLoaded=true;for _,loaded in ipairs(report.samples[used].loaded) do if not loaded then report.checks.allFiveLoaded=false end end
+ report.checks.allPackagesLoaded=true;for i=1,#packages do if not report.samples[used].loaded[i] then report.checks.allPackagesLoaded=false end end
  report.checks.under20MB=report.peakBytes<=20000000
- report.ok=report.checks.correctActivity and report.checks.realScrollable and report.checks.pageAndPoolReused and report.checks.knownOwnersIdle and report.checks.allFiveLoaded and report.checks.under20MB
+ report.ok=report.checks.correctActivity and report.checks.realScrollable and report.checks.pageAndPoolReused and report.checks.knownOwnersIdle and report.checks.allPackagesLoaded and report.checks.under20MB
  report.elapsedSeconds,report.sampleCount=GetTime()-started,used
  for i=used+1,#report.samples do report.samples[i]=nil end
  return probe:Finish(report)

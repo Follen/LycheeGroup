@@ -14,7 +14,7 @@ local function Idle()
 end
 assert(Idle(), "requires_idle_business")
 local packages={"LycheeGroup","LycheeGroup_Group","LycheeGroup_Notes","LycheeGroup_UI","MeetingStone"}
-local saved={fps=GetCVar("maxFPS"),fpsBk=GetCVar("maxFPSBk"),remember=A.db.rememberFilters,
+local saved={fps=GetCVar("maxFPS"),fpsBk=GetCVar("maxFPSBk"),remember=A.charPrefs.rememberFilters,
  page=A.UI and A.UI.page,mainPage=A.UI and A.UI.mainPage,
  msItem=browse.ActivityDropdown:GetItem(),msLast=profile.cdb.profile.lastSearchCode,
  msHistory=profile.cdb.profile.searchHistoryList,msPanel=main:GetSelectedPanel(),
@@ -36,7 +36,7 @@ local function Cleanup()
  if frame then frame:UnregisterAllEvents();frame:SetScript("OnEvent",nil);frame:Hide() end
  if ui then
   ui:Hide(true);ui.Motion:StopAll()
-  g.db.prefs.find=saved.findPrefs
+  g.prefs.find=saved.findPrefs
   g.Search:SetFilters(saved.findFilters)
   page.loaded=nil;page.restoredInitial=nil
   ui.page,ui.mainPage=saved.page,saved.mainPage
@@ -53,7 +53,7 @@ local function Cleanup()
   browse:UpdateFilters()
   if saved.msPanel then main:SelectPanel(saved.msPanel) end
  end
- A.db.rememberFilters=saved.remember
+ A.charPrefs.rememberFilters=saved.remember
  C_LFGList.ClearSearchTextFields()
  SetCVar("maxFPS",saved.fps);SetCVar("maxFPSBk",saved.fpsBk)
 end
@@ -62,9 +62,9 @@ assert(probe:Guard(Idle,{"PLAYER_REGEN_DISABLED","GROUP_ROSTER_UPDATE","CHALLENG
 SetCVar("maxFPS",60);SetCVar("maxFPSBk",60)
 if targetName=="lychee" then
  assert(A:Ensure("Group"))
- g=A.Group;saved.findPrefs=g.db.prefs.find;saved.findFilters=Copy(g.Search:GetFilters())
- A.db.rememberFilters=true
- g.db.prefs.find={category="3",categoryPrefs={["3"]={groupKey=424,difficultyID=15}},filters={sort="newest"}}
+ g=A.Group;saved.findPrefs=g.prefs.find;saved.findFilters=Copy(g.Search:GetFilters())
+ A.charPrefs.rememberFilters=true
+ g.prefs.find={category="3",categoryPrefs={["3"]={groupKey=424,difficultyID=15}},filters={sort="newest"}}
  if A.UI and A.UI.pages.find then A.UI.pages.find.loaded=nil;A.UI.pages.find.restoredInitial=nil end
  assert(A:Open("find"));ui=A.UI;page=ui.pages.find;list=page.results
  assert(g.Search.request and g.Search.request.activityID==1956,"lychee_wrong_activity")
@@ -134,7 +134,7 @@ local function Finish()
  report.checks.nonempty=true;for _,q in ipairs(report.queries) do if not q.results or q.results==0 then report.checks.nonempty=false end end
  Cleanup()
  report.checks.closed=not main:IsShown() and not (A.UI and A.UI:IsShown())
- report.checks.preferencesRestored=A.db.rememberFilters==saved.remember and profile.cdb.profile.lastSearchCode==saved.msLast and profile.cdb.profile.searchHistoryList==saved.msHistory
+ report.checks.preferencesRestored=A.charPrefs.rememberFilters==saved.remember and profile.cdb.profile.lastSearchCode==saved.msLast and profile.cdb.profile.searchHistoryList==saved.msHistory
  report.checks.fpsRestored=GetCVar("maxFPS")==saved.fps and GetCVar("maxFPSBk")==saved.fpsBk
  report.checks.businessUnchanged=Idle()
  report.ok=true;for _,v in pairs(report.checks) do if v~=true then report.ok=false end end

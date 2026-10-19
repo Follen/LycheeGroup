@@ -1,13 +1,13 @@
 -- 当前观察者的角色好友、战网游戏角色和公会身份；不保存账号昵称或成员原表。
 local A=_G.LycheeGroup
 local G=A.Group
-local R={names={},guids={},shortNames={},available=0,dirty=true,version=0}
+local R={names={},guids={},shortNames={},dirty=true,version=0}
 G.Relations=R
 local BNET,CHARACTER,GUILD=1,2,4
 local memberNames={}
 local function Clear()
  wipe(R.names);wipe(R.guids);wipe(R.shortNames)
- R.guildClubID,R.sampledAt=nil,nil;R.available=0;R.dirty=true
+ R.guildClubID,R.sampledAt=nil,nil;R.dirty=true
 end
 local function Schedule()
  if R.timer then return end
@@ -33,7 +33,6 @@ local function Add(flag,name,realm,guid)
   if previous==nil then R.shortNames[short]=key
   elseif previous~=key then R.shortNames[short]=false end
  end
- if key or guid then R.available=bit.bor(R.available,flag) end
 end
 
 function R:GetVersion()
@@ -41,7 +40,7 @@ function R:GetVersion()
  -- A hidden one-off reader can request a fresh snapshot without owning events.
  -- Within one frame it shares that snapshot with the rest of its member batch.
  if self.dirty or not self.active and self.sampledAt~=now then
-  wipe(self.names);wipe(self.guids);wipe(self.shortNames);self.available=0
+  wipe(self.names);wipe(self.guids);wipe(self.shortNames)
   if C_FriendList.IsLegacyFriendSystemEnabled() then
    for index=1,C_FriendList.GetNumFriends() do
     local info=G.Public(C_FriendList.GetFriendInfoByIndex(index))
@@ -74,13 +73,8 @@ function R:GetVersion()
  return self.version
 end
 
-function R:CanMatch(kind)
- self:GetVersion()
- return bit.band(self.available,kind=="guild" and GUILD or BNET+CHARACTER)~=0
-end
-
 -- Native generic "friend" is deliberately not reclassified as Battle.net.
--- Results may additionally provide explicit native character/guild evidence.
+-- Applicants and the current roster use this index; search keeps native group lists.
 function R:Apply(member,matchNameOnly)
  if member.isSelf then
   member.isBNetFriend,member.isCharFriend,member.isGuildMate,member.isFriend=false,false,false,false
@@ -128,7 +122,6 @@ end
 
 function R:OnChanged()
  self.dirty=true
- G.Results:InvalidateView()
  if self.active then Schedule() end
 end
 

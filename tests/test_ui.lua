@@ -19,6 +19,8 @@ do
  T.eq(icon:GetTexture(),1900001)
  member.specName="Explicit specialization"
  T.eq(U:SpecName(member),member.specName,"provider specialization names keep precedence")
+ U:SetMemberIcon(icon,member);T.eq(icon:GetTexture(),1900001,"a valid native ID keeps icon priority over an explicit display name")
+ T.eq(A.Specializations:Get(900001),"Cached spec 900001","UI metadata is shared with lightweight core consumers")
  T.eq(calls,1)
  member.specName=nil;member.specID=900002
  T.eq(U:SpecName(member),nil,"unavailable specialization metadata stays absent")
@@ -32,6 +34,9 @@ do
  member.specID=900001;U:SetMemberIcon(icon,member)
  T.eq(icon:GetTexture(),1900001,"reusing an earlier specialization restores its own icon")
  T.eq(calls,4)
+ A.Specializations:Get(900003)
+ U:SetMemberIcon(icon,{specID=900003,class="WARRIOR"})
+ T.eq(icon:GetTexture(),1900003);T.eq(calls,5,"metadata first read by a core consumer is reused by UI icons")
  GetSpecializationInfoByID=original
 end
 -- Delve thumbnails use the native member's UV rectangle, including when it is
@@ -159,7 +164,8 @@ U.frame:Fire("OnMouseDown","LeftButton")
 T.eq(U.drag.handle,U.frame,"passive main-window areas retain their drag callback after host setup")
 U.frame:Fire("OnMouseUp","LeftButton");T.eq(U.drag.handle,nil,"releasing a passive-area drag stops the window")
 settings:SelectSection("browse");settings.controls.rememberFilters.widget:Fire("OnClick")
-T.eq(A.db.rememberFilters,false,"shared browse preference writes through Core")
+T.eq(A.charPrefs.rememberFilters,false,"browse preference writes to this character through Core")
+T.eq(A:GetSetting("rememberFilters"),false)
 T.eq(settings.panels.keywords,nil,"keyword filtering has been removed from settings")
 T.eq(settings.keywordInput,nil)
 for _,mode in ipairs({"shift","alt","ctrl","always"}) do
@@ -418,8 +424,8 @@ do
 end
 do
  local saved=G.applicants[71]
- local one={name="ArenaOne-Away",nameKey="ArenaOne-Away",class="MAGE",assignedRole="DAMAGER",itemLevel=288,dungeonScore=3900,ratingKind="pvp",rating=1950,pvpRatingInfo={bracket=1,rating=1950,activityName="2v2"}}
- local two={name="ArenaTwo-Away",nameKey="ArenaTwo-Away",class="PRIEST",assignedRole="HEALER",itemLevel=285,dungeonScore=4100,ratingKind="pvp",rating=1450,pvpRatingInfo={bracket=1,rating=1450,activityName="2v2"}}
+ local one={applicantID=71,name="ArenaOne-Away",nameKey="ArenaOne-Away",class="MAGE",assignedRole="DAMAGER",itemLevel=288,dungeonScore=3900,ratingKind="pvp",rating=1950,pvpRatingInfo={bracket=1,rating=1950,activityName="2v2"}}
+ local two={applicantID=71,name="ArenaTwo-Away",nameKey="ArenaTwo-Away",class="PRIEST",assignedRole="HEALER",itemLevel=285,dungeonScore=4100,ratingKind="pvp",rating=1450,pvpRatingInfo={bracket=1,rating=1450,activityName="2v2"}}
  G.applicants[71]={id=71,status="applied",displayOrderID=1,comment="2v2",members={one,two}}
  G.applicants[72]={id=72,status="applied",displayOrderID=2,comment="2v2",members={{name="ArenaThree-Away",nameKey="ArenaThree-Away",class="MAGE",assignedRole="DAMAGER",itemLevel=290,dungeonScore=1000,ratingKind="pvp",rating=1750,pvpRatingInfo={bracket=1,rating=1750,activityName="2v2"}}}}
  G:Notify("applicants");Pick(create.sortChoice,"score")
@@ -664,13 +670,13 @@ do
  local events={"OnTextChanged","OnEnterPressed","OnEscapePressed","OnTabPressed","OnArrowPressed","OnEditFocusGained","OnEditFocusLost","OnEnter","OnLeave","OnHide","OnShow"}
  local scripts={};for _,event in ipairs(events) do scripts[event]=box:GetScript(event) end
  box:UserType("Old native activity token")
- local remember=A.db.rememberFilters;A.db.rememberFilters=true
- G.db.prefs.find={filters={text="Old saved local query",minLevel=12,maxLevel=99,tankPresence="present",healerPresence="missing",needsDamage=true}}
+ local remember=A.charPrefs.rememberFilters;A.charPrefs.rememberFilters=true
+ G.prefs.find={filters={text="Old saved local query",minLevel=12,maxLevel=99,tankPresence="present",healerPresence="missing",needsDamage=true}}
  local combat=InCombatLockdown;_G.InCombatLockdown=function() return true end
  T.eq(A:Open("find"),true,"Find first opens during combat without protected mouse propagation")
  local page=U.pages.find
  T.eq(G.filters.tankPresence,"present");T.eq(G.filters.healerPresence,"missing");T.eq(G.filters.damagePresence,"missing","first entry migrates the saved damage requirement alongside the other role-presence fields")
- T.eq(G.filters.needsDamage,nil);T.eq(G.db.prefs.find.filters.needsDamage,nil,"migration removes the retired damage field")
+ T.eq(G.filters.needsDamage,nil);T.eq(G.prefs.find.filters.needsDamage,nil,"migration removes the retired damage field")
  T.eq(page.rolePresenceChoices.TANK.value,"present");T.eq(page.rolePresenceChoices.HEALER.value,"missing");T.eq(page.rolePresenceChoices.DAMAGER.value,"missing")
  page:ClearFilters();T.eq(G.filters.tankPresence,nil);T.eq(G.filters.healerPresence,nil);T.eq(G.filters.damagePresence,nil)
  T.eq(page.picker,nil,"Find keeps the activity popup unbuilt while only results are open")
@@ -709,7 +715,7 @@ do
  local revision=U.Native.searchLease.revision
  box:UserType("12-15");T.eq(U.Native.searchLease.revision,revision+1,"each native edit distinguishes a newer query without parsing it")
  T.eq(G.filters.text,nil);T.eq(G.filters.leaderText,nil);T.eq(G.filters.minLevel,nil);T.eq(G.filters.maxLevel,nil,"native range text is never copied into local result filters")
- T.eq(G.db.prefs.find.filters.text,nil,"protected search text is not saved for a forbidden SetText restore")
+ T.eq(G.prefs.find.filters.text,nil,"protected search text is not saved for a forbidden SetText restore")
  box:SetFocus();T.eq(page.search.focused,true);box:Fire("OnEnterPressed")
  T.eq(G.searchText,"12-15","Enter submits the text already owned by the native input")
  page:SelectCategory("seasonDungeon");T.eq(box:GetText(),"12-15","searches within the category preserve the player's native query")
@@ -771,7 +777,7 @@ do
  A:Open("find")
  page:SetSearchMode("leader");T.eq(page.search.box,page.previewSearchBox);T.eq(U.Native.searchLease,nil)
  page.searchClear:Fire("OnClick")
- A.db.rememberFilters=remember
+ A.charPrefs.rememberFilters=remember
 end
 A:Open("find")
 local find=U.pages.find
@@ -779,7 +785,7 @@ do
  local getResults,previousState,previousError,inputError=G.GetResults,G.state,G.error,find.searchError
  local resultIDs=getResults(G)
  G.GetResults=function() return {} end;find.searchError=nil
- G.state="waiting";G.error="Retry in 5 seconds";G:Notify("search")
+ G.state="waiting";G.error="Retry in 5 seconds";G:Notify("results");G:Notify("search")
  T.eq(find.emptyHelp:GetText(),G.error,"the empty state explains the pending retry")
  T.eq(find.statusText:GetText(),"","the search notice does not repeat the visible retry explanation")
  G.error="Retry in 4 seconds";G:Notify("search")
@@ -791,7 +797,7 @@ do
  find.searchError="Search input unavailable";G:Notify("search")
  T.eq(find.statusText:GetText(),find.searchError,"a distinct input error remains visible")
  find.searchError=nil;G.GetResults=function() return resultIDs end
- G.state="waiting";G.error="Retry in 3 seconds";G:Notify("search")
+ G.state="waiting";G.error="Retry in 3 seconds";G:Notify("results");G:Notify("search")
  T.eq(find.emptyPanel:IsShown(),false,"existing results keep the central empty state hidden")
  T.eq(find.statusText:GetText(),G.error,"results retain the pending retry beside the search results")
  G.state="failed";G.error="Search failed again";G:Notify("search")
@@ -880,7 +886,7 @@ do
 end
 T.eq(G.filters.maxMembers,1,"direct numeric input immediately updates real filter state");T.eq(find.fMembers.placeholder:IsShown(),false)
 find.fMembers.box:SetText("");T.eq(G.filters.maxMembers,nil);T.eq(find.fMembers.placeholder:IsShown(),true)
-local rememberBounds=A.db.rememberFilters;A.db.rememberFilters=true
+local rememberBounds=A.charPrefs.rememberFilters;A.charPrefs.rememberFilters=true
 find.fMembers.box:SetText("4");find.fMinMembers.box:SetText("2")
 T.eq(G.filters.minMembers,2);T.eq(G.filters.maxMembers,4,"minimum input never overwrites the maximum")
 find.fMinMembers.box:SetText("3");T.eq(G.filters.maxMembers,4)
@@ -938,7 +944,7 @@ do
  local allPresent={tankPresence="present",healerPresence="present",damagePresence="present"}
  find:RestoreCategory(allPresent);find:UpdateFilters()
  T.eq(choices.TANK.value,"present");T.eq(choices.HEALER.value,"present");T.eq(choices.DAMAGER.value,nil,"legacy all-present preferences retain tank and healer without selecting missing damage")
- T.eq(allPresent.damagePresence,nil);T.eq(G.db.prefs.find.categoryPrefs.seasonDungeon.damagePresence,nil,"normalized preferences no longer save all three positive conditions")
+ T.eq(allPresent.damagePresence,nil);T.eq(G.prefs.find.categoryPrefs.seasonDungeon.damagePresence,nil,"normalized preferences no longer save all three positive conditions")
  T.eq(choices.DAMAGER.buttons[1]:IsEnabled(),false)
  find:SelectCategory("seasonRaid");find:SelectCategory("seasonDungeon")
  T.eq(choices.TANK.value,"present");T.eq(choices.HEALER.value,"present");T.eq(choices.DAMAGER.value,nil,"category changes preserve the normalized role conditions")
@@ -948,12 +954,12 @@ do
   T.eq(choices[role].value,"missing","legacy saved missing-role filters migrate to a visible seasonal choice")
   T.eq(G.filters.neededRole,nil,"the migrated condition has only one active representation")
   Choose(role,"missing")
-  local saved=G.db.prefs.find.categoryPrefs.seasonDungeon
+  local saved=G.prefs.find.categoryPrefs.seasonDungeon
   T.eq(saved.neededRole,nil);T.eq(saved.tankPresence,nil);T.eq(saved.healerPresence,nil);T.eq(saved.damagePresence,nil);T.eq(saved.needsDamage,nil,"clearing a migrated condition removes both current and retired saved fields")
  end
  find:SelectCategory("seasonRaid");find:SetFiltersOpen(filtersOpen)
 end
-A.db.rememberFilters=rememberBounds
+A.charPrefs.rememberFilters=rememberBounds
 T.eq(find.filterToggle.label:GetText(),"筛选","the filter arrow is texture art rather than an unsupported font glyph")
 for _,r in ipairs(find.seasonCategories.rows) do if r.key=="seasonRaid" then T.eq(r.selected:IsShown(),true,"category selection has a tonal background and vertical marker");T.eq(r.mark:IsShown(),true) end end
 
@@ -993,7 +999,7 @@ do
  catalog.GetGroups=function(self,key) if key=="seasonDungeon" or key=="2" then return groups end;return getGroups(self,key) end
  catalog.GetActivityTier=function(self,activity) return activity.fixtureTier or getTier(self,activity) end
  catalog.GetGroupShortName=function(self,key,groupKey) if groupKey==201 then return "毒牙" elseif groupKey==202 then return "红玉" end;return getShort(self,key,groupKey) end
- local remember=A.db.rememberFilters;A.db.rememberFilters=true
+ local remember=A.charPrefs.rememberFilters;A.charPrefs.rememberFilters=true
  local function Row(key) for _,row in ipairs(find.activities.rows) do if row.key==key then return row end end;error("missing activity row "..key) end
  local function Difficulty(id) for _,button in ipairs(find.difficultyButtons) do if button.value==id and button:IsShown() then button:Fire("OnClick");return end end;error("missing difficulty "..tostring(id)) end
  local function Check(key) if not find.multiSelectMode then find.multiSelectToggle:Fire("OnClick") end;Row(key).multiSelect:Fire("OnClick") end
@@ -1013,7 +1019,7 @@ do
  T.eq(Row(201).multiSelect:IsShown(),true);T.eq(Row(202).multiSelect:IsShown(),true);T.eq(Row(203).multiSelect:IsShown(),false,"entering multi-selection only enables actual keystone rows")
  T.eq(calls,before,"entering multi-selection does not search")
  T.eq(find.pickerConfirm:IsShown(),false)
- local savedDifficulty=G.db.prefs.find.categoryPrefs.seasonDungeon.difficultyID
+ local savedDifficulty=G.prefs.find.categoryPrefs.seasonDungeon.difficultyID
  find:ClosePicker();find:SelectCategory("seasonDungeon")
  T.eq(G.filters.difficultyID,savedDifficulty,"closing an unsubmitted choice restores the confirmed difficulty")
  Difficulty(8)
@@ -1078,7 +1084,7 @@ do
  T.eq(find.emptyText:GetText(),"请选择副本")
  find:ClosePicker();find:SelectCategory("2")
  T.same(G.filters.groupKeys,{[201]=true});T.eq(Row(201).multiSelect:GetChecked(),true,"closing the expansion draft restores the last confirmed collection")
- local saved=G.db.prefs.find.categoryPrefs.seasonDungeon
+ local saved=G.prefs.find.categoryPrefs.seasonDungeon
  saved.groupKey=nil;saved.groupKeys={[201]=true,[203]=true,[999]=true};saved.difficultyID=8
  find:SelectCategory("seasonRaid");find:SelectCategory("seasonDungeon")
  T.same(G.filters.groupKeys,{[201]=true},"restoration excludes removed groups and groups without the chosen keystone activity")
@@ -1109,7 +1115,7 @@ do
  T.eq(calls,ratedCalls);Row(909):Fire("OnClick","LeftButton");T.eq(calls,ratedCalls+1);T.eq(lastActivity,9009)
  find:SelectCategory("seasonRaid");catalog.GetCategories=getCategories
  catalog.GetActivities,catalog.GetGroups,catalog.GetActivityTier,catalog.GetGroupShortName=getActivities,getGroups,getTier,getShort
- G.Search.Search=search;A.db.rememberFilters=remember
+ G.Search.Search=search;A.charPrefs.rememberFilters=remember
  find:SelectCategory("seasonRaid");find:SelectCategory("seasonDungeon");Row(0):Fire("OnClick","LeftButton")
 end
 find:SelectCategory("seasonDungeon");find:ClosePicker()
@@ -1313,14 +1319,14 @@ noteBox:SetScript("OnEditFocusGained",function(box)
   firstFocusBackground=box:CreateTexture(nil,"BACKGROUND");firstFocusBackground:SetAllPoints();firstFocusBackground:SetColorTexture(0,0,0,.9)
  end
 end)
-find.main:Fire("OnKeyDown","ENTER");T.eq(U.Native.applicationLease.id,target.key);T.eq(G.clearedApplication,nil,"opening configuration keeps the engine's current note")
+find.main:Fire("OnKeyDown","ENTER");T.eq(U.Application.applicationLease.id,target.key);T.eq(G.clearedApplication,nil,"opening configuration keeps the engine's current note")
 T.eq(firstFocusBackground:IsShown(),false,"native art created on first application focus stays behind the shared input surface");T.eq(firstFocusBackground:GetAlpha(),0)
 local savedApps=G.apps
 G.apps={savedApps[1]}
 for i=2,5 do G.apps[i]={id=900+i,name="Other category "..i,leaderName="Other-Away",categoryID=3,status=i==5 and "invited" or "applied"} end
 local previousID=LFGListApplicationDialog.resultID
 A.db.reduceMotion=false
-U.Native:Apply(102)
+U.Application:Apply(102)
 T.ok(find.limitNotice:IsShown(),"the sixth application explains the cap beside the primary action")
 T.ok(find.limitNotice:GetHeight()>=40)
 T.eq(find.limitText.justify,"LEFT","notice text has an explicit left alignment")
@@ -1351,15 +1357,15 @@ do
  T.eq(find.continueApplication:IsEnabled(),true)
  G.Search.Search=search;G.apps[1].status="applied";G:Notify("applications")
 end
-find.continueApplication:Fire("OnClick");T.eq(U.Native.applicationLease.id,102,"continuing configures the original target when no role has been confirmed yet")
-G.apps[2].status="applied";U.Native:Apply(102)
+find.continueApplication:Fire("OnClick");T.eq(U.Application.applicationLease.id,102,"continuing configures the original target when no role has been confirmed yet")
+G.apps[2].status="applied";U.Application:Apply(102)
 f.base.AdvanceClock(6.4);G:Notify("applications");f.base.AdvanceClock(.11)
 T.eq(find.limitNotice:IsShown(),true,"the pending target and notice remain after 6.5 seconds")
 G:Notify("applications");T.eq(find.limitNotice:IsShown(),true,"passive updates retain the pending application")
 G.apps[2].status="cancelled";G:Notify("applications");find.continueApplication:Fire("OnClick")
-T.eq(U.Native.applicationLease.id,102,"a slot released after the old timeout still continues the original target")
+T.eq(U.Application.applicationLease.id,102,"a slot released after the old timeout still continues the original target")
 G.apps[2].status="applied"
-U.Native:Apply(102);find.closeApplicationNotice:Fire("OnClick");G:Notify("applications")
+U.Application:Apply(102);find.closeApplicationNotice:Fire("OnClick");G:Notify("applications")
 T.eq(find.limitNotice:IsShown(),false,"the notice can be dismissed without passive reopening")
 G.apps=savedApps;find.scopeToggle:Fire("OnClick");G:Notify("applications")
 do
@@ -1397,51 +1403,54 @@ do
  local originalSubmit=dialog.SignUpButton:GetScript("OnClick");local originalEvent=dialog:GetScript("OnEvent");local noteParent=dialog.Description.EditBox:GetParent();local noteFont={dialog.Description.EditBox:GetFont()}
  local before=dialog.submissions
  U:CloseModal()
- T.eq(U.Native:IsAutoApplyEnabled(),false,"automatic application starts disabled for this login")
+ T.eq(U.Application:IsAutoApplyEnabled(),false,"automatic application starts disabled for this login")
  T.eq(find.autoApply.value,false);T.eq(find.autoApply:GetWidth(),44,"only the actual track is a toggle target")
  T.eq(find.applicationRoles,nil,"header role shortcuts are removed")
  find.applicationSettings:Fire("OnClick");T.eq(U.activeModal,nil,"the disabled text cannot bypass enabling configuration")
  T.eq(target.key,102);target:Fire("OnDoubleClick","LeftButton");T.eq(dialog.submissions,before,"a disabled double click opens a temporary confirmation")
- T.eq(U.Native.applicationLease.id,102);T.eq(dialog.Description:GetParent(),U.Native.applicationModal.note)
- T.eq(U.Native.applicationLease.roles.TANK,true,"first confirmation prefers the current specialization")
- T.eq(U.Native:GetApplicationRoles(),nil,"preselection does not confirm saved automatic roles")
+ T.eq(U.Application.applicationLease.id,102);T.eq(dialog.Description:GetParent(),U.Application.applicationModal.note)
+ T.eq(U.Application.applicationLease.roles.TANK,true,"first confirmation prefers the current specialization")
+ T.eq(U.Application.applicationPrefs and U.Application.applicationPrefs.roles,nil,"preselection does not confirm saved roles")
+ T.eq(A.charPrefs.applicationRoles,nil,"opening a default selection does not persist it")
  U:CloseModal();T.eq(dialog.submissions,before)
  _G.GetSpecializationRole=function() return "HEALER" end
- find:Apply(102);T.eq(U.Native.applicationLease.roles.DAMAGER,true,"an unavailable specialization falls back to an available queue role")
+ find:Apply(102);T.eq(U.Application.applicationLease.roles.DAMAGER,true,"an unavailable specialization falls back to an available queue role")
  U:CloseModal();_G.GetSpecializationRole=function() return "TANK" end
  find:Apply(102)
  dialog.Description.EditBox:UserType("Temporary native note")
- U.Native.applicationModal.roles.DAMAGER:Fire("OnClick");U.Native.applicationModal.submit:Fire("OnClick")
+ U.Application.applicationModal.roles.DAMAGER:Fire("OnClick");U.Application.applicationModal.submit:Fire("OnClick")
  T.eq(dialog.submissions,before+1);T.eq(dialog.submitted.note,"Temporary native note")
  T.eq(dialog.submitted.tank,true);T.eq(dialog.submitted.damage,true,"manual confirmation preserves multiple selected roles")
  T.eq(G.applyCalls,1,"temporary confirmation submits through the business Apply entry")
- T.eq(U.Native:IsAutoApplyEnabled(),false);T.eq(U.Native:GetApplicationRoles(),nil,"temporary application does not configure automatic roles")
+ T.eq(U.Application:IsAutoApplyEnabled(),false);T.same(U.Application.applicationPrefs.roles,{TANK=true,DAMAGER=true},"a confirmed manual application becomes this character's next default")
+ T.same(A.charPrefs.applicationRoles,{TANK=true,HEALER=false,DAMAGER=true},"only the three explicit role booleans enter this character's saved preferences")
  T.eq(U.activeModal,nil);T.eq(dialog.Description:GetParent(),dialog);T.eq(dialog.Description.EditBox:GetParent(),noteParent)
  T.eq(dialog.SignUpButton:GetScript("OnClick"),originalSubmit);T.eq(dialog:GetScript("OnEvent"),originalEvent)
  T.same({dialog.Description.EditBox:GetFont()},noteFont,"releasing restores the original native text presentation")
  find.main:Fire("OnKeyDown","ENTER");T.eq(dialog.submissions,before+1,"Enter still requires confirmation while automatic application is off")
- T.eq(U.Native.applicationLease.id,102);U:CloseModal()
+ T.eq(U.Application.applicationLease.id,102);U:CloseModal()
  find.autoApply:Fire("OnClick")
  T.eq(find.autoApply.value,false,"the switch stays off while its configuration is pending")
- T.eq(U.Native.applicationLease.id,nil)
- T.eq(U.Native.applicationModal.group:IsShown(),false,"configuration has no retired explanation or empty group row")
- T.eq(({U.Native.applicationModal.roleLabel:GetPoint()})[3],0,"roles start at the content edge after removing the help text")
- U:CloseModal();T.eq(U.Native:IsAutoApplyEnabled(),false,"cancelling activation leaves the feature off")
+ T.eq(U.Application.applicationLease.id,nil)
+ T.eq(U.Application.applicationModal.group:IsShown(),false,"configuration has no retired explanation or empty group row")
+ T.eq(({U.Application.applicationModal.roleLabel:GetPoint()})[3],0,"roles start at the content edge after removing the help text")
+ U:CloseModal();T.eq(U.Application:IsAutoApplyEnabled(),false,"cancelling activation leaves the feature off")
  find.autoApply:Fire("OnClick")
- local modal=U.Native.applicationModal
- local groupText=modal.group:GetText();U:SetText(modal.group,string.rep("较长的申请队伍标题",6));U.Native:LayoutApplication()
+ local modal=U.Application.applicationModal
+ local groupText=modal.group:GetText();U:SetText(modal.group,string.rep("较长的申请队伍标题",6));U.Application:LayoutApplication()
  T.eq(modal.group:GetHeight(),modal.group:GetStringHeight(),"two-line application titles reserve their complete enlarged line boxes")
- U:SetText(modal.group,groupText);U.Native:LayoutApplication()
- modal.roles.TANK:Fire("OnClick")
+ U:SetText(modal.group,groupText);U.Application:LayoutApplication()
+ modal.roles.TANK:Fire("OnClick");modal.roles.DAMAGER:Fire("OnClick")
  T.eq(modal.submit:IsEnabled(),false,"activation cannot save an empty role selection")
- modal.submit:Fire("OnClick");T.eq(U.Native:IsAutoApplyEnabled(),false)
+ modal.submit:Fire("OnClick");T.eq(U.Application:IsAutoApplyEnabled(),false)
  modal.roles.DAMAGER:Fire("OnClick");modal.roles.TANK:Fire("OnClick")
  T.eq(modal.roles.TANK.active,true);T.eq(modal.roles.DAMAGER.active,true)
  dialog.Description.EditBox:UserType("A reusable native note");modal.submit:Fire("OnClick")
  T.eq(dialog.submissions,before+1,"saving activation does not submit a group application")
- T.eq(U.Native:IsAutoApplyEnabled(),true);T.eq(find.autoApply.value,true)
- T.same(U.Native:GetApplicationRoles(),{TANK=true,DAMAGER=true})
- T.eq(LycheeGroupDB.autoApply,nil,"automatic application preferences remain session only")
+ T.eq(U.Application:IsAutoApplyEnabled(),true);T.eq(find.autoApply.value,true)
+ T.same(U.Application.applicationPrefs.roles,{TANK=true,DAMAGER=true})
+ T.eq(LycheeGroupDB.autoApply,nil,"the automatic application switch remains session only")
+ T.same(A.charPrefs.applicationRoles,{TANK=true,HEALER=false,DAMAGER=true})
  local activity=G.records[102].activityID;G.records[102].activityID=1
  target:Fire("OnDoubleClick","LeftButton");T.eq(dialog.submissions,before+2,"an enabled double click reuses the configured input directly")
  T.eq(dialog.submitted.tank,true);T.eq(dialog.submitted.damage,true,"quick submission retains the complete multi-role selection")
@@ -1452,20 +1461,21 @@ do
  T.same(find.applicationSettings.label.color,U.Theme.brand,"the separate settings text uses brand color on hover")
  T.eq(find.applicationSettings.hover:IsShown(),false,"the settings text has no surrounding hover surface")
  find.applicationSettings:Fire("OnLeave");find.applicationSettings:Fire("OnClick")
- T.eq(U.Native:IsAutoApplyEnabled(),true,"clicking the text edits without toggling")
- T.eq(U.Native.applicationLease.id,nil);T.eq(modal.submit.label:GetText(),U.L.save)
+ T.eq(U.Application:IsAutoApplyEnabled(),true,"clicking the text edits without toggling")
+ T.eq(U.Application.applicationLease.id,nil);T.eq(modal.submit.label:GetText(),U.L.save)
  dialog.Description.EditBox:UserType("Updated native note");modal.roles.DAMAGER:Fire("OnClick");modal.submit:Fire("OnClick")
- T.eq(dialog.submissions,before+3);T.same(U.Native:GetApplicationRoles(),{TANK=true})
+ T.eq(dialog.submissions,before+3);T.same(U.Application.applicationPrefs.roles,{TANK=true})
  find:OpenResultMenu(find.results,102)
  local menu=U.context.menu;T.eq(menu.items[1].label,"编辑后申请")
  menu.list.rows[1]:Fire("OnClick","LeftButton")
  T.eq(dialog.submissions,before+3,"the context menu always waits for confirmation")
- T.eq(U.Native.applicationLease.id,102);T.eq(modal.submit.label:GetText(),"申请")
+ T.eq(U.Application.applicationLease.id,102);T.eq(modal.submit.label:GetText(),"申请")
  dialog.Description.EditBox:UserType("Manual application note")
  modal.roles.DAMAGER:Fire("OnClick");modal.roles.TANK:Fire("OnClick");modal.submit:Fire("OnClick")
  T.eq(dialog.submissions,before+4);T.eq(dialog.submitted.note,"Manual application note")
  T.eq(dialog.submitted.damage,true);T.eq(dialog.submitted.tank,false)
- T.same(U.Native:GetApplicationRoles(),{TANK=true},"manual application does not replace the automatic role configuration")
+ T.same(U.Application.applicationPrefs.roles,{TANK=true},"manual application does not replace the automatic role configuration")
+ T.same(A.charPrefs.applicationRoles,{TANK=true,HEALER=false,DAMAGER=false},"one-off overrides do not replace the character's saved automatic roles")
  dialog.Description.EditBox:UserType("Updated native note")
  dialog.available.TANK=false;find:Apply(102)
  T.eq(dialog.submissions,before+4,"an unavailable remembered role cannot be submitted")
@@ -1473,16 +1483,16 @@ do
  modal.roles.DAMAGER:Fire("OnClick");modal.submit:Fire("OnClick")
  T.eq(dialog.submissions,before+5);T.eq(dialog.submitted.damage,true)
  dialog.available.TANK=true
- find.autoApply:Fire("OnClick");T.eq(U.Native:IsAutoApplyEnabled(),false)
+ find.autoApply:Fire("OnClick");T.eq(U.Application:IsAutoApplyEnabled(),false)
  find:Apply(102);T.eq(dialog.submissions,before+5,"turning the switch off immediately restores confirmation")
- T.eq(U.Native.applicationLease.id,102);U:CloseModal()
+ T.eq(U.Application.applicationLease.id,102);U:CloseModal()
  find.autoApply:Fire("OnClick");modal.submit:Fire("OnClick")
- T.eq(U.Native:IsAutoApplyEnabled(),true,"reenabling requires saving configuration again")
+ T.eq(U.Application:IsAutoApplyEnabled(),true,"reenabling requires saving configuration again")
  _G.GetSpecializationRole=function() return "DAMAGER" end
  find.applicationSettings:Fire("OnClick")
- T.eq(U.Native.applicationLease.roles.TANK,true,"editing retains explicitly saved roles across specialization changes")
+ T.eq(U.Application.applicationLease.roles.TANK,true,"editing retains explicitly saved roles across specialization changes")
  local foreign=CreateFrame("Frame",nil,UIParent);dialog.Description:SetParent(foreign);dialog.Description:SetHeight(40)
- T.eq(U.Native.applicationLease,nil);T.eq(dialog.Description:GetParent(),foreign,"lease release preserves an external owner's layout")
+ T.eq(U.Application.applicationLease,nil);T.eq(dialog.Description:GetParent(),foreign,"lease release preserves an external owner's layout")
  T.eq(U.activeModal,nil);dialog.Description:SetParent(dialog);dialog.Description:SetSize(210,28)
  T.same({GetLFGRoles()},roles,"temporary and automatic applications leave dungeon finder roles unchanged")
  local nativeApply=C_LFGList.ApplyToGroup;C_LFGList.ApplyToGroup=function() error("Rejected by client") end
@@ -1494,7 +1504,7 @@ do
  find:Apply(102,true);G.apps[1].status="cancelled";G:Notify("applications")
  find.continueApplication:Fire("OnClick")
  T.eq(dialog.submissions,submitted,"continuing Edit and apply still waits for confirmation")
- T.eq(U.Native.applicationLease.id,102);T.eq(U.Native.applicationModal.submit.label:GetText(),"申请")
+ T.eq(U.Application.applicationLease.id,102);T.eq(U.Application.applicationModal.submit.label:GetText(),"申请")
  U:CloseModal()
  G.apps[1].status="applied";find:Apply(102)
  local pendingRecord=G.records[102];G.records[102]=nil;G.apps[1].status="cancelled";G:Notify("applications")
@@ -1729,6 +1739,46 @@ do
  T.eq(U.Motion.jobs[find],nil,"the pending render releases itself immediately")
  record.name=old;find:RefreshResults()
 end
+do
+ local records,status,errorText=G.records,G.state,G.error
+ local setItems=find.results.SetItems;local fills,renders=0,0
+ find.results.SetItems=function(self,ids,render)
+  fills=fills+1
+  return setItems(self,ids,function(...) renders=renders+1;return render(...) end)
+ end
+ G.state="done";G.error=nil;G:Notify("results")
+ local completedRenders=renders;local ids=find.results.ids
+ T.ok(completedRenders>0,"completion binds the visible results")
+ G:Notify("search")
+ T.eq(fills,1,"results then search completion binds the list only once")
+ T.eq(renders,completedRenders,"completion state notification does not repaint result rows")
+ local points=0;local originals={}
+ for _,region in ipairs({find.context,find.resultCount,find.resultsHeader,find.results,find.emptyPanel}) do
+  local previous=region.SetPoint;originals[region]=previous
+  region.SetPoint=function(self,...) points=points+1;return previous(self,...) end
+ end
+ G:Notify("results");G:Notify("search")
+ T.eq(points,0,"unchanged final layout reuses the five result anchors")
+ for region,previous in pairs(originals) do region.SetPoint=previous end
+ ids=find.results.ids
+ G.state="waiting";G.error="Queued search";G:Notify("search")
+ T.eq(find.results.ids,ids,"queued search retains the already bound result set")
+ T.eq(find.refresh:IsEnabled(),false,"queued state disables refresh immediately")
+ T.eq(find.statusMessage,"Queued search","queued feedback updates without a list repaint")
+ G.records={};G.state="searching";G.error=nil;G:Notify("results");G:Notify("search")
+ T.eq(find.emptyPanel:IsShown(),true);T.eq(find.emptyText:GetText(),U.L.searching)
+ T.eq(find.start:IsShown(),false);T.eq(find.busyIcon:IsShown(),true)
+ local emptyFills=fills
+ G.state="waiting";G.error="Retry soon";G:Notify("search")
+ T.eq(find.emptyText:GetText(),U.L.searchWaitingTitle);T.eq(find.emptyHelp:GetText(),"Retry soon")
+ G.state="failed";G.error="Search failed";G:Notify("search")
+ T.eq(find.emptyText:GetText(),U.L.searchFailedTitle);T.eq(find.emptyHelp:GetText(),"Search failed")
+ T.eq(find.start:IsShown(),true);T.eq(find.busyIcon:IsShown(),false)
+ G.state="done";G.error=nil;G:Notify("search")
+ T.eq(find.emptyText:GetText(),U.L.noResults);T.eq(find.emptyHelp:GetText(),U.L.noResultsHelp)
+ T.eq(fills,emptyFills,"empty-state transitions update immediately without rebinding rows")
+ find.results.SetItems=setItems;G.records,G.state,G.error=records,status,errorText;find:RefreshResults()
+end
 find:SetFiltersOpen(true);T.ok(U.Motion.jobs[find.filterPanel]);find:SetFiltersOpen(false);T.eq(U.Motion.jobs[find.filterPanel],nil)
 find:SelectCategory("seasonDungeon");T.ok(U.Motion.jobs[find.picker]);find:ClosePicker();T.eq(U.Motion.jobs[find.picker],nil)
 A.db.reduceMotion=false;G.state="searching";find:ReadSearchState();T.ok(U.Motion.jobs[find.busyIcon],"only an active search animates the lychee")
@@ -1894,6 +1944,71 @@ do
  two.factionGroup=nil;g:Notify("applicants");T.eq(batch.people[2].faction:IsShown(),false,"reused rows clear a missing faction")
  u:Hide(true)
 end
+-- Offscreen applications still own the countdown until the final deadline.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("zhCN")
+ local a,u,g=fresh.A,fresh.U,fresh.G;a.db.reduceMotion=true
+ local clock,now=GetTime,0;GetTime=function() return now end
+ for i=1,5 do g.apps[i]={id=i,name="Application "..i,categoryID=2,status=i==5 and "applied" or "invited",expiresAt=i==5 and 90 or nil} end
+ a:Open("find");local page=u.pages.find;page:ShowApplicationLimit(101)
+ T.ok(page.countdown)
+ now=1;fresh.base.AdvanceClock(1)
+ T.ok(page.countdown,"four invited rows do not stop an offscreen applied entry's countdown")
+ page.appList:SetPixelOffset(999,false)
+ local row;for _,candidate in ipairs(page.appList.rows) do if candidate.key==5 then row=candidate;break end end
+ T.eq(row.status:GetText(),"1:29")
+ now=5;fresh.base.AdvanceClock(1);T.eq(row.status:GetText(),"1:25","scrolling to the pending entry keeps updating its remaining time")
+ now=90;fresh.base.AdvanceClock(1)
+ T.eq(page.countdown,nil,"the final display deadline stops the countdown")
+ T.eq(g.apps[5].status,"applied","a display deadline does not invent a native terminal status")
+ g.apps[5].expiresAt=120;g:Notify("applications");T.ok(page.countdown,"a refreshed future deadline restarts the countdown")
+ now=91;fresh.base.AdvanceClock(1);T.eq(row.status:GetText(),"0:29")
+ u:Hide(true);T.eq(page.countdown,nil);GetTime=clock
+end
+-- Applicant details keep the selected identity when native member slots are reused.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("zhCN")
+ local a,u,g=fresh.A,fresh.U,fresh.G;a.db.reduceMotion=true
+ local function Member(name,score)
+  return {applicantID=71,name=name.."-Away",nameKey=name.."-Away",class="MAGE",assignedRole="DAMAGER",itemLevel=320,dungeonScore=score}
+ end
+ local original=Member("Original",2500)
+ local app={id=71,status="applied",activityID=2,members={original}}
+ g.listing={activityID=2,name="Recruitment"};g.applicants[71]=app;a:Open("create")
+ local page,tip=u.pages.create,u.Tooltip
+ page.batchScroll.mouseOver=true;page.batchPool[1].people[1].tooltipArea:Fire("OnEnter")
+ T.eq(tip.selectedMemberID,"Original-Away")
+ original.name,original.nameKey="Replacement-Away","Replacement-Away"
+ local current=Member("Original",3100);app.members[2]=current;g:Notify("applicants")
+ T.eq(tip.member,current,"an in-place applicant slot replacement follows the selected identity to its new slot")
+ T.eq(tip.interactive.metrics[2].value:GetText(),"3100")
+ current.name,current.nameKey="Another-Away","Another-Away";g:Notify("applicants")
+ T.eq(tip.member,nil);T.eq(tip.interactive:IsShown(),false,"details never silently switch to the new occupant of a selected slot")
+ local function OpenCopy()
+  tip:Hide();tip:ShowApplicants(page.batchPool[1],app)
+  tip.interactive.memberButtons[1]:Fire("OnClick")
+  local x,y=tip.positionX,tip.positionY
+  tip.interactive.wcl:Fire("OnClick")
+  T.eq(tip.member,nil);T.ok(u.copyDialog:IsShown())
+  return x,y
+ end
+ app.members={Member("Original",3200)};g:Notify("applicants")
+ local x,y=OpenCopy()
+ app={id=71,status="applied",activityID=1,members={Member("Other",1000),Member("Original",3300)}}
+ g.applicants[71]=app;g:Notify("applicants");u.copyDialog:Hide()
+ T.eq(tip.member,app.members[2],"copy restore reacquires both the applicant record and the member identity")
+ T.ok(tip.pinned);T.ok(tip.interactive.back:IsShown())
+ T.eq(tip.positionX,x);T.eq(tip.positionY,y,"copy restore keeps the pinned position")
+ T.eq(tip.interactive.metrics[2].value:IsShown(),false,"restored detail uses the current recruitment activity")
+ tip.interactive.back:Fire("OnClick");T.eq(tip.sourceApp,app);T.eq(tip.member,nil)
+ OpenCopy();g.applicants[71]=nil;g:Notify("applicants");u.copyDialog:Hide()
+ T.eq(tip.member,nil);T.eq(tip.interactive:IsShown(),false,"a removed application is not revived by closing copy")
+ g.applicants[71]=app;g:Notify("applicants");OpenCopy()
+ app.members[1].name,app.members[1].nameKey="NewOccupant-Away","NewOccupant-Away"
+ g:Notify("applicants");u.copyDialog:Hide()
+ T.eq(tip.member,nil);T.eq(tip.interactive:IsShown(),false,"copy snapshots retain the original identity even when the saved table is rewritten")
+ u:Hide(true)
+end
 -- Applicant detail scope follows its recruitment activity, and personal markers
 -- share the full identity block's center instead of sitting below the portrait.
 do
@@ -2035,7 +2150,7 @@ do
  local fresh=dofile("tests/ui_fixture.lua")("zhCN")
  local a,u,g,base=fresh.A,fresh.U,fresh.G,fresh.base
  a.db.reduceMotion=true
- g.db.prefs.find={category="seasonDungeon",categoryPrefs={seasonDungeon={selected=true,difficultyID=8}}}
+ g.prefs.find={category="seasonDungeon",categoryPrefs={seasonDungeon={selected=true,difficultyID=8}}}
  for id=1,2 do g.records[id]={id=id,activityID=2,activity=g.Catalog:GetActivity(2),categoryID=2,name="Group "..id,leaderName="Leader"..id.."-Away",leaderKey="Leader"..id.."-Away",leaderFactionGroup=1,numMembers=1,maxNumPlayers=5,age=10} end
  g.apps={{id=2,status="applied",categoryID=2,result=g.records[2],expiresAt=GetTime()+300}}
  local sendTell,tells=ChatFrame_SendTell,{}
@@ -2112,8 +2227,8 @@ end
 -- new search; this also covers the English all-instances label.
 do
  local fresh=dofile("tests/ui_fixture.lua")("enUS")
- fresh.A.db.rememberFilters=true
- fresh.G.db.prefs.find={category="seasonDungeon",categoryPrefs={seasonDungeon={groupKey=20,difficultyID=8}}}
+ fresh.A.charPrefs.rememberFilters=true
+ fresh.G.prefs.find={category="seasonDungeon",categoryPrefs={seasonDungeon={groupKey=20,difficultyID=8}}}
  fresh.A:Open("find")
  local page=fresh.U.pages.find
  T.eq(fresh.G.filters.groupKey,20);T.eq(fresh.G.filters.difficultyID,8,"first entry restores the seasonal single-selection context")
@@ -2126,7 +2241,7 @@ end
 -- A collection and the explicit all-instances choice both survive a reload.
 for _,choice in ipairs({{groupKeys={[20]=true},difficultyID=8},{selected=true,difficultyID=8}}) do
  local fresh=dofile("tests/ui_fixture.lua")("zhCN")
- fresh.G.db.prefs.find={category="seasonDungeon",categoryPrefs={seasonDungeon=choice}}
+ fresh.G.prefs.find={category="seasonDungeon",categoryPrefs={seasonDungeon=choice}}
  local search,calls=fresh.G.Search.Search,0
  fresh.G.Search.Search=function(self,...) calls=calls+1;return search(self,...) end
  fresh.A:Open("find")
@@ -2174,7 +2289,7 @@ do
  members[5].subgroup,members[6].subgroup=1,2;g:Notify("roster")
  T.ok(view.scrollbar:IsShown());view.scrollbar:SetValue(64);g:Notify("roster")
  T.eq(view.scroll:GetVerticalScroll(),64,"a roster update preserves the open list position")
- view.memberButtons[1]:Fire("OnClick");T.eq(tip.rosterMemberID,"Roster-1")
+ view.memberButtons[1]:Fire("OnClick");T.eq(tip.selectedMemberID,"Roster-1")
  local selected=members[1]
  selected.guid="Roster-new";selected.name="Replacement-Away";selected.nameKey=selected.name
  members[3]={guid="Roster-1",name="Player1-Away",nameKey="Player1-Away",class="PRIEST",assignedRole="HEALER",subgroup=1,dungeonScore=3200}
@@ -2595,7 +2710,7 @@ do
  T.eq(button:IsShown(),false);T.eq(marks.noteKey,nil)
  a.db.noteMarks=true;a.db.notesEnabled=false;T.eq(u.Members:BindMarks(marks,person),62)
  a.db.notesEnabled=true
- g.db.prefs.find={category="seasonDungeon",categoryPrefs={seasonDungeon={selected=true,difficultyID=8}}}
+ g.prefs.find={category="seasonDungeon",categoryPrefs={seasonDungeon={selected=true,difficultyID=8}}}
  local record={id=1,activityID=2,activity=g.Catalog:GetActivity(2),activityName="Dungeon activity",categoryID=2,name="Known members",leaderName=plain.name,leaderKey=plain.nameKey,numMembers=2,maxNumPlayers=5,age=10,bnetFriends=1,charFriends=1,guildMates=1,details={members={plain,person},counts={HEALER=1,DAMAGER=1},relationships={bnet={"战网昵称"},character={person.name},guild={"公会玩家"}}}}
  g.records[1]=record;a:Open("find")
  local row=u.pages.find.results.rows[1]
@@ -2651,4 +2766,55 @@ do
  T.eq(g.invitedApplicant,nil);T.eq(g.declinedApplicant,nil)
  T.eq(applicant.marks.noteKey,nil,"leaving the applicant page releases the clickable player identity")
  u:Hide(true)
+end
+
+-- Character defaults survive a new UI session; only confirmed, available roles are saved.
+do
+ local preferences={defaultSort="members",rememberFilters=true,applicationRoles={TANK=true,HEALER=true,DAMAGER=false},find={category="seasonDungeon",categoryPrefs={seasonDungeon={selected=true,groupKey=20,difficultyID=8,minMembers="2",maxMembers="4",sort="rating"}}}}
+ local fresh=dofile("tests/ui_fixture.lua")("enUS",preferences)
+ local a,u,g=fresh.A,fresh.U,fresh.G
+ a.db.reduceMotion=true;a.db.defaultSort="itemLevel";a.db.rememberFilters=false
+ g.records[901]={id=901,name="Saved roles",activityID=2,activity=g.Catalog:GetActivity(2),activityName="Dungeon activity",categoryID=2,leaderName="Leader-Home",leaderKey="Leader-Home",numMembers=2,maxNumPlayers=5,age=1,details={members={{name="Leader-Home",nameKey="Leader-Home",class="WARRIOR",assignedRole="TANK",isLeader=true},{name="Member-Home",nameKey="Member-Home",class="MAGE",assignedRole="DAMAGER"}}}}
+ local countMembers=u.MemberCounts
+ u.MemberCounts=function() error("five-player result and application rows must not calculate unused role counts") end
+ a:Open("find")
+ local page=u.pages.find;local application=u.Application;local dialog=LFGListApplicationDialog
+ T.eq(g.prefs,a.charPrefs);T.eq(page.fMinMembers.box:GetText(),"2");T.eq(page.fMembers.box:GetText(),"4")
+ T.eq(page.sortChoice.value,"rating","the category restores this character's saved sorting")
+ T.eq(page.results.rows[1].roster.slots[1].icon:GetTexture(),"Interface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES","removing unused counts preserves the actual player's class icon")
+ T.ok(page.results.rows[1].roster.slots[2].icon:IsShown());T.eq(page.results.rows[1].roster.slots[3].icon:IsShown(),false,"only the two actual members have portraits")
+ T.eq(application:IsAutoApplyEnabled(),false,"saved roles never enable automatic application on a new login")
+ T.same(application.applicationPrefs.roles,{TANK=true,HEALER=true})
+ page:ClearFilters();T.eq(page.sortChoice.value,"members","clearing filters uses the character default, not the legacy account value")
+ T.eq(a.charPrefs.find.categoryPrefs.seasonDungeon.sort,"members");T.eq(g.db.prefs.find,nil,"Find never writes the account migration seed")
+ application:Apply(901)
+ T.eq(application.applicationLease.roles.TANK,true);T.eq(application.applicationLease.roles.HEALER,nil,"unavailable remembered roles are filtered before confirmation")
+ local modal=application.applicationModal
+ modal.roles.TANK:Fire("OnClick");modal.roles.DAMAGER:Fire("OnClick");u:CloseModal()
+ T.same(preferences.applicationRoles,{TANK=true,HEALER=true,DAMAGER=false},"cancelled edits do not change saved role defaults")
+ application:Apply(901);T.eq(application.applicationLease.roles.TANK,true,"cancelled changes do not alter the next default selection")
+ local nativeApply=C_LFGList.ApplyToGroup
+ C_LFGList.ApplyToGroup=function() error("Rejected") end
+ modal.roles.TANK:Fire("OnClick");modal.roles.DAMAGER:Fire("OnClick");modal.submit:Fire("OnClick")
+ T.same(preferences.applicationRoles,{TANK=true,HEALER=true,DAMAGER=false},"a failed submission does not save one-off roles")
+ C_LFGList.ApplyToGroup=nativeApply;modal.submit:Fire("OnClick")
+ T.same(preferences.applicationRoles,{TANK=false,HEALER=false,DAMAGER=true},"a successful manual confirmation saves this character's next roles")
+ T.eq(application:IsAutoApplyEnabled(),false);T.eq(preferences.enabled,nil);T.eq(preferences.note,nil)
+ g.apps={{id=901,status="applied",result=g.records[901]}};page:RefreshApplications()
+ T.ok(page.appList.rows[1].roster.slots[2].icon:IsShown(),"pinned applications keep both actual five-player members without unused counts")
+ T.eq(page.appList.rows[1].roster.slots[3].icon:IsShown(),false)
+ u.MemberCounts=countMembers
+ a:Open("settings",{section="browse"})
+ local settings=u.pages.settings
+ T.eq(settings.controls.defaultSort.widget.value,"members");T.eq(settings.controls.rememberFilters.widget.value,true)
+ fresh.Pick(settings.controls.defaultSort.widget,"rating")
+ T.eq(a.charPrefs.defaultSort,"rating");T.eq(a.db.defaultSort,"itemLevel","settings do not rewrite the account migration seed")
+ settings.controls.rememberFilters.widget:Fire("OnClick");T.eq(a.charPrefs.rememberFilters,false);T.eq(a.db.rememberFilters,false)
+ u:Hide(true)
+ local restored=dofile("tests/ui_fixture.lua")("zhCN",preferences)
+ restored.A.db.reduceMotion=true;restored.A:Open("find")
+ T.eq(restored.U.Application:IsAutoApplyEnabled(),false,"another reload restores roles but keeps the automatic switch off")
+ T.same(restored.U.Application.applicationPrefs.roles,{DAMAGER=true})
+ T.eq(restored.A.charPrefs.applicationRoles,preferences.applicationRoles)
+ restored.U:Hide(true)
 end

@@ -50,8 +50,10 @@ for i, name in ipairs(PACKAGES) do
   local _, loaded = C_AddOns.IsAddOnLoaded(name)
   report.loadedAtStart[i] = loaded == true
 end
-report.coreOnlyAtStart = report.loadedAtStart[1] and not report.loadedAtStart[2]
-  and not report.loadedAtStart[3] and not report.loadedAtStart[4] and not report.loadedAtStart[5]
+report.coreOnlyAtStart = report.loadedAtStart[1] == true
+for i = 2, #PACKAGES do
+  if report.loadedAtStart[i] then report.coreOnlyAtStart = false; break end
+end
 report.businessPagesUnloadedAtStart = not report.loadedAtStart[2]
   and not report.loadedAtStart[3] and not report.loadedAtStart[4]
 for _, page in ipairs(PAGES) do
@@ -63,7 +65,13 @@ end
 -- Keep report storage constant through the measurements; do not allocate a new
 -- frame/timer/closure for each round. Observer and whole-heap bytes are not
 -- subtracted from, or attributed to, the addon counters.
-for i = 1, 32 do report.samples[i] = { addonKB = {0, 0, 0, 0, 0}, loaded = {false, false, false, false, false} } end
+for i = 1, 32 do
+  local sample = { addonKB = {}, loaded = {} }
+  for packageIndex = 1, #PACKAGES do
+    sample.addonKB[packageIndex], sample.loaded[packageIndex] = 0, false
+  end
+  report.samples[i] = sample
+end
 local used = 0
 local ticker, eventFrame, cleaned, touched
 local function Cleanup()

@@ -22,6 +22,7 @@ local MAX_DEPTH = 64 -- 解析深度上限:合法记录只有三层,超出按无
 -- ---------------------------------------------------------------- JSON
 
 local function EscapeString(s)
+	if not s:find('[\\"\n\r]') then return '"' .. s .. '"' end
 	return '"' .. (s:gsub("\\", "\\\\"):gsub('"', '\\"'):gsub("\n", "\\n"):gsub("\r", "\\r")) .. '"'
 end
 

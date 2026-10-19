@@ -2,6 +2,10 @@ local A = _G.LycheeGroup
 local G,L = A.Group,A.GroupLocale
 local Search={filters={},generation=0,state="idle"}
 G.Search=Search
+function Search:BindInput(lease) self.inputLease=lease end
+function Search:ReleaseInput(expected)
+ if self.inputLease==expected then self.inputLease=nil end
+end
 function Search:RequestActivities()
  -- Availability belongs to the session, not a page. Repeating this request
  -- broadcasts a global refresh to every loaded group browser.
@@ -32,7 +36,7 @@ end
 -- Only one native request runs at a time; each new selection replaces the pending one.
 function Search:Search(categoryKey,activityID,mode,text)
  if not G.Catalog:GetCategory(categoryKey) then return false,L.invalidActivity end
- local lease=A.UI and A.UI.Native and A.UI.Native.searchLease
+ local lease=self.inputLease
  local revision=lease and lease.revision or 0
  mode=mode or "native"
  local request={categoryKey=categoryKey,activityID=activityID,revision=revision,lease=lease,mode=mode,text=text}
@@ -68,7 +72,7 @@ function Search:Submit(request)
  self.request=request
  self.categoryKey,self.error,self.state,self.abandoned=categoryKey,nil,"searching",nil
  G.Results:BeginSearch(self.generation)
- local lease=A.UI and A.UI.Native and A.UI.Native.searchLease
+ local lease=self.inputLease
  if request.mode=="group" and (not lease or lease~=request.lease or lease.revision~=request.revision) then
   self.state,self.error,self.pending,self.request="failed",L.searchRestricted,nil,nil
   G.Results:FailSearch(self.generation);G:Notify("search");return false,self.error
@@ -122,6 +126,7 @@ function Search:OnSearchFailed(reason)
  G.Game:RefreshSubscriptions();G:Notify("search")
 end
 function Search:EndBrowse()
+ -- The native owner releases its input; a category change only ends browsing.
  self:CancelTimer()
  self.pending,self.request,self.backoff=nil,nil,nil
  self.generation=self.generation+1;self.abandoned=true;self.error=nil

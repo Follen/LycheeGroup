@@ -6,6 +6,7 @@ Stubs.SetUnit("player", { name = "本人", realm = "晨风号角", class = "WARR
 
 Load.addon("LycheeGroup", "Locale.lua")
 Load.addon("LycheeGroup", "Core.lua")
+Load.addon("LycheeGroup", "Specializations.lua")
 
 -- ---------------------------------------------------------------- LFG/秘境替身
 
@@ -63,14 +64,14 @@ _G.C_FriendList={
  IsLegacyFriendSystemEnabled=function() return true end,
  GetNumFriends=function() S.socialReads=(S.socialReads or 0)+1;return #S.social.friends end,
  GetFriendInfoByIndex=function(index) return S.social.friends[index] end,
- ShowFriends=function() end,
+ ShowFriends=function() S.friendRequests=(S.friendRequests or 0)+1 end,
 }
 _G.C_Club={
  GetGuildClubId=function() return S.social.guildID end,
  GetClubMembers=function() local ids={};for i=1,#S.social.guild do ids[i]=i end;return ids end,
  GetMemberInfo=function(_,index) return S.social.guild[index] end,
 }
-_G.C_GuildInfo={GuildRoster=function() end}
+_G.C_GuildInfo={GuildRoster=function() S.guildRequests=(S.guildRequests or 0)+1 end}
 _G.IsInGuild=function() return S.social.guildID~=nil end
 _G.GetPlayerInfoByGUID=function(guid)
  local info=S.guidNames[guid]
@@ -117,7 +118,7 @@ _G.C_LFGList = {
 	GetSearchResultPlayerInfo = function(id,index) S.playerReads=S.playerReads+1;return S.players[id] and S.players[id][index] end,
 	GetSearchResultFriends = function(id) local f=S.friends[id] or {};return f.bnet or {},f.character or {},f.guild or {} end,
 	GetSearchResultMemberCounts = function(id) S.memberCountReads=S.memberCountReads+1;return S.counts[id] end,
-	GetSearchResultEncounterInfo = function(id) return S.encounters[id] end,
+	GetSearchResultEncounterInfo = function(id) S.encounterReads=(S.encounterReads or 0)+1;return S.encounters[id] end,
 	GetActivityInfoTable = function(id) return ACTIVITY[id] end,
 	RequestAvailableActivities = function() S.availabilityRequests = (S.availabilityRequests or 0) + 1 end,
 	GetAvailableCategories=function() return {2,3} end,
@@ -219,6 +220,9 @@ _G.C_ChallengeMode = {
 
 Load.addon("LycheeGroup_Group", "Locale.lua")
 Load.addon("LycheeGroup_Group", "Group.lua")
+local publicBeforeResults=_G.LycheeGroup.Group.Public
+T.eq(type(publicBeforeResults),"function","native value reads are available before any result service loads")
+T.eq(publicBeforeResults("public"),"public")
 Load.addon("LycheeGroup_Group", "RaidBuffs.lua")
 Load.addon("LycheeGroup_Group", "Relations.lua")
 Load.addon("LycheeGroup_Group", "Roster.lua")
@@ -227,6 +231,7 @@ Load.addon("LycheeGroup_Group", "Catalog.lua")
 Load.addon("LycheeGroup", "Presentation.lua")
 Load.addon("LycheeGroup_Group", "Search.lua")
 Load.addon("LycheeGroup_Group", "Results.lua")
+T.eq(_G.LycheeGroup.Group.Public,publicBeforeResults,"loading Results does not replace the shared native value reader")
 Load.addon("LycheeGroup_Group", "Applications.lua")
 Load.addon("LycheeGroup_Group", "CreationPresets.lua")
 Load.addon("LycheeGroup_Group", "Listing.lua")
@@ -236,8 +241,28 @@ Load.addon("LycheeGroup_Group", "History.lua")
 
 local A = _G.LycheeGroup
 local G = A.Group
+local legacyFind={category="seasonDungeon",categoryPrefs={seasonDungeon={groupKeys={"dungeon-1"},sort="rating",tankPresence="missing"}},filters={sort="rating"}}
+_G.LycheeGroupGroupDB={prefs={find=legacyFind}}
 G:Initialize()
-T.eq(type(G.db.prefs), "table", "搜索页面偏好由组队存档入口初始化")
+T.eq(type(G.prefs), "table", "搜索页面偏好由角色存档入口初始化")
+do
+ local first=G.prefs
+ T.eq(first,A.charPrefs);T.eq(first,_G.LycheeGroupPrefsDB)
+ T.same(first.find,legacyFind,"the first character inherits the complete saved filters")
+ T.ok(first.find~=legacyFind);T.ok(first.find.categoryPrefs.seasonDungeon.groupKeys~=legacyFind.categoryPrefs.seasonDungeon.groupKeys)
+ first.find.categoryPrefs.seasonDungeon.groupKeys[1]="dungeon-2"
+ first.find.categoryPrefs.seasonDungeon.sort="members"
+ _G.LycheeGroupPrefsDB={};A.db=nil;G:Initialize()
+ local second=G.prefs
+ T.eq(second.find.categoryPrefs.seasonDungeon.groupKeys[1],"dungeon-1","another character inherits the untouched account seed")
+ second.find.categoryPrefs.seasonDungeon.sort="itemLevel"
+ _G.LycheeGroupPrefsDB=first;A.db=nil;G:Initialize()
+ T.eq(G.prefs,first);T.eq(first.find.categoryPrefs.seasonDungeon.sort,"members","returning to a character never overwrites its filters")
+ T.eq(first.find.categoryPrefs.seasonDungeon.groupKeys[1],"dungeon-2")
+ T.eq(second.find.categoryPrefs.seasonDungeon.sort,"itemLevel")
+ T.eq(legacyFind.categoryPrefs.seasonDungeon.sort,"rating")
+ G.prefs.find={};G.db.prefs=nil
+end
 
 local searchView, listingView = {}, {}
 T.eq(#Stubs.FramesWithEvent("LFG_LIST_UPDATE_SEARCH_RESULTS"), 0, "无浏览时不监听搜索更新")
@@ -259,6 +284,17 @@ local function Fire(event, ...)
 	if delivered == 0 then
 		G:OnEvent(event, ...)
 	end
+end
+
+do
+	local refresh=G.Game.RefreshRelations
+	local calls=0
+	G.Game.RefreshRelations=function(self) calls=calls+1;return refresh(self) end
+	local before=notifications.applications or 0
+	G:Notify("applications")
+	T.eq(notifications.applications,before+1,"Notify still delivers the requested change")
+	T.eq(calls,0,"publishing a notification alone never starts or stops a business service")
+	G.Game.RefreshRelations=refresh
 end
 
 -- ---------------------------------------------------------------- 搜索与结果
@@ -341,13 +377,14 @@ do
 	S.counts[12]={TANK=0,HEALER=1,DAMAGER=3}
 	S.counts[13]={TANK=1,HEALER=0,DAMAGER=2}
 	S.encounters[12]={"已击败的首领"}
-	local countReads=S.memberCountReads
+	local countReads,encounterReads=S.memberCountReads,S.encounterReads or 0
 	local details=G:GetResultDetails(12)
 	T.eq(S.memberCountReads,countReads,"individual party avatars do not fetch the unused native class/spec count maps")
 	T.eq(details.members[1].nameKey,"治疗者-晨风号角","成员身份与姓名来自原生数据")
 	T.eq(details.members[1].specName,"神圣")
 	T.eq(details.members[1].class,"PRIEST")
-	T.eq(details.encounters[1],"已击败的首领")
+	T.eq(S.encounterReads or 0,encounterReads,"party details never request unused raid encounter progress")
+	T.eq(details.encounters,nil,"party details do not retain encounter progress")
 	S.results[12].numCharFriends=1;S.results[12].numBNetFriends=1;S.results[12].numGuildMates=1
 	S.friends[12]={character={"治疗者-晨风号角"},bnet={"战网昵称"},guild={"治疗者-晨风号角"}}
 	G.Results:OnResultUpdated(12);details=G:GetResultDetails(12)
@@ -499,7 +536,13 @@ do
 	G.Search:Search("3", nil)
 	Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED")
 
+	local published={}
+	local refresh=G.Game.RefreshRelations
+	G.Game.RefreshRelations=function(self) published[#published+1]="relations";return refresh(self) end
+	local stopWatching=G:Subscribe(function(kind) if kind=="applications" then published[#published+1]="applications" end end)
 	local ok = G.Applications:Apply(11, { tank = true, damage = true })
+	stopWatching();G.Game.RefreshRelations=refresh
+	T.same(published,{"applications"},"application changes notify consumers without refreshing an unrelated relationship service")
 	T.ok(ok, "申请提交")
 	T.eq(S.applyCalls[#S.applyCalls].tank, true)
 	T.eq(S.applyCalls[#S.applyCalls].damage, true)
@@ -516,7 +559,7 @@ do
 	T.ok(G.Applications:AcceptInvite(11), "接受邀请")
 	Fire("LFG_LIST_APPLICATION_STATUS_UPDATED", 11, "inviteaccepted", "invited", "黑翼速通")
 	T.eq(G.Applications:GetApplication(11).status, "inviteaccepted")
-	T.eq(G.Applications:HasActive(), false, "接受成功是申请终态")
+	T.eq(G.Applications:GetActiveCount(), 0, "接受成功是申请终态")
 
 	-- 原生已结束的申请在下一次同步时移除。
 	table.remove(S.applications, 1)
@@ -937,6 +980,21 @@ end
 -- ---------------------------------------------------------------- 公开门面
 
 do
+	local completed=#G:GetHistory()
+	S.activeMap=502
+	A:SetSetting("history",false)
+	A:SetSetting("history",true)
+	T.ok(G:GetActiveRun(),"enabling history restores an ongoing native run through the loaded Group")
+	A:SetSetting("history",false)
+	T.eq(G:GetActiveRun(),nil,"disabling history discards the pending run immediately")
+	T.eq(G.charDB.activeRun,nil,"disabling history also clears the saved pending baseline")
+	T.eq(#Stubs.FramesWithEvent("CHALLENGE_MODE_COMPLETED"),0,"disabling history releases the run events")
+	T.eq(#G:GetHistory(),completed,"changing history preferences never writes an unfinished run")
+	S.activeMap=nil
+	A:SetSetting("history",true)
+end
+
+do
 	-- UI 平铺合同:GetActivities 目录与各所有者方法的委托。
 	local raids = G:GetActivities("3")
 	T.eq(#raids, 1, "团本目录含分类 3 活动")
@@ -1193,11 +1251,17 @@ for id=101,165 do S.results[id]={activityIDs={502},name="Group "..id,numMembers=
 G.Results:BeginSearch(900);G.Results:CommitResults(900)
 S.players[165]={{name="Cached-Away",classFilename="PRIEST",className="牧师",assignedRole="HEALER",specName="神圣",isLeader=true}}
 S.counts[165]={TANK=0,HEALER=1,DAMAGER=0};S.encounters[165]={"Boss A"}
+S.results[165].activityIDs={501};G.Results:OnResultUpdated(165)
 for id=101,165 do G:GetResultDetails(id) end
 T.eq(G:GetResultCount(),65)
 T.eq(G:GetResult(101).details,nil,"old member snapshots leave the cache without dropping groups")
 T.ok(G:GetResult(165).details,"recently displayed detail remains reusable")
+local recentlyRead=G:GetResultDetails(102)
+G:GetResultDetails(101)
+T.eq(G:GetResult(102).details,recentlyRead,"a clean detail cache hit refreshes its LRU position")
+T.eq(G:GetResult(103).details,nil,"the least recently read snapshot is evicted instead of the recent cache hit")
 do
+ G.Results:OnResultUpdated(165)
  local native=S.counts[165]
  native.classesByRole={HEALER={PRIEST=1}};native.NOROLE=0
  local weak=setmetatable({native},{__mode="v"})
@@ -1229,8 +1293,8 @@ do
 	S.results[164].numMembers=2;S.now=S.now+.02;G.Results:CommitResults(900)
 	T.eq(G:GetResult(164).detailsDirty,true,"bulk membership changes mark the existing detail container for refill")
 	T.eq(G:GetResultDetails(165),changed,"other results retain their cached details")
-	G:GetResultDetails(101)
-	T.eq(G:GetResult(102).details,nil,"the same sixty-four-entry eviction queue survives bulk refreshes")
+	G:GetResultDetails(103)
+	T.eq(G:GetResult(104).details,nil,"the same sixty-four-entry LRU survives bulk refreshes")
 	local retained=0;for id=101,165 do if G:GetResult(id).details then retained=retained+1 end end
 	T.ok(retained<=64,"preserving snapshots never increases the detail cache bound")
 	T.eq(G:GetResultCount(),65,"cache reuse preserves the complete native result set")
@@ -1250,6 +1314,101 @@ do
  G.Results:QueueUpdate(165);G.Results:BeginSearch(902)
  T.eq(G.Game.frame:GetScript("OnUpdate"),nil,"a new search or browse close cancels queued result work")
  T.eq(G.Results.updatePending,nil)
+end
+do
+ -- Completion consumes only already queued changes; later updates stay live.
+ local savedResults,savedIDs=S.results,S.resultIDs
+ local view={};G:Attach(view,"search");G.Search:EndBrowse()
+ local function Player(spec)
+  return {name="Boundary-Away",classFilename="PRIEST",className="牧师",assignedRole="HEALER",specName=spec,isLeader=true}
+ end
+ S.results={};S.resultIDs={93001,93002,93003}
+ for _,id in ipairs(S.resultIDs) do
+  S.results[id]={activityIDs={501},name="Before "..id,leaderName="Boundary-Away",numMembers=1}
+  S.players[id]={Player("神圣")}
+ end
+ S.encounters[93001]={"Boss A"}
+ T.ok(G.Search:Search("seasonRaid",501))
+ G:OnEvent("LFG_LIST_UPDATE_SEARCH_RESULTS");G.Game.frame:GetScript("OnUpdate")()
+ local details=G:GetResultDetails(93001)
+ S.now=S.now+.02;S.players[93001]={Player("戒律")};S.encounters[93001]={"Boss A","Boss B"}
+ G:OnEvent("LFG_LIST_UPDATE_SEARCH_RESULTS");G:OnEvent("LFG_LIST_SEARCH_RESULT_UPDATED",93001)
+ local nativeList=C_LFGList.GetFilteredSearchResults;local lists=0
+ C_LFGList.GetFilteredSearchResults=function() lists=lists+1;return nativeList() end
+ local reads=S.resultReads
+ Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED")
+ T.eq(S.resultReads,reads+3,"completion reads the full native result set once")
+ T.eq(G:GetResultDetails(93001),details)
+ T.eq(details.members[1].specName,"戒律","completion preserves a queued same-count member invalidation")
+ T.eq(#details.encounters,2,"completion preserves queued raid progress invalidation")
+ T.eq(G.Results.updatePending,nil,"completion consumes its preexisting update queue")
+ T.eq(G.Game.frame:GetScript("OnUpdate"),nil,"completion leaves no duplicate deferred full read")
+ Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED")
+ T.eq(S.resultReads,reads+3,"a duplicate completion event does not reread a finished search")
+ T.eq(lists,1,"queued bulk and completion share one native ID array")
+
+ S.results[93001].name="After completion";G:OnEvent("LFG_LIST_SEARCH_RESULT_UPDATED",93001)
+ G.Game.frame:GetScript("OnUpdate")()
+ T.eq(S.resultReads,reads+4,"a genuine later update in the same frame still reads native data")
+ T.eq(G:GetResult(93001).name,"After completion")
+
+ local nativeInfo=C_LFGList.GetSearchResultInfo;local reentered=false
+ C_LFGList.GetSearchResultInfo=function(id)
+  local info=nativeInfo(id)
+  if id==93003 and not reentered then
+   reentered=true;S.results[93001].name="During commit";S.players[93001]={Player("暗影")};S.encounters[93001]={"Boss C"}
+   G:OnEvent("LFG_LIST_SEARCH_RESULT_UPDATED",93001);G:OnEvent("LFG_LIST_UPDATE_SEARCH_RESULTS")
+  end
+  return info
+ end
+ S.now=S.now+.02;G:OnEvent("LFG_LIST_SEARCH_RESULT_UPDATED",93002);reads=S.resultReads
+ G.Results:CommitResults(G.Results.gen)
+ C_LFGList.GetSearchResultInfo=nativeInfo
+ T.eq(S.resultReads,reads+3);T.ok(G.Results.updatePending,"events arriving during a commit remain queued")
+ S.now=S.now+.02
+ G.Game.frame:GetScript("OnUpdate")()
+ T.eq(S.resultReads,reads+6,"a reentrant bulk still refreshes every result")
+ T.eq(G:GetResult(93001).name,"During commit")
+ T.eq(G:GetResultDetails(93001).members[1].specName,"暗影")
+ T.eq(G:GetResultDetails(93001).encounters[1],"Boss C")
+ T.eq(G.Results.updatePending,nil)
+
+ local changed=false;local unsubscribe=G:Subscribe(function(kind)
+  if kind=="results" and not changed then changed=true;S.results[93002].name="During notification";G.Results:QueueUpdate(93002) end
+ end)
+ S.now=S.now+.02;G.Results:CommitResults(G.Results.gen);unsubscribe();reads=S.resultReads
+ T.ok(G.Results.updatePending,"a subscriber's new result event is not consumed by the completed commit")
+ G.Game.frame:GetScript("OnUpdate")()
+ T.eq(S.resultReads,reads+1);T.eq(G:GetResult(93002).name,"During notification")
+
+ local closed=false
+ C_LFGList.GetSearchResultInfo=function(id)
+  local info=nativeInfo(id)
+  if id==93002 and not closed then closed=true;G.Search:EndBrowse() end
+  return info
+ end
+ S.now=S.now+.02;G.Results:QueueUpdate(93001);G.Results:CommitResults(G.Results.gen)
+ C_LFGList.GetSearchResultInfo=nativeInfo
+ T.eq(G:GetResultCount(),0,"closing during a native read prevents stale results from repopulating the cleared generation")
+ T.eq(G.Results.updatePending,nil);T.eq(G.Game.frame:GetScript("OnUpdate"),nil)
+ S.resultIDs={93003};T.ok(G.Search:Search("seasonRaid",501))
+ local initialUpdate=false
+ C_LFGList.GetSearchResultInfo=function(id)
+  local info=nativeInfo(id);local snapshot={};for key,value in pairs(info) do snapshot[key]=value end
+  if not initialUpdate then
+   initialUpdate=true;S.results[id].name="During first read";G:OnEvent("LFG_LIST_SEARCH_RESULT_UPDATED",id)
+  end
+  return snapshot
+ end
+ Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED");C_LFGList.GetSearchResultInfo=nativeInfo
+ T.eq(G:GetResultCount(),1);T.eq(G:GetResult(93001),nil,"the next generation contains only its own native IDs")
+ T.ok(G.Results.updatePending,"an update during a new result's first read survives before that record is installed")
+ G.Game.frame:GetScript("OnUpdate")()
+ T.eq(G:GetResult(93003).name,"During first read","first-read updates are not hidden by the same-frame sample time")
+ C_LFGList.GetFilteredSearchResults=nativeList
+ G:Detach(view)
+ for id=93001,93003 do S.players[id],S.encounters[id]=nil,nil end
+ S.results,S.resultIDs=savedResults,savedIDs
 end
 S.now=100
 unsubscribe()
@@ -1312,9 +1471,60 @@ Stubs.FireEvent("SOUNDKIT_FINISHED",7);T.eq(G.Alerts.handle,nil);T.eq(#Stubs.Fra
 G.Applicants:Clear();S.activeEntry=nil
 
 -- Lightweight specialization resolution stays within the member's native class.
+do
+ local shared,getClass=A.Specializations,GetClassInfo
+ local reads,ready=0,false
+ GetClassInfo=function(index)
+  reads=reads+1
+  if index==2 and not ready then return end
+  return getClass(index)
+ end
+ Load.addon("LycheeGroup", "Specializations.lua")
+ local metadata=A.Specializations
+ T.eq(reads,0,"defining shared specialization queries does not read the class directory")
+ T.eq(metadata:Class("UNKNOWN"),nil);T.eq(reads,2)
+ ready=true
+ T.eq(metadata:Class("PALADIN"),2,"a previously incomplete class directory is retried and recovers")
+ T.eq(reads,4)
+ for _=1,30 do metadata:Class("UNKNOWN");metadata:Class("WARRIOR");metadata:Class("PALADIN") end
+ T.eq(reads,4,"known and unknown tokens reuse a complete class directory without rescanning")
+ A.Specializations,GetClassInfo=shared,getClass
+end
 local resolvedID,resolvedName=G:ResolveMemberSpec({class="WARRIOR",specName="武器"})
 T.eq(resolvedID,71);T.eq(resolvedName,"武器")
 T.eq(G:ResolveMemberSpec({class="PALADIN",specName="武器"}),nil,"the same spec label is not guessed across classes")
+do
+ local getID,getClass=GetSpecializationInfoByID,GetSpecializationInfoForClassID
+ local idReads,nameReads,idReady,nameReady=0,0,false,false
+ GetSpecializationInfoByID=function(id)
+  idReads=idReads+1
+  return id,"Shared ID",nil,(id~=910102 or idReady) and 1910101 or nil
+ end
+ GetSpecializationInfoForClassID=function(classID,index)
+  nameReads=nameReads+1
+  if index==1 then return 920000+classID,"Shared name",nil,1920000+classID end
+  return 930000+classID,"Late name",nil,nameReady and 1930000+classID or nil
+ end
+ for _=1,30 do G:ResolveMemberSpec({class="WARRIOR",specID=910101}) end
+ T.eq(idReads,1,"lightweight consumers share complete ID metadata across members")
+ local id,name,icon,class=G:ResolveMemberSpec({class="WARRIOR",specID=910102,specName="Shared name",localizedClass="Provided class"})
+ T.eq(id,910102);T.eq(name,"Shared ID");T.eq(icon,nil);T.eq(class,"Provided class")
+ T.eq(nameReads,0,"an explicit ID never changes to a name-inferred specialization when metadata is incomplete")
+ G:ResolveMemberSpec({class="WARRIOR",specID=910102});T.eq(idReads,3,"incomplete ID metadata remains retryable")
+ idReady=true;G:ResolveMemberSpec({class="WARRIOR",specID=910102});G:ResolveMemberSpec({class="WARRIOR",specID=910102})
+ T.eq(idReads,4,"recovered ID metadata is retained")
+ T.eq(G:ResolveMemberSpec({class="WARRIOR",specName="Shared name"}),920001)
+ T.eq(G:ResolveMemberSpec({class="PALADIN",specName="Shared name"}),920002,"identical labels resolve within each member's own class")
+ for _=1,30 do G:ResolveMemberSpec({class="WARRIOR",specName="Shared name"}) end
+ T.eq(nameReads,2,"successful class-name matches reuse the shared directory")
+ T.eq(A.Specializations:Get(920001),"Shared name");T.eq(idReads,4,"name discovery also supplies subsequent ID consumers")
+ local _,_,missing=G:ResolveMemberSpec({class="WARRIOR",specName="Late name"});T.eq(missing,nil)
+ local before=nameReads;nameReady=true
+ local _,_,recovered=G:ResolveMemberSpec({class="WARRIOR",specName="Late name"});T.eq(recovered,1930001)
+ T.ok(nameReads>before,"incomplete name metadata is retried on the next consumer")
+ before=nameReads;G:ResolveMemberSpec({class="WARRIOR",specName="Late name"});T.eq(nameReads,before)
+ GetSpecializationInfoByID,GetSpecializationInfoForClassID=getID,getClass
+end
 
 -- The last journal tier is the observed season subset, not another expansion.
 local nativeAvailable=C_LFGList.GetAvailableActivities
@@ -1452,7 +1662,7 @@ end
 do
 	-- Native input changes distinguish requests without inspecting restricted text.
 	local view={};G:Attach(view,"search");G.Search:EndBrowse()
-	local previousUI=A.UI;local lease={revision=1};A.UI={Native={searchLease=lease}}
+	local lease={revision=1};G.Search:BindInput(lease)
 	local calls=#S.searchCalls
 	G.Search:Search("seasonRaid",501)
 	lease.revision=2;G.Search:Search("seasonRaid",501)
@@ -1460,7 +1670,39 @@ do
 	Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED");Stubs.AdvanceClock(0)
 	T.eq(#S.searchCalls,calls+2,"the same activity with newer native input is searched again")
 	T.eq(S.searchCalls[#S.searchCalls].activityFilter[1],501)
-	Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED");G:Detach(view);A.UI=previousUI
+	Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED");G.Search:ReleaseInput(lease);G:Detach(view)
+end
+
+do
+	-- Queued input must still belong to the current native lease at submission.
+	local view={};G:Attach(view,"search");G.Search:EndBrowse()
+	local first={revision=1};G.Search:BindInput(first)
+	local calls=#S.searchCalls
+	T.ok(G.Search:Search("seasonRaid",501,"group"))
+	T.ok(G.Search:Search("seasonRaid",nil,"group"))
+	G.Search:ReleaseInput(first)
+	local second={revision=1};G.Search:BindInput(second)
+	G.Search:ReleaseInput(first)
+	Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED");Stubs.AdvanceClock(0)
+	T.eq(#S.searchCalls,calls+1,"reacquiring the same revision never authorizes the previous lease's queued request")
+	T.eq(G.Search:GetState(),"failed")
+	T.ok(G.Search:Search("seasonRaid",501,"group"),"a late old-lease release keeps the replacement input usable")
+	Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED")
+	G.Search:EndBrowse()
+	T.ok(G.Search:Search("seasonRaid",501,"group"),"ending a browse keeps a still-owned input available for the next category")
+	T.eq(#S.searchCalls,calls+3)
+	T.ok(G.Search:Search("seasonRaid",nil,"group"))
+	second.revision=2
+	Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED");Stubs.AdvanceClock(0)
+	T.eq(#S.searchCalls,calls+3,"editing without resubmitting invalidates the old queued input revision")
+	T.eq(G.Search:GetState(),"failed")
+	T.ok(G.Search:Search("seasonRaid",501,"group"))
+	T.ok(G.Search:Search("seasonRaid",nil,"group"))
+	G.Search:ReleaseInput(second)
+	Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED");Stubs.AdvanceClock(0)
+	T.eq(#S.searchCalls,calls+4,"releasing the current lease prevents its queued request from reaching the native search")
+	T.eq(G.Search:GetState(),"failed")
+	G:Detach(view)
 end
 
 do
@@ -1480,10 +1722,10 @@ do
 	local oldTime=GetTime;local now=1000;GetTime=function() return now end
 	local function Advance(seconds) now=now+seconds;Stubs.AdvanceClock(seconds) end
 	local calls=#S.searchCalls;local applications=#G:GetApplications()
-	local previousUI=A.UI;A.UI={Native={searchLease={}}};S.nativeSearchText="12-15"
+	local lease={};G.Search:BindInput(lease);S.nativeSearchText="12-15"
 	T.ok(G.Search:Search("seasonRaid"))
 	T.eq(S.searchCalls[#S.searchCalls].nativeSearchText,"12-15","an active native search lease preserves registered search text")
-	A.UI=previousUI
+	G.Search:ReleaseInput(lease)
 	T.ok(G.Search:Search("seasonDungeon"),"a selection made during search is accepted for later")
 	T.ok(G.Search:Search("3",105),"only the latest selection remains queued")
 	T.eq(#S.searchCalls,calls+1,"inflight searches never overlap")
@@ -1941,7 +2183,20 @@ end
 do
  local entry,applicants,applicantMembers=S.activeEntry,S.applicants,S.applicantMembers
  S.activeEntry=nil;G.Listing:OnEntryUpdate()
+ local friendRequests,guildRequests=S.friendRequests or 0,S.guildRequests or 0
  local view={};G:Attach(view,"search")
+ T.eq(#Stubs.FramesWithEvent("BN_FRIEND_INFO_CHANGED"),0,"searching uses native relationship aggregates without local social listeners")
+ local applications,status,pending=S.applications,S.appStatus,S.appPending
+ S.applications={8703};S.appStatus={[8703]="applied"};S.appPending={}
+ G.Applications:Restore();T.ok(G.Applications:IsActive(8703))
+ G:Detach(view)
+ T.eq(#Stubs.FramesWithEvent("BN_FRIEND_INFO_CHANGED"),0,"a background application does not own a local relationship subscription")
+ T.eq(Stubs.FireEvent("FRIENDLIST_UPDATE"),0,"unused social changes cannot schedule background relationship work")
+ T.eq(G.Relations.timer,nil)
+ G:Attach(view,"search")
+ T.eq(S.friendRequests or 0,friendRequests,"search and application transitions never request a character friend refresh")
+ T.eq(S.guildRequests or 0,guildRequests,"search and application transitions never request a guild refresh")
+ S.applications,S.appStatus,S.appPending=applications,status,pending;G.Applications:Restore()
  S.social.bnet={{displayName="浅墨影",accounts={
   {clientProgram="WoW",wowProjectID=1,isOnline=true,isInCurrentRegion=true,characterName="Other",realmName="Away"},
   {clientProgram="WoW",wowProjectID=1,isOnline=true,isInCurrentRegion=true,characterName="晴昼秋岚",realmName="燃烧之刃",playerGuid="Player-Bnet"},
@@ -1965,19 +2220,28 @@ do
  T.eq(details.members[3].isBNetFriend,nil,"Battle.net nicknames never identify a search roster member")
  local reads=S.playerReads;G.Search:SetFilters({guild=true});T.eq(table.concat(G:GetResults(),","),"")
  T.eq(S.playerReads,reads,"relationship filters do not read native members")
+ local createView={};G:Attach(createView,"create")
+ T.eq(#Stubs.FramesWithEvent("BN_FRIEND_INFO_CHANGED"),1,"the current-roster view owns live observer relationships")
+ T.eq(S.friendRequests,friendRequests+1);T.eq(S.guildRequests,guildRequests+1)
  local notifications=0;local unsub=G:Subscribe(function(kind) if kind=="relations" then notifications=notifications+1 end end)
+ local sort,sorts=table.sort,0
+ table.sort=function(values,compare) sorts=sorts+1;return sort(values,compare) end
  S.social.bnet[1].accounts={};S.social.guild={};Fire("BN_FRIEND_INFO_CHANGED",1);Fire("GUILD_ROSTER_UPDATE",true)
- T.eq(table.concat(G:GetResults(),","),"","relationship changes invalidate the current filtered result set")
+ T.eq(table.concat(G:GetResults(),","),"","local observer changes preserve native relationship filter results")
  T.eq(G:GetResultDetails(8701).members[2].isBNetFriend,nil);T.eq(details.members[2].isGuildMate,nil)
  T.eq(S.playerReads,reads,"observer changes do not reread unchanged native search members")
  T.eq(notifications,0);Stubs.AdvanceClock(0)
  T.eq(notifications,1,"a burst of relationship events produces one display notification")
+ T.eq(sorts,0,"local relationship changes never invalidate the native search order")
+ table.sort=sort
  S.social.bnet[1].accounts={{clientProgram="WoW",wowProjectID=1,isOnline=true,isInCurrentRegion=true,characterName="晴昼秋岚",realmName="燃烧之刃"}}
  Fire("BN_FRIEND_INFO_CHANGED",1)
  local leader,assistant,inGroup=_G.UnitIsGroupLeader,_G.UnitIsGroupAssistant,_G.IsInGroup
  _G.UnitIsGroupLeader=function() return false end;_G.UnitIsGroupAssistant=function() return false end
  _G.IsInGroup=function() return true end
  S.activeEntry={activityIDs={502}};G.Listing:OnEntryUpdate()
+ G:Detach(createView)
+ T.eq(#Stubs.FramesWithEvent("BN_FRIEND_INFO_CHANGED"),1,"an active listing retains observer relationships after the roster view closes")
  S.applicants={[8702]={applicationStatus="applied",numMembers=3,displayOrderID=1}}
  S.applicantMembers={[8702]={
   {name="晴昼秋岚",class="PRIEST"},
@@ -2005,8 +2269,9 @@ do
  S.social.friends[#S.social.friends+1]={name="Unqualified-晨风号角"};Fire("FRIENDLIST_UPDATE")
  local incomplete={name="Unqualified",realm=""};G.Relations:Apply(incomplete)
  T.eq(incomplete.isCharFriend,false,"an empty remote realm does not guess a local character identity")
+ G.Search:SetFilters({friends=true});T.eq(#G:GetResults(),0)
  S.results[8701].numBNetFriends=1;S.friends[8701]={bnet={"浅墨影"}}
- G.Results:OnResultUpdated(8701);G.Search:SetFilters({friends=true})
+ G.Results:OnResultUpdated(8701)
  T.eq(table.concat(G:GetResults(),","),"8701","unattributable native aggregate evidence remains valid for filtering")
  details=G:GetResultDetails(8701)
  T.eq(details.members[3].isBNetFriend,nil,"a native Battle.net display name cannot attribute a same-named unrelated character")

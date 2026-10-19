@@ -164,7 +164,6 @@ function Applications:GetActiveCount()
  for _,record in pairs(records) do if Active(record) then count=count+1 end end
  return count
 end
-function Applications:HasActive() return self:GetActiveCount()>0 end
 function Applications:ReleaseFinished()
  if not G:HasViews("search") then
   for id,record in pairs(records) do if not Active(record) then records[id]=nil;dirty=true end end

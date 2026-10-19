@@ -57,21 +57,9 @@ local function Active(app) return UI:GetGroup().Applications:IsActive(app.id) en
 local function NameOnly(value) return value and value:match("^[^-]+") or L.unknown end
 local function Detail(record) return UI:GetGroup().Results:GetDetails(record) end
 local function ResultTooltipArea(row,list)
- local hover=CreateFrame("Frame",nil,row);hover:SetPoint("TOPLEFT");hover:SetPoint("BOTTOMLEFT");hover:SetWidth(row:GetWidth()*list.tooltipFraction)
- row.tooltipArea=hover
- row:HookScript("OnSizeChanged",function(r,width) hover:SetWidth(width*list.tooltipFraction) end)
- hover:SetScript("OnEnter",function()
-  if not row:IsEnabled() or not row.key or not row._hitVisible or not list.clip:IsMouseOver() then return end
-  local enter=row:GetScript("OnEnter");if enter then enter(row) end
-  local record=Record(row.key);if record then UI.Tooltip:ShowGroup(row,record) end
- end)
- hover:SetScript("OnLeave",function()
-  if not row:IsMouseOver() then local leave=row:GetScript("OnLeave");if leave then leave(row) end end
-  UI.Tooltip:LeaveOwner(row)
- end)
- hover:SetScript("OnHide",function() if UI.Tooltip:IsOwned(row) then UI.Tooltip:Hide() end end)
- -- Setting hover scripts enables clicks in Retail; narrow input last.
- hover:EnableMouse(false);hover:EnableMouseMotion(true)
+ UI:BindTooltipArea(row,list.tooltipFraction,
+  function(r) return r:IsEnabled() and r.key and r._hitVisible and list.clip:IsMouseOver() end,
+  function(r) local record=Record(r.key);if record then UI.Tooltip:ShowGroup(r,record) end end)
 end
 local function RosterColumns(roster)
  for _,slot in ipairs(roster.slots) do slot.role:SetSize(10,10) end
@@ -102,7 +90,6 @@ local function UpdateMembers(row,id,record,details)
  if row.isParty then row.membersExpanded=nil end
  row.membersButton:EnableMouse(not row.isParty)
  local counts=details and details.counts
- if details and record and record.maxNumPlayers==5 then counts=UI:MemberCounts(details.members) end
  row.roster:Update(details and details.members,counts,record and record.maxNumPlayers,true)
  UI:SetText(row.count,record and not row.isParty and UI:MemberCountText(record) or "")
  LayoutMembers(row)
@@ -141,16 +128,20 @@ end
 local function StopCountdown()
  if P.countdown then P.countdown:Cancel();P.countdown=nil end
 end
+local function HasApplicationCountdown()
+ local now=GetTime()
+ for _,id in ipairs(state.appIDs) do
+  local app=state.apps[id]
+  if app.status=="applied" and app.expiresAt and app.expiresAt>now then return true end
+ end
+ return false
+end
 local function RefreshApplicationClock()
- local running=false
  for _,row in ipairs(P.appList.rows) do
   local app=row.key and state.apps[row.key]
-  if app then
-   UpdateApplicationStatus(row,app)
-   if app.expiresAt and app.expiresAt>GetTime() and app.status=="applied" then running=true end
-  end
+  if app and row._hitVisible then UpdateApplicationStatus(row,app) end
  end
- if not running then StopCountdown() end
+ if not HasApplicationCountdown() then StopCountdown() end
 end
 local function UpdateApplication(row,id)
  local app=UI:GetGroup():GetApplication(id);local r=app and app.result
@@ -207,13 +198,14 @@ function P:Build(parent)
  end,{height=32,radius=16});self.scopeToggle:SetPoint("LEFT",self.appsBadge,"RIGHT",10,0)
  self.autoJoin=C.Check(self.applicationPanel,Say("自动进组","Auto join"),function(value) UI:SetGroupSetting("autoJoin",value) end);C.SetFont(self.autoJoin.label,14);C.SetLineHeight(self.autoJoin.label,20,true);self.autoJoin:SetSize(54+FitText(self.autoJoin.label),26);self.autoJoin:SetPoint("TOPRIGHT",-16,-15);self.autoJoin.track:ClearAllPoints();self.autoJoin.track:SetPoint("RIGHT",0,0);self.autoJoin.label:ClearAllPoints();self.autoJoin.label:SetPoint("RIGHT",self.autoJoin.track,"LEFT",-10,0)
  self.autoApply=C.Check(self.applicationPanel,"",function(value)
-  local ok,err=UI.Native:SetAutoApply(value);if not ok then P:SetStatus(err or L.failed) end
+  local ok,err=UI.Application:SetAutoApply(value);if not ok then P:SetStatus(err or L.failed) end
  end);self.autoApply:SetSize(44,26);self.autoApply:SetPoint("RIGHT",self.autoJoin,"LEFT",-20,0);self.autoApply.label:Hide()
  self.applicationSettings=C.Button(self.applicationPanel,L.applicationSettings,112,function()
-  if not UI.Native:IsAutoApplyEnabled() then return end
-  local ok,err=UI.Native:OpenApplicationSettings();if not ok then P:SetStatus(err or L.failed) end
+  if not UI.Application:IsAutoApplyEnabled() then return end
+  local ok,err=UI.Application:OpenApplicationSettings();if not ok then P:SetStatus(err or L.failed) end
  end)
  self.applicationSettings:SetHeight(26);C.SetFont(self.applicationSettings.label,14);C.SetLineHeight(self.applicationSettings.label,20,true)
+ UI.Application.onPreferencesChanged=function() P:UpdateApplicationSettings() end
  self.applicationSettings:SetPoint("RIGHT",self.autoApply,"LEFT",-10,0)
  function self.applicationSettings:RefreshStyle()
   self.fill:Hide();self.hover:Hide();UI:Color(self.label,self._inside and T.brand or T.muted)
@@ -515,12 +507,13 @@ function P:SelectCategory(key,row)
   self:RememberCategory()
   self.draftGroupKeys,self.multiSelectMode=nil,nil
   state.browseReady=false;UI:GetGroup().Search:EndBrowse()
-  state.category=key;state.searchMode="group";local prefs=A.db.rememberFilters and state.categoryPrefs[key]
+  state.category=key;state.searchMode="group";local prefs=A:GetSetting("rememberFilters") and state.categoryPrefs[key]
   state.groupKey=prefs and prefs.groupKey or nil;state.tier=prefs and prefs.tier;state.difficultyID=prefs and prefs.difficultyID
   self:RestoreCategory(prefs or {})
   self.loading=true;state.personKey=nil
   if UI.preview then self.previewSearchBox:SetText("") else
-  UI.Native:UseLeaderSearch(self);self.previewSearchBox:SetText("")
+   UI.Native:UseLeaderSearch()
+   self.search.box=self.previewSearchBox;self.previewSearchBox:Show();self.previewSearchBox:SetText("")
   end
   self.loading=nil
  end
@@ -536,7 +529,7 @@ function P:SelectCategory(key,row)
  if changed and state.browseReady then self:DoSearch(true) end
 end
 function P:RememberCategory()
- if not A.db.rememberFilters then return end
+ if not A:GetSetting("rememberFilters") then return end
  local prefs=state.categoryPrefs[state.category] or {};state.categoryPrefs[state.category]=prefs
  local choice=state.confirmedChoice or {}
  prefs.groupKey,prefs.tier,prefs.difficultyID=choice.groupKey,choice.tier,choice.difficultyID
@@ -569,7 +562,7 @@ function P:RestoreCategory(prefs)
  state.filters.damagePresence=seasonDungeon and prefs.damagePresence or nil
  self.roleChoice:SetValue(role or false,role and ({TANK=L.tank,HEALER=L.healer,DAMAGER=L.damage})[role] or L.anyRole)
  state.social=prefs.social=="caution" and "noCaution" or prefs.social;self.socialChoice:SetValue(state.social or false,state.social and ({friend=L.friendChar,guild=L.friendGuild,any=L.notes,positive=Say("含推荐玩家","Recommended players"),noCaution=Say("不含拉黑记录","Without blocked players")})[state.social] or Say("全部关系","All relations"))
- state.filters.sort=prefs.sort or A.db.defaultSort;self.sortChoice:SetValue(state.filters.sort,L[state.filters.sort] or L.newest)
+ state.filters.sort=prefs.sort or A:GetSetting("defaultSort");self.sortChoice:SetValue(state.filters.sort,L[state.filters.sort] or L.newest)
  self.loading=nil
 end
 function P:SyncSearchInputMode()
@@ -604,7 +597,8 @@ function P:SetSearchMode(mode)
  state.searchMode=mode
  if not UI.preview then
   if mode=="leader" then
-   UI.Native:UseLeaderSearch(self)
+   UI.Native:UseLeaderSearch()
+   self.search.box=self.previewSearchBox;self.previewSearchBox:Show()
    self.previewSearchBox:SetText(text)
   else
    local ok,err=UI.Native:AcquireSearch(self,self.search)
@@ -676,9 +670,9 @@ function P:UpdateFilters(reset)
  UI:GetGroup():SetFilters(filters)
 end
 function P:SavePrefs()
- if not A.db.rememberFilters then return end
+ if not A:GetSetting("rememberFilters") then return end
  self:RememberCategory()
- local prefs=UI:GetGroup().db.prefs.find or {};UI:GetGroup().db.prefs.find=prefs
+ local prefs=UI:GetGroup().prefs.find or {};UI:GetGroup().prefs.find=prefs
  prefs.category=state.category;prefs.categoryPrefs=state.categoryPrefs;prefs.social=state.social
  prefs.filters=prefs.filters or {};wipe(prefs.filters);for k,v in pairs(state.filters) do if k~="text" and k~="leaderText" and k~="searchMode" then prefs.filters[k]=v end end
  local choice=state.confirmedChoice or {}
@@ -686,7 +680,7 @@ function P:SavePrefs()
  prefs.filters.selected=choice.selected==true
 end
 function P:ClearFilters()
- self.loading=true;self.fMinMembers.box:SetText("");self.fMembers.box:SetText("");self.roleChoice:SetValue(false,L.anyRole);state.filters.tankPresence,state.filters.healerPresence,state.filters.damagePresence=nil,nil,nil;state.social=nil;self.socialChoice:SetValue(false,Say("全部关系","All relations"));state.filters.sort=A.db.defaultSort;self.sortChoice:SetValue(state.filters.sort,L[state.filters.sort] or L.newest);self.loading=nil;self:UpdateFilters()
+ self.loading=true;self.fMinMembers.box:SetText("");self.fMembers.box:SetText("");self.roleChoice:SetValue(false,L.anyRole);state.filters.tankPresence,state.filters.healerPresence,state.filters.damagePresence=nil,nil,nil;state.social=nil;self.socialChoice:SetValue(false,Say("全部关系","All relations"));state.filters.sort=A:GetSetting("defaultSort");self.sortChoice:SetValue(state.filters.sort,L[state.filters.sort] or L.newest);self.loading=nil;self:UpdateFilters()
 end
 function P:OnSearchTextChanged(box,changed)
  local empty=box:GetText()==""
@@ -745,6 +739,8 @@ function P:LayoutResults()
   M:FinishPlacement(self.limitNotice);self.limitNotice:ClearAllPoints();self.limitNotice:SetPoint("TOPLEFT",self.main,"TOPLEFT",0,-top);self.noticeTop=top
  end
  if message~="" then top=top+self.limitNotice:GetHeight()+12 end
+ if self.resultsTop==top then return end
+ self.resultsTop=top
  self.context:ClearAllPoints();self.context:SetPoint("TOPLEFT",12,-top)
  self.resultCount:ClearAllPoints();self.resultCount:SetPoint("LEFT",self.context,"RIGHT",12,0)
  self.resultsHeader:ClearAllPoints();self.resultsHeader:SetPoint("TOPLEFT",0,-top-40)
@@ -779,8 +775,7 @@ function P:RefreshApplications()
  self.scopeToggle:SetWidth(FitText(self.scopeToggle.label)+24)
  self.appsHeight=h;self.applicationPanel:SetHeight(68+h);self:LayoutResults()
  self.autoJoin:SetValue(UI:GetGroupSetting("autoJoin"))
- local ticking=false
- for _,id in ipairs(state.appIDs) do local app=state.apps[id];if app.status=="applied" and app.expiresAt and app.expiresAt>GetTime() then ticking=true;break end end
+ local ticking=HasApplicationCountdown()
  if ticking and not self.countdown then
   self.countdown=C_Timer.NewTicker(1,RefreshApplicationClock)
  elseif not ticking then StopCountdown() end
@@ -814,7 +809,12 @@ function P:RefreshResults()
   for _,row in ipairs(self.results.rows) do PlaceColumns(row.score,row.description,"LEFT") end
  end
  self:RefreshApplications();local ids=state.browseReady and UI:GetGroup():GetResults() or {};self.results:SetItems(ids,RenderResult);UI:SetText(self.resultCount,Say("%d 支队伍","%d groups"):format(#ids))
- local status=UI:GetGroup():GetSearchState();local empty=#ids==0;self.emptyPanel:SetShown(empty)
+ self:RefreshSearchState()
+end
+function P:RefreshSearchState()
+ if not self.frame or not self.frame:IsShown() or UI.hiding then return end
+ local raid=Category().id==3
+ local status=UI:GetGroup():GetSearchState();local empty=not self.results.ids or #self.results.ids==0;self.emptyPanel:SetShown(empty)
  self.resultsHeader:SetShown(not empty);UI:SetText(self.resultHeadings.rating,raid and Say("进度","Progress") or Say("评分","Score"))
  if empty then
   local busy=state.browseReady and (status=="searching" or status=="waiting")
@@ -834,7 +834,7 @@ end
 local function RefreshPendingResults() P:RefreshResults();return true end
 function P:Apply(id,manual)
  if not Record(id) then self:SetStatus(L.unavailable);return end
- local ok,err=UI.Native:Apply(id,manual);self:SetStatus(not state.limitTarget and ok==false and (err or L.failed) or "")
+ local ok,err=UI.Application:Apply(id,manual);self:SetStatus(not state.limitTarget and ok==false and (err or L.failed) or "")
 end
 function P:OnApplicationCancelled(id)
  -- Keep the original target while the user is freeing a slot for another group.
@@ -842,7 +842,7 @@ function P:OnApplicationCancelled(id)
  self:DoSearch()
 end
 function P:UpdateApplicationSettings()
- local enabled=UI.Native:IsAutoApplyEnabled()
+ local enabled=UI.Application:IsAutoApplyEnabled()
  self.autoApply:SetValue(enabled)
  UI:SetText(self.applicationSettings.label,L.applicationSettings)
  self.applicationSettings:SetWidth(FitText(self.applicationSettings.label))
@@ -882,8 +882,8 @@ function P:Enter(context)
  end
  if not self.loaded then
   self.loaded=true;self.loading=true
-  local prefs=A.db.rememberFilters and UI:GetGroup().db.prefs.find or {};local filters=prefs.filters or {}
-  state.category=prefs.category or "seasonDungeon";state.categoryPrefs=prefs.categoryPrefs or {};state.filters.sort=filters.sort or A.db.defaultSort;state.social=prefs.social
+  local prefs=A:GetSetting("rememberFilters") and UI:GetGroup().prefs.find or {};local filters=prefs.filters or {}
+  state.category=prefs.category or "seasonDungeon";state.categoryPrefs=prefs.categoryPrefs or {};state.filters.sort=filters.sort or A:GetSetting("defaultSort");state.social=prefs.social
   if UI.preview then self.previewSearchBox:SetText(filters.text or "") end
   local saved=state.categoryPrefs[state.category] or filters
   state.groupKey=saved.groupKey;state.difficultyID=saved.difficultyID;state.tier=saved.tier
@@ -910,7 +910,8 @@ function P:Enter(context)
   elseif kind=="applicationCancelled" then P:OnApplicationCancelled(id)
   elseif kind=="result" then M:Start(P,RefreshPendingResults)
   elseif kind=="relations" then P:RefreshResults();UI.Tooltip:RefreshRelations()
-  elseif kind=="search" or kind=="results" or kind=="applications" then P:RefreshResults() end
+  elseif kind=="search" then P:RefreshSearchState()
+  elseif kind=="results" or kind=="applications" then P:RefreshResults() end
  end) end
  self:WatchNotes();self:RefreshCategories();self:RefreshPicker();self:UpdateFilters();self:SetFiltersOpen(self.filtersOpen)
  self:OnSearchTextChanged(self.search.box)

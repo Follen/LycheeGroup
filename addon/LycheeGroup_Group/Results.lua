@@ -4,18 +4,15 @@ local G = A.Group
 local Results={gen=0}
 G.Results=Results
 local records,ids,detailQueue,pendingIDs={},{},{},{}
-local pendingBulk
+local pendingBulk,committing
+local updateVersion=0
 -- Keep recently visited rows across filter/sort/scroll changes. The old 16-entry
 -- cache discarded the same party snapshots repeatedly during ordinary reordering.
 local DETAIL_CAPACITY=64
 local count,scan=0,0
 local dirty=true
-local function Public(value)
- if issecretvalue and issecretvalue(value) then return nil end
- return value
-end
-G.Public=Public
-local function Normalize(id,record,invalidateDetails)
+local Public=G.Public
+local function Normalize(id,record,invalidateDetails,expectedScan)
  -- GetTime is constant within one rendered frame. Bulk notifications in that
  -- frame share the normalized record; an explicit result event always rereads.
  local now=GetTime()
@@ -31,6 +28,7 @@ local function Normalize(id,record,invalidateDetails)
  local activityIDs=Public(info.activityIDs)
  local activityID=type(activityIDs)=="table" and Public(activityIDs[1]) or nil
  local activity=G.Catalog:GetActivity(activityID)
+ if expectedScan and scan~=expectedScan then return nil end
  record=record or {id=id}
  record.sampledAt=now
  record.activityID,record.activity=activityID,activity
@@ -101,11 +99,17 @@ local function RelationNames(values)
  end
  return names
 end
+local function TouchDetails(record)
+ if records[record.id]~=record or detailQueue[#detailQueue]==record.id then return end
+ for i=#detailQueue,1,-1 do if detailQueue[i]==record.id then table.remove(detailQueue,i);break end end
+ detailQueue[#detailQueue+1]=record.id
+ if #detailQueue>DETAIL_CAPACITY then local old=records[table.remove(detailQueue,1)];if old then old.details=nil;old.detailsDirty=nil end end
+end
 function Results:GetDetails(idOrRecord)
  local record=type(idOrRecord)=="table" and idOrRecord or records[idOrRecord]
  if not record then return nil end
  local details=record.details
- if details and not record.detailsDirty then return details end
+ if details and not record.detailsDirty then TouchDetails(record);return details end
  details=details or {members={}}
  -- Five-player rows show individual members. Their role-count API result also
  -- contains nested class counts, so read it only for an actual role filter.
@@ -150,21 +154,19 @@ function Results:GetDetails(idOrRecord)
   local relations={bnet=RelationNames(bnet),character=RelationNames(character),guild=RelationNames(guild)}
   details.relationships=relations
  end
- local encounters=Public(C_LFGList.GetSearchResultEncounterInfo(record.id))
- if type(encounters)=="table" then
-  details.encounters=details.encounters or {};wipe(details.encounters)
-  for _,value in ipairs(encounters) do
-   local name=Public(value)
-   if type(name)=="string" then details.encounters[#details.encounters+1]=name end
-  end
- elseif details.encounters then wipe(details.encounters) end
+ if record.categoryID==3 then
+  local encounters=Public(C_LFGList.GetSearchResultEncounterInfo(record.id))
+  if type(encounters)=="table" then
+   details.encounters=details.encounters or {};wipe(details.encounters)
+   for _,value in ipairs(encounters) do
+    local name=Public(value)
+    if type(name)=="string" then details.encounters[#details.encounters+1]=name end
+   end
+  elseif details.encounters then wipe(details.encounters) end
+ else details.encounters=nil end
  record.details=details;record.detailsDirty=nil
  -- 队列仅存 ID，旧结果不会被缓存队列继续强引用。
- if records[record.id]==record then
-  for i=#detailQueue,1,-1 do if detailQueue[i]==record.id then table.remove(detailQueue,i);break end end
-  detailQueue[#detailQueue+1]=record.id
-  if #detailQueue>DETAIL_CAPACITY then local old=records[table.remove(detailQueue,1)];if old then old.details=nil;old.detailsDirty=nil end end
- end
+ TouchDetails(record)
  return details
 end
 local function MatchesNote(key,kind)
@@ -220,56 +222,73 @@ local function Sort(a,b)
  return a<b
 end
 function Results:InvalidateView() dirty=true end
+local function FinishUpdates(version)
+ for id,queued in pairs(pendingIDs) do if queued<=version then pendingIDs[id]=nil end end
+ if pendingBulk and pendingBulk<=version then pendingBulk=nil end
+ if Results.updatePending and not pendingBulk and not next(pendingIDs) then
+  G.Game.frame:SetScript("OnUpdate",nil);Results.updatePending=nil
+ end
+end
 function Results:CancelUpdates()
  G.Game.frame:SetScript("OnUpdate",nil)
- self.updatePending=nil;pendingBulk=nil;wipe(pendingIDs)
+ self.updatePending=nil;pendingBulk,committing=nil,nil;wipe(pendingIDs)
 end
 local function FlushUpdates()
- G.Game.frame:SetScript("OnUpdate",nil);Results.updatePending=nil
+ local version,currentScan=updateVersion,scan
  if pendingBulk then
-  pendingBulk=nil
   Results:CommitResults(Results.gen,pendingIDs)
  else
-  for id in pairs(pendingIDs) do Results:OnResultUpdated(id) end
+  for id,queued in pairs(pendingIDs) do
+   if queued<=version then Results:OnResultUpdated(id) end
+   if scan~=currentScan then return end
+  end
+  FinishUpdates(version)
  end
- wipe(pendingIDs)
 end
--- Native events delivered in one frame describe one final native snapshot.
--- Reuse the existing event frame and ID set, reading each affected row once.
+-- Reuse the event frame and ID set for queued updates. Events received during
+-- a flush keep their newer sequence and are handled by the next frame.
 function Results:QueueUpdate(id)
- if id then
-  if not records[id] then return end
-  pendingIDs[id]=true
- else pendingBulk=true end
+ if id and not records[id] and not committing then return end
+ updateVersion=updateVersion+1
+ if id then pendingIDs[id]=updateVersion else pendingBulk=updateVersion end
  if not self.updatePending then
   self.updatePending=true;G.Game.frame:SetScript("OnUpdate",FlushUpdates);G.Game.frame:Show()
  end
 end
 function Results:BeginSearch(gen)
  self:CancelUpdates()
- self.gen=gen;wipe(records);wipe(detailQueue);wipe(ids);count=0;self:InvalidateView();G:Notify("results")
+ self.gen=gen;scan=scan+1;wipe(records);wipe(detailQueue);wipe(ids);count=0;self:InvalidateView();G:Notify("results")
 end
 function Results:CommitResults(gen,updatedIDs)
  if gen~=self.gen then return end
  scan=scan+1
+ local currentScan,version=scan,updateVersion
+ committing=currentScan
  local _,list=C_LFGList.GetFilteredSearchResults()
+ if scan~=currentScan then return end
  for _,id in ipairs(list or {}) do
   local old=records[id]
-  local record=Normalize(id,old,updatedIDs and updatedIDs[id])
+  local record=Normalize(id,old,updatedIDs and updatedIDs[id] or pendingIDs[id],currentScan)
+  if scan~=currentScan then return end
   if record and not record.isDelisted then
-   record.scan=scan;records[id]=record
+   record.scan=currentScan;records[id]=record
    if not old then count=count+1 end
   end
  end
- for id,record in pairs(records) do if record.scan~=scan or record.isDelisted then records[id]=nil;count=count-1 end end
+ for id,record in pairs(records) do if record.scan~=currentScan or record.isDelisted then records[id]=nil;count=count-1 end end
  for i=#detailQueue,1,-1 do if not records[detailQueue[i]] then table.remove(detailQueue,i) end end
+ -- A full snapshot consumes prior queued events, never events received during it.
+ committing=nil
+ FinishUpdates(version)
  self:InvalidateView();G:Notify("results")
 end
 function Results:FailSearch(gen) if gen==self.gen then self:BeginSearch(gen) end end
 function Results:OnResultUpdated(id)
  local record=records[id]
  if not record then return end
- record=Normalize(id,record,true)
+ local currentScan=scan
+ record=Normalize(id,record,true,currentScan)
+ if scan~=currentScan then return end
  if not record or record.isDelisted then
   records[id]=nil;count=count-1
   for i=#detailQueue,1,-1 do if detailQueue[i]==id then table.remove(detailQueue,i);break end end
@@ -283,7 +302,7 @@ function Results:GetResults()
   local leaderText=type(filters.leaderText)=="string" and filters.leaderText:lower():match("^%s*(.-)%s*$") or nil
   if leaderText=="" then leaderText=nil end
   for id,record in pairs(records) do if not record.isDelisted and Pass(record,filters,leaderText) then ids[#ids+1]=id end end
-  sorting=filters.sort or A.db.defaultSort;table.sort(ids,Sort);dirty=false
+  sorting=filters.sort or A:GetSetting("defaultSort");table.sort(ids,Sort);dirty=false
  end
  return ids
 end

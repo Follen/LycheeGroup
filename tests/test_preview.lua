@@ -6,7 +6,8 @@ local function Clone(value)
  if type(value)~="table" then return value end
  local copy={};for k,v in pairs(value) do copy[k]=Clone(v) end;return copy
 end
-local savedDB=Clone(A.db);local savedGroupDB=Clone(G.db)
+A.charPrefs.applicationRoles={TANK=true,HEALER=false,DAMAGER=false}
+local savedDB=Clone(A.db);local savedGroupDB=Clone(G.db);local savedPrefs=Clone(A.charPrefs)
 local nativeName=LFGListFrame.EntryCreation.Name
 local nativeDescription=LFGListFrame.EntryCreation.Description.EditBox
 local nativeSearch=LFGListFrame.SearchPanel.SearchBox
@@ -27,6 +28,8 @@ _G.InCombatLockdown=combat;U.pages.find.main:Fire("OnEvent","PLAYER_REGEN_ENABLE
 local preview=U:GetGroup()
 T.eq(A.Group,G,"the real backend is never replaced")
 T.ok(preview~=G);T.eq(#preview:GetApplications(),3)
+T.ok(preview.prefs~=A.charPrefs,"preview owns a separate character-preference table")
+T.eq(preview.applicationPrefs.roles,nil,"preview does not inherit the real character's application configuration")
 T.eq(U.page,"find");T.eq(U.previewExit:IsShown(),true)
 local find=U.pages.find
 T.eq(find.search.box,find.previewSearchBox,"preview keeps its own ordinary search input")
@@ -45,6 +48,8 @@ local captainRecord=preview.records[preview.recordIDs[4]]
 local captain,comment=captainRecord.leaderName,captainRecord.comment
 find.search.box:SetText(captain)
 T.same(preview:GetResults(),{preview.recordIDs[4]},"leader preview searches the exposed leader name")
+find.search.box:SetText("  "..captain.."  ")
+T.same(preview:GetResults(),{preview.recordIDs[4]},"leader preview trims surrounding query whitespace like production")
 captainRecord.leaderName=nil;captainRecord.comment="描述检索样例"
 find.search.box:SetText("描述检索样例")
 T.same(preview:GetResults(),{},"leader mode does not inspect descriptions when the leader name is absent")
@@ -59,6 +64,31 @@ local beforeNoteFilter=preview:GetResults()
 preview:SetFilters({notes="noCaution"})
 T.same(preview:GetResults(),beforeNoteFilter,"preview groups without player notes pass the blocked-player exclusion")
 find:ClearFilters()
+do
+ local members=captainRecord.details.members
+ local saved={captainRecord.bnetFriends,captainRecord.charFriends,captainRecord.guildMates}
+ local flags={}
+ for i,member in ipairs(members) do flags[i]={member.isBNetFriend,member.isGuildMate} end
+ captainRecord.bnetFriends,captainRecord.charFriends,captainRecord.guildMates=0,0,0
+ for _,member in ipairs(members) do member.isBNetFriend=true;member.isGuildMate=true end
+ preview:SetFilters({friends=true,guild=true})
+ local function Contains(ids,wanted) for _,id in ipairs(ids) do if id==wanted then return true end end;return false end
+ T.eq(Contains(preview:GetResults(),captainRecord.id),false,"relationship filters use result aggregate counts, not member flags")
+ captainRecord.bnetFriends=1;captainRecord.guildMates=1
+ T.eq(Contains(preview:GetResults(),captainRecord.id),true,"relationship aggregate counts admit a matching result")
+ captainRecord.bnetFriends,captainRecord.charFriends,captainRecord.guildMates=unpack(saved)
+ for i,member in ipairs(members) do member.isBNetFriend=flags[i][1];member.isGuildMate=flags[i][2] end
+ find:ClearFilters()
+end
+do
+ local app={id=99999,status="none",pendingStatus="applied"};preview.apps[#preview.apps+1]=app
+ T.eq(preview.Applications:IsActive(app.id),true,"pending applied status counts as active")
+ app.status="applied";app.pendingStatus="cancelled"
+ T.eq(preview.Applications:IsActive(app.id),false,"a non-active pending transition excludes an otherwise applied record")
+ app.status="none";app.pendingStatus="invited"
+ T.eq(preview.Applications:IsActive(app.id),true,"pending invite status counts as active")
+ preview.apps[#preview.apps]=nil
+end
 local previewCounts=captainRecord.details.counts
 local savedTank,savedHealer,savedDamage=previewCounts.TANK,previewCounts.HEALER,previewCounts.DAMAGER
 previewCounts.TANK,previewCounts.HEALER,previewCounts.DAMAGER=0,1,2
@@ -73,25 +103,27 @@ T.eq(preview:GetApplications()[1].status,"invited")
 Click(find.autoJoin);T.eq(preview.settings.autoJoin,true);T.eq(A.db.autoJoin,savedDB.autoJoin,"preview invite handling does not change SavedVariables")
 local result=preview:GetResults()[1]
 find:Apply(result)
-T.eq(U.Native.applicationLease,nil,"preview does not lease the registered native application dialog")
-T.ok(U.Native.previewApplication~=nil)
-T.eq(U.Native.applicationModal.previewNote.box:GetText(),"")
-T.eq(U.Native:IsAutoApplyEnabled(),false)
-if not U.Native.previewApplication.roles.DAMAGER then Click(U.Native.applicationModal.roles.DAMAGER) end
-if not U.Native.previewApplication.roles.TANK then Click(U.Native.applicationModal.roles.TANK) end
-T.eq(U.Native.applicationModal.roles.DAMAGER.active,true);T.eq(U.Native.applicationModal.roles.TANK.active,true,"preview also supports multiple selected roles")
-U.Native.applicationModal.previewNote.box:SetText("Preview note")
-Click(U.Native.applicationModal.submit)
+T.eq(U.Application.applicationLease,nil,"preview does not lease the registered native application dialog")
+T.ok(U.Application.previewApplication~=nil)
+T.eq(U.Application.applicationModal.previewNote.box:GetText(),"")
+T.eq(U.Application:IsAutoApplyEnabled(),false)
+if not U.Application.previewApplication.roles.DAMAGER then Click(U.Application.applicationModal.roles.DAMAGER) end
+if not U.Application.previewApplication.roles.TANK then Click(U.Application.applicationModal.roles.TANK) end
+T.eq(U.Application.applicationModal.roles.DAMAGER.active,true);T.eq(U.Application.applicationModal.roles.TANK.active,true,"preview also supports multiple selected roles")
+U.Application.applicationModal.previewNote.box:SetText("Preview note")
+Click(U.Application.applicationModal.submit)
 T.eq(preview:GetApplication(result).comment,"Preview note");T.eq(preview:GetApplication(result).status,"applied")
 T.eq(preview:GetApplication(result).role.tank,true);T.eq(preview:GetApplication(result).role.damage,true)
 T.eq(U.activeModal,nil)
-T.eq(U.Native:IsAutoApplyEnabled(),false,"a temporary preview application leaves automation off")
+T.eq(U.Application:IsAutoApplyEnabled(),false,"a temporary preview application leaves automation off")
+T.same(preview.prefs.applicationRoles,{TANK=true,HEALER=false,DAMAGER=true},"manual preview confirmation saves only to the sample provider")
+T.same(A.charPrefs,savedPrefs,"preview role and filter edits do not alter the real character's preferences")
 Click(find.autoApply);T.eq(find.autoApply.value,false)
-Click(U.Native.applicationModal.submit);T.eq(U.Native:IsAutoApplyEnabled(),true)
+Click(U.Application.applicationModal.submit);T.eq(U.Application:IsAutoApplyEnabled(),true)
 local nextResult=preview:GetResults()[1];find:Apply(nextResult)
 T.eq(U.activeModal,nil,"preview has the same configured quick-apply path")
 T.eq(preview:GetApplication(nextResult).comment,"Preview note")
-Click(find.applicationSettings);U.Native.applicationModal.previewNote.box:SetText("Changed sample note");Click(U.Native.applicationModal.submit)
+Click(find.applicationSettings);U.Application.applicationModal.previewNote.box:SetText("Changed sample note");Click(U.Application.applicationModal.submit)
 T.eq(preview.applicationPrefs.note,"Changed sample note");T.eq(U.activeModal,nil)
 T.eq(preview:Cancel(result),true);T.eq(preview:GetApplication(result).status,"cancelled")
 T.eq(A:Preview("create"),true)
@@ -137,8 +169,9 @@ T.eq(U.preview,nil);T.eq(U:GetGroup(),G);T.eq(U.previewExit:IsShown(),false)
 T.eq(nativeName:GetText(),"Real draft");T.eq(nativeDescription:GetText(),"Real description","registered native text is untouched")
 T.same(A.db,savedDB,"preview never writes real settings")
 T.same(G.db,savedGroupDB,"preview preferences stay in memory")
+T.same(A.charPrefs,savedPrefs,"leaving preview preserves every real character preference")
 T.eq(next(G.views),nil,"no preview owner is attached to the real backend")
-T.eq(U.Native.previewCreation,nil);T.eq(U.Native.previewApplication,nil)
+T.eq(U.Native.previewCreation,nil);T.eq(U.Application.previewApplication,nil)
 for _,saved in ipairs(actions) do saved[1][saved[2]]=saved[3] end
 T.eq(A:Preview("applications"),true)
 A:Open("settings")

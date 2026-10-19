@@ -269,6 +269,7 @@ function Stubs.Install(overrides)
 	wipe(inspectRequests)
 	_G.LycheeGroup = nil
 	_G.LycheeGroupDB = nil
+	_G.LycheeGroupPrefsDB = nil
 	_G.LycheeGroupGroupDB = nil
 	_G.LycheeGroupCharacterDB = nil
 	_G.LycheeGroupNotesDB = nil

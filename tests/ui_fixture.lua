@@ -1,13 +1,13 @@
 -- Shared offline UI fixtures; no game client is contacted.
-return function(locale)
+return function(locale,preferences)
 local base=dofile("tests/stubs.lua");base.Install({locale=locale,realm="Home"})
 local S=dofile("tests/ui_stubs.lua");S.Install()
-_G.LycheeGroup=nil;_G.LycheeGroupDB=nil;_G.LycheeGroupNotesDB=nil;_G.LibStub=nil
-dofile("addon/LycheeGroup/Core.lua");dofile("addon/LycheeGroup/Locale.lua");dofile("addon/LycheeGroup/Fonts.lua")
+_G.LycheeGroup=nil;_G.LycheeGroupDB=nil;_G.LycheeGroupPrefsDB=preferences;_G.LycheeGroupNotesDB=nil;_G.LibStub=nil
+dofile("addon/LycheeGroup/Core.lua");dofile("addon/LycheeGroup/Specializations.lua");dofile("addon/LycheeGroup/Locale.lua");dofile("addon/LycheeGroup/Fonts.lua")
 local A=LycheeGroup;A:LoadDB();dofile("addon/LycheeGroup/Bindings.lua")
 for _,file in ipairs({"Locale.lua","Notes.lua","Records.lua","PlayerInfo.lua","RosterReminder.lua"}) do dofile("addon/LycheeGroup_Notes/"..file) end
 A.Notes:Initialize()
-local G={db={prefs={}},subs={},views={},records={},apps={},applicants={},state="idle"}
+local G={db={prefs={}},prefs=A.charPrefs,subs={},views={},records={},apps={},applicants={},state="idle"}
 A.Group=G
 dofile("addon/LycheeGroup_Group/CreationPresets.lua")
 dofile("addon/LycheeGroup_Group/RaidBuffs.lua")
@@ -17,6 +17,9 @@ function G:Subscribe(fn) self.subs[fn]=true;return function() self.subs[fn]=nil 
 function G:Notify(kind,id) for fn in pairs(self.subs) do fn(kind,id) end end
 function G:Attach(view,kind) self.views[view]=kind end
 function G:Detach(view) self.views[view]=nil end
+function G:OnSettingChanged(key,value)
+ if key=="autoJoin" and value then self.Applications:TryAutoJoin() end
+end
 function G:GetActivities() return {{id=1,name="Raid activity",fullName="A full raid activity name"}} end
 function G:GetHistory() return {} end
 function G:GetResults() local ids={};for id in pairs(self.records) do if not self.Applications:IsActive(id) then ids[#ids+1]=id end end;table.sort(ids);return ids end
@@ -55,17 +58,22 @@ function G:DeclineInvite(id) self.declined=id;return true end
 function G:Invite(id) local allowed,reason=self:CanManageApplicants();if not allowed then return false,reason end;local app=self.applicants[id];if app.acting then return false,"Busy" end;app.acting=true;self.invitedApplicant=id;self:Notify("applicants");return true end
 function G:Decline(id) local allowed,reason=self:CanManageApplicants();if not allowed then return false,reason end;local app=self.applicants[id];if app.acting then return false,"Busy" end;app.acting=true;self.declinedApplicant=id;self:Notify("applicants");return true end
 G.Search={}
+function G.Search:BindInput(lease) self.inputLease=lease end
+function G.Search:ReleaseInput(lease) if self.inputLease==lease then self.inputLease=nil end end
 G.Results={}
 function G.Results:GetDetails(record) return record.details or {members={},counts={TANK=1,HEALER=1,DAMAGER=2},encounters={}} end
 function G.Results:InvalidateView() end
 G.Applications={}
 function G.Applications:IsActive(id)
- local app=G:GetApplication(id);return app and (app.status=="applied" or app.status=="invited" or app.pendingStatus~=nil) or false
+ local app=G:GetApplication(id);if not app then return false end
+ local status,pending=app.status,app.pendingStatus
+ if pending and pending~="applied" and pending~="invited" then return false end
+ return status=="applied" or status=="invited" or (status==nil or status=="none") and (pending=="applied" or pending=="invited")
 end
 function G.Applications:TryAutoJoin() end
 function G.Applications:CanCancel(id) local app=G:GetApplication(id);return app~=nil and app.status=="applied" and not app.pendingStatus end
 function G.Applications:GetActiveCount()
- local count=0;for _,app in ipairs(G.apps) do if app.status=="applied" or app.status=="invited" or app.pendingStatus then count=count+1 end end;return count
+ local count=0;for _,app in ipairs(G.apps) do if self:IsActive(app.id) then count=count+1 end end;return count
 end
 G.Alerts={Stop=function() end}
 function G.Search:EndBrowse() G.state="idle";self.pending=nil;if self.timer then self.timer:Cancel();self.timer=nil end;G:Notify("results") end
@@ -112,7 +120,7 @@ dofile("addon/LycheeGroup_Group/Locale.lua");G.L=A.GroupLocale;dofile("addon/Lyc
 _G.LycheeUI=nil
 local libraryPrivate={}
 for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Components.lua","Native.lua","Menu.lua"}) do assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/"..file))("LycheeGroup",libraryPrivate) end
-for _,file in ipairs({"Locale.lua","Theme.lua","Motion.lua","Components.lua","Members.lua","Preview.lua","Tooltip.lua","Native.lua","Transfer.lua","Host.lua","Find.lua","Create.lua","Notes.lua","Settings.lua"}) do dofile("addon/LycheeGroup_UI/"..file) end
+for _,file in ipairs({"Locale.lua","Theme.lua","Motion.lua","Components.lua","Members.lua","Preview.lua","Tooltip.lua","Native.lua","Application.lua","Transfer.lua","Host.lua","Find.lua","Create.lua","Notes.lua","Settings.lua"}) do dofile("addon/LycheeGroup_UI/"..file) end
 local U=A.UI;local M,C=U.Motion,U.C
 local Open=A.Open
 function A:Open(page,ctx) self.lastOpen=page;return Open(self,page,ctx) end

@@ -7,7 +7,7 @@
 ## IconTexture: Interface\AddOns\LycheeGroup\Media\addon-logo.tga
 ## Dependencies: LycheeGroup
 ## LoadOnDemand: 1
-## Version: 1.0.2
+## Version: 1.0.3
 Locale.lua
 Theme.lua
 Motion.lua
@@ -16,6 +16,7 @@ Members.lua
 Preview.lua
 Tooltip.lua
 Native.lua
+Application.lua
 Transfer.lua
 Host.lua
 Find.lua

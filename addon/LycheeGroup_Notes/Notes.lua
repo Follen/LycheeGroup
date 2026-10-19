@@ -36,7 +36,7 @@ local function NormalizeRecord(key, data)
 	}
 end
 
--- Initialize():装载 LycheeGroupNotesDB,旧结构迁移到 schema=2,核对 Core 摘要并启动提醒。
+-- Initialize():装载 LycheeGroupNotesDB,旧结构迁移到 schema=3,核对 Core 摘要并启动提醒。
 function Notes:Initialize()
 	if self.db then return end
 	A:LoadDB()

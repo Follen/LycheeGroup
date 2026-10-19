@@ -84,9 +84,15 @@ local function BeginRaidPreview()
  end
  report.fixture.raidGenerationHeapDeltaKB=collectgarbage("count")-heap
  provider.category="seasonRaid";provider.activity=raidActivity;provider.Search.categoryKey="seasonRaid"
- provider.db.prefs.find={category="seasonRaid"};find.loaded=nil;find.restoredInitial=nil
- find:Enter();find:RefreshResults()
+ provider.prefs.find={category="seasonRaid"};find.loaded=nil;find.restoredInitial=nil
+ find:Enter();find:CommitChoice();find:DoSearch()
  report.fixture.visiblePreviewResults=#provider:GetResults();assert(report.fixture.visiblePreviewResults==100,"preview_results_filtered")
+ report.fixture.boundPreviewResults=#find.results.ids
+ assert(report.fixture.boundPreviewResults==100,"preview_results_not_bound")
+ report.checks.raidResultsVisible=not find.emptyPanel:IsShown() and find.results.rows[1].key~=nil
+ assert(report.checks.raidResultsVisible,"preview_results_not_visible")
+ report.fixture.raidFirstKey=find.results.rows[1].key
+ report.fixture.raidMaximumObservedOffset=0;report.checks.raidFirstRowChanged=false
  phase="preview_100_groups_40_members";phaseAt=GetTime();step=0;Sample("preview_ready")
 end
 local function BeginApplicants()
@@ -125,7 +131,7 @@ local function Finish()
  report.checks.knownOwnersIdle=not ui:IsShown() and not ui.preview and not g:HasViews() and not g.Results.updatePending and g.Game.frame:GetScript("OnUpdate")==nil and not g.Search.timer and not g.Search.pending and next(ui.Motion.jobs)==nil
  report.checks.allPackagesLoaded=true;for _,loaded in ipairs(report.samples[used].loaded) do if not loaded then report.checks.allPackagesLoaded=false end end
  report.checks.under20MB=report.peakBytes<=20000000
- report.ok=report.checks.pageFramesReused and report.checks.poolsReused and report.checks.notesUnchanged and report.checks.nativeDraftPreserved and report.checks.knownOwnersIdle and report.checks.allPackagesLoaded and report.checks.under20MB
+ report.ok=report.checks.pageFramesReused and report.checks.poolsReused and report.checks.notesUnchanged and report.checks.nativeDraftPreserved and report.checks.knownOwnersIdle and report.checks.allPackagesLoaded and report.checks.under20MB and report.checks.raidResultsVisible and report.checks.raidScrolled and report.checks.raidFirstRowChanged
  report.elapsedSeconds,report.sampleCount=GetTime()-started,used
  for i=used+1,#report.samples do report.samples[i]=nil end
  return probe:Finish(report)
@@ -149,14 +155,22 @@ local function Tick()
   if step==12*#pages*2 then ui:Hide(true);BeginRaidPreview() end
   nextAt=GetTime()+.3
  elseif phase=="preview_100_groups_40_members" then
-  local list=find.results;local maximum=math.max(0,#provider:GetResults()*list.rowHeight-list:GetHeight())
+  local list=find.results
+  -- Observe the previous animated request after the intervening frame ticks.
+  report.fixture.raidMaximumObservedOffset=math.max(report.fixture.raidMaximumObservedOffset,list.pixelOffset)
+  if list.rows[1].key and list.rows[1].key~=report.fixture.raidFirstKey then report.checks.raidFirstRowChanged=true end
+  local maximum=math.max(0,(#list.ids-1)*list.rowHeight+list.rows[1]:GetHeight()-list:GetHeight())
   local fraction=step%40/20;if fraction>1 then fraction=2-fraction end
   list:SetPixelOffset(maximum*fraction,true);report.operations.raidScroll=report.operations.raidScroll+1
   if step%2==0 then
    local tip=ui.Tooltip;local id=provider.recordIDs[(step-1)%100+1]
    tip:Hide();tip:ShowGroup(list.rows[1],provider.records[id]);tip.expanded=true;tip:RenderGroup();report.operations.raidTips=report.operations.raidTips+1
   end
-  if now-phaseAt>=20 then BeginApplicants() end
+  if now-phaseAt>=20 then
+   report.checks.raidScrolled=report.fixture.raidMaximumObservedOffset>0
+   assert(report.checks.raidScrolled and report.checks.raidFirstRowChanged,"preview_results_did_not_scroll")
+   BeginApplicants()
+  end
   nextAt=GetTime()+.15
  elseif phase=="preview_50_applicant_batches" then
   if step%4==0 then create:RefreshApplicants();report.operations.applicantRefresh=report.operations.applicantRefresh+1 end

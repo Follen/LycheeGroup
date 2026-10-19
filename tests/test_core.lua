@@ -72,6 +72,58 @@ do
 	T.eq(A.db.keywordFilters,nil,"fresh settings do not recreate keyword filters")
 end
 
+-- Character settings survive reloads without changing another character or notes.
+do
+ local account,character=A.db,A.charPrefs
+ local notes=_G.LycheeGroupNotesDB
+ local legacy={defaultSort="rating",rememberFilters=false,notesEnabled=true}
+ local first,second={},{}
+ local sharedNotes={records={['Shared-Realm']={reason="Keep across characters"}}}
+ _G.LycheeGroupNotesDB=sharedNotes
+ local function Login(prefs)
+  _G.LycheeGroupDB=legacy;_G.LycheeGroupPrefsDB=prefs;A.db=nil;A.charPrefs=nil;A:LoadDB()
+ end
+ Login(first)
+ T.eq(A:GetSetting("defaultSort"),"rating","the first character inherits the old account default")
+ T.eq(A:GetSetting("rememberFilters"),false,"false is a saved preference, not a missing value")
+ A:SetSetting("defaultSort","members");A:SetSetting("rememberFilters",true)
+ T.eq(first.defaultSort,"members");T.eq(first.rememberFilters,true)
+ T.eq(legacy.defaultSort,"rating","character changes leave the migration seed unchanged")
+ Login(second)
+ T.eq(A:GetSetting("defaultSort"),"rating");T.eq(A:GetSetting("rememberFilters"),false)
+ A:SetSetting("defaultSort","itemLevel")
+ Login(first)
+ T.eq(A:GetSetting("defaultSort"),"members","returning to the first character restores its own sort")
+ T.eq(A:GetSetting("rememberFilters"),true)
+ T.eq(second.defaultSort,"itemLevel")
+ T.eq(_G.LycheeGroupNotesDB,sharedNotes,"character preference loading preserves shared player notes")
+ T.eq(sharedNotes.records['Shared-Realm'].reason,"Keep across characters")
+ _G.LycheeGroupDB=account;_G.LycheeGroupPrefsDB=character;_G.LycheeGroupNotesDB=notes
+ A.db=nil;A.charPrefs=nil;A:LoadDB()
+end
+
+-- Settings update their stored value before notifying the already-loaded owner.
+do
+ local oldGroup,oldEnsure=A.Group,A.Ensure
+ local history,autoJoin=A.db.history,A.db.autoJoin
+ local loads,changes=0,{}
+ A.Ensure=function() loads=loads+1 end
+ A.Group=nil
+ A:SetSetting("history",not history)
+ A:SetSetting("autoJoin",not autoJoin)
+ T.eq(loads,0,"group preferences do not load the business package")
+ A.Group={OnSettingChanged=function(_,key,value)
+  T.eq(A.db[key],value,"the owner sees the updated setting")
+  changes[#changes+1]={key,value}
+ end}
+ A:SetSetting("history",history)
+ A:SetSetting("autoJoin",autoJoin)
+ A:SetSetting("autoJoin",autoJoin)
+ T.same(changes,{{"history",history},{"autoJoin",autoJoin}},"loaded owner gets each actual setting change once")
+ T.eq(loads,0)
+ A.Group,A.Ensure=oldGroup,oldEnsure
+end
+
 -- ---------------------------------------------------------------- 链接格式
 
 do

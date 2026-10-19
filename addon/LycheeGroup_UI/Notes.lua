@@ -112,19 +112,9 @@ function P:Build(parent)
  self.countText=C.Text(self.left,"",14,T.dim);self.countText:SetPoint("TOPRIGHT",-C.listRightInset-CARD_RIGHT_INSET,0);C.SetLineHeight(self.countText,20,true)
  self.list=C.List(self.left,LIST_WIDTH,LIST_HEIGHT,ROW_HEIGHT,function(key,button) P:OnSelect(key,button) end);self.list:SetPoint("TOPLEFT",0,-32);self.list.selectionMark=false
  for _,row in ipairs(self.list.rows) do
-  local area=CreateFrame("Frame",nil,row);area:SetPoint("TOPLEFT");area:SetPoint("BOTTOMLEFT");area:SetWidth(row:GetWidth()*.25);row.tooltipArea=area
-  row:HookScript("OnSizeChanged",function(_,width) area:SetWidth(width*.25) end)
-  area:SetScript("OnEnter",function()
-   if not row:IsEnabled() or not row.key or not row._hitVisible or not P.list.clip:IsMouseOver() then return end
-   local enter=row:GetScript("OnEnter");if enter then enter(row) end
-   if P.list.selectedKey~=row.key then UI.Tooltip:ShowNote(row,row.key) end
-  end)
-  area:SetScript("OnLeave",function()
-   if not row:IsMouseOver() then local leave=row:GetScript("OnLeave");if leave then leave(row) end end
-   UI.Tooltip:LeaveOwner(row)
-  end)
-  area:SetScript("OnHide",function() if UI.Tooltip:IsOwned(row) then UI.Tooltip:Hide() end end)
-  area:EnableMouse(false);area:EnableMouseMotion(true)
+  UI:BindTooltipArea(row,.25,
+   function(r) return r:IsEnabled() and r.key and r._hitVisible and P.list.clip:IsMouseOver() end,
+   function(r) if P.list.selectedKey~=r.key then UI.Tooltip:ShowNote(r,r.key) end end)
   row.icon=C.Icon(row,30);row.icon:SetPoint("TOPLEFT",12,-21)
   row.title:ClearAllPoints();row.title:SetPoint("TOPLEFT",50,-8);row.title:SetWidth(CARD_WIDTH-CARD_RIGHT_INSET-132-8-50);C.SetFont(row.title,T.listTitleSize);C.SetLineHeight(row.title,T.listTitleLineHeight,true)
   row.meta:ClearAllPoints();row.meta:SetPoint("TOPLEFT",50,-40);row.meta:SetWidth(CARD_WIDTH-CARD_RIGHT_INSET-132-8-50)

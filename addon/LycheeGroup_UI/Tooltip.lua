@@ -56,6 +56,48 @@ function Tip:Position(frame)
  frame:ClearAllPoints();frame:SetPoint("TOPLEFT",window,"TOPLEFT",x,-y)
 end
 function Tip:IsOwned(owner) return self.owner==owner end
+function Tip:ClearSource()
+ self.record,self.member,self.details,self.sourceApp,self.sourceRoster=nil,nil,nil,nil,nil
+ self.memberContext,self.rosterContext,self.directPlayer,self.selectedMemberID,self.applicantID=nil,nil,nil,nil,nil
+end
+local resumeFields={"owner","record","details","sourceApp","sourceRoster","selectedMemberID","applicantID","member","memberContext","rosterContext","directPlayer","pinned","pointX","pointY","positionX","positionY","expanded"}
+function Tip:Capture()
+ local saved={page=UI.page,scroll=self.interactive.scroll:GetVerticalScroll(),back=self.interactive.back:IsShown()}
+ for _,key in ipairs(resumeFields) do saved[key]=self[key] end
+ return saved
+end
+local function FindMember(members,id)
+ -- Providers reuse member tables by slot; only the identity captured at selection is stable.
+ if not id then return end
+ for _,member in ipairs(members) do if Members:ID(member)==id then return member end end
+end
+function Tip:Restore(saved)
+ local group=UI:GetGroup()
+ local member=saved.member
+ if saved.sourceRoster then
+  saved.sourceRoster=group:GetRoster();member=FindMember(saved.sourceRoster,saved.selectedMemberID)
+ elseif saved.applicantID then
+  saved.sourceApp=group:GetApplicant(saved.applicantID)
+  member=saved.sourceApp and FindMember(saved.sourceApp.members,saved.selectedMemberID)
+ elseif saved.record then
+  local application=group:GetApplication(saved.record.id)
+  saved.record=group:GetResult(saved.record.id) or application and application.result
+  if saved.record then saved.details=group.Results:GetDetails(saved.record);member=FindMember(saved.details.members,saved.selectedMemberID) else member=nil end
+ end
+ if not member and not (saved.sourceRoster and not saved.directPlayer) then return end
+ for _,key in ipairs(resumeFields) do self[key]=saved[key] end
+ if member then self:RenderPlayer(member,saved.back)
+ else self:ShowRoster(saved.owner,saved.sourceRoster,saved.pinned,saved.rosterContext) end
+ local f=self.interactive;f.scrollbar:SetValue(math.min(saved.scroll,ScrollMaximum(f.scroll,f.canvas)))
+end
+function Tip:RebindRosterOwner(memberID,owner)
+ if self.directPlayer and memberID==self.selectedMemberID then self.owner=owner end
+ local saved=UI.activeModal and UI.activeModal.restoreTooltip
+ if saved and saved.directPlayer and memberID==saved.selectedMemberID then saved.owner=owner end
+end
+function Tip:HideRosterOwner(owner,memberID)
+ if self:IsOwned(owner) and not (self.directPlayer and memberID==self.selectedMemberID) then self:Hide() end
+end
 function Tip:Hide()
  if self.outsideClicks then self.outsideClicks:Hide() end
  UI.Motion:Stop(self)
@@ -66,8 +108,7 @@ function Tip:Hide()
   for _,button in ipairs(f.memberButtons) do UI:CloseMenuFor(button);button.member=nil;button.memberContext=nil;button.targetKey=nil end
  end
  self.owner=nil
- self.record,self.member,self.details,self.pinned,self.sourceApp,self.sourceRoster,self.rosterMemberID=nil,nil,nil,nil,nil,nil,nil
- self.memberContext,self.rosterContext,self.directPlayer=nil,nil,nil
+ self:ClearSource();self.pinned=nil
  self.pointX,self.pointY,self.positionX,self.positionY,self.expanded,self.adjustPoint=nil,nil,nil,nil,nil,nil
 end
 
@@ -136,13 +177,7 @@ function UI:CopyText(title,value,restoreTooltip,identity,fieldLabel)
    local saved=modal.restoreTooltip;modal.restoreTooltip=nil
    f.field.box:ClearFocus();f.value=nil;f.field.box:SetText("")
    if saved and reason==nil and UI.frame:IsShown() and not UI.hiding and UI.page==saved.page and not UI.activeModal then
-    Tip.owner,Tip.record,Tip.details,Tip.sourceApp,Tip.sourceRoster=saved.owner,saved.record,saved.details,saved.sourceApp,saved.sourceRoster
-    Tip.memberContext,Tip.rosterContext,Tip.directPlayer=saved.memberContext,saved.rosterContext,saved.directPlayer
-    Tip.pointX,Tip.pointY,Tip.positionX,Tip.positionY,Tip.expanded=saved.pointX,saved.pointY,saved.positionX,saved.positionY,saved.expanded
-    if saved.sourceRoster then
-     Tip.member,Tip.rosterMemberID,Tip.pinned=saved.member,saved.rosterMemberID,saved.pinned
-     Tip:RefreshRoster(saved.owner,saved.directPlayer and UI:GetGroup():GetRoster() or saved.sourceRoster,saved.rosterContext)
-    else Tip:RenderPlayer(saved.member,true) end
+    Tip:Restore(saved)
    end
   end
   modal.built=true;self.copyDialog=f
@@ -232,7 +267,7 @@ function Tip:BuildInteractive()
   if UI.preview or not name or not realm or realm=="" then return end
   local function Encode(value) return value:gsub("([^%w%-_%.~])",function(ch) return ("%%%02X"):format(ch:byte()) end) end
   local regions={[1]="us",[2]="kr",[3]="eu",[4]="tw",[5]="cn"};local region=regions[GetCurrentRegion()] or "us"
-  local restore=(Tip.pinned or Tip.directPlayer) and {owner=Tip.owner,record=Tip.record,details=Tip.details,sourceApp=Tip.sourceApp,sourceRoster=Tip.sourceRoster,rosterMemberID=Tip.rosterMemberID,member=Tip.member,memberContext=Tip.memberContext,rosterContext=Tip.rosterContext,directPlayer=Tip.directPlayer,pinned=Tip.pinned,page=UI.page,pointX=Tip.pointX,pointY=Tip.pointY,positionX=Tip.positionX,positionY=Tip.positionY,expanded=Tip.expanded} or nil
+  local restore=(Tip.pinned or Tip.directPlayer) and Tip:Capture() or nil
   UI:CopyText(Say("复制 WCL 链接","Copy WCL link"),"https://"..(region=="cn" and "cn." or "www.").."warcraftlogs.com/character/"..region.."/"..Encode(realm).."/"..Encode(name),restore,name.."-"..realm)
  end)
  f.wcl:SetSurfaceColors(T.secondaryContainer,T.refreshHover,T.surfaceHighest)
@@ -285,10 +320,9 @@ function Tip:ResetInteractive(owner,width)
 end
 function Tip:ShowApplicants(owner,app,keepPinned)
  if self.pinned and not keepPinned then return end
+ self:ClearSource()
  self.pinned=keepPinned==true
- self.sourceApp=app
- self.record,self.member,self.details,self.sourceRoster,self.rosterMemberID=nil,nil,nil,nil,nil
- self.memberContext,self.rosterContext,self.directPlayer=nil,nil,nil
+ self.sourceApp,self.applicantID=app,app.id
  local f=self:ResetInteractive(owner,512)
  UI:SetText(f.title,L.applicants);f.title:ClearAllPoints();f.title:SetPoint("TOPLEFT");f.title:SetWidth(f.canvas:GetWidth());f.icon:Hide();f.subtitle:Hide();f.summary:Hide();f.leader:Hide()
  f.comment:ClearAllPoints();f.comment:SetPoint("TOPLEFT",0,-40);UI:SetText(f.comment,app.comment or "");f.comment:SetHeight(0)
@@ -368,9 +402,9 @@ function Tip:LayoutRosterGroups(members,columns,width,top)
 end
 function Tip:ShowRoster(owner,members,keepPinned,activityContext)
  if self.pinned and not keepPinned then return end
+ self:ClearSource()
  self.pinned=keepPinned==true;self.sourceRoster=members
- self.record,self.member,self.details,self.sourceApp,self.rosterMemberID,self.expanded=nil,nil,nil,nil,nil,nil
- self.memberContext,self.directPlayer=nil,nil;self.rosterContext=activityContext
+ self.expanded=nil;self.rosterContext=activityContext
  local raid
  if activityContext then raid=activityContext.rosterMode=="groups" else raid=not UI.preview and IsInRaid() or #members>5 end
  wipe(self.rosterGroupCounts)
@@ -408,7 +442,7 @@ function Tip:RefreshRoster(owner,members,activityContext)
  local scroll=self.interactive.scroll:GetVerticalScroll()
  local selected
  if self.member then
-  for _,member in ipairs(members) do if Members:ID(member)==self.rosterMemberID then selected=member;break end end
+  selected=FindMember(members,self.selectedMemberID)
  end
  self.sourceRoster=members
  if selected then self:RenderPlayer(selected,self.pinned)
@@ -417,11 +451,25 @@ function Tip:RefreshRoster(owner,members,activityContext)
  local f=self.interactive
  f.scrollbar:SetValue(math.min(scroll,ScrollMaximum(f.scroll,f.canvas)))
 end
+function Tip:RefreshApplicant()
+ if not self.applicantID then return end
+ local app=UI:GetGroup():GetApplicant(self.applicantID)
+ if not app then self:Hide();return end
+ local f=self.interactive;local offset=f.scroll:GetVerticalScroll()
+ self.sourceApp=app
+ if self.member then
+  local member=FindMember(app.members,self.selectedMemberID)
+  if not member then self:Hide();return end
+  self:RenderPlayer(member,f.back:IsShown())
+ else self:ShowApplicants(self.owner,app,self.pinned) end
+ f.scrollbar:SetValue(math.min(offset,ScrollMaximum(f.scroll,f.canvas)))
+end
 function Tip:RefreshRelations()
  local f=self.interactive
  if not f or not f:IsShown() then return end
  local group=UI:GetGroup()
  if self.sourceRoster then self:RefreshRoster(self.owner,group:GetRoster(),self.rosterContext);return end
+ if self.applicantID then self:RefreshApplicant();return end
  local offset=f.scroll:GetVerticalScroll()
  local members
  if self.record then
@@ -429,19 +477,11 @@ function Tip:RefreshRelations()
   local record=group:GetResult(self.record.id) or app and app.result
   if not record then self:Hide();return end
   self.record=record;self.details=group.Results:GetDetails(record);members=self.details.members
- elseif self.sourceApp or self.memberContext and self.memberContext.source=="applicant" then
-  local id=self.sourceApp and self.sourceApp.id or self.member and self.member.applicantID
-  local app=id and group:GetApplicant(id)
-  if not app then self:Hide();return end
-  self.sourceApp=app;members=app.members
  end
  if self.member then
   local current=self.member
   if members then
-   current=nil;local key=Members:ID(self.member)
-   for _,member in ipairs(members) do
-    if member==self.member or key and Members:ID(member)==key then current=member;break end
-   end
+   current=FindMember(members,self.selectedMemberID)
   end
   if current then
    self:RenderPlayer(current,f.back:IsShown());f.scrollbar:SetValue(math.min(offset,ScrollMaximum(f.scroll,f.canvas)));return
@@ -455,8 +495,7 @@ end
 function Tip:ShowGroup(owner,record)
  if self.pinned then return end
  if self.record~=record or self.owner~=owner then self.expanded=false end
- self.record,self.member,self.sourceApp,self.sourceRoster,self.rosterMemberID=record,nil,nil,nil,nil
- self.memberContext,self.rosterContext,self.directPlayer=nil,nil,nil
+ self:ClearSource();self.record=record
  self.details=UI:GetGroup().Results:GetDetails(record)
  self:ResetInteractive(owner,512);self:RenderGroup()
 end
@@ -581,9 +620,9 @@ function Tip:ShowPlayer(owner,member,context)
  local directRoster=context and context.source=="roster"
  context=context or DefaultMemberContext(member)
  if context.canOpenDetails==false then return end
- self.record,self.details,self.sourceApp,self.rosterContext=nil,nil,nil,nil
+ self:ClearSource()
  self.sourceRoster=directRoster and UI:GetGroup():GetRoster() or nil;self.directPlayer=directRoster
- self.memberContext=context;self.rosterMemberID=directRoster and Members:ID(member) or nil
+ self.memberContext=context
  self:ResetInteractive(owner,440);self:RenderPlayer(member,false)
 end
 local function NoteHeader(f,note,top)
@@ -600,8 +639,7 @@ end
 function Tip:ShowNote(owner,key)
  if self.pinned then return end
  local note=A.Notes:Find(key);if not note then return end
- self.record,self.member,self.details,self.sourceApp,self.sourceRoster,self.rosterMemberID=nil,nil,nil,nil,nil,nil
- self.memberContext,self.rosterContext,self.directPlayer=nil,nil,nil
+ self:ClearSource()
  local f=self:ResetInteractive(owner,512)
  f.icon:Hide();f.subtitle:Hide();f.summary:Hide();f.leader:Hide()
  f.title:ClearAllPoints();f.title:SetPoint("TOPLEFT");f.title:SetWidth(f.canvas:GetWidth());UI:SetText(f.title,note.name.."-"..note.server)
@@ -662,7 +700,8 @@ function Tip:RenderPlayer(member,fromGroup,adjustPoint)
  self.memberContext=context
  fromGroup=fromGroup==true and not self.directPlayer
  self.member=member;self.pinned=fromGroup==true;self.adjustPoint=adjustPoint==true
- self.rosterMemberID=self.sourceRoster and Members:ID(member) or nil
+ self.selectedMemberID=Members:ID(member)
+ self.applicantID=context.source=="applicant" and (self.sourceApp and self.sourceApp.id or member.applicantID) or nil
  local scores
  if context.source=="applicant" then
   if context.showDungeonRecords then scores=UI:GetGroup():GetApplicantDungeonScores(member) end

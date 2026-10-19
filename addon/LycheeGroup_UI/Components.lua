@@ -21,39 +21,35 @@ end
 function UI:CanWhisperFaction(factionGroup)
  return not self.preview and factionGroup~=nil and factionGroup==PLAYER_FACTION_GROUP[UnitFactionGroup("player")]
 end
-local specIcons={}
-local specMetadata={}
-local function Specialization(specID)
- local cached=specMetadata[specID]
- if cached then return cached[1],cached[2] end
- local _,name,_,icon=GetSpecializationInfoByID(specID)
- -- Only complete native metadata is stable enough to retain; missing data
- -- must remain retryable when a later binding can resolve it.
- if name and icon then specMetadata[specID]={name,icon} end
- return name,icon
+function UI:BindTooltipArea(row,fraction,eligible,show)
+ local area=CreateFrame("Frame",nil,row)
+ area:SetPoint("TOPLEFT");area:SetPoint("BOTTOMLEFT");area:SetWidth(row:GetWidth()*fraction)
+ row.tooltipArea=area
+ row:HookScript("OnSizeChanged",function(_,width) area:SetWidth(width*fraction) end)
+ area:SetScript("OnEnter",function()
+  if not eligible(row) then return end
+  local enter=row:GetScript("OnEnter");if enter then enter(row) end
+  show(row)
+ end)
+ area:SetScript("OnLeave",function()
+  if not row:IsMouseOver() then local leave=row:GetScript("OnLeave");if leave then leave(row) end end
+  UI.Tooltip:LeaveOwner(row)
+ end)
+ area:SetScript("OnHide",function() if UI.Tooltip:IsOwned(row) then UI.Tooltip:Hide() end end)
+ -- Setting hover scripts enables clicks in Retail; narrow input last.
+ area:EnableMouse(false);area:EnableMouseMotion(true)
+ return area
 end
+local Specializations=_G.LycheeGroup.Specializations
 function UI:SpecName(member)
  if member.specName then return member.specName end
- if member.specID and member.specID>0 then local name=Specialization(member.specID);return name end
+ if member.specID and member.specID>0 then local name=Specializations:Get(member.specID);return name end
 end
 function UI:SetMemberIcon(icon,member)
  local spec=member and member.specID
- local texture=spec and spec>0 and select(2,Specialization(spec))
+ local texture=spec and spec>0 and select(2,Specializations:Get(spec))
  if not texture and member and member.specName and member.class then
-  local entries=specIcons[member.class]
-  if not entries then
-   entries={};specIcons[member.class]=entries
-   for classID=1,GetNumClasses() do
-    local _,file=GetClassInfo(classID)
-    if file==member.class then
-     for index=1,C_SpecializationInfo.GetNumSpecializationsForClassID(classID) do
-      local _,name,_,art=GetSpecializationInfoForClassID(classID,index);entries[name]=art
-     end
-     break
-    end
-   end
-  end
-  texture=entries[member.specName]
+  texture=select(3,Specializations:Find(member.class,member.specName))
  end
  if texture then context:SetGameTexture(icon,texture)
  else

@@ -33,8 +33,6 @@ local DEFAULTS = {
 	autoJoin = false,
 	relations = true,
 	noteMarks = true,
-	rememberFilters = true,
-	defaultSort = "newest",
 	defaultNote = "neutral",
 	reminders = "all",
 	history = true,
@@ -44,6 +42,8 @@ local DEFAULTS = {
 	floatingScale = 130,
 	uiScale = 100,
 }
+
+local CHARACTER_DEFAULTS = { rememberFilters = true, defaultSort = "newest" }
 
 local initialized = {}
 local loading = {}
@@ -64,6 +64,20 @@ function A:LoadDB()
 	raw.schema = DEFAULTS.schema
 	raw.keywordFilters = nil
 	self.db = raw
+	local prefs = _G.LycheeGroupPrefsDB
+	if type(prefs) ~= "table" then
+		prefs = {}
+		_G.LycheeGroupPrefsDB = prefs
+	end
+	for key, default in pairs(CHARACTER_DEFAULTS) do
+		if prefs[key] == nil then
+			local value = raw[key]
+			if value == nil then value = default end
+			prefs[key] = value
+		end
+	end
+	prefs.schema = 1
+	self.charPrefs = prefs
 end
 
 -- ---------------------------------------------------------------- 加载器
@@ -208,17 +222,20 @@ end
 
 -- ---------------------------------------------------------------- 设置
 
+function A:GetSetting(key)
+	if CHARACTER_DEFAULTS[key] ~= nil then return self.charPrefs[key] end
+	return self.db[key]
+end
+
 -- A:SetSetting(key, value) 同步配置与生命周期。
 function A:SetSetting(key, value)
-	if self.db[key] == value then return end
-	self.db[key] = value
+	local db = CHARACTER_DEFAULTS[key] ~= nil and self.charPrefs or self.db
+	if db[key] == value then return end
+	db[key] = value
 	if key == "nativeLFGEntry" then self:SyncNativeLFGEntry() end
 	if key == "minimap" then self.Minimap:UpdateSettings() end
 	if key == "font" then self.Fonts:Apply() end
-	if key == "history" and self.Group then
-		if value then self.Group.History:Restore() else self.Group.History:Discard() end
-	end
-	if key == "autoJoin" and value and self.Group then self.Group.Applications:TryAutoJoin() end
+	if self.Group and (key == "history" or key == "autoJoin") then self.Group:OnSettingChanged(key, value) end
 	if self.Floating and (key == "floating" or key == "floatingLocked" or key == "floatingScale") then self.Floating:UpdateSettings() end
 	if key == "reduceMotion" and self.Floating then
 		if value and self.Floating.running then self.Floating:Tick(1) end

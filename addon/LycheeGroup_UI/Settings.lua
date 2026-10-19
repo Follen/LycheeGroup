@@ -1,4 +1,4 @@
--- One Settings navigation serves account preferences and addon information.
+-- One Settings navigation serves account and character preferences and addon information.
 local A=_G.LycheeGroup
 local UI=A.UI
 local C,T,L=UI.C,UI.Theme,UI.L
@@ -15,8 +15,8 @@ local definitions={
  {"font",S("界面字体","Interface font"),S("选择游戏字体或已安装的共享字体，立即生效。","Choose a game or installed shared font. Changes apply immediately."),function() return A.Fonts:Choices() end},
  {"reduceMotion",L.reduceMotion,S("关闭开窗位移、Logo 动作和局部过渡。","Disable window movement, logo animation and local transitions.")}},
  browse={
- {"defaultSort",S("默认排序","Default sorting"),S("进入其他活动分类时采用的排序。","Sorting used when entering another activity category."),{{value="newest",label=L.newest},{value="rating",label=L.leaderRating},{value="itemLevel",label=L.requiredItemLevel},{value="members",label=L.members}}},
- {"rememberFilters",S("记住各分类的筛选","Remember category filters"),S("切换活动后恢复筛选条件；赛季分类默认查看全部活动。","Restore filters for each category; seasonal categories start with all activities.")},
+ {"defaultSort",S("默认排序","Default sorting"),S("本角色进入其他活动分类时采用的排序。","Default sorting for this character's activity categories."),{{value="newest",label=L.newest},{value="rating",label=L.leaderRating},{value="itemLevel",label=L.requiredItemLevel},{value="members",label=L.members}}},
+ {"rememberFilters",S("记住本角色的筛选","Remember character filters"),S("本角色独立保存各分类筛选；赛季分类默认查看全部活动。","Save category filters for this character; seasonal categories start with all activities.")},
  {"relations",S("好友与公会标记","Friend and guild markers"),S("在队伍、申请者和成员提示中显示关系。","Show relationships in group, applicant and player details.")},
  {"raidMembers",S("团本成员列表","Raid members"),S("控制团本悬停提示中何时展开成员。","Choose when raid tooltips expand the member list."),{{value="shift",label=S("按 Shift 切换","Press Shift to toggle")},{value="alt",label=S("按 Alt 切换","Press Alt to toggle")},{value="ctrl",label=S("按 Ctrl 切换","Press Ctrl to toggle")},{value="always",label=S("始终展开","Always expand")}}}},
  notes={{"defaultNote",S("新记录的默认类型","Default note type"),S("每次记笔记时仍可选择其他类型。","Choose a different type whenever you record a player."),types},
@@ -108,7 +108,7 @@ local function WindowScaleControl(parent)
   commitOnRelease=true,
   onPreview=function(value) if control and control.valueLabel then UI:SetText(control.valueLabel,value.."%") end end,
  })
- control:SetValue(A.db.uiScale)
+ control:SetValue(A:GetSetting("uiScale"))
  return control
 end
 
@@ -226,15 +226,16 @@ function P:Sync()
  self.syncing=true
  for key,entry in pairs(self.controls) do
   local c,row=entry.widget,entry.definition
+  local value=A:GetSetting(key)
   if row[4]=="binding" then
    local text=self.bindingCapture and A.L.bindingListen or A.L.bindingCurrent:format(A.Bindings:Text())
    local conflict=not A.Bindings:Keys() and A.Bindings:Conflict(A.Bindings.defaultKey)
    if not self.bindingCapture and conflict then text=text.."\n"..A.L.bindingDefaultConflict:format(GetBindingName(conflict)) end
    UI:SetText(entry.help,text)
    UI:SetText(c.label,self.bindingCapture and S("按下新按键…","Press a key…") or A.L.bindingChange)
-  elseif row[4]=="range" then if not c:IsDragging() then c:SetValue(A.db[key]);UI:SetText(c.valueLabel,A.db[key].."%") end
-  elseif row[4] then local label;local choices=type(row[4])=="function" and row[4]() or row[4];for _,choice in ipairs(choices) do if choice.value==A.db[key] then label=choice.label;break end end;c:SetValue(A.db[key],label)
-  else c:SetValue(A.db[key]==true);UI:SetText(c.label,A.db[key] and S("已开启","On") or S("已关闭","Off"));c:SetWidth(math.ceil(c.label:GetStringWidth())+c.track:GetWidth()+36);UI:Color(c.label,c._inside and T.text or T.muted) end
+  elseif row[4]=="range" then if not c:IsDragging() then c:SetValue(value);UI:SetText(c.valueLabel,value.."%") end
+  elseif row[4] then local label;local choices=type(row[4])=="function" and row[4]() or row[4];for _,choice in ipairs(choices) do if choice.value==value then label=choice.label;break end end;c:SetValue(value,label)
+  else c:SetValue(value==true);UI:SetText(c.label,value and S("已开启","On") or S("已关闭","Off"));c:SetWidth(math.ceil(c.label:GetStringWidth())+c.track:GetWidth()+36);UI:Color(c.label,c._inside and T.text or T.muted) end
  end
  self.syncing=nil
  self:LayoutRows()

@@ -5,7 +5,7 @@ _G.LycheeUI=nil
 local libraryPrivate={}
 for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Components.lua","Native.lua","Menu.lua"}) do assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/"..file))("LycheeGroup",libraryPrivate) end
 _G.LycheeGroup=nil;_G.LycheeGroupDB=nil
-for _,file in ipairs({"Locale.lua","Core.lua","Fonts.lua","Floating.lua"}) do dofile("addon/LycheeGroup/"..file) end
+for _,file in ipairs({"Locale.lua","Core.lua","Specializations.lua","Fonts.lua","Floating.lua"}) do dofile("addon/LycheeGroup/"..file) end
 local A=LycheeGroup;A:LoadDB()
 local apps={{id=1,name="A group",status="applied",activityID=1,activityName="A dungeon",leaderName="Leader-Away",expiresAt=130},{id=2,name="An invitation",status="invited",activityID=1}}
 local members={};for i=1,30 do members[i]={name="Player"..i.."-Away",nameKey="Player"..i.."-Away",class="WARRIOR",specID=71,dungeonScore=2000+i,itemLevel=500+i} end
@@ -116,6 +116,22 @@ for i=5,3,-1 do apps[i]=nil end;apps[2].status="invited";F.panel:Hide()
 F:ShowPanel()
 members[1].factionGroup=1;members[2].factionGroup=0
 listing={name="My listing",activityID=1};callback("listing");T.eq(F.count:GetText(),"30","recruitment counts individual people");T.eq(F.scroll:GetHeight(),UIParent:GetHeight()/F.frame:GetScale()-F.frame:GetHeight()-48)
+do
+ local getID,getClass=GetSpecializationInfoByID,GetSpecializationInfoForClassID
+ local idReads,nameReads=0,0
+ GetSpecializationInfoByID=function(...) idReads=idReads+1;return getID(...) end
+ GetSpecializationInfoForClassID=function(...) nameReads=nameReads+1;return getClass(...) end
+ local score=members[1].dungeonScore
+ for i=1,20 do members[1].dungeonScore=score+i;callback("applicant") end
+ T.eq(idReads,0,"twenty updates of thirty already-bound members make no further ID metadata reads")
+ local specName=select(2,getClass(1,2))
+ for _,member in ipairs(members) do member.specID=nil;member.specName=specName end
+ for i=1,20 do members[1].dungeonScore=score+i;callback("applicant") end
+ T.eq(nameReads,2,"thirty name-only members share one two-entry class lookup across twenty updates")
+ for _,member in ipairs(members) do member.specID=71;member.specName=nil end
+ members[1].dungeonScore=score;callback("applicants")
+ GetSpecializationInfoByID,GetSpecializationInfoForClassID=getID,getClass
+end
 T.eq(F.context.logo,F.logoTexture,"the applicant reminder animates the original logo through the shared Brand context")
 T.eq(F.entries,workingEntries);T.eq(F.entries[1],firstEntry);T.eq(firstEntry.application,nil,"recruitment reuse clears the previous application reference")
 local batchEntry=F.entries[1].batch
@@ -421,5 +437,22 @@ do
  F:ShowPanel();T.ok(#F.entries>0,"reenabling floating restores the applicant list on hover")
  A:SetSetting("floating",false);T.eq(F.frame:IsShown(),false);T.eq(base.PendingTimers(),0,"disabling again leaves no pending floating timer")
  G.GetApplications,G.GetApplicants=getApplications,getApplicants
+end
+do
+ local clock,now=GetTime,0;GetTime=function() return now end
+ listing=nil;apps={{id=91,name="Countdown",status="applied",activityID=1,activityName="Dungeon",expiresAt=1}}
+ A:SetSetting("reduceMotion",true);A:SetSetting("floating",true);F:ShowPanel()
+ local row=F.rows[1];local writes=0;local setText=row.timer.SetText
+ row.timer.SetText=function(self,value) writes=writes+1;return setText(self,value) end
+ now=1;base.AdvanceClock(1)
+ T.eq(row.timer:GetText(),"0:00");T.eq(F.countdown,nil,"floating stops its ticker after every displayed deadline reaches zero")
+ local settled=writes;now=4;base.AdvanceClock(1)
+ T.eq(writes,settled,"an unchanged zero countdown has no periodic text writes")
+ T.eq(apps[1].status,"applied","floating leaves expiry status to native business events")
+ apps[1].expiresAt=10;callback("applications");T.ok(F.countdown,"a new future deadline restarts the floating ticker")
+ now=5;base.AdvanceClock(1);T.eq(row.timer:GetText(),"0:05")
+ F:Dismiss();T.eq(F.countdown,nil)
+ now=12;F:ShowPanel();T.eq(F.countdown,nil,"opening an already elapsed application does not start a ticker")
+ row.timer.SetText=setText;A:SetSetting("floating",false);GetTime=clock
 end
 _G.LycheeGroup=nil;_G.LycheeGroupDB=nil

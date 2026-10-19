@@ -1,5 +1,5 @@
 -- Six real searches through the normal refresh/reopen actions, with natural GC.
--- Run after live_list_memory.lua has warmed all five packages and closed the UI.
+-- Run after live_list_memory.lua has warmed all four product packages and closed the UI.
 local probe=...
 local A=_G.LycheeGroup
 local ui,g=A and A.UI,A and A.Group
@@ -8,7 +8,7 @@ if InCombatLockdown() or C_ChallengeMode.IsChallengeModeActive() or C_LFGList.Ha
 if g:GetSearchState()=="searching" then return probe:Fail("search_already_running") end
 local packages={"LycheeGroup","LycheeGroup_Group","LycheeGroup_Notes","LycheeGroup_UI"}
 local page=ui.pages.find
-local oldPage,oldMain,oldPrefs=ui.page,ui.mainPage,g.db.prefs.find
+local oldPage,oldMain,oldPrefs=ui.page,ui.mainPage,g.prefs.find
 local oldShown,oldFilters={},{}
 for key,p in pairs(ui.pages) do oldShown[key]=p.frame and p.frame:IsShown() or false end
 for key,value in pairs(g.Search:GetFilters()) do oldFilters[key]=value end
@@ -17,7 +17,11 @@ local version,build,_,interface=GetBuildInfo()
 local report={schema="lycheegroup.refresh-memory.v1",packages=packages,client={version=version,build=build,interface=interface},
  scenario={rounds=6,minimumSearchSpacingSeconds=8,gcPolicy="natural; no explicit collection",samplePolicy="each phase boundary and each second while waiting"},
  settings={reduceMotion=A.db.reduceMotion,scriptProfile=GetCVar("scriptProfile")},samples={},queries={},checks={},peakBytes=0}
-for i=1,128 do report.samples[i]={addonKB={0,0,0,0,0},loaded={false,false,false,false,false}} end
+for i=1,128 do
+ local row={addonKB={},loaded={}}
+ for packageIndex=1,#packages do row.addonKB[packageIndex],row.loaded[packageIndex]=0,false end
+ report.samples[i]={addonKB=row.addonKB,loaded=row.loaded}
+end
 local used,round,ticker,eventFrame,cleaned=0,0
 local function Cleanup()
  if cleaned then return end
@@ -25,7 +29,7 @@ local function Cleanup()
  if ticker then ticker:Cancel();ticker=nil end
  if eventFrame then eventFrame:UnregisterAllEvents();eventFrame:SetScript("OnEvent",nil);eventFrame:Hide() end
  ui:Hide(true);ui.Motion:StopAll()
- g.Search:SetFilters(oldFilters);g.db.prefs.find=oldPrefs;page.loaded=nil;page.restoredInitial=nil
+ g.Search:SetFilters(oldFilters);g.prefs.find=oldPrefs;page.loaded=nil;page.restoredInitial=nil
  for key,p in pairs(ui.pages) do if p.frame then p.frame:SetShown(oldShown[key]) end end
  ui.page,ui.mainPage=oldPage,oldMain
 end
@@ -45,7 +49,7 @@ local function Sample(tag)
  report.peakBytes=math.max(report.peakBytes,total*1024)
 end
 Sample("before")
-g.db.prefs.find={category="seasonDungeon"};page.loaded=nil;page.restoredInitial=nil
+g.prefs.find={category="seasonDungeon"};page.loaded=nil;page.restoredInitial=nil
 local phase,nextAt,lastSample="open",GetTime(),GetTime()
 local originalFrame,originalPool=page.frame,#page.results.rows
 report.checks.reusedPage=true;report.checks.closedResultsReleased=true
@@ -85,10 +89,10 @@ local function Tick()
   Cleanup();Sample("closed_final")
   report.checks.knownOwnersIdle=not ui:IsShown() and not g:HasViews() and g:GetResultCount()==0 and not g.Results.updatePending
    and g.Game.frame:GetScript("OnUpdate")==nil and not g.Search.timer and not g.Search.pending and next(ui.Motion.jobs)==nil
-  report.checks.allFivePackagesLoaded=true
-  for _,loaded in ipairs(report.samples[used].loaded) do if not loaded then report.checks.allFivePackagesLoaded=false end end
+  report.checks.allPackagesLoaded=true
+  for i=1,#packages do if not report.samples[used].loaded[i] then report.checks.allPackagesLoaded=false end end
   report.checks.budget=report.peakBytes<=20000000
-  report.ok=report.checks.budget and report.checks.knownOwnersIdle and report.checks.reusedPage and report.checks.closedResultsReleased and report.checks.allFivePackagesLoaded
+  report.ok=report.checks.budget and report.checks.knownOwnersIdle and report.checks.reusedPage and report.checks.closedResultsReleased and report.checks.allPackagesLoaded
   report.elapsedSeconds,report.sampleCount=GetTime()-started,used
   for i=used+1,#report.samples do report.samples[i]=nil end
   return probe:Finish(report)

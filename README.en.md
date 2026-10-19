@@ -4,19 +4,20 @@
 
 A group-finding addon for retail World of Warcraft. Find groups, manage recruitment, and keep notes on players you meet, all in one window.
 
-Version **1.0.2** targets retail **12.1.5** (Interface `120105`) and supports Chinese and English. See the [changelog](CHANGELOG.md) (in Chinese) for version changes.
+Version **1.0.3** targets retail **12.1.5** (Interface `120105`) and supports Chinese and English. See the [changelog](CHANGELOG.md) (in Chinese) for version changes.
 
 ## Features
 
 - **Find groups:** browse dungeons, raids, delves, PvP, and other activities. Search and filter listings, read listing descriptions, inspect members, and track applications.
 - **Manage recruitment:** create and edit listings, inspect applicants' Mythic+ records and known factions, and invite players. Click the star beside the activity to save the current settings. Applying a favorite preserves your current title and description for you to review and publish; publishing does not save a creation history. Small-group activities show current members directly; raid activities show subgroup rosters on hover. Current-season raids also show class-buff coverage.
-- **Player notes:** save positive, neutral, or blocked-player records, with reminders when you group again. Import and export your notes.
+- **Character preferences:** keep application roles, category filters, and sorting separately for each character across reloads. Enable automatic application separately for each session.
+- **Player notes:** share positive, neutral, or blocked-player records across characters on the account, with reminders when you group again. Import and export your notes.
 - **Mythic+ history:** keep a per-character history of runs, key levels, dates, and teammates, then add notes from past runs.
 - **Interface settings:** change the main-window key binding and overall scale; the floating window has its own scale setting.
 
 The interface uses native Lua with bundled LycheeUI. Feature modules load on demand; no separate UI library installation is needed.
 
-The changes in 1.0.2 have passed offline regression checks and have been installed in the local game addon directory. This version has not yet been reloaded or verified in game; see the [product document](Product.md) for coverage.
+See the [product document](Product.md) for implementation and verification coverage.
 
 ## Installation
 

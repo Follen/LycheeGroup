@@ -3,15 +3,12 @@ local A=_G.LycheeGroup
 local UI=A.UI
 local zh=GetLocale()=="zhCN"
 local function S(cn,en) return zh and cn or en end
-function UI:GetGroup() return self.preview and self.preview.provider or A.Group end
-function UI:GetGroupSetting(key)
- if self.preview then return self.preview.provider.settings[key] end
- return A.db[key]
+local function Active(app)
+ if not app then return false end
+ local status,pending=app.status,app.pendingStatus
+ if pending and pending~="applied" and pending~="invited" then return false end
+ return status=="applied" or status=="invited" or (status==nil or status=="none") and (pending=="applied" or pending=="invited")
 end
-function UI:SetGroupSetting(key,value)
- if self.preview then self.preview.provider.settings[key]=value else A:SetSetting(key,value) end
-end
-local function Active(app) return app and (app.status=="applied" or app.status=="invited") end
 local function Copy(source) local out={};for key,value in pairs(source or {}) do out[key]=value end;return out end
 local function Seed(catalog)
  local categories=catalog:GetCategories()
@@ -25,8 +22,7 @@ local function NewProvider(scenario)
  local catalog=A.Group.Catalog
  local category,activity=Seed(catalog)
  if not activity then return nil,S("当前客户端活动目录尚未就绪，请稍后再打开预览。","The client activity catalog is not ready. Open preview again shortly.") end
- local p={isPreview=true,Catalog=catalog,L=A.Group.L,category=category,activity=activity,db={prefs={}},settings={autoJoin=false},applicationPrefs={},subs={},views={},records={},apps={},applicants={},roster={},filters={},state="done"}
- p.db.prefs.find={category=category}
+ local p={isPreview=true,Catalog=catalog,L=A.Group.L,category=category,activity=activity,db={},prefs={find={category=category}},settings={autoJoin=false},applicationPrefs={},subs={},views={},records={},apps={},applicants={},roster={},filters={},state="done"}
  p.Results={};p.Applications={};p.Search={categoryKey=category};p.Relations={}
  function p.Relations:Apply(member) return member end
  function p:Subscribe(callback) self.subs[callback]=true;return function() self.subs[callback]=nil end end
@@ -74,7 +70,9 @@ local function NewProvider(scenario)
    local pass=not self.Applications:IsActive(id) and self.Catalog:Matches(r.activity,f.category or self.category,f.groupKey,f.difficultyID,f.tier,f.groupKeys)
    if pass and text~="" then
     if f.searchMode=="group" and minLevel then pass=r.level and r.level>=minLevel and r.level<=maxLevel
-    elseif f.searchMode=="leader" then pass=r.leaderName and r.leaderName:lower():find(text,1,true)~=nil
+    elseif f.searchMode=="leader" then
+     local leaderText=text:match("^%s*(.-)%s*$")
+     pass=leaderText~="" and r.leaderName and r.leaderName:lower():find(leaderText,1,true)~=nil
     else pass=r.name:lower():find(text,1,true)~=nil end
    end
    if pass and f.minMembers then pass=r.numMembers>=f.minMembers end
@@ -88,10 +86,6 @@ local function NewProvider(scenario)
    end
    if pass and (f.friends or f.guild) then
     local friends=r.bnetFriends+r.charFriends>0;local guild=r.guildMates>0
-    for _,member in ipairs(r.details.members) do
-     friends=friends or member.isBNetFriend or member.isCharFriend or member.isFriend
-     guild=guild or member.isGuildMate
-    end
     if f.friends and not friends or f.guild and not guild then pass=false end
    end
    if pass and (f.notes and f.notes~="noCaution" or f.personKey and f.personKey~=r.leaderKey) then pass=false end

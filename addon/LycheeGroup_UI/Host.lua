@@ -13,6 +13,15 @@ function UI:Initialize()
 	-- 按需加载合同:此处不建窗口、不注册事件。
 end
 
+function UI:GetGroup() return self.preview and self.preview.provider or A.Group end
+function UI:GetGroupSetting(key)
+ if self.preview then return self.preview.provider.settings[key] end
+ return A:GetSetting(key)
+end
+function UI:SetGroupSetting(key,value)
+ if self.preview then self.preview.provider.settings[key]=value else A:SetSetting(key,value) end
+end
+
 function UI:GetNote(key)
  if self.preview or not A.db.notesEnabled or not key or not A.Notes then return nil end
  return A.Notes:Find(key)
@@ -360,6 +369,7 @@ function UI:Hide(immediate)
 	if self.copyDialog then self.copyDialog:Hide() end
 	for _, input in ipairs(self.inputs or {}) do input:ClearFocus() end
 	if self.Native then self.Native:ClearFocus() end
+	self.Application:ClearFocus()
 	local function done()
 		if UI.exitToken ~= token then return end
 		UI.finishHide = nil

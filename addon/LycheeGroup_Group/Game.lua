@@ -66,7 +66,7 @@ function Game:RefreshSubscriptions()
 end
 
 function Game:RefreshRelations()
- local active=G:HasViews() or C_LFGList.HasActiveEntryInfo() or G.Applications:HasActive()
+ local active=G:HasViews("create") or C_LFGList.HasActiveEntryInfo()
  if G.Relations.active==active then return end
  SetEvents(self.frame,RELATION_EVENTS,active)
  G.Relations:SetActive(active)

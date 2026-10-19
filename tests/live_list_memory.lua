@@ -25,9 +25,13 @@ local report={schema="lycheegroup.list-memory.v2",units="KB",packages=PACKAGES,
  observer={preallocatedSamples=SAMPLE_CAPACITY,periodicDrivers=1,wrappedCallbacks=2},
  samples={},checks={},summary={naturalPeakKB=0,naturalHeapPeakKB=0,sampledUncollectedPeakKB=0,retainedWorkloadPeakKB=0},
  operations={},frameCounts={}}
-for i=1,SAMPLE_CAPACITY do report.samples[i]={addonKB={0,0,0,0,0},loaded={false,false,false,false,false},
+for i=1,SAMPLE_CAPACITY do
+ local sample={addonKB={},loaded={}}
+ for packageIndex=1,#PACKAGES do sample.addonKB[packageIndex],sample.loaded[packageIndex]=0,false end
+ report.samples[i]={addonKB=sample.addonKB,loaded=sample.loaded,
  tag="",phase="",step=0,atSeconds=0,gcMs=0,luaHeapKB=0,counterRefreshMs=0,addonTotalKB=0,
- luaHeapAfterRefreshKB=0,realResults=0,filteredResults=0,visiblePool=0,scrollOffset=0} end
+ luaHeapAfterRefreshKB=0,realResults=0,filteredResults=0,visiblePool=0,scrollOffset=0}
+end
 report.initialNativeApplications=#C_LFGList.GetApplications()
 report.initialActiveListing=C_LFGList.HasActiveEntryInfo()
 for i=1,4 do report.operations[i]={calls=0,inclusiveMs=0,maxInclusiveMs=0,heapNetKB=0,recordsUpdated=0} end
@@ -47,7 +51,7 @@ local function Cleanup()
  if ui then
   ui:Hide(true);ui.Motion:StopAll()
   if originalFilters then g.Search:SetFilters(originalFilters) end
-  if savedPrefs then g.db.prefs.find=savedPrefs.value;page.loaded=nil;page.restoredInitial=nil end
+  if savedPrefs then g.prefs.find=savedPrefs.value;page.loaded=nil;page.restoredInitial=nil end
   for key,p in pairs(ui.pages) do if p.frame then p.frame:SetShown(oldPageShown[key]==true) end end
   ui.page,ui.mainPage=oldPage,oldMain
  end
@@ -145,16 +149,16 @@ for _,key in ipairs({"settings","notes","create"}) do
  Sample("warm_"..key,"natural",0,false);ui:Hide(true)
 end
 g=A.Group;page=ui.pages.find
-savedPrefs={value=g.db.prefs.find}
-g.db.prefs.find={category="seasonDungeon"}
+savedPrefs={value=g.prefs.find}
+g.prefs.find={category="seasonDungeon"}
 page.loaded=nil;page.restoredInitial=nil
 local generationBefore=A.Group and A.Group.Search:GetGeneration() or 0
 local ok,err=A:Open("find")
 if not ok then return probe:Fail("open_find_failed_"..tostring(err)) end
 ui,g,page=A.UI,A.Group,A.UI.pages.find
--- Enter normally starts the only request. A previously warmed same-category
--- Enter may not search; invoke that normal action only if generation did not move.
-if g.Search:GetGeneration()==generationBefore and g.Search:GetState()~="searching" and g.Search:GetState()~="waiting" then page:DoSearch() end
+-- The fixture starts without a confirmed activity. Confirm the category's
+-- all-activities choice before issuing the only native search.
+page:CommitChoice();page:DoSearch()
 expectedGeneration=g.Search:GetGeneration()
 report.category=g.Search.categoryKey
 report.generationAtOpen,report.generationBeforeOpen=expectedGeneration,generationBefore
@@ -165,6 +169,9 @@ local function BeginWorkload()
  g.Search:SetFilters(filters)
  local current=g:GetResults();for i,id in ipairs(current) do ids[i]=id end
  report.initialRealResults=g:GetResultCount();report.initialFilteredResults=#current
+ report.initialBoundResults=#page.results.ids
+ assert(report.initialRealResults>0,"real_results_empty")
+ assert(report.initialBoundResults==#current and page.results.rows[1].key and not page.emptyPanel:IsShown(),"real_results_not_bound")
  local _,nativeIDs=C_LFGList.GetFilteredSearchResults();report.initialNativeFilteredResults=#(nativeIDs or {})
  -- Visit the existing pool at different rows once, accounting for lazy native
  -- text/texture resources before checking steady-state reuse.
@@ -218,8 +225,8 @@ local function Finish()
  local before,after=report.frameCounts.warm,report.frameCounts.final
  report.checks.nativeObjectsStable=not before.truncated and not after.truncated
   and before.frames==after.frames and before.regions==after.regions and before.animationGroups==after.animationGroups
- report.checks.allFivePackagesLoaded=true
- for _,loaded in ipairs(report.samples[finalGC].loaded) do if not loaded then report.checks.allFivePackagesLoaded=false end end
+ report.checks.allPackagesLoaded=true
+ for i=1,#PACKAGES do if not report.samples[finalGC].loaded[i] then report.checks.allPackagesLoaded=false end end
  report.checks.noProbeDrivers=ticker==nil and eventFrame:GetScript("OnEvent")==nil
  local baseline,final=report.samples[baselineGC],report.samples[finalGC]
  report.summary.retainedBaselineSample,report.summary.retainedFinalSample=baselineGC,finalGC
@@ -231,15 +238,15 @@ local function Finish()
  report.summary.naturalPeakBytes=report.summary.naturalPeakKB*1024
  report.summary.sampledUncollectedPeakBytes=report.summary.sampledUncollectedPeakKB*1024
  report.summary.finalOpenRetainedBytes=final.addonTotalKB*1024
- report.checks.naturalFivePackageBudget=report.summary.sampledUncollectedPeakBytes<=report.summary.budgetBytes
- report.checks.retainedFivePackageBudget=report.summary.finalOpenRetainedBytes<=report.summary.budgetBytes
+ report.checks.naturalPackageBudget=report.summary.sampledUncollectedPeakBytes<=report.summary.budgetBytes
+ report.checks.retainedPackageBudget=report.summary.finalOpenRetainedBytes<=report.summary.budgetBytes
  report.finalNativeApplications=#C_LFGList.GetApplications()
  report.finalActiveListing=C_LFGList.HasActiveEntryInfo()
  report.checks.engineResourceAttribution=false
  report.elapsedSeconds,report.sampleCount=GetTime()-started,sampleCount
  report.ok=report.checks.knownOwnersIdle and report.checks.resultPoolStable
-  and report.checks.searchGenerationUnchanged and report.checks.naturalFivePackageBudget and report.checks.retainedFivePackageBudget
-  and report.checks.nativeObjectsStable and report.checks.allFivePackagesLoaded
+  and report.checks.searchGenerationUnchanged and report.checks.naturalPackageBudget and report.checks.retainedPackageBudget
+  and report.checks.nativeObjectsStable and report.checks.allPackagesLoaded
  for i=sampleCount+1,#report.samples do report.samples[i]=nil end
  return probe:Finish(report)
 end

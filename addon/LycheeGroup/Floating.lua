@@ -320,7 +320,7 @@ function F:ShowPanel()
  local hadEntries=self.entries and #self.entries>0
  self:CancelHide();entryCount=0;self.entries,self.entryTops=entries,tops
  self.entriesVersion=(self.entriesVersion or 0)+1
- local group=A.Group;local total=0;local pending=false;local batchCount=0
+ local group=A.Group;local total=0;local pending=false;local batchCount=0;local now=GetTime()
  local canManage=group and group:CanManageApplicants()
  local canCancel=not self.recruiting or group:CanManageListing()
  if group then
@@ -377,7 +377,7 @@ function F:ShowPanel()
     local leaderHeight=math.max(20,self.measure:GetStringHeight())
     local height=24+activityHeight+4+titleHeight+4+leaderHeight+8;local entry=AddEntry(total,height);total=total+height
     entry.application,entry.gap,entry.activityWidth,entry.detailWidth,entry.detailText,entry.activityHeight,entry.titleHeight=app,8,activityWidth,detailWidth,detailText,activityHeight,titleHeight
-    if app.expiresAt then pending=true end
+    if app.expiresAt and app.expiresAt>now then pending=true end
    end end
   end
  end
@@ -400,13 +400,19 @@ function F:ShowPanel()
  elseif not pending and self.countdown then self.countdown:Cancel();self.countdown=nil end
 end
 function F:RefreshClock()
+ local now=GetTime();local pending=false
+ for _,entry in ipairs(self.entries) do
+  local app=entry.application
+  if app and app.expiresAt and app.expiresAt>now then pending=true;break end
+ end
  for _,row in ipairs(self.rows) do
   local app=row.application
-  if app then
-   local remaining=app.expiresAt and math.max(0,math.ceil(app.expiresAt-GetTime()))
+  if app and row:IsShown() then
+   local remaining=app.expiresAt and math.max(0,math.ceil(app.expiresAt-now))
    row.timer:SetText(remaining and ("%d:%02d"):format(math.floor(remaining/60),remaining%60) or "—")
   end
  end
+ if not pending and self.countdown then self.countdown:Cancel();self.countdown=nil end
 end
 function F:Render()
  if not self.entries or next(exits) then return end
