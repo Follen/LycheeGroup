@@ -7,7 +7,7 @@
 ## IconTexture: Interface\AddOns\LycheeGroup\Media\addon-logo.tga
 ## Dependencies: LycheeGroup
 ## LoadOnDemand: 1
-## Version: 1.0.4
+## Version: 1.0.5
 ## SavedVariables: LycheeGroupNotesDB
 Locale.lua
 Notes.lua

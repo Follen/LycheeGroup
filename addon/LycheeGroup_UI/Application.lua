@@ -178,7 +178,7 @@ function Application:Apply(resultID,manual,confirmedRoles)
  local group=UI:GetGroup()
  if group:GetListing() then return false,group.L.recruiting end
  if group.Applications:IsActive(resultID) then return false,group.L.alreadyApplied end
- if group.Applications:GetActiveCount()>=5 then self:ReleaseApplication();UI:ShowApplicationLimit(resultID,manual);return false,group.L.applicationLimit end
+ if group.Applications:GetActiveCount()>=5 then self:ReleaseApplication();UI:ShowApplicationLimit();return false,group.L.applicationLimit end
  if not UI.preview then
   local entry,err=UI.Native:Ready();if not entry then return false,err end
   local result=C_LFGList.GetSearchResultInfo(resultID);if not result or result.isDelisted then return false,L.unavailable end

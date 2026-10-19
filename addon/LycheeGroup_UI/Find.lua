@@ -21,7 +21,8 @@ local LIST_GUTTER=14
 local BODY=MAIN-LIST_GUTTER
 local APP_BODY=MAIN-32-LIST_GUTTER
 local AGE_WIDTH=zh and 88 or 96
-local APP_ROW_HEIGHT,RESULT_ROW_HEIGHT=72,84
+local APP_ROW_HEIGHT,RESULT_ROW_HEIGHT=40,84
+local AVAILABLE_NOTICE_COLOR={38/255,61/255,48/255,1}
 local FILTER_BUTTON_WIDTH=126
 local SEARCH_RIGHT=144+FILTER_BUTTON_WIDTH
 local RESULT_COLUMNS={
@@ -29,7 +30,7 @@ local RESULT_COLUMNS={
  members={x=427,width=138},ilvl={x=581,width=52},rating={x=649,width=76},
  description={x=741,width=BODY-765-AGE_WIDTH},age={x=BODY-12-AGE_WIDTH,width=AGE_WIDTH},
 }
-local APPLICATION_COLUMNS={title={width=APP_BODY-599},leader={x=APP_BODY-522,width=120}}
+local APPLICATION_COLUMNS={title={x=36,width=APP_BODY-591},leader={x=APP_BODY-522,width=120}}
 local state={category="seasonDungeon",searchMode="group",apps={},appIDs={},categoryPrefs={},filters={sort="newest"}}
 local function Category() return UI:GetGroup().Catalog:GetCategory(state.category) end
 local function AllActivitiesLabel(cat)
@@ -71,19 +72,20 @@ local function RosterColumns(roster)
  end
 end
 local function LayoutMembers(row)
- row.membersButton:ClearAllPoints();row.membersButton:SetPoint("LEFT",row.membersX,row.membersExpanded and 11 or 0)
+ row.membersButton:ClearAllPoints();row.membersButton:SetPoint("LEFT",row.membersX,row.membersExpanded and row.membersExpandedY or 0)
  row.roster:SetWidth(row.isParty and 110 or 132)
  row.count:SetShown(not row.isParty and row.membersExpanded==true)
 end
-local function BuildMembers(row,x)
- row.membersX=x
+local function BuildMembers(row,x,compact)
+ row.membersX=x;row.membersExpandedY=compact and 9 or 11
  row.membersButton=C.Button(row,"",138,function()
   if row.isParty or not row.key or not row._hitVisible then return end
   row.membersExpanded=not row.membersExpanded;LayoutMembers(row)
  end)
- row.membersButton:SetStyle({height=24,radius=6})
- row.roster=C.Roster(row.membersButton,18,5);row.roster:SetSize(132,20);row.roster:SetPoint("CENTER");RosterColumns(row.roster)
- row.count=C.Text(row,"",14,T.muted,138);C.SetLineHeight(row.count,20,true);row.count:SetPoint("LEFT",x,-13);row.count:SetJustifyH("CENTER");row.count:SetWordWrap(false)
+ row.membersButton:SetStyle({height=compact and 18 or 24,radius=6})
+ row.roster=C.Roster(row.membersButton,18,5);row.roster:SetSize(132,compact and 18 or 20);row.roster:SetPoint("CENTER");RosterColumns(row.roster)
+ if compact then for _,item in ipairs(row.roster.counts) do C.SetFont(item.text,12);C.SetLineHeight(item.text,14,true) end end
+ row.count=C.Text(row,"",compact and 12 or 14,T.muted,138);C.SetLineHeight(row.count,compact and 14 or 20,true);row.count:SetPoint("LEFT",x,compact and -9 or -13);row.count:SetJustifyH("CENTER");row.count:SetWordWrap(false)
  LayoutMembers(row)
 end
 local function UpdateMembers(row,id,record,details)
@@ -199,7 +201,7 @@ function P:Build(parent)
  self.searchClear=C.Button(self.search,"",28,function() P:ClearSearch() end);self.searchClear:SetSize(28,28);self.searchClear:SetPoint("RIGHT",self.searchModeToggle,"LEFT",-6,0);C.Glyph(self.searchClear,"close",14):SetPoint("CENTER");self.searchClear:Hide()
  self.search.box:ClearAllPoints();self.search.box:SetPoint("TOPLEFT",52,-4);self.search.box:SetPoint("BOTTOMRIGHT",self.searchModeToggle,"LEFT",-40,4)
  self.applicationPanel=CreateFrame("Frame",nil,main);self.applicationPanel:SetPoint("TOPLEFT",0,-68);self.applicationPanel:SetWidth(MAIN);self.applicationPanel.fill=C.Panel(self.applicationPanel,T.panel,20)
- self.appsTitle=C.Text(self.applicationPanel,L.applications,14,T.text);C.SetLineHeight(self.appsTitle,20,true);self.appsTitle:SetPoint("LEFT",self.applicationPanel,"TOPLEFT",16,-34)
+ self.appsTitle=C.Text(self.applicationPanel,L.applications,14,T.text);C.SetLineHeight(self.appsTitle,20,true);self.appsTitle:SetPoint("LEFT",self.applicationPanel,"TOPLEFT",16,-26)
  self.appsBadge=CreateFrame("Frame",nil,self.applicationPanel);self.appsBadge:SetSize(48,24);self.appsBadge:SetPoint("LEFT",self.appsTitle,"RIGHT",10,0);C.Panel(self.appsBadge,T.selected,12)
  self.appsCount=C.Text(self.appsBadge,"0",14,T.text);C.SetLineHeight(self.appsCount,20,true);self.appsCount:SetPoint("CENTER")
  self.appsEmpty=C.Text(self.applicationPanel,Say("本分类暂无申请","No applications in this category"),14,T.dim);self.appsEmpty:SetPoint("LEFT",self.appsBadge,"RIGHT",12,0)
@@ -208,7 +210,7 @@ function P:Build(parent)
   if not state.showGlobal then P:DismissApplicationNotice() end
   P:RefreshApplications()
  end,{height=32,radius=16});self.scopeToggle:SetPoint("LEFT",self.appsBadge,"RIGHT",10,0)
- self.autoJoin=C.Check(self.applicationPanel,Say("自动进组","Auto join"),function(value) UI:SetGroupSetting("autoJoin",value) end);C.SetFont(self.autoJoin.label,14);C.SetLineHeight(self.autoJoin.label,20,true);self.autoJoin:SetSize(54+FitText(self.autoJoin.label),26);self.autoJoin:SetPoint("RIGHT",self.applicationPanel,"TOPRIGHT",-16,-34);self.autoJoin.track:ClearAllPoints();self.autoJoin.track:SetPoint("RIGHT",0,0);self.autoJoin.label:ClearAllPoints();self.autoJoin.label:SetPoint("RIGHT",self.autoJoin.track,"LEFT",-10,0)
+ self.autoJoin=C.Check(self.applicationPanel,Say("自动进组","Auto join"),function(value) UI:SetGroupSetting("autoJoin",value) end);C.SetFont(self.autoJoin.label,14);C.SetLineHeight(self.autoJoin.label,20,true);self.autoJoin:SetSize(54+FitText(self.autoJoin.label),26);self.autoJoin:SetPoint("RIGHT",self.applicationPanel,"TOPRIGHT",-16,-26);self.autoJoin.track:ClearAllPoints();self.autoJoin.track:SetPoint("RIGHT",0,0);self.autoJoin.label:ClearAllPoints();self.autoJoin.label:SetPoint("RIGHT",self.autoJoin.track,"LEFT",-10,0)
  self.autoApply=C.Check(self.applicationPanel,"",function(value)
   local ok,err=UI.Application:SetAutoApply(value);if not ok then P:SetStatus(err or L.failed) end
  end);self.autoApply:SetSize(44,26);self.autoApply:SetPoint("RIGHT",self.autoJoin,"LEFT",-20,0);self.autoApply.label:Hide()
@@ -223,35 +225,31 @@ function P:Build(parent)
   self.fill:Hide();self.hover:Hide();UI:Color(self.label,self._inside and T.brand or T.muted)
  end
  self.refresh=C.IconButton(main,"refresh",48,function() P:DoSearch() end,{iconSize=22,radius=24,surfaceColors={T.selected,T.refreshHover}});self.refresh:SetPoint("TOPRIGHT",main,"TOPRIGHT",0,0);self.refreshIcon=self.refresh.icon
- self.appList=C.List(self.applicationPanel,MAIN-32,APP_ROW_HEIGHT*3,APP_ROW_HEIGHT,function(id,button,row) if button=="RightButton" then P:OpenResultMenu(row,id) end end);self.appList:SetGutter(LIST_GUTTER);self.appList:SetPoint("TOPLEFT",16,-56);self.appList.tooltipFraction=.25
+ self.appList=C.List(self.applicationPanel,MAIN-32,APP_ROW_HEIGHT*3,APP_ROW_HEIGHT,function(id,button,row) if button=="RightButton" then P:OpenResultMenu(row,id) end end);self.appList:SetGutter(LIST_GUTTER);self.appList:SetPoint("TOPLEFT",16,-44);self.appList.tooltipFraction=.25
  self.appList.selectionFill=false;self.appList.selectionMark=false;self.appList.hoverFill=false;self.appList.alternateRows=false
  self.limitNotice=C.Notice(main,BODY,function()
-  if state.limitTarget then P:DismissApplicationNotice()
+  if state.applicationLimit then P:DismissApplicationNotice()
   else P.dismissedStatus=P.statusMessage;P.statusMessage="" end
   P:LayoutResults()
  end)
  self.limitText=self.limitNotice.text;self.statusText=self.limitText
- self.continueApplication=C.Button(self.limitNotice,Say("继续申请","Continue application"),150,function()
-  if UI:GetGroup().Applications:GetActiveCount()>=5 or not state.limitTarget then return end
-  local id,manual=state.limitTarget,state.limitManual;P:DismissApplicationNotice();P:RefreshApplications();P:Apply(id,manual)
- end);self.continueApplication:SetWidth(FitText(self.continueApplication.label)+24);self.continueApplication:SetHeight(32);self.continueApplication:SetPoint("RIGHT",-40,0)
  self.closeApplicationNotice=self.limitNotice.close
  self.limitNotice:Hide()
  for _,row in ipairs(self.appList.rows) do
   ResultTooltipArea(row,self.appList)
   row.base=C.Panel(row,T.rowAlternate,12);row.base:Hide()
-  row.title:ClearAllPoints();row.title:SetPoint("LEFT",44,0);row.title:SetWidth(APPLICATION_COLUMNS.title.width);C.SetLineHeight(row.title,T.listTitleLineHeight,true);row.meta:Hide()
-  row.icon=C.Icon(row,32);row.icon:SetPoint("LEFT",0,0)
+  row.title:ClearAllPoints();row.title:SetPoint("LEFT",APPLICATION_COLUMNS.title.x,0);row.title:SetWidth(APPLICATION_COLUMNS.title.width);C.SetFont(row.title,15);C.SetLineHeight(row.title,20,true);row.meta:Hide()
+  row.icon=C.Icon(row,24);row.icon:SetPoint("LEFT",0,0)
   row.leaderIcon=C.Icon(row,12);row.leaderIcon:SetTexture(T.media.."leader.tga");row.leaderIcon:SetPoint("LEFT",APPLICATION_COLUMNS.leader.x-17,0)
   row.leader=C.Text(row,"",14,T.muted,APPLICATION_COLUMNS.leader.width);row.leader:SetPoint("LEFT",APPLICATION_COLUMNS.leader.x,0);C.SetLineHeight(row.leader,20,true);row.leader:SetWordWrap(false)
-  BuildMembers(row,APP_BODY-386)
+  BuildMembers(row,APP_BODY-386,true)
   row.status=C.Text(row,"",14,T.dim,112);row.status:SetPoint("LEFT",APP_BODY-224,0);C.SetLineHeight(row.status,20,true);row.status:SetJustifyH("CENTER")
   row.cancel=C.Button(row,L.cancelApplication,92,function(b)
    local id=b.targetKey;local app=UI:GetGroup():GetApplication(id);if not app then return end
    if not UI:GetGroup().Applications:CanCancel(id) then return end
    local ok,err=UI:GetGroup():Cancel(id)
    if not ok then P:SetStatus(err or L.failed) end
-  end);C.SetFont(row.cancel.label,14);C.SetLineHeight(row.cancel.label,20,true);row.cancel:SetHeight(36);row.cancel:SetPoint("RIGHT",0,0)
+  end);C.SetFont(row.cancel.label,14);C.SetLineHeight(row.cancel.label,20,true);row.cancel:SetStyle({height=28,radius=14});row.cancel:SetPoint("RIGHT",0,0)
   row.cancel:HookScript("OnEnter",function(button) if button:IsEnabled() and button.isCancel then UI:Color(button.label,T.accent) end end)
  end
  self.context=C.Text(main,"",20,T.text,MAIN-180)
@@ -762,12 +760,12 @@ function P:SetStatus(message)
 end
 function P:LayoutResults()
  if not self.results then return end
- local top=156+(self.appsHeight or 0)
- local quota=state.limitTarget~=nil
+ local top=140+(self.appsHeight or 0)
+ local quota=state.applicationLimit
  local available=quota and UI:GetGroup().Applications:GetActiveCount()<5
- self.continueApplication:SetShown(available);self.continueApplication:SetAvailable(available)
  local message=quota and (available and Say("已有空余名额，可以继续申请。","A slot is available. You can continue your application.") or Say("最多同时申请 5 支队伍，请先取消一项申请。","You can apply to five groups at once. Cancel an application to continue.")) or self.statusMessage or ""
- self.limitNotice:SetMessage(message,available and self.continueApplication:GetWidth()+8 or 0)
+ self.limitNotice.fill:SetColor(available and AVAILABLE_NOTICE_COLOR or T.notice)
+ self.limitNotice:SetMessage(message)
  if self.noticeTop~=top then
   M:FinishPlacement(self.limitNotice);self.limitNotice:ClearAllPoints();self.limitNotice:SetPoint("TOPLEFT",self.main,"TOPLEFT",0,-top);self.noticeTop=top
  end
@@ -806,25 +804,25 @@ function P:RefreshApplications()
  UI:SetText(self.appsEmpty,Say("本分类暂无申请","No applications in this category"));C.SetLineHeight(self.appsEmpty,20,true);self.appsEmpty:SetShown(categoryCount==0 and globalCount==0);self.scopeToggle:SetShown(globalCount>categoryCount)
  UI:SetText(self.scopeToggle.label,state.showGlobal and Say("仅看本分类","This category") or Say("查看全部申请","All applications"))
  self.scopeToggle:SetWidth(FitText(self.scopeToggle.label)+24)
- self.appsHeight=h;self.applicationPanel:SetHeight(68+h);self:LayoutResults()
+ self.appsHeight=h;self.applicationPanel:SetHeight(52+h);self:LayoutResults()
  self.autoJoin:SetValue(UI:GetGroupSetting("autoJoin"))
  local ticking=HasApplicationCountdown()
  if ticking and not self.countdown then
   self.countdown=C_Timer.NewTicker(1,RefreshApplicationClock)
  elseif not ticking then StopCountdown() end
 end
-function P:ShowApplicationLimit(targetID,manual)
- state.limitTarget,state.limitManual=targetID,manual;state.showGlobal=true
+function P:ShowApplicationLimit()
+ state.applicationLimit=true;state.showGlobal=true
  self:ClosePicker();UI:CloseMenu();UI.Tooltip:Hide();self:RefreshApplications()
- M:Reveal(self.limitNotice,"TOPLEFT",self.main,"TOPLEFT",0,-156-(self.appsHeight or 0),0,7,.20)
+ M:Reveal(self.limitNotice,"TOPLEFT",self.main,"TOPLEFT",0,-140-(self.appsHeight or 0),0,7,.20)
 end
 function P:DismissApplicationNotice()
- state.limitTarget,state.limitManual=nil,nil
+ state.applicationLimit=nil
  if self.limitNotice then M:FinishPlacement(self.limitNotice);self.limitNotice:Hide() end
 end
-function UI:ShowApplicationLimit(targetID,manual)
- if self.page~="find" or not P.frame or not P.frame:IsShown() then A:Open("find",{applicationLimit=targetID,manualApplication=manual})
- else P:ShowApplicationLimit(targetID,manual) end
+function UI:ShowApplicationLimit()
+ if self.page~="find" or not P.frame or not P.frame:IsShown() then A:Open("find",{applicationLimit=true})
+ else P:ShowApplicationLimit() end
 end
 function P:RefreshResults()
  M:Stop(self)
@@ -866,12 +864,12 @@ function P:RefreshSearchState()
 end
 local function RefreshPendingResults() P:RefreshResults();return true end
 function P:Apply(id,manual)
+ if state.applicationLimit then self:DismissApplicationNotice() end
  if not Record(id) then self:SetStatus(L.unavailable);return end
- local ok,err=UI.Application:Apply(id,manual);self:SetStatus(not state.limitTarget and ok==false and (err or L.failed) or "")
+ local ok,err=UI.Application:Apply(id,manual);self:SetStatus(not state.applicationLimit and ok==false and (err or L.failed) or "")
 end
 function P:OnApplicationCancelled(id)
- -- Keep the original target while the user is freeing a slot for another group.
- if not state.browseReady or state.limitTarget or not UI:GetGroup():GetResult(id) then return end
+ if not state.browseReady or not UI:GetGroup():GetResult(id) then return end
  self:DoSearch()
 end
 function P:UpdateApplicationSettings()
@@ -956,7 +954,7 @@ function P:Enter(context)
  self:WatchNotes();self:RefreshCategories();self:RefreshPicker();self:UpdateFilters();self:SetFiltersOpen(self.filtersOpen)
  self:OnSearchTextChanged(self.search.box)
  if context and context.applicationID then self.appList:Select(context.applicationID,true) end
- if context and context.applicationLimit then self:ShowApplicationLimit(context.applicationLimit,context.manualApplication) end
+ if context and context.applicationLimit then self:ShowApplicationLimit() end
  local searchState=UI:GetGroup():GetSearchState()
   if context and context.leaderKey or UI:GetGroup().Search.abandoned or searchState=="idle" or searchState~="searching" and UI:GetGroup().Search.categoryKey~=state.category then self:DoSearch() end
 end
@@ -968,7 +966,7 @@ function P:Leave()
  self.results:Clear();self.appList:Clear();self.seasonCategories:Clear();self.categories:Clear();if self.picker then self.activities:Clear();self:ClosePicker() end;M:FinishPlacement(self.filterPanel);self.filterPanel:Hide()
  StopCountdown();M:Waiting(self.busyIcon,false);M:Spin(self.refreshIcon,false);self.busyState=nil
  wipe(state.apps);wipe(state.appIDs);state.selected=nil
- state.limitTarget=nil;state.showGlobal=nil
+ state.showGlobal=nil
  UI:GetGroup():Detach(self);UI:FitToScreen()
 end
 

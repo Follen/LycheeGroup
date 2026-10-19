@@ -4,7 +4,7 @@
 
 A group-finding addon for retail World of Warcraft. Find groups, manage recruitment, and keep notes on players you meet, all in one window.
 
-Version **1.0.4** targets retail **12.1.5** (Interface `120105`) and supports Chinese and English. See the [changelog](CHANGELOG.md) (in Chinese) for version changes.
+Version **1.0.5** targets retail **12.1.5** (Interface `120105`) and supports Chinese and English. See the [changelog](CHANGELOG.md) (in Chinese) for version changes.
 
 ## Features
 

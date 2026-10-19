@@ -1215,7 +1215,7 @@ do
  T.eq(Geometry(target.score).x+target.score:GetWidth()+16,Geometry(target.description).x)
  T.eq(Geometry(target.description).x+target.description:GetWidth()+12,Geometry(target.age).x)
  T.eq(find.appList.rows[1].description,nil,"outbound applications do not gain a description column")
- T.eq(find.appList.rows[1].title:GetWidth(),body-631);T.eq(Geometry(find.appList.rows[1].leader).x,body-554,"outbound applications retain their dedicated wider columns")
+ T.eq(find.appList.rows[1].title:GetWidth(),body-623);T.eq(Geometry(find.appList.rows[1].leader).x,body-554,"outbound applications retain their dedicated wider columns")
  r.comment="A complete group description that can wrap over two compact lines without shifting member slots or numeric columns";Render()
  T.eq(target.description:GetText(),r.comment,"search rows display the listing description independently of its title")
  r.comment="";Render();T.eq(target.description:GetText(),"—","empty descriptions replace any previous row text")
@@ -1370,25 +1370,29 @@ local invitedRow;for _,r in ipairs(find.appList.rows) do if r.key==905 then invi
 T.ok(invitedRow and not invitedRow.cancel:IsShown(),"invitations keep the native response dialog without duplicate action buttons")
 find.appList:SetPixelOffset(0,false)
 find.appList.rows[2].cancel:Fire("OnClick");T.eq(G.cancelled,902)
-T.eq(find.continueApplication:IsEnabled(),false,"cancellation waits for a native status event")
+T.eq(find.continueApplication,nil,"the quota notice has no continue-application button")
+T.eq(find.limitText:GetText(),"最多同时申请 5 支队伍，请先取消一项申请。","cancellation waits for a native status event")
 G.apps[2].status="cancelled";G:Notify("applications")
-T.eq(find.continueApplication:IsEnabled(),true)
+T.eq(find.limitText:GetText(),"已有空余名额，可以继续申请。")
+T.same(find.limitNotice.fill.color,{38/255,61/255,48/255,1},"available application slots use a green notice background")
 T.eq(LFGListApplicationDialog.resultID,previousID,"freeing a slot does not auto apply")
 do
  local search,calls=G.Search.Search,0
  G.Search.Search=function(self,...) calls=calls+1;return search(self,...) end
  G.apps[1].status="cancelled";G:Notify("applicationCancelled",101);G:Notify("applications")
- T.eq(calls,0,"freeing a slot keeps the pending application's original result ID")
- T.eq(find.continueApplication:IsEnabled(),true)
+ T.eq(calls,1,"freeing a slot refreshes current results even while the quota notice is shown")
+ T.eq(find.limitNotice:IsShown(),true)
  G.Search.Search=search;G.apps[1].status="applied";G:Notify("applications")
 end
-find.continueApplication:Fire("OnClick");T.eq(U.Application.applicationLease.id,102,"continuing configures the original target when no role has been confirmed yet")
+find:Apply(102);T.eq(U.Application.applicationLease.id,102,"the player selects a group again after freeing a slot")
+T.eq(find.limitNotice:IsShown(),false,"selecting a group again clears the quota notice")
 G.apps[2].status="applied";U.Application:Apply(102)
+T.same(find.limitNotice.fill.color,U.Theme.notice,"reaching the cap again restores the ordinary notice background")
 f.base.AdvanceClock(6.4);G:Notify("applications");f.base.AdvanceClock(.11)
-T.eq(find.limitNotice:IsShown(),true,"the pending target and notice remain after 6.5 seconds")
-G:Notify("applications");T.eq(find.limitNotice:IsShown(),true,"passive updates retain the pending application")
-G.apps[2].status="cancelled";G:Notify("applications");find.continueApplication:Fire("OnClick")
-T.eq(U.Application.applicationLease.id,102,"a slot released after the old timeout still continues the original target")
+T.eq(find.limitNotice:IsShown(),true,"the quota notice remains after 6.5 seconds")
+G:Notify("applications");T.eq(find.limitNotice:IsShown(),true,"passive updates retain the quota notice")
+G.apps[2].status="cancelled";G:Notify("applications");find:Apply(103)
+T.eq(U.Application.applicationLease.id,103,"the player can choose a different group after a slot becomes available")
 G.apps[2].status="applied"
 U.Application:Apply(102);find.closeApplicationNotice:Fire("OnClick");G:Notify("applications")
 T.eq(find.limitNotice:IsShown(),false,"the notice can be dismissed without passive reopening")
@@ -1527,14 +1531,14 @@ do
  for i=1,5 do G.apps[i]={id=900+i,name="Pending "..i,categoryID=3,status="applied"} end
  local submitted=dialog.submissions
  find:Apply(102,true);G.apps[1].status="cancelled";G:Notify("applications")
- find.continueApplication:Fire("OnClick")
- T.eq(dialog.submissions,submitted,"continuing Edit and apply still waits for confirmation")
+ find:Apply(102,true)
+ T.eq(dialog.submissions,submitted,"selecting Edit and apply again still waits for confirmation")
  T.eq(U.Application.applicationLease.id,102);T.eq(U.Application.applicationModal.submit.label:GetText(),"申请")
  U:CloseModal()
  G.apps[1].status="applied";find:Apply(102)
  local pendingRecord=G.records[102];G.records[102]=nil;G.apps[1].status="cancelled";G:Notify("applications")
- find.continueApplication:Fire("OnClick")
- T.eq(find.limitText:GetText(),U.L.unavailable,"continuing a vanished target gives a visible explanation")
+ find:Apply(102)
+ T.eq(find.limitText:GetText(),U.L.unavailable,"selecting a vanished target gives a visible explanation instead of the quota notice")
  T.eq(dialog.submissions,submitted)
  G.records[102]=pendingRecord;G.apps=priorApps;G:Notify("applications")
  _G.GetSpecialization,_G.GetSpecializationRole=getSpec,getSpecRole
@@ -1807,12 +1811,12 @@ end
 find:SetFiltersOpen(true);T.ok(U.Motion.jobs[find.filterPanel]);find:SetFiltersOpen(false);T.eq(U.Motion.jobs[find.filterPanel],nil)
 find:SelectCategory("seasonDungeon");T.ok(U.Motion.jobs[find.picker]);find:ClosePicker();T.eq(U.Motion.jobs[find.picker],nil)
 A.db.reduceMotion=false;G.state="searching";find:ReadSearchState();T.ok(U.Motion.jobs[find.busyIcon],"only an active search animates the lychee")
-find:ShowApplicationLimit(102);local closingRecords=G.records
+find:ShowApplicationLimit();local closingRecords=G.records
 local applicationClock=find.countdown
 U:Hide(true);T.eq(next(U.Motion.jobs),nil,"closing releases scroll, tooltip and waiting jobs")
 T.eq(find.countdown,nil,"closing releases the application countdown")
 if applicationClock then T.eq(applicationClock.cancelled,true,"closing cancels the active countdown timer") end
-T.eq(find.limitNotice:IsShown(),false,"leaving clears the pending application notice")
+T.eq(find.limitNotice:IsShown(),false,"leaving clears the quota notice")
 T.eq(next(G.views),nil)
 local nativeSpecIcon=U.C.Icon(U.frame,24)
 U:SetMemberIcon(nativeSpecIcon,{class="WARRIOR",specName="武器",assignedRole="DAMAGER"})
@@ -1855,8 +1859,8 @@ U:Hide(true)
 do
  T.near(U.Theme.width,1160*1.12,.001,"the main window is twelve percent wider")
  T.eq(U.Theme.height,840,"widening keeps the original window height")
- T.eq(select(2,find.appList.rows[1].title:GetFont()),21,"outgoing applications share the note and result title size")
- T.eq(find.appList.rows[1].title:GetHeight(),28)
+ T.eq(select(2,find.appList.rows[1].title:GetFont()),18,"outgoing applications use a compact single-line title")
+ T.eq(find.appList.rows[1].title:GetHeight(),24)
  local function Top(region) local point={region:GetPoint()};return -point[#point] end
  for _,row in ipairs({find.results.rows[1],notes.list.rows[1],notes.historyList.rows[1]}) do
   T.eq(select(2,row.title:GetFont()),21)
@@ -1975,7 +1979,7 @@ do
  local a,u,g=fresh.A,fresh.U,fresh.G;a.db.reduceMotion=true
  local clock,now=GetTime,0;GetTime=function() return now end
  for i=1,5 do g.apps[i]={id=i,name="Application "..i,categoryID=2,status=i==5 and "applied" or "invited",expiresAt=i==5 and 90 or nil} end
- a:Open("find");local page=u.pages.find;page:ShowApplicationLimit(101)
+ a:Open("find");local page=u.pages.find;page:ShowApplicationLimit()
  T.ok(page.countdown)
  now=1;fresh.base.AdvanceClock(1)
  T.ok(page.countdown,"four invited rows do not stop an offscreen applied entry's countdown")
