@@ -43,6 +43,10 @@ button:Fire("OnClick", "LeftButton")
 T.eq(A.UI:IsShown(), false, "a second left click closes the main window")
 button:Fire("OnClick", "RightButton")
 T.eq(openedPage, "settings"); T.eq(openedContext.section, "general")
+local toggle, toggles = A.ToggleWindow, 0
+A.ToggleWindow = function() toggles = toggles + 1 end
+button:Fire("OnClick", "LeftButton"); T.eq(toggles, 1, "minimap delegates the transition decision to the common toggle")
+A.ToggleWindow = toggle
 
 local function Position()
     return select(4, button:GetPoint())

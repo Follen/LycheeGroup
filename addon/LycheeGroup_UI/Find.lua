@@ -285,6 +285,7 @@ function P:Build(parent)
  self.emptyHelp=C.Text(self.emptyPanel,"",14,T.muted,600);self.emptyHelp:SetPoint("TOP",0,-124);self.emptyHelp:SetJustifyH("CENTER")
  self.start=C.Button(self.emptyPanel,L.searchNow,140,function() if state.browseReady then P:DoSearch() else P:SelectCategory(state.category) end end);self.start:SetPrimary(true);self.start:SetPoint("TOP",self.emptyHelp,"BOTTOM",0,-24)
  main:SetScript("OnKeyDown",function(_,key)
+  if UI.hiding then return end
   if key=="F10" and IsShiftKeyDown() and state.selected then P:OpenResultMenu(P.results,state.selected,false);return end
   if key~="ENTER" or not state.selected then return end
   for _,input in ipairs(UI.inputs or {}) do if input:HasFocus() then return end end

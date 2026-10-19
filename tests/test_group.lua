@@ -1136,7 +1136,7 @@ do
 	T.eq(G:GetApplication(11), app, "清搜索结果不取消或复制申请")
 	T.eq(app.comment, nil, "申请不保留整条搜索说明")
 	T.eq(#Stubs.FramesWithEvent("LFG_LIST_UPDATE_SEARCH_RESULTS"), 0, "隐藏后停止搜索流式监听")
-	T.eq(#Stubs.FramesWithEvent("LFG_LIST_SEARCH_RESULT_UPDATED"), 0, "隐藏后停止单条结果监听")
+	T.eq(#Stubs.FramesWithEvent("LFG_LIST_SEARCH_RESULT_UPDATED"), 1, "隐藏后只为活动申请保留单条结果监听")
 	local reads = S.resultReads
 	T.eq(Stubs.FireEvent("LFG_LIST_UPDATE_SEARCH_RESULTS"), 0, "原生更新不再触达搜索处理器")
 	G:OnEvent("LFG_LIST_UPDATE_SEARCH_RESULTS")
@@ -1147,6 +1147,7 @@ do
 	T.ok(G:AcceptInvite(11), "独立申请不依赖结果仓库即可接受邀请")
 	Fire("LFG_LIST_APPLICATION_STATUS_UPDATED", 11, "inviteaccepted", "invited", "黑翼速通")
 	T.eq(G:GetApplication(11), nil, "隐藏时终态申请释放摘要")
+	T.eq(#Stubs.FramesWithEvent("LFG_LIST_SEARCH_RESULT_UPDATED"), 0, "最后一条活动申请结束后释放单条结果监听")
 	S.applications = {}
 
 	-- 本窗口关闭后在原生界面重新发布,最小入口仍能接管申请者。
@@ -2028,8 +2029,38 @@ do
  T.eq(S.playerReads,reads+2,"container reuse still reads every native member, even in the same frame")
  T.eq(app.name,"After refresh");T.eq(app.leaderClass,"PALADIN")
  T.eq(members[1].specName,"Holy");T.eq(members[2].name,"Replacement-Away")
- G.Results:QueueUpdate(9003)
- T.eq(G.Results.updatePending,nil,"a private application is not covered by the cleared search-store update queue")
+ local nativeApplicationInfo=C_LFGList.GetApplicationInfo
+ local applicationReads,updates=0,0
+ C_LFGList.GetApplicationInfo=function(...) applicationReads=applicationReads+1;return nativeApplicationInfo(...) end
+ local stop=G:Subscribe(function(kind) if kind=="applications" then updates=updates+1 end end)
+ S.results[9003].name="Updated by result event";S.results[9003].leaderName="ReplacementLeader-Away"
+ S.players[9003][1]={name="ReplacementLeader-Away",classFilename="MAGE",specName="Fire",isLeader=true}
+ local resultReads=S.resultReads
+ T.eq(Stubs.FireEvent("LFG_LIST_SEARCH_RESULT_UPDATED",9003),1,"hidden active applications still receive their native result updates")
+ G.Results:BeginSearch(20001)
+ T.ok(G.Results.updatePending,"ending a browse preserves queued updates owned by an active application")
+ G.Game.frame:GetScript("OnUpdate")()
+ T.eq(app.name,"Updated by result event");T.eq(app.leaderName,"ReplacementLeader-Away");T.eq(app.leaderClass,"MAGE")
+ T.eq(app.result,result);T.eq(app.status,"applied","metadata refresh does not alter application state")
+ T.eq(G:GetResultCount(),0,"a private update never adds a result to the closed browser")
+ T.eq(S.resultReads,resultReads+1);T.eq(applicationReads,0,"metadata updates do not reread all native application statuses")
+ T.eq(updates,1,"the floating window receives one application notification")
+ local oldIDs=S.resultIDs;S.resultIDs={}
+ S.results[9003].name="Other-category update"
+ Stubs.FireEvent("LFG_LIST_SEARCH_RESULT_UPDATED",9003);G.Results:QueueUpdate()
+ G.Game.frame:GetScript("OnUpdate")()
+ T.eq(app.name,"Other-category update","a bulk snapshot cannot consume another category's application update without reading it")
+ T.eq(updates,2);T.eq(G:GetResultCount(),0)
+ S.resultIDs={9003}
+ G.Results:CommitResults(20001)
+ T.eq(app.result,G:GetResult(9003),"a new browse adopts its current result object for the existing application")
+ T.ok(app.result~=result);T.eq(updates,3,"a result batch publishes application metadata once")
+ result,details=app.result,app.result.details;members=details.members
+ S.results[9003].name="Visible result update"
+ Stubs.FireEvent("LFG_LIST_SEARCH_RESULT_UPDATED",9003);G.Game.frame:GetScript("OnUpdate")()
+ T.eq(app.name,"Visible result update");T.eq(updates,4);T.eq(applicationReads,0)
+ stop();C_LFGList.GetApplicationInfo=nativeApplicationInfo;S.resultIDs=oldIDs
+ G.Results:BeginSearch(20002)
  reads=S.playerReads;S.players[9003][2].specName="Arms"
  Fire("LFG_LIST_APPLICATION_STATUS_UPDATED",9003,"applied","applied")
  T.eq(S.playerReads,reads+2,"application status events also refresh all same-count member details")
@@ -2038,7 +2069,29 @@ do
  G.Applications:SyncAll()
  T.eq(app.leaderClass,nil,"an unavailable leader class cannot retain the previous snapshot's color")
  S.applications={};G.Applications:SyncAll();G.Applications:ReleaseFinished()
+ G.Results:BeginSearch(20002)
+ G.Results:QueueUpdate(9003)
+ T.eq(G.Results.updatePending,nil,"a finished private application cannot be revived by a late result update")
  S.results[9003],S.players[9003],ACTIVITY[9002]=nil,nil,nil
+end
+
+-- A burst of application metadata changes publishes one complete snapshot.
+do
+ local applicationIDs={9011,9012,9013,9014,9015}
+ S.applications=applicationIDs;S.appStatus={};S.appPending={}
+ for _,id in ipairs(applicationIDs) do S.appStatus[id]="applied";S.results[id]={activityIDs={502},name="Before burst",leaderName="Leader-Away",numMembers=1} end
+ G.Results:BeginSearch(20100);G.Applications:SyncAll()
+ local updates=0;local stop=G:Subscribe(function(kind) if kind=="applications" then updates=updates+1 end end)
+ local reads=S.resultReads
+ for _=1,6 do for _,id in ipairs(applicationIDs) do S.results[id].name="After burst "..id;Stubs.FireEvent("LFG_LIST_SEARCH_RESULT_UPDATED",id) end end
+ T.eq(updates,0);T.eq(S.resultReads,reads,"the native burst remains queued")
+ G.Game.frame:GetScript("OnUpdate")()
+ T.eq(updates,1,"all application result IDs in one frame publish one complete application snapshot")
+ T.eq(S.resultReads,reads+5,"every changed application is still refreshed once")
+ for _,id in ipairs(applicationIDs) do T.eq(G:GetApplication(id).name,"After burst "..id);T.eq(G:GetApplication(id).status,"applied") end
+ T.eq(G.Game.frame:GetScript("OnUpdate"),nil);T.eq(G:GetResultCount(),0)
+ stop();S.applications={};G.Applications:SyncAll();G.Applications:ReleaseFinished()
+ for _,id in ipairs(applicationIDs) do S.results[id]=nil end
 end
 
 -- Confirmed terminal events still advance status without rebuilding discarded data.

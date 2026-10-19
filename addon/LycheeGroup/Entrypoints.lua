@@ -5,7 +5,6 @@ local groupReady = false
 local WAKE_EVENTS = {
     "LFG_LIST_APPLICATION_STATUS_UPDATED",
     "LFG_LIST_ACTIVE_ENTRY_UPDATE",
-    "CHALLENGE_MODE_START",
 }
 
 -- Only the premade-group branch of the minimap eye is redirected. The stock
@@ -42,6 +41,7 @@ end
 
 local function StopGroupWake()
     for _, event in ipairs(WAKE_EVENTS) do events:UnregisterEvent(event) end
+    events:UnregisterEvent("CHALLENGE_MODE_START")
 end
 
 function A:OnModuleReady(module)
@@ -60,8 +60,16 @@ local function HasActiveLFGBusiness()
     return false
 end
 
-local function HasActiveChallengeRun()
-    return C_ChallengeMode.IsChallengeModeActive()
+function A:SyncHistoryWake()
+    if groupReady or not self.db.history then
+        events:UnregisterEvent("CHALLENGE_MODE_START")
+        return
+    end
+    events:RegisterEvent("CHALLENGE_MODE_START")
+    if C_ChallengeMode.IsChallengeModeActive() then
+        local group, err = self:Ensure("Group")
+        if not group then self:Print(self.L.loadFailed:format(tostring(err))) end
+    end
 end
 
 local function HandOffToGroup(event, ...)
@@ -142,11 +150,12 @@ local function OnPlayerLogin()
         if not notes then A:NoteMessage(A.L.loadFailed:format(tostring(err))) end
     end
     if groupReady then return end
-    if HasActiveLFGBusiness() or HasActiveChallengeRun() then
+    if HasActiveLFGBusiness() then
         local group, err = A:Ensure("Group")
         if not group then A:Print(A.L.loadFailed:format(tostring(err))) end
     else
         for _, event in ipairs(WAKE_EVENTS) do events:RegisterEvent(event) end
+        A:SyncHistoryWake()
     end
 end
 
@@ -198,8 +207,7 @@ SlashCmdList.LYCHEEGROUP = function(message)
     elseif command == "note" then
         SlashNote(rest)
     elseif command == "" or command == "find" then
-        local ui = A.UI
-        if ui and ui:IsShown() then ui:Hide() else A:Open("find") end
+        A:ToggleWindow()
     elseif command == "create" or command == "notes" or command == "settings" then
         A:Open(command)
     else

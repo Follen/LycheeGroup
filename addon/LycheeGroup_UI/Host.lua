@@ -368,6 +368,7 @@ function UI:Hide(immediate)
 	local token = (self.exitToken or 0) + 1
 	self.exitToken = token
 	local closingPage = self.page and self.pages[self.page]
+	if closingPage and closingPage.CancelBindingCapture then closingPage:CancelBindingCapture(true) end
 	self:CloseMenu()
 	self:CloseModal("hide")
 	UI.Tooltip:Hide()

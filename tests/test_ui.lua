@@ -610,6 +610,31 @@ do
  T.eq(notes.specChoice.value,66,"the initial snapshot fills the specialization before Save")
  Pick(notes.specChoice,70);notes:Save()
  T.eq(A.Notes:Find("Observed-Away").specID,70,"an explicit specialization selection takes priority over the snapshot")
+ A.Notes:Remove("Observed-Away");base.SetInspectSpec("party1",0)
+ notes:OpenAdd({name="Observed",realm="Away",unit="party1"})
+ notes.eReason.box:SetText("Before pending edit");notes:Save()
+ notes.eName.box:SetText("Corrected-Away");notes.eReason.box:SetText("After pending edit")
+ base.SetInspectSpec("party1",66);base.FireEvent("INSPECT_READY","observed-note");base.AdvanceClock(5)
+ T.eq(A.Notes:Find("Observed-Away"),nil,"editing the pending identity cancels the old save before its callback")
+ T.eq(A.Notes:Find("Corrected-Away"),nil,"typing a correction does not implicitly save it")
+ T.eq(notes.eName.box:GetText(),"Corrected-Away");T.eq(notes.eReason.box:GetText(),"After pending edit")
+ T.eq(notes.eStatus:GetText(),"","editing clears the obsolete inspection status")
+ notes:Save();T.eq(A.Notes:Find("Corrected-Away").reason,"After pending edit","the next save uses the corrected identity and reason")
+ A.Notes:Remove("Corrected-Away")
+ local edits={
+  function() notes.eReason.box:SetText("Revised while inspecting") end,
+  function() Pick(notes.classChoice,"WARRIOR") end,
+  function() Pick(notes.specChoice,70) end,
+  function() notes.typeButtons.caution:Fire("OnClick") end,
+ }
+ for _,edit in ipairs(edits) do
+  base.SetInspectSpec("party1",0);notes:OpenAdd({name="Observed",realm="Away",unit="party1"})
+  notes.eReason.box:SetText("Original pending value");notes:Save();edit()
+  base.SetInspectSpec("party1",66);base.FireEvent("INSPECT_READY","observed-note");base.AdvanceClock(5)
+  T.eq(A.Notes:Find("Observed-Away"),nil,"every editable save field invalidates the pending snapshot")
+  notes:Save();T.ok(A.Notes:Find("Observed-Away"),"a corrected draft remains saveable")
+  A.Notes:Remove("Observed-Away")
+ end
  A.Notes:Remove("Legacy-Away");A.Notes:Remove("Observed-Away");base.SetUnit("party1",nil)
  notes:OpenEdit("Guest-Away")
 end
@@ -1741,7 +1766,14 @@ do
  U.Tooltip:ShowGroup(target,raid)
  T.eq(#buttons,40,"opening a larger raid expands the existing member pool")
  T.eq(buttons[40].member,raidMembers[40]);T.ok(buttons[40]:IsVisible(),"the full forty-player roster remains accessible")
- local nodes=#S.nodes;U.Tooltip:Hide();U.Tooltip:ShowGroup(target,raid)
+ local nodes=#S.nodes;U.Tooltip:Hide()
+ local hides,widths=0,{};local hide=buttons[1].Hide;local view=U.Tooltip.interactive;local setWidth=view.SetWidth
+ for _,button in ipairs(buttons) do button.Hide=function(self) hides=hides+1;return hide(self) end end
+ view.SetWidth=function(self,width) widths[#widths+1]=width;return setWidth(self,width) end
+ U.Tooltip:ShowGroup(target,raid)
+ T.eq(hides,40,"one hover clears the warm member pool only once");T.same(widths,{1080},"the raid goes directly to its final width")
+ T.eq(U.Tooltip.owner,target);T.eq(buttons[40].member,raidMembers[40]);T.ok(buttons[40]:IsVisible())
+ for _,button in ipairs(buttons) do button.Hide=hide end;view.SetWidth=setWidth
  T.eq(#S.nodes,nodes,"reopening a roster reuses its native object high-water mark");T.eq(buttons[1],first)
  U.Tooltip:Hide();T.eq(buttons[40].member,nil,"closing clears newly grown member bindings too")
  for i=40,31,-1 do raidMembers[i]=nil end
@@ -2508,6 +2540,31 @@ do
  T.ok(list:IsShown());T.eq(page.groupSummary:IsShown(),false);T.eq(list.rows[1].member,two)
  u:Hide(true);T.eq(list.rows[1].member,nil,"leaving releases inline roster bindings")
 end
+-- Keyboard shortcuts stop when close starts, before the retained page leaves.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("zhCN")
+ local a,u,g=fresh.A,fresh.U,fresh.G
+ g.records[901]={id=901,activityID=2,name="Closing shortcut",leaderName="Leader-Home",numMembers=1}
+ g.prefs.find={category="seasonDungeon",categoryPrefs={seasonDungeon={selected=true,difficultyID=8}}}
+ a.db.reduceMotion=false;a:Open("find")
+ u.Motion:Tick(2)
+ local page=u.pages.find;page:RefreshResults();T.eq(page.results.rows[1].key,901);page.results.rows[1]:Fire("OnClick","LeftButton")
+ page.autoApply:Fire("OnClick");u.Application.applicationModal.submit:Fire("OnClick")
+ T.ok(u.Application:IsAutoApplyEnabled())
+ local dialog=LFGListApplicationDialog;local before=dialog.submissions
+ u:Hide();T.ok(u.hiding);T.ok(u.frame:IsShown())
+ page.main:Fire("OnKeyDown","ENTER");T.eq(dialog.submissions,before,"Enter cannot apply while the window exits")
+ local shift=IsShiftKeyDown;IsShiftKeyDown=function() return true end
+ page.main:Fire("OnKeyDown","F10");T.eq(u.context.menu and u.context.menu:IsShown() or false,false,"closing cannot open a result menu")
+ IsShiftKeyDown=shift
+ a:Open("find");page.results.rows[1]:Fire("OnClick","LeftButton");page.main:Fire("OnKeyDown","ENTER")
+ T.eq(dialog.submissions,before+1,"reversing close restores the normal shortcut")
+ u.Motion:Tick(2);a:ToggleWindow();u.Motion:Tick(.1)
+ T.ok(u.hiding);local closingToken=u.exitToken
+ a:ToggleWindow();T.eq(u.hiding,nil);T.ok(u.exitToken>closingToken,"a second toggle invalidates the earlier close")
+ u.Motion:Tick(1);T.ok(u:IsShown(),"toggle reverses the in-progress close");T.eq(g.views[page],"search")
+ u:Hide(true)
+end
 -- Binding capture uses Blizzard's binding map, and scale applies to the whole window.
 do
  local fresh=dofile("tests/ui_fixture.lua")("zhCN")
@@ -2567,6 +2624,14 @@ do
  T.eq(page.bindingCapture,nil);T.eq(capture.keyboardEnabled,false);T.eq(capture:GetScript("OnKeyDown"),nil)
  capture:Show();page:BeginBindingCapture();u:Navigate("notes")
  T.eq(page.bindingCapture,nil);T.eq(page.frame.events.PLAYER_REGEN_DISABLED,nil);T.eq(capture.keyboardEnabled,false)
+ u:Navigate("settings",{section="general"});a.db.reduceMotion=false;page:BeginBindingCapture()
+ local beforeClose=#s.bindingSaves
+ u:Hide();T.ok(u.hiding);T.ok(u.frame:IsShown(),"closing preserves the animated page")
+ T.eq(page.bindingCapture,nil);T.eq(capture.keyboardEnabled,false);T.eq(capture:GetScript("OnKeyDown"),nil)
+ T.eq(page.frame.events.PLAYER_REGEN_DISABLED,nil)
+ capture:Fire("OnKeyDown","F8");T.eq(#s.bindingSaves,beforeClose,"closing immediately cancels key capture")
+ a:Open("settings");page:BeginBindingCapture();T.eq(page.bindingCapture,capture,"capture remains available after reversing close")
+ page:CancelBindingCapture();a.db.reduceMotion=true
  u:Navigate("settings",{section="interface"})
  local baseline=math.min(1,(UIParent:GetWidth()-40)/u.Theme.width,(UIParent:GetHeight()-40)/u.Theme.height)
  local floatingScale=a.db.floatingScale

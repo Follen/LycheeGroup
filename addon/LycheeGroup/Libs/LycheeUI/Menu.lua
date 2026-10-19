@@ -7,6 +7,9 @@ function Library.AttachMenus(UI)
  local function Close()
   if menu then menu:Hide() end
  end
+ local function CanOpen(anchor)
+  return anchor:IsVisible() and not UI:IsHiding() and (not anchor.isChoice or anchor:IsEnabled())
+ end
  local function Build()
   menu=CreateFrame("Frame",nil,UI.parent);menu:SetFrameStrata("TOOLTIP");menu:SetFrameLevel(20);menu:SetClampedToScreen(true);menu:EnableMouse(true)
   C.Shadow(menu,T.menuRadius);menu.fill=C.Panel(menu,T.raised,T.menuRadius);menu.keys={};menu:Hide()
@@ -44,9 +47,11 @@ function Library.AttachMenus(UI)
   end
  end
  function UI:OpenMenu(anchor,items,onPick,options)
-  if #items==0 or not anchor:IsVisible() or self:IsHiding() then return end
+  if #items==0 or not CanOpen(anchor) then return end
   if not menu then Build() end
-  Close();options=options or {}
+  Close()
+  if menu:IsShown() or not CanOpen(anchor) then return end
+  options=options or {}
   menu.anchor,menu.items,menu.onPick=anchor,items,onPick
   menu.fill:SetColor(T.raised)
   if anchor.isChoice then anchor:SetExpanded(true) end
@@ -59,9 +64,11 @@ function Library.AttachMenus(UI)
   local height=math.min(400,math.max(40,math.floor((UI.parent:GetHeight()/scale-48)/40)*40),#items*40)
   local gutter=#items*40>height and C.listRightInset or 0
   local natural=selectMenu and anchor:GetWidth() or 216
-  for _,entry in ipairs(items) do
-   menu.measure:SetText(entry.label or tostring(entry.value or ""))
-   natural=math.max(natural,math.ceil(menu.measure:GetStringWidth())+(selectMenu and 32 or entry.icon and 40 or 12)+12+8+gutter)
+  if not options.width then
+   for _,entry in ipairs(items) do
+    menu.measure:SetText(entry.label or tostring(entry.value or ""))
+    natural=math.max(natural,math.ceil(menu.measure:GetStringWidth())+(selectMenu and 32 or entry.icon and 40 or 12)+12+8+gutter)
+   end
   end
   local width=math.min(UI.parent:GetWidth()/scale-16,options.width or natural)-8
   menu.selectMenu,menu.contentWidth,menu.gutter,menu.selectedValue=selectMenu,width,gutter,options.selectedValue

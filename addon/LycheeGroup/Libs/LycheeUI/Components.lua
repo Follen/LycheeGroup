@@ -483,7 +483,6 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover)
   row.selected._selMotion=nil;row.selected:SetAlpha(0);row.selected:Hide()
   row.mark._selMotion=nil;row.mark:SetAlpha(0);row.mark:Hide()
   UI:ReleaseRow(row)
-  if UI.CloseMenuFor then UI:CloseMenuFor(row) end
  end
  local function Leave(row)
   row._inside=nil;row._pressed=nil;M:Stop(row.hover);row.hover:Hide();row.hover:SetAlpha(0)
@@ -542,7 +541,7 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover)
  function list:SetPixelOffset(value,animate)
   local target=math.max(0,math.min(value,MaxOffset()))
   M:Stop(self);self.scrollTarget=target
-  if not animate or UI:IsReducedMotion() then self.pixelOffset=target;self.offset=math.floor(target/self.rowHeight);self:Refresh(true);return end
+  if target==self.pixelOffset or not animate or UI:IsReducedMotion() then self.pixelOffset=target;self.offset=math.floor(target/self.rowHeight);self:Refresh(true);return end
   scrollFrom,scrollElapsed=self.pixelOffset,0
   M:Start(self,ScrollStep)
  end
@@ -765,6 +764,7 @@ function C.Slider(parent,width,min,max,step,onChange,options)
    if button~="LeftButton" or drag then return end
    drag={scale=input:GetEffectiveScale(),left=input:GetLeft(),width=input:GetWidth(),value=shell.value}
    Sample(true)
+   if not drag then return end
    input:SetScript("OnUpdate",function()
     Sample(false)
     if not IsMouseButtonDown("LeftButton") then shell:FinishDrag(true) end

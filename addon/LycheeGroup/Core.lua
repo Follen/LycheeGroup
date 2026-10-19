@@ -153,7 +153,7 @@ function A:Open(page, context)
 end
 
 function A:ToggleWindow()
-	if self.UI and self.UI:IsShown() then self.UI:Hide() else return self:Open("find") end
+	if self.UI and self.UI:IsShown() and not self.UI.hiding then self.UI:Hide() else return self:Open("find") end
 end
 
 -- Explicit, session-only UI previews. No preview provider replaces the real Group.
@@ -237,7 +237,9 @@ function A:SetSetting(key, value)
 	if key == "nativeLFGEntry" then self:SyncNativeLFGEntry() end
 	if key == "minimap" then self.Minimap:UpdateSettings() end
 	if key == "font" then self.Fonts:Apply() end
-	if self.Group and (key == "history" or key == "autoJoin") then self.Group:OnSettingChanged(key, value) end
+	if self.Group and (key == "history" or key == "autoJoin") then
+		self.Group:OnSettingChanged(key, value)
+	elseif key == "history" then self:SyncHistoryWake() end
 	if self.Floating and (key == "floating" or key == "floatingLocked" or key == "floatingScale") then self.Floating:UpdateSettings() end
 	if key == "reduceMotion" and self.Floating then
 		if value and self.Floating.running then self.Floating:Tick(1) end

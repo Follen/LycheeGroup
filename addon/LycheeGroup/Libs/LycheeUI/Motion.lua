@@ -41,7 +41,7 @@ for index,pose in ipairs(poses) do
 end
 function Library.CreateMotion(UI)
 -- 单一驱动;switches/alphas 记录进行中动画的终值,StopAll 据此落终态不留残影。
-local M = {jobs={}, startTimes={}, switches={}, alphas={}, colors={}, placements={},waiting={},busy={},spins={},spinOwners={},tickBuffer={}}
+local M = {jobs={}, jobIds={}, nextJobId=0, startTimes={}, switches={}, alphas={}, colors={}, placements={},waiting={},busy={},spins={},spinOwners={},tickBuffer={}}
 local function RestoreWaiting(region,saved)
  region:SetSize(saved.width,saved.height);region:SetAlpha(saved.alpha)
  region:ClearAllPoints();if saved.point[1] then region:SetPoint(unpack(saved.point)) end
@@ -52,6 +52,7 @@ end
 function M:Start(key, job)
  if not self.driver then self.driver=CreateFrame("Frame") end
  self.jobs[key]=job
+ self.nextJobId=self.nextJobId+1;self.jobIds[key]=self.nextJobId
  self.startTimes[key]=GetTimePreciseSec()
  if not self.running then
   self.running=true;self.driver:SetScript("OnUpdate",Drive);self.driver:Show()
@@ -59,11 +60,12 @@ function M:Start(key, job)
 end
 function M:Stop(key)
  self.jobs[key]=nil
+ self.jobIds[key]=nil
  self.startTimes[key]=nil
  if self.waiting[key] then RestoreWaiting(key,self.waiting[key]);self.waiting[key]=nil end
  if self.busy[key] then key:SetAlpha(self.busy[key]);self.busy[key]=nil end
  if self.spins[key] then key:SetRotation(0);self.spins[key]=nil end
- self.switches[key]=nil;self.alphas[key]=nil;self.colors[key]=nil
+ self.switches[key]=nil;self.alphas[key]=nil;self.colors[key]=nil;self.placements[key]=nil
  if self.running and not next(self.jobs) then
   self.running=false;self.driver:SetScript("OnUpdate",nil);self.driver:Hide()
  end
@@ -93,7 +95,7 @@ function M:Reveal(region,point,parent,relative,x,y,dx,dy,duration)
  local placement={point,parent,relative,x,y}
  self.placements[region]=placement
  region:ClearAllPoints()
- if UI:IsReducedMotion() then region:SetPoint(point,parent,relative,x,y);region:SetAlpha(1);self.placements[region]=nil;return end
+ if duration==0 or UI:IsReducedMotion() then region:SetPoint(point,parent,relative,x,y);region:SetAlpha(1);self.placements[region]=nil;return end
  region:SetPoint(point,parent,relative,x+(dx or 0),y+(dy or 0));region:SetAlpha(.35)
  local elapsed=0
  self.alphas[region]=1
@@ -141,25 +143,25 @@ function M:Count() local count=0;for _ in pairs(self.jobs) do count=count+1 end;
 function M:Tick(elapsed,now)
  local snapshot,count=self.tickBuffer,0
  for key,job in pairs(self.jobs) do
-  count=count+2;snapshot[count-1],snapshot[count]=key,job
+  count=count+3;snapshot[count-2],snapshot[count-1],snapshot[count]=key,job,self.jobIds[key]
  end
- for i=1,count,2 do
-  local key,job=snapshot[i],snapshot[i+1]
-  snapshot[i],snapshot[i+1]=nil,nil
-  if self.jobs[key]==job then
+ for i=1,count,3 do
+  local key,job,jobId=snapshot[i],snapshot[i+1],snapshot[i+2]
+  snapshot[i],snapshot[i+1],snapshot[i+2]=nil,nil,nil
+  if self.jobIds[key]==jobId then
    local started=self.startTimes[key];self.startTimes[key]=nil
    -- OnUpdate elapsed covers the entire frame, including work before a new
    -- task existed. Only its first driver tick needs this lifetime clamp.
    local dt=now and started and math.max(0,math.min(elapsed,now-started)) or elapsed
    local finished=job(dt)
-   if finished and self.jobs[key]==job then self:Stop(key) end
+   if finished and self.jobIds[key]==jobId then self:Stop(key) end
   end
  end
 end
 function M:Alpha(region,target,duration,initial,finished)
  self:Stop(region)
  local from=initial or region:GetAlpha()
- if UI:IsReducedMotion() or from==target then
+ if duration==0 or UI:IsReducedMotion() or from==target then
   self.alphas[region]=nil
   region:SetAlpha(target)
   if finished then finished() end
@@ -287,7 +289,7 @@ function M:StopAll()
  for region,saved in pairs(self.waiting) do RestoreWaiting(region,saved);self.waiting[region]=nil end
  for region,alpha in pairs(self.busy) do region:SetAlpha(alpha);self.busy[region]=nil end
  for region,target in pairs(self.placements) do region:ClearAllPoints();region:SetPoint(unpack(target));region:SetAlpha(1);self.placements[region]=nil end
- for key in pairs(self.jobs) do self.jobs[key]=nil;self.startTimes[key]=nil end
+ for key in pairs(self.jobs) do self.jobs[key]=nil;self.jobIds[key]=nil;self.startTimes[key]=nil end
  if self.running then self.running=false;self.driver:SetScript("OnUpdate",nil);self.driver:Hide() end
  for region,to in pairs(self.switches) do
   region:ClearAllPoints();region:SetPoint("LEFT",region:GetParent(),"LEFT",to,0);region._slideX=to

@@ -144,7 +144,6 @@ function P:BuildRow(parent,row,index)
  else
   control=C.Check(holder,"",function(value) A:SetSetting(row[1],value);P:Sync() end)
   control.track:ClearAllPoints();control.track:SetPoint("RIGHT",-12,0);control.label:ClearAllPoints();control.label:SetPoint("RIGHT",control.track,"LEFT",-12,0);C.SetFont(control.label,14);control:SetPoint("RIGHT",0,0)
-  control.settingsSwitch=true
   control:HookScript("OnEnter",function(button) UI:Color(button.label,T.text) end)
   control:HookScript("OnLeave",function(button) UI:Color(button.label,T.muted) end)
   control:HookScript("OnHide",function(button) UI:Color(button.label,T.muted) end)

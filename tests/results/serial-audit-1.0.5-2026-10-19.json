@@ -1,0 +1,921 @@
+{
+  "schema": "lycheegroup.serial-audit.v1",
+  "date": "2026-10-19",
+  "baselineCommit": "8d3c1d5340e6adab6522f8a66cad551c3631d46b",
+  "requested": {
+    "product": {
+      "architecture": 5,
+      "performance": 5,
+      "hygiene": 5
+    },
+    "library": {
+      "architecture": 5,
+      "performance": 5,
+      "hygiene": 5
+    },
+    "order": "Each round follows the previous round's fix and focused verification; library rounds follow product rounds and synchronization."
+  },
+  "invariants": [
+    "Preserve business behavior, complete datasets, UI layout and user interactions.",
+    "Do not fabricate findings to meet a per-round quota."
+  ],
+  "baseline": {
+    "product": {
+      "command": "lua tests/runner.lua",
+      "passed": 5129,
+      "failedModules": 0
+    },
+    "library": {
+      "command": "lua tests/run.lua",
+      "passed": 467
+    },
+    "widgetTreeScenes": 36
+  },
+  "rounds": [
+    {
+      "id": "product-architecture-1",
+      "status": "complete",
+      "scope": "Core loading, initialization, wake listeners and ownership",
+      "finding": "History disabled still loaded Group on challenge start or login during a run, with no consumer.",
+      "fix": "Gate challenge wake on history setting; disabling removes the wake listener; enabling during an active run ensures Group and restores the run.",
+      "files": [
+        "addon/LycheeGroup/Entrypoints.lua",
+        "addon/LycheeGroup/Core.lua",
+        "tests/test_core.lua",
+        "Architecture.md"
+      ],
+      "verification": {
+        "command": "lua tests/runner.lua core group",
+        "passed": 1293,
+        "failedModules": 0
+      },
+      "newRelativeToPreviousRounds": true
+    },
+    {
+      "id": "product-architecture-2",
+      "status": "complete",
+      "scope": "Search, result, application and listing state ownership",
+      "finding": "Result metadata updated while copied application title/leader/class stayed stale; cross-category or hidden active applications dropped result events.",
+      "fix": "Centralized application result adoption; full result batches notify once; coalesced single-ID updates include active applications outside the browse store, survive browse reset and expire their listener with the last active application. Application status, ordering and automatic-join state are untouched.",
+      "files": [
+        "addon/LycheeGroup_Group/Applications.lua",
+        "addon/LycheeGroup_Group/Results.lua",
+        "addon/LycheeGroup_Group/Game.lua",
+        "tests/test_group.lua",
+        "Architecture.md",
+        "perfermance.md"
+      ],
+      "verification": {
+        "command": "lua tests/runner.lua group ui floating",
+        "passed": 4222,
+        "failedModules": 0,
+        "coverage": [
+          "native hidden result event",
+          "queued update across browse reset",
+          "other-category update combined with bulk event",
+          "new result object adopted",
+          "one batch notification",
+          "no application status reread",
+          "terminal event releases listener"
+        ]
+      },
+      "newRelativeToPreviousRounds": true
+    },
+    {
+      "id": "product-architecture-3",
+      "status": "complete",
+      "scope": "Notes identity, storage, transfer, asynchronous inspection and editor ownership",
+      "finding": "Editing a draft during inspection kept the old save callback valid, which wrote old identity/reason and replaced the user's newer input.",
+      "fix": "All editable save fields invalidate and cancel a pending save before changing its draft, preserve input and clear the stale waiting status; the next explicit Save uses current data.",
+      "files": [
+        "addon/LycheeGroup_UI/Notes.lua",
+        "tests/test_ui.lua",
+        "Product.md",
+        "Architecture.md"
+      ],
+      "verification": {
+        "command": "lua tests/runner.lua notes ui transfer",
+        "passed": 3175,
+        "failedModules": 0,
+        "coverage": [
+          "identity and reason edits",
+          "class/spec/type edits",
+          "late INSPECT_READY and timeout",
+          "explicit resave"
+        ]
+      },
+      "newRelativeToPreviousRounds": true
+    },
+    {
+      "id": "product-architecture-4",
+      "status": "complete",
+      "scope": "Host, modal and native-field lifecycles; keyboard ownership during window transitions",
+      "finding": "Host retained outgoing pages for the close animation while Settings key capture and Find shortcuts still performed bindings/applications.",
+      "fix": "Cancel Settings capture at close start and suspend Find keyboard shortcuts during hiding; retain outgoing page and animation, and restore normal input on reopen.",
+      "files": [
+        "addon/LycheeGroup_UI/Host.lua",
+        "addon/LycheeGroup_UI/Find.lua",
+        "tests/test_ui.lua",
+        "Architecture.md"
+      ],
+      "verification": {
+        "command": "lua tests/runner.lua ui",
+        "passed": 2764,
+        "failedModules": 0,
+        "coverage": [
+          "close animation retains visible page",
+          "no late binding writes",
+          "no Enter applications or Shift-F10 menu while closing",
+          "shortcuts and capture work after rapid reopen"
+        ]
+      },
+      "newRelativeToPreviousRounds": true
+    },
+    {
+      "id": "product-architecture-5",
+      "status": "complete",
+      "scope": "Cross-package window entry contracts, settings propagation, display profiles and package metadata",
+      "finding": "Bindings, minimap and slash duplicated a physical-visibility check that discarded a second toggle during the close animation.",
+      "fix": "Route all three entries through Core ToggleWindow; use the existing Host hiding state to reopen through the normal business loader without changing IsShown semantics.",
+      "files": [
+        "addon/LycheeGroup/Core.lua",
+        "addon/LycheeGroup/Minimap.lua",
+        "addon/LycheeGroup/Entrypoints.lua",
+        "tests/test_core.lua",
+        "tests/test_minimap.lua",
+        "tests/test_ui.lua",
+        "Architecture.md"
+      ],
+      "verification": {
+        "command": "lua tests/runner.lua core minimap ui",
+        "passed": 3022,
+        "failedModules": 0,
+        "coverage": [
+          "real close/reopen reversal via ToggleWindow",
+          "old close token invalidated",
+          "view subscription preserved",
+          "minimap and slash forwarding"
+        ]
+      },
+      "newRelativeToPreviousRounds": true
+    },
+    {
+      "id": "product-performance-1",
+      "status": "complete",
+      "scope": "Group search/result/application batch reads, notifications and consumers",
+      "finding": "Single-result bursts coalesced native reads by ID but emitted one applications notification per active ID, repeating view rebuilds.",
+      "fix": "Aggregate application metadata notifications in FlushUpdates while retaining each changed ID, immediate direct updates and generation checks.",
+      "verification": {
+        "command": "lua tests/runner.lua group ui floating",
+        "passed": 4272,
+        "failedModules": 0,
+        "workload": "5 active application IDs x 6 events in one frame",
+        "before": {
+          "nativeResultReads": 5,
+          "applicationNotifications": 5
+        },
+        "after": {
+          "nativeResultReads": 5,
+          "applicationNotifications": 1
+        },
+        "coverage": [
+          "all five final names and statuses retained",
+          "hidden browser stays empty",
+          "idle update handler removed"
+        ]
+      },
+      "newRelativeToPreviousRounds": true
+    },
+    {
+      "id": "product-performance-2",
+      "status": "complete",
+      "scope": "UI list and tooltip binding costs",
+      "finding": "ShowGroup fully reset the tooltip before RenderGroup reset it again at the final width.",
+      "fix": "Capture the owner without resetting; RenderGroup performs the one complete reset at the final width.",
+      "verification": {
+        "command": "lua tests/runner.lua ui",
+        "passed": 2775,
+        "failedModules": 0,
+        "workload": "Warm 40-member raid tooltip reopen",
+        "before": {
+          "resets": 2,
+          "memberHideCalls": 80,
+          "widthWrites": [
+            512,
+            1080
+          ]
+        },
+        "after": {
+          "resets": 1,
+          "memberHideCalls": 40,
+          "widthWrites": [
+            1080
+          ]
+        },
+        "coverage": [
+          "all 40 members retained",
+          "owner and dimensions preserved",
+          "modifier expansion",
+          "scroll and pool reuse"
+        ]
+      },
+      "newRelativeToPreviousRounds": true
+    },
+    {
+      "id": "product-performance-3",
+      "status": "complete",
+      "scope": "Notes storage, query, reminder and import/export costs",
+      "finding": "Merge normalized both long text fields before checking timestamps, discarding all that work for duplicate or older records.",
+      "fix": "Trim reason and class/spec text only in the accepted-write branch; preserve identity validation, timestamp precedence and notifications.",
+      "verification": {
+        "command": "lua tests/runner.lua notes ui transfer",
+        "passed": 3209,
+        "failedModules": 0,
+        "workload": "One same-timestamp and one older import, both text fields >4KiB",
+        "before": {
+          "longTextScans": 8
+        },
+        "after": {
+          "longTextScans": 0
+        },
+        "coverage": [
+          "unchanged record identity preserved",
+          "invalid counts unchanged",
+          "newer text still trimmed",
+          "existing transfer and UI behavior"
+        ]
+      },
+      "newRelativeToPreviousRounds": true
+    },
+    {
+      "id": "product-performance-4",
+      "status": "complete",
+      "scope": "Floating, font and minimap hot paths and timer ownership",
+      "finding": "Recruiting scroll rebinds called RefreshClock, walking every member/footer entry for application deadlines that cannot exist in this mode.",
+      "fix": "RefreshClock skips recruiting; existing ShowPanel ownership continues cancelling the application ticker when switching modes.",
+      "verification": {
+        "command": "lua tests/runner.lua floating fonts",
+        "passed": 470,
+        "failedModules": 0,
+        "workload": "Read-only fixture: 100 batches, 300 members, 400 entries, 12 visible-range changes",
+        "before": {
+          "unneededEntryReads": 4800
+        },
+        "after": {
+          "unneededEntryReads": 0
+        },
+        "coverage": [
+          "focused actual-source 101-entry scroll regression",
+          "all members retained",
+          "normal application deadlines and idle ticker cleanup",
+          "fonts"
+        ]
+      },
+      "newRelativeToPreviousRounds": true
+    },
+    {
+      "id": "product-performance-5",
+      "status": "complete",
+      "scope": "Catalog, roster, relations, applicants and history refresh chains",
+      "finding": "No additional actionable performance defect confirmed. Catalog invalidation is event-driven, relation snapshots are shared within the frame, roster/applicant notifications are coalesced, and history sampling stops with the active run.",
+      "fix": "No code change; retained full data and existing business timing.",
+      "verification": {
+        "method": "Read-only review of current sources and existing regression coverage; no repeated full test run.",
+        "coverage": [
+          "Catalog cache invalidation",
+          "Roster inspection and batched notifications",
+          "Relations index ownership and GetVersion callers",
+          "Applicants synchronous actions and deferred display",
+          "History collection lifetime"
+        ]
+      },
+      "newRelativeToPreviousRounds": null
+    },
+    {
+      "id": "product-hygiene-1",
+      "status": "complete",
+      "scope": "Own runtime code: internal dead functions, state fields and branches",
+      "finding": "Settings assigned settingsSwitch to each toggle, but no runtime, library, test or probe read it.",
+      "fix": "Removed the unused assignment; retained the three existing visual callbacks, public facades and probe interfaces.",
+      "verification": {
+        "command": "lua tests/runner.lua ui",
+        "passed": 2775,
+        "failedModules": 0,
+        "method": "Whole-repository reference scan and existing settings/UI regressions"
+      },
+      "newRelativeToPreviousRounds": true
+    },
+    {
+      "id": "product-hygiene-2",
+      "status": "complete",
+      "scope": "Localized text, UI remnants and own runtime media references",
+      "finding": "59 obsolete UI locale keys had no static or dynamic consumers; both language strings were still built when UI loaded.",
+      "fix": "Removed only the unused locale entries. Preserved page/sort/state keys, library text keys and dynamically selected media.",
+      "verification": {
+        "command": "lua tests/runner.lua ui preview",
+        "passed": 2956,
+        "failedModules": 0,
+        "coverage": [
+          "zhCN and enUS paths in existing tests",
+          "All dynamic locale reads checked",
+          "Runtime media references including dynamic favorites/fonts checked"
+        ],
+        "removedLocaleKeys": [
+          "addonName",
+          "raids",
+          "declineInvite",
+          "removeListing",
+          "noSelection",
+          "stale",
+          "recordedSpec",
+          "recordedAt",
+          "transferHint",
+          "notesEnabledHelp",
+          "historyHint",
+          "levelFmt",
+          "teammatesCount",
+          "partyMembers",
+          "rolesCompact",
+          "noApplications",
+          "notesEditorHint",
+          "ratingFloor",
+          "itemLevelFloor",
+          "membersCeiling",
+          "chooseGroupHint",
+          "applicationsEmptyHelp",
+          "createListingHelp",
+          "editListingHelp",
+          "applicantsHelp",
+          "allRaids",
+          "settingsHelp",
+          "settingsSaved",
+          "notesNoMatch",
+          "noListing",
+          "notesEmpty",
+          "askReasonHelp",
+          "reduceMotionHelp",
+          "allDungeons",
+          "activitySearch",
+          "needTank",
+          "needHealer",
+          "needDamage",
+          "groupCount",
+          "applicationCount",
+          "noDescription",
+          "noFilteredResultsHelp",
+          "groupDetail",
+          "currentActivity",
+          "browseHint",
+          "applicationsContinue",
+          "notesHint",
+          "listingLive",
+          "applicantParty",
+          "selectApplicant",
+          "inviteParty",
+          "applicantNoMatch",
+          "partyMinimum",
+          "createActivityHelp",
+          "createDetailsHelp",
+          "createRequirementsHelp",
+          "listingVisibility",
+          "newApplication",
+          "noteCount"
+        ]
+      },
+      "newRelativeToPreviousRounds": true
+    },
+    {
+      "id": "product-hygiene-3",
+      "status": "complete",
+      "scope": "Current documentation status, source contracts, entry links and historical evidence boundaries",
+      "finding": "Top-level status conflated earlier audits/live installs with the current unpublished work, Product still described released 1.0.4 features as unpublished, and Architecture listed an unused catalog API plus an obsolete absolute no-load claim for settings.",
+      "fix": "Updated four current status introductions against release 1.0.5; kept historical evidence unchanged; documented active-run history enablement and actual activity-group derivation.",
+      "verification": {
+        "method": "Eight formal Markdown documents' local link targets resolved; source/commit/changelog cross-check; git diff --check passed. No runtime test needed for documentation.",
+        "coverage": [
+          "Product",
+          "Desgin",
+          "Architecture",
+          "perfermance",
+          "README bilingual",
+          "Agents",
+          "third-party library notes"
+        ]
+      },
+      "newRelativeToPreviousRounds": true
+    },
+    {
+      "id": "product-hygiene-4",
+      "status": "complete",
+      "scope": "Packaging/synchronization scripts, TOC/XML closure, release metadata and tracked/ignored file boundaries",
+      "finding": "No new actionable packaging or repository-boundary issue confirmed.",
+      "fix": "No code change; retained automatic Bindings.xml, runtime licenses, historical releases and user/local artifacts.",
+      "verification": {
+        "method": "Read-only manifest and byte comparison",
+        "runtimeLibraryFilesMatched": 43,
+        "libraryMediaFilesMatched": 36,
+        "missingLoadTargets": 0,
+        "luaOutsideLoadClosure": 0,
+        "coverage": [
+          "Build includes four product folders",
+          "Four TOCs and ncc version 1.0.5",
+          "Changelog path exists",
+          "Source and embedded library content match",
+          "Runtime files tracked; generated/local files ignored"
+        ]
+      },
+      "newRelativeToPreviousRounds": null
+    },
+    {
+      "id": "product-hygiene-5",
+      "status": "complete",
+      "scope": "Offline test entry, shared fixtures and diagnostic documentation",
+      "finding": "Unknown test module names were silently ignored; a typo ran zero tests and exited successfully, and mixed valid/unknown names hid the mistake.",
+      "fix": "Validate the finite module list once before loading fixtures; unknown names report available modules and exit 2. Documented targeted selection in both READMEs.",
+      "verification": {
+        "method": "Direct subprocess checks",
+        "cases": [
+          {
+            "args": [
+              "gropu"
+            ],
+            "exit": 2,
+            "testsRun": 0
+          },
+          {
+            "args": [
+              "core",
+              "gropu"
+            ],
+            "exit": 2,
+            "testsRun": 0
+          },
+          {
+            "args": [
+              "core",
+              "core"
+            ],
+            "exit": 0,
+            "passed": 217,
+            "moduleRuns": 1
+          }
+        ],
+        "coverage": [
+          "Early error",
+          "Mixed input rejection",
+          "Valid selection and deduplication"
+        ]
+      },
+      "newRelativeToPreviousRounds": true
+    },
+    {
+      "id": "library-architecture-1",
+      "status": "complete",
+      "scope": "Core/context creation, theme ownership, embedding/version publication and API documentation",
+      "finding": "No new actionable defect confirmed. Version publication follows the complete manifest, contexts own independent top-level state, and shared read-only color tokens follow the documented contract.",
+      "fix": "No code change; retained existing public APIs and embedding lifecycle.",
+      "verification": {
+        "method": "Read-only source/API/README review against existing embedding and context regression coverage",
+        "coverage": [
+          "Same/older/newer copy loading",
+          "Context state separation",
+          "Theme/alias precedence",
+          "Media resolution",
+          "No native allocation at definition load"
+        ]
+      },
+      "newRelativeToPreviousRounds": null
+    },
+    {
+      "id": "library-architecture-2",
+      "status": "complete",
+      "scope": "NativeFrame/Input/Button ownership, nested release and callback handoff contracts",
+      "finding": "Focus callbacks could recursively release the same lease or move its host while Release kept stale ownership. Input and native-button handlers continued styling after callbacks released their lease, relighting an old field or restarting motion on a hidden context.",
+      "fix": "Finish reentrant release once, recheck ownership after focus callbacks, and stop stale input/button visual continuation. Document callback transfer semantics; source compatibility revision is 19 with display version 1.2.0.",
+      "verification": {
+        "command": "lua tests/run.lua",
+        "passed": 474,
+        "workload": "Existing native input/button stubs and original callback paths",
+        "before": {
+          "finishCalls": 2,
+          "layoutRestores": 2,
+          "staleInputFocused": true,
+          "postHideMotionJobs": 1
+        },
+        "after": {
+          "finishCalls": 1,
+          "layoutRestores": 1,
+          "staleInputFocused": false,
+          "postHideMotionJobs": 0
+        },
+        "coverage": [
+          "Focus callback releases entire context",
+          "Focus callback changes parent",
+          "Foreign focus preserved",
+          "Button callback closes context",
+          "Native text and normal restoration remain intact"
+        ]
+      },
+      "newRelativeToPreviousRounds": true
+    },
+    {
+      "id": "library-architecture-3",
+      "status": "complete",
+      "scope": "Menu/Choice ownership, availability and public close/hover callbacks",
+      "finding": "OpenMenu continued after onMenuClosed changed ownership or hid the context/anchor. A reentrant longer menu left extra keys and caused nil indexing when overwritten by a shorter request; disabled Choice callbacks could reopen interactive menus.",
+      "fix": "Recheck menu ownership, context/anchor visibility and Choice availability after close callbacks; give callback-opened menus precedence; document the public lifecycle.",
+      "verification": {
+        "command": "lua tests/run.lua",
+        "passed": 482,
+        "coverage": [
+          "Close callback hides context",
+          "Close callback hides pending anchor",
+          "3-item callback menu replaces 1-item request without stale keys",
+          "Only one Choice expanded",
+          "Disabled Choice cannot reopen",
+          "Normal close and hover lifecycle retained"
+        ]
+      },
+      "newRelativeToPreviousRounds": true
+    },
+    {
+      "id": "library-architecture-4",
+      "status": "complete",
+      "scope": "Motion task replacement, cancellation endpoints and zero-duration API contracts",
+      "finding": "Stop left Reveal placement endpoints behind, so a later StopAll overwrote caller positioning. Alpha/Reveal with zero duration divided by zero. Restarting the same key and callback function during Tick was mistaken for the completing old run.",
+      "fix": "Discard cancelled placements, immediately finish zero-duration Alpha/Reveal, and track each Start identity through the reusable tick snapshot. Document cancellation and callback replacement semantics.",
+      "verification": {
+        "command": "lua tests/run.lua",
+        "passed": 489,
+        "coverage": [
+          "Cancel Reveal then manually position and StopAll",
+          "FinishPlacement still lands",
+          "Zero Alpha callback exactly once",
+          "Zero Reveal has finite coordinates and no job",
+          "Same-function restart survives until next tick",
+          "StopAll releases job identities",
+          "Existing five-segment brand trajectory and clock regression coverage"
+        ]
+      },
+      "newRelativeToPreviousRounds": true
+    },
+    {
+      "id": "library-architecture-5",
+      "status": "complete",
+      "scope": "Component public callbacks, lifecycle and API decoupling",
+      "finding": "A commit-on-release slider installed its frame sampler after onPreview had cancelled the drag or hidden the control; the next frame dereferenced a released drag.",
+      "fix": "Stop Begin after the preview callback releases drag ownership; document callback cancellation. Normal drag geometry, step behavior and commit timing remain unchanged.",
+      "verification": {
+        "command": "lua tests/run.lua",
+        "passed": 495,
+        "coverage": [
+          "onPreview calls FinishDrag(false)",
+          "onPreview hides slider",
+          "Original value restored without commit",
+          "No stale OnUpdate after cancellation or reopen",
+          "Existing normal track/thumb drag and release cases"
+        ]
+      },
+      "newRelativeToPreviousRounds": true
+    },
+    {
+      "id": "library-performance-1",
+      "status": "complete",
+      "scope": "Virtual list scroll scheduling and row release work",
+      "finding": "Wheel input at either boundary or on a fully visible list scheduled a 140ms zero-distance animation. Row release also called CloseMenuFor twice through the same contract.",
+      "fix": "Use the immediate refresh path when target equals current position; retain selection and hit-rect updates. Remove the duplicate menu close call.",
+      "verification": {
+        "command": "lua tests/run.lua",
+        "passed": 499,
+        "workload": "One boundary wheel event followed by 14 x 10ms ticks; independent 120Hz probe also covered top/bottom/fitting lists",
+        "before": {
+          "refreshes": 14,
+          "pixelOffset": 0
+        },
+        "after": {
+          "refreshes": 1,
+          "pixelOffset": 0
+        },
+        "coverage": [
+          "Fitting list",
+          "Bottom edge and last item",
+          "Same-offset locate selection",
+          "Cancel pending movement by returning to current offset",
+          "Existing partial row and recycled-click cases"
+        ]
+      },
+      "newRelativeToPreviousRounds": true
+    },
+    {
+      "id": "library-performance-2",
+      "status": "complete",
+      "scope": "Menu opening, text measurement and bounded row binding",
+      "finding": "Explicit menu width discarded the natural width result but still measured every label through native text APIs.",
+      "fix": "Only measure natural label width when no explicit width is supplied; preserve scale clamping, item keys, viewport and selection.",
+      "verification": {
+        "command": "lua tests/run.lua",
+        "passed": 502,
+        "workload": "100-item menu with width=216, then automatic width",
+        "before": {
+          "nativeWidthMeasurements": 100,
+          "menuWidth": 216,
+          "itemCount": 100
+        },
+        "after": {
+          "nativeWidthMeasurements": 0,
+          "menuWidth": 216,
+          "itemCount": 100
+        },
+        "coverage": [
+          "Last fixed-width item reachable",
+          "Automatic width still measures all 100 labels",
+          "Existing scale, edge placement, row reuse and long label checks"
+        ]
+      },
+      "newRelativeToPreviousRounds": true
+    },
+    {
+      "id": "library-performance-3",
+      "status": "complete",
+      "scope": "Native lease acquisition, style refresh, restoration and object reuse",
+      "finding": "No new actionable performance defect confirmed. Presentation snapshots are acquired per lease, updates follow focus/layout events, and reusable native button panels and scrollbar art are retained; there is no polling.",
+      "fix": "No code change. Retained focus-triggered restyling because native or other-addon presentation may change between leases.",
+      "verification": {
+        "method": "Read-only review of Native.lua and actual product AcquireSearch/AcquireCreation callers against already-passing native suite",
+        "coverage": [
+          "Bounded active input/button leases",
+          "No per-frame native scans",
+          "Scrollbar texture reuse",
+          "Removal of scripts and input registry on release",
+          "Child-before-parent release",
+          "Current callback cleanup regressions"
+        ]
+      },
+      "newRelativeToPreviousRounds": null
+    },
+    {
+      "id": "library-performance-4",
+      "status": "complete",
+      "scope": "Panel/Shadow/Text/theme work and Roster fixed-pool rendering",
+      "finding": "No new actionable performance defect confirmed. Panels already coalesce unchanged geometry and composed color/alpha writes; shadows are static slices, text updates are cached, and five-person rosters use fixed objects and bounded scans.",
+      "fix": "No code change; retained native geometry and public region behavior instead of adding speculative caches.",
+      "verification": {
+        "method": "Read-only review of Components/Core/Theme and existing passing panel/style/font/roster coverage",
+        "coverage": [
+          "Composed alpha and equal RGB write suppression",
+          "No shadow update driver",
+          "Context-local font measurement helper",
+          "Immutable shared theme defaults",
+          "Stable role ordering without mutating members",
+          "Fixed five-slot roster and full raid counts"
+        ]
+      },
+      "newRelativeToPreviousRounds": null
+    },
+    {
+      "id": "library-performance-5",
+      "status": "complete",
+      "scope": "Motion driver idle state, task snapshots, first-frame timing and steady animation work",
+      "finding": "No further actionable performance defect confirmed after architecture-4 cleanup. One driver runs only while jobs exist, snapshots are reused and cleared, initial native clock reads stop after first ticks, and shared brand coefficients are already precomputed.",
+      "fix": "No code change; preserved all motion timing, curves and reduced-motion behavior.",
+      "verification": {
+        "method": "Read-only Motion source audit against already-passing scheduler, brand-trajectory and cancellation tests",
+        "coverage": [
+          "50 simultaneous tasks with 51 total native clock reads",
+          "120 steady frames without extra clock reads",
+          "One driver attach/detach per busy interval",
+          "No idle OnUpdate after StopAll",
+          "Same-function replacement identities released",
+          "Brand trajectory error below 0.00001 in offline reference test"
+        ]
+      },
+      "newRelativeToPreviousRounds": null
+    },
+    {
+      "id": "library-hygiene-1",
+      "status": "complete",
+      "scope": "Runtime internal bindings versus documented public component/context fields",
+      "finding": "NativeInput's script loop bound an unused callback local. Apparent unused lease.shell is a documented public API and must remain.",
+      "fix": "Remove only the unused local binding; retain exposed factories, theme tokens, lease fields and all media resolver surfaces.",
+      "verification": {
+        "command": "luac -p Native.lua",
+        "result": "pass",
+        "coverage": [
+          "Cross-reference all six runtime files",
+          "API/test/product consumer references",
+          "Public NativeInput .shell retained"
+        ]
+      },
+      "newRelativeToPreviousRounds": true
+    },
+    {
+      "id": "library-hygiene-2",
+      "status": "complete",
+      "scope": "Runtime manifest, media reachability and editable source asset boundaries",
+      "finding": "No removable runtime file confirmed. Glyph names are a public dynamic resolver, the four shadows and role icons have explicit paths, and Assets/role-tank.svg is documented editable source.",
+      "fix": "No deletion. Kept runtime/media and source artwork separate; confirmed sync copies only runtime files and Media.",
+      "verification": {
+        "method": "Manifest closure and filesystem inventory",
+        "runtimeFiles": 43,
+        "scripts": 6,
+        "mediaFiles": 36,
+        "editableSourceAssets": 1,
+        "missing": [],
+        "unexpectedRuntimeDocsTestsOrTOC": [],
+        "coverage": [
+          "XML load order",
+          "Standalone TOC entry",
+          "All 36 dynamic/public media retained",
+          "Source SVG excluded from runtime manifest"
+        ]
+      },
+      "newRelativeToPreviousRounds": null
+    },
+    {
+      "id": "library-hygiene-3",
+      "status": "complete",
+      "scope": "Current revision notes, API behavior descriptions and documentation links",
+      "finding": "Revision 19's README maintenance summary covered only the first native-lease fix, and the typography section could be read as declaring r18 current.",
+      "fix": "Summarize all completed r19 changes, distinguish historical r18 font introduction from current r19, and clarify explicit menu width without duplicating design values.",
+      "verification": {
+        "method": "Documentation/source cross-check and local Markdown link resolution",
+        "localLinksChecked": 6,
+        "missingLinks": 0,
+        "coverage": [
+          "Display version stays 1.2.0",
+          "Compatibility revision 19 marked unpublished",
+          "API callback and timing contracts match implementation",
+          "Visual design unchanged"
+        ]
+      },
+      "newRelativeToPreviousRounds": true
+    },
+    {
+      "id": "library-hygiene-4",
+      "status": "complete",
+      "scope": "Offline test reachability and generated/development debris",
+      "finding": "No orphaned test or generated debris confirmed. The runner loads the manifest, stubs and every focused test module, and assertions propagate failures.",
+      "fix": "No deletion or new test framework.",
+      "verification": {
+        "method": "Test import inventory and filesystem inspection",
+        "testLuaFiles": 7,
+        "orphanedTestFiles": [],
+        "temporaryOrCompiledArtifacts": [],
+        "conflictMarkers": [],
+        "coverage": [
+          "Five focused modules referenced by run.lua",
+          "Shared stubs loaded once",
+          "Manifest load errors fail through assert",
+          "No generated files in runtime tree"
+        ]
+      },
+      "newRelativeToPreviousRounds": null
+    },
+    {
+      "id": "library-hygiene-5",
+      "status": "complete",
+      "scope": "Version identity, source authority and product synchronization handoff",
+      "finding": "No further version/package defect confirmed. Source runtime, TOC and documentation agree on display 1.2.0 and compatibility revision 19; r18 remains the historical font introduction. The library source is an existing non-Git directory.",
+      "fix": "No repository initialization or standalone package addition. Retain canonical source and the existing Sync-LycheeUI handoff; product READMEs will track r19 when synchronization completes.",
+      "verification": {
+        "method": "Source identity and existing Sync/Build entrypoint review",
+        "sourceRoot": "D:/Code/wow/addons/LycheeUI",
+        "displayVersion": "1.2.0",
+        "compatibilityRevision": 19,
+        "standaloneTOCIncludedInProduct": false,
+        "coverage": [
+          "Revision published after complete XML",
+          "Same revision in README/API/design context",
+          "Build invokes existing sync and only four product folders",
+          "No branch, repository or release created"
+        ]
+      },
+      "newRelativeToPreviousRounds": null
+    }
+  ],
+  "limits": [
+    "Offline widget-tree equality does not establish native pixel rendering or hardware interaction equivalence.",
+    "Runtime checks covered the named programmatic paths only; no real application/listing/invite/note-save action, active challenge or complete scaling matrix was tested.",
+    "The initial r19 probe's coordinate assertion failure is retained with exact before/after engine values; no product defect was found in that path.",
+    "No new addon-specific CPU/memory budget measurement was performed; the historical 20 MB high-frequency-list target remains unresolved."
+  ],
+  "productToLibrarySync": {
+    "command": "tools/Sync-LycheeUI.ps1",
+    "result": "completed",
+    "displayVersion": "1.2.0",
+    "compatibilityRevision": 18,
+    "runtimeFilesAlreadyMatched": 43
+  },
+  "finalIntegration": {
+    "productTests": {
+      "command": "lua tests/runner.lua",
+      "passed": 5227,
+      "failedModules": 0,
+      "modules": 9
+    },
+    "libraryTests": {
+      "command": "lua tests/run.lua",
+      "passed": 502
+    },
+    "librarySync": {
+      "command": "tools/Sync-LycheeUI.ps1",
+      "runtimeFiles": 43,
+      "embeddedFiles": 43,
+      "sha256Mismatches": [],
+      "displayVersion": "1.2.0",
+      "compatibilityRevision": 19
+    },
+    "layoutComparison": {
+      "method": "Generate tests/ui_preview.lua and compare SHA256 of each complete scene serialized with sorted JSON keys against pre-audit baseline",
+      "scenes": 36,
+      "exactMatches": 36,
+      "totalNodes": 256166,
+      "differences": [],
+      "scope": "Local widget-tree data, including hidden nodes; not a native pixel rendering comparison"
+    },
+    "runtimeReports": [
+      "tests/results/runtime-serial-audit-1.0.5-2026-10-19.json",
+      "tests/results/runtime-library-r19-1.0.5-2026-10-19.json"
+    ],
+    "git": {
+      "commit": false,
+      "push": false,
+      "release": false
+    },
+    "runtimeValidation": {
+      "clientBuild": "12.1.5.70448",
+      "character": "晴昼秋岚-白银之手",
+      "productPass": {
+        "reportedChecks": 20,
+        "embeddedRevision": 18,
+        "scope": [
+          "Read-only real search",
+          "Four product pages",
+          "Binding capture stops on close",
+          "Rapid toggle reversal",
+          "Native leases returned",
+          "Explicit preview 45-member tooltip",
+          "No active-business work after close"
+        ]
+      },
+      "libraryPass": {
+        "embeddedRevision": 19,
+        "installedRuntimeFiles": 43,
+        "copiedChangedFiles": 5,
+        "assertionsPassedBeforeProbeFailure": 16,
+        "remainingReportedChecks": 13,
+        "scope": [
+          "Product search/creation native leases",
+          "Menu open/replace/close",
+          "Menu callback ownership",
+          "Same-function motion restart",
+          "Reveal cancellation",
+          "Zero-duration transitions",
+          "Ordinary EditBox focus callback release",
+          "Idle Motion, leases, views and timers"
+        ],
+        "probeFailure": {
+          "classification": "Test assertion used requested integer coordinates instead of engine-normalized coordinates",
+          "requested": [
+            77,
+            -13
+          ],
+          "actualBefore": [
+            77.00000762939453,
+            -13.000000953674316
+          ],
+          "actualAfter": [
+            77.00000762939453,
+            -13.000000953674316
+          ],
+          "correctedCheck": "Exact engine-reported before/after equality; no tolerance introduced",
+          "retained": true,
+          "productSourceChangedForProbe": false
+        }
+      },
+      "cleanup": {
+        "mainWindowHidden": true,
+        "settingsAndWrappersRestored": true,
+        "nativeLeasesReleased": true,
+        "motionJobsZero": true,
+        "connectionsClosed": true
+      },
+      "errorProvider": {
+        "session": 225,
+        "retainedHistoryRead": 36,
+        "currentSessionErrors": 0,
+        "incompleteHistoricalMetadata": true
+      }
+    }
+  },
+  "summary": {
+    "completedRounds": 30,
+    "roundsWithNewFindings": 21,
+    "roundsWithoutNewActionableFindings": 9,
+    "status": "complete",
+    "productVersion": "1.0.5",
+    "unpublished": true,
+    "libraryDisplayVersion": "1.2.0",
+    "libraryCompatibilityRevision": 19
+  }
+}

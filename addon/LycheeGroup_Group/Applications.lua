@@ -37,6 +37,23 @@ local function Sort(a,b)
  if (a.status=="invited")~=(b.status=="invited") then return a.status=="invited" end
  return a.seq<b.seq
 end
+local function AdoptResult(record,result)
+ record.result=result;record.categoryID=result.categoryID
+ record.name=result.name;record.leaderName=result.leaderName;record.activityName=result.activityName
+ record.activityArt=result.activity and result.activity.journalID and select(6,EJ_GetInstanceInfo(result.activity.journalID))
+ local activity=result.activity
+ record.activityLabel=activity and activity.groupID and activity.groupID>0 and C_LFGList.GetActivityGroupInfo(activity.groupID) or result.activityName
+ record.activityDetail=activity and activity.difficultyID and activity.difficultyID>0 and GetDifficultyInfo(activity.difficultyID) or ""
+ record.leaderClass=nil
+ for _,member in ipairs(G.Results:GetDetails(result).members) do if member.isLeader then record.leaderClass=member.class;break end end
+end
+-- Adopt an already-read result without changing application status or join state.
+function Applications:AdoptResult(id,result)
+ local record=records[id]
+ if not record or not Active(record) then return false end
+ AdoptResult(record,result)
+ return true
+end
 local function Update(id,status,pending,remaining,groupName)
  if status=="applied" or (status==nil or status=="none") and pending=="applied" then retired[id]=nil
  elseif retired[id] then return nil end
@@ -52,16 +69,7 @@ local function Update(id,status,pending,remaining,groupName)
  if finished[status] then record.removeAt=record.removeAt or GetTime()+5 else record.removeAt=nil end
  if type(remaining)=="number" then record.expiresAt=GetTime()+remaining end
  local result=Active(record) and (G.Results:GetResult(id) or G.Results:Capture(id,record.result,true) or record.result)
- if result then
-  record.result=result;record.categoryID=result.categoryID
-  record.name=result.name;record.leaderName=result.leaderName;record.activityName=result.activityName
-  record.activityArt=result.activity and result.activity.journalID and select(6,EJ_GetInstanceInfo(result.activity.journalID))
-  local activity=result.activity
-  record.activityLabel=activity and activity.groupID and activity.groupID>0 and C_LFGList.GetActivityGroupInfo(activity.groupID) or result.activityName
-  record.activityDetail=activity and activity.difficultyID and activity.difficultyID>0 and GetDifficultyInfo(activity.difficultyID) or ""
-  record.leaderClass=nil
-  for _,member in ipairs(G.Results:GetDetails(result).members) do if member.isLeader then record.leaderClass=member.class;break end end
- end
+ if result then AdoptResult(record,result) end
  if groupName and groupName~="" then record.name=groupName end
  dirty=true
  if cancelled then G:Notify("applicationCancelled",id) end
@@ -79,6 +87,7 @@ function Applications:SyncAll()
  end
  for id,seen in pairs(retired) do if seen~=generation then retired[id]=nil end end
  ScheduleRetirement()
+ G.Game:RefreshResultSubscription()
 end
 function Applications:Apply(id,roles)
  if C_LFGList.HasActiveEntryInfo() then return false,L.recruiting end
@@ -145,6 +154,7 @@ function Applications:OnStatusUpdated(id,status,oldStatus,groupName)
   if status=="inviteaccepted" or status=="invitedaccepted" then joined=true end
  end
  self:TryAutoJoin()
+ G.Game:RefreshResultSubscription()
  G.Results:InvalidateView();G:Notify("applications");self:ReleaseFinished()
 end
 function Applications:Restore()

@@ -104,10 +104,11 @@ end
 
 -- Settings update their stored value before notifying the already-loaded owner.
 do
- local oldGroup,oldEnsure=A.Group,A.Ensure
+ local oldGroup,oldEnsure,oldHistoryWake=A.Group,A.Ensure,A.SyncHistoryWake
  local history,autoJoin=A.db.history,A.db.autoJoin
  local loads,changes=0,{}
  A.Ensure=function() loads=loads+1 end
+ A.SyncHistoryWake=function() end
  A.Group=nil
  A:SetSetting("history",not history)
  A:SetSetting("autoJoin",not autoJoin)
@@ -121,7 +122,7 @@ do
  A:SetSetting("autoJoin",autoJoin)
  T.same(changes,{{"history",history},{"autoJoin",autoJoin}},"loaded owner gets each actual setting change once")
  T.eq(loads,0)
- A.Group,A.Ensure=oldGroup,oldEnsure
+ A.Group,A.Ensure,A.SyncHistoryWake=oldGroup,oldEnsure,oldHistoryWake
 end
 
 -- ---------------------------------------------------------------- 链接格式
@@ -181,6 +182,10 @@ do
 	end
 	local minimapInits=0
 	A.Minimap={Initialize=function() minimapInits=minimapInits+1 end}
+	local oldChallengeActive=C_ChallengeMode.IsChallengeModeActive
+	local challengeActive=true
+	C_ChallengeMode.IsChallengeModeActive=function() return challengeActive end
+	A.db.history=false
 	Load.addon("LycheeGroup", "Entrypoints.lua")
 	Stubs.FireEvent("ADDON_LOADED", "UnrelatedBefore")
 	T.eq(#loads, 0, "其他插件不唤醒业务")
@@ -194,6 +199,20 @@ do
 	T.eq(minimapInits,1,"登录创建独立小地图入口")
 	T.eq(#Stubs.FramesWithEvent("PLAYER_LOGIN"), 0, "登录初始化只运行一次")
 	T.eq(#loads, 0, "只有已结束的申请时不加载业务包")
+	T.eq(#Stubs.FramesWithEvent("CHALLENGE_MODE_START"),0,"关闭历史的秘境内登录不加载 Group 或监听开始事件")
+	Stubs.FireEvent("CHALLENGE_MODE_START")
+	T.eq(#loads,0,"关闭历史后秘境事件不唤醒 Group")
+	local ensure=A.Ensure
+	local historyRestores=0
+	A.Ensure=function(_,module) T.eq(module,"Group");historyRestores=historyRestores+1;return {} end
+	A:SetSetting("history",true)
+	T.eq(historyRestores,1,"在进行中的秘境启用历史立即请求加载和恢复")
+	A:SetSetting("history",false)
+	T.eq(#Stubs.FramesWithEvent("CHALLENGE_MODE_START"),0,"加载前停用历史即撤销开始监听")
+	A.Ensure=ensure;challengeActive=false
+	A:SetSetting("history",true)
+	T.eq(#loads,0,"启用历史但秘境未开始不提前加载")
+	T.eq(#Stubs.FramesWithEvent("CHALLENGE_MODE_START"),1,"启用历史保留下一次开始唤醒")
 	Stubs.FireEvent("ADDON_LOADED", "UnrelatedAfter")
 	T.eq(#loads, 0)
 	T.ok(nativeMenu, "原生头像菜单入口已注册")
@@ -204,9 +223,15 @@ do
 	T.eq(#Stubs.FramesWithEvent("CHALLENGE_MODE_START"), 0, "领域接管后退订核心唤醒")
 	A:Ensure("Group")
 	T.eq(inits, 1, "重复使用不重复初始化")
+	C_ChallengeMode.IsChallengeModeActive=oldChallengeActive
 
 	-- 命令处理使用姓名/服务器各自字段，未填写理由不保存本地化占位文本。
 	local captured
+	local toggle, toggles = A.ToggleWindow, 0
+	A.ToggleWindow = function() toggles = toggles + 1 end
+	SlashCmdList.LYCHEEGROUP(""); SlashCmdList.LYCHEEGROUP("find")
+	T.eq(toggles,2,"slash toggles use the common transition decision")
+	A.ToggleWindow = toggle
 	local oldOpen = A.Open
 	A.Open = function(_, page, context) captured={page=page,context=context}; return true end
 	SlashCmdList.LYCHEEGROUP("note Cross-Foreign")

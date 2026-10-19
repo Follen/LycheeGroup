@@ -14,7 +14,6 @@ local WAKE_EVENTS = {
 
 local SEARCH_EVENTS = {
 	"LFG_LIST_SEARCH_RESULTS_RECEIVED",
-	"LFG_LIST_SEARCH_RESULT_UPDATED",
 	"LFG_LIST_UPDATE_SEARCH_RESULTS",
 	"LFG_LIST_SEARCH_FAILED",
 }
@@ -52,10 +51,19 @@ function Game:Init()
 	SetEvents(frame, WAKE_EVENTS, true)
 end
 
+function Game:RefreshResultSubscription()
+	local frame = self.frame
+	if G:HasViews("search") or G.Search:GetState()=="searching" or G.Applications:GetActiveCount()>0 then
+		frame:RegisterEvent("LFG_LIST_SEARCH_RESULT_UPDATED")
+	else frame:UnregisterEvent("LFG_LIST_SEARCH_RESULT_UPDATED") end
+end
+
 function Game:RefreshSubscriptions()
 	local frame = self.frame
 	if not frame then return end
-	SetEvents(frame, SEARCH_EVENTS, G:HasViews("search") or G.Search:GetState()=="searching")
+	local browsing = G:HasViews("search") or G.Search:GetState()=="searching"
+	SetEvents(frame, SEARCH_EVENTS, browsing)
+	self:RefreshResultSubscription()
 	local listing = C_LFGList.HasActiveEntryInfo()
 	self:RefreshRelations()
 	SetEvents(frame, APPLICANT_EVENTS, listing)

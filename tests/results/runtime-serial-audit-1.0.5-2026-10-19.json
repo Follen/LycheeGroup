@@ -1,0 +1,314 @@
+{
+  "schema": "lycheegroup.runtime-serial-audit.v1",
+  "date": "2026-10-19",
+  "startedAt": "2026-10-19T16:38:10.7710000+08:00",
+  "finishedAt": "2026-10-19T16:43:12.3309627+08:00",
+  "baselineCommit": "8d3c1d5340e6adab6522f8a66cad551c3631d46b",
+  "candidate": "Uncommitted product audit fixes on release 1.0.5; embedded LycheeUI 1.2.0 revision 18; no library synchronization or build command executed",
+  "sourceScope": [
+    {
+      "package": "LycheeGroup",
+      "files": 60,
+      "treeSha256": "cc205350072d562135d2e33b07e5e109373ea75fc275029a3fc9e10cd8751ee5",
+      "installedMismatches": []
+    },
+    {
+      "package": "LycheeGroup_Group",
+      "files": 20,
+      "treeSha256": "b88cac029ffbb02f546ece9e2dc54c9bdfc504dbe0184d692c63c6026747d754",
+      "installedMismatches": []
+    },
+    {
+      "package": "LycheeGroup_Notes",
+      "files": 6,
+      "treeSha256": "130497d4ecee8ed2ebecc2f3198e8a028ea273d9e6fd59c353d06b248c27d5e2",
+      "installedMismatches": []
+    },
+    {
+      "package": "LycheeGroup_UI",
+      "files": 23,
+      "treeSha256": "2b04211ce55cd991fbafec514d3ebeee96ae69fa5f3f457ec5ab668e7e5ab1e4",
+      "installedMismatches": []
+    }
+  ],
+  "sourceHashMethod": "SHA256 of UTF-8, LF-joined relative Windows paths and lowercase SHA256 file hashes, sorted by full path, per package",
+  "deployment": {
+    "installation": "D:/Game/World of Warcraft/_retail_",
+    "packages": [
+      "LycheeGroup",
+      "LycheeGroup_Group",
+      "LycheeGroup_Notes",
+      "LycheeGroup_UI"
+    ],
+    "copiedChangedFiles": 14,
+    "installedFilesEqualCandidate": true,
+    "loadedBy": "CLI live reload runtime-serial-audit-20261019-load",
+    "loadedRuntime": "000000050000fd958af18ac32f04e685"
+  },
+  "identity": {
+    "schema": "Lycheedev mailbox protocol v1",
+    "runtime": "000000050000fd958af18ac32f04e685",
+    "owner": "da83db0b5d5ba7b96f5f324172653789",
+    "fence": 1,
+    "nextSlot": 14,
+    "slots": 500,
+    "inventory": 500,
+    "inputState": "Lycheedev mailbox protocol v1",
+    "character": "晴昼秋岚",
+    "realm": "白银之手",
+    "guid": "Player-707-0708329D",
+    "build": "12.1.5.70448",
+    "product": "retail",
+    "release": "3.2.3"
+  },
+  "process": {
+    "pid": 21476,
+    "processStartedAt": "134368585816828959",
+    "executable": "D:/Game/World of Warcraft/_retail_/Wow.exe",
+    "windowHandle": "99422208",
+    "build": "12.1.5.70448",
+    "product": "retail",
+    "character": "晴昼秋岚",
+    "realm": "白银之手",
+    "guid": "Player-707-0708329D"
+  },
+  "projectPin": "project_missing; reused explicit unique installation/PID; no project or lock created",
+  "connection": "CON-da83db0b5d5ba7b96f5f324172653789",
+  "preflight": {
+    "request": "runtime-serial-audit-20261019-preflight",
+    "operation": "LMO-7cc2b192887f609d024306f080c44280",
+    "reportOk": true,
+    "complete": true,
+    "cleanup": "complete",
+    "coreLoaded": true,
+    "groupLoaded": false,
+    "uiLoaded": false,
+    "notesLoaded": false,
+    "history": true,
+    "floating": true,
+    "reduceMotion": false,
+    "activeChallenge": false,
+    "activeListing": false,
+    "applications": 0,
+    "uiShown": false,
+    "libraryRuntimeVersion": 18
+  },
+  "behavior": {
+    "request": "runtime-serial-audit-20261019-behavior",
+    "operation": "LMO-22b164c73da796851a2f0723ade3a893",
+    "reportOk": true,
+    "reportState": "verified",
+    "complete": true,
+    "cleanup": "complete",
+    "result": {
+      "checks": {
+        "binding_capture_started": true,
+        "close_cancels_binding_capture": true,
+        "close_completed": true,
+        "close_shell_blocks_mouse": true,
+        "closed_no_creation_inspect_listener": true,
+        "closed_no_find_subscribers": true,
+        "closed_no_native_owner": true,
+        "closed_no_page_countdown": true,
+        "closed_no_search_lease": true,
+        "closed_no_ui_motion": true,
+        "closed_no_views": true,
+        "create_visible": true,
+        "find_keys_ignored_during_close": true,
+        "find_visible": true,
+        "notes_visible": true,
+        "old_close_did_not_hide_reopen": true,
+        "rapid_toggle_reopens": true,
+        "real_input_lease_bound": true,
+        "settings_visible": true,
+        "tooltip_complete_real_members": true
+      },
+      "closedSubscriptions": {
+        "roster": false,
+        "searchResult": false,
+        "searchResults": false
+      },
+      "floating": {
+        "count": "0",
+        "dismissed": true,
+        "driverStopped": true,
+        "entries": 0,
+        "panel": true,
+        "recruiting": false,
+        "shown": true
+      },
+      "frameSamples": 217,
+      "maxObservedFrameSeconds": 0.30000001192092896,
+      "naturalGC": true,
+      "pages": [
+        {
+          "alpha": 1,
+          "height": 840,
+          "page": "settings",
+          "shown": true,
+          "width": 1299.1998291015625
+        },
+        {
+          "alpha": 1,
+          "height": 840,
+          "page": "find",
+          "shown": true,
+          "width": 1299.1998291015625
+        },
+        {
+          "alpha": 1,
+          "height": 840,
+          "page": "create",
+          "shown": true,
+          "width": 1299.1998291015625
+        },
+        {
+          "alpha": 1,
+          "height": 840,
+          "page": "notes",
+          "shown": true,
+          "width": 1299.1998291015625
+        },
+        {
+          "alpha": 1,
+          "height": 840,
+          "page": "settings",
+          "shown": true,
+          "width": 1299.1998291015625
+        }
+      ],
+      "restored": true,
+      "scope": "live controllers, real read-only search; callbacks are programmatic, no hardware routing claim",
+      "search": {
+        "filtered": 26,
+        "initialState": "searching",
+        "nativeReturned": 101,
+        "nativeTotal": 101,
+        "state": "done",
+        "success": true,
+        "total": 99
+      },
+      "tooltip": {
+        "expectedMembers": 1,
+        "resultID": 4226,
+        "shown": true,
+        "source": "real_search_result",
+        "visibleMemberButtons": 1
+      },
+      "unavailable": [
+        "no real applications or listing: hidden summaries, countdown and recruiting-mode transition untested",
+        "no active challenge and history enabled: cold history-off challenge wake untested",
+        "no real uncached inspect target: async note-save cancellation untested"
+      ]
+    }
+  },
+  "preview": {
+    "request": "runtime-serial-audit-20261019-preview",
+    "operation": "LMO-6fc158cc3d27e49481db741769625c11",
+    "reportOk": true,
+    "reportState": "verified",
+    "complete": true,
+    "cleanup": "complete",
+    "result": {
+      "cleanup": {
+        "countdown": false,
+        "floatingDriver": false,
+        "motion": 0,
+        "previewEnded": true,
+        "tooltipHidden": true,
+        "uiHidden": true,
+        "views": false
+      },
+      "largeTooltip": {
+        "inputMembers": 45,
+        "isPreview": true,
+        "lastIdentity": "RuntimePreview45-PreviewRealm",
+        "scrollMaximum": 2037.750732421875,
+        "shownMembers": 45
+      },
+      "memoryScope": "whole-client Lua heap KB, natural GC, no forced collection or attribution",
+      "restored": true,
+      "samples": [
+        {
+          "at": 65106.784,
+          "label": "before_preview",
+          "luaHeapKB": 426485.6767578125
+        },
+        {
+          "at": 65107.784,
+          "label": "idle_1",
+          "luaHeapKB": 427357.916015625
+        },
+        {
+          "at": 65108.784,
+          "label": "idle_2",
+          "luaHeapKB": 427513.1015625
+        },
+        {
+          "at": 65109.784,
+          "label": "idle_3",
+          "luaHeapKB": 427678.0478515625
+        }
+      ],
+      "scope": "live rendering of explicitly synthetic private Preview data; no real application/listing/invite acceptance"
+    }
+  },
+  "errors": {
+    "providerSession": 224,
+    "availableCount": 36,
+    "returnedCount": 36,
+    "newCurrentSessionErrors": [],
+    "latestRetainedErrorEpoch": 1792385472.0,
+    "latestRetainedErrorSession": 210,
+    "beforeAvailableCount": 36,
+    "afterAvailableCount": 36,
+    "metadataComplete": false,
+    "incompleteReasons": [
+      "error[8].stack",
+      "error[8].locals"
+    ],
+    "limitation": "All 36 retained entries returned; one historical entry lacks stack/locals. No errors from current session 224; retained history was not cleared."
+  },
+  "notTested": [
+    "Real hidden application result updates across category changes, summary contents, countdown and last-application subscription release: no real applications present.",
+    "Real listing/applicant updates, floating recruiting-mode transition and permissions: no real listing present; none was submitted.",
+    "Cold history-disabled CHALLENGE_MODE_START and login during active challenge: initial history enabled, challenge inactive; no native event fabricated.",
+    "Real asynchronous note-save cancellation while inspecting an uncached player: no suitable real pending inspection; no notes saved or changed.",
+    "Real mouse/keyboard hit testing, secure hardware input routing and pixel visual acceptance: controllers were called programmatically, no screenshots were taken.",
+    "Exclusive addon CPU, retained addon/native UI bytes, cumulative allocations, peak memory, long-run leak and performance budget acceptance: bounded whole-client readings cannot establish these."
+  ],
+  "interpretation": [
+    "Four actual pages were visible at 1299.1998291015625 x 840, alpha 1.",
+    "Read-only native search completed; native 101 vs product store 99 were sequential dynamic observations and are not evidence of truncation or complete set equality. Current product filters yielded 26.",
+    "Real search tooltip displayed its complete one-member data; synthetic Preview tooltip separately displayed all 45 members including member 45 and scroll overflow.",
+    "Frame dt observation sampled 217 frames and included a 0.30000001192092896 second maximum; includes page/module startup and client/observer work, not exclusive addon CPU.",
+    "Natural whole-client Lua heap samples rose during preview and idle; no forced GC used and no leak or retention conclusion drawn."
+  ],
+  "cleanup": {
+    "probeOwnedTimersAndObserverRemoved": true,
+    "temporaryApplyMethodRestored": true,
+    "bindingCaptureCancelledWithoutBindingWrite": true,
+    "characterPreferencesRestored": true,
+    "reduceMotionRestored": true,
+    "findLoadedFlagsResetToReloadRestoredPreferences": true,
+    "uiHidden": true,
+    "tooltipHidden": true,
+    "previewEnded": true,
+    "floatingPanelDismissed": true,
+    "nativeSearchLeaseReleased": true,
+    "nativeOwnerReleased": true,
+    "groupViewsReleased": true,
+    "uiMotionStopped": true,
+    "floatingCountdownStopped": true,
+    "realApplicationsInvitesListingsNotesSubmitted": 0,
+    "connectionClosed": true,
+    "connectionBound": false,
+    "connectionComplete": true,
+    "connectionCleanup": "complete"
+  },
+  "evidence": {
+    "journal": ".lycheedev/live/connections/CON-da83db0b5d5ba7b96f5f324172653789.jsonl",
+    "lifecycle": "Retain complete .lycheedev/live recovery unit; raw retained results use operation IDs above."
+  },
+  "outcome": "Available bounded runtime checks passed; business-scene and measurement limits are listed explicitly."
+}

@@ -42,6 +42,11 @@ local function CancelPending()
 	state.cancel = nil
 	if cancel then cancel() end
 end
+local function DraftChanged()
+ if not state.cancel then return end
+ CancelPending()
+ P:SetEditorStatus("")
+end
 
 local function Subscribe()
 	if state.unsub or not (A.Notes and A.Notes.Subscribe) then return end
@@ -135,19 +140,20 @@ function P:Build(parent)
  self.eNameLabel=C.Text(editor,S("玩家","Player"),14,T.muted);self.eNameLabel:SetPoint("TOPLEFT",16,-68);C.SetLineHeight(self.eNameLabel,20,true)
  self.eName=C.Edit(editor,inner,44);self.eName:SetPoint("TOPLEFT",16,-100)
  self.eNameHint=C.Text(self.eName,L.notesIdentityHint,14,T.dim,inner-24);self.eNameHint:SetPoint("LEFT",12,0);C.SetLineHeight(self.eNameHint,20,true)
- self.eName.box:HookScript("OnTextChanged",function() P.eNameHint:SetShown(P.eName.box:GetText()=="") end)
+ self.eName.box:HookScript("OnTextChanged",function() DraftChanged();P.eNameHint:SetShown(P.eName.box:GetText()=="") end)
  self.eAvatar=C.Icon(editor,40);self.eAvatar:SetPoint("TOPLEFT",16,-72)
  self.eIdentity=C.Text(editor,"",16,T.text,inner-52);self.eIdentity:SetPoint("TOPLEFT",68,-66);self.eIdentity:SetWordWrap(false);C.SetLineHeight(self.eIdentity,22,true)
  self.eRealm=C.Text(editor,"",14,T.muted,inner-52);self.eRealm:SetPoint("TOPLEFT",68,-96);C.SetLineHeight(self.eRealm,20,true)
  self.classLabel=C.Text(editor,S("职业","Class"),14,T.muted);self.classLabel:SetPoint("TOPLEFT",16,-148);C.SetLineHeight(self.classLabel,20,true)
  self.specLabel=C.Text(editor,S("专精","Specialization"),14,T.muted);self.specLabel:SetPoint("TOPLEFT",28+half,-148);C.SetLineHeight(self.specLabel,20,true)
- self.classChoice=C.Choice(editor,half,function() return P:ClassItems() end,function(value) state.identityEdited=true;state.legacyClassSpec=nil;state.recordClass=value or nil;state.recordSpec=nil;P:SyncSpec() end);self.classChoice:SetPoint("TOPLEFT",16,-172);self.classChoice:SetHeight(44)
- self.specChoice=C.Choice(editor,half,function() return P:SpecItems() end,function(value) state.identityEdited=true;state.legacyClassSpec=nil;state.recordSpec=value or nil;P:SyncSpec() end);self.specChoice:SetPoint("TOPLEFT",28+half,-172);self.specChoice:SetHeight(44)
+ self.classChoice=C.Choice(editor,half,function() return P:ClassItems() end,function(value) DraftChanged();state.identityEdited=true;state.legacyClassSpec=nil;state.recordClass=value or nil;state.recordSpec=nil;P:SyncSpec() end);self.classChoice:SetPoint("TOPLEFT",16,-172);self.classChoice:SetHeight(44)
+ self.specChoice=C.Choice(editor,half,function() return P:SpecItems() end,function(value) DraftChanged();state.identityEdited=true;state.legacyClassSpec=nil;state.recordSpec=value or nil;P:SyncSpec() end);self.specChoice:SetPoint("TOPLEFT",28+half,-172);self.specChoice:SetHeight(44)
  self.typeLabel=C.Text(editor,S("记录类型","Note type"),14,T.muted);C.SetLineHeight(self.typeLabel,20,true)
  self.typeSwitch=CreateFrame("Frame",nil,editor);self.typeSwitch:SetSize(inner,36);self.typeSwitch:SetPoint("TOPLEFT",16,-228);C.Panel(self.typeSwitch,T.surfaceLow,8)
- self.typeButtons={};for i,entry in ipairs(NOTE_TYPES) do local w=(inner-14)/3;local button=C.Button(self.typeSwitch,entry.label,w,function() state.recordType=entry.key;P:SyncSpec() end,{variant="compact",textColor=T.text});button:SetPoint("TOPLEFT",3+(i-1)*(w+4),-3);button.label:ClearAllPoints();button.label:SetPoint("CENTER",10,0);button.icon=C.Glyph(button,entry.key=="positive" and "heart" or entry.key=="caution" and "caution" or "book",14);button.icon:SetPoint("CENTER",-(button.label:GetStringWidth()+6)/2,0);self.typeButtons[entry.key]=button end
+ self.typeButtons={};for i,entry in ipairs(NOTE_TYPES) do local w=(inner-14)/3;local button=C.Button(self.typeSwitch,entry.label,w,function() DraftChanged();state.recordType=entry.key;P:SyncSpec() end,{variant="compact",textColor=T.text});button:SetPoint("TOPLEFT",3+(i-1)*(w+4),-3);button.label:ClearAllPoints();button.label:SetPoint("CENTER",10,0);button.icon=C.Glyph(button,entry.key=="positive" and "heart" or entry.key=="caution" and "caution" or "book",14);button.icon:SetPoint("CENTER",-(button.label:GetStringWidth()+6)/2,0);self.typeButtons[entry.key]=button end
  self.eReasonLabel=C.Text(editor,L.reason,14,T.muted);self.eReasonLabel:SetPoint("TOPLEFT",16,-276);C.SetLineHeight(self.eReasonLabel,20,true)
  self.eReason=C.Edit(editor,inner,112,true);self.eReason:SetPoint("TOPLEFT",16,-300);self.eReason:SetPlaceholder(S("写下当时发生的事","Describe what happened"));C.SetLineHeight(self.eReason.box,20)
+ self.eReason.box:HookScript("OnTextChanged",DraftChanged)
  self.eDate=C.Text(editor,"",14,T.dim,inner);self.eDate:SetPoint("TOPLEFT",16,-420);C.SetLineHeight(self.eDate,20,true)
  self.eStatus=C.Text(editor,"",14,T.muted,inner);self.eStatus:SetPoint("TOPLEFT",16,-448);self.eStatus:SetMaxLines(2);C.SetLineHeight(self.eStatus,20)
  self.eSave=C.Button(editor,L.save,88,function() P:Save() end);self.eSave:SetPrimary(true);self.eSave:SetPoint("BOTTOMRIGHT",-16,16)

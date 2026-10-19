@@ -172,16 +172,14 @@ function Records.Merge(records)
 				local timestamp = TimestampOf(item)
 				-- 旧文本没有时间时保留未知值;每次重导不能把旧记录变成新记录。
 				if timestamp <= 0 then timestamp = 0 end
-				local reason = Trim(item.reason)
-				local classSpec = Trim(item.classSpec)
 				local current = DB.records[key]
 				if not current or timestamp > TimestampOf(current) then
 					DB.records[key] = {
 						name = cleanName,
 						server = cleanServer,
 						timestamp = timestamp,
-						reason = reason,
-						classSpec = classSpec,
+						reason = Trim(item.reason),
+						classSpec = Trim(item.classSpec),
 						type = item.type == "positive" and "positive" or item.type == "caution" and "caution" or "neutral",
 						class = type(item.class) == "string" and item.class or nil,
 						specID = type(item.specID) == "number" and item.specID or nil,

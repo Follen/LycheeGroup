@@ -89,7 +89,7 @@ function M:Initialize()
         if mouseButton == "RightButton" then
             A:Open("settings", {section = "general"})
         elseif mouseButton == "LeftButton" then
-            if A.UI and A.UI:IsShown() then A.UI:Hide() else A:Open("find") end
+            A:ToggleWindow()
         end
     end)
     button:SetScript("OnDragStart", function()

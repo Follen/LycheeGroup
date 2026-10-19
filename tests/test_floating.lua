@@ -369,6 +369,16 @@ do
  local viewport=F.scroll:GetHeight()
  CheckRange(0,viewport);CheckRange(tops[50],tops[55]-tops[50]);CheckRange(tops[50]+.01,viewport)
  CheckRange(F.body:GetHeight()-viewport,viewport)
+ local iterate,clockScans=ipairs,0
+ _G.ipairs=function(values)
+  local iterator,state,index=iterate(values)
+  if values~=F.entries then return iterator,state,index end
+  return function(source,key) local nextKey,value=iterator(source,key);if value then clockScans=clockScans+1 end;return nextKey,value end,state,index
+ end
+ F:SetOffset(tops[20],false);F:SetOffset(tops[60],false)
+ _G.ipairs=iterate
+ T.eq(clockScans,0,"recruiting scrolls do not scan every member for nonexistent application clocks")
+ T.eq(#F.entries,101);T.eq(F.rows[1].applicantID,77);T.eq(F.countdown,nil)
  local reads=0
  F.entryTops=setmetatable({},{__index=function(_,index) reads=reads+1;return tops[index] end})
  F:Render()

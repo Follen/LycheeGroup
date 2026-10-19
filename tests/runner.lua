@@ -6,7 +6,16 @@
 local ALL = { "core", "notes", "group", "transfer", "ui", "preview", "floating", "minimap", "fonts" }
 
 local requested = {}
-for i = 1, #arg do requested[arg[i]] = true end
+local known = {}
+for _, name in ipairs(ALL) do known[name] = true end
+for i = 1, #arg do
+	local name = arg[i]
+	if not known[name] then
+		io.stderr:write(("Unknown test module: %s\nAvailable modules: %s\n"):format(name, table.concat(ALL, ", ")))
+		os.exit(2)
+	end
+	requested[name] = true
+end
 
 local names = {}
 for _, name in ipairs(ALL) do

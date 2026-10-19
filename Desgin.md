@@ -2,7 +2,7 @@
 
 更新日期：2026-10-19。
 
-状态：2026-10-19。正式源码已接入第 7 项：主窗横向增加 12% 至 1299.2 × 840，主窗、菜单、Tooltip 与弹窗文字统一增加 3px、行盒增加 4，并逐页重排；浮窗保持原尺寸与字号。此前六项以提交 `4df8091` 为历史基线，包含寻队成员隐藏服务器、顶部保留队长完整身份、关系姓名独立列出、笔记仅预匹配队长，以及两种申请表的列顺序；收藏、名单、筛选、绑定与缩放等已有功能继续保留。当前离线 UI 回归通过，第 7 项已安装，按实机截图修正的成员图标与申请列间距待游戏内复核。本地 widget-tree 与 [Material 3 · v4.4 网页原型](prototype-v4/index.html) 是布局对照，不是游戏截图。内置 LycheeUI 1.2.0（修订 18）；此前安装、审计和实机结果保留原日期与范围，不延伸为本轮验收。共享组件见 [LycheeUI 通用规范](../LycheeUI/DESIGN.md)，功能状态见 [Product.md 第 7 节](Product.md#7-用户可见的验收结果)，验证与安装记录见 [perfermance.md 第 12 节](perfermance.md#12-当前内存测试与验证状态)。其他旧原型保留为历史对照。
+状态：1.0.6 沿用 1.0.5 的正式布局：主窗 1299.2 × 840，主界面文字沿用增加 3px、行盒增加 4 的配置，“我的申请”采用 40 高紧凑行；浮窗保持独立尺寸与字号。1.0.6 内置冻结的 LycheeUI 1.2.0（修订 19）；36 个 widget-tree 场景与修改前逐场景完全一致，实机已检查四页尺寸与有限交互生命周期，未完成像素及硬件鼠标视觉验收。本地 widget-tree 与 [Material 3 · v4.4 网页原型](prototype-v4/index.html) 是布局对照，不是游戏截图；旧原型保留为历史参考。共享组件见 [LycheeUI 通用规范](../LycheeUI/DESIGN.md)，功能状态见 [Product.md 第 7 节](Product.md#7-用户可见的验收结果)，本次与历史验证、安装记录见 [perfermance.md 第 12 节](perfermance.md#12-当前内存测试与验证状态)。
 
 本文只维护界面设计。功能与业务行为见 [Product.md](Product.md)，程序组织见 [Architecture.md](Architecture.md)，运行成本与测量要求见 [perfermance.md](perfermance.md)。界面参考 Material 3 的[颜色系统](https://m3.material.io/styles/color/the-color-system)与[桌面布局](https://m3.material.io/foundations/layout/canonical-examples/overview)，采用分层表面、圆角操作、分段选择与连续列表。以下颜色为手动选择的荔枝主题角色色，尺寸按桌面组队工具适配；保留荔枝品牌和主 Lychee 的 [Presence.lua](../Lychee/addon/Lychee/UI/Presence.lua)、[Motion.lua](../Lychee/addon/Lychee/UI/Motion.lua) 动作。原生 Lua 界面是当前呈现依据；未完成客户端核对的项目不视为视觉验收通过。
 

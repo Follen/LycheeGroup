@@ -1,0 +1,499 @@
+{
+  "schema": "lycheegroup.runtime-library-audit.v1",
+  "date": "2026-10-19",
+  "finishedAt": "2026-10-19T17:13:29.1872682+08:00",
+  "scope": "Focused follow-up after library 15 audit rounds; retains earlier r18 runtime report unchanged",
+  "baselineCommit": "8d3c1d5340e6adab6522f8a66cad551c3631d46b",
+  "candidate": "Uncommitted 1.0.5 product with embedded LycheeUI display 1.2.0 revision 19",
+  "previousReport": "tests/results/runtime-serial-audit-1.0.5-2026-10-19.json",
+  "identity": {
+    "schema": "Lycheedev mailbox protocol v1",
+    "runtime": "00000006000104d7ea7754a7132131c1",
+    "owner": "064b09bef43f4aa20b75b81e1c97c291",
+    "fence": 1,
+    "nextSlot": 2,
+    "slots": 500,
+    "inventory": 500,
+    "inputState": "Lycheedev mailbox protocol v1",
+    "character": "晴昼秋岚",
+    "realm": "白银之手",
+    "guid": "Player-707-0708329D",
+    "build": "12.1.5.70448",
+    "product": "retail",
+    "release": "3.2.3"
+  },
+  "process": {
+    "pid": 21476,
+    "processStartedAt": "134368585816828959",
+    "executable": "D:/Game/World of Warcraft/_retail_/Wow.exe",
+    "windowHandle": "99422208",
+    "installation": "D:/Game/World of Warcraft/_retail_",
+    "actor": "晴昼秋岚-白银之手",
+    "clientBuild": "12.1.5.70448"
+  },
+  "projectPin": "No project/lock created; fixed explicit installation/PID/actor confirmed by doctor and fresh bind",
+  "connection": "CON-064b09bef43f4aa20b75b81e1c97c291",
+  "preflight": {
+    "request": "runtime-r19-preflight",
+    "operation": "LMO-f1d24a026186fd6f8d1500b764cc2642",
+    "reportState": "verified",
+    "report": {
+      "logs": {},
+      "ok": true,
+      "resourcesReleased": true,
+      "result": {
+        "applications": {},
+        "challenge": false,
+        "floating": true,
+        "group": true,
+        "history": true,
+        "inCombat": false,
+        "libraryVersion": 18,
+        "listing": false,
+        "loaded": {
+          "LycheeGroup": true,
+          "LycheeGroup_Group": true,
+          "LycheeGroup_Notes": true,
+          "LycheeGroup_UI": true
+        },
+        "notesEnabled": true,
+        "observerTime": 1792400949,
+        "reduceMotion": false,
+        "shown": false,
+        "uiPage": "create"
+      }
+    },
+    "complete": true,
+    "cleanup": "complete",
+    "cleanupMethod": "released"
+  },
+  "deployment": {
+    "scope": "Only embedded LycheeUI files copied; no Sync-LycheeUI or Build command run",
+    "changedFiles": [
+      "Components.lua",
+      "Core.lua",
+      "Menu.lua",
+      "Motion.lua",
+      "Native.lua"
+    ],
+    "all43FilesMatchInstalled": true,
+    "files": [
+      {
+        "path": "Components.lua",
+        "sha256": "b5e881428282ea33b612452fdc4a262cd7fc9bee264a9935eb28caa384cd0a32",
+        "installedSha256": "b5e881428282ea33b612452fdc4a262cd7fc9bee264a9935eb28caa384cd0a32"
+      },
+      {
+        "path": "Core.lua",
+        "sha256": "96ff52550c3757f31f631e04f5f9bbe993ae8b81d37cc9ad00d08489d6019e53",
+        "installedSha256": "96ff52550c3757f31f631e04f5f9bbe993ae8b81d37cc9ad00d08489d6019e53"
+      },
+      {
+        "path": "embeds.xml",
+        "sha256": "7f7853d2cb7021a71654816ac17a2b79b18927ae9b490b2dd492005cdb84b589",
+        "installedSha256": "7f7853d2cb7021a71654816ac17a2b79b18927ae9b490b2dd492005cdb84b589"
+      },
+      {
+        "path": "Media\\arrow.tga",
+        "sha256": "93786301129ed889270d2a02f5643d4416e82697785f143fa10bb7ae54998727",
+        "installedSha256": "93786301129ed889270d2a02f5643d4416e82697785f143fa10bb7ae54998727"
+      },
+      {
+        "path": "Media\\bell.tga",
+        "sha256": "d64179d1877cb926fff238a148f060f00184f2d40e140693391223211e62c8cc",
+        "installedSha256": "d64179d1877cb926fff238a148f060f00184f2d40e140693391223211e62c8cc"
+      },
+      {
+        "path": "Media\\book.tga",
+        "sha256": "ac017a1a6244bb94fb175efdb64d4c56b58c72e71a47fbc96305f618ec56c385",
+        "installedSha256": "ac017a1a6244bb94fb175efdb64d4c56b58c72e71a47fbc96305f618ec56c385"
+      },
+      {
+        "path": "Media\\caution.tga",
+        "sha256": "6bdad242ba25891acd890ae9b4ce1e87002ec295d835bd76ec0972834820d953",
+        "installedSha256": "6bdad242ba25891acd890ae9b4ce1e87002ec295d835bd76ec0972834820d953"
+      },
+      {
+        "path": "Media\\chevron.tga",
+        "sha256": "d88346a13d505bc3aac4f58e292952f98490b5f0c03348a192e95c6fbda89780",
+        "installedSha256": "d88346a13d505bc3aac4f58e292952f98490b5f0c03348a192e95c6fbda89780"
+      },
+      {
+        "path": "Media\\circle.tga",
+        "sha256": "ee3d0ece0a31e76edc81cda3ea666c637bcf28724466222948e2ab235216b293",
+        "installedSha256": "ee3d0ece0a31e76edc81cda3ea666c637bcf28724466222948e2ab235216b293"
+      },
+      {
+        "path": "Media\\close.tga",
+        "sha256": "756dd35d3c7c393d6acc4c6109439f02ff0ba342dd82b1451d93ae3bc7a1424e",
+        "installedSha256": "756dd35d3c7c393d6acc4c6109439f02ff0ba342dd82b1451d93ae3bc7a1424e"
+      },
+      {
+        "path": "Media\\damage.tga",
+        "sha256": "96c8027f0e3d3c5ff1c23f97908cbfde953689718ba7c7b89560fbdabc73148c",
+        "installedSha256": "96c8027f0e3d3c5ff1c23f97908cbfde953689718ba7c7b89560fbdabc73148c"
+      },
+      {
+        "path": "Media\\decline.tga",
+        "sha256": "a2b846a146af2ad86c904dad55446c7da3a01c38bf2f7217faaa18af3d00c06d",
+        "installedSha256": "a2b846a146af2ad86c904dad55446c7da3a01c38bf2f7217faaa18af3d00c06d"
+      },
+      {
+        "path": "Media\\delve.tga",
+        "sha256": "1c23269c110de259dde4ac0ee3664381a26f6e54f259698251867e15ea081c0a",
+        "installedSha256": "1c23269c110de259dde4ac0ee3664381a26f6e54f259698251867e15ea081c0a"
+      },
+      {
+        "path": "Media\\flag.tga",
+        "sha256": "8b76497c797ae469666cae8ce2f55cdbb312fde25ecb0fa12cbf86c4dcf4afc7",
+        "installedSha256": "8b76497c797ae469666cae8ce2f55cdbb312fde25ecb0fa12cbf86c4dcf4afc7"
+      },
+      {
+        "path": "Media\\friend.tga",
+        "sha256": "aa7511f387531c53c08577ea59be63f04bae800dd733d311f068de1c56d9d445",
+        "installedSha256": "aa7511f387531c53c08577ea59be63f04bae800dd733d311f068de1c56d9d445"
+      },
+      {
+        "path": "Media\\guild.tga",
+        "sha256": "f516322a4522b38e3e878991d0f23b548c4abd1f5343c3ddd632999daf281f46",
+        "installedSha256": "f516322a4522b38e3e878991d0f23b548c4abd1f5343c3ddd632999daf281f46"
+      },
+      {
+        "path": "Media\\healer.tga",
+        "sha256": "07e45ec90d9720ed0891d85a69f0f315d04e05f559b8186d418bb271cef28a26",
+        "installedSha256": "07e45ec90d9720ed0891d85a69f0f315d04e05f559b8186d418bb271cef28a26"
+      },
+      {
+        "path": "Media\\heart.tga",
+        "sha256": "d6be15a5e4bd895a85da6cea324d6ff8aa0a5134bbdfc645979cebe796302873",
+        "installedSha256": "d6be15a5e4bd895a85da6cea324d6ff8aa0a5134bbdfc645979cebe796302873"
+      },
+      {
+        "path": "Media\\history.tga",
+        "sha256": "60ee8e76f8acede358987f77a5bb96d60879e21cb19b4a56ba90f8e4256900c8",
+        "installedSha256": "60ee8e76f8acede358987f77a5bb96d60879e21cb19b4a56ba90f8e4256900c8"
+      },
+      {
+        "path": "Media\\icon-mask.tga",
+        "sha256": "3842cf0e05c57441da86894559b30b17bf97055b301cd076003b119da5f8a5b5",
+        "installedSha256": "3842cf0e05c57441da86894559b30b17bf97055b301cd076003b119da5f8a5b5"
+      },
+      {
+        "path": "Media\\invite.tga",
+        "sha256": "9bf21e948867e84c592c6111b6471015acfaeb1bab725cbfa53b386a290c8d1e",
+        "installedSha256": "9bf21e948867e84c592c6111b6471015acfaeb1bab725cbfa53b386a290c8d1e"
+      },
+      {
+        "path": "Media\\leader.tga",
+        "sha256": "a02d4d7353e6261571d048496121bf23e3e4b82c234b52a34b082bbc0d7f8fbf",
+        "installedSha256": "a02d4d7353e6261571d048496121bf23e3e4b82c234b52a34b082bbc0d7f8fbf"
+      },
+      {
+        "path": "Media\\lychee-logo.tga",
+        "sha256": "9cd1f306fe5c8092dd425401d8c2eec192a61c0e3eba1645ee37601295326f94",
+        "installedSha256": "9cd1f306fe5c8092dd425401d8c2eec192a61c0e3eba1645ee37601295326f94"
+      },
+      {
+        "path": "Media\\mountain.tga",
+        "sha256": "d981fe8f731cdd0558316c924fc760e23bdbd5eed249dc55988120abc8c3741e",
+        "installedSha256": "d981fe8f731cdd0558316c924fc760e23bdbd5eed249dc55988120abc8c3741e"
+      },
+      {
+        "path": "Media\\plus.tga",
+        "sha256": "07311c36e089b733d8e4dbb5ae5a2b68cc3e746e9a047be4a434e8dafa5e9fb6",
+        "installedSha256": "07311c36e089b733d8e4dbb5ae5a2b68cc3e746e9a047be4a434e8dafa5e9fb6"
+      },
+      {
+        "path": "Media\\pvp.tga",
+        "sha256": "134405c33a27e31baa64bb05c0d88a242455c8df8c6e98a6fccbd11d20cd1b18",
+        "installedSha256": "134405c33a27e31baa64bb05c0d88a242455c8df8c6e98a6fccbd11d20cd1b18"
+      },
+      {
+        "path": "Media\\refresh.tga",
+        "sha256": "1d4ea9510b9ee540a485dbf37b379ec6b7467707a409809ed5d012c922fec71e",
+        "installedSha256": "1d4ea9510b9ee540a485dbf37b379ec6b7467707a409809ed5d012c922fec71e"
+      },
+      {
+        "path": "Media\\role-dps.tga",
+        "sha256": "dac50b2f0351372df0358c74922262c959a296eafb23238a622f0e1d54de493e",
+        "installedSha256": "dac50b2f0351372df0358c74922262c959a296eafb23238a622f0e1d54de493e"
+      },
+      {
+        "path": "Media\\role-healer.tga",
+        "sha256": "599ff94cb2b3776b2a4c9abd06821583e707178bab20b34aa1d0369619633a50",
+        "installedSha256": "599ff94cb2b3776b2a4c9abd06821583e707178bab20b34aa1d0369619633a50"
+      },
+      {
+        "path": "Media\\role-tank.tga",
+        "sha256": "b18db002db43b57d5546b97217f6c71180ed0f1dd0079c37616e9b175f79c5b2",
+        "installedSha256": "b18db002db43b57d5546b97217f6c71180ed0f1dd0079c37616e9b175f79c5b2"
+      },
+      {
+        "path": "Media\\rounded-corner.tga",
+        "sha256": "6c5203e7c6caede452ff5a34e6a356f2e7caef376cd3d1a4ac40353e340b9e5a",
+        "installedSha256": "6c5203e7c6caede452ff5a34e6a356f2e7caef376cd3d1a4ac40353e340b9e5a"
+      },
+      {
+        "path": "Media\\search.tga",
+        "sha256": "fc6308be9daccbc766db4942a9ddde797d57902a128c229e69f389f342d6fba7",
+        "installedSha256": "fc6308be9daccbc766db4942a9ddde797d57902a128c229e69f389f342d6fba7"
+      },
+      {
+        "path": "Media\\settings.tga",
+        "sha256": "f326928897d118c63e16d2b3a0e15894b3064319063ae3e449125ce646b77c30",
+        "installedSha256": "f326928897d118c63e16d2b3a0e15894b3064319063ae3e449125ce646b77c30"
+      },
+      {
+        "path": "Media\\shadow-12.tga",
+        "sha256": "4b114a802ec77994eb266a970de8e7d1dece24883ae9cb0bfb926ae337615978",
+        "installedSha256": "4b114a802ec77994eb266a970de8e7d1dece24883ae9cb0bfb926ae337615978"
+      },
+      {
+        "path": "Media\\shadow-16.tga",
+        "sha256": "64d76fdbf085b2f28381cfdc4a2e6390b71c07c9bd6f1d911f3ab56180edc926",
+        "installedSha256": "64d76fdbf085b2f28381cfdc4a2e6390b71c07c9bd6f1d911f3ab56180edc926"
+      },
+      {
+        "path": "Media\\shadow-24.tga",
+        "sha256": "a7d36e795f94ce43e658898ecbcc6415fa72301104581590e318aa6e59107276",
+        "installedSha256": "a7d36e795f94ce43e658898ecbcc6415fa72301104581590e318aa6e59107276"
+      },
+      {
+        "path": "Media\\shadow-28.tga",
+        "sha256": "356c7b119618c92d25d747992cc1aa7cb1c9187ff18166393db36a967b296e34",
+        "installedSha256": "356c7b119618c92d25d747992cc1aa7cb1c9187ff18166393db36a967b296e34"
+      },
+      {
+        "path": "Media\\tank.tga",
+        "sha256": "2170055981bab271ce345b40283fbd4c6e3ec36b039545793811add99c5ccaaf",
+        "installedSha256": "2170055981bab271ce345b40283fbd4c6e3ec36b039545793811add99c5ccaaf"
+      },
+      {
+        "path": "Media\\tower.tga",
+        "sha256": "56872153a16c9276dbaaf6a40eba24ee522d67bdd4bf628b0236c1b9ef26b99b",
+        "installedSha256": "56872153a16c9276dbaaf6a40eba24ee522d67bdd4bf628b0236c1b9ef26b99b"
+      },
+      {
+        "path": "Menu.lua",
+        "sha256": "12802627800a830cd59d4873f7781d9f160cd9148942542fe4d346a84496f8f2",
+        "installedSha256": "12802627800a830cd59d4873f7781d9f160cd9148942542fe4d346a84496f8f2"
+      },
+      {
+        "path": "Motion.lua",
+        "sha256": "a370267f43beee54471ec4d9fe6eccb497979b87f7c5e37c29195b54c5ac111f",
+        "installedSha256": "a370267f43beee54471ec4d9fe6eccb497979b87f7c5e37c29195b54c5ac111f"
+      },
+      {
+        "path": "Native.lua",
+        "sha256": "d59ac027ab49a4ce093f8a24999f732b2ba89d0502940145812809c45947a712",
+        "installedSha256": "d59ac027ab49a4ce093f8a24999f732b2ba89d0502940145812809c45947a712"
+      },
+      {
+        "path": "Theme.lua",
+        "sha256": "a17eb795e77ecf69c9cb28d8c6e86396c835f7b2bbb33da664ac27f154f49c45",
+        "installedSha256": "a17eb795e77ecf69c9cb28d8c6e86396c835f7b2bbb33da664ac27f154f49c45"
+      }
+    ],
+    "reloadRequest": "runtime-r19-load",
+    "reloadPhase": "complete",
+    "fromRuntime": "000000050000fd958af18ac32f04e685",
+    "loadedRuntime": "00000006000104d7ea7754a7132131c1"
+  },
+  "initialFocusedProbe": {
+    "request": "runtime-r19-focused",
+    "operation": "LMO-e7f3931d0900dc58a9940d248ee8d8df",
+    "reportState": "verified",
+    "report": {
+      "error": "LycheeMemoryProbe:10: cancelled_reveal_preserves_new_position",
+      "logs": {},
+      "ok": false,
+      "resourcesReleased": true
+    },
+    "complete": true,
+    "cleanup": "complete",
+    "cleanupMethod": "released"
+  },
+  "checksCompletedBeforeFirstFailure": {
+    "evidenceBasis": "Initial async probe reached the cancelled_reveal_preserves_new_position assertion; every preceding Check calls assert. Earlier assertion values were not serialized separately because the callback failed. The exact source and verified failure remain retained in the original request/journal.",
+    "passed": [
+      "loaded_revision_19",
+      "loaded_version_1_2_0",
+      "find_native_search_owned",
+      "find_native_search_returned",
+      "create_native_both_owned",
+      "create_native_both_returned",
+      "product_menu_open",
+      "product_menu_replaced",
+      "product_menu_closed",
+      "rapid_reopen_immediate",
+      "rapid_reopen_survives_old_finish",
+      "product_idle_hidden",
+      "reentrant_menu_takes_precedence",
+      "menu_close_callback_hides_context",
+      "motion_same_function_restart_survives",
+      "motion_same_function_restart_completes"
+    ],
+    "notReachedInInitialProbe": [
+      "zero_duration_alpha_finishes_once",
+      "zero_duration_reveal_finishes",
+      "ordinary_focus_callback_releases_context",
+      "ordinary_focus_no_stale_motion",
+      "final product/context idle assertions"
+    ]
+  },
+  "coordinateDiagnosis": {
+    "classification": "Probe assertion precision error; no library positioning regression found",
+    "failedCondition": "GetPoint x == 77 and y == -13 after SetPoint(77,-13)",
+    "explanation": "Client scale 0.7111111283302307 normalizes requested integer offsets to float. Direct SetPoint immediately reads (77.00000762939453,-13.000000953674316). StopAll preserved those exact values and cleared the old Reveal placement.",
+    "diagnostic": {
+      "request": "runtime-r19-coordinate",
+      "operation": "LMO-c36f5e9fc41ecc99de0396d03472b679",
+      "reportState": "verified",
+      "report": {
+        "logs": {},
+        "ok": true,
+        "resourcesReleased": true,
+        "result": {
+          "motion": 0,
+          "placementAfterStop": false,
+          "points": [
+            {
+              "label": "reveal",
+              "point": "TOPLEFT",
+              "relativePoint": "TOPLEFT",
+              "x": 4,
+              "y": -70.00000762939453
+            },
+            {
+              "label": "caller_position",
+              "point": "TOPLEFT",
+              "relativePoint": "TOPLEFT",
+              "x": 77.00000762939453,
+              "y": -13.000000953674316
+            },
+            {
+              "label": "after_stop_all",
+              "point": "TOPLEFT",
+              "relativePoint": "TOPLEFT",
+              "x": 77.00000762939453,
+              "y": -13.000000953674316
+            }
+          ],
+          "scale": 0.7111111283302307
+        }
+      },
+      "complete": true,
+      "cleanup": "complete",
+      "cleanupMethod": "released"
+    },
+    "correctedCheck": "Compare the exact engine-reported caller position before/after StopAll. Zero-duration Reveal compares to the engine-normalized direct SetPoint position. No coordinate tolerance was introduced."
+  },
+  "remainingChecks": {
+    "request": "runtime-r19-remaining",
+    "operation": "LMO-478aa5724638c7cbca92f3b8c525b85d",
+    "reportState": "verified",
+    "report": {
+      "logs": [
+        "loaded_revision_19  true",
+        "loaded_version_1_2_0  true",
+        "cancelled_reveal_preserves_exact_engine_position  true",
+        "zero_duration_alpha_finishes_once  true",
+        "zero_duration_reveal_finishes  true",
+        "ordinary_focus_callback_releases_context  true",
+        "ordinary_focus_no_stale_motion  true",
+        "product_idle_motion_zero  true",
+        "product_idle_leases_zero  true",
+        "product_idle_views_zero  true",
+        "product_idle_timers_zero  true",
+        "product_idle_floating_driver_stopped  true",
+        "independent_context_idle  true"
+      ],
+      "ok": true,
+      "resourcesReleased": true,
+      "result": {
+        "cancelledPlacement": {
+          "afterX": 77.00000762939453,
+          "afterY": -13.000000953674316,
+          "beforeX": 77.00000762939453,
+          "beforeY": -13.000000953674316,
+          "placementExists": false
+        },
+        "checks": {
+          "cancelled_reveal_preserves_exact_engine_position": true,
+          "independent_context_idle": true,
+          "loaded_revision_19": true,
+          "loaded_version_1_2_0": true,
+          "ordinary_focus_callback_releases_context": true,
+          "ordinary_focus_no_stale_motion": true,
+          "product_idle_floating_driver_stopped": true,
+          "product_idle_leases_zero": true,
+          "product_idle_motion_zero": true,
+          "product_idle_timers_zero": true,
+          "product_idle_views_zero": true,
+          "zero_duration_alpha_finishes_once": true,
+          "zero_duration_reveal_finishes": true
+        },
+        "restored": true,
+        "scope": "Remaining checks after coordinate assertion diagnosis; independent ordinary controls, no product actions",
+        "version": 19,
+        "versionString": "1.2.0"
+      }
+    },
+    "complete": true,
+    "cleanup": "complete",
+    "cleanupMethod": "released"
+  },
+  "errors": {
+    "providerSession": 225,
+    "availableCount": 36,
+    "returnedCount": 36,
+    "currentSessionErrors": [],
+    "providerHistoryCountBefore": 36,
+    "metadataComplete": false,
+    "incompleteReasons": [
+      "error[8].stack",
+      "error[8].locals"
+    ],
+    "historyCleared": false
+  },
+  "cleanup": {
+    "allProbeLifecyclesComplete": true,
+    "allProbeResourcesReleased": true,
+    "characterPreferencesRestored": true,
+    "reduceMotionRestored": true,
+    "searchMethodWrapperRestored": true,
+    "findLoadedFlagsResetForRestoredPreferences": true,
+    "mainWindowHidden": true,
+    "independentFramesHidden": true,
+    "independentEditBoxFocusCleared": true,
+    "mainAndIndependentNativeLeasesReleased": true,
+    "mainAndIndependentMotionZero": true,
+    "groupViewsReleased": true,
+    "productSearchCountdownAndFloatingTimersAbsent": true,
+    "floatingDriverStopped": true,
+    "realSearchSuppressedDuringLeaseChecks": true,
+    "realApplicationListingInviteNoteWrites": 0,
+    "connectionClosed": true,
+    "connectionBound": false,
+    "connectionComplete": true,
+    "connectionCleanup": "complete"
+  },
+  "limits": [
+    "Only targeted r19 paths rechecked; first report retains initial four-page, real-search, tooltip and natural-memory observations.",
+    "Product menu and rapid-toggle tests invoke controllers programmatically; no claim about hardware mouse/keyboard hit testing.",
+    "Reentrant focus test uses an ordinary probe-owned EditBox and actual SetFocus callback, not a protected Blizzard input callback.",
+    "No real application, listing, invite or note save was submitted; no active business scene existed.",
+    "Native input lease checks temporarily suppressed Group.Search.Search and restored the exact method; no new real search was required.",
+    "No extended performance sampling, live slider drag cancellation or every callback interleaving was added to this focused pass."
+  ],
+  "evidence": {
+    "journal": ".lycheedev/live/connections/CON-064b09bef43f4aa20b75b81e1c97c291.jsonl",
+    "codeFiles": [
+      ".lycheedev/runtime-r19-focused.lua",
+      ".lycheedev/runtime-r19-coordinate.lua",
+      ".lycheedev/runtime-r19-remaining.lua"
+    ],
+    "retention": "Keep complete .lycheedev/live recovery unit. The failed first report remains part of this evidence."
+  },
+  "outcome": "Targeted runtime checks passed; one strict integer-coordinate probe assertion was diagnosed and corrected using exact before/after engine values. No r19 product/library runtime defect found in this scope."
+}

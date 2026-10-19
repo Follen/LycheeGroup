@@ -401,6 +401,7 @@ function F:ShowPanel()
  elseif not pending and self.countdown then self.countdown:Cancel();self.countdown=nil end
 end
 function F:RefreshClock()
+ if self.recruiting then return end
  local now=GetTime();local pending=false
  for _,entry in ipairs(self.entries) do
   local app=entry.application

@@ -497,7 +497,7 @@ function Tip:ShowGroup(owner,record)
  if self.record~=record or self.owner~=owner then self.expanded=false end
  self:ClearSource();self.record=record
  self.details=UI:GetGroup().Results:GetDetails(record)
- self:ResetInteractive(owner,512);self:RenderGroup()
+ self:CaptureOwner(owner);self:RenderGroup()
 end
 function Tip:RenderGroup()
  local record=self.record;if not record then return end

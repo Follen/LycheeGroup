@@ -248,26 +248,29 @@ local function FinishUpdates(version)
   G.Game.frame:SetScript("OnUpdate",nil);Results.updatePending=nil
  end
 end
-function Results:CancelUpdates()
- G.Game.frame:SetScript("OnUpdate",nil)
- self.updatePending=nil;pendingBulk,committing=nil,nil;wipe(pendingIDs)
+function Results:CancelUpdates(keepApplications)
+ pendingBulk,committing=nil,nil
+ for id in pairs(pendingIDs) do if not keepApplications or not G.Applications:IsActive(id) then pendingIDs[id]=nil end end
+ if not next(pendingIDs) then G.Game.frame:SetScript("OnUpdate",nil);self.updatePending=nil end
 end
 local function FlushUpdates()
  local version,currentScan=updateVersion,scan
  if pendingBulk then
   Results:CommitResults(Results.gen,pendingIDs)
  else
+  local applicationsChanged=false
   for id,queued in pairs(pendingIDs) do
-   if queued<=version then Results:OnResultUpdated(id) end
-   if scan~=currentScan then return end
+   if queued<=version and Results:OnResultUpdated(id,true) then applicationsChanged=true end
+   if scan~=currentScan then break end
   end
-  FinishUpdates(version)
+  if scan==currentScan then FinishUpdates(version) end
+  if applicationsChanged then G:Notify("applications") end
  end
 end
 -- Reuse the event frame and ID set for queued updates. Events received during
 -- a flush keep their newer sequence and are handled by the next frame.
 function Results:QueueUpdate(id)
- if id and not records[id] and not committing then return end
+ if id and not records[id] and not committing and not G.Applications:IsActive(id) then return end
  updateVersion=updateVersion+1
  if id then pendingIDs[id]=updateVersion else pendingBulk=updateVersion end
  if not self.updatePending then
@@ -275,13 +278,14 @@ function Results:QueueUpdate(id)
  end
 end
 function Results:BeginSearch(gen)
- self:CancelUpdates()
+ self:CancelUpdates(true)
  self.gen=gen;scan=scan+1;wipe(records);wipe(detailQueue);wipe(ids);count=0;self:InvalidateView();G:Notify("results")
 end
 function Results:CommitResults(gen,updatedIDs)
  if gen~=self.gen then return end
  scan=scan+1
  local currentScan,version=scan,updateVersion
+ local applicationsChanged=false
  committing=currentScan
  local _,list=C_LFGList.GetFilteredSearchResults()
  if scan~=currentScan then return end
@@ -293,26 +297,43 @@ function Results:CommitResults(gen,updatedIDs)
    record.scan=currentScan;records[id]=record
    if not old then count=count+1 end
   end
+  if record and G.Applications:AdoptResult(id,record) then applicationsChanged=true end
  end
  for id,record in pairs(records) do if record.scan~=currentScan or record.isDelisted then records[id]=nil;count=count-1 end end
  for i=#detailQueue,1,-1 do if not records[detailQueue[i]] then table.remove(detailQueue,i) end end
+ -- A bulk search snapshot does not contain applications from other categories.
+ for id,queued in pairs(pendingIDs) do
+  if queued<=version and not records[id] and G.Applications:IsActive(id) then
+   local record=Normalize(id,G.Applications:GetApplication(id).result,true,currentScan)
+   if scan~=currentScan then return end
+   if record and G.Applications:AdoptResult(id,record) then applicationsChanged=true end
+  end
+ end
  -- A full snapshot consumes prior queued events, never events received during it.
  committing=nil
  FinishUpdates(version)
  self:InvalidateView();G:Notify("results")
+ if applicationsChanged then G:Notify("applications") end
 end
 function Results:FailSearch(gen) if gen==self.gen then self:BeginSearch(gen) end end
-function Results:OnResultUpdated(id)
+function Results:OnResultUpdated(id,deferApplications)
  local record=records[id]
- if not record then return end
+ local inResults=record~=nil
+ if not record then
+  if not G.Applications:IsActive(id) then return end
+  record=G.Applications:GetApplication(id).result
+ end
  local currentScan=scan
  record=Normalize(id,record,true,currentScan)
  if scan~=currentScan then return end
- if not record or record.isDelisted then
+ local applicationChanged=record and G.Applications:AdoptResult(id,record)
+ if inResults and (not record or record.isDelisted) then
   records[id]=nil;count=count-1
   for i=#detailQueue,1,-1 do if detailQueue[i]==id then table.remove(detailQueue,i);break end end
  end
- self:InvalidateView();G:Notify("result",id)
+ if inResults then self:InvalidateView();G:Notify("result",id) end
+ if applicationChanged and not deferApplications then G:Notify("applications") end
+ return applicationChanged
 end
 function Results:GetResults()
  if dirty then

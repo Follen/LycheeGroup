@@ -124,6 +124,26 @@ do
 end
 
 do
+ local reason="  "..string.rep("long import reason ",300).."  "
+ local classSpec="  "..string.rep("legacy specialization ",220).."  "
+ local item={name="重复大记录",server="晨风号角",timestamp=200,reason=reason,classSpec=classSpec}
+ Notes:Merge({item})
+ local original=Notes:Find("重复大记录-晨风号角")
+ local gsub,scans=string.gsub,0
+ string.gsub=function(value,...) if #value>4096 then scans=scans+1 end;return gsub(value,...) end
+ local changed,invalid=Notes:Merge({item});item.timestamp=100
+ local olderChanged,olderInvalid=Notes:Merge({item})
+ string.gsub=gsub
+ T.eq(changed,0);T.eq(invalid,0);T.eq(olderChanged,0);T.eq(olderInvalid,0)
+ T.eq(scans,0,"unchanged or older imports do not rescan discarded long reason/spec text")
+ T.eq(Notes:Find("重复大记录-晨风号角"),original)
+ item.timestamp=300;Notes:Merge({item})
+ T.eq(Notes:Find("重复大记录-晨风号角").reason,reason:match("^%s*(.-)%s*$"),"newer content still receives normal trimming")
+ T.eq(Notes:Find("重复大记录-晨风号角").classSpec,classSpec:match("^%s*(.-)%s*$"))
+ Notes:Remove("重复大记录-晨风号角")
+end
+
+do
 	local imported = {
 		{ name = "旧零时间", server = "晨风号角", timestamp = 0, reason = "旧理由", classSpec = "历史专精原文" },
 		{ name = "旧缺时间", server = "晨风号角", reason = "" },

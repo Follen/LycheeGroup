@@ -96,7 +96,11 @@ end
 function Lease:Release()
  if not self.active then return end
  local owned=self:IsOwned()
- if owned and self.box then self.box:ClearFocus() end
+ if owned and self.box then
+  self.box:ClearFocus()
+  if not self.active then return end
+  owned=self:IsOwned()
+ end
  self.active=false;self.context.nativeControls[self]=nil
  local restoreScripts={}
  for _,item in ipairs(self.scripts) do
@@ -164,12 +168,16 @@ function Library.AttachNative(context)
    local name=event
    lease:Bind(box,name,function(input,previous,...)
     Dispatch(name,input,previous,...)
-    if name=="OnHide" then input:ClearFocus();shell:SetFocused(false)
+    if not lease:IsOwned() then lease:Release();return end
+    if name=="OnHide" then
+     input:ClearFocus()
+     if not lease:IsOwned() then lease:Release();return end
+     shell:SetFocused(false)
     else shell:SetFocused(input:HasFocus(),name=="OnEnter") end
     if name=="OnEditFocusGained" then lease:RefreshStyle() end
    end)
   end
-  for event,callback in pairs(scripts) do
+  for event in pairs(scripts) do
    if not focus[event] then
     local name=event
     lease:Bind(box,name,function(input,previous,...) return Dispatch(name,input,previous,...) end)
@@ -244,6 +252,7 @@ function Library.AttachNative(context)
   button:SetSize(math.max(options.minWidth or 96,label:GetStringWidth()+40),40)
   local inside,pressed
   local function Surface(immediate)
+   if not lease:IsOwned() then lease:Release();return end
    local enabled=button:IsEnabled()
    button:SetAlpha(enabled and 1 or .38)
    M:Color(fill,enabled and (pressed and T.primaryPressed or inside and T.primaryHover) or T.primary,not immediate and .12 or nil)
