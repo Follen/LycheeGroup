@@ -56,6 +56,9 @@ function Tip:Position(frame)
  frame:ClearAllPoints();frame:SetPoint("TOPLEFT",window,"TOPLEFT",x,-y)
 end
 function Tip:IsOwned(owner) return self.owner==owner end
+function Tip:IsResult(id)
+ return self.record~=nil and self.record.id==id and self.interactive~=nil and self.interactive:IsShown()
+end
 function Tip:ClearSource()
  self.record,self.member,self.details,self.sourceApp,self.sourceRoster=nil,nil,nil,nil,nil
  self.memberContext,self.rosterContext,self.directPlayer,self.selectedMemberID,self.applicantID=nil,nil,nil,nil,nil

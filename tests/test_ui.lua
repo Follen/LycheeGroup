@@ -416,7 +416,7 @@ do
  table.sort(headings,function(a,b) return X(a)<X(b) end)
  local labels={};for i,header in ipairs(headings) do labels[i]=header:GetText() end
  T.same(labels,{"申请者","职责","评分","装等","备注","操作"},"party applicant headings follow the visible data columns")
- T.eq(create.applicantHeaders.name:GetWidth(),211,"applicant identity keeps a compact column")
+ T.eq(create.applicantHeaders.name:GetWidth(),262,"applicant identity gains three Chinese character widths")
  local ilvl,rating,comment=create.applicantHeaders.ilvl,create.applicantHeaders.rating,create.applicantHeaders.comment
  local ilvlRight=X(ilvl)+ilvl:GetWidth()
  T.near(ilvlRight-ilvl:GetStringWidth()-X(rating)-rating:GetWidth(),X(comment)-ilvlRight,.001,"party item level has equal visible gaps to rating and notes")
@@ -464,7 +464,7 @@ do
  U:CloseMenu()
  listing.activityID=oldActivity;G:Notify("listing")
  T.eq(create.applicantHeaders.rating:IsShown(),true);T.eq(batch.people[1].score:IsShown(),true)
- T.eq(batch.people[1].score:GetText(),"2200");T.near(batch.comment:GetWidth(),242.2,.001,"reused dungeon batches restore score space")
+ T.eq(batch.people[1].score:GetText(),"2200");T.near(batch.comment:GetWidth(),191.2,.001,"reused dungeon batches restore score space")
  Pick(create.sortChoice,"score");Pick(create.sortChoice,"newest")
 end
 
@@ -2866,7 +2866,7 @@ do
  T.eq(batch.invite:IsShown(),false);T.eq(batch.decline:IsShown(),false)
  T.eq(applicant.title:GetText(),person.nameKey);T.eq(applicant.meta,nil,"applicants have no generic note text under the name")
  T.eq(applicant.title.wrap,true);T.ok(applicant.title:GetStringHeight()<=applicant:GetHeight())
- T.ok(56+applicant.title:GetWidth()+24+6+applicant.marks:GetWidth()<=223,"full name, faction and marks fit the name column")
+ T.ok(56+applicant.title:GetWidth()+24+6+applicant.marks:GetWidth()<=274,"full name, faction and marks fit the name column")
  point={applicant.marks:GetPoint()};T.eq(point[2],applicant.faction);T.eq(point[3],"RIGHT");T.eq(point[5],0)
  a.Notes:Edit(person.nameKey,"Caution",{type="caution"})
  T.eq(applicant.marks.noteButton.icon:GetTexture(),u.Theme.media.."caution.tga","the pooled note button follows the actual current note type")
@@ -3090,4 +3090,65 @@ do
  T.eq(fresh.base.PendingTimers(),0)
  u:Hide();u.Motion:Tick(.5)
  T.eq(page.unsub,nil);T.eq(next(g.views),nil);T.eq(u.Motion.jobs[page.batchScroll],nil)
+end
+
+-- Search and saved-application details follow the current leader and faction.
+do
+ for _,notification in ipairs({"result","results","applications"}) do
+  local fresh=dofile("tests/ui_fixture.lua")("zhCN",{find={category="3",categoryPrefs={["3"]={selected=true}}}})
+  local a,u,g=fresh.A,fresh.U,fresh.G;a.db.reduceMotion=true;a.db.raidMembers="shift"
+  EJ_GetDifficulty=function() return 14 end;EJ_SelectInstance=function() end;EJ_GetEncounterInfoByIndex=function() end
+  local alpha={name="Alpha-Away",nameKey="Alpha-Away",class="WARRIOR",assignedRole="TANK",isLeader=true,factionGroup=1}
+  local beta={name="Beta-Away",nameKey="Beta-Away",class="MAGE",assignedRole="DAMAGER"}
+  local record={id=7,activityID=1,activity=g.Catalog:GetActivity(1),categoryID=3,name="Raid group",comment=string.rep("Complete description. ",200),leaderName=alpha.name,leaderKey=alpha.nameKey,leaderFactionGroup=1,numMembers=2,maxNumPlayers=30,age=10,details={members={alpha,beta},counts={TANK=1,HEALER=0,DAMAGER=1}}}
+  local other={id=8,activityID=1,activity=record.activity,categoryID=3,name="Other group",leaderName="Other-Away",leaderKey="Other-Away",leaderFactionGroup=1,numMembers=1,maxNumPlayers=30,age=20,details={members={{name="Other-Away",nameKey="Other-Away",class="MAGE",isLeader=true,factionGroup=1}},counts={TANK=0,HEALER=0,DAMAGER=1}}}
+  g.records[7],g.records[8]=record,other
+  local application={id=7,status="applied",categoryID=3,name=record.name,leaderName=alpha.name,result=record,expiresAt=GetTime()+300}
+  if notification=="applications" then g.apps={application} end
+  a:Open("find")
+  local page,tip=u.pages.find,u.Tooltip
+  local list=notification=="applications" and page.appList or page.results
+  local function RowFor(target,id) for _,row in ipairs(target.rows) do if row.key==id then return row end end end
+  local row=RowFor(list,7);list.clip.mouseOver=true;row.mouseOver=true;row.tooltipArea:Fire("OnEnter")
+  local view=tip.interactive;view:Fire("OnEvent","MODIFIER_STATE_CHANGED","LSHIFT",1)
+  T.eq(view:GetWidth(),1080);tip.pinned=true;tip.outsideClicks:Show();view.scrollbar:SetValue(48)
+  local scroll,x,y=view.scroll:GetVerticalScroll(),tip.positionX,tip.positionY
+  T.eq(scroll,48,"the full description gives the tooltip a real scroll position to preserve")
+  local render=tip.RenderGroup;local renders=0
+  tip.RenderGroup=function(self,...) renders=renders+1;return render(self,...) end
+  if notification=="result" then
+   local details=g.Results.GetDetails;local reads=0
+   g.Results.GetDetails=function(self,current) if current.id==7 then reads=reads+1 end;return details(self,current) end
+   g:Notify("result",8);u.Motion:Tick(.02)
+   T.eq(renders,0,"another result does not redraw the open tooltip")
+   T.eq(reads,1,"an unrelated result adds no detail lookup beyond the existing visible-row refresh")
+   g.Results.GetDetails=details
+  end
+  record.leaderName,record.leaderKey,record.leaderFactionGroup=beta.name,beta.nameKey,0;application.leaderName=beta.name
+  alpha.isLeader,alpha.factionGroup=nil,nil;beta.isLeader,beta.factionGroup=true,0
+  g:Notify(notification,7)
+  if notification=="result" then
+   g:Notify(notification,7)
+   T.eq(renders,0,"single-result tooltip updates wait for the existing frame batch")
+  end
+  u.Motion:Tick(.02)
+  T.eq(renders,1,notification.." refreshes the open source once after its rows")
+  T.eq(row.leader:GetText(),"Beta");T.eq(view.leader:GetText(),beta.name,"the tooltip follows the changed group leader")
+  local alphaRow,betaRow
+  for _,memberRow in ipairs(view.memberButtons) do
+   if memberRow.member==alpha then alphaRow=memberRow elseif memberRow.member==beta then betaRow=memberRow end
+  end
+  T.eq(alphaRow.faction:IsShown(),false,"the former leader loses its unsupported faction marker")
+  T.eq(betaRow.faction:GetTexture(),"Interface\\AddOns\\LycheeGroup_UI\\Media\\faction-horde.tga");T.ok(betaRow.faction:IsShown())
+  T.eq(tip.expanded,true);T.eq(tip.pinned,true);T.eq(view:GetWidth(),1080)
+  T.eq(view.scroll:GetVerticalScroll(),scroll);T.eq(tip.positionX,x);T.eq(tip.positionY,y)
+  if notification=="result" then
+   g:Notify("result",7);tip:Hide()
+   local nextRow=RowFor(page.results,8);nextRow.mouseOver=true;nextRow.tooltipArea:Fire("OnEnter");renders=0
+   u.Motion:Tick(.02)
+   T.eq(renders,0,"a queued result does not redraw a different tooltip opened before the batch")
+   T.eq(tip.record,other)
+  end
+  u:Hide(true)
+ end
 end

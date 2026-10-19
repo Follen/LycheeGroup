@@ -825,8 +825,9 @@ function UI:ShowApplicationLimit()
  if self.page~="find" or not P.frame or not P.frame:IsShown() then A:Open("find",{applicationLimit=true})
  else P:ShowApplicationLimit() end
 end
-function P:RefreshResults()
+function P:RefreshResults(refreshTooltip)
  M:Stop(self)
+ local tooltipResultID=self.pendingTooltipResultID;self.pendingTooltipResultID=nil
  if not self.frame or not self.frame:IsShown() or UI.hiding then return end
  local raid=Category().id==3
  if self.raidResultColumns~=raid then
@@ -842,6 +843,7 @@ function P:RefreshResults()
  end
  self:RefreshApplications();local ids=state.browseReady and UI:GetGroup():GetResults() or {};self.results:SetItems(ids,RenderResult);UI:SetText(self.resultCount,Say("%d 支队伍","%d groups"):format(#ids))
  self:RefreshSearchState()
+ if refreshTooltip or tooltipResultID and UI.Tooltip:IsResult(tooltipResultID) then UI.Tooltip:RefreshRelations() end
 end
 function P:RefreshSearchState()
  if not self.frame or not self.frame:IsShown() or UI.hiding then return end
@@ -903,7 +905,7 @@ function P:OpenResultMenu(anchor,id,cursor)
  end,{cursor=cursor~=false})
 end
 function P:OnNotesChanged()
- if self.frame and self.frame:IsShown() then UI:GetGroup().Results:InvalidateView();self:RefreshResults();UI.Tooltip:RefreshRelations() end
+ if self.frame and self.frame:IsShown() then UI:GetGroup().Results:InvalidateView();self:RefreshResults(true) end
 end
 function P:WatchNotes()
  if self.notesUnsub then self.notesUnsub();self.notesUnsub=nil end
@@ -947,10 +949,12 @@ function P:Enter(context)
  if not self.unsub then self.unsub=UI:GetGroup():Subscribe(function(kind,id)
   if kind=="activities" then P:RefreshCategories();P:RefreshPicker();P:UpdateFilters()
   elseif kind=="applicationCancelled" then P:OnApplicationCancelled(id)
-  elseif kind=="result" then M:Start(P,RefreshPendingResults)
-  elseif kind=="relations" then P:RefreshResults();UI.Tooltip:RefreshRelations()
+  elseif kind=="result" then
+   if UI.Tooltip:IsResult(id) then P.pendingTooltipResultID=id end
+   M:Start(P,RefreshPendingResults)
+  elseif kind=="relations" then P:RefreshResults(true)
   elseif kind=="search" then P:RefreshSearchState()
-  elseif kind=="results" or kind=="applications" then P:RefreshResults() end
+  elseif kind=="results" or kind=="applications" then P:RefreshResults(true) end
  end) end
  self:WatchNotes();self:RefreshCategories();self:RefreshPicker();self:UpdateFilters();self:SetFiltersOpen(self.filtersOpen)
  self:OnSearchTextChanged(self.search.box)
@@ -960,7 +964,7 @@ function P:Enter(context)
   if context and context.leaderKey or UI:GetGroup().Search.abandoned or searchState=="idle" or searchState~="searching" and UI:GetGroup().Search.categoryKey~=state.category then self:DoSearch() end
 end
 function P:Leave()
- M:Stop(self)
+ M:Stop(self);self.pendingTooltipResultID=nil
  UI.Native:ReleaseSearch();self.searchAvailable,self.searchError=nil,nil
  self:DismissApplicationNotice()
  if self.unsub then self.unsub();self.unsub=nil end;if self.notesUnsub then self.notesUnsub();self.notesUnsub=nil end

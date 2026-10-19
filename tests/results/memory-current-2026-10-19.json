@@ -1,0 +1,766 @@
+{
+  "schema": "lycheegroup.current-memory-investigation.v1",
+  "date": "2026-10-19",
+  "clientBuild": "12.1.5.70448",
+  "interface": 120105,
+  "runtimeProductVersion": "1.0.5",
+  "workspaceHead": "9a39958e8cb440207b2d54f55069b797ce3030cf",
+  "runtimeScope": "Existing client; no deployment or reload during the investigation. Current source edits were not loaded.",
+  "session": "CON-e2ddc5b968dbdc5d0bb640c70d4b176c",
+  "connectionClosed": true,
+  "units": "Native AddOn counters in KB; MB = KB * 1024 / 1000000.",
+  "findings": {
+    "reported31MBPeak": "Already garbage-collected before capture; exact composition of that historical peak is unavailable.",
+    "initialFourPackageMB": 19.3318,
+    "nativeRefreshDeltaMB": 2.165548,
+    "nativeRefreshGroupShare": 0.9811096313727519,
+    "finalCollectedMB": 3.475142,
+    "finalRetainedMB": 7.670943,
+    "retainedPackageMB": [
+      1.013963,
+      2.593753,
+      0.040633,
+      4.022594
+    ]
+  },
+  "limitations": [
+    "Package attribution is native AddOn accounting, not exact per-table retained bytes or GPU/process memory.",
+    "Direct API microbenchmarks report synchronous whole-Lua-heap deltas with natural GC enabled; they do not count actual production calls.",
+    "UI object counts are deduplicated across known roots and may include borrowed native children; they do not assign bytes.",
+    "Only existing dungeon search data was operated; no active applicant scene was available during this capture.",
+    "Three searches and sampled peaks do not prove the 20 MB ceiling or absence of leaks in all scenes."
+  ],
+  "probes": {
+    "initial": {
+      "operation": "LMO-3db20b36127e5ee267203ada457d82aa",
+      "request": "memory-current-natural-v1",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "sourceSHA256": "e3d91757ee4642f876e66db5535bb74feee8faa63c671327b71b60e40dff6d75",
+      "report": {
+        "logs": {},
+        "ok": true,
+        "resourcesReleased": true,
+        "result": {
+          "client": [
+            "12.1.5",
+            "70448",
+            "Oct 15 2026",
+            120105,
+            "",
+            " "
+          ],
+          "explicitGC": false,
+          "heapKB": 508644.55859375,
+          "packages": [
+            {
+              "cachedKB": 1475.416015625,
+              "currentKB": 1476.2099609375,
+              "name": "LycheeGroup",
+              "version": "1.0.5"
+            },
+            {
+              "cachedKB": 11493.544921875,
+              "currentKB": 12085.208984375,
+              "name": "LycheeGroup_Group",
+              "version": "1.0.5"
+            },
+            {
+              "cachedKB": 122.7705078125,
+              "currentKB": 122.7705078125,
+              "name": "LycheeGroup_Notes",
+              "version": "1.0.5"
+            },
+            {
+              "cachedKB": 5083.2578125,
+              "currentKB": 5194.521484375,
+              "name": "LycheeGroup_UI",
+              "version": "1.0.5"
+            }
+          ],
+          "refreshMs": 93.89450000226498,
+          "scene": {
+            "activeListing": false,
+            "combat": false,
+            "groupLoaded": true,
+            "motionJobs": 0,
+            "page": "find",
+            "preview": false,
+            "rosterSize": 0,
+            "uiLoaded": true,
+            "uiShown": true
+          },
+          "totalKB": 18878.7109375
+        }
+      }
+    },
+    "browse": {
+      "operation": "LMO-0540e7ef87aec37194f3d69b5ad2da4e",
+      "request": "memory-find-phases-v1",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "sourceSHA256": "66cd9f3fb208c7299d3d754e443670a0ef6ad637b174b78ba5be9dc114acec2c",
+      "report": {
+        "logs": {},
+        "ok": true,
+        "resourcesReleased": true,
+        "result": {
+          "cleanup": {
+            "restoresOffset": true,
+            "stopsTimer": true,
+            "unregistersEvents": true
+          },
+          "events": {
+            "LFG_LIST_SEARCH_RESULT_UPDATED": 6
+          },
+          "operations": {
+            "tips": 6,
+            "wheel": 12
+          },
+          "packages": [
+            "LycheeGroup",
+            "LycheeGroup_Group",
+            "LycheeGroup_Notes",
+            "LycheeGroup_UI"
+          ],
+          "samples": [
+            {
+              "addonsKB": [
+                1013.916015625,
+                3133.0234375,
+                39.6806640625,
+                4060.8037109375
+              ],
+              "at": 0.5,
+              "events": {},
+              "gcMs": 0,
+              "heapKB": 433971.61328125,
+              "refreshMs": 80.16310000419617,
+              "structure": {
+                "cachedDetails": 33,
+                "detailMembers": 72,
+                "dirtyDetails": 10,
+                "filtered": 52,
+                "motions": 0,
+                "results": 52,
+                "rowPool": 9,
+                "tooltipMemberPool": 29
+              },
+              "tag": "baseline",
+              "totalKB": 8247.423828125
+            },
+            {
+              "addonsKB": [
+                1009.853515625,
+                3127.4609375,
+                39.6806640625,
+                4060.8037109375
+              ],
+              "at": 8.51600000000326,
+              "events": {},
+              "gcMs": 0,
+              "heapKB": 432925.87890625,
+              "refreshMs": 81.37250000238419,
+              "structure": {
+                "cachedDetails": 33,
+                "detailMembers": 72,
+                "dirtyDetails": 10,
+                "filtered": 52,
+                "motions": 0,
+                "results": 52,
+                "rowPool": 9,
+                "tooltipMemberPool": 29
+              },
+              "tag": "idle_8s",
+              "totalKB": 8237.798828125
+            },
+            {
+              "addonsKB": [
+                1010.3955078125,
+                3186.828125,
+                39.6806640625,
+                4129.72265625
+              ],
+              "at": 15.539000000004307,
+              "events": {
+                "LFG_LIST_SEARCH_RESULT_UPDATED": 5
+              },
+              "gcMs": 0,
+              "heapKB": 434236.0712890625,
+              "refreshMs": 80.60689999163151,
+              "structure": {
+                "cachedDetails": 50,
+                "detailMembers": 99,
+                "dirtyDetails": 9,
+                "filtered": 50,
+                "motions": 0,
+                "results": 50,
+                "rowPool": 9,
+                "tooltipMemberPool": 29
+              },
+              "tag": "scroll_12_wheels",
+              "totalKB": 8366.626953125
+            },
+            {
+              "addonsKB": [
+                1010.4580078125,
+                3191.2734375,
+                39.6806640625,
+                4132.28125
+              ],
+              "at": 22.539000000004307,
+              "events": {
+                "LFG_LIST_SEARCH_RESULT_UPDATED": 6
+              },
+              "gcMs": 0,
+              "heapKB": 435412.40625,
+              "refreshMs": 83.44750000536442,
+              "structure": {
+                "cachedDetails": 50,
+                "detailMembers": 99,
+                "dirtyDetails": 9,
+                "filtered": 50,
+                "motions": 0,
+                "results": 50,
+                "rowPool": 9,
+                "tooltipMemberPool": 29
+              },
+              "tag": "tips_6_groups",
+              "totalKB": 8373.693359375
+            },
+            {
+              "addonsKB": [
+                1010.4580078125,
+                3191.2734375,
+                39.6806640625,
+                4132.28125
+              ],
+              "at": 24.546000000002095,
+              "events": {
+                "LFG_LIST_SEARCH_RESULT_UPDATED": 6
+              },
+              "gcMs": 0,
+              "heapKB": 435689.951171875,
+              "refreshMs": 83.22679999470711,
+              "structure": {
+                "cachedDetails": 50,
+                "detailMembers": 99,
+                "dirtyDetails": 9,
+                "filtered": 50,
+                "motions": 0,
+                "results": 50,
+                "rowPool": 9,
+                "tooltipMemberPool": 29
+              },
+              "tag": "natural_end",
+              "totalKB": 8373.693359375
+            },
+            {
+              "addonsKB": [
+                990.126953125,
+                2603.7744140625,
+                39.6806640625,
+                3928.1943359375
+              ],
+              "at": 25.046000000002095,
+              "events": {
+                "LFG_LIST_SEARCH_RESULT_UPDATED": 6
+              },
+              "gcMs": 193.7655000090599,
+              "heapKB": 419243.603515625,
+              "refreshMs": 74.4057999998331,
+              "structure": {
+                "cachedDetails": 50,
+                "detailMembers": 99,
+                "dirtyDetails": 9,
+                "filtered": 50,
+                "motions": 0,
+                "results": 50,
+                "rowPool": 9,
+                "tooltipMemberPool": 29
+              },
+              "tag": "diagnostic_gc",
+              "totalKB": 7561.7763671875
+            }
+          ],
+          "scope": "existing real search; no search request or application",
+          "started": 71513.636
+        }
+      }
+    },
+    "composition": {
+      "operation": "LMO-fcaa21c035852d29036f82ea465254f7",
+      "request": "memory-composition-v1",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "sourceSHA256": "a17e226a11e5f4557308fbe75c718c69265c32d59fa8a114a8ef651ffb9ce8bc",
+      "report": {
+        "logs": {},
+        "ok": true,
+        "resourcesReleased": true,
+        "result": {
+          "explicitGC": false,
+          "input": {
+            "categoryID": 2,
+            "maxPlayers": 5,
+            "members": 1
+          },
+          "packages": [
+            "LycheeGroup",
+            "LycheeGroup_Group",
+            "LycheeGroup_Notes",
+            "LycheeGroup_UI"
+          ],
+          "reads": [
+            {
+              "calls": 100,
+              "heapDeltaKB": 309.8828125,
+              "ms": 0.5843999981880188,
+              "name": "native_search_result_info",
+              "naturalGC": true
+            },
+            {
+              "calls": 100,
+              "heapDeltaKB": 123.9453125,
+              "ms": 0.1899999976158142,
+              "name": "native_search_player_info",
+              "naturalGC": true
+            },
+            {
+              "calls": 100,
+              "heapDeltaKB": 495.0810546875,
+              "ms": 1.011900007724762,
+              "name": "native_member_counts",
+              "naturalGC": true
+            },
+            {
+              "calls": 100,
+              "heapDeltaKB": 311.703125,
+              "ms": 1.3226999938488007,
+              "name": "normalized_private_result",
+              "naturalGC": true
+            },
+            {
+              "calls": 100,
+              "heapDeltaKB": 200.109375,
+              "ms": 1.2187000066041946,
+              "name": "private_member_details",
+              "naturalGC": true
+            }
+          ],
+          "structure": {
+            "activities": 847,
+            "activityGroups": 11,
+            "applicants": 0,
+            "applications": 0,
+            "creationPresets": 0,
+            "historyRuns": 0,
+            "journalTiers": 213,
+            "notes": 0,
+            "pages": {
+              "create": true,
+              "find": true,
+              "notes": true,
+              "settings": true
+            },
+            "resultDetails": 40,
+            "resultMembers": 67,
+            "results": 40,
+            "roster": 1,
+            "rowPool": 9,
+            "uiObjects": {
+              "Button": 376,
+              "CheckButton": 12,
+              "EditBox": 10,
+              "FontString": 1047,
+              "Frame": 471,
+              "MaskTexture": 243,
+              "ScrollFrame": 15,
+              "Slider": 15,
+              "Texture": 7511
+            },
+            "uiObjectsTruncated": false
+          }
+        }
+      }
+    },
+    "refresh": {
+      "operation": "LMO-5d9452b6e3bbd62a5b2970fab284bd26",
+      "request": "memory-native-refresh-current-v1",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "sourceSHA256": "4fe8515a85d388ded9c7cc4713db599fb230d4d67fadd8b6066ea2dbdce87bef",
+      "report": {
+        "logs": {},
+        "ok": true,
+        "resourcesReleased": true,
+        "result": {
+          "elapsed": 25.77400000000489,
+          "events": {
+            "LFG_LIST_SEARCH_RESULTS_RECEIVED": 3,
+            "LFG_LIST_SEARCH_RESULT_UPDATED": 414
+          },
+          "explicitGC": false,
+          "packages": [
+            "LycheeGroup",
+            "LycheeGroup_Group",
+            "LycheeGroup_Notes",
+            "LycheeGroup_UI"
+          ],
+          "requests": [
+            {
+              "after": 43,
+              "at": 1.0240000000048894,
+              "before": 42,
+              "state": "searching"
+            },
+            {
+              "after": 44,
+              "at": 9.123999999996158,
+              "before": 43,
+              "state": "searching"
+            },
+            {
+              "after": 45,
+              "at": 17.210000000006403,
+              "before": 44,
+              "state": "searching"
+            }
+          ],
+          "samples": [
+            {
+              "addonsKB": [
+                991.0546875,
+                3317.5556640625,
+                39.6806640625,
+                3950.8427734375
+              ],
+              "at": 0.5,
+              "events": {},
+              "heapKB": 446869.9013671875,
+              "refreshMs": 88.16699999570847,
+              "results": 38,
+              "state": "done",
+              "tag": "baseline",
+              "totalKB": 8299.1337890625
+            },
+            {
+              "addonsKB": [
+                991.0546875,
+                3319.0634765625,
+                39.6806640625,
+                3952.759765625
+              ],
+              "at": 2.0240000000048894,
+              "events": {
+                "LFG_LIST_SEARCH_RESULT_UPDATED": 62
+              },
+              "heapKB": 447135.1123046875,
+              "refreshMs": 87.3108000010252,
+              "results": 0,
+              "state": "searching",
+              "tag": "natural",
+              "totalKB": 8302.55859375
+            },
+            {
+              "addonsKB": [
+                991.0546875,
+                3319.0634765625,
+                39.6806640625,
+                3952.759765625
+              ],
+              "at": 4.047999999995227,
+              "events": {
+                "LFG_LIST_SEARCH_RESULT_UPDATED": 63
+              },
+              "heapKB": 447494.181640625,
+              "refreshMs": 92.23870000243187,
+              "results": 0,
+              "state": "searching",
+              "tag": "natural",
+              "totalKB": 8302.55859375
+            },
+            {
+              "addonsKB": [
+                991.4453125,
+                3996.6806640625,
+                39.6806640625,
+                3967.7841796875
+              ],
+              "at": 6.076000000000931,
+              "events": {
+                "LFG_LIST_SEARCH_RESULTS_RECEIVED": 1,
+                "LFG_LIST_SEARCH_RESULT_UPDATED": 145
+              },
+              "heapKB": 451256.8095703125,
+              "refreshMs": 87.37729999423027,
+              "results": 98,
+              "state": "done",
+              "tag": "natural",
+              "totalKB": 8995.5908203125
+            },
+            {
+              "addonsKB": [
+                991.4453125,
+                4006.4541015625,
+                39.6806640625,
+                3967.828125
+              ],
+              "at": 8.10000000000582,
+              "events": {
+                "LFG_LIST_SEARCH_RESULTS_RECEIVED": 1,
+                "LFG_LIST_SEARCH_RESULT_UPDATED": 148
+              },
+              "heapKB": 451623.833984375,
+              "refreshMs": 87.58269999921322,
+              "results": 97,
+              "state": "done",
+              "tag": "natural",
+              "totalKB": 9005.408203125
+            },
+            {
+              "addonsKB": [
+                991.4453125,
+                4011.2197265625,
+                39.6806640625,
+                3969.2626953125
+              ],
+              "at": 10.123999999996158,
+              "events": {
+                "LFG_LIST_SEARCH_RESULTS_RECEIVED": 1,
+                "LFG_LIST_SEARCH_RESULT_UPDATED": 202
+              },
+              "heapKB": 451981.3837890625,
+              "refreshMs": 93.05660000443459,
+              "results": 0,
+              "state": "searching",
+              "tag": "natural",
+              "totalKB": 9011.6083984375
+            },
+            {
+              "addonsKB": [
+                991.4453125,
+                4011.2197265625,
+                39.6806640625,
+                3969.2626953125
+              ],
+              "at": 12.153000000005704,
+              "events": {
+                "LFG_LIST_SEARCH_RESULTS_RECEIVED": 1,
+                "LFG_LIST_SEARCH_RESULT_UPDATED": 202
+              },
+              "heapKB": 452338.119140625,
+              "refreshMs": 89.55160000920296,
+              "results": 0,
+              "state": "searching",
+              "tag": "natural",
+              "totalKB": 9011.6083984375
+            },
+            {
+              "addonsKB": [
+                991.6396484375,
+                4690.1025390625,
+                39.6806640625,
+                3979.197265625
+              ],
+              "at": 14.179000000003725,
+              "events": {
+                "LFG_LIST_SEARCH_RESULTS_RECEIVED": 2,
+                "LFG_LIST_SEARCH_RESULT_UPDATED": 295
+              },
+              "heapKB": 456272.4443359375,
+              "refreshMs": 94.7947999984026,
+              "results": 98,
+              "state": "done",
+              "tag": "natural",
+              "totalKB": 9700.6201171875
+            },
+            {
+              "addonsKB": [
+                991.6396484375,
+                4716.1650390625,
+                39.6806640625,
+                3979.197265625
+              ],
+              "at": 16.210000000006403,
+              "events": {
+                "LFG_LIST_SEARCH_RESULTS_RECEIVED": 2,
+                "LFG_LIST_SEARCH_RESULT_UPDATED": 303
+              },
+              "heapKB": 456640.9833984375,
+              "refreshMs": 95.5494000017643,
+              "results": 96,
+              "state": "done",
+              "tag": "natural",
+              "totalKB": 9726.6826171875
+            },
+            {
+              "addonsKB": [
+                991.6396484375,
+                4724.1884765625,
+                39.6806640625,
+                3980.587890625
+              ],
+              "at": 18.210000000006403,
+              "events": {
+                "LFG_LIST_SEARCH_RESULTS_RECEIVED": 2,
+                "LFG_LIST_SEARCH_RESULT_UPDATED": 349
+              },
+              "heapKB": 457048.4873046875,
+              "refreshMs": 98.72789999842644,
+              "results": 0,
+              "state": "searching",
+              "tag": "natural",
+              "totalKB": 9736.0966796875
+            },
+            {
+              "addonsKB": [
+                991.6396484375,
+                4724.1884765625,
+                39.6806640625,
+                3980.587890625
+              ],
+              "at": 20.211999999999534,
+              "events": {
+                "LFG_LIST_SEARCH_RESULTS_RECEIVED": 2,
+                "LFG_LIST_SEARCH_RESULT_UPDATED": 349
+              },
+              "heapKB": 457415.84375,
+              "refreshMs": 89.50329999625683,
+              "results": 0,
+              "state": "searching",
+              "tag": "natural",
+              "totalKB": 9736.0966796875
+            },
+            {
+              "addonsKB": [
+                991.7919921875,
+                5372.8525390625,
+                39.6806640625,
+                3990.0546875
+              ],
+              "at": 22.239000000001397,
+              "events": {
+                "LFG_LIST_SEARCH_RESULTS_RECEIVED": 3,
+                "LFG_LIST_SEARCH_RESULT_UPDATED": 408
+              },
+              "heapKB": 461016.734375,
+              "refreshMs": 90.60310000181198,
+              "results": 100,
+              "state": "done",
+              "tag": "natural",
+              "totalKB": 10394.3798828125
+            },
+            {
+              "addonsKB": [
+                991.7919921875,
+                5379.3681640625,
+                39.6806640625,
+                3990.0546875
+              ],
+              "at": 24.2670000000071,
+              "events": {
+                "LFG_LIST_SEARCH_RESULTS_RECEIVED": 3,
+                "LFG_LIST_SEARCH_RESULT_UPDATED": 410
+              },
+              "heapKB": 461411.7919921875,
+              "refreshMs": 103.87619999051094,
+              "results": 99,
+              "state": "done",
+              "tag": "natural",
+              "totalKB": 10400.8955078125
+            },
+            {
+              "addonsKB": [
+                991.7919921875,
+                5392.3994140625,
+                39.6806640625,
+                3990.0546875
+              ],
+              "at": 25.77400000000489,
+              "events": {
+                "LFG_LIST_SEARCH_RESULTS_RECEIVED": 3,
+                "LFG_LIST_SEARCH_RESULT_UPDATED": 414
+              },
+              "heapKB": 461767.748046875,
+              "refreshMs": 91.7580000013113,
+              "results": 99,
+              "state": "done",
+              "tag": "final",
+              "totalKB": 10413.9267578125
+            }
+          ],
+          "scope": "three ordinary current-category searches at 8-second intervals",
+          "started": 71674.614
+        }
+      }
+    },
+    "retained": {
+      "operation": "LMO-e1d6ff82dfeeda52e128484d36af232f",
+      "request": "memory-final-retained-v1",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "sourceSHA256": "1237a63072f46a925982cbd0feff52df5b23c8b9bd5c2ab18b1476dbe2be9397",
+      "report": {
+        "logs": {},
+        "ok": true,
+        "resourcesReleased": true,
+        "result": {
+          "faction": {
+            "allianceID": 1,
+            "allianceToken": "Alliance",
+            "hordeID": 0,
+            "hordeToken": "Horde",
+            "playerID": 1,
+            "playerToken": "Alliance"
+          },
+          "final": {
+            "motionJobs": 0,
+            "resultUpdatePending": false,
+            "rows": 9
+          },
+          "packages": [
+            "LycheeGroup",
+            "LycheeGroup_Group",
+            "LycheeGroup_Notes",
+            "LycheeGroup_UI"
+          ],
+          "samples": [
+            {
+              "addonsKB": [
+                991.8642578125,
+                5854.6416015625,
+                39.6806640625,
+                3998.662109375
+              ],
+              "gcMs": 0,
+              "heapKB": 476149.693359375,
+              "refreshMs": 97.60629999637604,
+              "tag": "before_gc",
+              "totalKB": 10884.8486328125
+            },
+            {
+              "addonsKB": [
+                990.1982421875,
+                2532.9619140625,
+                39.6806640625,
+                3928.314453125
+              ],
+              "gcMs": 196.90879999101162,
+              "heapKB": 420811.087890625,
+              "refreshMs": 87.32909999787807,
+              "tag": "after_gc",
+              "totalKB": 7491.1552734375
+            }
+          ],
+          "scene": {
+            "page": "find",
+            "results": 81,
+            "searchState": "done",
+            "shown": true
+          }
+        }
+      }
+    }
+  }
+}

@@ -7,15 +7,15 @@ local FORM=math.min(820,MAIN-48)
 local CONTENT=MAIN-48
 local BATCH_WIDTH=CONTENT-C.listRightInset
 local columns={
- name={x=12,width=211,align="LEFT"},role={x=247,width=66,align="CENTER"},
- rating={x=337,width=76,align="RIGHT"},ilvl={x=437,width=78,align="RIGHT"},
- comment={x=547,width=BATCH_WIDTH-655,align="LEFT"},actions={x=BATCH_WIDTH-96,width=84,align="CENTER"},
+ name={x=12,width=262,align="LEFT"},role={x=298,width=66,align="CENTER"},
+ rating={x=388,width=76,align="RIGHT"},ilvl={x=488,width=78,align="RIGHT"},
+ comment={x=598,width=BATCH_WIDTH-706,align="LEFT"},actions={x=BATCH_WIDTH-96,width=84,align="CENTER"},
 }
 local MEMBER_HEIGHT,MEMBER_STRIDE=72,76
 local FAVORITE_HEIGHT=128
 local noRatingColumns={
- name=columns.name,role=columns.role,ilvl={x=337,width=78,align="RIGHT"},
- comment={x=447,width=BATCH_WIDTH-555,align="LEFT"},
+ name=columns.name,role=columns.role,ilvl={x=388,width=78,align="RIGHT"},
+ comment={x=498,width=BATCH_WIDTH-606,align="LEFT"},
  rating=columns.rating,actions=columns.actions,
 }
 local applicantSorts={{value="newest",label=L.newest},{value="score",label=L.rating},{value="ilvl",label=L.itemLevel}}

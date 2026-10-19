@@ -1,0 +1,11 @@
+Tool: built-in image_gen; true transparent RGBA output.
+Status: integrated as addon/LycheeGroup_UI/Media/battlenet-friend.tga.
+Source: battlenet-symbol-v2.png (1254 x 1254).
+Runtime: 128 x 128, uncompressed 32-bit BGRA TGA, alpha retained.
+Export: uniform downscale and format conversion only; no manual shape or background edits.
+
+Initial prompt:
+Use case: logo-brand. Asset type: a tiny Battle.net friends status icon for a World of Warcraft addon, displayed at 18 to 24 pixels on a charcoal UI. Primary request: generate the recognizable Battle.net emblem only, as a clean flat raster icon: the familiar three interlocking curved orbital swooshes forming the Battle.net swirl, with an open center and clear negative spaces. Use a single vivid cyan-blue fill, close to #26B9F5. Make the curves thick, crisp and balanced so the emblem stays legible at tiny UI sizes. Center one emblem on a square canvas, with about 8 percent transparent padding on each edge. Truly transparent RGBA background. No human head, no person, no silhouette, no bust, no avatar, no friend badge, no dot, no letters, no wordmark, no text, no border, no enclosing square or circle, no gradient, no lighting, no shadow, no glow, no bevel, no 3D. The output should contain only the flat cyan Battle.net symbol and transparent pixels.
+
+Final edit prompt:
+Use case: precise-object-edit. Edit the supplied cyan Battle.net symbol. Preserve its recognizable three interlocking orbital swoosh emblem and its overall centered shape. Clean it into a precise, flat tiny UI icon: every swoosh is a perfectly solid uniform cyan-blue #26B9F5 with crisp smooth antialiased edges. Remove ALL cyan speckles, scattered pixels, scratches, remnants, texture and colored noise from the transparent background and from every negative-space opening. The entire exterior background and the open spaces between the swooshes must be truly transparent, absolutely clean. Only the three smooth, solid orbital swooshes remain. No gradients, highlights, shading, glow or 3D. Keep the full emblem within the square with at least 8% clear transparent margin. No head, people, avatar, badge, letters or words. Output one clean transparent RGBA game icon.
