@@ -260,8 +260,8 @@ function P:BuildRaidBuffs()
 end
 function P:BuildRosterList()
  local list=CreateFrame("Frame",nil,self.rosterCard);list:SetPoint("TOPLEFT",20,-56);list:SetWidth(248);self.rosterList=list
- local clip=CreateFrame("ScrollFrame",nil,list);clip:SetPoint("TOPLEFT");clip:SetPoint("BOTTOMRIGHT",-C.listRightInset,0);list.clip=clip
- local body=CreateFrame("Frame",nil,clip);body:SetWidth(248-C.listRightInset);body:SetHeight(1);clip:SetScrollChild(body);list.body=body;list.rows={}
+ local clip=CreateFrame("ScrollFrame",nil,list);clip:SetPoint("TOPLEFT");clip:SetPoint("BOTTOMRIGHT");list.clip=clip;list.gutter=0
+ local body=CreateFrame("Frame",nil,clip);body:SetWidth(list:GetWidth());body:SetHeight(1);clip:SetScrollChild(body);list.body=body;list.rows={}
  local slider=C.ScrollBar(list);slider:SetPoint("TOPRIGHT");slider:SetPoint("BOTTOMRIGHT");list.slider=slider
  slider:SetScript("OnValueChanged",function(_,value) if not list.syncing then P:SetRosterOffset(value) end end)
  list:EnableMouseWheel(true);list:SetScript("OnMouseWheel",function(_,delta) P:SetRosterOffset(clip:GetVerticalScroll()-delta*48) end)
@@ -279,9 +279,14 @@ function P:SetRosterOffset(offset)
   if not row._hitVisible then HideMemberTooltip(row) end
  end end
 end
-function P:RefreshRosterList()
+function P:RefreshRosterList(gutter)
  if not self.rosterList then self:BuildRosterList() end
  local list=self.rosterList;list:Show();list.empty:SetShown(#self.roster==0)
+ gutter=gutter or 0
+ if list.gutter~=gutter then
+  list.gutter=gutter;list.clip:SetPoint("BOTTOMRIGHT",-gutter,0)
+  list.body:SetWidth(list:GetWidth()-gutter);list.empty:SetWidth(list.body:GetWidth())
+ end
  for i=1,#self.roster do
   local row=list.rows[i]
   if not row then
@@ -312,6 +317,7 @@ function P:RefreshRosterList()
  end
  for i=#self.roster+1,#list.rows do local row=list.rows[i];HideMemberTooltip(row);UI:CloseMenuFor(row);row:Hide();row.member=nil;row.memberContext=nil end
  list.body:SetHeight(#self.roster>0 and top-4 or 36)
+ if gutter==0 then list.fullHeight=list.body:GetHeight() end
 end
 function P:ClearRosterList()
  if not self.rosterList then return end
@@ -323,7 +329,11 @@ function P:LayoutRosterCard()
  self.rosterCard:ClearAllPoints();self.rosterCard:SetPoint("TOPLEFT",0,-top)
  local height=112
  if self.rosterContext and self.rosterContext.rosterMode=="list" and self.rosterList then
-  local list=self.rosterList;local viewport=math.min(list.body:GetHeight(),math.max(44,T.contentHeight-top-76))
+  local list=self.rosterList;local available=math.max(44,T.contentHeight-top-76)
+  -- Decide from full-width text so wrapping in the narrower scroll area cannot keep an unnecessary gutter.
+  local gutter=list.fullHeight>available and C.listRightInset or 0
+  if list.gutter~=gutter then self:RefreshRosterList(gutter) end
+  local viewport=math.min(list.body:GetHeight(),available)
   list:SetHeight(viewport);list.syncing=true;list.slider:SetMinMaxValues(0,math.max(0,list.body:GetHeight()-viewport));list.syncing=nil
   list.slider:SetShown(list.body:GetHeight()>viewport);self:SetRosterOffset(list.clip:GetVerticalScroll());height=76+viewport
  elseif self.buffReport then
@@ -435,7 +445,7 @@ function P:EnsureBatchMembers(f,count)
   local row=CreateFrame("Button",nil,f);row:SetSize(columns.actions.x,MEMBER_HEIGHT);row:RegisterForClicks("LeftButtonUp","RightButtonUp")
   row.icon=C.Icon(row,32);row.icon:SetPoint("LEFT",columns.name.x,0)
   row.title=C.Text(row,"",14,T.text,223);row.title:SetPoint("LEFT",56,0);C.SetLineHeight(row.title,20);row.title:SetWordWrap(true)
-  row.faction=C.Icon(row,18);row.faction:SetPoint("LEFT",row.title,"RIGHT",6,0)
+  row.faction=C.Icon(row,18)
   row.marks=UI.Members:CreateMarks(row,true)
   row.role=C.Icon(row,18)
   row.roles={row.role}
@@ -766,7 +776,8 @@ function P:RenderBatches()
      local faction=UI:SetFactionIcon(row.faction,m);local marksWidth=UI.Members:BindMarks(row.marks,m)
      local available=columns.name.x+columns.name.width-56-(faction and 24 or 0)-(marksWidth>0 and marksWidth+6 or 0)
      row.title:SetWidth(math.min(available,FitText(row.title)));row.title:SetHeight(0);row.title:SetWordWrap(true)
-     row.marks:ClearAllPoints();row.marks:SetPoint("LEFT",faction and row.faction or row.title,"RIGHT",6,0)
+     row.marks:ClearAllPoints();row.marks:SetPoint("LEFT",row.title,"RIGHT",6,0)
+     row.faction:ClearAllPoints();row.faction:SetPoint("LEFT",marksWidth>0 and row.marks or row.title,"RIGHT",6,0)
      UpdateApplicantRoles(row,m,layout);UI:SetText(row.ilvl,m.itemLevel and math.floor(m.itemLevel) or "—")
      if row.noRatingLayout~=self.hideApplicantRating or row.ilvlX~=layout.ilvl.x then row.noRatingLayout=self.hideApplicantRating;row.ilvlX=layout.ilvl.x;row.ilvl:ClearAllPoints();row.ilvl:SetPoint("LEFT",layout.ilvl.x,0);row.score:SetShown(not self.hideApplicantRating) end
      if self.hideApplicantRating then UI:SetText(row.score,"") else UI:SetScore(row.score,UI:MemberRating(m)) end

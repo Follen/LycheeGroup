@@ -178,6 +178,8 @@ end
 
 -- Subscribe(callback(kind, id)) -> unsubscribe
 -- kind: "search"|"results"|"result"|"activities"|"applications"|"application"|"applicationCancelled"|"listing"|"applicants"|"applicant"|"permissions"|"history"|"relations"
+-- A "results" notification may carry the changed ID set; consume it during the
+-- callback because the Results owner reuses it after synchronous dispatch.
 function G:Subscribe(callback)
 	if type(callback) ~= "function" then
 		return function() end

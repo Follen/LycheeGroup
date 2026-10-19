@@ -265,11 +265,13 @@ local function Tick()
  elseif phase=="natural" or phase=="retained" then
   for _=1,BATCH do Work();if phase~="natural" and phase~="retained" then break end end
  elseif phase=="natural_settle" then
+  if g.Results.updatePending then return end
   -- The first explicit GC happens only AFTER the entire natural workload.
   Sample("natural_end_before_gc","natural",step,false)
   baselineGC=Sample("open_retained_baseline","gc",step,true)
   phase,step="retained",0
  elseif phase=="retained_settle" then
+  if g.Results.updatePending then return end
   Sample("repeat_end_before_gc","retained",step,false)
   finalGC=Sample("open_retained_final","gc",step,true)
   report.frameCounts.final=ObjectCounts()

@@ -3,22 +3,24 @@ local A = _G.LycheeGroup
 local G = A.Group
 local Results={gen=0}
 G.Results=Results
-local records,ids,detailQueue,pendingIDs={},{},{},{}
+local records,ids,detailQueue,pendingIDs,changedIDs={},{},{},{},{}
 -- Exact native title keys live only for this login; never serialize or parse them.
 local blockedTitles,blockedTitleCount={},0
 local pendingBulk,committing
 local updateVersion=0
+local BULK_INTERVAL=.2
+local nextBulkAt=0
 -- Keep recently visited rows across filter/sort/scroll changes. The old 16-entry
 -- cache discarded the same party snapshots repeatedly during ordinary reordering.
 local DETAIL_CAPACITY=64
 local count,scan=0,0
 local dirty=true
 local Public=G.Public
-local function Normalize(id,record,invalidateDetails,expectedScan)
- -- GetTime is constant within one rendered frame. Bulk notifications in that
- -- frame share the normalized record; an explicit result event always rereads.
+local function Normalize(id,record,invalidateDetails,expectedScan,metadataDirty)
+ -- Repeated consumers can share a same-frame read. A new native event makes
+ -- its metadata dirty even when GetTime has not advanced to another frame.
  local now=GetTime()
- if record and not invalidateDetails and record.sampledAt==now then return record end
+ if record and not metadataDirty and not invalidateDetails and record.sampledAt==now then return record end
  local info=Public(C_LFGList.GetSearchResultInfo(id))
  if type(info)~="table" then return nil end
  local previousActivity=record and record.activityID
@@ -241,31 +243,44 @@ function Results:ClearBlockedTitles()
  return true
 end
 function Results:GetBlockedTitleCount() return blockedTitleCount end
-local function FinishUpdates(version)
+local function FinishUpdates(version,fullSnapshot)
  for id,queued in pairs(pendingIDs) do if queued<=version then pendingIDs[id]=nil end end
- if pendingBulk and pendingBulk<=version then pendingBulk=nil end
+ if fullSnapshot and pendingBulk and pendingBulk<=version then pendingBulk=nil end
  if Results.updatePending and not pendingBulk and not next(pendingIDs) then
   G.Game.frame:SetScript("OnUpdate",nil);Results.updatePending=nil
  end
 end
 function Results:CancelUpdates(keepApplications)
  pendingBulk,committing=nil,nil
+ nextBulkAt=0
  for id in pairs(pendingIDs) do if not keepApplications or not G.Applications:IsActive(id) then pendingIDs[id]=nil end end
  if not next(pendingIDs) then G.Game.frame:SetScript("OnUpdate",nil);self.updatePending=nil end
 end
 local function FlushUpdates()
  local version,currentScan=updateVersion,scan
- if pendingBulk then
-  Results:CommitResults(Results.gen,pendingIDs)
- else
-  local applicationsChanged=false
-  for id,queued in pairs(pendingIDs) do
-   if queued<=version and Results:OnResultUpdated(id,true) then applicationsChanged=true end
-   if scan~=currentScan then break end
+ -- A complete snapshot consumes the dirty IDs as part of the same native
+ -- read, including detail invalidations; do not read those records twice.
+ if pendingBulk and GetTime()>=nextBulkAt then Results:CommitResults(Results.gen,pendingIDs);return end
+ -- Bulk events share the last commit's fixed window. Specific IDs are still
+ -- read on this frame, without consuming or extending the pending snapshot.
+ local applicationsChanged=false
+ wipe(changedIDs)
+ for id,queued in pairs(pendingIDs) do
+  if queued<=version then
+   local applicationChanged,inResults=Results:OnResultUpdated(id,true,true)
+   if applicationChanged then applicationsChanged=true end
+   if inResults then changedIDs[id]=true end
   end
-  if scan==currentScan then FinishUpdates(version) end
-  if applicationsChanged then G:Notify("applications") end
+  if scan~=currentScan then break end
  end
+ if scan==currentScan then
+  FinishUpdates(version)
+  if next(changedIDs) then
+   Results:InvalidateView();G:Notify("results",changedIDs)
+  end
+ end
+ wipe(changedIDs)
+ if applicationsChanged then G:Notify("applications") end
 end
 -- Reuse the event frame and ID set for queued updates. Events received during
 -- a flush keep their newer sequence and are handled by the next frame.
@@ -283,15 +298,17 @@ function Results:BeginSearch(gen)
 end
 function Results:CommitResults(gen,updatedIDs)
  if gen~=self.gen then return end
+ nextBulkAt=GetTime()+BULK_INTERVAL
  scan=scan+1
  local currentScan,version=scan,updateVersion
  local applicationsChanged=false
+ local metadataDirty=pendingBulk~=nil
  committing=currentScan
  local _,list=C_LFGList.GetFilteredSearchResults()
  if scan~=currentScan then return end
  for _,id in ipairs(list or {}) do
   local old=records[id]
-  local record=Normalize(id,old,updatedIDs and updatedIDs[id] or pendingIDs[id],currentScan)
+  local record=Normalize(id,old,updatedIDs and updatedIDs[id] or pendingIDs[id],currentScan,metadataDirty)
   if scan~=currentScan then return end
   if record and not record.isDelisted then
    record.scan=currentScan;records[id]=record
@@ -311,12 +328,12 @@ function Results:CommitResults(gen,updatedIDs)
  end
  -- A full snapshot consumes prior queued events, never events received during it.
  committing=nil
- FinishUpdates(version)
+ FinishUpdates(version,true)
  self:InvalidateView();G:Notify("results")
  if applicationsChanged then G:Notify("applications") end
 end
 function Results:FailSearch(gen) if gen==self.gen then self:BeginSearch(gen) end end
-function Results:OnResultUpdated(id,deferApplications)
+function Results:OnResultUpdated(id,deferApplications,deferResults)
  local record=records[id]
  local inResults=record~=nil
  if not record then
@@ -331,9 +348,9 @@ function Results:OnResultUpdated(id,deferApplications)
   records[id]=nil;count=count-1
   for i=#detailQueue,1,-1 do if detailQueue[i]==id then table.remove(detailQueue,i);break end end
  end
- if inResults then self:InvalidateView();G:Notify("result",id) end
+ if inResults and not deferResults then self:InvalidateView();G:Notify("result",id) end
  if applicationChanged and not deferApplications then G:Notify("applications") end
- return applicationChanged
+ return applicationChanged,inResults
 end
 function Results:GetResults()
  if dirty then

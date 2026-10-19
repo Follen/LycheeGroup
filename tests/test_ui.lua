@@ -1305,7 +1305,14 @@ do
  T.eq(members[1].specID,900063,"rendering preserves provider member order")
  r.categoryID=3;r.maxNumPlayers=40;r.numMembers=40;r.details.counts={TANK=2,HEALER=8,DAMAGER=30};Render()
  T.eq(Geometry(target.roster).x,roster.x,"raid composition shares the membership column center")
- T.eq(target.roster:GetWidth(),132,"raid roles are centered without a trailing column gap")
+ local function CheckMemberPadding()
+  local first,last=target.roster.counts[1].icon,target.roster.counts[3].text
+  local offset=(target.membersButton:GetWidth()-target.roster:GetWidth())/2
+  local left=offset+Geometry(first).x
+  local right=target.membersButton:GetWidth()-(offset+Geometry(last).x+last:GetStringWidth())
+  T.near(left,right,.01,"raid role summary has equal visible padding inside its hover background")
+ end
+ CheckMemberPadding()
  T.eq(target.roster.slots[1].icon:IsShown(),false,"raid rows switch back to aggregate role counts")
  T.eq(target.roster.counts[1].text:GetText(),"2");T.eq(target.roster.counts[2].text:GetText(),"8");T.eq(target.roster.counts[3].text:GetText(),"30")
  target.membersButton:Fire("OnClick");T.eq(target.count:IsShown(),true);T.eq(target.count:GetText(),"40/40","raid results keep their member counter")
@@ -1317,6 +1324,7 @@ do
  end
  r.details.counts={TANK=10,HEALER=10,DAMAGER=20};Render()
  for i,item in ipairs(target.roster.counts) do T.same(Geometry(item.icon),roleColumns[i],"two-digit role counts never move later columns") end
+ r.details.counts={TANK=0,HEALER=0,DAMAGER=1};Render();CheckMemberPadding()
  r.categoryID=4;r.ratingKind="pvp";r.leaderRating=0;Render()
  T.eq(find.resultHeadings.rating:GetText(),"评分","PvP uses the shared score column")
  T.eq(target.score:GetText(),"暂无分数");T.ok(target.score:GetStringWidth()<=target.score:GetWidth())
@@ -1689,7 +1697,16 @@ do
  T.eq(row.name:GetWidth(),bothWidth+22,"a role without faction uses the same single-marker text boundary")
  member.assignedRole=nil;U.Members:Bind(row,member,250,false,true)
  T.eq(row.name:GetWidth(),bothWidth+46,"a reused row without markers returns both slots and the text gap")
- T.eq(row.role:IsShown(),false);T.eq(row.faction:IsShown(),false);row:Hide()
+ T.eq(row.role:IsShown(),false);T.eq(row.faction:IsShown(),false)
+ member.isBNetFriend=true;member.assignedRole="HEALER";member.factionGroup=1;U.Members:BindRoster(row,member,250,false,true)
+ local marks={row.marks:GetPoint()};faction={row.faction:GetPoint()}
+ T.ok(row.marks.icons.bnet:IsShown());T.eq(marks[2],row.faction);T.eq(marks[3],"LEFT","relationships precede faction in current-roster rows")
+ T.eq(faction[2],row.role);T.eq(faction[3],"LEFT","faction precedes the final role icon")
+ member.factionGroup=nil;U.Members:BindRoster(row,member,250,false,true);marks={row.marks:GetPoint()}
+ T.eq(marks[2],row.role);T.eq(marks[3],"LEFT","relationships close up against the role when faction is unknown")
+ member.assignedRole=nil;U.Members:BindRoster(row,member,250,false,true);marks={row.marks:GetPoint()}
+ T.eq(marks[2],row.icon);T.eq(marks[3],"RIGHT","relationships use the right edge when both trailing icons are absent")
+ row:Hide()
 end
 T.ok(U.Tooltip.interactive.leaderIcon:IsShown(),"the right-aligned header uses a leader icon beside the name")
 T.ok(U.Tooltip.interactive.memberButtons[1].leaderIcon:IsShown());T.eq(U.Tooltip.interactive.memberButtons[2].leaderIcon:IsShown(),false)
@@ -2525,10 +2542,20 @@ do
  local fresh=dofile("tests/ui_fixture.lua")("zhCN")
  local a,u,g=fresh.A,fresh.U,fresh.G;a.db.reduceMotion=true
  local one={guid="Inline-1",name="First-Away",nameKey="First-Away",class="MAGE",assignedRole="DAMAGER",dungeonScore=2500,subgroup=1}
- local two={guid="Inline-2",name="Second-Away",nameKey="Second-Away",class="PRIEST",assignedRole="HEALER",subgroup=1}
+ local two={guid="Inline-2",name="Longnamehere-Away",nameKey="Longnamehere-Away",class="PRIEST",assignedRole="HEALER",factionGroup=0,isBNetFriend=true,subgroup=1}
  local members={one,two};g.GetRoster=function() return members end
  a:Open("create");local page,tip=u.pages.create,u.Tooltip
  local list=page.rosterList;list.clip.mouseOver=true
+ T.eq(list.rows[1]:GetWidth(),list:GetWidth(),"a fitting roster returns the scrollbar space so hover margins are equal")
+ local fullHeight,favoriteHeight=list.body:GetHeight(),page.favoritesCard:GetHeight()
+ page.favoritesCard:SetHeight(u.Theme.contentHeight-16-76-(fullHeight-8));page:LayoutRosterCard()
+ T.ok(list.slider:IsShown());T.eq(list.rows[1]:GetWidth(),list:GetWidth()-u.C.listRightInset)
+ T.ok(list.body:GetHeight()>fullHeight,"reserving the scrollbar can wrap a name onto another line")
+ page:SetRosterOffset(20)
+ page.favoritesCard:SetHeight(u.Theme.contentHeight-16-76-fullHeight);page:LayoutRosterCard()
+ T.eq(list.slider:IsShown(),false,"full-width content that fits must release the gutter even when narrow rows would still overflow")
+ T.eq(list.rows[1]:GetWidth(),list:GetWidth());T.eq(list.body:GetHeight(),fullHeight);T.eq(list.clip:GetVerticalScroll(),0)
+ page.favoritesCard:SetHeight(favoriteHeight);page:LayoutRosterCard()
  list.rows[1].tooltipArea:Fire("OnEnter")
  T.eq(tip.member,one);T.ok(tip.directPlayer);T.eq(tip.interactive.back:IsShown(),false)
  members={two,one};one.dungeonScore=2600;g:Notify("roster")
@@ -2872,7 +2899,8 @@ do
  T.eq(applicant.title:GetText(),person.nameKey);T.eq(applicant.meta,nil,"applicants have no generic note text under the name")
  T.eq(applicant.title.wrap,true);T.ok(applicant.title:GetStringHeight()<=applicant:GetHeight())
  T.ok(56+applicant.title:GetWidth()+24+6+applicant.marks:GetWidth()<=274,"full name, faction and marks fit the name column")
- point={applicant.marks:GetPoint()};T.eq(point[2],applicant.faction);T.eq(point[3],"RIGHT");T.eq(point[5],0)
+ point={applicant.marks:GetPoint()};T.eq(point[2],applicant.title);T.eq(point[3],"RIGHT");T.eq(point[5],0)
+ point={applicant.faction:GetPoint()};T.eq(point[2],applicant.marks);T.eq(point[3],"RIGHT","applicant faction follows relationships and notes")
  a.Notes:Edit(person.nameKey,"Caution",{type="caution"})
  T.eq(applicant.marks.noteButton.icon:GetTexture(),u.Theme.media.."caution.tga","the pooled note button follows the actual current note type")
  person.isBNetFriend=false;g:Notify("relations");T.eq(applicant.marks.icons.bnet:IsShown(),false)
@@ -3099,7 +3127,7 @@ end
 
 -- Search and saved-application details follow the current leader and faction.
 do
- for _,notification in ipairs({"result","results","applications"}) do
+ for _,notification in ipairs({"result","results","applications","dirtyBatch"}) do
   local fresh=dofile("tests/ui_fixture.lua")("zhCN",{find={category="3",categoryPrefs={["3"]={selected=true}}}})
   local a,u,g=fresh.A,fresh.U,fresh.G;a.db.reduceMotion=true;a.db.raidMembers="shift"
   EJ_GetDifficulty=function() return 14 end;EJ_SelectInstance=function() end;EJ_GetEncounterInfoByIndex=function() end
@@ -3112,6 +3140,12 @@ do
   if notification=="applications" then g.apps={application} end
   a:Open("find")
   local page,tip=u.pages.find,u.Tooltip
+  local deferred=notification=="result" or notification=="dirtyBatch"
+  local function Notify(id)
+   if notification=="dirtyBatch" then
+    local changed={[id]=true};g:Notify("results",changed);wipe(changed)
+   else g:Notify(notification,id) end
+  end
   local list=notification=="applications" and page.appList or page.results
   local function RowFor(target,id) for _,row in ipairs(target.rows) do if row.key==id then return row end end end
   local row=RowFor(list,7);list.clip.mouseOver=true;row.mouseOver=true;row.tooltipArea:Fire("OnEnter")
@@ -3121,19 +3155,19 @@ do
   T.eq(scroll,48,"the full description gives the tooltip a real scroll position to preserve")
   local render=tip.RenderGroup;local renders=0
   tip.RenderGroup=function(self,...) renders=renders+1;return render(self,...) end
-  if notification=="result" then
+  if deferred then
    local details=g.Results.GetDetails;local reads=0
    g.Results.GetDetails=function(self,current) if current.id==7 then reads=reads+1 end;return details(self,current) end
-   g:Notify("result",8);u.Motion:Tick(.02)
+   Notify(8);u.Motion:Tick(.02)
    T.eq(renders,0,"another result does not redraw the open tooltip")
    T.eq(reads,1,"an unrelated result adds no detail lookup beyond the existing visible-row refresh")
    g.Results.GetDetails=details
   end
   record.leaderName,record.leaderKey,record.leaderFactionGroup=beta.name,beta.nameKey,0;application.leaderName=beta.name
   alpha.isLeader,alpha.factionGroup=nil,nil;beta.isLeader,beta.factionGroup=true,0
-  g:Notify(notification,7)
-  if notification=="result" then
-   g:Notify(notification,7)
+  Notify(7)
+  if deferred then
+   Notify(7)
    T.eq(renders,0,"single-result tooltip updates wait for the existing frame batch")
   end
   u.Motion:Tick(.02)
@@ -3147,8 +3181,8 @@ do
   T.eq(betaRow.faction:GetTexture(),"Interface\\AddOns\\LycheeGroup_UI\\Media\\faction-horde.tga");T.ok(betaRow.faction:IsShown())
   T.eq(tip.expanded,true);T.eq(tip.pinned,true);T.eq(view:GetWidth(),1080)
   T.eq(view.scroll:GetVerticalScroll(),scroll);T.eq(tip.positionX,x);T.eq(tip.positionY,y)
-  if notification=="result" then
-   g:Notify("result",7);tip:Hide()
+  if deferred then
+   Notify(7);tip:Hide()
    local nextRow=RowFor(page.results,8);nextRow.mouseOver=true;nextRow.tooltipArea:Fire("OnEnter");renders=0
    u.Motion:Tick(.02)
    T.eq(renders,0,"a queued result does not redraw a different tooltip opened before the batch")

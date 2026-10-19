@@ -106,7 +106,7 @@ end
 local function MemberMeta(member)
  return UI:SpecName(member) or member.localizedClass or L.unknown
 end
-local function LayoutIdentity(icon,title,subtitle,role,faction,marks,marksWidth,width,top,inset,search)
+local function LayoutIdentity(icon,title,subtitle,role,faction,marks,marksWidth,width,top,inset)
  local textX=inset+ICON_SIZE+TEXT_GAP
  role:SetSize(MARK_SIZE,MARK_SIZE);role:SetShown(role:GetTexture()~=nil)
  faction:SetSize(MARK_SIZE,MARK_SIZE)
@@ -121,17 +121,10 @@ local function LayoutIdentity(icon,title,subtitle,role,faction,marks,marksWidth,
  role:ClearAllPoints();role:SetPoint("RIGHT",icon,"RIGHT",width-2*inset-ICON_SIZE,0)
  marks:ClearAllPoints()
  faction:ClearAllPoints()
- if search then
-  if role:IsShown() then faction:SetPoint("RIGHT",role,"LEFT",-4,0) else faction:SetPoint("RIGHT",icon,"RIGHT",width-2*inset-ICON_SIZE,0) end
-  if faction:IsShown() then marks:SetPoint("RIGHT",faction,"LEFT",-4,0)
-  elseif role:IsShown() then marks:SetPoint("RIGHT",role,"LEFT",-4,0)
-  else marks:SetPoint("RIGHT",icon,"RIGHT",width-2*inset-ICON_SIZE,0) end
- else
-  if role:IsShown() then marks:SetPoint("RIGHT",role,"LEFT",-4,0) else marks:SetPoint("RIGHT",icon,"RIGHT",width-2*inset-ICON_SIZE,0) end
-  if marksWidth>0 then faction:SetPoint("RIGHT",marks,"LEFT",-4,0)
-  elseif role:IsShown() then faction:SetPoint("RIGHT",role,"LEFT",-4,0)
-  else faction:SetPoint("RIGHT",icon,"RIGHT",width-2*inset-ICON_SIZE,0) end
- end
+ if role:IsShown() then faction:SetPoint("RIGHT",role,"LEFT",-4,0) else faction:SetPoint("RIGHT",icon,"RIGHT",width-2*inset-ICON_SIZE,0) end
+ if faction:IsShown() then marks:SetPoint("RIGHT",faction,"LEFT",-4,0)
+ elseif role:IsShown() then marks:SetPoint("RIGHT",role,"LEFT",-4,0)
+ else marks:SetPoint("RIGHT",icon,"RIGHT",width-2*inset-ICON_SIZE,0) end
  subtitle:ClearAllPoints();subtitle:SetPoint("TOPLEFT",textX,-subtitleTop);subtitle:SetWidth(textWidth);subtitle:SetHeight(0);subtitle:SetWordWrap(true)
  local height=math.max(ICON_SIZE,titleHeight+2+math.max(subtitle:GetLineHeight(),subtitle:GetStringHeight()))
  -- Portrait and right-side marks share the complete identity block's center,
@@ -168,7 +161,7 @@ local function Bind(self,button,member,width,isLeader,interactive,inset,padding,
   marksWidth=PaintMarks(button.marks)
  else marksWidth=self:BindMarks(button.marks,member) end
  inset,padding=inset or 6,padding or 4
- local height=math.max(56,LayoutIdentity(button.icon,button.name,button.realm,button.role,button.faction,button.marks,marksWidth,width,padding,inset,search)+padding*2)
+ local height=math.max(56,LayoutIdentity(button.icon,button.name,button.realm,button.role,button.faction,button.marks,marksWidth,width,padding,inset)+padding*2)
  button:SetHeight(height);button:Show()
  return height
 end

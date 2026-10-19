@@ -73,11 +73,14 @@ local function RosterColumns(roster)
 end
 local function LayoutMembers(row)
  row.membersButton:ClearAllPoints();row.membersButton:SetPoint("LEFT",row.membersX,row.membersExpanded and row.membersExpandedY or 0)
- row.roster:SetWidth(row.isParty and 110 or 132)
+ -- Center the visible role summary, excluding the last count's unused text width.
+ row.roster:SetWidth(row.isParty and 110 or 112+row.roster.counts[3].text:GetStringWidth())
+ row.roster:SetScale(row.isParty and row.partyScale or 1)
  row.count:SetShown(not row.isParty and row.membersExpanded==true)
 end
 local function BuildMembers(row,x,compact)
  row.membersX=x;row.membersExpandedY=compact and 9 or 11
+ row.partyScale=compact and 1 or 1.2
  row.membersButton=C.Button(row,"",138,function()
   if row.isParty or not row.key or not row._hitVisible then return end
   row.membersExpanded=not row.membersExpanded;LayoutMembers(row)
@@ -949,8 +952,14 @@ function P:Enter(context)
  if not self.unsub then self.unsub=UI:GetGroup():Subscribe(function(kind,id)
   if kind=="activities" then P:RefreshCategories();P:RefreshPicker();P:UpdateFilters()
   elseif kind=="applicationCancelled" then P:OnApplicationCancelled(id)
-  elseif kind=="result" then
-   if UI.Tooltip:IsResult(id) then P.pendingTooltipResultID=id end
+  elseif kind=="result" or kind=="results" and type(id)=="table" then
+   if kind=="result" then
+    if UI.Tooltip:IsResult(id) then P.pendingTooltipResultID=id end
+   else
+    for resultID in pairs(id) do
+     if UI.Tooltip:IsResult(resultID) then P.pendingTooltipResultID=resultID;break end
+    end
+   end
    M:Start(P,RefreshPendingResults)
   elseif kind=="relations" then P:RefreshResults(true)
   elseif kind=="search" then P:RefreshSearchState()

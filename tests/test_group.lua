@@ -1090,6 +1090,7 @@ do
 	}
 	S.resultIDs[#S.resultIDs + 1] = 14
 	Fire("LFG_LIST_UPDATE_SEARCH_RESULTS")
+	S.now=S.now+.2
 	G.Game.frame:GetScript("OnUpdate")()
 	T.eq(G.Results:GetCount(), 4, "流式更新提交新增结果")
 	T.ok(G.Results:GetResult(14) ~= nil, "新队伍可见")
@@ -1369,7 +1370,7 @@ do
  for i=1,8 do S.results[165].name="Latest "..i;G:OnEvent("LFG_LIST_SEARCH_RESULT_UPDATED",165);G.Results:QueueUpdate() end
  T.eq(S.resultReads,before,"native event bursts queue work without repeated info allocations")
  local flush=G.Game.frame:GetScript("OnUpdate");T.ok(flush)
- S.now=S.now+.02;flush()
+ S.now=S.now+.2;flush()
  T.eq(S.resultReads,before+1,"bulk and per-result notifications share one final native read")
  T.eq(G:GetResult(165).name,"Latest 8","the merged update reads the final native metadata")
  T.eq(G.Game.frame:GetScript("OnUpdate"),nil,"the event frame has no idle refresh callback")
@@ -1427,7 +1428,7 @@ do
  G.Results:CommitResults(G.Results.gen)
  C_LFGList.GetSearchResultInfo=nativeInfo
  T.eq(S.resultReads,reads+3);T.ok(G.Results.updatePending,"events arriving during a commit remain queued")
- S.now=S.now+.02
+ S.now=S.now+.2
  G.Game.frame:GetScript("OnUpdate")()
  T.eq(S.resultReads,reads+6,"a reentrant bulk still refreshes every result")
  T.eq(G:GetResult(93001).name,"During commit")
@@ -1473,6 +1474,111 @@ do
  S.results,S.resultIDs=savedResults,savedIDs
 end
 S.now=100
+do
+ -- Bulk notifications share a fixed 200ms window; new events do not move its
+ -- deadline, while individual changes stay prompt inside the window.
+ local savedResults,savedIDs=S.results,S.resultIDs
+ S.resultIDs={93901,93902}
+ S.results={
+  [93901]={activityIDs={502},name="Before A",numMembers=1},
+  [93902]={activityIDs={502},name="Before B",numMembers=2},
+ }
+ G.Results:BeginSearch(939);G.Results:CommitResults(939)
+ local reads=S.resultReads
+ for step=1,9 do
+  S.now=100+step*.02
+  S.results[93902].name="Latest bulk "..step;G.Results:QueueUpdate()
+  if step==3 then
+   S.results[93901].name="Urgent single"
+   for _=1,8 do G.Results:QueueUpdate(93901) end
+  end
+  G.Game.frame:GetScript("OnUpdate")()
+  T.eq(S.resultReads-reads,step>=3 and 1 or 0,"waiting bulk events never reread the whole list")
+  T.eq(G:GetResult(93902).name,"Before B","bulk-only metadata waits for the fixed window")
+  T.ok(G.Results.updatePending,"processing single IDs preserves the pending bulk snapshot")
+ end
+ T.eq(G:GetResult(93901).name,"Urgent single","single-ID events do not wait for the bulk window")
+ S.now=100.2;G.Game.frame:GetScript("OnUpdate")()
+ T.eq(S.resultReads-reads,3,"the deadline performs exactly one complete two-record read")
+ T.eq(G:GetResult(93902).name,"Latest bulk 9","the deadline includes the latest event without postponing")
+ T.eq(G.Results.updatePending,nil);T.eq(G.Game.frame:GetScript("OnUpdate"),nil)
+ G.Results:QueueUpdate();G.Results:BeginSearch(9391)
+ reads=S.resultReads;G.Results:QueueUpdate();G.Game.frame:GetScript("OnUpdate")()
+ T.eq(S.resultReads-reads,2,"a new search starts immediately without the old throttle deadline")
+ T.eq(G.Results.updatePending,nil)
+ S.results,S.resultIDs=savedResults,savedIDs;S.now=100
+end
+do
+ -- Dirty events are merged into one complete refresh, never a partially
+ -- visible scan. Once the throttle opens, subscribers see the whole batch.
+ local savedResults,savedIDs=S.results,S.resultIDs
+ S.results={};S.resultIDs={}
+ for id=94001,94100 do
+  S.resultIDs[#S.resultIDs+1]=id
+  S.results[id]={activityIDs={502},name="Before "..id,numMembers=1,age=id-94000}
+ end
+ G.Results:BeginSearch(940);G.Results:CommitResults(940)
+ for _,id in ipairs(S.resultIDs) do S.results[id].name="After "..id end
+ S.results[94001].age=900
+ S.results[94099].name="Urgent";S.results[94099].numMembers=4
+ table.remove(S.resultIDs,50)
+ S.resultIDs[#S.resultIDs+1]=94101
+ S.results[94101]={activityIDs={502},name="Added",numMembers=2,age=1}
+ local publications,partial=0,false
+ local unsubscribe=G:Subscribe(function(kind)
+  if kind~="results" and kind~="result" then return end
+  publications=publications+1
+  if G:GetResultCount()~=#S.resultIDs or G:GetResult(94050) then partial=true end
+  for _,id in ipairs(S.resultIDs) do
+   local record=G:GetResult(id)
+   if not record or record.name~=S.results[id].name then partial=true end
+  end
+ end)
+ local reads=S.resultReads
+ for _=1,8 do G.Results:QueueUpdate();G.Results:QueueUpdate(94099) end
+ T.eq(S.resultReads,reads,"dirty marking alone does not read native records")
+ S.now=S.now+.2;G.Game.frame:GetScript("OnUpdate")()
+ T.eq(S.resultReads-reads,100,"one flush reads each native ID once, including specifically dirty IDs")
+ T.eq(G.Results.updatePending,nil,"one complete flush consumes the batch without a delayed continuation")
+ T.eq(publications,1,"bulk and single-ID events publish one completed view update")
+ T.eq(partial,false,"subscribers cannot observe a half-refreshed batch")
+ T.eq(G:GetResultCount(),#S.resultIDs)
+ T.eq(G:GetResult(94050),nil,"the final native snapshot removes missing IDs")
+ for _,id in ipairs(S.resultIDs) do
+  local result,native=G:GetResult(id),S.results[id]
+  T.ok(result,"all native results remain available")
+  T.eq(result.name,native.name);T.eq(result.age,native.age);T.eq(result.numMembers,native.numMembers)
+ end
+ -- An explicit full commit still consumes later bulk-only metadata changes,
+ -- even if the clock reports the same rendered frame.
+ S.results[94001].name="Later bulk metadata";reads=S.resultReads
+ G.Results:QueueUpdate();G.Results:CommitResults(G.Results.gen)
+ T.eq(S.resultReads-reads,100,"a new bulk event invalidates same-frame metadata")
+ T.eq(G:GetResult(94001).name,"Later bulk metadata")
+ T.eq(G.Results.updatePending,nil,"an explicit complete commit consumes the pending window immediately")
+
+ S.results[94001].name="Single A";S.results[94099].name="Single B"
+ publications,partial,reads=0,false,S.resultReads
+ for _=1,8 do G.Results:QueueUpdate(94001);G.Results:QueueUpdate(94099) end
+ G.Game.frame:GetScript("OnUpdate")()
+ T.eq(S.resultReads-reads,2,"a specific dirty batch reads only its two distinct IDs")
+ T.eq(publications,1,"specific dirty IDs also publish only after the complete batch")
+ T.eq(partial,false,"every subscriber sees both updated records together")
+ unsubscribe()
+
+ reads=S.resultReads
+ G.Search:SetFilters({maxMembers=3,sort="newest"})
+ local expected={}
+ for _,id in ipairs(S.resultIDs) do if S.results[id].numMembers<=3 then expected[#expected+1]=id end end
+ table.sort(expected,function(a,b) if S.results[a].age~=S.results[b].age then return S.results[a].age<S.results[b].age end;return a<b end)
+ T.same(G:GetResults(),expected,"dirty refresh preserves the independently computed filtered order")
+ T.eq(S.resultReads,reads,"local filtering and sorting do not reread native base metadata")
+ G.Results:QueueUpdate();G.Results:QueueUpdate(94001)
+ G.Results:BeginSearch(941)
+ T.eq(G:GetResultCount(),0);T.eq(G.Game.frame:GetScript("OnUpdate"),nil,"a new search cancels the complete pending dirty batch")
+ S.results,S.resultIDs=savedResults,savedIDs
+ S.now=100
+end
 unsubscribe()
 T.eq(Stubs.PendingTimers(), 0, "Group 包不产生任何常驻计时器")
 
