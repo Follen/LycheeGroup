@@ -848,7 +848,7 @@ do
  G.GetResults=getResults;G.state=previousState;G.error=previousError;find.searchError=inputError;find:RefreshResults()
 end
 T.eq(find.rail:GetWidth(),208);T.near(find.main:GetWidth(),995.2,.001)
-T.eq(find.filterPanel:GetWidth(),300);T.eq(find.results.rowHeight,84)
+T.eq(find.filterPanel:GetWidth(),300);T.eq(find.results.rowHeight,76)
 T.eq(find.seasonCategories.rows[1]:GetHeight(),48,"the activity sidebar keeps its original compact row height")
 do
  local countPoint={find.resultCount:GetPoint()}
@@ -1411,6 +1411,11 @@ do
 end
 find:Apply(102);T.eq(U.Application.applicationLease.id,102,"the player selects a group again after freeing a slot")
 T.eq(find.limitNotice:IsShown(),false,"selecting a group again clears the quota notice")
+do
+ local row=find.results.rows[5];local point={row:GetPoint()}
+ T.ok(#find.appList.ids>=3,"the density check keeps all three application rows visible")
+ T.ok(row.key and -point[#point]+row:GetHeight()<=find.results:GetHeight(),"five complete result rows fit below three applications without reducing the window or fonts")
+end
 G.apps[2].status="applied";U.Application:Apply(102)
 T.same(find.limitNotice.fill.color,U.Theme.notice,"reaching the cap again restores the ordinary notice background")
 f.base.AdvanceClock(6.4);G:Notify("applications");f.base.AdvanceClock(.11)
