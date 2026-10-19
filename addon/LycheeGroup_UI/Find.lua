@@ -645,7 +645,6 @@ function P:UpdateFilters(reset)
  if not self.frame then return end
  local filters=state.filters;local cat=Category();local keys=false
  if cat.id==2 then for _,activity in ipairs(UI:GetGroup().Catalog:GetActivities(state.category)) do if activity.isMythicPlusActivity and (not state.groupKey or UI:GetGroup().Catalog:GetGroupKey(state.category,activity)==state.groupKey) and (not state.difficultyID or activity.difficultyID==state.difficultyID) and (not state.tier or UI:GetGroup().Catalog:GetActivityTier(activity)==state.tier) then keys=true;break end end end
- self.canSearchKeys=keys
  local seasonDungeon=cat.id==2 and cat.season
  self:SyncSearchInputMode()
  UI:SetText(self.searchHint,state.searchMode=="leader" and LEADER_SEARCH_HINT or keys and KEY_SEARCH_HINT or SEARCH_HINT)
@@ -735,7 +734,7 @@ function P:ClearSearch()
  state.personKey=nil;self:DoSearch()
 end
 function P:DoSearch(keepPicker)
- if not state.browseReady then self:UpdateFilters();self:RefreshResults();return end
+ if not state.browseReady then self:UpdateFilters();return end
  if not self:EnsureSearchInput() then return end
  if not keepPicker then self:ClosePicker() end
  UI.Tooltip:Hide();self:UpdateFilters()
@@ -755,7 +754,7 @@ function P:DoSearch(keepPicker)
  local text=mode=="leader" and self.search.box:GetText() or nil
  local ok,err=UI:GetGroup().Search:Search(state.category,activityID,mode,text)
  if not ok then self:SetStatus(err or L.failed) end
- self:ReadSearchState();self:RefreshResults()
+ self:ReadSearchState()
 end
 function P:SetStatus(message)
  self.statusMessage=message or ""

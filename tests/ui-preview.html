@@ -44,5 +44,6 @@ else if(n.texture||n.atlas){el.classList.add('icon');let label='◇',bg='#354c61
 stage.append(el);}
 document.querySelectorAll('button').forEach((b,i)=>b.classList.toggle('active',i===index));window.currentLayout=index;
 }
-SHOTS.forEach((shot,i)=>{const b=document.createElement('button');b.textContent=shot.name;b.onclick=()=>render(i);tabs.insertBefore(b,tabs.lastElementChild)});render(0);
+if(typeof SHOTS==='undefined'){stage.textContent='尚未生成本地预览。请在仓库根目录运行：lua tests/ui_preview.lua，然后重新打开此页。';stage.style.padding='24px';}
+else{SHOTS.forEach((shot,i)=>{const b=document.createElement('button');b.textContent=shot.name;b.onclick=()=>render(i);tabs.insertBefore(b,tabs.lastElementChild)});render(0);}
 </script>

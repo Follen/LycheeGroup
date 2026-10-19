@@ -3,11 +3,11 @@
   "type": "mod",
   "id": 31228,
   "name": "荔枝组队",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "game_versions": [
     "12.1.5"
   ],
-  "changelog_file": "../release/changelog-1.0.3.zh-CN.txt",
+  "changelog_file": "../release/changelog-1.0.4.zh-CN.txt",
   "ignore": [
     "*.psd",
     "node_modules/**"

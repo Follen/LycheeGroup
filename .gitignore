@@ -5,6 +5,7 @@
 /tools/Remove-ReferenceDirectory.ps1
 /prototype-v4/mock-*.png
 /prototype-v4/preview-relations-*.png
+/tests/preview-data.js
 
 # Build output
 /dist/

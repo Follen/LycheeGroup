@@ -154,6 +154,10 @@ local function json(v,path)
  else local parts={};if #v>0 then for i,x in ipairs(v) do parts[#parts+1]=json(x,path..'['..i..']') end;visiting[v]=nil;return '['..table.concat(parts,',')..']' end
   for k,x in pairs(v) do parts[#parts+1]=json(tostring(k))..':'..json(x,path..'.'..tostring(k)) end;visiting[v]=nil;return '{'..table.concat(parts,',')..'}' end
 end
-local encoded=json(shots)
-local out=assert(io.open("tests/preview-data.js","wb"));out:write("const SHOTS=",encoded,";");out:close()
+local out=assert(io.open("tests/preview-data.js","wb"));out:write("const SHOTS=[")
+for i,shot in ipairs(shots) do
+ if i>1 then out:write(",") end
+ out:write(json(shot))
+end
+out:write("];");out:close()
 print("Saved "..#shots.." local sample layouts from the addon widget tree.")

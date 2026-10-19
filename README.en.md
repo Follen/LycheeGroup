@@ -4,7 +4,7 @@
 
 A group-finding addon for retail World of Warcraft. Find groups, manage recruitment, and keep notes on players you meet, all in one window.
 
-Version **1.0.3** targets retail **12.1.5** (Interface `120105`) and supports Chinese and English. See the [changelog](CHANGELOG.md) (in Chinese) for version changes.
+Version **1.0.4** targets retail **12.1.5** (Interface `120105`) and supports Chinese and English. See the [changelog](CHANGELOG.md) (in Chinese) for version changes.
 
 ## Features
 
@@ -55,6 +55,8 @@ Run the offline tests from the repository root with Lua 5.1:
 ```sh
 lua tests/runner.lua
 ```
+
+For the local widget-tree preview, run `lua tests/ui_preview.lua`, then open [`tests/ui-preview.html`](tests/ui-preview.html). The generated `tests/preview-data.js` stays local and is not committed. This preview uses sample data and does not verify in-game behavior.
 
 [`tools/Build-Addon.ps1`](tools/Build-Addon.ps1) builds the addon archive. It syncs the bundled library from a sibling `LycheeUI` source directory by default; use `-LibraryPath` to select another location.
 

@@ -11,6 +11,7 @@ Stubs.SetUnit("player", { name = "本人", realm = "晨风号角", class = "WARR
 
 Load.addon("LycheeGroup", "Locale.lua")
 Load.addon("LycheeGroup", "Core.lua")
+Load.addon("LycheeGroup", "Specializations.lua")
 LycheeGroup:LoadDB() -- Core ADDON_LOADED precedes every LoD package.
 Load.addon("LycheeGroup_Notes", "Locale.lua")
 Load.addon("LycheeGroup_Notes", "Notes.lua")
@@ -366,6 +367,29 @@ do
 	T.eq(resolved.class,"PALADIN");T.eq(resolved.specID,nil);T.eq(resolved.classSpec,"圣骑士")
 	T.eq(reads,0,"a known class without specialization or legacy text needs no specialization scan")
 	GetSpecializationInfoForClassID=getSpec
+	do
+		local savedMetadata, getClass = A.Specializations, GetClassInfo
+		local ready, classReads = false, 0
+		Load.addon("LycheeGroup", "Specializations.lua")
+		GetClassInfo=function(id)
+			classReads=classReads+1
+			local name, token, classID=getClass(id)
+			if token=="PALADIN" and not ready then return end
+			return name, token, classID
+		end
+		local record={class="PALADIN",specID=66,classSpec=""}
+		T.eq(Notes.PlayerInfo.ResolveRecord(record).class,nil,"an incomplete class directory is not treated as a permanent match")
+		ready=true
+		T.eq(Notes.PlayerInfo.ResolveRecord(record).specID,66,"class metadata recovers when the native directory becomes available")
+		classReads=0
+		for i=1,100 do
+			local identity=Notes.PlayerInfo.ResolveRecord(record)
+			T.eq(identity.class,"PALADIN");T.eq(identity.specID,66)
+		end
+		T.eq(classReads,0,"repeated note bindings reuse the shared class directory")
+		T.eq(record.classSpec,"","display resolution does not rewrite the stored snapshot")
+		GetClassInfo, A.Specializations=getClass, savedMetadata
+	end
 	ok,snapshot=Notes:Add("旧文字记录","银松森林","",nil,"圣骑士-神圣")
 	T.ok(ok);T.eq(snapshot.class,"PALADIN");T.eq(snapshot.specID,66,"接收旧字符串的添加入口也存入可靠结构")
 	Notes:Remove("旧文字记录-银松森林")

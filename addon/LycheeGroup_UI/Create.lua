@@ -692,6 +692,7 @@ function P:Submit()
  else self:ValidateForm();self:SetFormError(reason or L.failed) end
 end
 function P:RefreshApplicants()
+ if UI.hiding then return end
  UI.Motion:Stop(self.batchScroll);self.batchScrollTarget=nil
  local group=UI:GetGroup()
  local listing=group:GetListing();local activity=listing and group.Catalog:GetActivity(listing.activityID)

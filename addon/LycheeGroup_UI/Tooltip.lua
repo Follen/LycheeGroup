@@ -307,7 +307,7 @@ function Tip:ResetInteractive(owner,width)
  for _,b in ipairs(f.memberButtons) do b:Hide();b.member=nil;b.memberContext=nil;b.targetKey=nil end
  for _,title in pairs(f.rosterGroupTitles) do title:Hide() end
  for _,row in pairs(f.relationshipRows) do row:Hide() end
- for _,metric in ipairs(f.metrics) do metric.title:Hide();metric.value:Hide();metric.title:SetWordWrap(false);C.SetLineHeight(metric.title,20,true) end
+ for _,metric in ipairs(f.metrics) do metric.title:Hide();metric.value:Hide();metric.title:SetWordWrap(false);C.SetLineHeight(metric.title,20,true);C.SetLineHeight(metric.value,20,true) end
  f.back:Hide();f.note:Hide();f.wcl:Hide();f.playerRole:Hide();f.noteHeading:Hide();f.noteGlyph:Hide();f.noteDate:Hide();f.noteDivider:Hide();f.bossTitle:Hide();f.bossCount:Hide();f.bossText:Hide();f.composition:Hide();f.pvpRatings:Hide()
  for _,row in ipairs(f.bossRows) do row:Hide() end
  f.dungeonTitle:Hide();f.dungeonEmpty:Hide();f.playerFaction:Hide()
@@ -737,7 +737,7 @@ function Tip:RenderPlayer(member,fromGroup,adjustPoint)
  if f.playerRole:IsShown() then f.playerFaction:SetPoint("RIGHT",f.playerRole,"LEFT",-6,0)
  else f.playerFaction:SetPoint("RIGHT",f.canvas,"TOPRIGHT",0,identityCenter) end
  local metricTop=math.max(top+PLAYER_ICON_SIZE+2,identityBottom)+16
- local columnWidth=context.showRating and (width-16)/2 or width;local metricHeight=f.metrics[1].title:GetLineHeight()
+ local columnWidth=context.showRating and (width-16)/2 or width;local metricHeight=f.metrics[1].title:GetHeight()
  local rating,ratingKind,ratingActivity
  if context.showRating then rating,ratingKind,ratingActivity=UI:MemberRating(member) end
  for i=1,(context.showRating and 2 or 1) do
@@ -748,6 +748,11 @@ function Tip:RenderPlayer(member,fromGroup,adjustPoint)
   local x=(i-1)*(columnWidth+16);local valueWidth=metric.value:GetStringWidth()
   metric.title:SetPoint("TOPLEFT",x,-metricTop);metric.title:SetWidth(columnWidth-valueWidth-12);metric.title:SetHeight(0);metric.title:SetWordWrap(true)
   metric.value:SetPoint("TOPRIGHT",f.canvas,"TOPLEFT",x+columnWidth,-metricTop);metric.value:SetWidth(valueWidth);metric.title:Show();metric.value:Show();metricHeight=math.max(metricHeight,metric.title:GetStringHeight())
+ end
+ for i=1,(context.showRating and 2 or 1) do
+  local metric=f.metrics[i]
+  metric.title:SetHeight(metricHeight);metric.value:SetHeight(metricHeight)
+  metric.title:SetJustifyV("TOP");metric.value:SetJustifyV("TOP")
  end
  f.leader:Hide()
  top=metricTop+metricHeight+20

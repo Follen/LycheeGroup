@@ -2103,6 +2103,25 @@ do
  tip:Hide();tip:ShowPlayer(row,person)
  T.eq(view.metrics[1].title:GetText(),"PvP 装等");T.eq(view.metrics[2].title:GetText(),"3v3");T.eq(view.metrics[2].value:GetText(),"1800")
  T.ok(view.metrics[2].value:IsShown(),"PvP applicant rating is restored after raid details")
+ local function TopOffset(region) local point={region:GetPoint()};return point[#point] end
+ for _,metric in ipairs({view.metrics[1],view.metrics[2]}) do
+  T.eq(metric.title:GetHeight(),24);T.eq(metric.value:GetHeight(),24,"player labels and numbers share the same single-line box")
+  T.eq(metric.title.justifyV,"TOP");T.eq(metric.value.justifyV,"TOP")
+  T.eq(TopOffset(metric.title),TopOffset(metric.value),"player labels and numbers share the same top anchor")
+ end
+ local actionTop=TopOffset(view.wcl)
+ person.pvpRatingInfo.activityName=string.rep("Long rated arena ",5);tip:RenderPlayer(person)
+ local wrappedHeight=view.metrics[2].title:GetStringHeight()
+ T.ok(wrappedHeight>24,"the long rating label exercises real wrapping")
+ for i=1,2 do
+  T.eq(view.metrics[i].title:GetHeight(),wrappedHeight);T.eq(view.metrics[i].value:GetHeight(),wrappedHeight)
+  T.eq(view.metrics[i].value.justifyV,"TOP","the number remains aligned with the label's first line")
+ end
+ T.ok(TopOffset(view.wcl)<actionTop,"actions move below the complete wrapped metric row")
+ person.pvpRatingInfo.activityName="3v3";tip:RenderPlayer(person)
+ T.eq(view.metrics[2].value:GetHeight(),24,"reusing a player detail releases the previous wrapped height")
+ tip:ResetInteractive(row,440)
+ T.eq(view.metrics[2].value:GetHeight(),24);T.eq(view.metrics[2].value.justifyV,"MIDDLE","other tooltip views restore the standard value alignment")
  person.assignedRole=nil;person.factionGroup=nil;tip:Hide();tip:ShowPlayer(row,person)
  T.eq(view.playerRole:IsShown(),false);T.eq(view.playerFaction:IsShown(),false)
  T.eq(view.title:GetWidth(),view.canvas:GetWidth()-48,"unknown markers leave the full identity text width")
@@ -2927,4 +2946,79 @@ do
  T.same(restored.U.Application.applicationPrefs.roles,{DAMAGER=true})
  T.eq(restored.A.charPrefs.applicationRoles,preferences.applicationRoles)
  restored.U:Hide(true)
+end
+
+-- Search notifications own list refreshes, including queued requests and preview.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("enUS",{find={category="seasonDungeon",categoryPrefs={seasonDungeon={selected=true}}}})
+ local a,u,g=fresh.A,fresh.U,fresh.G
+ g.Game={RefreshSubscriptions=function() end}
+ function g:HasViews(kind) for _,value in pairs(self.views) do if not kind or value==kind then return true end end;return false end
+ function g.Results:BeginSearch() g.records={};g:Notify("results") end
+ dofile("addon/LycheeGroup_Group/Search.lua")
+ function g:GetSearchState() return self.Search:GetState() end
+ function g:GetSearchError() return self.Search:GetSearchError() end
+ local nativeCalls=0
+ C_LFGList.GetLanguageSearchFilter=function() return 0 end
+ C_LFGList.Search=function() nativeCalls=nativeCalls+1 end
+ a:Open("find")
+ local page=u.pages.find;local refresh=page.RefreshResults;local fills=0
+ page.RefreshResults=function(self,...) fills=fills+1;return refresh(self,...) end
+ g.Search.state="done";fills=0
+ page:DoSearch()
+ T.eq(fills,2,"a native search refreshes for changed filters and its cleared result snapshot only")
+ T.eq(g.Search:GetState(),"searching");T.eq(page.refresh:IsEnabled(),false)
+ g.Results.FailSearch=g.Results.BeginSearch
+ g.Search:OnSearchFailed("throttled")
+ local calls=nativeCalls;fills=0
+ page:DoSearch()
+ T.eq(fills,1,"a waiting request refreshes changed local filters without a duplicate tail repaint")
+ T.eq(nativeCalls,calls);T.ok(g.Search.pending);T.eq(page.refresh:IsEnabled(),false)
+ u:Hide(true);g.Search:EndBrowse() -- This fixture's Attach/Detach only tracks view ownership.
+ T.eq(a:Preview("applications"),true)
+ page:CommitChoice();page.search.box:SetText("");fills=0
+ page:DoSearch()
+ T.eq(fills,1,"preview search needs only its filter notification to bind results")
+ T.eq(#page.results.ids,3);T.eq(#page.appList.ids,3);T.eq(nativeCalls,calls,"preview never submits a native search")
+ u:Hide(true)
+end
+
+-- Closing skips applicant presentation, while the real service keeps terminal deadlines.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("enUS")
+ local a,u,g=fresh.A,fresh.U,fresh.G;local now=0
+ GetTime=function() return now end
+ g.Public=function(value) return value end
+ function g:RemotePlayerKey(name) return name and a:PlayerKey(name) end
+ g.Relations={ApplyMembers=function() return 0 end,GetVersion=function() return 0 end}
+ g.Listing={GetListing=function() return g.listing end}
+ g.Alerts={Stop=function() end,NewApplicants=function() end}
+ g.listing={activityID=2,name="Listing",requiredItemLevel=0}
+ local status="applied"
+ C_LFGList.HasActiveEntryInfo=function() return true end
+ C_LFGList.GetApplicants=function() return {1} end
+ C_LFGList.RefreshApplicants=function() end
+ C_LFGList.GetApplicantInfo=function() return {applicationStatus=status,numMembers=1,displayOrderID=1,comment="A note"} end
+ C_LFGList.GetApplicantMemberInfo=function() return "Applicant-Away","WARRIOR","Warrior",80,600,0,false,false,true,"DAMAGER",nil,2500,nil,0,nil,71,false end
+ dofile("addon/LycheeGroup_Group/Applicants.lua")
+ local lists,reads=0,0
+ function g:GetApplicants() lists=lists+1;return self.Applicants:GetApplicants() end
+ function g:GetApplicant(id) reads=reads+1;return self.Applicants:GetApplicant(id) end
+ function g:RefreshApplicants() return self.Applicants:RequestRefresh() end
+ a:Open("create");local page=u.pages.create;u.Motion:Tick(.5)
+ local ids=page.appIDs
+ u:Hide();u.Motion:Tick(.1);lists,reads=0,0
+ status="cancelled";g.Applicants:OnApplicantUpdated(1);fresh.base.AdvanceClock(0)
+ T.eq(g.Applicants:GetApplicant(1).status,"cancelled","closing does not delay the native applicant status")
+ T.eq(lists,0);T.eq(reads,0,"the closing page performs no applicant lookup or sorting")
+ T.eq(page.appIDs,ids,"the leaving animation retains its existing applicant bindings")
+ u:Show("create");u.Motion:Tick(.5)
+ T.eq(u.hiding,nil);T.eq(u.frame:IsShown(),true);T.eq(g.views[page],"create")
+ T.ok(reads>0,"a reversed close refreshes the latest applicants on entry")
+ T.eq(page.batchPool[1].status:GetText(),u.L.states.cancelled)
+ now=5;fresh.base.AdvanceClock(5)
+ T.eq(g.Applicants:GetApplicant(1),nil);T.eq(#page.appIDs,0,"confirmed terminal rows expire after a quick reopen without another page change")
+ T.eq(fresh.base.PendingTimers(),0)
+ u:Hide();u.Motion:Tick(.5)
+ T.eq(page.unsub,nil);T.eq(next(g.views),nil);T.eq(u.Motion.jobs[page.batchScroll],nil)
 end

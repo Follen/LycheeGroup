@@ -43,10 +43,8 @@ function PlayerInfo.ResolveRecord(record)
 	local text = type(record.classSpec) == "string" and record.classSpec or ""
 	if not record.class and not record.specID and text=="" then return {classSpec=""} end
 	if record.class then
-		for classID = 1, GetNumClasses() do
-			local name, class = GetClassInfo(classID)
-			if class == record.class then return ResolveClass(classID, name, class, record.specID, text, true) end
-		end
+		local classID, name = A.Specializations:Class(record.class)
+		if classID then return ResolveClass(classID, name, record.class, record.specID, text, true) end
 	end
 	for classID = 1, GetNumClasses() do
 		local name, class = GetClassInfo(classID)

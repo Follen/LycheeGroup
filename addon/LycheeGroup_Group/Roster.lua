@@ -170,22 +170,20 @@ function R:Get()
   member.assignedRole=G.Public(UnitGroupRolesAssigned(unit))
   member.isLeader=G.Public(UnitIsGroupLeader(unit))==true
   member.isSelf=G.Public(UnitIsUnit(unit,"player"))==true
-  local spec,source
+  local spec
   if member.isSelf then
    local selected=C_SpecializationInfo.GetSpecialization()
    spec=selected and C_SpecializationInfo.GetSpecializationInfo(selected)
-   member.itemLevel=G.Public(select(2,GetAverageItemLevel()));source="player"
+   member.itemLevel=G.Public(select(2,GetAverageItemLevel()))
   else
    local cached=self.inspected[guid]
    spec=self.librarySpecs[guid]
-   if spec then source="libspecialization"
-   elseif not self.changed[guid] then
+   if not spec and not self.changed[guid] then
     spec=Positive(C_SpecializationInfo.GetInspectSpecialization(unit)) or cached and cached.specID
-    if spec then source="inspect" end
    end
    member.itemLevel=Positive(C_PaperDollInfo.GetInspectItemLevel(unit)) or cached and cached.itemLevel
   end
-  member.specID=Positive(spec);member.specSource=source
+  member.specID=Positive(spec)
   if member.specID and (not member.assignedRole or member.assignedRole=="NONE") then member.assignedRole=select(5,GetSpecializationInfoByID(member.specID)) end
   local summary=G.Public(C_PlayerInfo.GetPlayerMythicPlusRatingSummary(unit))
   member.dungeonScore=summary and G.Public(summary.currentSeasonScore)
