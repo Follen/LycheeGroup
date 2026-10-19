@@ -2,7 +2,7 @@
 
 更新日期：2026-10-20。
 
-状态：1.1.1 延续 1.1.0 的紧凑寻队布局，并调整成员图标顺序、大小和居中留白：主窗仍为 1299.2 × 840，主界面文字沿用增加 3px、行盒增加 4 的配置，“我的申请”采用 36 高紧凑行，待选队伍行高 76；浮窗保持独立尺寸与字号。1.1.1 发布包内置 LycheeUI 1.2.0（修订 19）；当前工作区已解除共享库冻结并接入修订 21 的导航、分段与菜单动效，尚未发布。1.0.6 发布前的 36 个 widget-tree 场景与该轮修改前逐场景完全一致，当时实机已检查四页尺寸与有限交互生命周期，未完成像素及硬件鼠标视觉验收。本地 widget-tree 与 [Material 3 · v4.4 网页原型](prototype-v4/index.html) 是布局对照，不是游戏截图；旧原型保留为历史参考。共享组件见 [LycheeUI 通用规范](../LycheeUI/DESIGN.md)，功能状态见 [Product.md 第 7 节](Product.md#7-用户可见的验收结果)，本次与历史验证、安装记录见 [perfermance.md 第 12 节](perfermance.md#12-当前内存测试与验证状态)。
+状态：1.1.2 保留 1.1.1 的紧凑寻队布局、成员图标顺序、大小和居中留白：主窗仍为 1299.2 × 840，主界面文字沿用增加 3px、行盒增加 4 的配置，“我的申请”采用 36 高紧凑行，待选队伍行高 76；浮窗保持独立尺寸与字号。1.1.2 内置 LycheeUI 1.2.0（修订 21），共享库已解除冻结并接入导航、分段与菜单动效，源库与内置副本一致。本轮 36 个控件树场景对照通过；实机四页尺寸、导航动效及关闭清理检查通过，并检查了寻队、笔记和设置页截图。该范围不代表全部缩放、像素对照或硬件鼠标操作均已验收。1.0.6 发布前的 36 个 widget-tree 场景与该轮修改前逐场景完全一致，当时实机已检查四页尺寸与有限交互生命周期，未完成像素及硬件鼠标视觉验收。本地 widget-tree 与 [Material 3 · v4.4 网页原型](prototype-v4/index.html) 是布局对照，不是游戏截图；旧原型保留为历史参考。共享组件见 [LycheeUI 通用规范](../LycheeUI/DESIGN.md)，功能状态见 [Product.md 第 7 节](Product.md#7-用户可见的验收结果)，本次与历史验证、安装记录见 [perfermance.md 第 12 节](perfermance.md#12-当前内存测试与验证状态)。
 
 本文只维护界面设计。功能与业务行为见 [Product.md](Product.md)，程序组织见 [Architecture.md](Architecture.md)，运行成本与测量要求见 [perfermance.md](perfermance.md)。界面参考 Material 3 的[颜色系统](https://m3.material.io/styles/color/the-color-system)与[桌面布局](https://m3.material.io/foundations/layout/canonical-examples/overview)，采用分层表面、圆角操作、分段选择与连续列表。以下颜色为手动选择的荔枝主题角色色，尺寸按桌面组队工具适配；保留荔枝品牌和主 Lychee 的 [Presence.lua](../Lychee/addon/Lychee/UI/Presence.lua)、[Motion.lua](../Lychee/addon/Lychee/UI/Motion.lua) 动作。原生 Lua 界面是当前呈现依据；未完成客户端核对的项目不视为视觉验收通过。
 

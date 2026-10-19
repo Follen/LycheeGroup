@@ -984,15 +984,19 @@ function Library.Context:SetGameAtlas(icon,name)
   icon:SetTexCoord(info.leftTexCoord+width*crop,info.rightTexCoord-width*crop,info.topTexCoord+height*crop,info.bottomTexCoord-height*crop)
  end
 end
+local function SameIconChannel(value,target,byte)
+ -- Raw float readback can straddle a half-byte rounding boundary such as .9.
+ return math.abs(value-target)<=.000001 or math.floor(value*255+.5)==byte
+end
 function Library.Context:SetIconState(icon,selected,hovered)
  icon=icon._lycheeTexture or icon
  local gray=not selected
  if icon:IsDesaturated()~=gray then icon:SetDesaturated(gray) end
  local value=selected and 1 or hovered and .98 or .9
+ local byte=math.floor(value*255+.5)
  local r,g,b=icon:GetVertexColor()
- -- Native float32 readback need not equal the original Lua color literal.
- if math.abs(r-value)>.000001 or math.abs(g-value)>.000001 or math.abs(b-value)>.000001 then icon:SetVertexColor(value,value,value) end
+ if not SameIconChannel(r,value,byte) or not SameIconChannel(g,value,byte) or not SameIconChannel(b,value,byte) then icon:SetVertexColor(value,value,value) end
  local alpha=selected and 1 or hovered and .9 or .72
- if math.abs(icon:GetAlpha()-alpha)>.000001 then icon:SetAlpha(alpha) end
+ if not SameIconChannel(icon:GetAlpha(),alpha,math.floor(alpha*255+.5)) then icon:SetAlpha(alpha) end
 end
 

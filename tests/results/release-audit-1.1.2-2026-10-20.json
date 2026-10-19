@@ -3,7 +3,7 @@
   "date": "2026-10-20",
   "release": "1.1.2",
   "baseline": "0aeafd0",
-  "status": "static_audit_complete_runtime_pending",
+  "status": "complete_with_bounded_runtime_evidence",
   "scope": {
     "product": "D:/Code/wow/addons/LycheeGroup",
     "canonicalLibrary": "D:/Code/wow/addons/LycheeUI",
@@ -242,7 +242,7 @@
       "command": "lua tests/runner.lua ui preview",
       "assertions": 3276,
       "failed": 0,
-      "laterCodeChanges": false
+      "laterCodeChanges": true
     },
     "layout": {
       "scenes": 36,
@@ -254,7 +254,8 @@
       "removedNodesPerScene": 98,
       "representationCheck": "The first post-P2 raw-storage comparison matched 3/36 scenes. Every remaining mismatch resolved to an omitted white Texture tint versus explicitly stored [1,1,1,1], because SetIconState correctly skipped that unchanged write. Resolving only this existing getter default restored 36/36; no color, position or layout tolerance was added.",
       "method": "Before H1 all snapshots were byte-equivalent after canonical JSON serialization to the pre-goal baseline. After H1, remove only explicitly hidden Texture leaves without incoming node/anchor/scroll references, renumber every node and reference, and compare every remaining property. After P2, additionally resolve an absent Texture vertex-tint field to its existing getter default [1,1,1,1]; omitting the unchanged white setter no longer creates that optional stub field. All 36 scenes match.",
-      "limits": "Offline widget-tree equivalence does not establish native pixels, hardware hit testing, secure operations or all scales."
+      "limits": "Offline widget-tree equivalence does not establish native pixels, hardware hit testing, secure operations or all scales.",
+      "matchedAfterRuntimeFix": 36
     },
     "manifests": {
       "runtimeLua": 52,
@@ -262,17 +263,420 @@
       "orphaned": 0,
       "productTOCs": 4,
       "sharedRuntimeFiles": 43
+    },
+    "sharedFinal": {
+      "command": "lua tests/run.lua",
+      "assertions": 645,
+      "failed": 0,
+      "scope": "canonical LycheeUI, including native 8-bit quantization and adjacent channel correction fixtures"
+    },
+    "productFinal": {
+      "command": "lua tests/runner.lua",
+      "modules": 9,
+      "assertions": 6126,
+      "failed": 0
     }
   },
   "runtime": {
-    "status": "not_started",
-    "previousKnownLimit": "The 1.1.1 mixed real-data/event workload sampled 27.070 MB, exceeding the 20 MB target. That historical failure is retained and is not overwritten by offline verification."
+    "status": "complete_with_bounded_runtime_evidence",
+    "staticFixCommit": "07eb3e2",
+    "runtimeFix": {
+      "initialFailedOperation": "LMO-000f884fbfbffa1e2104826293337a3d",
+      "diagnosticOperation": "LMO-ef58b4b7b25dbbe38ad2477f82c65923",
+      "finding": "Native Texture RGB/alpha readback uses 8-bit quantization, so a float32-only tolerance caused duplicate setters.",
+      "change": "Accept raw float readback within 1e-6 or the same rounded 8-bit channel; preserve original setter order, external corrections and adjacent channel distinctions, without a cross-icon cache.",
+      "focusedReview": "Helper has no new allocation, owned state, callback or lifecycle; adjacent RGB and alpha corrections and exact original native RGBA verified."
+    },
+    "installation": {
+      "path": "D:/Game/World of Warcraft/_retail_",
+      "pid": 21476,
+      "matchedFiles": 109,
+      "installedProductVersion": "1.1.2",
+      "libraryVersion": "1.2.0",
+      "libraryRevision": 21,
+      "build": "12.1.5.70448"
+    },
+    "connection": {
+      "id": "CON-45d2334edd2a738b2d48571a9821433e",
+      "initialRuntime": "0000000c0001aea9cf9e202de9f3b98e",
+      "finalRuntime": "0000000d0001b054bf069e63bcf2b04a",
+      "toolkit": "3.2.3",
+      "closed": true,
+      "bound": false,
+      "cleanup": "complete"
+    },
+    "memory": {
+      "operation": "LMO-22f7a319292e57fdeaa2c39c9c158e0a",
+      "complete": true,
+      "reportState": "verified",
+      "reportOk": true,
+      "cleanup": "complete",
+      "scenario": {
+        "gcPolicy": "natural phase first; first explicit collection follows all natural steps; collect only, never stop/restart GC",
+        "nativeObjects": "known product UI roots; Frame/region/animation counts, no engine-byte attribution",
+        "nativeSearches": 1,
+        "naturalSteps": 1024,
+        "operations": [
+          "native_bulk_event",
+          "eight_native_result_events",
+          "local_filter_sort",
+          "refresh_scroll"
+        ],
+        "operationsPerTick": 16,
+        "retainedSteps": 256,
+        "sampleEveryOperations": 4,
+        "tickIntervalSeconds": 0.1,
+        "timeoutSeconds": 115
+      },
+      "client": {
+        "build": "70448",
+        "date": "Oct 15 2026",
+        "interface": 120105,
+        "version": "12.1.5"
+      },
+      "initialRealResults": 45,
+      "finalRealResults": 43,
+      "elapsedSeconds": 29.562999999994645,
+      "sampleCount": 330,
+      "settings": {
+        "noteMarks": true,
+        "reduceMotion": false,
+        "scriptProfile": "0"
+      },
+      "summary": {
+        "budgetBytes": 20000000,
+        "finalOpenRetainedBytes": 2777003,
+        "naturalHeapPeakKB": 457053.533203125,
+        "naturalPeakBytes": 16744507,
+        "naturalPeakKB": 16352.0576171875,
+        "retainedBaselineSample": 263,
+        "retainedDeltaKB": -0.3515625,
+        "retainedFinalSample": 329,
+        "retainedPackageDeltaKB": [
+          -0.39453125,
+          0,
+          0,
+          0.04296875
+        ],
+        "retainedWorkloadPeakKB": 6072.958984375,
+        "sampledUncollectedPeakBytes": 16744507,
+        "sampledUncollectedPeakKB": 16352.0576171875,
+        "wholeHeapRetainedDeltaKB": -64.375
+      },
+      "frameCounts": {
+        "final": {
+          "animationGroups": 0,
+          "frames": 592,
+          "regions": 5524,
+          "truncated": false
+        },
+        "warm": {
+          "animationGroups": 0,
+          "frames": 592,
+          "regions": 5524,
+          "truncated": false
+        }
+      },
+      "checks": {
+        "allPackagesLoaded": true,
+        "engineResourceAttribution": false,
+        "knownOwnersIdle": true,
+        "knownOwnersIdleAfterCleanup": true,
+        "nativeObjectsStable": true,
+        "naturalPackageBudget": true,
+        "noProbeDrivers": true,
+        "resultPoolStable": true,
+        "retainedPackageBudget": true,
+        "searchGenerationUnchanged": true
+      },
+      "methodProfilesRestored": true,
+      "operationsPerKind": [
+        320,
+        320,
+        320,
+        320
+      ],
+      "effectiveSingleResultEvents": 2504,
+      "scope": "Four packages after 07eb3e2 before the final icon readback comparison fix; 1024 natural-GC operations then 256 retained operations. One real search, no data truncation. The final icon-only change received focused native verification, not another full memory run.",
+      "closedRetainedBytes": 2564587,
+      "limits": "engineResourceAttribution=false is an explicit scope limitation. This passing sample does not invalidate the historical 27.070 MB run or establish a global ceiling or causal reduction percentage."
+    },
+    "motion": {
+      "operation": "LMO-35eabe91880a9dbcc4bcebd6c33db059",
+      "complete": true,
+      "reportState": "verified",
+      "reportOk": true,
+      "cleanup": "complete",
+      "tick": {
+        "count": 840,
+        "maxMs": 0.1565999984741211,
+        "sumMs": 25.492200314998627
+      },
+      "warmObjects": {
+        "frames": 576,
+        "regions": 5852
+      },
+      "rounds": [
+        {
+          "jobs": 0,
+          "objects": {
+            "frames": 576,
+            "regions": 5852
+          }
+        },
+        {
+          "jobs": 0,
+          "objects": {
+            "frames": 576,
+            "regions": 5852
+          }
+        },
+        {
+          "jobs": 0,
+          "objects": {
+            "frames": 576,
+            "regions": 5852
+          }
+        }
+      ],
+      "closedJobs": 0,
+      "driverActive": false,
+      "intermediatePagePositions": 236,
+      "maxFPS": "120",
+      "maxFPSBk": "30",
+      "gc": "natural",
+      "actionCount": 33,
+      "scope": "Product Notes/Settings pages and preview scenes, before the icon-only fix. Tick cost is not full frame time."
+    },
+    "sharedFinal": {
+      "operation": "LMO-a40ba39524f8d90c0f496a9691051966",
+      "complete": true,
+      "reportState": "verified",
+      "reportOk": true,
+      "cleanup": "complete",
+      "result": {
+        "build": "70448",
+        "checks": [
+          "window replacement receives final alpha",
+          "hidden switch settles",
+          "hidden navigation settles",
+          "false segment retained",
+          "icon state matches original setter sequence",
+          "unchanged icon state performs no native writes",
+          "external icon changes corrected",
+          "external vertex alpha corrected",
+          "adjacent external color byte corrected",
+          "adjacent external alpha byte corrected",
+          "icon state matches original setter sequence",
+          "unchanged icon state performs no native writes",
+          "external icon changes corrected",
+          "external vertex alpha corrected",
+          "adjacent external color byte corrected",
+          "adjacent external alpha byte corrected",
+          "icon state matches original setter sequence",
+          "unchanged icon state performs no native writes",
+          "external icon changes corrected",
+          "external vertex alpha corrected",
+          "adjacent external color byte corrected",
+          "adjacent external alpha byte corrected",
+          "OnEditFocusLost handoff preserved",
+          "OnHide handoff preserved",
+          "Reveal continues from displayed position",
+          "immediate Reveal restores endpoint",
+          "temporary owners idle"
+        ],
+        "icon": {
+          "alpha": 1,
+          "desaturated": false,
+          "vertex": [
+            1,
+            1,
+            1,
+            1
+          ]
+        },
+        "iconStates": [
+          {
+            "alpha": 0.7215686440467834,
+            "alphaAfterVertexSetter": 0.12156863510608673,
+            "hovered": false,
+            "original": {
+              "alpha": 0.7215686440467834,
+              "rgba": [
+                0.9019608497619629,
+                0.9019608497619629,
+                0.9019608497619629,
+                0.7215686440467834
+              ]
+            },
+            "rgba": [
+              0.9019608497619629,
+              0.9019608497619629,
+              0.9019608497619629,
+              0.7215686440467834
+            ],
+            "selected": false
+          },
+          {
+            "alpha": 0.9019608497619629,
+            "alphaAfterVertexSetter": 0.12156863510608673,
+            "hovered": true,
+            "original": {
+              "alpha": 0.9019608497619629,
+              "rgba": [
+                0.9803922176361084,
+                0.9803922176361084,
+                0.9803922176361084,
+                0.9019608497619629
+              ]
+            },
+            "rgba": [
+              0.9803922176361084,
+              0.9803922176361084,
+              0.9803922176361084,
+              0.9019608497619629
+            ],
+            "selected": false
+          },
+          {
+            "alpha": 1,
+            "alphaAfterVertexSetter": 0.12156863510608673,
+            "hovered": false,
+            "original": {
+              "alpha": 1,
+              "rgba": [
+                1,
+                1,
+                1,
+                1
+              ]
+            },
+            "rgba": [
+              1,
+              1,
+              1,
+              1
+            ],
+            "selected": true
+          }
+        ],
+        "revision": 21,
+        "scope": "Real native regions in an invisible temporary context; no protected business actions or hardware dispatch."
+      }
+    },
+    "pagesFinal": {
+      "operation": "LMO-2cc96f71decf3cfe36a4dc652dd23945",
+      "complete": true,
+      "reportState": "verified",
+      "reportOk": true,
+      "cleanup": "complete",
+      "result": {
+        "blankNoticeGeometryWrites": 0,
+        "checks": [
+          "late Notes readiness watches visible Find",
+          "find page visible",
+          "create page visible",
+          "blank notices do not rewrite native anchors",
+          "visible notice reserves space",
+          "cleared notice restores original anchor",
+          "notes page visible",
+          "settings page visible",
+          "closed window owns no native controls",
+          "closed window has no animation driver",
+          "hidden pages release Notes subscriptions",
+          "LycheeGroup loads 1.1.2",
+          "LycheeGroup_Group loads 1.1.2",
+          "LycheeGroup_Notes loads 1.1.2",
+          "LycheeGroup_UI loads 1.1.2"
+        ],
+        "notesInitiallyLoaded": false,
+        "pages": [
+          {
+            "height": 840,
+            "name": "find",
+            "scale": 0.7111111283302307,
+            "width": 1299.1998291015625
+          },
+          {
+            "height": 840,
+            "name": "create",
+            "scale": 0.7111111283302307,
+            "width": 1299.1998291015625
+          },
+          {
+            "height": 840,
+            "name": "notes",
+            "scale": 0.7111111283302307,
+            "width": 1299.1998291015625
+          },
+          {
+            "height": 840,
+            "name": "settings",
+            "scale": 0.7111111283302307,
+            "width": 1299.1998291015625
+          }
+        ],
+        "versions": [
+          {
+            "loaded": true,
+            "name": "LycheeGroup",
+            "version": "1.1.2"
+          },
+          {
+            "loaded": true,
+            "name": "LycheeGroup_Group",
+            "version": "1.1.2"
+          },
+          {
+            "loaded": true,
+            "name": "LycheeGroup_Notes",
+            "version": "1.1.2"
+          },
+          {
+            "loaded": true,
+            "name": "LycheeGroup_UI",
+            "version": "1.1.2"
+          }
+        ]
+      }
+    },
+    "errors": {
+      "operation": "LMO-9159fcd6d805db385e528b9235591e2a",
+      "complete": true,
+      "reportState": "verified",
+      "reportOk": true,
+      "cleanup": "complete",
+      "baselineCapturedAt": 1792444532,
+      "baselineSession": 250,
+      "finalCapturedAt": 1792445182,
+      "finalSession": 251,
+      "availableCount": 38,
+      "returnedCount": 38,
+      "newErrorCount": 0,
+      "snapshotComplete": false,
+      "incompleteReasons": [
+        "error[11].stack",
+        "error[11].locals"
+      ],
+      "scope": "All 38 stored records returned; one historical record lacks stack/locals. No error storage was cleared."
+    },
+    "visual": {
+      "observed": [
+        "find",
+        "notes",
+        "settings"
+      ],
+      "method": "Read-only screenshots of the actual game window during final 1.1.2 page checks.",
+      "limits": "Create was verified by native geometry/lifecycle, not a captured screenshot. No claim of full pixel, hardware mouse, all scales or secure-operation coverage."
+    },
+    "previousKnownLimit": "The historical 1.1.1 mixed real-data/event workload sampled 27.070 MB, above the 20 MB target. Its data size, actor and GC conditions differ from this run; it is retained unchanged."
   },
   "versionConsistency": {
     "libraryVersion": "1.2.0",
     "revision": 21,
     "status": "matched_43_runtime_files",
-    "externalGit": false
+    "externalGit": false,
+    "productVersion": "1.1.2"
   },
   "limits": [
     "No absolute claim that all possible bugs, client states or third-party interactions are absent.",
