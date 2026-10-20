@@ -2,7 +2,7 @@
 
 更新日期：2026-10-20。
 
-状态：当前实现版本为 1.1.5，内置 LycheeUI 1.2.0（修订 22），源库与内置副本一致；共享库已按用户要求解除冻结。1.1.2 的循环审计、离线回归及有限实机验证已完成，当时发现的图标量化读回问题已修复并复测，详见 [perfermance.md 第 12 节](perfermance.md#12-当前内存测试与验证状态)。活动与来源显示规则由主包 Presentation 管理，成员名单共用 UI.Members，主窗和浮窗分别持有共享库 Context。1.0.6 发布前产品与组件库串行审计的范围、修复与验证见[审计记录](tests/results/serial-audit-1.0.5-2026-10-19.json)；该轮源码安装重载后，完成有限的页面、控件归还、菜单和关闭清理检查。此前以 `2b74449` 为基线的重构及实机检查保留为历史证据，该轮独立完成的 36 个布局场景对照与运行时范围见 [perfermance.md 第 12 节](perfermance.md#12-当前内存测试与验证状态)。历史真实列表自然内存峰值仍超过 20 MB，完整性能验收尚未通过。
+状态：当前实现版本为 1.1.6，内置 LycheeUI 1.2.0（修订 22），源库与内置副本一致；共享库已按用户要求解除冻结。1.1.2 的循环审计、离线回归及有限实机验证已完成，当时发现的图标量化读回问题已修复并复测，详见 [perfermance.md 第 12 节](perfermance.md#12-当前内存测试与验证状态)。活动与来源显示规则由主包 Presentation 管理，成员名单共用 UI.Members，主窗和浮窗分别持有共享库 Context。1.0.6 发布前产品与组件库串行审计的范围、修复与验证见[审计记录](tests/results/serial-audit-1.0.5-2026-10-19.json)；该轮源码安装重载后，完成有限的页面、控件归还、菜单和关闭清理检查。此前以 `2b74449` 为基线的重构及实机检查保留为历史证据，该轮独立完成的 36 个布局场景对照与运行时范围见 [perfermance.md 第 12 节](perfermance.md#12-当前内存测试与验证状态)。历史真实列表自然内存峰值仍超过 20 MB，完整性能验收尚未通过。
 
 产品范围见 [Product.md](Product.md)，视觉与动画轨迹见 [Desgin.md](Desgin.md)，资源额度与测量方法见 [perfermance.md](perfermance.md)。
 
@@ -233,11 +233,15 @@ Applicants 成员保存原生 `GetApplicantMemberInfo` 第 15 返回值 `raceID`
 
 Create 的申请者批次绘制若遇到已从服务移除、但排队通知尚未更新视图的 ID，立即重新获取申请名单及批次高度，再绘制当前成员，避免关系或笔记刷新先到时读取失效的申请记录。
 
+申请者种族展开状态由复用的成员行持有，以申请 ID 和成员身份判断是否仍为同一目标；普通刷新保留，换绑或隐藏时清除。点击阵营单元格只切换该行的图标锚点和种族可见性，右键仍打开成员菜单；状态不进入 Group 服务或 SavedVariables。
+
 申请者成员详情首次打开时，`GetApplicantDungeonScores` 才读取 `C_LFGList.GetApplicantDungeonScoreForListing(applicantID, memberIndex, 当前活动)` 和 `GetApplicantBestDungeonScore`，保存当前副本与最佳一场记录；申请者事件使缓存失效，后续按需重新读取。不使用 RaiderIO，不扫描全部副本，不把最佳评分记录推断为生涯最高限时层数。Tooltip 的两条层数控件按 `C_ChallengeMode.GetKeystoneLevelRarityColor` 着色，控件所示层数改变时才重新读取颜色，与限时状态独立。缓存生命周期见 [perfermance.md](perfermance.md#6-招募申请者与通讯)。
 
 Create 与 Floating 根据当前招募活动的 `categoryID==3` 隐藏团队申请评分；Create 同时切换列布局和排序选项，已有评分排序切为最新，复用到其他分类时恢复原布局。此展示条件不按当前团队人数或 `IsInRaid()` 判断。
 
 评分在 Group 数据入口按活动归一化：搜索记录保留 `leaderPvpRatingInfo` 的赛制与分数，主列使用原生返回的首项；不推断评分数组与活动数组的逐项映射。PvP 申请者使用 `GetApplicantPvpRatingInfoForListing(applicantID, memberIndex, activityID)` 取得当前招募赛制分，招募活动改变时重新读取。PvP 装等使用 `pvpItemLevel`。列表、排序与成员提示消费相同字段，缺少 PvP 评分不回退大秘境分；nil 与明确的 0 在数据层分别保留，展示层统一处理未知、零分与正数。具体展示要求见 [Product.md 第 3.1 节](Product.md#31-活动分类与队伍信息)。
+
+搜索、招募标题／描述和申请备注的原生输入在取得过程中也可能被其他界面重新挂载。UI.Native 与 Application 在取得边界确认共享 lease 仍有效，之后才登记搜索输入或继续初始化；失败时归还已取得的同组控件，保留外部宿主的布局，并返回现有不可用提示。创建页的准备与校验分支互斥，准备失败不会被后续校验清除提示或重新启用发布按钮；再次进入沿原入口重试。真实申请备注的部分初始化状态与 Preview 明确区分，清理不会访问尚未创建的模拟输入。
 
 “标题”搜索（内部模式名 group）由 `C_LFGList.Search` 读取引擎登记的原生 SearchBox。`UI.Native:AcquireSearch(owner,shell)` 借用该框并通过 `LycheeUI.C.NativeInput` 接管，以 `searchLease` 保存业务 owner 和输入修订号；布局、样式、焦点和回调的保存／释放由共享库负责。首次真实租借清除旧文本与活动 token；同分类 Enter、刷新及普通重开保留输入，切换分类主动清空旧条件。进入页面、操作搜索栏或提交搜索时检查该原生框的实际父对象；被集合石等界面移走后，重新接管布局和回调，清除外部残留查询，并记住最新归还位置。本页面持有输入框时只接受玩家键入文本，其他浏览界面因活动目录更新而写入的活动 token 通过原生清空接口移除；本页面的活动选择通过独立搜索参数提交。事件发生时若发现父对象已变更，则释放租借并将该事件交回原有处理器。离开页面时仅归还仍由本页面持有的布局，已被其他界面接管的回调不被覆盖；不以轮询或常驻 hook 争抢输入框。`ClearSearch()` 处理明确清空动作，`ReleaseSearch()` 归还控件而不清空输入。group 请求在提交时核对原生租借与修订号，输入不可用则报告错误，不改成其他搜索。
 

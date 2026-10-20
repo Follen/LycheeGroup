@@ -447,7 +447,7 @@ do
 end
 do
  local function X(region) local p={region:GetPoint()};return p[#p-1] end
- for _,pair in ipairs({{"ilvl","ilvl"},{"rating","score"}}) do
+ for _,pair in ipairs({{"role","role"},{"ilvl","ilvl"},{"rating","score"}}) do
   local header,value=create.applicantHeaders[pair[1]],batch.people[1][pair[2]]
   T.eq(header.justify,"CENTER");T.eq(X(header)+header:GetWidth()/2,X(value)+value:GetWidth()/2,"numeric header and value share their center")
  end
@@ -457,19 +457,52 @@ do
  local labels={};for i,header in ipairs(headings) do labels[i]=header:GetText() end
  T.same(labels,{"申请者","职责","阵营","评分","装等","备注","操作"},"party applicant headings follow the visible data columns")
  T.ok(X(create.applicantHeaders.role)<250,"roles move substantially toward the applicant identity")
- local factionLeft=X(create.applicantHeaders.faction)
- T.eq(X(batch.people[1].faction),factionLeft,"faction icons share a fixed column edge")
- T.eq(X(batch.people[1].race),factionLeft+24,"race names keep the same left edge after the icon")
+ local row=batch.people[1]
+ local faction=create.applicantHeaders.faction
+ T.eq(faction.justify,"CENTER","faction headings center over the icon and expanded race")
+ T.eq(row.faction:GetParent(),row.factionButton);T.eq(row.faction:GetPoint(),"CENTER")
+ T.eq(X(row.factionButton)+row.factionButton:GetWidth()/2,X(faction)+faction:GetWidth()/2,"the icon button and heading share their center")
+ T.eq(row.race.justify,"CENTER");T.eq(X(row.race)+row.race:GetWidth()/2,X(faction)+faction:GetWidth()/2)
+ T.ok(row.factionButton:GetWidth()<=row.faction:GetWidth()+16,"faction hover feedback stays close to the icon")
  T.ok(X(create.applicantHeaders.comment)-X(create.applicantHeaders.ilvl)-create.applicantHeaders.ilvl:GetWidth()>=32,"notes keep clear space after item level")
- T.ok(X(create.applicantHeaders.role)+create.applicantHeaders.role:GetWidth()<X(create.applicantHeaders.faction))
  local previous
- for _,key in ipairs({"role","faction","rating","ilvl"}) do local h=create.applicantHeaders[key];local center=X(h)+h:GetWidth()/2;if previous then T.near(center-previous,104,.001,"the middle columns have equal center spacing") end;previous=center end
- local member=G.applicants[71].members[1];local race=member.raceName
- for _,name in ipairs({"赞达拉巨魔","光铸德莱尼","至高岭牛头人"}) do
-  member.raceName=name;create:RefreshApplicants()
-  local row=batch.people[1];T.ok(row.race:GetStringWidth()<=row.race:GetWidth(),"long Chinese race names fit on one line")
-  T.eq(X(row.faction),factionLeft);T.eq(X(row.race),factionLeft+24,"race length does not shift the text column")
+ for _,key in ipairs({"role","faction","rating","ilvl"}) do
+  local header=create.applicantHeaders[key];local center=X(header)+header:GetWidth()/2
+  if previous then T.eq(center-previous,96,"applicant metadata columns have equal center spacing") end
+  previous=center
  end
+ local height=row:GetHeight()
+ T.eq(row.race:IsShown(),false,"race names start collapsed")
+ row.factionButton:Fire("OnClick","LeftButton");T.eq(row.race:IsShown(),false,"clipped cells do not toggle outside the viewport")
+ create.batchScroll.mouseOver=true
+ row.factionButton:Fire("OnClick","LeftButton")
+ T.eq(row.race:IsShown(),true);T.eq(batch.people[2].race:IsShown(),false,"each member expands independently")
+ local iconPoint,racePoint={row.factionButton:GetPoint()},{row.race:GetPoint()}
+ T.eq(iconPoint[#iconPoint],11);T.eq(racePoint[#racePoint],-13)
+ T.eq(row:GetHeight(),height,"expansion fits inside the existing row")
+ create:RefreshApplicants();T.eq(row.race:IsShown(),true,"ordinary applicant refresh preserves the current member's expansion")
+ row.factionButton:Fire("OnClick","RightButton")
+ T.ok(U.context:IsMenuOpen(row),"right clicking the faction cell keeps the member menu");T.eq(row.race:IsShown(),true)
+ U:CloseMenu()
+ row.factionButton:Fire("OnClick","LeftButton")
+ iconPoint={row.factionButton:GetPoint()}
+ T.eq(row.race:IsShown(),false);T.eq(iconPoint[#iconPoint],0,"collapsing recenters the icon vertically")
+ local member=G.applicants[71].members[1];local race=member.raceName
+ for _,name in ipairs({"人类","血精灵","赞达拉巨魔","光铸德莱尼","至高岭牛头人"}) do
+  member.raceName=name;create:RefreshApplicants()
+  T.ok(row.race:GetStringWidth()<=row.race:GetWidth(),"long Chinese race names fit on one line")
+  T.eq(row.race.wrap,false,"race names never wrap as recycled applicant rows change")
+  T.eq(X(row.race)+row.race:GetWidth()/2,X(faction)+faction:GetWidth()/2,"all race names keep the icon's center")
+ end
+ row.factionButton:Fire("OnClick","LeftButton")
+ local nameKey=member.nameKey;member.nameKey="Replacement-Away";create:RefreshApplicants()
+ T.eq(row.race:IsShown(),false,"a reused row does not transfer expansion to a different member")
+ member.nameKey=nameKey
+ local factionGroup=member.factionGroup;member.factionGroup=nil;member.raceName=nil;create:RefreshApplicants()
+ T.eq(row.faction:IsShown(),false);T.eq(row.factionButton.label:GetText(),"—","unknown faction keeps a visible centered trigger")
+ row.factionButton:Fire("OnClick","LeftButton");T.eq(row.race:GetText(),"—");T.eq(row.race:IsShown(),true)
+ row:Hide();row:Show();T.eq(row.race:IsShown(),false,"hidden rows release transient expansion")
+ member.factionGroup=factionGroup;create.batchScroll.mouseOver=nil
  member.raceName=race;create:RefreshApplicants()
  T.eq(create.groupSummary:GetWidth(),create.groupStrip:GetWidth()+24,"the hover summary hugs its content with equal padding")
 end
@@ -506,15 +539,21 @@ do
  table.sort(headings,function(a,b) return X(a)<X(b) end)
  local labels={};for i,header in ipairs(headings) do labels[i]=header:GetText() end
  T.same(labels,{"申请者","职责","阵营","装等","备注","操作"},"raid applicant headings reclaim the score column")
- local ilvl,faction=create.applicantHeaders.ilvl,create.applicantHeaders.faction
- T.near(X(ilvl)+ilvl:GetWidth()/2-X(faction)-faction:GetWidth()/2,104,.001,"raid item level keeps the same middle-column spacing")
+ local faction=create.applicantHeaders.faction
+ T.eq(faction.justify,"CENTER","raid faction headings also center over their content")
+ T.eq(X(batch.people[1].factionButton)+batch.people[1].factionButton:GetWidth()/2,X(faction)+faction:GetWidth()/2,"raid faction icons share the heading center")
+ T.eq(X(batch.people[1].race)+batch.people[1].race:GetWidth()/2,X(faction)+faction:GetWidth()/2,"raid race names share the same center")
+ create.batchScroll.mouseOver=true;batch.people[1].factionButton:Fire("OnClick","LeftButton")
+ T.eq(batch.people[1].race:IsShown(),true,"raid applicants use the same race expansion")
+ batch.people[1].factionButton:Fire("OnClick","LeftButton");create.batchScroll.mouseOver=nil
+ for _,key in ipairs({"role","ilvl"}) do local header,value=create.applicantHeaders[key],batch.people[1][key];T.eq(header.justify,"CENTER");T.eq(X(header)+header:GetWidth()/2,X(value)+value:GetWidth()/2,"raid role and item level share their header centers") end
  T.ok(batch.comment:GetWidth()>115,"raid notes use the space released by the score column")
  create.sortChoice:Fire("OnClick","LeftButton")
  for _,item in ipairs(U.context.menu.items) do T.ok(item.value~="score","raid sort menu omits rating") end
  U:CloseMenu()
  listing.activityID=oldActivity;G:Notify("listing")
  T.eq(create.applicantHeaders.rating:IsShown(),true);T.eq(batch.people[1].score:IsShown(),true)
- T.eq(batch.people[1].score:GetText(),"2200");T.near(batch.comment:GetWidth(),145.2,.001,"reused dungeon batches restore score space")
+ T.eq(batch.people[1].score:GetText(),"2200");T.near(batch.comment:GetWidth(),169.2,.001,"reused dungeon batches restore score space")
  Pick(create.sortChoice,"score");Pick(create.sortChoice,"newest")
 end
 
@@ -3130,7 +3169,8 @@ do
  T.eq(applicant.title.wrap,true);T.ok(applicant.title:GetStringHeight()<=applicant:GetHeight())
  T.ok(56+applicant.title:GetWidth()+6+applicant.marks:GetWidth()<=236,"full name and marks fit the name column")
  point={applicant.marks:GetPoint()};T.eq(point[2],applicant.title);T.eq(point[3],"RIGHT");T.eq(point[5],0)
- point={applicant.faction:GetPoint()};T.ok(point[#point-1]>=314,"applicant faction sits in its dedicated column")
+ point={applicant.factionButton:GetPoint()};T.ok(point[#point-1]>=314,"applicant faction sits in its dedicated column")
+ T.eq(applicant.faction:GetParent(),applicant.factionButton);T.eq(applicant.faction:GetPoint(),"CENTER")
  a.Notes:Edit(person.nameKey,"Caution",{type="caution"})
  T.eq(applicant.marks.noteButton.icon:GetTexture(),u.Theme.media.."caution.tga","the pooled note button follows the actual current note type")
  person.isBNetFriend=false;g:Notify("relations");T.eq(applicant.marks.icons.bnet:IsShown(),false)
@@ -3782,4 +3822,50 @@ do
  local maximum=select(2,view.scrollbar:GetMinMaxValues());view.scrollbar:SetValue(maximum)
  view.scroll:Fire("OnMouseWheel",-1);T.eq(u.Motion.jobs[view.scroll],nil);T.eq(view.scroll:GetVerticalScroll(),maximum)
  u:Hide(true)
+end
+
+-- Native fields may be taken by another browser during synchronous layout.
+for _,target in ipairs({"creationTitle","creationDescription","applicationDescription","search"}) do
+ local fresh=dofile("tests/ui_fixture.lua")("zhCN")
+ local a,u,g=fresh.A,fresh.U,fresh.G
+ a.db.reduceMotion=true
+ local creation=target=="creationTitle" or target=="creationDescription"
+ if not creation then a:Open("find") end
+ local page=u.pages[creation and "create" or "find"]
+ if target=="search" then u.Native:ReleaseSearch() end
+ local region=target=="creationTitle" and LFGListFrame.EntryCreation.Name
+  or target=="creationDescription" and LFGListFrame.EntryCreation.Description
+  or target=="applicationDescription" and LFGListApplicationDialog.Description
+  or LFGListFrame.SearchPanel.SearchBox
+ local originalParent,originalScript=region:GetParent(),region:GetScript("OnSizeChanged")
+ local inputs=#u.inputs
+ local foreign=CreateFrame("Frame",nil,UIParent)
+ region:SetScript("OnSizeChanged",function(self) self:SetParent(foreign) end)
+ local ok,err
+ if creation then
+  a:Open("create");ok=u.Native.owner~=nil;err=page.formError:GetText()
+  T.eq(page.publish:IsEnabled(),false,"opening a form with failed native acquisition keeps Publish disabled")
+  T.ok(page.formNotice:IsShown(),"the full page-entry path preserves the acquisition failure notice")
+ elseif target=="applicationDescription" then ok,err=u.Application:OpenApplicationSettings(nil,true)
+ else ok,err=u.Native:AcquireSearch(page,page.search) end
+ T.eq(ok,false,target.." reports acquisition failure instead of publishing an inactive lease")
+ T.eq(err,u.L.unavailable);T.eq(region:GetParent(),foreign,"failed acquisition preserves the new browser's parent")
+ if not creation then T.eq(#u.inputs,inputs,"failed acquisition leaves no borrowed input registration") end
+ inputs=#u.inputs
+ for lease in pairs(u.context.nativeControls) do T.ok(lease:IsOwned(),"remaining native registrations still own their controls") end
+ if creation then
+  T.eq(u.Native.owner,nil);T.eq(u.Native.titleInput,nil);T.eq(u.Native.descriptionInput,nil)
+ elseif target=="applicationDescription" then
+  T.eq(u.Application.applicationLease,nil);T.eq(u.Application.previewApplication,nil)
+  T.eq(u.activeModal,nil,"failed application acquisition closes its temporary modal")
+ else T.eq(u.Native.searchLease,nil);T.eq(g.Search.inputLease,nil,"search never binds a failed native lease") end
+ region:SetScript("OnSizeChanged",originalScript);region:SetParent(originalParent)
+ if creation then
+  ok,err=a:Open("create");T.eq(u.Native.owner,page);T.ok(u.Native.titleInput:IsOwned() and u.Native.descriptionInput:IsOwned())
+  T.eq(#u.inputs,inputs+2);T.eq(page.publish:IsEnabled(),true);T.eq(page.formNotice:IsShown(),false,"a successful page-entry retry clears the unavailable notice")
+ elseif target=="applicationDescription" then ok,err=u.Application:OpenApplicationSettings(nil,true);T.ok(u.Application.applicationLease.description:IsOwned())
+ else ok,err=page:EnsureSearchInput();T.ok(u.Native.searchLease:IsOwned());T.eq(g.Search.inputLease,u.Native.searchLease) end
+ T.eq(ok,true,target.." can be retried after the foreign browser returns the field")
+ u:Hide(true)
+ T.eq(next(u.context.nativeControls),nil,"closing after recovery releases all native controls")
 end

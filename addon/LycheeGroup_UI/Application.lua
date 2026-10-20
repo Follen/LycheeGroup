@@ -123,11 +123,12 @@ function Application:RefreshApplicationRoles()
 end
 function Application:ReleaseApplication()
  local lease=self.previewApplication or self.applicationLease;if not lease then return end
+ local preview=self.previewApplication~=nil
  self.previewApplication,self.applicationLease=nil,nil
  local modal=self.applicationModal
  modal.onClose=nil
- if lease.description then lease.description:Release()
- else modal.previewNote.box:ClearFocus();modal.previewNote.box:SetText("");modal.previewNote:Hide() end
+ if preview then modal.previewNote.box:ClearFocus();modal.previewNote.box:SetText("");modal.previewNote:Hide()
+ elseif lease.description then lease.description:Release() end
  if modal.frame:IsShown() then modal:Close() end
 end
 function Application:OpenApplicationSettings(resultID,enableOnSave)
@@ -145,12 +146,15 @@ function Application:OpenApplicationSettings(resultID,enableOnSave)
   self.applicationLease=lease
   local dialog=LFGListApplicationDialog;local description=dialog.Description
   lease.dialog=dialog
-  lease.description=C.NativeInput(modal.note,description.EditBox,{container=description,onLost=function() Application:ReleaseApplication() end})
+  local input=C.NativeInput(modal.note,description.EditBox,{container=description,onLost=function() Application:ReleaseApplication() end})
+  if self.applicationLease~=lease or not input:IsOwned() then input:Release();self:ReleaseApplication();return false,L.unavailable end
+  lease.description=input
   lease.description:Bind(dialog,"OnShow",function(frame,previous,...) if previous then previous(frame,...) end;Application:ReleaseApplication() end)
   lease.description:Bind(dialog,"OnEvent",function(frame,previous,event,...) if previous then previous(frame,event,...) end;if event=="LFG_ROLE_UPDATE" then Application:RefreshApplicationRoles() end end)
   if modal.previewNote then modal.previewNote:Hide() end
   description.EditBox:SetFocus();lease.description:RefreshStyle()
  end
+ if (self.previewApplication or self.applicationLease)~=lease then return false,L.unavailable end
  modal.onClose=function() Application:ReleaseApplication() end
  local result=resultID and UI:GetGroup():GetResult(resultID)
  UI:SetText(modal.group,result and result.name or "")

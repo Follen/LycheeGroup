@@ -50,6 +50,7 @@ function Native:AcquireSearch(owner,shell)
    OnEditFocusGained=false,OnEditFocusLost=false,OnEnter=false,OnLeave=false,
   },
  })
+ if not lease:IsOwned() then self.searchDirty=true;lease:Release();return false,L.unavailable end
  lease.owner=owner;lease.revision=0;lease.previousChanged=previousChanged;lease.searchService=search
  self.searchLease=lease
  search:BindInput(lease)
@@ -89,7 +90,7 @@ function Native:AcquireCreation(owner,title,description)
   Native:ReleaseCreation()
   owner:OnCreationInputLost()
  end
- self.titleInput=C.NativeInput(title,name,{
+ local titleInput=C.NativeInput(title,name,{
   onLost=Lost,
   scripts={
    -- The stock callback assumes EntryCreation is the field's direct parent.
@@ -97,13 +98,17 @@ function Native:AcquireCreation(owner,title,description)
    OnTabPressed=function() desc.EditBox:SetFocus() end,
   },
  })
- self.descriptionInput=C.NativeInput(description,desc.EditBox,{
+ if self.owner~=owner or not titleInput:IsOwned() then titleInput:Release();self:ReleaseCreation();return false,L.unavailable end
+ self.titleInput=titleInput
+ local descriptionInput=C.NativeInput(description,desc.EditBox,{
   container=desc,onLost=Lost,
   scripts={
    OnTabPressed=function() name:SetFocus() end,
    OnTextChanged=function(box,userInput) if descriptionChanged then descriptionChanged(box,userInput) end;owner:ValidateForm() end,
   },
  })
+ if self.owner~=owner or not titleInput:IsOwned() or not descriptionInput:IsOwned() then descriptionInput:Release();self:ReleaseCreation();return false,L.unavailable end
+ self.descriptionInput=descriptionInput
  return true
 end
 
@@ -188,9 +193,8 @@ function Native:ReleaseCreation()
  local entry=self.entry
  local title,description=self.titleInput,self.descriptionInput
  self.owner,self.entry,self.titleInput,self.descriptionInput=nil,nil,nil,nil
- if title:IsOwned() then entry.Name.selectedActivity,entry.Name.selectedCategory=nil,nil end
- if description:IsOwned() then entry.Description.selectedActivity,entry.Description.selectedCategory=nil,nil end
- title:Release();description:Release()
+ if title then if title:IsOwned() then entry.Name.selectedActivity,entry.Name.selectedCategory=nil,nil end;title:Release() end
+ if description then if description:IsOwned() then entry.Description.selectedActivity,entry.Description.selectedCategory=nil,nil end;description:Release() end
 end
 
 -- Ordinary edits exist only for explicit preview and never register native text.

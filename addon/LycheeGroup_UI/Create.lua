@@ -8,15 +8,15 @@ local CONTENT=MAIN-48
 local BATCH_WIDTH=CONTENT-C.listRightInset
 local columns={
  name={x=12,width=224,align="LEFT"},role={x=242,width=68,align="CENTER"},
- faction={x=314,width=132,align="CENTER"},
- rating={x=448,width=72,align="CENTER"},ilvl={x=564,width=48,align="CENTER"},
- comment={x=644,width=BATCH_WIDTH-752,align="LEFT"},actions={x=BATCH_WIDTH-96,width=84,align="CENTER"},
+ faction={x=316,width=112,align="CENTER"},
+ rating={x=432,width=72,align="CENTER"},ilvl={x=540,width=48,align="CENTER"},
+ comment={x=620,width=BATCH_WIDTH-728,align="LEFT"},actions={x=BATCH_WIDTH-96,width=84,align="CENTER"},
 }
 local MEMBER_HEIGHT,MEMBER_STRIDE=72,76
 local FAVORITE_HEIGHT=128
 local noRatingColumns={
- name=columns.name,role=columns.role,faction=columns.faction,ilvl={x=460,width=48,align="CENTER"},
- comment={x=548,width=BATCH_WIDTH-656,align="LEFT"},
+ name=columns.name,role=columns.role,faction=columns.faction,ilvl={x=444,width=48,align="CENTER"},
+ comment={x=532,width=BATCH_WIDTH-640,align="LEFT"},
  rating=columns.rating,actions=columns.actions,
 }
 local applicantSorts={{value="newest",label=L.newest},{value="score",label=L.rating},{value="ilvl",label=L.itemLevel}}
@@ -55,13 +55,17 @@ local function UpdateApplicantRoles(row,member,layout)
  local left=layout.role.x+(layout.role.width-(count*18+math.max(0,count-1)*4))/2
  for i,icon in ipairs(row.roles) do icon:SetShown(i<=count);icon:ClearAllPoints();icon:SetPoint("LEFT",left+(i-1)*22,0) end
 end
-local function UpdateApplicantFaction(row,member,layout)
- UI:SetFactionIcon(row.faction,member)
+local function LayoutApplicantFaction(row)
+ row.factionButton:ClearAllPoints();row.factionButton:SetPoint("LEFT",columns.faction.x+(columns.faction.width-row.factionButton:GetWidth())/2,row.factionExpanded and 11 or 0)
+ row.race:SetShown(row.factionExpanded==true)
+end
+local function UpdateApplicantFaction(row,member,applicantID)
+ local key=member.nameKey or member.name
+ if row.factionApplicantID~=applicantID or row.factionMemberKey~=key then row.factionExpanded=nil end
+ row.factionApplicantID,row.factionMemberKey=applicantID,key
+ UI:SetText(row.factionButton.label,UI:SetFactionIcon(row.faction,member) and "" or "—")
  UI:SetText(row.race,member.raceName or "—")
- local width=math.min(layout.faction.width-24,FitText(row.race))
- row.race:SetWidth(width);row.race:SetHeight(0);row.race:SetWordWrap(true)
- row.faction:ClearAllPoints();row.faction:SetPoint("LEFT",layout.faction.x,0)
- row.race:ClearAllPoints();row.race:SetPoint("LEFT",layout.faction.x+24,0)
+ LayoutApplicantFaction(row)
 end
 local function Shell(parent,w,h,x,y)
  local shell=C.Field(parent,w,h);shell:SetPoint("TOPLEFT",x,y);return shell
@@ -137,7 +141,7 @@ function P:Build(parent)
  self.sName=C.Text(manage,"",18,T.text,CONTENT-280);C.SetLineHeight(self.sName,24,true);self.sName:SetPoint("TOPLEFT",56,-28);self.sName:SetWordWrap(false)
  self.editListing=C.Button(manage,L.edit,80,function()
   local allowed,err=UI:GetGroup():CanManageListing();if not allowed then P:SetManageError(err);return end
-  state.editing=true;P:PrepareForm(true);P:RefreshMode()
+  state.editing=true;P:RefreshMode()
  end);self.editListing:SetPoint("TOPRIGHT",-108,-3);self.editListing:SetHeight(40)
  self.cancelListing=C.Button(manage,S("取消招募","End listing"),100,function() local ok,err=UI:GetGroup():RemoveListing();P:SetManageError(not ok and (err or L.failed) or "") end);self.cancelListing:SetPoint("TOPRIGHT",0,-3);self.cancelListing:SetHeight(40)
  self.listingFavorite=C.IconButton(manage,nil,40,function()
@@ -473,8 +477,15 @@ function P:EnsureBatchMembers(f,count)
   local row=CreateFrame("Button",nil,f);row:SetSize(columns.actions.x,MEMBER_HEIGHT);row:RegisterForClicks("LeftButtonUp","RightButtonUp")
   row.icon=C.Icon(row,32);row.icon:SetPoint("LEFT",columns.name.x,0)
   row.title=C.Text(row,"",14,T.text,223);row.title:SetPoint("LEFT",56,0);C.SetLineHeight(row.title,20);row.title:SetWordWrap(true)
-  row.faction=C.Icon(row,18);row.faction:SetPoint("LEFT",columns.faction.x,0)
-  row.race=C.Text(row,"",14,T.muted,columns.faction.width-24);row.race:SetPoint("LEFT",row.faction,"RIGHT",6,0);C.SetLineHeight(row.race,20);row.race:SetWordWrap(true)
+  row.factionButton=C.Button(row,"",32,function(_,button)
+   if not row.member or not P.batchScroll:IsMouseOver() then return end
+   if button=="RightButton" then P:OpenApplicantMenu(row);return end
+   row.factionExpanded=not row.factionExpanded;LayoutApplicantFaction(row)
+  end,{height=24,radius=6,textColor=T.muted})
+  row.factionButton:RegisterForClicks("LeftButtonUp","RightButtonUp")
+  row.faction=C.Icon(row.factionButton,18);row.faction:SetPoint("CENTER")
+  row.race=C.Text(row,"",14,T.muted,columns.faction.width);row.race:SetPoint("LEFT",columns.faction.x,-13);row.race:SetJustifyH("CENTER");C.SetLineHeight(row.race,20,true);row.race:SetWordWrap(false)
+  LayoutApplicantFaction(row)
   row.marks=UI.Members:CreateMarks(row,true)
   row.role=C.Icon(row,18)
   row.roles={row.role}
@@ -484,7 +495,7 @@ function P:EnsureBatchMembers(f,count)
   row:SetScript("OnEnter",function(r) if r.member then r:GetParent().bg:SetColor(T.rowHover);r:GetParent().bg:Show() end end)
   row:SetScript("OnLeave",function(r) local batch=r:GetParent();batch.bg:SetColor(T.rowAlternate);batch.bg:SetShown(batch.alternate==true);UI.Tooltip:LeaveOwner(r) end)
   row:SetScript("OnClick",function(r,button) if button=="RightButton" and r.member and P.batchScroll:IsMouseOver() then P:OpenApplicantMenu(r) end end)
-  row:SetScript("OnHide",function(r) UI:CloseMenuFor(r);UI.Members:ClearMarks(r.marks) end)
+  row:SetScript("OnHide",function(r) UI:CloseMenuFor(r);UI.Members:ClearMarks(r.marks);r.factionExpanded=nil;LayoutApplicantFaction(r) end)
   MemberTooltipArea(row,self.batchScroll)
   f.people[i]=row
  end
@@ -692,10 +703,10 @@ end
 function P:PrepareForm(editing)
  self.validationSubmitted=nil;state.submissionError=nil
  local allowed,reason=UI:GetGroup():CanManageListing()
- if not allowed then UI.Native:ReleaseCreation();self.publish:SetAvailable(false);self:SetFormError(reason);return end
+ if not allowed then UI.Native:ReleaseCreation();self.publish:SetAvailable(false);self:SetFormError(reason);return false end
  self.preparing=true
  local ok,err=UI.Native:AcquireCreation(self,self.titleShell,self.descriptionShell)
- if not ok then self.preparing=nil;self.publish:SetAvailable(false);self:SetFormError(err);return end
+ if not ok then self.preparing=nil;self.publish:SetAvailable(false);self:SetFormError(err);return false end
  if editing then
   form.presetActivityID=nil
   local l=UI:GetGroup():GetListing();form.activityID=l.activityID;local act=UI:GetGroup().Catalog:GetActivity(form.activityID)
@@ -705,7 +716,7 @@ function P:PrepareForm(editing)
   form.crossFaction=l.isCrossFactionListing==true;self.private:SetValue(l.privateGroup);self.crossFaction:SetValue(form.crossFaction);self.autoAccept:SetValue(l.autoAccept)
   if UI.preview then UI.Native:SetPreviewCreationText(l.name,l.comment) else C_LFGList.CopyActiveEntryInfoToCreationFields() end
  elseif not self.started then if UI.preview then UI.Native:SetPreviewCreationText("","") else C_LFGList.ClearCreationTextFields() end;self.started=true end
- self:RefreshPicker();self.preparing=nil;self:ValidateForm()
+ self:RefreshPicker();self.preparing=nil;self:ValidateForm();return true
 end
 function P:RefreshMode()
  local group=UI:GetGroup();local listing=group:GetListing();local canManage=group:CanManageListing()
@@ -717,7 +728,9 @@ function P:RefreshMode()
  group:SetApplicantView(self,not editing and self.unsub~=nil)
  if editing then
   UI:SetText(self.heading,state.editing and L.update or L.create);UI:SetText(self.publish.label,state.editing and L.update or L.publish)
-  if not canManage then UI.Native:ReleaseCreation() elseif UI.Native.owner~=self then self:PrepareForm(false) end;self:ValidateForm(true)
+  if not canManage then UI.Native:ReleaseCreation();self:ValidateForm(true)
+  elseif UI.Native.owner~=self then self:PrepareForm(state.editing)
+  else self:ValidateForm(true) end
  else
   UI.Native:ReleaseCreation();UI:SetText(self.sName,listing.name or L.currentListing)
   local act=UI:GetGroup().Catalog:GetActivity(listing.activityID);UI:SetActivityIcon(self.sIcon,act)
@@ -817,7 +830,7 @@ function P:RenderBatches()
     UI:CloseMenuFor(row)
     local m=app.members[i];if row.member~=m then HideMemberTooltip(row) end;row:SetShown(m~=nil);row.member=m
     if m then row.memberContext=self.applicantContext;row:ClearAllPoints();row:SetPoint("TOPLEFT",0,sharedY-(i-1)*MEMBER_STRIDE);UI:SetMemberIcon(row.icon,m);UI:SetText(row.title,m.nameKey or m.name and (m.name..(m.realm and "-"..m.realm or "")) or L.unknown);row.title:SetTextColor(UI:ClassColor(m.class))
-     UpdateApplicantFaction(row,m,layout)
+     UpdateApplicantFaction(row,m,id)
      local marksWidth=UI.Members:BindMarks(row.marks,m)
      local available=columns.name.x+columns.name.width-56-(marksWidth>0 and marksWidth+6 or 0)
      row.title:SetWidth(math.min(available,FitText(row.title)));row.title:SetHeight(0);row.title:SetWordWrap(true)

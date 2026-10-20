@@ -4,7 +4,7 @@
 
 魔兽世界正式服组队插件。在一个窗口里寻找队伍、管理招募，并记录与玩家的组队经历。
 
-当前版本为 **1.1.5**，目标客户端为正式服 **12.1.5**（Interface `120105`），支持中文和英文。版本变更见[更新日志](CHANGELOG.md)。
+当前版本为 **1.1.6**，目标客户端为正式服 **12.1.5**（Interface `120105`），支持中文和英文。版本变更见[更新日志](CHANGELOG.md)。
 
 ## 功能
 
@@ -67,6 +67,6 @@ lua tests/runner.lua
 
 项目说明：[产品](Product.md) · [设计](Desgin.md) · [架构](Architecture.md) · [性能](perfermance.md) · [文档与变更记录规则](Agents.md)。当前实现与游戏内验证范围见产品文档。
 
-1.1.5 内置 LycheeUI 1.2.0（修订 22），包含共享选择与菜单动效；源库与内置副本保持一致。共享库已按用户要求解除 [.lock](../LycheeUI/.lock) 冻结。开发接入见 [README](../LycheeUI/README.md)、[API](../LycheeUI/API.md) 和 [组件设计规范](../LycheeUI/DESIGN.md)。
+1.1.6 内置 LycheeUI 1.2.0（修订 22），包含共享选择与菜单动效；源库与内置副本保持一致。共享库已按用户要求解除 [.lock](../LycheeUI/.lock) 冻结。开发接入见 [README](../LycheeUI/README.md)、[API](../LycheeUI/API.md) 和 [组件设计规范](../LycheeUI/DESIGN.md)。
 
 内置第三方库的来源与许可见[库说明](addon/LycheeGroup_Group/Libs/README.md)。
