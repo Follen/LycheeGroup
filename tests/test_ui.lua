@@ -173,6 +173,9 @@ for _,mode in ipairs({"shift","alt","ctrl","always"}) do
 end
 T.eq(settings.panels.sounds,nil,"sound settings page is removed");T.eq(settings.controls.applicantTone,nil,"notification tone is not configurable")
 settings:SelectSection("floating")
+T.ok(settings.controls.floatingCompatibility,"floating integration is available in the existing settings section")
+settings.controls.floatingCompatibility.widget:Fire("OnClick");T.eq(A.db.floatingCompatibility,false)
+settings.controls.floatingCompatibility.widget:Fire("OnClick");T.eq(A.db.floatingCompatibility,true)
 do
  local setSetting=A.SetSetting;local writes=0
  function A:SetSetting(...) writes=writes+1;return setSetting(self,...) end
@@ -3256,7 +3259,9 @@ do
  function g:RemotePlayerKey(name) return name and a:PlayerKey(name) end
  g.Relations={ApplyMembers=function() return 0 end,GetVersion=function() return 0 end}
  g.Listing={GetListing=function() return g.listing end}
- g.Alerts={Stop=function() end,NewApplicants=function() end}
+ local previousEye=QueueStatusButton
+ QueueStatusButton={glowLocks={},SetGlowLock=function(self,key,enabled,count) self.glowLocks[key]=enabled and (count or -1) end}
+ LFGListFrame:Hide()
  g.listing={activityID=2,name="Listing",requiredItemLevel=0}
  local status="applied"
  C_LFGList.HasActiveEntryInfo=function() return true end
@@ -3265,11 +3270,16 @@ do
  C_LFGList.GetApplicantInfo=function() return {applicationStatus=status,numMembers=1,displayOrderID=1,comment="A note"} end
  C_LFGList.GetApplicantMemberInfo=function() return "Applicant-Away","WARRIOR","Warrior",80,600,0,false,false,true,"DAMAGER",nil,2500,nil,0,nil,71,false end
  dofile("addon/LycheeGroup_Group/Applicants.lua")
+ dofile("addon/LycheeGroup_Group/Alerts.lua")
+ function g:SetApplicantView(owner,visible) self.Alerts:SetViewed(owner,visible) end
  local lists,reads=0,0
  function g:GetApplicants() lists=lists+1;return self.Applicants:GetApplicants() end
  function g:GetApplicant(id) reads=reads+1;return self.Applicants:GetApplicant(id) end
  function g:RefreshApplicants() return self.Applicants:RequestRefresh() end
+ g.Applicants:RefreshList()
+ T.eq(QueueStatusButton.glowLocks["lfglist-applicant"],-1,"a hidden real applicant service starts the native reminder")
  a:Open("create");local page=u.pages.create;u.Motion:Tick(.5)
+ T.eq(QueueStatusButton.glowLocks["lfglist-applicant"],false,"entering the actual applicant page acknowledges the reminder")
  local ids=page.appIDs
  u:Hide();u.Motion:Tick(.1);lists,reads=0,0
  status="cancelled";g.Applicants:OnApplicantUpdated(1);fresh.base.AdvanceClock(0)
@@ -3285,6 +3295,17 @@ do
  T.eq(fresh.base.PendingTimers(),0)
  u:Hide();u.Motion:Tick(.5)
  T.eq(page.unsub,nil);T.eq(next(g.views),nil);T.eq(u.Motion.jobs[page.batchScroll],nil)
+ status="applied";g.Applicants:RefreshList();fresh.base.AdvanceClock(0)
+ T.eq(QueueStatusButton.glowLocks["lfglist-applicant"],-1,"a closed main window releases its applicant-view ownership")
+ T.eq(a:Preview("applicants"),true)
+ T.eq(QueueStatusButton.glowLocks["lfglist-applicant"],-1,"preview applicants never acknowledge a real reminder")
+ u:Hide(true);a:Open("create")
+ T.eq(QueueStatusButton.glowLocks["lfglist-applicant"],false,"returning to the live applicant page acknowledges it")
+ page.editListing:Fire("OnClick");g.Alerts:Update(true)
+ T.eq(QueueStatusButton.glowLocks["lfglist-applicant"],-1,"the editing form does not claim the hidden applicant list is visible")
+ page.formCancel:Fire("OnClick")
+ T.eq(QueueStatusButton.glowLocks["lfglist-applicant"],false,"returning from editing acknowledges the visible applicants")
+ u:Hide(true);g.Applicants:Clear();QueueStatusButton=previousEye
 end
 
 -- Search and saved-application details follow the current leader and faction.
@@ -3352,6 +3373,68 @@ do
   end
   u:Hide(true)
  end
+end
+
+-- Notes categories share the same moving sidebar selection and content reveal.
+do
+ local f=dofile("tests/ui_fixture.lua")("zhCN")
+ local a,u=f.A,f.U
+ a.Notes:Add("MotionNeutral","Away","neutral",nil,nil,{type="neutral"})
+ a.Notes:Add("MotionPositive","Away","positive",nil,nil,{type="positive"})
+ a.db.reduceMotion=false;a:Open("notes")
+ local p,m=u.pages.notes,u.Motion;m:Tick(2)
+ T.ok(p.tabSelection,"notes use the shared moving sidebar background and mark")
+ local function X(region) return select(4,region:GetPoint()) end
+ local function Y(region) return select(5,region:GetPoint()) end
+ local sidebarY=Y(p.tabSelection)
+ p.tabs.positive:Fire("OnClick")
+ T.eq(Y(p.tabSelection),sidebarY,"category input commits before the shared sidebar moves")
+ T.eq(p.tabSelection.mark:IsShown(),true)
+ T.eq(X(p.left),56,"forward note categories enter from the standard right offset")
+ T.ok(p.left:GetAlpha()<1 and m.jobs[p.left],"the records heading and populated list enter as one container")
+ T.eq(p.emptyState:IsShown(),false)
+ T.eq(p.list.ids[1],"MotionPositive-Away")
+ m:Tick(.05)
+ T.ok(Y(p.tabSelection)<sidebarY,"notes sidebar passes through a visible intermediate position")
+ local x,alpha,sideY=X(p.left),p.left:GetAlpha(),Y(p.tabSelection)
+ p.tabs.caution:Fire("OnClick")
+ T.eq(#p.list.ids,0);T.eq(p.emptyState:IsShown(),true)
+ T.eq(p.emptyTitle:GetText(),"这里还没有记录")
+ T.eq(p.emptyState:GetParent(),p.left,"the empty message shares the records content transition")
+ T.eq(X(p.left),x,"rapid record-to-empty switching continues at the current visible position")
+ T.eq(p.left:GetAlpha(),alpha,"record-to-empty switching retains the current fade")
+ T.eq(Y(p.tabSelection),sideY,"rapid sidebar switching retains its visible position")
+ local reveal,rect=m.jobIds[p.left],m.jobIds[m.rects[p.tabSelection]]
+ p.tabs.caution:Fire("OnClick");p:RefreshList()
+ T.eq(m.jobIds[p.left],reveal,"same-category and same-content refreshes do not restart the reveal")
+ T.eq(m.jobIds[m.rects[p.tabSelection]],rect,"same-category refreshes do not restart sidebar movement")
+ m:Tick(.2);T.eq(X(p.left),24);T.eq(p.left:GetAlpha(),1)
+ p.tabs.neutral:Fire("OnClick")
+ T.eq(X(p.left),-8,"backward note categories enter from the standard left offset")
+ T.eq(p.list.ids[1],"MotionNeutral-Away");T.eq(p.emptyState:IsShown(),false)
+ m:Tick(.2)
+ local editorReveal=m.nextJobId
+ p:OpenEdit("MotionNeutral-Away")
+ T.eq(m.nextJobId,editorReveal,"refreshing the same selected record does not replay its editor")
+ p.tabs.neutral:Fire("OnClick")
+ T.eq(m.nextJobId,editorReveal,"reselecting the same category does not close and reopen its editor")
+ p.tabs.history:Fire("OnClick")
+ T.eq(p.historyFrame:IsShown(),true);T.eq(p.historyEmpty:IsShown(),true)
+ T.eq(m.jobs[p.left],nil,"switching to history releases the hidden note transition")
+ T.eq(m.jobs[p.editor],nil,"switching to history releases the hidden editor transition")
+ T.ok(m.jobs[p.historyFrame],"history includes its heading, list and empty state in one reveal")
+ m:Tick(.05);local historyJob=m.jobIds[p.historyFrame]
+ p.tabs.history:Fire("OnClick")
+ T.eq(m.jobIds[p.historyFrame],historyJob,"refreshing history does not replay its reveal")
+ p.tabs.all:Fire("OnClick")
+ T.eq(m.jobs[p.historyFrame],nil,"returning to records releases hidden history movement")
+ T.eq(X(p.left),-8)
+ u:Hide(true)
+ T.eq(m:Count(),0,"hiding notes releases sidebar, list, history and editor motion")
+ a:Open("notes");m:Tick(2)
+ p.tabs.positive:Fire("OnClick");a.db.reduceMotion=true;u:SetReducedMotion(true)
+ T.eq(m:Count(),0);T.eq(X(p.left),24);T.eq(p.left:GetAlpha(),1)
+ u:Hide(true)
 end
 
 -- Exercise the actual routing, popup layout and selection entry points together.

@@ -9,13 +9,13 @@ local currentActivityID
 local retired={}
 local retirementTimer,retirementAt
 local notifyTimer
--- 原生状态同步读取；只把事件触发的展示通知合并到下一次调度。
+-- 原生状态同步读取；下一次调度合并展示，并在原生事件回调结束后同步提醒。
 local function NotifyChanged(immediate)
  if immediate then
   if notifyTimer then notifyTimer:Cancel();notifyTimer=nil end
   G:Notify("applicants")
  elseif not notifyTimer then
-  notifyTimer=C_Timer.NewTimer(0,function() notifyTimer=nil;G:Notify("applicants") end)
+  notifyTimer=C_Timer.NewTimer(0,function() notifyTimer=nil;G.Alerts:Sync();G:Notify("applicants") end)
  end
 end
 local finished={failed=true,cancelled=true,declined=true,declined_full=true,declined_delisted=true,invitedeclined=true,timedout=true,expired=true,inviteaccepted=true,invitedaccepted=true}
@@ -108,15 +108,15 @@ function Applicants:RefreshList(silent,immediate)
  for id,record in pairs(records) do if record.generation~=generation then records[id]=nil;dirty=true end end
  for id,seen in pairs(retired) do if seen~=generation then retired[id]=nil end end
  ScheduleRetirement()
- if newBatch and not silent then G.Alerts:NewApplicants() end
+ G.Alerts:Update(newBatch and not silent)
  NotifyChanged(immediate)
 end
 function Applicants:OnApplicantUpdated(id)
  local listing=G.Listing:GetListing()
  local record,isNew=Read(id,listing and listing.activityID)
- if not record then records[id]=nil;dirty=true
- elseif isNew and record.status=="applied" then G.Alerts:NewApplicants() end
+ if not record then records[id]=nil;dirty=true end
  ScheduleRetirement()
+ G.Alerts:Update(isNew and record.status=="applied")
  NotifyChanged()
 end
 function Applicants:OnEntryUpdate(created)

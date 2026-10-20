@@ -55,7 +55,7 @@ do
 	T.eq(A.db.notesHasRecords, false, "默认无记录摘要")
 	T.eq(A.db.askReason, true, "默认询问理由")
 	T.eq(A.db.reduceMotion, false, "默认完整动效")
-	T.eq(A.db.nativeLFGEntry, true, "默认从原生眼睛进入荔枝组队")
+	T.eq(A.db.nativeLFGEntry, true, "默认隐藏原生组队眼睛并保留声音")
 	T.eq(A.db.uiScale, 100, "主窗口缩放以当前尺寸 100% 为默认值")
 	T.eq(A.db.schema, 1)
 end
@@ -274,46 +274,46 @@ do
 	_G.Menu=nil
 end
 
--- The minimap eye keeps the native menu and battlefield priority. Its addon
--- can arrive after login without loading the product's UI ahead of a click.
+-- Concealing the eye leaves its native animation and callbacks alive. A late
+-- native addon and settings changes use the same one-time hooks.
 do
- local oldOpen,oldActive,oldApplications,oldInfo=A.Open,C_LFGList.HasActiveEntryInfo,C_LFGList.GetApplications,C_LFGList.GetApplicationInfo
- local nativeCalls,opened,listing,status,battlefield,openOK=0,nil,false,"applied",false,true
- _G.QueueStatusButton=CreateFrame("Button")
- QueueStatusButton.angerVal=0
- _G.LFG_ANGER_INC_VAL=nil -- Stock QueueStatus constants are file-local.
- _G.QueueStatus_InActiveBattlefield=function() return battlefield,false end
- _G.IsInLFDBattlefield=function() return false end
+ local oldOpen=A.Open
+ local nativeCalls,opened,hooks=0,nil,0
+ local eye=CreateFrame("Button");_G.QueueStatusButton=eye
+ _G.QueueStatusFrame=CreateFrame("Frame");QueueStatusFrame:Show()
+ eye.alpha=.8;eye.mouse=true;eye.EyeHighlightAnim={playing=true}
+ function eye:GetAlpha() return self.alpha end
+ function eye:SetAlpha(alpha) self.alpha=alpha end
+ function eye:IsMouseEnabled() return self.mouse end
+ function eye:EnableMouse(enabled) self.mouse=enabled end
+ function eye:HookScript(name,hook)
+  hooks=hooks+1;local original=self:GetScript(name)
+  self:SetScript(name,function(...) if original then original(...) end;hook(...) end)
+ end
+ function eye:Show() self.shown=true;local onShow=self:GetScript("OnShow");if onShow then onShow(self) end end
+ function eye:Hide() self.shown=false;self.EyeHighlightAnim.playing=false end
+ eye:Show()
  local original=function(_,button) nativeCalls=nativeCalls+1;return button end
- QueueStatusButton:SetScript("OnClick",original)
- C_LFGList.HasActiveEntryInfo=function() return listing end
- C_LFGList.GetApplications=function() return {42} end
- C_LFGList.GetApplicationInfo=function() return 42,status end
- A.Open=function(_,page) opened=page;return openOK end
+ eye:SetScript("OnClick",original)
+ A.Open=function(_,page) opened=page;return true end
  Stubs.FireEvent("ADDON_LOADED","Blizzard_QueueStatusFrame")
- local click=QueueStatusButton:GetScript("OnClick")
- T.ok(click~=original,"late native eye installs the click handoff")
+ T.eq(eye:GetAlpha(),0);T.eq(eye:IsMouseEnabled(),false,"hidden eye cannot intercept clicks or hover")
+ T.eq(eye:IsShown(),true);T.eq(eye.EyeHighlightAnim.playing,true,"the stock sound animation remains alive")
+ T.eq(QueueStatusFrame:IsShown(),false,"a tooltip already open on the eye is dismissed")
+ T.eq(eye:GetScript("OnClick"),original,"the native click callback stays intact")
  T.eq(#Stubs.FramesWithEvent("ADDON_LOADED"),0,"native addon listener ends after binding")
  T.eq(opened,nil,"binding does not open or load a page")
- click(QueueStatusButton,"LeftButton")
- T.eq(opened,"find");T.eq(nativeCalls,0)
- listing=true;for _=1,4 do click(QueueStatusButton,"LeftButton") end
- T.eq(opened,"create");T.eq(nativeCalls,0)
- T.eq(QueueStatusButton.angerVal,0,"redirected clicks do not duplicate private native eye animation state")
- T.eq(_G.LFG_ANGER_INC_VAL,nil,"native entry routing requires no global copy of a stock local constant")
- T.eq(click(QueueStatusButton,"RightButton"),"RightButton");T.eq(nativeCalls,1)
- battlefield=true;opened=nil;click(QueueStatusButton,"LeftButton")
- T.eq(opened,nil);T.eq(nativeCalls,2,"battlefield retains native priority")
- battlefield=false;listing=false;status="cancelled";click(QueueStatusButton,"LeftButton")
- T.eq(opened,nil);T.eq(nativeCalls,3,"no active premade group keeps native queue action")
- status="applied";A:SetSetting("nativeLFGEntry",false);click(QueueStatusButton,"LeftButton")
- T.eq(opened,nil);T.eq(nativeCalls,4,"disabled preference immediately restores native behavior")
- A:SetSetting("nativeLFGEntry",true);status="invited";click(QueueStatusButton,"LeftButton")
- T.eq(opened,"find");T.eq(nativeCalls,4)
- openOK=false;click(QueueStatusButton,"LeftButton")
- T.eq(nativeCalls,5,"failed product opening leaves the native entry available")
- A.Open,C_LFGList.HasActiveEntryInfo,C_LFGList.GetApplications,C_LFGList.GetApplicationInfo=oldOpen,oldActive,oldApplications,oldInfo
- _G.QueueStatusButton,_G.QueueStatus_InActiveBattlefield,_G.IsInLFDBattlefield,_G.LFG_ANGER_INC_VAL=nil,nil,nil,nil
+ eye:SetAlpha(1);T.eq(eye:GetAlpha(),0,"later opacity changes cannot reveal the eye")
+ eye:Show();T.eq(eye:GetAlpha(),0);T.eq(eye:IsMouseEnabled(),false)
+ A:SetSetting("nativeLFGEntry",false)
+ T.eq(eye:GetAlpha(),.8);T.eq(eye:IsMouseEnabled(),true,"turning the option off restores the original entry")
+ T.eq(original(eye,"RightButton"),"RightButton");T.eq(nativeCalls,1)
+ eye:SetAlpha(.6);eye:Show();T.eq(eye:GetAlpha(),.6,"disabled hooks allow normal native changes")
+ A:SetSetting("nativeLFGEntry",true);A:SyncNativeLFGEntry()
+ T.eq(eye:GetAlpha(),0);T.eq(hooks,1,"setting changes reuse the same hooks")
+ A:SetSetting("nativeLFGEntry",false);T.eq(eye:GetAlpha(),.6)
+ A:SetSetting("nativeLFGEntry",true)
+ A.Open=oldOpen;_G.QueueStatusButton,_G.QueueStatusFrame=nil,nil
 end
 
 -- Native binding writes keep scope and require explicit conflict replacement.

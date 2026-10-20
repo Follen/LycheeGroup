@@ -155,6 +155,9 @@ function Library.AttachNative(context)
   lease.box,lease.shell=box,shell
   lease.boxParent=container==box and shell or box:GetParent()
   local font=TextStyle(box);local insets={box:GetTextInsets()};local width=box:GetWidth()
+  local instructions=container~=box and box.Instructions
+  local instructionWidth=instructions and instructions:GetWidth()
+  local appliedInstructionWidth
   local ordinary=shell.box;local ordinaryShown=ordinary and ordinary:IsShown()
   local textStyles={}
   for _,region in ipairs({box:GetRegions()}) do if region:GetObjectType()=="FontString" then textStyles[#textStyles+1]=TextStyle(region) end end
@@ -197,6 +200,10 @@ function Library.AttachNative(context)
    for _,saved in ipairs(textStyles) do
     ApplyText(saved,T,saved.region==box.Instructions and T.muted or T.text)
    end
+   if instructions then
+    instructions:SetWidth(box:GetWidth())
+    appliedInstructionWidth=instructions:GetWidth()
+   end
    self:QuietTextures(container);if container~=box then self:QuietTextures(box) end
    -- InputScrollFrameTemplate uses a MinimalScrollBar EventFrame. Keep its
    -- native range, percentage, thumb sizing and input scripts; replace art only.
@@ -219,6 +226,7 @@ function Library.AttachNative(context)
    RestoreText(font,owned)
    if owned or options.textInsets and Same({box:GetTextInsets()},options.textInsets) then box:SetTextInsets(unpack(insets)) end
    if container~=box and (owned or box:GetWidth()==shell:GetWidth()-(options.contentInset or 36)) then box:SetWidth(width) end
+   if instructions and (owned or instructions:GetWidth()==appliedInstructionWidth) then instructions:SetWidth(instructionWidth) end
    for _,saved in ipairs(textStyles) do RestoreText(saved,owned) end
    if shell.box==box then shell.box=ordinary;if ordinary then ordinary:SetShown(ordinaryShown) end end
    shell:SetFocused(false)

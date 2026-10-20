@@ -56,15 +56,17 @@ function F:Build()
  self.context=_G.LycheeUI:CreateContext({font=A.Fonts:GetPath(),reducedMotion=function() return A.db.reduceMotion end})
  C,T=self.context.C,self.context.Theme
  local f=CreateFrame("Frame","LycheeGroupFloating",UIParent);f:SetSize(80,44);f:SetFrameStrata("MEDIUM");f:SetClampedToScreen(true);f:SetMovable(true);f:EnableMouse(false);self.frame=f
- local button=C.Button(f,"",80,function()
+ local button=CreateFrame("Button",nil,f);button:SetSize(80,44)
+ button:SetScript("OnClick",function()
   if F.dragging or F.dragClick then F.dragClick=nil;return end
   A:Open(F.recruiting and "create" or "find")
  end)
- button.label:Hide();button:SetHeight(44);button:SetPoint("TOPLEFT");button:SetRadius(22);button:RegisterForDrag("LeftButton");self.button=button
+ button:SetPoint("TOPLEFT");button:RegisterForDrag("LeftButton");self.button=button
  local logoAnchor=CreateFrame("Frame",nil,button);logoAnchor:SetSize(38,38);logoAnchor:SetPoint("LEFT",8,0);logoAnchor:EnableMouse(false);self.logoAnchor=logoAnchor
  local art=logoAnchor:CreateTexture(nil,"ARTWORK");art:SetTexture(T.media.."lychee-logo.tga");art:SetTexCoord(0,1,0,1);art:SetSize(38,38);art:SetPoint("CENTER",logoAnchor,"CENTER",0,0);self.logoTexture=art
  self.context.logo,self.context.logoButton=art,logoAnchor;T.logoSize=38
- self.count=Text(button,16,18);self.count:SetPoint("LEFT",54,0);self.count:SetJustifyH("CENTER");self.count:SetWordWrap(false);C.SetLineHeight(self.count,22,true)
+ self.count=Text(button,16,18);self.count:SetPoint("LEFT",logoAnchor,"RIGHT",4,0);self.count:SetJustifyH("CENTER");self.count:SetWordWrap(false);C.SetLineHeight(self.count,22,true)
+ self.ownCount=self.count
  button:HookScript("OnMouseDown",function(_,key) if key=="LeftButton" then F.dragClick=nil end end)
  button:SetScript("OnDragStart",function() if not A.db.floatingLocked then F.dragging=true;F.dragClick=true;F.frame:StartMoving();F:Dismiss() end end)
  button:SetScript("OnDragStop",function()
@@ -75,10 +77,11 @@ function F:Build()
  local panel=CreateFrame("Frame",nil,f);panel:SetSize(348,220);panel:SetPoint("BOTTOMLEFT",f,"TOPLEFT",0,8);panel:SetFrameStrata("DIALOG");panel:EnableMouse(true);panel:Hide();self.panel=panel
  panel:SetScript("OnShow",function(self) self:RegisterEvent("GLOBAL_MOUSE_DOWN") end)
  panel:SetScript("OnEvent",function()
-  if not F.frame:IsMouseOver() and not F.panel:IsMouseOver() then F:Dismiss() end
+  if not F:GetAnchor():IsMouseOver() and not F.panel:IsMouseOver() then F:Dismiss() end
  end)
  panel:SetScript("OnHide",function(self)
   self:UnregisterEvent("GLOBAL_MOUSE_DOWN");F:CancelHide()
+  if A.Group then A.Group:SetApplicantView(F,false) end
   if F.countdown then F.countdown:Cancel();F.countdown=nil end
   local resumeBrand=F.attention and F.context.Motion.jobs.brand~=nil
   F.context.Motion:StopAll();if resumeBrand then F:PlayAttention() end
@@ -184,7 +187,7 @@ function F:PlayAttention()
  end)
 end
 function F:SetAttention(enabled)
- enabled=enabled and self.frame:IsShown() and not A.db.reduceMotion or false
+ enabled=enabled and self:GetAnchor():IsVisible() and not A.db.reduceMotion or false
  if self.attention==enabled then return end
  self.attention=enabled
  if enabled then self:PlayAttention()
@@ -282,9 +285,47 @@ function F:CancelHide() if self.hideTask then self.hideTask:Cancel();self.hideTa
 function F:Dismiss() self:CancelHide();if self.panel then self.panel:Hide() end end
 function F:ScheduleHide()
  if not self.panel:IsShown() then return end
- self:CancelHide();self.hideTask=C_Timer.NewTimer(.12,function() F.hideTask=nil;if not F.frame:IsMouseOver() and not F.panel:IsMouseOver() then F:Fade(false) end end)
+ self:CancelHide();self.hideTask=C_Timer.NewTimer(.12,function() F.hideTask=nil;if not F:GetAnchor():IsMouseOver() and not F.panel:IsMouseOver() then F:Fade(false) end end)
+end
+function F:GetAnchor() return self.host or self.frame end
+function F:LayoutEntry()
+ local countWidth=math.max(18,math.ceil(self.count:GetStringWidth()))
+ if self.host then
+  self.frame:SetSize(self.host:GetWidth(),self.host:GetHeight())
+  self.logoAnchor:SetPoint("RIGHT",self.count,"LEFT",-4,0)
+ else
+  self.count:SetWidth(countWidth)
+  local width=math.max(80,58+countWidth)
+  self.frame:SetSize(width,44);self.button:SetWidth(width)
+  self.logoAnchor:SetPoint("LEFT",8,0)
+ end
+ self.panel:SetScale(A.db.floatingScale/100*UIParent:GetEffectiveScale()/self.frame:GetEffectiveScale())
+end
+-- Integrations supply an existing mouse target; the same logo, count and list
+-- move with it. The integration keeps ownership of that target's clicks.
+function F:SetHost(host,logoSize,count)
+ count=count or self.ownCount
+ local changed=self.host~=host or self.count~=count
+ logoSize=host and logoSize or 38
+ if changed or T.logoSize~=logoSize then self:SetAttention(false) end
+ if changed then
+  self:Dismiss();self.host=host;self.count=count;self.lastCount=nil
+  self.frame:ClearAllPoints();self.frame:SetParent(host or UIParent)
+  self.frame:SetClampedToScreen(host==nil)
+  self.logoAnchor:ClearAllPoints();self.logoAnchor:SetParent(host and self.frame or self.button)
+  self.button:SetShown(host==nil)
+  if host then self.frame:SetPoint("CENTER",host,"CENTER",0,0) else self:ResetPosition(true) end
+ end
+ if host and self.statusText then self.count:SetText(self.statusText) end
+ if T.logoSize~=logoSize then
+  T.logoSize=logoSize;self.logoAnchor:SetSize(logoSize,logoSize);self.context.Motion:StopBrand()
+ end
+ self.frame:SetScale(host and 1 or A.db.floatingScale/100)
+ self:LayoutEntry()
+ self:Update()
 end
 function F:ResetPosition(restore)
+ if self.host then return end
  local p=restore and A.db.floatingPosition
  self.frame:ClearAllPoints();if p then self.frame:SetPoint(p.point,UIParent,p.relativePoint,p.x,p.y) else self.frame:SetPoint("TOPLEFT",UIParent,"TOPLEFT",25.660334,-2.884586) end
 end
@@ -295,7 +336,8 @@ function F:Bind(group)
 end
 function F:UpdateSettings()
  if not self.frame then if not A.db.floating then return end;self:Build();if not self.frame then return end end
- self.frame:SetScale(A.db.floatingScale/100);self.frame:SetShown(A.db.floating==true)
+ if A.Integrations then A.Integrations.Rurutia:Sync() end
+ self.frame:SetScale(self.host and 1 or A.db.floatingScale/100);self:LayoutEntry();self.frame:SetShown(A.db.floating==true)
  if not A.db.floating then self.panel:Hide();self.entries=nil;self:CancelHide() end
  self:Update()
 end
@@ -311,15 +353,17 @@ function F:Update()
  if group then
   if self.recruiting then for _,id in ipairs(group:GetApplicants()) do local app=group:GetApplicant(id);if Operable(app) then count=count+#app.members end end else for _,app in ipairs(group:GetApplications()) do if Waiting(app) then count=count+1 end end end
  end
- if self.lastCount~=count then
-  self.count:SetText(count);self.count:SetWidth(0);local width=math.max(80,math.ceil(62+self.count:GetStringWidth()))
-  self.frame:SetWidth(width);self.button:SetWidth(width);self.count:SetWidth(width-62);self.lastCount=count
+ local idle=not self.recruiting and (not group or group.Applications:GetActiveCount()==0)
+ if self.lastCount~=count or self.lastRecruiting~=self.recruiting or self.lastIdle~=idle then
+  self.statusText=idle and (zh and "荔枝组队" or "Lychee LFG") or count==0 and (zh and "暂无申请" or "No applications") or (self.recruiting and (zh and "%d人申请" or "%d applicants") or (zh and "申请%d个" or "Applied: %d")):format(count)
+  self.count:SetText(self.statusText)
+  self:LayoutEntry();self.lastCount,self.lastRecruiting,self.lastIdle=count,self.recruiting,idle
  end
  self:SetAttention(self.recruiting and count>0)
  if self.panel:IsShown() then self:ShowPanel() end
 end
 function F:ShowPanel()
- if self.dragging or not A.db.floating or next(exits) then return end
+ if self.dragging or not A.db.floating or not self:GetAnchor():IsVisible() or next(exits) then return end
  local hadEntries=self.entries and #self.entries>0
  self:CancelHide();entryCount=0;self.entries,self.entryTops=entries,tops
  self.entriesVersion=(self.entriesVersion or 0)+1
@@ -388,7 +432,8 @@ function F:ShowPanel()
  if hadEntries and entryCount==0 then self:Dismiss();return end
  if entries[#entries] and entries[#entries].gap then local last=entries[#entries];local gap=last.gap;last.gap=0;last.height=last.height-gap;total=total-gap end
  canCancel=canCancel and (self.recruiting or #entries>0)
- local screenHeight=UIParent:GetHeight()/self.frame:GetScale();local top=self.frame:GetTop();local downRoom=top-self.frame:GetHeight()-8;local upRoom=screenHeight-top-8;local down=downRoom>upRoom
+ local anchor=self:GetAnchor();local scale=anchor:GetEffectiveScale()/self.panel:GetEffectiveScale()
+ local screenHeight=UIParent:GetHeight()*UIParent:GetEffectiveScale()/self.panel:GetEffectiveScale();local top=anchor:GetTop()*scale;local downRoom=top-anchor:GetHeight()*scale-8;local upRoom=screenHeight-top-8;local down=downRoom>upRoom
  local header=canCancel and 32 or 8;local padding=header+8
  self.scroll:SetPoint("TOPLEFT",12,-header);self.emptyCard:SetPoint("TOPLEFT",12,-header)
  local height=math.min(math.max(44,math.max(downRoom,upRoom)-padding),total);self.panel:SetHeight(math.max(44,height)+padding);self.scroll:SetHeight(math.max(44,height));self.body:SetHeight(math.max(1,total));self.syncScroll=true;self.scrollBar:SetHeight(self.scroll:GetHeight());self.scrollBar:SetMinMaxValues(0,math.max(0,total-self.scroll:GetHeight()));self.scrollBar:SetValue(self.scroll:GetVerticalScroll());self.thumb:SetHeight(math.max(24,self.scroll:GetHeight()*self.scroll:GetHeight()/math.max(1,total)));self.scrollBar:Hide();self.syncScroll=nil;self.empty:SetShown(#entries==0);self.emptyCard:SetShown(#entries==0)
@@ -396,9 +441,10 @@ function F:ShowPanel()
  self.cancel.label:SetText(self.recruiting and (zh and "取消招募" or "End listing") or (zh and "取消全部申请" or "Cancel all applications"));self.cancel:SetAvailable(canCancel and (self.recruiting or #entries>0));self.cancel:SetShown(canCancel)
  self.cancel:SetWidth(self.cancel.label:GetStringWidth()+8)
  self.scroll:SetVerticalScroll(math.max(0,math.min(self.scroll:GetVerticalScroll(),total-self.scroll:GetHeight())))
- self.panel:ClearAllPoints();local right=self.frame:GetLeft()>UIParent:GetWidth()*.6
- self.panel:SetPoint(down and (right and "TOPRIGHT" or "TOPLEFT") or (right and "BOTTOMRIGHT" or "BOTTOMLEFT"),self.frame,down and (right and "BOTTOMRIGHT" or "BOTTOMLEFT") or (right and "TOPRIGHT" or "TOPLEFT"),0,down and -8 or 8)
+ self.panel:ClearAllPoints();local right=anchor:GetLeft()*anchor:GetEffectiveScale()>UIParent:GetWidth()*UIParent:GetEffectiveScale()*.6
+ self.panel:SetPoint(down and (right and "TOPRIGHT" or "TOPLEFT") or (right and "BOTTOMRIGHT" or "BOTTOMLEFT"),anchor,down and (right and "BOTTOMRIGHT" or "BOTTOMLEFT") or (right and "TOPRIGHT" or "TOPLEFT"),0,down and -8 or 8)
  self:Render();self:Fade(true)
+ if group then group:SetApplicantView(self,self.recruiting and self.panel:IsVisible()) end
  if pending and not self.countdown then self.countdown=C_Timer.NewTicker(1,function() F:RefreshClock() end)
  elseif not pending and self.countdown then self.countdown:Cancel();self.countdown=nil end
 end

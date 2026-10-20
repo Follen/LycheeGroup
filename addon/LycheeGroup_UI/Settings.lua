@@ -10,7 +10,7 @@ local types={{value="positive",label=S("推荐","Positive")},{value="neutral",la
 local definitions={
  general={{"toggleBinding",A.L.bindingToggle,"","binding"},
  {"minimap",S("显示小地图按钮","Show minimap button"),S("左键开关主窗口，右键打开设置；拖动调整位置。","Left-click toggles the window; right-click opens settings. Drag to reposition.")},
- {"nativeLFGEntry",S("接管原生组队眼睛","Use the native LFG eye"),S("点击小地图组队眼睛打开荔枝组队；右键仍显示原生队列菜单。","Open Lychee LFG from the minimap eye; right-click keeps the native queue menu.")}},
+ {"nativeLFGEntry",S("隐藏原生组队眼睛","Hide the native LFG eye"),S("隐藏原生队列入口，保留申请提示音；关闭后恢复原生入口。","Hide the native queue button while keeping applicant sounds; turn this off to restore the native button.")}},
  interface={{"language",S("界面语言","Interface language"),S("仅改变插件文字，重载界面后生效。","Change addon text. Reload the UI to apply."),{{value="auto",label=S("跟随游戏","Game language")},{value="zhCN",label="简体中文"},{value="enUS",label="English"}}},
  {"uiScale",S("主窗口缩放","Main window scale"),S("等比调整整个主窗口，当前基准大小为 100%；悬浮窗单独设置。","Scale the entire main window; its baseline size is 100%. The floating window has a separate setting."),"range",75,125},
  {"font",S("界面字体","Interface font"),S("默认使用荔枝字体，也可选择游戏或共享字体，立即生效。","Use LycheeFont, a game font or an installed shared font. Changes apply immediately."),function() return A.Fonts:Choices() end},
@@ -25,7 +25,8 @@ local definitions={
  {"reminders",S("组队与邀请提醒","Group and invite reminders"),S("收到邀请、邀请玩家或再次组队时，提示符合范围的记录。","Show matching player notes when receiving an invite, inviting a player or grouping again."),{{value="all",label=S("全部记录","All notes")},{value="positive",label=S("仅推荐","Recommended only")},{value="caution",label=S("仅拉黑","Blocked only")},{value="off",label=S("不提醒","Off")}}},
  {"history",S("记录大秘境历史队友","Record Mythic+ teammates"),S("完成后保留活动与成员，便于回顾和补充笔记。","Keep completed runs and teammates for reviewing and adding notes.")}},
  floating={{"floating",S("显示悬浮窗","Show floating window"),S("查看申请与招募状态，关闭主窗口后仍然显示。","View active applications and recruitment while the main window is closed.")},
- {"floatingScale",S("悬浮窗缩放","Floating window scale"),S("单独调整悬浮窗大小，不影响主窗口。","Adjust the floating window independently."),"range"},
+ {"floatingCompatibility",S("悬浮窗兼容","Floating window integration"),S("自动接入 RurutiaSuite 顶栏集合石入口，显示荔枝标志、数量与悬浮列表。","Use the RurutiaSuite top bar entry for the lychee logo, count and popup list.")},
+ {"floatingScale",S("悬浮窗缩放","Floating window scale"),S("调整独立入口和下拉列表大小；兼容入口跟随 RurutiaSuite 的尺寸。","Scale the standalone entry and popup; the integrated entry follows RurutiaSuite's size."),"range"},
  {"floatingLocked",S("锁定位置","Lock position"),S("锁定后不能拖动，查看状态和点击入口不受影响。","Lock movement while keeping the status and shortcuts active.")}}}
 local RAIL, MAIN_X, PAD = 208, 224, 24
 local BODY_WIDTH = T.contentWidth - MAIN_X - PAD*2 - 12
@@ -51,7 +52,7 @@ function P:Build(parent)
   for i,row in ipairs(definitions[entry[1]] or {}) do self:BuildRow(panel,row,i) end
  end
  local reset={"resetPosition",S("悬浮窗位置","Floating window position"),S("未锁定时拖动荔枝标志，可放在屏幕内任意位置。","Drag the lychee logo to position the window when unlocked."),"action"}
- self:BuildRow(self.panels.floating,reset,4)
+ self:BuildRow(self.panels.floating,reset,#definitions.floating+1)
  self.reloadLanguage=C.Button(self.panels.interface,S("重载界面","Reload UI"),220,function() C_UI.Reload() end)
  self:BuildAbout(self.panels.about)
 end

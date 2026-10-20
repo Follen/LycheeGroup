@@ -691,6 +691,7 @@ function P:RefreshMode()
  if not listing or not canManage then state.editing=false end
  self.editListing:SetShown(listing~=nil and canManage);self.cancelListing:SetShown(listing~=nil and canManage)
  local editing=state.editing or not listing;self.formFrame:SetShown(editing);self.manage:SetShown(not editing);self.formCancel:SetShown(state.editing)
+ group:SetApplicantView(self,not editing and self.unsub~=nil)
  if editing then
   UI:SetText(self.heading,state.editing and L.update or L.create);UI:SetText(self.publish.label,state.editing and L.update or L.publish)
   if not canManage then UI.Native:ReleaseCreation() elseif UI.Native.owner~=self then self:PrepareForm(false) end;self:ValidateForm(true)
@@ -837,6 +838,7 @@ function P:Enter(context)
  if context and context.applicantID then for i,id in ipairs(self.appIDs) do if id==context.applicantID then self:SetBatchOffset(self.batchTops[i],false);break end end end
 end
 function P:Leave()
+ UI:GetGroup():SetApplicantView(self,false)
  self.favoritesExpanded=false;self:RefreshFavorites()
  UI.Motion:Stop(self.batchScroll);self.batchScrollTarget=nil;self.batchSlider:Hide()
  if self.unsub then self.unsub();self.unsub=nil end;if self.notesUnsub then self.notesUnsub();self.notesUnsub=nil end

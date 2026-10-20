@@ -4,7 +4,7 @@
 
 A group-finding addon for retail World of Warcraft. Find groups, manage recruitment, and keep notes on players you meet, all in one window.
 
-Version **1.1.2** targets retail **12.1.5** (Interface `120105`) and supports Chinese and English. See the [changelog](CHANGELOG.md) (in Chinese) for version changes.
+Version **1.1.3** targets retail **12.1.5** (Interface `120105`) and supports Chinese and English. See the [changelog](CHANGELOG.md) (in Chinese) for version changes.
 
 ## Features
 
@@ -13,7 +13,7 @@ Version **1.1.2** targets retail **12.1.5** (Interface `120105`) and supports Ch
 - **Character preferences:** keep application roles, category filters, and sorting separately for each character across reloads. Enable automatic application separately for each session.
 - **Player notes:** share positive, neutral, or blocked-player records across characters on the account, with reminders when you group again. Import and export your notes.
 - **Mythic+ history:** keep a per-character history of runs, key levels, dates, and teammates, then add notes from past runs.
-- **Interface settings:** change the main-window key binding and overall scale; the floating window has its own scale setting.
+- **Interface settings:** change the main-window key binding and overall scale; the floating window has its own scale setting. RurutiaSuite top bar integration is detected automatically and can be toggled in the floating window settings.
 
 The interface uses native Lua with bundled LycheeUI. Feature modules load on demand; no separate UI library installation is needed.
 
@@ -64,6 +64,6 @@ For the local widget-tree preview, run `lua tests/ui_preview.lua`, then open [`t
 
 Project documents (in Chinese): [Product](Product.md) · [Design](Desgin.md) · [Architecture](Architecture.md) · [Performance](perfermance.md) · [Documentation and changelog rules](Agents.md). The product document describes the current implementation and in-game validation coverage.
 
-Version 1.1.2 bundles LycheeUI 1.2.0 (revision 21), with shared selection and menu transitions. The source library and embedded copy match. The user has lifted the freeze recorded in [.lock](../LycheeUI/.lock). See the [integration guide](../LycheeUI/README.md), [API](../LycheeUI/API.md), and [component design specification](../LycheeUI/DESIGN.md).
+Version 1.1.3 bundles LycheeUI 1.2.0 (revision 22), with shared selection and menu transitions. The source library and embedded copy match. The user has lifted the freeze recorded in [.lock](../LycheeUI/.lock). See the [integration guide](../LycheeUI/README.md), [API](../LycheeUI/API.md), and [component design specification](../LycheeUI/DESIGN.md).
 
 See the [library notes](addon/LycheeGroup_Group/Libs/README.md) for bundled third-party sources and licenses.

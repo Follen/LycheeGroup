@@ -1,28 +1,31 @@
--- A new applicant batch uses the native LFG notification once.
+-- Share Blizzard's applicant glow lock; its animation owns sound playback.
 local A=_G.LycheeGroup
+local G=A.Group
 local Alerts={}
-A.Group.Alerts=Alerts
-function Alerts:Stop()
- if self.pending then self.pending:Cancel();self.pending=nil end
- if self.frame then self.frame:UnregisterEvent("SOUNDKIT_FINISHED") end
- if self.handle then StopSound(self.handle,120);self.handle=nil end
-end
-function Alerts:Play()
- self:Stop()
- if not self.frame then
-  self.frame=CreateFrame("Frame")
-  self.frame:SetScript("OnEvent",function(frame,_,handle)
-   if handle==Alerts.handle then Alerts.handle=nil;frame:UnregisterEvent("SOUNDKIT_FINISHED") end
-  end)
- end
- self.frame:RegisterEvent("SOUNDKIT_FINISHED")
- local played,handle=PlaySound(SOUNDKIT.UI_GROUP_FINDER_RECEIVE_APPLICATION or 47615,"Master",nil,true)
- if played then self.handle=handle else self.frame:UnregisterEvent("SOUNDKIT_FINISHED") end
-end
-function Alerts:NewApplicants()
- if self.pending then return end
- self.pending=C_Timer.NewTimer(.12,function()
-  self.pending=nil
-  if C_LFGList.HasActiveEntryInfo() then self:Play() end
+G.Alerts=Alerts
+local viewers={}
+-- Opening Blizzard's panel (or another LFG panel) acknowledges the same lock.
+if QueueStatusButton then
+ hooksecurefunc(QueueStatusButton,"SetGlowLock",function(_,lock,enabled)
+  if lock=="lfglist-applicant" and not enabled then Alerts.unread=nil end
  end)
+end
+function Alerts:Sync()
+ if not C_LFGList.HasActiveEntryInfo() or G.Applicants:GetCount()==0 or not G:CanManageApplicants()
+  or next(viewers) or LFGListFrame and LFGListFrame:IsVisible() then
+  self.unread=nil
+ end
+ if QueueStatusButton then QueueStatusButton:SetGlowLock("lfglist-applicant",self.unread==true) end
+end
+function Alerts:Stop()
+ self.unread=nil
+ self:Sync()
+end
+function Alerts:Update(hasNew)
+ if hasNew then self.unread=true end
+ self:Sync()
+end
+function Alerts:SetViewed(owner,visible)
+ viewers[owner]=visible or nil
+ if visible then self:Stop() end
 end

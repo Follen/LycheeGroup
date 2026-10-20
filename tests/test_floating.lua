@@ -21,6 +21,7 @@ G.Catalog={GetActivity=function(_,id) return activities[id] end}
 function G:GetApplication(id) for _,app in ipairs(apps) do if app.id==id then return app end end end
 function G:CanManageApplicants() return manageApplicants end
 function G:CanManageListing() return manageListing end
+function G:SetApplicantView(owner,visible) self.applicantViews=self.applicantViews or {};self.applicantViews[owner]=visible or nil end
 function G:Cancel(id) G.cancelled=id;return true end
 function G:Invite(id) G.inviteCalls=(G.inviteCalls or 0)+1;if applicant.acting then return false,"Pending" end;applicant.acting=true;G.invited=id;callback("applicants");return true end
 function G:Decline(id) if G.failDecline then return false,"Decline failed" end;if applicant.acting then return false,"Pending" end;applicant.acting=true;G.declined=id;callback("applicants");return true end
@@ -38,18 +39,20 @@ T.eq(select(2,F.rows[1].name:GetFont()),16);T.eq(select(2,F.rows[1].meta:GetFont
 T.eq(F.panel.events.GLOBAL_MOUSE_DOWN,true,"the expanded popup observes global clicks without a full-screen input catcher")
 local entryButtons=0;for _,child in ipairs({F.frame:GetChildren()}) do if child:GetObjectType()=="Button" then entryButtons=entryButtons+1 end end
 T.eq(entryButtons,1,"the collapsed icon and number share one actual button")
-T.eq(F.frame:GetWidth(),80);T.eq(F.frame:GetHeight(),44);T.eq(F.panel:GetWidth(),348);T.eq(F.scroll:GetWidth(),324)
-T.eq(F.count:GetText(),"1");T.eq(F.rows[1].name:GetText(),"A dungeon");T.eq(F.rows[1].meta:GetText(),"A group");T.eq(F.rows[1].leader:GetText(),"Leader-Away");T.eq(F.rows[1].timer:GetText(),"2:10")
+T.eq(F.frame:GetWidth(),115);T.eq(F.frame:GetHeight(),44);T.eq(F.panel:GetWidth(),348);T.eq(F.scroll:GetWidth(),324)
+T.eq(F.count:GetText(),"申请1个");T.eq(F.rows[1].name:GetText(),"A dungeon");T.eq(F.rows[1].meta:GetText(),"A group");T.eq(F.rows[1].leader:GetText(),"Leader-Away");T.eq(F.rows[1].timer:GetText(),"2:10")
 T.eq(F.rows[1].background:IsShown(),true,"each resting application keeps its own card")
 T.eq(F.rows[1].faction:IsShown(),false,"outbound application cards have no applicant faction marker")
 T.eq(F.rows[1].faction:GetTexture(),nil)
 T.eq(F.panel.background,nil,"the space around application cards has no outer backdrop")
 T.eq(F.frame:IsMouseEnabled(),false,"the outer container adds no second mouse target")
 T.eq(F.count:GetParent(),F.button);T.eq(F.logoTexture:GetParent(),F.logoAnchor);T.eq(F.logoAnchor:GetParent(),F.button)
-T.eq(F.button.fill:IsShown(),false,"the unified entry stays transparent at rest")
+T.eq(F.button.fill,nil,"the entry has no backdrop at rest")
 F.button:Fire("OnEnter");F.context.Motion:Tick(.12)
-T.eq(F.button.hover:IsShown(),true,"one capsule highlights both the icon and the number")
-F.button:Fire("OnLeave");T.eq(F.button.hover:IsShown(),false)
+T.eq(F.button.hover,nil,"hover opens the list without an entry highlight")
+F.button:Fire("OnLeave")
+T.eq(select(2,F.count:GetPoint()),F.logoAnchor,"the count is positioned relative to the logo")
+T.eq(select(4,F.count:GetPoint()),4);T.eq(select(5,F.count:GetPoint()),0)
 do
  local starts,stops=0,0;local start,stop=F.frame.StartMoving,F.frame.StopMovingOrSizing
  F.frame.StartMoving=function() starts=starts+1 end;F.frame.StopMovingOrSizing=function() stops=stops+1 end
@@ -115,7 +118,10 @@ F:ShowPanel();T.eq(F.scroll:GetHeight(),522,"five padded application cards remai
 for i=5,3,-1 do apps[i]=nil end;apps[2].status="invited";F.panel:Hide()
 F:ShowPanel()
 members[1].factionGroup=1;members[2].factionGroup=0
-listing={name="My listing",activityID=1};callback("listing");T.eq(F.count:GetText(),"30","recruitment counts individual people");T.eq(F.scroll:GetHeight(),UIParent:GetHeight()/F.frame:GetScale()-F.frame:GetHeight()-48)
+listing={name="My listing",activityID=1};callback("listing");T.eq(F.count:GetText(),"30人申请","recruitment counts individual people");T.eq(F.scroll:GetHeight(),UIParent:GetHeight()/F.frame:GetScale()-F.frame:GetHeight()-48)
+T.eq(G.applicantViews[F],true,"an expanded recruitment popup reports that applicants are being viewed")
+F:Dismiss();T.eq(G.applicantViews[F],nil,"dismissing the popup releases applicant-view ownership")
+F:ShowPanel();T.eq(G.applicantViews[F],true,"reopening the popup acknowledges applicants again")
 do
  local getID,getClass=GetSpecializationInfoByID,GetSpecializationInfoForClassID
  local idReads,nameReads=0,0
@@ -220,7 +226,7 @@ T.eq(F.rows[1].batch.background:IsShown(),true,"a resting applicant batch retain
 T.eq(F.rows[1].batch.background.fill.color[4],.60,"the resting batch shares the lighter translucent background")
 local staleInvite=F.rows[2].invite;local callsBefore=G.inviteCalls
 manageApplicants,manageListing=false,false;callback("permissions")
-T.eq(F.count:GetText(),"1","ordinary members retain the applicant count")
+T.eq(F.count:GetText(),"1人申请","ordinary members retain the applicant count")
 T.eq(#F.entries,2,"read-only applicants retain all members and the shared note without an empty footer")
 T.eq(F.rows[1].name:GetText(),"Player1-Away");T.eq(F.rows[2].name:GetText(),applicant.comment)
 T.eq(F.cancel:IsShown(),false,"ordinary members cannot end a listing")
@@ -312,7 +318,7 @@ T.eq(F.frame:GetScript("OnUpdate"),nil,"closing stops an active batch exit")
 F.panel.mouseOver=true;base.AdvanceClock(.2);F:Tick(.5);callback("applicants")
 T.eq(F.panel:IsShown(),false,"a cancelled hide timer, completed exit and native refresh cannot reopen the popup")
 F.panel.mouseOver=false
-F:ShowPanel();T.eq(#F.entries,0,"reopening never revives an acting applicant");T.eq(F.count:GetText(),"0","the collapsed count uses the same operable filter as the list")
+F:ShowPanel();T.eq(#F.entries,0,"reopening never revives an acting applicant");T.eq(F.count:GetText(),"暂无申请","the collapsed count uses the same operable filter as the list")
 T.eq(F.emptyCard:IsShown(),true);T.eq(F.emptyCard:GetHeight(),44)
 T.eq(F.cancel:IsShown(),true,"the owner can still end an empty listing")
 T.eq(F.panel:GetHeight(),84,"the empty recruitment view reserves only its meaningful listing action and centered content")
@@ -367,7 +373,7 @@ F:Dismiss()
 do
  local originalMembers=applicant.members;local many={};for i=1,100 do many[i]=originalMembers[1] end
  applicant.members=many;callback("applicants")
- T.eq(F.count:GetText(),"100");T.ok(F.frame:GetWidth()>80,"the single entry expands to preserve the complete count")
+ T.eq(F.count:GetText(),"100人申请");T.ok(F.frame:GetWidth()>80,"the single entry expands to preserve the complete count")
  T.eq(F.button:GetWidth(),F.frame:GetWidth());T.ok(F.count:GetWidth()>=F.count:GetStringWidth());T.eq(F.count.wrap,false,"the complete count stays on one stable line")
  F:ShowPanel()
  local tops=F.entryTops
@@ -396,7 +402,7 @@ do
  F:Render()
  T.ok(reads<30,"a stable scroll frame locates visible entries without scanning the complete applicant list")
  F.entryTops=tops;F:Dismiss()
- applicant.members=originalMembers;callback("applicants");T.eq(F.frame:GetWidth(),80)
+ applicant.members=originalMembers;callback("applicants");T.eq(F.frame:GetWidth(),115)
 end
 A:SetSetting("reduceMotion",false)
 T.ok(F.attention and F.context.Motion.jobs.brand,"restoring motion starts the actual shared Brand job")
@@ -405,7 +411,7 @@ local countPoint={F.count:GetPoint()};local framePoint={F.frame:GetPoint()};loca
 F.context.Motion:Tick(.168)
 T.near(F.logoTexture:GetWidth(),38*1.075,.001,"the first original Bezier segment stretches the logo horizontally")
 T.near(F.logoTexture:GetHeight(),38*.925,.001,"the same segment squashes the logo vertically around its original pivot")
-T.same({F.count:GetPoint()},countPoint,"the count baseline remains stable during attention")
+local currentCountPoint={F.count:GetPoint()};for i,value in ipairs(countPoint) do T.eq(currentCountPoint[i],value,"the count baseline remains stable during attention") end
 local currentFramePoint={F.frame:GetPoint()};for i,value in ipairs(framePoint) do T.eq(currentFramePoint[i],value,"the clickable container remains stable during attention") end
 T.same(F.logoTexture.texCoords,{0,1,0,1},"attention preserves the original full logo UV")
 local brandJob,timer=F.context.Motion.jobs.brand,F.attentionTimer;callback("applicants");A:SetSetting("floatingScale",110)
@@ -455,9 +461,10 @@ do
  T.eq(applicationReads,0,"disabled floating ignores application notifications without reading the application list")
  T.eq(applicantReads,0,"disabled floating ignores applicant notifications without reading the applicant list")
  applicant.status="applied";A:SetSetting("floating",true)
- T.eq(F.count:GetText(),"1","reenabling floating refreshes its applicant count")
+ T.eq(F.count:GetText(),"1人申请","reenabling floating refreshes its applicant count")
  F:ShowPanel();T.ok(#F.entries>0,"reenabling floating restores the applicant list on hover")
  A:SetSetting("floating",false);T.eq(F.frame:IsShown(),false);T.eq(base.PendingTimers(),0,"disabling again leaves no pending floating timer")
+  T.eq(G.applicantViews[F],nil,"disabling the floating entry cannot leave a hidden applicant viewer")
  G.GetApplications,G.GetApplicants=getApplications,getApplicants
 end
 do
@@ -475,6 +482,99 @@ do
  now=5;base.AdvanceClock(1);T.eq(row.timer:GetText(),"0:05")
  F:Dismiss();T.eq(F.countdown,nil)
  now=12;F:ShowPanel();T.eq(F.countdown,nil,"opening an already elapsed application does not start a ticker")
- row.timer.SetText=setText;A:SetSetting("floating",false);GetTime=clock
+ row.timer.SetText=setText
+ local savedApps=apps;apps={{id=91,status="invited"}};callback("applications")
+ T.eq(F.count:GetText(),"暂无申请","an active invitation is not an idle entry")
+ apps={};callback("applications")
+ T.eq(F.count:GetText(),"荔枝组队","ending the last application shows the brand even when the waiting count stays zero")
+ F:ShowPanel();T.eq(F.empty:GetText(),"暂无申请","the popup retains its empty-list message")
+ F:Dismiss();apps=savedApps;callback("applications")
+ T.eq(F.count:GetText(),"申请1个","a new application restores the status text")
+ A:SetSetting("floating",false);GetTime=clock
+end
+do
+ -- Match the exported RurutiaSuite 4.5.7 TopBar contract, including a baseline
+ -- layout refresh that writes its own text and retains non-left clicks.
+ dofile("addon/LycheeGroup/Integrations/Rurutia.lua")
+ local R=A.Integrations.Rurutia
+ C_AddOns.GetAddOnMetadata=function() return nil end
+ R:Initialize();A:SetSetting("floating",true)
+ T.eq(F.host,nil,"missing RurutiaSuite keeps the standalone entry")
+ local host=CreateFrame("Button",nil,UIParent);host:SetSize(90,20);host:SetScale(.8)
+ local icon=host:CreateTexture(nil,"ARTWORK");icon:SetTexture("original-icon");icon:SetSize(33,34)
+ local text=host:CreateFontString(nil,"OVERLAY");text:SetText("集合石");text:SetFont("Rurutia.ttf",18,"OUTLINE");text:SetPoint("CENTER",host,"CENTER",6,0)
+ local font={}
+ function font:Subscribe(owner,fn) self.owner,self.callback=owner,fn end
+ function font:Unsubscribe(owner) if owner==self.owner then self.owner,self.callback=nil,nil end end
+ function font:ApplyFontString(label,path) local _,size,flags=label:GetFont();label:SetFont(path,size,flags) end
+ local record={frame=host,icon=icon,text=text,active=true}
+ local View={}
+ function View:HideTooltip() GameTooltip:Hide() end
+ function View:RefreshQuick(key)
+  if key~="meetingstone" then return end
+  self.records[key].active=true;host:Show();icon:Show();text:Show();text:SetText("集合石")
+ end
+ function View:ShowComponent(key,visible)
+  if visible then self:RefreshQuick(key) else record.active=false;host:Hide() end
+ end
+ function View:HideAll() host:Hide() end
+ local view=setmetatable({records={meetingstone=record}},{__index=View})
+ host:SetScript("OnEnter",function() GameTooltip:Show() end)
+ host:SetScript("OnLeave",function() GameTooltip:Hide() end)
+ local clicked
+ local originalClick=function(_,button) clicked=button end;host:SetScript("OnClick",originalClick)
+ _G.RurutiaSuite={TopBarViewClass=View,TopBar={view=view},Font=font}
+ R:Initialize()
+ T.eq(F.host,host);T.eq(F.frame:GetParent(),host);T.eq(F.button:IsShown(),false,"integration has only the existing top bar mouse target")
+ T.eq(F.count,text,"the integrated label is the original Rurutia font string");T.eq(F.logoAnchor:GetParent(),F.frame)
+ T.eq(icon:IsShown(),false);T.eq(text:IsShown(),true);T.eq(icon:GetTexture(),"original-icon")
+ T.eq(F.logoTexture:GetWidth(),34);T.eq(F.count:GetText(),"申请1个")
+ T.eq(F.count:GetFont(),"Rurutia.ttf");T.eq(select(2,F.count:GetFont()),18);T.eq(select(3,F.count:GetFont()),"OUTLINE")
+ T.eq(select(2,F.logoAnchor:GetPoint()),text);T.eq(select(5,F.logoAnchor:GetPoint()),0,"the logo follows the native text's vertical anchor")
+ T.eq(text:GetPoint(),"CENTER");T.eq(select(4,text:GetPoint()),6);T.eq(select(5,text:GetPoint()),0,"the original text anchor is preserved")
+ font.callback(font.owner,font,"interface","Other","Other.ttf")
+ T.eq(F.count:GetFont(),"Other.ttf");T.eq(select(2,F.count:GetFont()),18);T.eq(select(3,F.count:GetFont()),"OUTLINE","font settings preserve Rurutia's size and outline")
+ A.Floating:ApplyFont("Lychee.ttf");T.eq(F.count:GetFont(),"Other.ttf","Lychee's font setting does not restyle the Rurutia entry")
+ T.eq(F.frame:GetWidth(),90);T.eq(host:GetWidth(),90,"count layout does not resize the host")
+ T.near(F.panel:GetEffectiveScale(),A.db.floatingScale/100,.001,"popup scale is independent of the top bar scale")
+ host:Fire("OnClick","RightButton");T.eq(clicked,"RightButton")
+ host:Fire("OnClick","LeftButton");T.eq(A.openedPage,"find","outgoing applications open the group list")
+ local savedApps=apps;apps={};callback("applications")
+ T.eq(text:GetText(),"荔枝组队","the native Rurutia text also shows the brand while idle")
+ View.RefreshQuick(view,"meetingstone");T.eq(text:GetText(),"荔枝组队","a top bar refresh preserves the idle brand")
+ apps=savedApps;callback("applications")
+ host.mouseOver=true;host:Fire("OnEnter")
+ T.eq(GameTooltip:IsShown(),false,"the native tooltip yields to the existing floating list")
+ T.eq(F.panel:IsShown(),true);T.eq(select(2,F.panel:GetPoint()),host,"the popup anchors to the top bar target")
+ host.mouseOver=false;host:Fire("OnLeave");F.panel.mouseOver=true;base.AdvanceClock(.12)
+ T.eq(F.panel:IsShown(),true,"moving from the host into its list does not close it")
+ F.panel.mouseOver=false;F.panel:Fire("OnEvent","GLOBAL_MOUSE_DOWN")
+ T.eq(F.panel:IsShown(),false);T.eq(F.countdown,nil)
+ A:SetSetting("reduceMotion",false);listing={activityID=1};applicant.status="applied";callback("listing")
+ T.eq(F.count:GetText(),"1人申请","switching mode changes wording even when the count is unchanged")
+ host:Fire("OnClick","LeftButton");T.eq(A.openedPage,"create","an active listing opens recruitment from the integrated entry")
+ host:Fire("OnEnter");T.eq(G.applicantViews[F],true,"integrated hover uses the existing viewed-applicants notification")
+ F:Dismiss();T.eq(G.applicantViews[F],nil)
+ T.ok(F.attentionTimer);local animation=F.context.Motion.jobs.brand
+ F.context.Motion:Tick(.2);T.ok(F.logoTexture:GetWidth()~=34,"integrated logo uses the same brand animation")
+ View.RefreshQuick(view,"meetingstone")
+ T.eq(F.context.Motion.jobs.brand,animation,"a host refresh does not restart or reset the logo")
+ T.eq(icon:IsShown(),false);T.eq(text:IsShown(),true);T.eq(text:GetText(),"1人申请","a top bar refresh cannot replace the status with its original label")
+ A:SetSetting("floatingCompatibility",false)
+ T.eq(F.host,nil);T.eq(F.frame:GetParent(),UIParent);T.eq(F.button:IsShown(),true)
+ T.eq(icon:IsShown(),true);T.eq(text:IsShown(),true);T.eq(text:GetText(),"集合石");T.eq(F.logoTexture:GetWidth(),38)
+ T.eq(font.callback,nil,"disabling integration unsubscribes from Rurutia font changes")
+ T.eq(host:GetScript("OnClick"),originalClick,"disabling integration restores the original click handler")
+ T.eq(F.count:GetParent(),F.button);T.eq(F.logoAnchor:GetParent(),F.button)
+ host:Fire("OnEnter");T.eq(GameTooltip:IsShown(),true);T.eq(F.panel:IsShown(),false,"disabled integration restores the original tooltip")
+ A:SetSetting("floatingCompatibility",true);T.eq(F.host,host)
+ View.ShowComponent(view,"meetingstone",false);T.eq(F.host,nil,"disabling the top bar component restores the standalone entry")
+ View.ShowComponent(view,"meetingstone",true);T.eq(F.host,host,"reenabling the component reuses the same floating objects")
+ View.HideAll(view);T.eq(F.host,nil)
+ View.RefreshQuick(view,"meetingstone");T.eq(F.host,host)
+ A:SetSetting("floating",false)
+ T.eq(F.host,nil);T.eq(icon:IsShown(),true);T.eq(text:IsShown(),true)
+ T.eq(base.PendingTimers(),0);T.eq(F.context.Motion:Count(),0,"disabled integration leaves no animation or popup timers")
+ _G.RurutiaSuite=nil;GameTooltip:Hide()
 end
 _G.LycheeGroup=nil;_G.LycheeGroupDB=nil

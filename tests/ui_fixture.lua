@@ -20,6 +20,7 @@ function G:Subscribe(fn) self.subs[fn]=true;return function() self.subs[fn]=nil 
 function G:Notify(kind,id) for fn in pairs(self.subs) do fn(kind,id) end end
 function G:Attach(view,kind) self.views[view]=kind end
 function G:Detach(view) self.views[view]=nil end
+function G:SetApplicantView(owner,visible) self.applicantViews=self.applicantViews or {};self.applicantViews[owner]=visible or nil end
 function G:OnSettingChanged(key,value)
  if key=="autoJoin" and value then self.Applications:TryAutoJoin() end
 end

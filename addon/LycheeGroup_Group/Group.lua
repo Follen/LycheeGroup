@@ -218,6 +218,7 @@ function G:RefreshPermissions()
 	local applicants, listing = self:CanManageApplicants(), self:CanManageListing()
 	if applicantPermission == applicants and listingPermission == listing then return end
 	applicantPermission, listingPermission = applicants, listing
+	self.Alerts:Sync()
 	self:Notify("permissions")
 end
 
@@ -246,6 +247,7 @@ function G:Publish(data) return self.Listing:Publish(data) end
 function G:Update(data) return self.Listing:Update(data) end
 function G:RemoveListing() return self.Listing:RemoveListing() end
 function G:GetApplicants() return self.Applicants:GetApplicants() end
+function G:SetApplicantView(owner,visible) self.Alerts:SetViewed(owner,visible) end
 function G:RefreshApplicants() return self.Applicants:RequestRefresh() end
 function G:GetApplicant(id) return self.Applicants:GetApplicant(id) end
 function G:GetApplicantDungeonScores(member) return self.Applicants:GetDungeonScores(member) end

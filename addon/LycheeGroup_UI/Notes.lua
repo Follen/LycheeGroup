@@ -93,9 +93,10 @@ end
 function P:Build(parent)
  local root=CreateFrame("Frame",nil,parent);root:SetAllPoints();self.frame=root
  local rail=CreateFrame("Frame",nil,root);rail:SetSize(RAIL,HEIGHT);rail:SetPoint("TOPLEFT")
- self.tabs={}
+ self.tabs={};self.tabSelection=C.Selection(rail,{radius=8,mark=true})
  for i,entry in ipairs({{"all",S("全部记录","All notes")},{"positive",S("推荐","Positive")},{"neutral",S("中性","Neutral")},{"caution",S("拉黑","Blocked")},{"history",S("历史队友","History")}}) do
-  local button=C.Navigation(rail,entry[2],RAIL,function() P:SelectTab(entry[1]) end,nil,{height=60,radius=8});button:SetPoint("TOPLEFT",0,-12-(i-1)*64-(i==5 and 20 or 0));button.label:ClearAllPoints();button.label:SetPoint("LEFT",52,0);button.label:SetWidth(100);button.label:SetWordWrap(false);C.SetLineHeight(button.label,22,true)
+  local button=C.Button(rail,entry[2],RAIL,function() P:SelectTab(entry[1]) end,{height=60,radius=8,fontSize=16,lineHeight=22,selectionFill=false});button:SetTextColors(T.muted,T.text,T.onSecondaryContainer);button:SetFrameLevel(self.tabSelection:GetFrameLevel()+1)
+  button.order=i;button.tabY=-12-(i-1)*64-(i==5 and 20 or 0);button:SetPoint("TOPLEFT",0,button.tabY);button.label:ClearAllPoints();button.label:SetPoint("LEFT",52,0);button.label:SetWidth(100);button.label:SetWordWrap(false);C.SetLineHeight(button.label,22,true)
   local glyph=entry[1]=="all" and "friend" or entry[1]=="positive" and "heart" or entry[1]=="caution" and "caution" or entry[1]=="history" and "history" or "book"
   button.glyph=C.Glyph(button,glyph,24);button.glyph:SetPoint("LEFT",16,0)
   button.icon=button.glyph
@@ -212,15 +213,18 @@ function P:SetEditorStatus(text,kind)
  UI:Color(self.eStatus,kind=="error" and T.warning or kind=="success" and T.good or T.muted)
 end
 function P:SelectTab(tab,skipDefault)
- local changed=state.tab~=nil and state.tab~=tab
- UI.Motion:FinishPlacement(self.left);UI.Motion:FinishPlacement(self.historyFrame)
+ local previous=state.tab;local changed=previous~=nil and previous~=tab
+ local direction=previous and self.tabs[tab].order<self.tabs[previous].order and -1 or 1
  state.tab=tab;local history=tab=="history"
  for key,button in pairs(self.tabs) do button:SetActive(key==tab);UI:Color(button.label,key==tab and T.text or T.muted);button.glyph:SetSelected(key==tab) end
- self:CloseTransfer();self:CloseEditor(true);self.toolbar:SetShown(not history);self.left:SetShown(not history);self.historyFrame:SetShown(history);self.editorEmpty:SetShown(not history)
+ local selected=self.tabs[tab];self.tabSelection:Select(0,selected.tabY,RAIL,selected:GetHeight(),self.frame:IsVisible())
+ self:CloseTransfer();if changed then self:CloseEditor(true) end
+ UI.Motion:FinishPlacement(history and self.left or self.historyFrame)
+ self.toolbar:SetShown(not history);self.left:SetShown(not history);self.historyFrame:SetShown(history);self.editorEmpty:SetShown(not history and state.panel==nil)
  UI:SetText(self.pageTitle,history and L.history or L.notes)
  self:RefreshCounts()
- if history then self:RefreshHistory() else self:RefreshList();local keys=self.list.ids;if not skipDefault and keys and keys[1] then self:OpenEdit(keys[1]) end end
- if changed then UI.Motion:Reveal(history and self.historyFrame or self.left,"TOPLEFT",self.main,"TOPLEFT",PAD,history and -76 or -WORK_TOP,4,0,.14) end
+ if history then self:RefreshHistory() else self:RefreshList();local keys=self.list.ids;if not skipDefault and keys and keys[1] and state.panel==nil then self:OpenEdit(keys[1]) end end
+ if changed then UI.Motion:Reveal(history and self.historyFrame or self.left,"TOPLEFT",self.main,"TOPLEFT",PAD,history and -76 or -WORK_TOP,direction*32,0,.18) end
 end
 function P:RefreshHistory()
  local group,err=A:Ensure("Group");if not group then A:NoteMessage(err);return end
@@ -331,12 +335,12 @@ local function SelectNote(key)
  P.list.selectedKey=key;P.list:Refresh(true)
 end
 
-local function ShowEditorChrome(mode)
+local function ShowEditorChrome(mode,reveal)
 	-- mode: "edit" | "add" | "missing";缺失态只显示说明与取消,不呈现可编辑字段。
 	local edit, add, missing = mode == "edit", mode == "add", mode == "missing"
 	state.panel = mode
 	P.editor:Show();P.editorEmpty:Hide()
-	UI.Motion:Reveal(P.editor,"TOPLEFT",P.main,"TOPLEFT",EDITOR_X-MAIN_X,-WORK_TOP,12,0,.18)
+	if reveal~=false then UI.Motion:Reveal(P.editor,"TOPLEFT",P.main,"TOPLEFT",EDITOR_X-MAIN_X,-WORK_TOP,12,0,.18) end
  UI:SetText(P.eTitle,add and L.add or missing and L.viewNote or S("玩家记录","Player note"))
  P.eClose:SetShown(add or missing)
  P.eIdentity:SetShown(edit);P.eAvatar:SetShown(edit);P.eRealm:SetShown(edit);P.eDate:SetShown(edit)
@@ -358,6 +362,7 @@ local function ShowEditorChrome(mode)
 end
 
 function P:OpenEdit(key)
+	local changed=state.panel~="edit" or state.editKey~=key
 	self:CloseTransfer()
 	CancelPending()
 	local r = A.Notes and A.Notes:Find(key)
@@ -370,7 +375,7 @@ function P:OpenEdit(key)
  state.identityEdited=nil;state.identityKey=key;state.legacyClassSpec=r.classSpec
  state.recordClass,state.recordSpec,state.recordType=identity.class,identity.specID,r.type or "neutral";self:SyncSpec()
 	state.draft = nil
-	ShowEditorChrome("edit")
+	ShowEditorChrome("edit",changed)
 	UI:SetText(self.eIdentity,r.name);UI:SetText(self.eRealm,r.server);UI:SetText(self.eDate,S("记录于 ","Recorded ")..UI:DateText(r.timestamp))
 	self.eReason.box:SetText(r.reason or "")
 	UI:SetText(self.eStatus, "")
@@ -611,6 +616,7 @@ end
 -- 隐藏退订、清编辑临时态与导出文本;搜索词保留。
 function P:Leave()
  UI.Motion:FinishPlacement(self.left);UI.Motion:FinishPlacement(self.historyFrame)
+ self.tabSelection:Clear()
 	if state.unsub then state.unsub(); state.unsub = nil end
 	self:CloseTransfer()
 	self:CloseEditor(true)

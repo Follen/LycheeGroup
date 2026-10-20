@@ -7,36 +7,41 @@ local WAKE_EVENTS = {
     "LFG_LIST_ACTIVE_ENTRY_UPDATE",
 }
 
--- Only the premade-group branch of the minimap eye is redirected. The stock
--- callback still owns battleground clicks, other queues and the right menu.
+-- Keep the stock animation running: its OnLoop owns applicant sounds.
 local nativeLFGHooked = false
+local nativeLFGState
+local function ConcealNativeLFGEntry(button)
+    if not A.db.nativeLFGEntry then return end
+    if not nativeLFGState then
+        nativeLFGState = {alpha = button:GetAlpha(), mouse = button:IsMouseEnabled()}
+    end
+    button:SetAlpha(0)
+    button:EnableMouse(false)
+    QueueStatusFrame:Hide()
+end
+
 function A:SyncNativeLFGEntry()
-    if nativeLFGHooked then return end
-    if not self.db.nativeLFGEntry then events:UnregisterEvent("ADDON_LOADED"); return end
     local button = QueueStatusButton
-    if not button then events:RegisterEvent("ADDON_LOADED"); return end
-    local original = button:GetScript("OnClick")
-    button:SetScript("OnClick", function(eye, mouseButton, ...)
-        if A.db.nativeLFGEntry and mouseButton == "LeftButton"
-            and not QueueStatus_InActiveBattlefield() and not IsInLFDBattlefield() then
-            local page
-            if C_LFGList.HasActiveEntryInfo() then
-                page = "create"
-            else
-                for _, id in ipairs(C_LFGList.GetApplications()) do
-                    local _, status = C_LFGList.GetApplicationInfo(id)
-                    if status == "applied" or status == "invited" then page = "find"; break end
-                end
-            end
-            if page and A:Open(page) then
-                -- The stock callback owns its file-local Angry Eye state.
-                return
-            end
-        end
-        return original(eye, mouseButton, ...)
-    end)
-    nativeLFGHooked = true
+    if not button then
+        if self.db.nativeLFGEntry then events:RegisterEvent("ADDON_LOADED")
+        else events:UnregisterEvent("ADDON_LOADED") end
+        return
+    end
+    if not nativeLFGHooked and self.db.nativeLFGEntry then
+        nativeLFGHooked = true
+        button:HookScript("OnShow", ConcealNativeLFGEntry)
+        hooksecurefunc(button, "SetAlpha", function(eye, alpha)
+            if A.db.nativeLFGEntry and alpha ~= 0 then eye:SetAlpha(0) end
+        end)
+    end
     events:UnregisterEvent("ADDON_LOADED")
+    if self.db.nativeLFGEntry then
+        ConcealNativeLFGEntry(button)
+    elseif nativeLFGState then
+        button:SetAlpha(nativeLFGState.alpha)
+        button:EnableMouse(nativeLFGState.mouse)
+        nativeLFGState = nil
+    end
 end
 
 local function StopGroupWake()

@@ -39,6 +39,7 @@ local DEFAULTS = {
 	history = true,
 	raidMembers = "shift",
 	floating = true,
+	floatingCompatibility = true,
 	floatingLocked = false,
 	floatingScale = 130,
 	uiScale = 100,
@@ -240,7 +241,7 @@ function A:SetSetting(key, value)
 	if self.Group and (key == "history" or key == "autoJoin") then
 		self.Group:OnSettingChanged(key, value)
 	elseif key == "history" then self:SyncHistoryWake() end
-	if self.Floating and (key == "floating" or key == "floatingLocked" or key == "floatingScale") then self.Floating:UpdateSettings() end
+	if self.Floating and (key == "floating" or key == "floatingCompatibility" or key == "floatingLocked" or key == "floatingScale") then self.Floating:UpdateSettings() end
 	if key == "reduceMotion" and self.Floating then
 		if value and self.Floating.running then self.Floating:Tick(1) end
 		self.Floating:Update()

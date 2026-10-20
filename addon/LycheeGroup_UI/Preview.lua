@@ -30,6 +30,7 @@ local function NewProvider(scenario)
  p.Presets=A.CreationPresets.New({},function() p:Notify("creationPresets") end)
  function p:Attach(owner,kind) self.views[owner]=kind end
  function p:Detach(owner) self.views[owner]=nil end
+ function p:SetApplicantView() end
  function p:GetSearchState() return self.state end
  function p:GetSearchError() return nil end
  function p.Search:Search(key,id) self.categoryKey=key;self.activityID=id;p.state="done";p:Notify("search");return true end
