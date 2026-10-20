@@ -154,7 +154,7 @@ local function NewProvider(scenario)
  local function Member(index)
   local slot=(index-1)%5+1;local name=names[slot]..(index>5 and tostring(index) or "");local realm=S("模拟服务器","PreviewRealm")
   local relation=(index-1)%4
-  return {isPreview=true,name=name,realm=realm,nameKey=name.."-"..realm,class=classes[slot],assignedRole=roles[slot],specID=specs[slot],itemLevel=260+slot*3,dungeonScore=2400+slot*135,factionGroup=index%2,isBNetFriend=relation==1,isCharFriend=relation==2,isGuildMate=relation==3,isFriend=false}
+  return {isPreview=true,name=name,realm=realm,nameKey=name.."-"..realm,class=classes[slot],assignedRole=roles[slot],specID=specs[slot],itemLevel=260+slot*3,dungeonScore=2400+slot*135,factionGroup=index%2,raceID=index%2==1 and 1 or 2,raceName=index%2==1 and S("人类","Human") or S("兽人","Orc"),isBNetFriend=relation==1,isCharFriend=relation==2,isGuildMate=relation==3,isFriend=false}
  end
  p.recordIDs={};p.applicantIDs={1,2,3};p.emptyIDs={}
  for i=1,6 do

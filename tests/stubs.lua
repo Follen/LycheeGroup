@@ -309,6 +309,16 @@ function Stubs.Install(overrides)
 		UnitClassBase = UnitClassBase,
 		UnitFactionGroup = function(unit) return units[unit] and units[unit].faction or "Alliance" end,
 		PLAYER_FACTION_GROUP = { [0]="Horde",[1]="Alliance",Horde=0,Alliance=1 },
+		C_CreatureInfo = {
+			GetRaceInfo = function(id)
+				local race = ({[1]={"人类","Human"},[2]={"兽人","Orc"},[24]={"熊猫人","Pandaren"}})[id]
+				return race and {raceID=id,raceName=race[locale=="zhCN" and 1 or 2]}
+			end,
+			GetFactionInfo = function(id)
+				local tag = ({[1]="Alliance",[2]="Horde",[24]="Neutral"})[id]
+				return tag and {groupTag=tag}
+			end,
+		},
 		UnitGroupRolesAssigned = function(unit) return units[unit] and units[unit].role or "NONE" end,
 		UnitIsGroupLeader = function(unit) return units[unit] and units[unit].leader == true end,
 		GetNumSubgroupMembers = function() local n=0;for key in pairs(units) do if key:match("^party%d+$") then n=n+1 end end;return n end,

@@ -73,8 +73,8 @@ local function RosterColumns(roster)
 end
 local function LayoutMembers(row)
  row.membersButton:ClearAllPoints();row.membersButton:SetPoint("LEFT",row.membersX,row.membersExpanded and row.membersExpandedY or 0)
- -- Center the visible role summary, excluding the last count's unused text width.
- row.roster:SetWidth(row.isParty and 110 or 112+row.roster.counts[3].text:GetStringWidth())
+ -- Fixed raid columns keep one- and two-digit counts aligned across rows.
+ row.roster:SetWidth(row.isParty and 110 or 132)
  row.roster:SetScale(row.isParty and row.partyScale or 1)
  row.count:SetShown(not row.isParty and row.membersExpanded==true)
 end
@@ -287,9 +287,6 @@ function P:Build(parent)
  main:SetScript("OnKeyDown",function(_,key)
   if UI.hiding then return end
   if key=="F10" and IsShiftKeyDown() and state.selected then P:OpenResultMenu(P.results,state.selected,false);return end
-  if key~="ENTER" or not state.selected then return end
-  for _,input in ipairs(UI.inputs or {}) do if input:HasFocus() then return end end
-  P:Apply(state.selected)
  end)
  -- Keyboard propagation cannot be changed during combat. A first build in
  -- combat remains mouse-usable; initialize shortcuts once combat ends.
@@ -904,10 +901,10 @@ end
 function P:OpenResultMenu(anchor,id,cursor)
  local r=Record(id);if not r then return end
  local applications=UI:GetGroup().Applications;local active=applications:IsActive(id);local application=UI:GetGroup():GetApplication(id);local invited=application and application.status=="invited"
- UI:OpenMenu(anchor,{{value="apply",label=invited and Say("已收到邀请","Invited") or active and L.cancelApplication or L.editAndApply,disabled=active and not applications:CanCancel(id)},{value="whisper",label=Say("与队长密聊","Whisper leader"),disabled=not r.leaderName or not UI:CanWhisperFaction(r.leaderFactionGroup)},{value="copy",label=Say("复制完整队长名称","Copy leader name"),disabled=UI.preview~=nil or not r.leaderName},{value="blockTitle",label=Say("屏蔽相同标题队伍","Block groups with this title"),disabled=r.name==nil},{value="block",label=Say("拉黑队长","Block leader"),disabled=UI.preview~=nil or not r.leaderKey}},function(action)
+ UI:OpenMenu(anchor,{{value="apply",label=invited and Say("已收到邀请","Invited") or active and L.cancelApplication or L.editAndApply,disabled=active and not applications:CanCancel(id)},{value="whisper",label=Say("与队长密聊","Whisper leader"),disabled=UI.preview~=nil or not r.leaderName},{value="copy",label=Say("复制队长名称","Copy leader name"),disabled=UI.preview~=nil or not r.leaderName},{value="blockTitle",label=Say("屏蔽相同标题队伍","Block groups with this title"),disabled=r.name==nil},{value="block",label=Say("拉黑队长","Block leader"),disabled=UI.preview~=nil or not r.leaderKey}},function(action)
   local target=Record(id);if not target then return end
   if action=="apply" then if applications:CanCancel(id) then local ok,err=UI:GetGroup():Cancel(id);if not ok then P:SetStatus(err or L.failed) end elseif not applications:IsActive(id) then P:Apply(id,true) end
-  elseif action=="whisper" and target.leaderName and UI:CanWhisperFaction(target.leaderFactionGroup) then ChatFrame_SendTell(target.leaderName)
+  elseif action=="whisper" and target.leaderName and not UI.preview then ChatFrame_SendTell(target.leaderName)
   elseif action=="copy" then UI:CopyText(L.leader,target.leaderName,nil,nil,Say("完整名称","Full name"))
   elseif action=="blockTitle" then UI:GetGroup().Results:BlockTitle(target.name)
   elseif action=="block" and not UI.preview then local _,n,r=A:PlayerKey(target.leaderKey);A:Open("notes",{add={name=n,realm=r,type="caution"}}) end

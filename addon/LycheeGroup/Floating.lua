@@ -394,18 +394,18 @@ function F:ShowPanel()
      for index,member in ipairs(app.members) do
       local faction=member.factionGroup and PLAYER_FACTION_GROUP[member.factionGroup]
       local factionTexture=factionTextures[faction]
-      local nameWidth=MEMBER_TEXT_WIDTH-(factionTexture and MEMBER_FACTION_SIZE+MEMBER_FACTION_GAP or 0)
+      local nameWidth=MEMBER_TEXT_WIDTH
       self.measure:SetFont(T.font,MEMBER_NAME_SIZE,"");C.SetLineHeight(self.measure,MEMBER_NAME_LINE);self.measure:SetWidth(nameWidth);self.measure:SetText(member.nameKey or member.name or A.L.invalidName)
       local nameHeight=math.max(MEMBER_NAME_LINE,self.measure:GetStringHeight())
-      local factionX=factionTexture and math.min(nameWidth,self.measure:GetStringWidth())+MEMBER_FACTION_GAP or nil
       local _,spec,icon,class=group:ResolveMemberSpec(member)
-      local meta=(class or (zh and "未知职业" or "Unknown class")).." · "..(spec or member.specName or (zh and "未知专精" or "Unknown specialization"))
-      self.measure:SetFont(T.font,MEMBER_META_SIZE,"");C.SetLineHeight(self.measure,MEMBER_META_LINE);self.measure:SetWidth(MEMBER_TEXT_WIDTH);self.measure:SetText(meta)
+      local meta=(member.raceName or "—").." · "..(class or (zh and "未知职业" or "Unknown class")).." · "..(spec or member.specName or (zh and "未知专精" or "Unknown specialization"))
+      local metaWidth=MEMBER_TEXT_WIDTH-(factionTexture and MEMBER_FACTION_SIZE+MEMBER_FACTION_GAP or 0)
+      self.measure:SetFont(T.font,MEMBER_META_SIZE,"");C.SetLineHeight(self.measure,MEMBER_META_LINE);self.measure:SetWidth(metaWidth);self.measure:SetText(meta)
       local metaHeight=math.max(MEMBER_META_LINE,self.measure:GetStringHeight());local pad=index==1 and 12 or 4
       local contentHeight=nameHeight+2+metaHeight
       local height=pad+contentHeight;local entry=AddEntry(total,height);total=total+height
       entry.member,entry.applicantID,entry.padTop,entry.batch,entry.nameHeight,entry.metaText,entry.memberIcon=member,id,pad,batch,nameHeight,meta,icon
-      entry.nameWidth,entry.factionTexture,entry.factionX,entry.hideRating=nameWidth,factionTexture,factionX,hideRating
+      entry.nameWidth,entry.factionTexture,entry.metaWidth,entry.hideRating=nameWidth,factionTexture,metaWidth,hideRating
      end
      if canManage or comment then
       local textWidth=canManage and 180 or 324-MEMBER_TEXT_X-12;local textHeight=0
@@ -551,8 +551,9 @@ function F:Render()
     local pad=entry.padTop
     row.icon:SetSize(32,32);row.icon:ClearAllPoints();row.icon:SetPoint("TOPLEFT",12,-pad)
     row.name:SetWidth(entry.nameWidth);row.name:SetPoint("TOPLEFT",MEMBER_TEXT_X,-pad);row.name:SetText(name or A.L.invalidName)
-    if entry.factionTexture then row.faction:SetTexture(entry.factionTexture);row.faction:ClearAllPoints();row.faction:SetPoint("TOPLEFT",MEMBER_TEXT_X+entry.factionX,-pad-(MEMBER_NAME_LINE-MEMBER_FACTION_SIZE)/2);row.faction:Show() end
-    row.meta:SetWidth(MEMBER_TEXT_WIDTH);row.meta:SetPoint("TOPLEFT",MEMBER_TEXT_X,-pad-entry.nameHeight-2);row.meta:SetText(entry.metaText)
+    local metaTop=-pad-entry.nameHeight-2
+    if entry.factionTexture then row.faction:SetTexture(entry.factionTexture);row.faction:ClearAllPoints();row.faction:SetPoint("TOPLEFT",MEMBER_TEXT_X,metaTop-(MEMBER_META_LINE-MEMBER_FACTION_SIZE)/2);row.faction:Show() end
+    row.meta:SetWidth(entry.metaWidth);row.meta:SetPoint("TOPLEFT",MEMBER_TEXT_X+MEMBER_TEXT_WIDTH-entry.metaWidth,metaTop);row.meta:SetText(entry.metaText)
     local color=m.class and RAID_CLASS_COLORS[m.class];if color then row.name:SetTextColor(color.r,color.g,color.b) end
     MemberIcon(row.icon,m,entry.memberIcon)
     if entry.hideRating then row.score:SetText("") elseif m.ratingKind=="pvp" then ColorScore(row.score,m.rating,"pvp") else ColorScore(row.score,m.dungeonScore) end

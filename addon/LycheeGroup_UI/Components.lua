@@ -18,9 +18,6 @@ function UI:SetFactionIcon(icon,member)
  if texture then icon:SetTexture(texture) end
  return texture~=nil
 end
-function UI:CanWhisperFaction(factionGroup)
- return not self.preview and factionGroup~=nil and factionGroup==PLAYER_FACTION_GROUP[UnitFactionGroup("player")]
-end
 function UI:BindTooltipArea(row,fraction,eligible,show)
  local area=CreateFrame("Frame",nil,row)
  area:SetPoint("TOPLEFT");area:SetPoint("BOTTOMLEFT");area:SetWidth(row:GetWidth()*fraction)

@@ -76,7 +76,11 @@ local function Read(id,activityID)
    end
   else member.itemLevel,member.rating=G.Public(itemLevel),member.dungeonScore end
   member.assignedRole,member.specID,member.relationship=G.Public(role),G.Public(specID),G.Public(relationship)
-  member.factionGroup=G.Public(factionGroup)
+  member.raceID=G.Public(raceID)
+  local race=member.raceID and C_CreatureInfo.GetRaceInfo(member.raceID)
+  local raceFaction=member.raceID and C_CreatureInfo.GetFactionInfo(member.raceID)
+  member.raceName=race and race.raceName
+  member.factionGroup=raceFaction and PLAYER_FACTION_GROUP[raceFaction.groupTag] or G.Public(factionGroup)
   local requested=member.requestedRoles or {};member.requestedRoles=requested
   requested.TANK,requested.HEALER,requested.DAMAGER=G.Public(tank)==true,G.Public(healer)==true,G.Public(damage)==true
   member.isLeaver=G.Public(isLeaver)==true

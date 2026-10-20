@@ -16,7 +16,7 @@ local names={"晚风听雨","糖霜骑士","暮色星河","云上青鸟","柚子
 local classes={"WARRIOR","PALADIN","MAGE","PRIEST","DRUID"}
 local members={}
 for i=1,5 do members[i]={name=names[i].."-晨风号角",nameKey=names[i].."-晨风号角",realm="晨风号角",class=classes[i],localizedClass=({"战士","圣骑士","法师","牧师","德鲁伊"})[i],assignedRole=i==1 and "TANK" or i==2 and "HEALER" or "DAMAGER",specName=({"防护","神圣","冰霜","暗影","平衡"})[i],itemLevel=642+i,dungeonScore=2800+i*70,isLeader=i==1,factionGroup=i%2} end
-for i,member in ipairs(members) do member.subgroup=1;member.unit=i==1 and "player" or "party"..(i-1);member.guid="Sample-"..i;member.isSelf=i==1 end
+for i,member in ipairs(members) do member.subgroup=1;member.unit=i==1 and "player" or "party"..(i-1);member.guid="Sample-"..i;member.isSelf=i==1;member.raceName=({"人类","血精灵","虚空精灵","至高岭牛头人","暗夜精灵"})[i] end
 function G:GetRoster() return {members[1],members[2],members[3]} end
 function G.Results:GetDetails(record)
  if record.details then return record.details end

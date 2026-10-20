@@ -7,15 +7,16 @@ local FORM=math.min(820,MAIN-48)
 local CONTENT=MAIN-48
 local BATCH_WIDTH=CONTENT-C.listRightInset
 local columns={
- name={x=12,width=262,align="LEFT"},role={x=298,width=66,align="CENTER"},
- rating={x=388,width=76,align="RIGHT"},ilvl={x=488,width=78,align="RIGHT"},
- comment={x=598,width=BATCH_WIDTH-706,align="LEFT"},actions={x=BATCH_WIDTH-96,width=84,align="CENTER"},
+ name={x=12,width=224,align="LEFT"},role={x=242,width=68,align="CENTER"},
+ faction={x=314,width=132,align="CENTER"},
+ rating={x=448,width=72,align="CENTER"},ilvl={x=564,width=48,align="CENTER"},
+ comment={x=644,width=BATCH_WIDTH-752,align="LEFT"},actions={x=BATCH_WIDTH-96,width=84,align="CENTER"},
 }
 local MEMBER_HEIGHT,MEMBER_STRIDE=72,76
 local FAVORITE_HEIGHT=128
 local noRatingColumns={
- name=columns.name,role=columns.role,ilvl={x=388,width=78,align="RIGHT"},
- comment={x=498,width=BATCH_WIDTH-606,align="LEFT"},
+ name=columns.name,role=columns.role,faction=columns.faction,ilvl={x=460,width=48,align="CENTER"},
+ comment={x=548,width=BATCH_WIDTH-656,align="LEFT"},
  rating=columns.rating,actions=columns.actions,
 }
 local applicantSorts={{value="newest",label=L.newest},{value="score",label=L.rating},{value="ilvl",label=L.itemLevel}}
@@ -53,6 +54,14 @@ local function UpdateApplicantRoles(row,member,layout)
  end
  local left=layout.role.x+(layout.role.width-(count*18+math.max(0,count-1)*4))/2
  for i,icon in ipairs(row.roles) do icon:SetShown(i<=count);icon:ClearAllPoints();icon:SetPoint("LEFT",left+(i-1)*22,0) end
+end
+local function UpdateApplicantFaction(row,member,layout)
+ UI:SetFactionIcon(row.faction,member)
+ UI:SetText(row.race,member.raceName or "—")
+ local width=math.min(layout.faction.width-24,FitText(row.race))
+ row.race:SetWidth(width);row.race:SetHeight(0);row.race:SetWordWrap(true)
+ row.faction:ClearAllPoints();row.faction:SetPoint("LEFT",layout.faction.x,0)
+ row.race:ClearAllPoints();row.race:SetPoint("LEFT",layout.faction.x+24,0)
 end
 local function Shell(parent,w,h,x,y)
  local shell=C.Field(parent,w,h);shell:SetPoint("TOPLEFT",x,y);return shell
@@ -151,7 +160,7 @@ function P:Build(parent)
  for _,key in ipairs({"ALL","TANK","HEALER","DAMAGER"}) do local button=self.roleFilters[key];C.SetLineHeight(button.label,20,true);button:SetWidth(FitText(button.label)+24+(key~="ALL" and 22 or 0));button:ClearAllPoints();button:SetPoint("TOPLEFT",filterX,-3);filterX=filterX+button:GetWidth()+4 end
  filterSurface:SetWidth(filterX-1)
  self.applicantHeaders={}
- for _,h in ipairs({{"name",S("申请者","Applicant")},{"role",L.role},{"rating",L.rating},{"ilvl",L.itemLevel},{"comment",S("备注","Note")},{"actions",S("操作","Actions")}}) do
+ for _,h in ipairs({{"name",S("申请者","Applicant")},{"role",L.role},{"faction",S("阵营","Faction")},{"rating",L.rating},{"ilvl",L.itemLevel},{"comment",S("备注","Note")},{"actions",S("操作","Actions")}}) do
   local col=columns[h[1]];local label=C.Header(manage,h[2],col.x,-167,col.width);label:SetJustifyH(col.align);self.applicantHeaders[h[1]]=label
  end
  self.batchScroll=CreateFrame("ScrollFrame",nil,manage);self.batchScroll:SetPoint("TOPLEFT",0,-BATCH_TOP);self.batchScroll:SetSize(BATCH_WIDTH,BATCH_MAX_HEIGHT)
@@ -422,9 +431,6 @@ end
 function P:LayoutApplicantViewport()
  local offset=self.manageNotice:IsShown() and self.manageNotice:GetHeight()+12 or 0
  local layout=self.hideApplicantRating and noRatingColumns or columns
- -- Balance the visible gaps around item level, accounting for header alignment.
- local beforeRight=self.hideApplicantRating and layout.role.x+(layout.role.width+self.applicantHeaders.role:GetStringWidth())/2 or layout.rating.x+layout.rating.width
- layout.ilvl.x=(beforeRight+layout.comment.x+self.applicantHeaders.ilvl:GetStringWidth())/2-layout.ilvl.width
  for key,label in pairs(self.applicantHeaders) do
   label:ClearAllPoints();label:SetPoint("TOPLEFT",layout[key].x,-167-offset);label:SetWidth(layout[key].width)
   label:SetShown(key~="rating" or not self.hideApplicantRating)
@@ -467,7 +473,8 @@ function P:EnsureBatchMembers(f,count)
   local row=CreateFrame("Button",nil,f);row:SetSize(columns.actions.x,MEMBER_HEIGHT);row:RegisterForClicks("LeftButtonUp","RightButtonUp")
   row.icon=C.Icon(row,32);row.icon:SetPoint("LEFT",columns.name.x,0)
   row.title=C.Text(row,"",14,T.text,223);row.title:SetPoint("LEFT",56,0);C.SetLineHeight(row.title,20);row.title:SetWordWrap(true)
-  row.faction=C.Icon(row,18)
+  row.faction=C.Icon(row,18);row.faction:SetPoint("LEFT",columns.faction.x,0)
+  row.race=C.Text(row,"",14,T.muted,columns.faction.width-24);row.race:SetPoint("LEFT",row.faction,"RIGHT",6,0);C.SetLineHeight(row.race,20);row.race:SetWordWrap(true)
   row.marks=UI.Members:CreateMarks(row,true)
   row.role=C.Icon(row,18)
   row.roles={row.role}
@@ -485,13 +492,13 @@ end
 function P:OpenApplicantMenu(row)
  local member=row.member
  local fullName=member.nameKey or member.name
- local nameKey,factionGroup,class,specID=member.nameKey,member.factionGroup,member.class,member.specID
+ local nameKey,class,specID=member.nameKey,member.class,member.specID
  UI:OpenMenu(row,{
-  {value="whisper",label=S("密聊","Whisper"),disabled=not fullName or not UI:CanWhisperFaction(factionGroup)},
+  {value="whisper",label=S("密聊","Whisper"),disabled=UI.preview~=nil or not fullName},
   {value="copy",label=S("复制名称","Copy name"),disabled=not fullName},
   {value="block",label=S("拉黑玩家","Block player"),disabled=UI.preview~=nil or not nameKey},
  },function(action)
-  if action=="whisper" and fullName and UI:CanWhisperFaction(factionGroup) then ChatFrame_SendTell(fullName)
+  if action=="whisper" and fullName and not UI.preview then ChatFrame_SendTell(fullName)
   elseif action=="copy" then UI:CopyText(S("玩家名称","Player name"),fullName,nil,nil,S("完整名称","Full name"))
   elseif action=="block" and not UI.preview then local _,name,realm=A:PlayerKey(nameKey);A:Open("notes",{add={name=name,realm=realm,type="caution",class=class,specID=specID}}) end
  end,{cursor=true})
@@ -794,6 +801,8 @@ function P:RenderBatches()
  local canManage=UI:GetGroup():CanManageApplicants()
  for index=first or 1,last or 0 do
    local id=self.appIDs[index];local app=UI:GetGroup():GetApplicant(id);local top=self.batchTops[index];local height=self.batchTops[index+1]-top
+   -- Native removal precedes the queued applicant notification; another repaint can arrive first.
+   if not app then self:RefreshApplicants();return end
    bound=bound+1;local f=self.batchPool[bound];if not f then f=self:BuildBatch(self.batchBody);self.batchPool[bound]=f end
    if f.appID~=id then for _,row in ipairs(f.people) do HideMemberTooltip(row) end end
    f:ClearAllPoints();f:SetPoint("TOPLEFT",0,-top);f:SetHeight(height);f:Show();f.appID=id;f.alternate=index%2==0;f.bg:SetColor(T.rowAlternate);f.bg:SetShown(f.alternate)
@@ -808,11 +817,11 @@ function P:RenderBatches()
     UI:CloseMenuFor(row)
     local m=app.members[i];if row.member~=m then HideMemberTooltip(row) end;row:SetShown(m~=nil);row.member=m
     if m then row.memberContext=self.applicantContext;row:ClearAllPoints();row:SetPoint("TOPLEFT",0,sharedY-(i-1)*MEMBER_STRIDE);UI:SetMemberIcon(row.icon,m);UI:SetText(row.title,m.nameKey or m.name and (m.name..(m.realm and "-"..m.realm or "")) or L.unknown);row.title:SetTextColor(UI:ClassColor(m.class))
-     local faction=UI:SetFactionIcon(row.faction,m);local marksWidth=UI.Members:BindMarks(row.marks,m)
-     local available=columns.name.x+columns.name.width-56-(faction and 24 or 0)-(marksWidth>0 and marksWidth+6 or 0)
+     UpdateApplicantFaction(row,m,layout)
+     local marksWidth=UI.Members:BindMarks(row.marks,m)
+     local available=columns.name.x+columns.name.width-56-(marksWidth>0 and marksWidth+6 or 0)
      row.title:SetWidth(math.min(available,FitText(row.title)));row.title:SetHeight(0);row.title:SetWordWrap(true)
      row.marks:ClearAllPoints();row.marks:SetPoint("LEFT",row.title,"RIGHT",6,0)
-     row.faction:ClearAllPoints();row.faction:SetPoint("LEFT",marksWidth>0 and row.marks or row.title,"RIGHT",6,0)
      UpdateApplicantRoles(row,m,layout);UI:SetText(row.ilvl,m.itemLevel and math.floor(m.itemLevel) or "—")
      if row.noRatingLayout~=self.hideApplicantRating or row.ilvlX~=layout.ilvl.x then row.noRatingLayout=self.hideApplicantRating;row.ilvlX=layout.ilvl.x;row.ilvl:ClearAllPoints();row.ilvl:SetPoint("LEFT",layout.ilvl.x,0);row.score:SetShown(not self.hideApplicantRating) end
      if self.hideApplicantRating then UI:SetText(row.score,"") else UI:SetScore(row.score,UI:MemberRating(m)) end

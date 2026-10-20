@@ -150,7 +150,8 @@ local function Bind(self,button,member,key,width,isLeader,interactive,inset,padd
  button.member=member;button.targetKey=self:ID(member) or member.name;button:SetWidth(width)
  button:SetEnabled(interactive==true)
  UI:SetMemberIcon(button.icon,member);UI:SetRoleIcon(button.role,member.assignedRole)
- UI:SetFactionIcon(button.faction,member);button.leaderIcon:SetShown(isLeader==true)
+ if search then button.faction:Hide() else UI:SetFactionIcon(button.faction,member) end
+ button.leaderIcon:SetShown(isLeader==true)
  local r,g,b=UI:ClassColor(member.class)
  UI:SetText(button.name,title);button.name:SetTextColor(r,g,b)
  UI:SetText(button.realm,MemberMeta(member))

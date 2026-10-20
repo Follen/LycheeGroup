@@ -417,11 +417,13 @@ do
  G.applicants[70]=nil;G:Notify("applicants")
  T.eq(solo.appID,nil);T.eq(solo.people[1].member,nil,"emptying recruitment releases pooled member bindings")
 end
-G.applicants[71]={id=71,status="applied",displayOrderID=1,comment="We join together",members={{name="One-Away",nameKey="One-Away",class="WARRIOR",assignedRole="TANK",specID=71,itemLevel=270,dungeonScore=2200},{name="Two-Away",nameKey="Two-Away",class="PALADIN",assignedRole="HEALER",specID=66,itemLevel=260,dungeonScore=2100}}}
+G.applicants[71]={id=71,status="applied",displayOrderID=1,comment="We join together",members={{name="One-Away",nameKey="One-Away",class="WARRIOR",assignedRole="TANK",specID=71,itemLevel=270,dungeonScore=2200,factionGroup=1,raceName="人类"},{name="Two-Away",nameKey="Two-Away",class="PALADIN",assignedRole="HEALER",specID=66,itemLevel=260,dungeonScore=2100,factionGroup=0,raceName="血精灵"}}}
 G:Notify("applicants")
 local batch=create.batchPool[1]
 T.eq(batch.people[2]:IsShown(),true,"every batch member has an individual row")
 T.eq(batch.comment:GetText(),"We join together");T.eq(batch.people[2].score:GetText(),"2100")
+T.eq(batch.people[1].race:GetText(),"人类");T.eq(batch.people[2].race:GetText(),"血精灵")
+T.ok(batch.people[1].faction:IsShown());T.ok(batch.people[2].faction:IsShown())
 do
  local row=batch.people[1]
  U.Tooltip:Hide();row:Fire("OnEnter")
@@ -447,17 +449,28 @@ do
  local function X(region) local p={region:GetPoint()};return p[#p-1] end
  for _,pair in ipairs({{"ilvl","ilvl"},{"rating","score"}}) do
   local header,value=create.applicantHeaders[pair[1]],batch.people[1][pair[2]]
-  T.eq(header.justify,"RIGHT");T.eq(X(header)+header:GetWidth(),X(value)+value:GetWidth(),"numeric header and value share their right edge")
+  T.eq(header.justify,"CENTER");T.eq(X(header)+header:GetWidth()/2,X(value)+value:GetWidth()/2,"numeric header and value share their center")
  end
  T.eq(X(create.applicantHeaders.actions),X(batch.invite));T.eq(create.applicantHeaders.actions:GetWidth(),84)
  local headings={};for _,header in pairs(create.applicantHeaders) do if header:IsShown() then headings[#headings+1]=header end end
  table.sort(headings,function(a,b) return X(a)<X(b) end)
  local labels={};for i,header in ipairs(headings) do labels[i]=header:GetText() end
- T.same(labels,{"申请者","职责","评分","装等","备注","操作"},"party applicant headings follow the visible data columns")
- T.eq(create.applicantHeaders.name:GetWidth(),262,"applicant identity gains three Chinese character widths")
- local ilvl,rating,comment=create.applicantHeaders.ilvl,create.applicantHeaders.rating,create.applicantHeaders.comment
- local ilvlRight=X(ilvl)+ilvl:GetWidth()
- T.near(ilvlRight-ilvl:GetStringWidth()-X(rating)-rating:GetWidth(),X(comment)-ilvlRight,.001,"party item level has equal visible gaps to rating and notes")
+ T.same(labels,{"申请者","职责","阵营","评分","装等","备注","操作"},"party applicant headings follow the visible data columns")
+ T.ok(X(create.applicantHeaders.role)<250,"roles move substantially toward the applicant identity")
+ local factionLeft=X(create.applicantHeaders.faction)
+ T.eq(X(batch.people[1].faction),factionLeft,"faction icons share a fixed column edge")
+ T.eq(X(batch.people[1].race),factionLeft+24,"race names keep the same left edge after the icon")
+ T.ok(X(create.applicantHeaders.comment)-X(create.applicantHeaders.ilvl)-create.applicantHeaders.ilvl:GetWidth()>=32,"notes keep clear space after item level")
+ T.ok(X(create.applicantHeaders.role)+create.applicantHeaders.role:GetWidth()<X(create.applicantHeaders.faction))
+ local previous
+ for _,key in ipairs({"role","faction","rating","ilvl"}) do local h=create.applicantHeaders[key];local center=X(h)+h:GetWidth()/2;if previous then T.near(center-previous,104,.001,"the middle columns have equal center spacing") end;previous=center end
+ local member=G.applicants[71].members[1];local race=member.raceName
+ for _,name in ipairs({"赞达拉巨魔","光铸德莱尼","至高岭牛头人"}) do
+  member.raceName=name;create:RefreshApplicants()
+  local row=batch.people[1];T.ok(row.race:GetStringWidth()<=row.race:GetWidth(),"long Chinese race names fit on one line")
+  T.eq(X(row.faction),factionLeft);T.eq(X(row.race),factionLeft+24,"race length does not shift the text column")
+ end
+ member.raceName=race;create:RefreshApplicants()
  T.eq(create.groupSummary:GetWidth(),create.groupStrip:GetWidth()+24,"the hover summary hugs its content with equal padding")
 end
 do
@@ -492,17 +505,16 @@ do
  local headings={};for _,header in pairs(create.applicantHeaders) do if header:IsShown() then headings[#headings+1]=header end end
  table.sort(headings,function(a,b) return X(a)<X(b) end)
  local labels={};for i,header in ipairs(headings) do labels[i]=header:GetText() end
- T.same(labels,{"申请者","职责","装等","备注","操作"},"raid applicant headings reclaim the score column")
- local ilvl,role,comment=create.applicantHeaders.ilvl,create.applicantHeaders.role,create.applicantHeaders.comment
- local ilvlRight=X(ilvl)+ilvl:GetWidth();local roleRight=X(role)+(role:GetWidth()+role:GetStringWidth())/2
- T.near(ilvlRight-ilvl:GetStringWidth()-roleRight,X(comment)-ilvlRight,.001,"raid item level has equal visible gaps to roles and notes")
+ T.same(labels,{"申请者","职责","阵营","装等","备注","操作"},"raid applicant headings reclaim the score column")
+ local ilvl,faction=create.applicantHeaders.ilvl,create.applicantHeaders.faction
+ T.near(X(ilvl)+ilvl:GetWidth()/2-X(faction)-faction:GetWidth()/2,104,.001,"raid item level keeps the same middle-column spacing")
  T.ok(batch.comment:GetWidth()>115,"raid notes use the space released by the score column")
  create.sortChoice:Fire("OnClick","LeftButton")
  for _,item in ipairs(U.context.menu.items) do T.ok(item.value~="score","raid sort menu omits rating") end
  U:CloseMenu()
  listing.activityID=oldActivity;G:Notify("listing")
  T.eq(create.applicantHeaders.rating:IsShown(),true);T.eq(batch.people[1].score:IsShown(),true)
- T.eq(batch.people[1].score:GetText(),"2200");T.near(batch.comment:GetWidth(),191.2,.001,"reused dungeon batches restore score space")
+ T.eq(batch.people[1].score:GetText(),"2200");T.near(batch.comment:GetWidth(),145.2,.001,"reused dungeon batches restore score space")
  Pick(create.sortChoice,"score");Pick(create.sortChoice,"newest")
 end
 
@@ -1369,14 +1381,15 @@ do
  T.eq(members[1].specID,900063,"rendering preserves provider member order")
  r.categoryID=3;r.maxNumPlayers=40;r.numMembers=40;r.details.counts={TANK=2,HEALER=8,DAMAGER=30};Render()
  T.eq(Geometry(target.roster).x,roster.x,"raid composition shares the membership column center")
- local function CheckMemberPadding()
-  local first,last=target.roster.counts[1].icon,target.roster.counts[3].text
-  local offset=(target.membersButton:GetWidth()-target.roster:GetWidth())/2
-  local left=offset+Geometry(first).x
-  local right=target.membersButton:GetWidth()-(offset+Geometry(last).x+last:GetStringWidth())
-  T.near(left,right,.01,"raid role summary has equal visible padding inside its hover background")
+ local function MemberColumnPositions()
+  local offset=Geometry(target.membersButton).x+(target.membersButton:GetWidth()-target.roster:GetWidth())/2
+  local positions={}
+  for i,item in ipairs(target.roster.counts) do
+   positions[i]={icon=offset+Geometry(item.icon).x,text=offset+Geometry(item.text).x}
+  end
+  return positions
  end
- CheckMemberPadding()
+ local memberColumnPositions=MemberColumnPositions()
  T.eq(target.roster.slots[1].icon:IsShown(),false,"raid rows switch back to aggregate role counts")
  T.eq(target.roster.counts[1].text:GetText(),"2");T.eq(target.roster.counts[2].text:GetText(),"8");T.eq(target.roster.counts[3].text:GetText(),"30")
  target.membersButton:Fire("OnClick");T.eq(target.count:IsShown(),true);T.eq(target.count:GetText(),"40/40","raid results keep their member counter")
@@ -1388,7 +1401,12 @@ do
  end
  r.details.counts={TANK=10,HEALER=10,DAMAGER=20};Render()
  for i,item in ipairs(target.roster.counts) do T.same(Geometry(item.icon),roleColumns[i],"two-digit role counts never move later columns") end
- r.details.counts={TANK=0,HEALER=0,DAMAGER=1};Render();CheckMemberPadding()
+ T.same(MemberColumnPositions(),memberColumnPositions,"all three raid columns remain aligned for different two-digit counts")
+ r.details.counts={TANK=0,HEALER=0,DAMAGER=1};Render()
+ T.same(MemberColumnPositions(),memberColumnPositions,"single-digit raid counts keep the same icon and text columns as two-digit counts")
+ target.membersButton:Fire("OnClick")
+ T.same(MemberColumnPositions(),memberColumnPositions,"expanding the member total preserves horizontal column alignment")
+ target.membersButton:Fire("OnClick")
  r.categoryID=4;r.ratingKind="pvp";r.leaderRating=0;Render()
  T.eq(find.resultHeadings.rating:GetText(),"评分","PvP uses the shared score column")
  T.eq(target.score:GetText(),"暂无分数");T.ok(target.score:GetStringWidth()<=target.score:GetWidth())
@@ -1441,7 +1459,8 @@ noteBox:SetScript("OnEditFocusGained",function(box)
   firstFocusBackground=box:CreateTexture(nil,"BACKGROUND");firstFocusBackground:SetAllPoints();firstFocusBackground:SetColorTexture(0,0,0,.9)
  end
 end)
-find.main:Fire("OnKeyDown","ENTER");T.eq(U.Application.applicationLease.id,target.key);T.eq(G.clearedApplication,nil,"opening configuration keeps the engine's current note")
+find.main:Fire("OnKeyDown","ENTER");T.eq(U.Application.applicationLease,nil,"Enter leaves the selected result alone so the user can open chat")
+target:Fire("OnDoubleClick","LeftButton");T.eq(U.Application.applicationLease.id,target.key);T.eq(G.clearedApplication,nil,"opening configuration keeps the engine's current note")
 T.eq(firstFocusBackground:IsShown(),false,"native art created on first application focus stays behind the shared input surface");T.eq(firstFocusBackground:GetAlpha(),0)
 local savedApps=G.apps
 G.apps={savedApps[1]}
@@ -1558,8 +1577,8 @@ do
  T.eq(U.activeModal,nil);T.eq(dialog.Description:GetParent(),dialog);T.eq(dialog.Description.EditBox:GetParent(),noteParent)
  T.eq(dialog.SignUpButton:GetScript("OnClick"),originalSubmit);T.eq(dialog:GetScript("OnEvent"),originalEvent)
  T.same({dialog.Description.EditBox:GetFont()},noteFont,"releasing restores the original native text presentation")
- find.main:Fire("OnKeyDown","ENTER");T.eq(dialog.submissions,before+1,"Enter still requires confirmation while automatic application is off")
- T.eq(U.Application.applicationLease.id,102);U:CloseModal()
+ find.main:Fire("OnKeyDown","ENTER");T.eq(dialog.submissions,before+1,"Enter never submits while automatic application is off")
+ T.eq(U.Application.applicationLease,nil,"Enter does not open the temporary application window")
  find.autoApply:Fire("OnClick")
  T.eq(find.autoApply.value,false,"the switch stays off while its configuration is pending")
  T.eq(U.Application.applicationLease.id,nil)
@@ -1587,7 +1606,9 @@ do
  T.eq(dialog.submitted.tank,true);T.eq(dialog.submitted.damage,true,"quick submission retains the complete multi-role selection")
  T.eq(dialog.submitted.note,"A reusable native note");T.eq(U.activeModal,nil);T.eq(G.clearedApplication,nil)
  G.records[102].activityID=activity
- find.main:Fire("OnKeyDown","ENTER");T.eq(dialog.submissions,before+3,"enabled Enter follows the configured quick path")
+ find.main:Fire("OnKeyDown","ENTER");T.eq(dialog.submissions,before+2,"Enter never submits while automatic application is on")
+ T.eq(U.Application.applicationLease,nil,"Enter does not open a window while automatic application is on")
+ target:Fire("OnDoubleClick","LeftButton");T.eq(dialog.submissions,before+3,"double click keeps using the configured quick path")
  find.applicationSettings:Fire("OnEnter")
  T.same(find.applicationSettings.label.color,U.Theme.brand,"the separate settings text uses brand color on hover")
  T.eq(find.applicationSettings.hover:IsShown(),false,"the settings text has no surrounding hover surface")
@@ -2096,8 +2117,24 @@ do
  T.same(tip.dungeonRows[1].keyLevel.color,{1,.5,0},"a recycled level row refreshes its native color");T.eq(colorReads,3)
  C_ChallengeMode.GetKeystoneLevelRarityColor=rarity
  u.Tooltip:Hide();u.Tooltip:ShowGroup(page.frame,{name="Party",numMembers=2,maxNumPlayers=5,details={members={one,two}}})
- T.eq(select(2,tip.memberButtons[1].name:GetFont()),17);T.ok(tip.memberButtons[1].faction:IsShown());T.ok(tip.memberButtons[2].faction:IsShown())
+ T.eq(select(2,tip.memberButtons[1].name:GetFont()),17);T.eq(tip.memberButtons[1].faction:IsShown(),false);T.eq(tip.memberButtons[2].faction:IsShown(),false)
  two.factionGroup=nil;g:Notify("applicants");T.eq(batch.people[2].faction:IsShown(),false,"reused rows clear a missing faction")
+ u:Hide(true)
+end
+-- Relations can repaint after native deletion but before the queued applicant notification.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("zhCN")
+ local a,u,g=fresh.A,fresh.U,fresh.G;a.db.reduceMotion=true
+ g.listing={activityID=2,name="Recruiting"}
+ for id=1,2 do g.applicants[id]={id=id,status="applied",displayOrderID=id,members={{name="Member"..id.."-Away",nameKey="Member"..id.."-Away",class="MAGE",assignedRole="DAMAGER"}}} end
+ a:Open("create");local page=u.pages.create
+ g.applicants[1]=nil
+ g:Notify("relations")
+ T.same(page.appIDs,{2},"a repaint drops deleted IDs before painting the remaining applicants")
+ T.eq(page.batchPool[1].appID,2);T.ok(page.batchPool[1]:IsShown())
+ g.applicants[2]=nil
+ g:Notify("relations")
+ T.eq(#page.appIDs,0);T.ok(page.empty:IsShown());T.eq(page.batchPool[1]:IsShown(),false)
  u:Hide(true)
 end
 -- Offscreen applications still own the countdown until the final deadline.
@@ -2367,7 +2404,7 @@ for _,synchronous in ipairs({false,true}) do
  T.eq(page:FormData().isCrossFactionListing,true,"explicitly ending the next listing restores the new-listing default")
  u:Hide(true)
 end
--- Context actions use the clicked identity and the current player's faction.
+-- Context actions use the clicked identity without restricting whispers by faction.
 do
  local fresh=dofile("tests/ui_fixture.lua")("zhCN")
  local a,u,g,base=fresh.A,fresh.U,fresh.G,fresh.base
@@ -2390,21 +2427,20 @@ do
  T.eq(page.results.rows[1].key,1);T.eq(page.appList.rows[1].key,2)
  for _,entry in ipairs({{list=page.results,id=1},{list=page.appList,id=2}}) do
   entry.list.clip.mouseOver=true
-  for _,case in ipairs({{"Alliance",1,true},{"Alliance",0,false},{"Alliance",false,false},{"Horde",0,true},{"Horde",1,false},{"Neutral",1,false}}) do
+  for _,case in ipairs({{"Alliance",1},{"Alliance",0},{"Alliance",false},{"Horde",0},{"Horde",1},{"Neutral",1}}) do
    base.SetUnit("player",{faction=case[1]});g.records[entry.id].leaderFactionGroup=case[2] or nil
    local row=entry.list.rows[1];row:Fire("OnMouseDown","RightButton");row:Fire("OnClick","RightButton")
    local item,action=Item("whisper")
-   T.eq(item.disabled,not case[3],"search results and saved applications use both factions")
-   T.eq(action:IsEnabled(),case[3],"unavailable whispers are visibly disabled menu rows")
+   T.eq(item.disabled,false,"search and saved-application whispers ignore unreliable faction data")
+   T.eq(action:IsEnabled(),true)
    local before=#tells;Choose("whisper")
-   T.eq(#tells,before+(case[3] and 1 or 0),"disabled faction actions cannot open a whisper")
-   if case[3] then T.eq(tells[#tells],"Leader"..entry.id.."-Away") end
+   T.eq(#tells,before+1);T.eq(tells[#tells],"Leader"..entry.id.."-Away")
   end
  end
  base.SetUnit("player",{faction="Alliance"});g.records[1].leaderFactionGroup=1
  page:OpenResultMenu(page.results.rows[1],1)
  g.records[1].leaderFactionGroup=0
- local before=#tells;Choose("whisper");T.eq(#tells,before,"a faction update before selection is honored")
+ local before=#tells;Choose("whisper");T.eq(#tells,before+1,"a faction update does not block opening chat")
  page:OpenResultMenu(page.results.rows[1],1);Choose("copy")
  T.eq(u.copyDialog.value,"Leader1-Away");T.eq(u.copyDialog.fieldLabel:GetText(),"完整名称")
  u:CloseModal()
@@ -2421,14 +2457,15 @@ do
  row:Fire("OnClick","RightButton")
  local menu=u.context.menu
  T.eq(#menu.items,3);T.eq(menu.items[1].label,"密聊");T.eq(menu.items[2].label,"复制名称");T.eq(menu.items[3].label,"拉黑玩家")
- T.eq(Item("whisper").disabled,true);T.eq(Item("copy").disabled,false);T.eq(Item("block").disabled,false)
- Choose("whisper");T.eq(#tells,before)
+ T.eq(Item("whisper").disabled,false);T.eq(Item("copy").disabled,false);T.eq(Item("block").disabled,false)
+ before=#tells;Choose("whisper");T.eq(#tells,before+1)
+ row:Fire("OnClick","RightButton")
  Choose("copy");T.eq(u.copyDialog.value,"Two-Away","copy targets the clicked second member, including realm")
  T.eq(u.copyDialog.fieldLabel:GetText(),"完整名称");u:CloseModal()
  two.factionGroup=1;g:Notify("applicants");row:Fire("OnClick","RightButton");Choose("whisper")
  T.eq(tells[#tells],"Two-Away","whisper targets the clicked member rather than the batch leader")
  two.factionGroup=nil;g:Notify("applicants");row:Fire("OnClick","RightButton")
- T.eq(Item("whisper").disabled,true,"unknown applicant faction is not treated as the player's faction")
+ T.eq(Item("whisper").disabled,false,"unknown applicant faction does not block opening chat")
  two.factionGroup=1;g:Notify("applicants")
  T.eq(menu:IsShown(),false,"updating applicant data closes the old menu")
  row:Fire("OnClick","RightButton");create:SetBatchOffset(1,false)
@@ -2710,7 +2747,10 @@ do
  page.main:Fire("OnKeyDown","F10");T.eq(u.context.menu and u.context.menu:IsShown() or false,false,"closing cannot open a result menu")
  IsShiftKeyDown=shift
  a:Open("find");page.results.rows[1]:Fire("OnClick","LeftButton");page.main:Fire("OnKeyDown","ENTER")
- T.eq(dialog.submissions,before+1,"reversing close restores the normal shortcut")
+ T.eq(dialog.submissions,before,"Enter remains available to chat after reversing close")
+ IsShiftKeyDown=function() return true end
+ page.main:Fire("OnKeyDown","F10");T.ok(u.context.menu:IsShown(),"reversing close restores the result menu shortcut")
+ IsShiftKeyDown=shift
  u.Motion:Tick(2);a:ToggleWindow();u.Motion:Tick(.1)
  T.ok(u.hiding);local closingToken=u.exitToken
  a:ToggleWindow();T.eq(u.hiding,nil);T.ok(u.exitToken>closingToken,"a second toggle invalidates the earlier close")
@@ -3071,7 +3111,8 @@ do
  record.bnetFriends,record.charFriends,record.guildMates=1,1,1;g:Notify("relations")
  T.eq(row.marks:GetWidth(),84);T.ok(row.meta:GetWidth()+6+row.marks:GetWidth()<=210)
  T.ok(ordinary.marks.icons.neutral:IsShown(),"only the leader note appears in the search member list")
- local point={ordinary.marks:GetPoint()};T.eq(point[2],ordinary.faction);T.eq(point[3],"LEFT");T.eq(point[5],0,"the leader note precedes the faction icon")
+ T.eq(ordinary.faction:IsShown(),false,"search identities never show faction icons")
+ local point={ordinary.marks:GetPoint()};T.eq(point[2],ordinary.role);T.eq(point[3],"LEFT");T.eq(point[5],0,"the leader note precedes the role icon")
  a.Notes:Edit(plain.nameKey,"Updated leader",{type="positive"})
  T.ok(row.marks.icons.positive:IsShown());T.eq(row.marks.icons.neutral:IsShown(),false)
  T.ok(ordinary.marks.icons.positive:IsShown());T.eq(ordinary.marks.icons.neutral:IsShown(),false)
@@ -3087,9 +3128,9 @@ do
  T.eq(batch.invite:IsShown(),false);T.eq(batch.decline:IsShown(),false)
  T.eq(applicant.title:GetText(),person.nameKey);T.eq(applicant.meta,nil,"applicants have no generic note text under the name")
  T.eq(applicant.title.wrap,true);T.ok(applicant.title:GetStringHeight()<=applicant:GetHeight())
- T.ok(56+applicant.title:GetWidth()+24+6+applicant.marks:GetWidth()<=274,"full name, faction and marks fit the name column")
+ T.ok(56+applicant.title:GetWidth()+6+applicant.marks:GetWidth()<=236,"full name and marks fit the name column")
  point={applicant.marks:GetPoint()};T.eq(point[2],applicant.title);T.eq(point[3],"RIGHT");T.eq(point[5],0)
- point={applicant.faction:GetPoint()};T.eq(point[2],applicant.marks);T.eq(point[3],"RIGHT","applicant faction follows relationships and notes")
+ point={applicant.faction:GetPoint()};T.ok(point[#point-1]>=314,"applicant faction sits in its dedicated column")
  a.Notes:Edit(person.nameKey,"Caution",{type="caution"})
  T.eq(applicant.marks.noteButton.icon:GetTexture(),u.Theme.media.."caution.tga","the pooled note button follows the actual current note type")
  person.isBNetFriend=false;g:Notify("relations");T.eq(applicant.marks.icons.bnet:IsShown(),false)
@@ -3385,7 +3426,7 @@ do
    if memberRow.member==alpha then alphaRow=memberRow elseif memberRow.member==beta then betaRow=memberRow end
   end
   T.eq(alphaRow.faction:IsShown(),false,"the former leader loses its unsupported faction marker")
-  T.eq(betaRow.faction:GetTexture(),"Interface\\AddOns\\LycheeGroup_UI\\Media\\faction-horde.tga");T.ok(betaRow.faction:IsShown())
+  T.eq(betaRow.faction:IsShown(),false,"a new search leader also has no faction marker")
   T.eq(tip.expanded,true);T.eq(tip.pinned,true);T.eq(view:GetWidth(),1080)
   T.eq(view.scroll:GetVerticalScroll(),scroll);T.eq(tip.positionX,x);T.eq(tip.positionY,y)
   if deferred then

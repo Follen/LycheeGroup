@@ -2460,16 +2460,21 @@ do
  local reads=0
  C_LFGList.GetApplicantBestDungeonScore=function(id,index) reads=reads+1;T.eq(id,8001);T.eq(index,1);return {mapName="Best dungeon",bestRunLevel=19,finishedSuccess=false} end
  C_LFGList.GetApplicantDungeonScoreForListing=function(id,index,activity) reads=reads+1;T.eq(id,8001);T.eq(index,1);T.eq(activity,502);return {mapName="Current dungeon",bestRunLevel=18,finishedSuccess=true} end
- S.activeEntry={activityIDs={502},name="Mythic listing"};S.applicants={[8001]={applicationStatus="applied",numMembers=2}};S.applicantMembers={[8001]={{name="Alliance-Away",class="MAGE",factionGroup=1},{name="Horde-Away",class="WARRIOR",factionGroup=0}}}
+ S.activeEntry={activityIDs={502},name="Mythic listing"};S.applicants={[8001]={applicationStatus="applied",numMembers=2}};S.applicantMembers={[8001]={{name="Alliance-Away",class="MAGE",factionGroup=0,raceID=1},{name="Horde-Away",class="WARRIOR",factionGroup=0,raceID=2}}}
  G.Listing:OnEntryUpdate();G:RefreshApplicants()
  local member=G:GetApplicant(8001).members[1]
  T.eq(member.factionGroup,1);T.eq(G:GetApplicant(8001).members[2].factionGroup,0)
+ T.eq(member.raceID,1);T.eq(member.raceName,"人类","applicants keep localized native race data")
+ T.eq(G:GetApplicant(8001).members[2].raceName,"兽人")
  T.eq(reads,0,"list refresh does not query dungeon detail APIs")
  local scores=G:GetApplicantDungeonScores(member)
  T.eq(reads,2);T.eq(scores.current.level,18);T.eq(scores.current.timed,true);T.eq(scores.best.level,19);T.eq(scores.best.timed,false)
  T.eq(G:GetApplicantDungeonScores(member),scores);T.eq(reads,2,"reopening unchanged details reuses the snapshot")
- S.applicantMembers[8001][1].factionGroup=nil;G.Applicants:OnApplicantUpdated(8001)
+ S.applicantMembers[8001][1].raceID=24;S.applicantMembers[8001][1].factionGroup=1;G.Applicants:OnApplicantUpdated(8001)
+ T.eq(member.raceName,"熊猫人");T.eq(member.factionGroup,1,"a neutral race uses the applicant's own faction")
+ S.applicantMembers[8001][1].factionGroup=nil;S.applicantMembers[8001][1].raceID=nil;G.Applicants:OnApplicantUpdated(8001)
  T.eq(member.factionGroup,nil,"missing native faction clears the previous marker")
+ T.eq(member.raceName,nil,"missing native race clears the reused member's previous race")
  T.ok(G:GetApplicantDungeonScores(member)~=scores);T.eq(reads,4)
  C_LFGList.GetApplicantBestDungeonScore=function() return nil end
  C_LFGList.GetApplicantDungeonScoreForListing=function() return {bestRunLevel=0,mapName="Current dungeon"} end
