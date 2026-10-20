@@ -15,7 +15,10 @@ function Alerts:Sync()
   or next(viewers) or LFGListFrame and LFGListFrame:IsVisible() then
   self.unread=nil
  end
- if QueueStatusButton then QueueStatusButton:SetGlowLock("lfglist-applicant",self.unread==true) end
+ local enabled=self.unread==true
+ if QueueStatusButton and (QueueStatusButton.glowLocks["lfglist-applicant"] or false)~=(enabled and -1 or false) then
+  QueueStatusButton:SetGlowLock("lfglist-applicant",enabled)
+ end
 end
 function Alerts:Stop()
  self.unread=nil

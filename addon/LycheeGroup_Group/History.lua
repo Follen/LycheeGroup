@@ -10,9 +10,8 @@ local pending -- 指向 charDB.activeRun,不另留一份可丢失的内存基线
 local UNITS = { "player", "party1", "party2", "party3", "party4" }
 
 local function Specialization(unit)
-	local id = C_SpecializationInfo.GetInspectSpecialization(unit)
-	if issecretvalue and issecretvalue(id) then return nil end
-	if type(id) == "number" and id > 0 then return id end
+	local guid = G.Public(UnitGUID(unit))
+	return G.Roster:GetUnitSpec(unit, guid, unit == "player")
 end
 
 -- 采集 player+party1..4;按 key 去重,已记录成员只补齐先前未取得的专精。
@@ -114,6 +113,16 @@ function History:OnRosterUpdate()
 	if not C_ChallengeMode.IsChallengeModeActive()
 		or C_ChallengeMode.GetActiveChallengeMapID() ~= pending.mapChallengeModeID then return end
 	CollectMembers(pending.members, pending.order)
+end
+
+-- Late library/inspect data may arrive while the run is still active. Fill only
+-- the matching member's missing snapshot; completed runs remain immutable.
+function History:OnSpecUpdate(key, specID)
+	if not pending or not key then return end
+	specID = G.Public(specID)
+	if type(specID) ~= "number" or specID <= 0 then return end
+	local member = pending.members[key]
+	if member and member.specID == nil then member.specID = specID end
 end
 
 function History:OnWorldEntered()

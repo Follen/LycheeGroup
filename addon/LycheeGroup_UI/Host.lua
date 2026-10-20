@@ -122,20 +122,6 @@ function UI:OpenMenu(anchor,items,onPick,options)
 end
 function UI:CloseMenuFor(anchor) return self.context:CloseMenuFor(anchor) end
 function UI:CloseMenu() return self.context:CloseMenu() end
-function UI:HideToast()
- if self.toastTimer then self.toastTimer:Cancel();self.toastTimer=nil end
- if self.toast then self.toast:SetMessage("") end
-end
-function UI:ShowToast(message)
- self:HideToast()
- if not self.toast then
-  self.toast=C.Notice(self.frame,480,function() UI:HideToast() end)
-  self.toast:SetPoint("BOTTOM",self.frame,"BOTTOM",0,24)
-  self.toast:SetFrameLevel(self.frame:GetFrameLevel()+20)
- end
- self.toast:SetMessage(message)
- self.toastTimer=C_Timer.NewTimer(4,function() UI:HideToast() end)
-end
 function UI:HandleEscape()
  local page=self.pages[self.page]
  if page and page.CancelBindingCapture and page:CancelBindingCapture() then return end
@@ -343,7 +329,6 @@ function UI:Navigate(page, context)
 		if p.Enter then p:Enter(context) end
 		return
 	end
-	self:HideToast()
 	self:CloseMenu()
 	self:CloseModal("navigate")
 	UI.Tooltip:Hide()
@@ -368,7 +353,6 @@ end
 
 -- UI:Hide(immediate):立即阻止输入,整页随 Presence 退场,隐藏后才清内容和页面订阅。
 function UI:Hide(immediate)
-	self:HideToast()
 	if A.Floating then A.Floating:Dismiss() end
 	local frame = self.frame
 	if not frame or not frame:IsShown() or (self.hiding and not immediate) then return end

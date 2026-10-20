@@ -12,12 +12,12 @@ local definitions={
  {"minimap",S("显示小地图按钮","Show minimap button"),S("左键开关主窗口，右键打开设置；拖动调整位置。","Left-click toggles the window; right-click opens settings. Drag to reposition.")},
  {"nativeLFGEntry",S("隐藏原生组队眼睛","Hide the native LFG eye"),S("隐藏原生队列入口，保留申请提示音；关闭后恢复原生入口。","Hide the native queue button while keeping applicant sounds; turn this off to restore the native button.")}},
  interface={{"language",S("界面语言","Interface language"),S("仅改变插件文字，重载界面后生效。","Change addon text. Reload the UI to apply."),{{value="auto",label=S("跟随游戏","Game language")},{value="zhCN",label="简体中文"},{value="enUS",label="English"}}},
- {"uiScale",S("主窗口缩放","Main window scale"),S("等比调整整个主窗口，当前基准大小为 100%；悬浮窗单独设置。","Scale the entire main window; its baseline size is 100%. The floating window has a separate setting."),"range",75,125},
+ {"uiScale",S("主窗口缩放","Main window scale"),S("等比调整整个主窗口。","Scale the entire main window proportionally."),"range",75,125},
  {"font",S("界面字体","Interface font"),S("默认使用荔枝字体，也可选择游戏或共享字体，立即生效。","Use LycheeFont, a game font or an installed shared font. Changes apply immediately."),function() return A.Fonts:Choices() end},
  {"reduceMotion",L.reduceMotion,S("关闭开窗位移、Logo 动作和局部过渡。","Disable window movement, logo animation and local transitions.")}},
  browse={
  {"defaultSort",S("默认排序","Default sorting"),S("本角色进入其他活动分类时采用的排序。","Default sorting for this character's activity categories."),{{value="newest",label=L.newest},{value="rating",label=L.leaderRating},{value="itemLevel",label=L.requiredItemLevel},{value="members",label=L.members}}},
- {"rememberFilters",S("记住本角色的筛选","Remember character filters"),S("本角色独立保存各分类筛选；赛季分类默认查看全部活动。","Save category filters for this character; seasonal categories start with all activities.")},
+ {"rememberFilters",S("记住本角色的筛选","Remember character filters"),S("本角色独立保存各分类筛选。","Save category filters for this character.")},
  {"relations",S("好友与公会标记","Friend and guild markers"),S("在队伍、申请者和成员提示中显示关系。","Show relationships in group, applicant and player details.")},
  {"raidMembers",S("团本成员列表","Raid members"),S("控制团本悬停提示中何时展开成员。","Choose when raid tooltips expand the member list."),{{value="shift",label=S("按 Shift 切换","Press Shift to toggle")},{value="alt",label=S("按 Alt 切换","Press Alt to toggle")},{value="ctrl",label=S("按 Ctrl 切换","Press Ctrl to toggle")},{value="always",label=S("始终展开","Always expand")}}}},
  notes={{"defaultNote",S("新记录的默认类型","Default note type"),S("每次记笔记时仍可选择其他类型。","Choose a different type whenever you record a player."),types},
@@ -25,8 +25,8 @@ local definitions={
  {"reminders",S("组队与邀请提醒","Group and invite reminders"),S("收到邀请、邀请玩家或再次组队时，提示符合范围的记录。","Show matching player notes when receiving an invite, inviting a player or grouping again."),{{value="all",label=S("全部记录","All notes")},{value="positive",label=S("仅推荐","Recommended only")},{value="caution",label=S("仅拉黑","Blocked only")},{value="off",label=S("不提醒","Off")}}},
  {"history",S("记录大秘境历史队友","Record Mythic+ teammates"),S("完成后保留活动与成员，便于回顾和补充笔记。","Keep completed runs and teammates for reviewing and adding notes.")}},
  floating={{"floating",S("显示悬浮窗","Show floating window"),S("查看申请与招募状态，关闭主窗口后仍然显示。","View active applications and recruitment while the main window is closed.")},
- {"floatingCompatibility",S("悬浮窗兼容","Floating window integration"),S("自动接入 RurutiaSuite 顶栏集合石入口，显示荔枝标志、数量与悬浮列表。","Use the RurutiaSuite top bar entry for the lychee logo, count and popup list.")},
- {"floatingScale",S("悬浮窗缩放","Floating window scale"),S("调整独立入口和下拉列表大小；兼容入口跟随 RurutiaSuite 的尺寸。","Scale the standalone entry and popup; the integrated entry follows RurutiaSuite's size."),"range"},
+ {"floatingCompatibility",S("悬浮窗兼容","Floating window integration"),S("自动接入第三方UI配置的视觉兼容","Automatically adapt the appearance to third-party UI configurations.")},
+ {"floatingScale",S("悬浮窗缩放","Floating window scale"),S("调整悬浮窗大小。","Adjust the floating window size."),"range"},
  {"floatingLocked",S("锁定位置","Lock position"),S("锁定后不能拖动，查看状态和点击入口不受影响。","Lock movement while keeping the status and shortcuts active.")}}}
 local RAIL, MAIN_X, PAD = 208, 224, 24
 local BODY_WIDTH = T.contentWidth - MAIN_X - PAD*2 - 12
@@ -239,6 +239,12 @@ function P:Sync()
   elseif row[4] then local label;local choices=type(row[4])=="function" and row[4]() or row[4];for _,choice in ipairs(choices) do if choice.value==value then label=choice.label;break end end;c:SetValue(value,label)
   else c:SetValue(value==true);UI:SetText(c.label,value and S("已开启","On") or S("已关闭","Off"));c:SetWidth(math.ceil(c.label:GetStringWidth())+c.track:GetWidth()+36);UI:Color(c.label,c._inside and T.text or T.muted) end
  end
+ local floatingScale=self.controls.floatingScale.widget
+ local scaleAvailable=not A.db.floatingCompatibility
+ floatingScale.slider:EnableMouse(scaleAvailable)
+ floatingScale.progress:SetShown(scaleAvailable)
+ floatingScale.thumb:SetVertexColor(unpack(scaleAvailable and T.accent or T.disabled))
+ UI:Color(floatingScale.valueLabel,scaleAvailable and T.muted or T.disabled)
  self.reloadLanguage:SetShown(A:NeedsLanguageReload())
  self:LayoutRows()
  if self.section=="about" then self:RefreshAbout() end

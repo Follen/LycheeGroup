@@ -2871,7 +2871,7 @@ do
  u:Hide(true)
 end
 
--- Item-level correction uses the player's highest level and an independent toast.
+-- Item-level correction reserves inline space and stays independent of failures.
 do
  local fresh=dofile("tests/ui_fixture.lua")("zhCN")
  local a,u,g,clock=fresh.A,fresh.U,fresh.G,fresh.base
@@ -2882,34 +2882,58 @@ do
  LFGListFrame.EntryCreation.Name:UserType("Item level test")
  page.ilvl.box:UserType("999")
  T.eq(page.ilvl.box:GetText(),"400","manual input clamps to floored highest item level, not equipped level")
- T.ok(u.toast:IsShown());T.ok(u.toast.text:GetText():find("400",1,true))
- local toast,timer=u.toast,u.toastTimer
+ T.ok(page.correctionNotice and page.correctionNotice:IsShown(),"the actual correction appears inline in the creation form")
+ T.eq(page.correctionNotice:GetParent(),page.formFrame)
+ T.eq(page.correctionNotice:GetWidth(),page.formFrame:GetWidth(),"correction feedback spans the activity form instead of the window footer")
+ local correctionPoint={page.correctionNotice:GetPoint()}
+ T.eq(correctionPoint[1],"TOPLEFT");T.eq(correctionPoint[#correctionPoint],-44,"correction feedback starts below the form heading")
+ local function FormY(region) local point={region:GetPoint()};return point[#point] end
+ T.eq(FormY(page.desc),-56-page.correctionNotice:GetHeight()-12,"inline correction reserves space above the activity form")
+ T.eq(FormY(page.req),-356-page.correctionNotice:GetHeight()-12)
+ local notice,timer=page.correctionNotice,page.correctionTimer
+ T.ok(notice.text:GetText():find("400",1,true))
  clock.AdvanceClock(2);page.ilvl.box:UserType("999")
- T.eq(u.toast,toast,"repeated corrections reuse one toast")
- T.eq(timer.cancelled,true,"a replacement toast cancels the old expiration")
- clock.AdvanceClock(2);T.ok(toast:IsShown(),"the cancelled old expiration does not hide the new message")
- clock.AdvanceClock(2);T.eq(toast:IsShown(),false);T.eq(u.toastTimer,nil)
+ T.eq(page.correctionNotice,notice,"repeated corrections reuse one inline notice")
+ T.eq(timer.cancelled,true,"a replacement correction cancels the old expiration")
+ clock.AdvanceClock(2);T.ok(notice:IsShown(),"the cancelled old expiration does not hide the new message")
+ clock.AdvanceClock(2);T.eq(notice:IsShown(),false);T.eq(page.correctionTimer,nil)
+ T.eq(FormY(page.desc),-56);T.eq(FormY(page.req),-356,"expiration returns the form to its original layout")
  for _,value in ipairs({"","0","350"}) do page.ilvl.box:UserType(value);T.eq(page.ilvl.box:GetText(),value) end
- T.eq(u.toastTimer,nil,"empty, zero and valid requirements do not create a toast")
+ T.eq(page.correctionTimer,nil,"empty, zero and valid requirements do not create a correction timer")
  local activity=g.Catalog:GetActivity(2);local oldPvp=activity.isPvpActivity
  activity.isPvpActivity=true;page.ilvl.box:UserType("999")
  T.eq(page.ilvl.box:GetText(),"450","PvP activities use the third native item-level return")
- T.ok(toast.text:GetText():find("PvP",1,true));activity.isPvpActivity=oldPvp
- u:HideToast();page:UsePreset({activityID=2,requiredItemLevel=999,generalPlaystyle=2})
+ T.ok(notice.text:GetText():find("PvP",1,true));activity.isPvpActivity=oldPvp
+ page:HideCorrectionNotice();page:UsePreset({activityID=2,requiredItemLevel=999,generalPlaystyle=2})
  T.eq(page.ilvl.box:GetText(),"999","preset population preserves its requirement until an explicit submit")
- T.eq(u.toastTimer,nil)
+ T.eq(page.correctionTimer,nil)
  page:Submit();T.eq(g.published.requiredItemLevel,400,"publish corrects prefilled requirements before dispatch")
+ T.eq(page.correctionTimer,nil,"switching from the form to applicant management releases correction feedback")
  g.listing.requiredItemLevel=999;page.editListing:Fire("OnClick")
  T.eq(page.ilvl.box:GetText(),"999","opening an existing listing does not silently edit its requirement")
  highest=380.8;page:Submit()
  T.eq(g.updated.requiredItemLevel,380,"editing submission rereads the current highest level after equipment changes")
- u:ShowToast("Transient correction");page:SetFormError("Persistent form error")
+ page.editListing:Fire("OnClick")
+ page:ShowCorrectionNotice("Transient correction");page:SetFormError("Persistent form error")
  T.eq(page.formError:GetText(),"Persistent form error");T.ok(page.formNotice:IsShown())
- T.eq(select(1,toast:GetPoint()),"BOTTOM","toast overlays the window footer independently of the form notice")
- local active=u.toastTimer;u:Navigate("notes")
- T.eq(active.cancelled,true);T.eq(u.toastTimer,nil);T.eq(toast:IsShown(),false,"page changes clear transient feedback")
- u:ShowToast("Close test");active=u.toastTimer;u:Hide(true)
- T.eq(active.cancelled,true);T.eq(u.toastTimer,nil);T.eq(toast:IsShown(),false,"closing clears the toast and its sole timer")
+ T.eq(notice.text:GetText(),"Transient correction","failure feedback does not replace the correction message")
+ T.eq(FormY(notice),-44-page.formNotice:GetHeight()-12,"errors and corrections occupy separate rows under the title")
+ local offset=page.formNotice:GetHeight()+notice:GetHeight()+24
+ T.eq(FormY(page.desc),-56-offset);T.eq(FormY(page.req),-356-offset)
+ T.ok(-FormY(page.req)+page.req:GetHeight()<=page.formFrame:GetHeight()-page.publish:GetHeight()-12,"both notices reserve space without reaching the fixed publish action")
+ page.formNotice.close:Fire("OnClick")
+ T.ok(notice:IsShown(),"dismissing a failure keeps correction feedback")
+ T.eq(FormY(notice),-44);T.eq(FormY(page.desc),-56-notice:GetHeight()-12)
+ page:SetFormError("Persistent form error");timer=page.correctionTimer
+ notice.close:Fire("OnClick")
+ T.eq(timer.cancelled,true);T.eq(page.correctionTimer,nil)
+ T.eq(page.formError:GetText(),"Persistent form error","dismissing the correction keeps the failure reason")
+ T.ok(page.formNotice:IsShown());T.eq(FormY(page.desc),-56-page.formNotice:GetHeight()-12)
+ page:SetFormError("");T.eq(FormY(page.desc),-56);T.eq(FormY(page.req),-356)
+ page:ShowCorrectionNotice("Page change test");local active=page.correctionTimer;u:Navigate("notes")
+ T.eq(active.cancelled,true);T.eq(page.correctionTimer,nil);T.eq(notice:IsShown(),false,"page changes clear transient feedback")
+ u:Navigate("create");page.editListing:Fire("OnClick");page:ShowCorrectionNotice("Close test");active=page.correctionTimer;u:Hide(true)
+ T.eq(active.cancelled,true);T.eq(page.correctionTimer,nil);T.eq(notice:IsShown(),false,"closing clears correction feedback and its sole timer")
  GetAverageItemLevel=original
 end
 

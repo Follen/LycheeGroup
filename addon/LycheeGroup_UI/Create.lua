@@ -110,6 +110,8 @@ function P:Build(parent)
  self.publish=C.Button(f,L.publish,120,function() P:Submit() end);self.publish:SetPoint("BOTTOMRIGHT");self.publish:SetHeight(40);self.publish:SetPrimary(true)
  self.formCancel=C.Button(f,L.cancel,120,function() state.editing=false;UI.Native:ReleaseCreation();P:RefreshMode() end);self.formCancel:SetHeight(40);self.formCancel:SetPoint("RIGHT",self.publish,"LEFT",-8,0)
  self.formNotice=C.Notice(f,FORM,function() P:SetFormError("") end);self.formNotice:SetPoint("TOPLEFT",0,-44);self.formError=self.formNotice.text
+ self.correctionNotice=C.Notice(f,FORM,function() P:HideCorrectionNotice() end);self.correctionNotice:SetPoint("TOPLEFT",0,-44)
+ f:HookScript("OnHide",function() P:HideCorrectionNotice() end)
  local optionX=0
  for _,option in ipairs({self.private,self.crossFaction,self.autoAccept}) do
   option:SetHeight(40);option.label:ClearAllPoints();option.label:SetPoint("LEFT",option.track,"RIGHT",8,0);option:SetWidth(52+FitText(option.label))
@@ -177,13 +179,27 @@ function P:Build(parent)
  summary:EnableMouse(false);summary:EnableMouseMotion(true)
  self:RefreshFavorites()
 end
+function P:LayoutFormNotices()
+ local offset=self.formNotice:IsShown() and self.formNotice:GetHeight()+12 or 0
+ self.correctionNotice:ClearAllPoints();self.correctionNotice:SetPoint("TOPLEFT",0,-44-offset)
+ if self.correctionNotice:IsShown() then offset=offset+self.correctionNotice:GetHeight()+12 end
+ self.desc:ClearAllPoints();self.desc:SetPoint("TOPLEFT",0,-56-offset)
+ self.req:ClearAllPoints();self.req:SetPoint("TOPLEFT",0,-356-offset)
+end
 function P:SetFormError(message)
  local wasShown=self.formNotice:IsShown()
  self.formNotice:SetMessage(message)
- if not wasShown and not self.formNotice:IsShown() then return end
- local offset=self.formNotice:IsShown() and self.formNotice:GetHeight()+12 or 0
- self.desc:ClearAllPoints();self.desc:SetPoint("TOPLEFT",0,-56-offset)
- self.req:ClearAllPoints();self.req:SetPoint("TOPLEFT",0,-356-offset)
+ if wasShown or self.formNotice:IsShown() then self:LayoutFormNotices() end
+end
+function P:HideCorrectionNotice()
+ if self.correctionTimer then self.correctionTimer:Cancel();self.correctionTimer=nil end
+ if not self.correctionNotice:IsShown() then return end
+ self.correctionNotice:SetMessage("");self:LayoutFormNotices()
+end
+function P:ShowCorrectionNotice(message)
+ if self.correctionTimer then self.correctionTimer:Cancel() end
+ self.correctionNotice:SetMessage(message);self:LayoutFormNotices()
+ self.correctionTimer=C_Timer.NewTimer(4,function() P:HideCorrectionNotice() end)
 end
 function P:RefreshFavoriteState()
  local group=UI:GetGroup()
@@ -639,7 +655,7 @@ function P:CorrectItemLevel()
  local limit,pvp=UI.Native:GetCreationItemLevelLimit(form.activityID)
  if limit and value>limit then
   self.ilvl.box:SetText(tostring(limit))
-  UI:ShowToast((pvp and S("已将 PvP 装等要求调整为 %d（你的最高 PvP 装等）。","PvP item level requirement adjusted to %d (your highest PvP item level).")
+  self:ShowCorrectionNotice((pvp and S("已将 PvP 装等要求调整为 %d（你的最高 PvP 装等）。","PvP item level requirement adjusted to %d (your highest PvP item level).")
    or S("已将装等要求调整为 %d（你的最高装等）。","Item level requirement adjusted to %d (your highest item level).")):format(limit))
  end
 end
@@ -838,6 +854,7 @@ function P:Enter(context)
  if context and context.applicantID then for i,id in ipairs(self.appIDs) do if id==context.applicantID then self:SetBatchOffset(self.batchTops[i],false);break end end end
 end
 function P:Leave()
+ self:HideCorrectionNotice()
  UI:GetGroup():SetApplicantView(self,false)
  self.favoritesExpanded=false;self:RefreshFavorites()
  UI.Motion:Stop(self.batchScroll);self.batchScrollTarget=nil;self.batchSlider:Hide()

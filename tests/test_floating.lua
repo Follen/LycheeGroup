@@ -5,8 +5,16 @@ _G.LycheeUI=nil
 local libraryPrivate={}
 for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Components.lua","Native.lua","Menu.lua"}) do assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/"..file))("LycheeGroup",libraryPrivate) end
 _G.LycheeGroup=nil;_G.LycheeGroupDB=nil
-for _,file in ipairs({"Locale.lua","Core.lua","Specializations.lua","Fonts.lua","Floating.lua"}) do dofile("addon/LycheeGroup/"..file) end
-local A=LycheeGroup;A:LoadDB()
+for _,file in ipairs({"Locale.lua","Core.lua","Specializations.lua","Fonts.lua","Floating.lua","API.lua"}) do dofile("addon/LycheeGroup/"..file) end
+local A=LycheeGroup;local API=A.API.Floating
+local startupNotifications=0
+local stopStartup=API:Subscribe(function(status)
+ startupNotifications=startupNotifications+1
+ T.eq(status.available,false,"subscribing before the database is ready immediately reports unavailable")
+end)
+T.eq(API.version,1);T.eq(startupNotifications,1)
+A:LoadDB();T.eq(API:IsAvailable(),false,"database loading alone does not publish a host before the floating UI exists")
+stopStartup()
 local apps={{id=1,name="A group",status="applied",activityID=1,activityName="A dungeon",leaderName="Leader-Away",expiresAt=130},{id=2,name="An invitation",status="invited",activityID=1}}
 local members={};for i=1,30 do members[i]={name="Player"..i.."-Away",nameKey="Player"..i.."-Away",class="WARRIOR",specID=71,dungeonScore=2000+i,itemLevel=500+i} end
 dofile("addon/LycheeGroup_Group/Group.lua");local resolveSpec=A.Group.ResolveMemberSpec
@@ -30,6 +38,7 @@ RAID_CLASS_COLORS={WARRIOR={r=.8,g=.6,b=.4}}
 C_LFGList.GetActivityInfoTable=function() return {} end
 _G.GetTime=function() return 0 end
 local F=A.Floating;F:Bind(G);F:UpdateSettings();F:ShowPanel()
+T.eq(startupNotifications,1,"disposing a subscription before startup prevents later delivery")
 local function Position(frame)
  local _,relative,point,x,y=frame:GetPoint();if type(relative)=="number" then return relative,point end;return x,y
 end
@@ -84,6 +93,9 @@ F:ShowPanel()
 T.eq(F.cancel:IsShown(),false,"an empty waiting list hides cancel-all instead of leaving a disabled header")
 T.eq(F.panel:GetHeight(),60,"an empty application popup drops the unused header")
 T.eq(F.emptyCard:IsShown(),true);T.eq(F.emptyCard:GetHeight(),44)
+T.ok(F.emptyCard:GetWidth()<324,"an empty popup uses a compact card instead of a full application row")
+T.eq(F.panel:GetWidth(),F.emptyCard:GetWidth()+24);T.eq(F.scroll:GetWidth(),F.emptyCard:GetWidth())
+T.eq(F.empty:GetText(),"暂无申请","an active invitation keeps the waiting-list empty message")
 T.eq(F.empty.justify,"CENTER","empty text is centered within its complete width")
 T.eq(F.empty:GetPoint(),"CENTER");T.eq(select(2,Position(F.emptyCard)),-8,"empty content keeps equal top and bottom padding")
 apps[1].status="applied";callback("applications")
@@ -487,16 +499,138 @@ do
  T.eq(F.count:GetText(),"暂无申请","an active invitation is not an idle entry")
  apps={};callback("applications")
  T.eq(F.count:GetText(),"荔枝组队","ending the last application shows the brand even when the waiting count stays zero")
- F:ShowPanel();T.eq(F.empty:GetText(),"暂无申请","the popup retains its empty-list message")
+ F:ShowPanel();T.eq(F.empty:GetText(),"暂无活动","the idle popup distinguishes no activity from an active empty waiting list")
  F:Dismiss();apps=savedApps;callback("applications")
  T.eq(F.count:GetText(),"申请1个","a new application restores the status text")
  A:SetSetting("floating",false);GetTime=clock
 end
 do
+ -- A third-party host can integrate without loading any bundled adapter.
+ T.eq(A.Adapters,nil)
+ local host=CreateFrame("Button",nil,UIParent);host:SetSize(120,24)
+ local label=host:CreateFontString(nil,"OVERLAY");label:SetText("External entry")
+ label:SetFont("External.ttf",16,"");label:SetPoint("CENTER")
+ local owner,other={},{}
+ local released=0
+ local function Release()
+  released=released+1
+  T.eq(F.host,nil,"release runs after the floating objects return to their own entry")
+  T.eq(API:Detach(owner),false,"ownership is already cleared when release runs")
+  label:SetText("External entry")
+ end
+ local ok,reason=API:Attach(owner,host,24,label,Release)
+ T.eq(ok,false);T.eq(reason,"unavailable","disabled floating does not lend its controls")
+ A:SetSetting("floating",true)
+ local notifications,status=0
+ local unsubscribe=API:Subscribe(function(value) notifications=notifications+1;status=value end)
+ T.eq(notifications,1);T.eq(status.available,true);T.eq(status.count,1);T.eq(status.recruiting,false)
+ status.text="changed by consumer";T.eq(API:GetStatus().text,"申请1个","status snapshots do not expose mutable internal state")
+ F:Update();T.eq(notifications,1,"unchanged presentation does not send another status notification")
+ local frame,rows=F.frame,F.rows
+ T.eq(API:Attach(owner,host,24,label,Release),true)
+ T.eq(F.frame,frame);T.eq(F.rows,rows);T.eq(F.host,host);T.eq(F.count,label)
+ T.eq(label:GetText(),"申请1个");T.eq(label:GetFont(),"External.ttf")
+ ok,reason=API:Attach(other,host,24,label,Release)
+ T.eq(ok,false);T.eq(reason,"occupied","a second adapter cannot take the existing host")
+ T.eq(API:Refresh(other),false);T.eq(API:Detach(other),false)
+ T.eq(API:ShowPopup(other),false);T.eq(API:HidePopup(other),false)
+ T.eq(API:ShowPopup(owner),true);T.eq(F.panel:IsShown(),true)
+ local bounds=CreateFrame("Frame",nil,UIParent);bounds:SetSize(300,40);bounds:SetScale(.5)
+ bounds.GetTop=function() return 1900 end;bounds.GetLeft=function() return 180 end
+ host.GetTop=function() return 1000 end;host.GetLeft=function() return 100 end
+ T.eq(API:SetPopupBounds(other,{bounds}),false)
+ T.eq(API:SetPopupBounds(owner,{bounds}),true)
+ local layouts,layoutPanel=0,F.LayoutPanel
+ F.LayoutPanel=function(...) layouts=layouts+1;return layoutPanel(...) end
+ T.eq(API:SetPopupBounds(owner,{bounds}),true);T.eq(layouts,0,"unchanged host bounds do not duplicate the following popup layout")
+ F.LayoutPanel=layoutPanel
+ T.eq(F.panel:GetPoint(),"TOPLEFT")
+ local popupScale=F.panel:GetEffectiveScale()
+ T.near(select(5,F.panel:GetPoint()),(930-976)/popupScale-8,.001,"popup starts below the visible host region at its own scale")
+ bounds:Hide();API:Refresh(owner)
+ T.eq(select(5,F.panel:GetPoint()),-8,"hidden host controls do not reserve popup space")
+ bounds:Show();bounds.GetLeft=function() return 1200 end;API:Refresh(owner)
+ T.eq(select(5,F.panel:GetPoint()),-8,"controls outside the popup width do not move it")
+ bounds.GetLeft=function() return 180 end;bounds.GetTop=function() return 200 end
+ host.GetTop=function() return 50 end;API:Refresh(owner)
+ T.eq(F.panel:GetPoint(),"BOTTOMLEFT")
+ T.near(select(5,F.panel:GetPoint()),50/popupScale+8,.001,"a bottom entry opens above the reserved host region")
+ T.eq(API:SetPopupBounds(owner,nil),true);T.eq(select(5,F.panel:GetPoint()),8)
+ host.GetTop,host.GetLeft=nil,nil
+ host.mouseOver=false;F.panel.mouseOver=false
+ T.eq(API:HidePopup(owner),true);base.AdvanceClock(.12);F:Tick(.23)
+ T.eq(F.panel:IsShown(),false)
+ host:SetSize(150,28);T.eq(API:Refresh(owner),true);T.eq(F.frame:GetWidth(),150)
+ T.eq(notifications,1,"host geometry changes do not publish unchanged business status")
+ API:Open();T.eq(A.openedPage,"find")
+ local savedApps=apps;apps={};callback("applications")
+ T.eq(notifications,2);T.eq(status.idle,true);T.eq(status.count,0);T.eq(status.text,"荔枝组队")
+ apps=savedApps;callback("applications");T.eq(notifications,3)
+ A:SetSetting("floatingCompatibility",false)
+ T.eq(released,1);T.eq(label:GetText(),"External entry");T.eq(status.available,false)
+ T.eq(API:Detach(owner),false);T.eq(released,1,"detaching a released owner does not repeat cleanup")
+ A:SetSetting("floatingCompatibility",true)
+ T.eq(API:Attach(owner,host,24,label,Release),true)
+ local beforeDisable=notifications
+ A:SetSetting("floating",false)
+ T.eq(notifications,beforeDisable+1,"disabling a hosted entry publishes its final unavailable status only once")
+ T.eq(released,2);T.eq(F.frame:IsShown(),false);T.eq(base.PendingTimers(),0)
+ local previous=notifications;unsubscribe()
+ A:SetSetting("floating",true);T.eq(notifications,previous,"unsubscribe stops later availability notifications")
+ -- Public callbacks may re-enter Attach or fail. Keep external failures at
+ -- the API boundary so the remaining notifications and cleanup still run.
+ local errors={};local oldErrorHandler=geterrorhandler
+ geterrorhandler=function() return function(message) errors[#errors+1]=message end end
+ local immediate=API:Subscribe(function() error("immediate subscriber") end)
+ T.eq(#errors,1,"an immediate subscriber error is reported")
+ immediate()
+ local goodCalls=0
+ local bad=API:Subscribe(function() error("later subscriber") end)
+ local good=API:Subscribe(function() goodCalls=goodCalls+1 end)
+ local before=goodCalls
+ A:SetSetting("floatingCompatibility",false)
+ T.eq(goodCalls,before+1,"a failing subscriber does not block later subscribers")
+ T.ok(#errors>=3,"later subscriber errors are reported")
+ bad();good();A:SetSetting("floatingCompatibility",true)
+
+ local host2=CreateFrame("Button",nil,UIParent);host2:SetSize(120,24)
+ local ownerB={};local releaseMode="reattach"
+ local function ReentrantRelease()
+  if releaseMode=="reattach" then
+   T.eq(API:Attach(ownerB,host2,24,label,function() end),true)
+  elseif releaseMode=="disable" then
+   A:SetSetting("floatingCompatibility",false)
+  elseif releaseMode=="error" then
+   error("release callback")
+  end
+ end
+ T.eq(API:Attach(owner,host,24,label,ReentrantRelease),true)
+ ok,reason=API:Attach(owner,host2,24,label,function() end)
+ T.eq(ok,false,"reentrant owner B keeps the slot during owner A's host change")
+ T.eq(reason,"occupied");T.eq(F.host,host2)
+ T.eq(API:Detach(ownerB),true)
+
+ releaseMode="disable"
+ T.eq(API:Attach(owner,host,24,label,ReentrantRelease),true)
+ ok,reason=API:Attach(owner,host2,24,label,function() end)
+ T.eq(ok,false,"a release callback that disables compatibility blocks the outer attach")
+ T.eq(reason,"unavailable");T.eq(F.host,nil)
+ A:SetSetting("floatingCompatibility",true)
+
+ releaseMode="error"
+ T.eq(API:Attach(owner,host,24,label,ReentrantRelease),true)
+ T.eq(API:Detach(owner),true,"a failed external release is isolated after ownership is cleared")
+ T.ok(#errors>=4,"release errors are reported")
+ T.eq(API:Attach(owner,host,24,label,function() end),true,"failed release cleanup leaves the API available for remount")
+ T.eq(API:Detach(owner),true)
+ geterrorhandler=oldErrorHandler
+ A:SetSetting("floating",false)
+end
+do
  -- Match the exported RurutiaSuite 4.5.7 TopBar contract, including a baseline
  -- layout refresh that writes its own text and retains non-left clicks.
- dofile("addon/LycheeGroup/Integrations/Rurutia.lua")
- local R=A.Integrations.Rurutia
+ dofile("addon/LycheeGroup/Adapters/Rurutia.lua")
+ local R=A.Adapters.Rurutia
  C_AddOns.GetAddOnMetadata=function() return nil end
  R:Initialize();A:SetSetting("floating",true)
  T.eq(F.host,nil,"missing RurutiaSuite keeps the standalone entry")
@@ -519,12 +653,18 @@ do
  end
  function View:HideAll() host:Hide() end
  local view=setmetatable({records={meetingstone=record}},{__index=View})
+ local markerBar=CreateFrame("Frame",nil,UIParent);markerBar:SetSize(300,24)
+ markerBar.GetTop=function() return 30 end
+ local markerView={bar=markerBar}
  host:SetScript("OnEnter",function() GameTooltip:Show() end)
  host:SetScript("OnLeave",function() GameTooltip:Hide() end)
  local clicked
  local originalClick=function(_,button) clicked=button end;host:SetScript("OnClick",originalClick)
- _G.RurutiaSuite={TopBarViewClass=View,TopBar={view=view},Font=font}
+ _G.RurutiaSuite={TopBarViewClass=View,TopBar={view=view},RaidMarker={view=markerView},Font=font}
+ A:SetSetting("floating",false)
  R:Initialize()
+ T.eq(F.host,nil,"an adapter initialized before floating is enabled waits for availability")
+ A:SetSetting("floating",true)
  T.eq(F.host,host);T.eq(F.frame:GetParent(),host);T.eq(F.button:IsShown(),false,"integration has only the existing top bar mouse target")
  T.eq(F.count,text,"the integrated label is the original Rurutia font string");T.eq(F.logoAnchor:GetParent(),F.frame)
  T.eq(icon:IsShown(),false);T.eq(text:IsShown(),true);T.eq(icon:GetTexture(),"original-icon")
@@ -546,6 +686,35 @@ do
  host.mouseOver=true;host:Fire("OnEnter")
  T.eq(GameTooltip:IsShown(),false,"the native tooltip yields to the existing floating list")
  T.eq(F.panel:IsShown(),true);T.eq(select(2,F.panel:GetPoint()),host,"the popup anchors to the top bar target")
+ T.near(select(5,F.panel:GetPoint()),(30-16)/F.panel:GetEffectiveScale()+8,.001,"Rurutia reserves the raid-marker controls through the public API")
+ host.GetTop=function() return 1000 end;host.GetLeft=function() return 100 end
+ View.RefreshQuick(view,"meetingstone")
+ T.eq(F.panel:GetPoint(),"TOPLEFT","moving the entry away from the marker bar keeps the popup near its entry")
+ T.eq(select(5,F.panel:GetPoint()),-8,"a distant marker bar does not reserve the screen between the two controls")
+ host:Fire("OnEnter");T.eq(select(5,F.panel:GetPoint()),-8,"reopening also excludes independently moved controls")
+ host.GetTop,host.GetLeft=nil,nil;View.RefreshQuick(view,"meetingstone")
+ T.near(select(5,F.panel:GetPoint()),(30-16)/F.panel:GetEffectiveScale()+8,.001,"returning the entry restores nearby marker avoidance")
+ local reads,measures=0,0
+ local getApplications,measureHeight=G.GetApplications,F.measure.GetStringHeight
+ G.GetApplications=function(...) reads=reads+1;return getApplications(...) end
+ F.measure.GetStringHeight=function(...) measures=measures+1;return measureHeight(...) end
+ local version,fade,cards=F.entriesVersion,F.fade,F.cardElapsed
+ for i=1,25 do View.RefreshQuick(view,"meetingstone") end
+ T.eq(reads,0,"unrelated top bar refreshes do not read the application list")
+ T.eq(measures,0,"unrelated top bar refreshes do not remeasure popup entries")
+ T.eq(F.entriesVersion,version);T.eq(F.fade,fade);T.eq(F.cardElapsed,cards)
+ host.GetTop=function() return 1200 end;host.GetLeft=function() return 1700 end
+ host:SetScale(.9);host:SetSize(110,24);View.RefreshQuick(view,"meetingstone")
+ T.eq(F.frame:GetWidth(),110);T.eq(F.frame:GetHeight(),24)
+ T.near(F.panel:GetEffectiveScale(),A.db.floatingScale/100,.001,"host scaling leaves the popup at its configured scale")
+ T.eq(F.panel:GetPoint(),"TOPRIGHT","moving the host to the top right repositions the existing popup")
+ T.eq(select(3,F.panel:GetPoint()),"BOTTOMRIGHT");T.eq(F.entriesVersion,version)
+ T.eq(reads,0);T.eq(measures,0,"geometry changes reuse measured list content")
+ G.GetApplications,F.measure.GetStringHeight=getApplications,measureHeight
+ local oldTitle=apps[1].name;apps[1].name="Updated application";callback("applications")
+ T.eq(F.rows[1].meta:GetText(),"Updated application","real business notifications still rebuild visible content")
+ apps[1].name=oldTitle;callback("applications")
+ host.GetTop,host.GetLeft=nil,nil;host:SetScale(.8);host:SetSize(90,20);View.RefreshQuick(view,"meetingstone")
  host.mouseOver=false;host:Fire("OnLeave");F.panel.mouseOver=true;base.AdvanceClock(.12)
  T.eq(F.panel:IsShown(),true,"moving from the host into its list does not close it")
  F.panel.mouseOver=false;F.panel:Fire("OnEvent","GLOBAL_MOUSE_DOWN")
@@ -572,9 +741,109 @@ do
  View.ShowComponent(view,"meetingstone",true);T.eq(F.host,host,"reenabling the component reuses the same floating objects")
  View.HideAll(view);T.eq(F.host,nil)
  View.RefreshQuick(view,"meetingstone");T.eq(F.host,host)
+ local savedPosition,existingFrame=A.db.floatingPosition,F.frame
+ local getStringWidth=F.ownCount.GetStringWidth
+ -- The client reports the rendered (possibly truncated) width for bounded text.
+ F.ownCount.GetStringWidth=function(label) return math.min(label:GetWidth(),label:GetUnboundedStringWidth()) end
+ F.ownCount:SetWidth(18)
+ F:ToggleStandaloneTest()
+ T.eq(F.host,nil);T.eq(F.frame:GetPoint(),"CENTER");T.eq(F.panel:IsShown(),true)
+ T.ok(F.count:GetWidth()>=F.count:GetUnboundedStringWidth(),"restoring the standalone entry fits the complete label instead of keeping its old clipped width")
+ T.eq(icon:IsShown(),true);T.eq(text:GetText(),"集合石","test mode restores the original top bar entry")
+ T.eq(A.db.floatingCompatibility,true,"testing does not change the compatibility setting")
+ T.eq(F.frame,existingFrame,"testing reuses the real floating window")
+ View.RefreshQuick(view,"meetingstone");T.eq(F.host,nil,"top bar refreshes leave the standalone test visible")
+ F.button:Fire("OnDragStart");F.button:Fire("OnDragStop")
+ T.eq(A.db.floatingPosition,savedPosition,"dragging the test window preserves the saved position")
+ F:ToggleStandaloneTest()
+ T.eq(F.host,host);T.eq(F.panel:IsShown(),false);T.eq(icon:IsShown(),false)
+ F.ownCount.GetStringWidth=getStringWidth
  A:SetSetting("floating",false)
+ F:ToggleStandaloneTest();T.eq(F.frame:IsShown(),true,"the explicit test also works with floating disabled")
+ T.eq(A.db.floating,false,"testing does not enable the saved floating setting")
+ F:ToggleStandaloneTest();T.eq(F.frame:IsShown(),false,"closing the test restores the disabled setting")
  T.eq(F.host,nil);T.eq(icon:IsShown(),true);T.eq(text:IsShown(),true)
  T.eq(base.PendingTimers(),0);T.eq(F.context.Motion:Count(),0,"disabled integration leaves no animation or popup timers")
  _G.RurutiaSuite=nil;GameTooltip:Hide()
+end
+-- Compact empty content is shared by the standalone and integrated popups.
+for _,locale in ipairs({"zhCN","enUS"}) do
+ local clock=dofile("tests/stubs.lua");clock.Install({locale=locale,realm="Home"})
+ local native=dofile("tests/ui_stubs.lua");native.Install()
+ _G.LycheeUI=nil;_G.LycheeGroup=nil;_G.LycheeGroupDB=nil
+ local private={}
+ for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Components.lua","Native.lua","Menu.lua"}) do assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/"..file))("LycheeGroup",private) end
+ for _,file in ipairs({"Locale.lua","Core.lua","Specializations.lua","Fonts.lua","Floating.lua","API.lua","Presentation.lua"}) do dofile("addon/LycheeGroup/"..file) end
+ local addon=LycheeGroup;addon:LoadDB();addon.db.reduceMotion=true
+ local applications,activeListing,notify={},nil,nil
+ local group={Applications={GetActiveCount=function() return #applications end,IsActive=function() return true end},
+  Catalog={GetActivity=function() return {categoryID=2,maxNumPlayers=5} end}}
+ function group:GetApplications() return applications end
+ function group:GetListing() return activeListing end
+ function group:GetApplicants() return {} end
+ function group:CanManageApplicants() return true end
+ function group:CanManageListing() return true end
+ function group:SetApplicantView() end
+ function group:Subscribe(callback) notify=callback;return function() end end
+ addon.Group=group
+ local floating,api=addon.Floating,addon.API.Floating
+ floating:Bind(group);floating:UpdateSettings()
+ local idleText=locale=="zhCN" and "暂无活动" or "No activity"
+ local waitingText=locale=="zhCN" and "暂无申请" or "No applications"
+ local brand=locale=="zhCN" and "荔枝组队" or "Lychee LFG"
+ local card=floating.emptyCard
+ for _,integrated in ipairs({false,true}) do
+  local host,owner
+  if integrated then
+   owner={};host=CreateFrame("Button",nil,UIParent);host:SetSize(90,20);host:SetScale(.8)
+   local label=host:CreateFontString(nil,"OVERLAY");label:SetFont("Rurutia.ttf",18,"OUTLINE");label:SetPoint("CENTER")
+   T.eq(api:Attach(owner,host,24,label,function() end),true)
+  end
+  local function Open()
+   if integrated then T.eq(api:ShowPopup(owner),true) else floating.button:Fire("OnEnter") end
+  end
+  local function Empty(message,height)
+   Open()
+   T.eq(floating.empty:GetText(),message);T.eq(floating.emptyCard,card,"all empty states reuse one card")
+   T.ok(card:IsShown());T.ok(card:GetWidth()<324,"short localized empty content remains compact")
+   T.ok(card:GetWidth()-floating.empty:GetUnboundedStringWidth()>=32,"the complete empty label retains its horizontal padding")
+   T.eq(floating.panel:GetWidth(),card:GetWidth()+24);T.eq(floating.scroll:GetWidth(),card:GetWidth())
+   T.eq(floating.panel:GetHeight(),height);T.eq(floating.scroll:GetHeight(),44)
+   T.eq(floating.body:GetWidth(),324,"empty viewport resizing leaves the content canvas width stable")
+   T.eq(select(2,floating.panel:GetPoint()),floating:GetAnchor())
+   T.near(floating.panel:GetEffectiveScale(),addon.db.floatingScale/100,.001)
+  end
+  applications={};activeListing=nil;notify("applications")
+  Empty(idleText,60);T.eq(floating.count:GetText(),brand,"the folded idle entry retains the product name")
+  applications={{id=1,status="invited"}};notify("applications")
+  Empty(waitingText,60)
+  activeListing={activityID=1};notify("listing")
+  Empty(waitingText,84);T.ok(floating.cancel:IsShown(),"an empty listing retains its end-listing action")
+  T.ok(floating.panel:GetWidth()>=floating.cancel:GetWidth()+48,"a compact recruitment header still fits its complete action")
+  activeListing=nil;applications={{id=1,status="applied",name="Group",activityName="Dungeon",leaderName="Leader-Away"}};notify("listing")
+  T.eq(floating.panel:GetWidth(),348);T.eq(floating.scroll:GetWidth(),324)
+  T.eq(floating.emptyCard:IsShown(),false);T.eq(floating.rows[1]:GetWidth(),324,"real application rows recover their original full width")
+  applications={};notify("applications")
+  T.eq(floating.panel:IsShown(),false,"the last waiting application still closes the popup")
+  Empty(idleText,60)
+  local measure=floating.empty.GetUnboundedStringWidth
+  floating.empty.GetUnboundedStringWidth=function() return 323.7 end
+  floating:LayoutPanel()
+  T.ok(card:GetWidth()>=323.7+32,"wider font metrics can expand an empty card without clipping")
+  T.eq(floating.rows[1]:GetWidth(),324,"a widened empty viewport never resizes the fixed row pool")
+  T.eq(floating.body:GetWidth(),324)
+  floating.empty.GetUnboundedStringWidth=measure;floating:LayoutPanel()
+  T.ok(card:GetWidth()<324,"restoring short text metrics returns to the compact width")
+  if integrated then
+   host.GetTop=function() return 1200 end;host.GetLeft=function() return 1700 end
+   host:SetSize(110,24);host:SetScale(.9);api:Refresh(owner)
+   T.eq(floating.panel:GetPoint(),"TOPRIGHT","a resized host retains the popup's screen-edge anchoring")
+   T.eq(card:GetWidth(),floating.scroll:GetWidth());T.eq(floating.rows[1]:GetWidth(),324)
+   T.near(floating.panel:GetEffectiveScale(),addon.db.floatingScale/100,.001)
+   api:Detach(owner)
+  else floating:Dismiss() end
+ end
+ addon:SetSetting("floating",false)
+ T.eq(clock.PendingTimers(),0)
 end
 _G.LycheeGroup=nil;_G.LycheeGroupDB=nil

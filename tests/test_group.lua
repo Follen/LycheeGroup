@@ -53,6 +53,7 @@ _G.StopSound=function() end
 -- Native queue-eye contract from the pinned QueueStatusFrame source.
 _G.QueueStatusButton={glowLocks={}}
 function QueueStatusButton:SetGlowLock(key,enabled,count)
+ S.glowWrites=(S.glowWrites or 0)+1
  self.glowLocks[key]=enabled and (count or -1)
 end
 local function PulseApplicantSound()
@@ -940,6 +941,11 @@ end
 
 do
 	-- 进行中的秘境:开始 → 采集 → 完成 → 写入。
+	local oldSelected, oldInfo = C_SpecializationInfo.GetSpecialization, C_SpecializationInfo.GetSpecializationInfo
+	C_SpecializationInfo.GetSpecialization = function() return 1 end
+	C_SpecializationInfo.GetSpecializationInfo = function(index)
+		if index == 1 then return 73, "武器" end
+	end
 	Stubs.SetUnit("party1", { name = "队友甲", realm = "晨风号角", class = "PALADIN", classID = 2, guid = "P-1" })
 	Stubs.SetUnit("party2", { name = "队友乙", realm = "银松森林", class = "MAGE", classID = 1, guid = "P-2" })
 	Stubs.SetInspectSpec("party1", 66)
@@ -953,6 +959,9 @@ do
 	T.eq(active.mapName, "测试秘境·502")
 	T.eq(active.level, 10, "层数来自钥石信息")
 	T.eq(#active.members, 3, "含自己在内 3 名成员")
+	local activeSelf
+	for _, member in ipairs(active.members) do if member.isSelf then activeSelf = member end end
+	T.eq(activeSelf and activeSelf.specID, 73, "历史记录使用自身本地专精 API，不读 inspect")
 	T.eq(G.charDB.activeRun.id, active.id, "进行中基线直接持久到角色存档")
 	Stubs.SetTime(active.startedAt + 60)
 	Fire("CHALLENGE_MODE_START", 502)
@@ -971,6 +980,22 @@ do
 	-- 重复队伍事件不重复记录。
 	Fire("GROUP_ROSTER_UPDATE")
 	T.eq(#G.History:GetActiveRun().members, 4, "按 key 去重")
+	local rosterReads, inspectRequests = 0, #Stubs.InspectRequests()
+	local getRoster = G.Roster.Get
+	G.Roster.Get = function(self, ...) rosterReads = rosterReads + 1; return getRoster(self, ...) end
+	for _, callback in pairs(specCallbacks) do callback(65, "HEALER", "MELEE", "队友乙-银松森林", "") end
+	G.Roster.Get = getRoster
+	local updatedAway
+	for _, member in ipairs(G.History:GetActiveRun().members) do if member.name == "队友乙" then updatedAway = member end end
+	T.eq(updatedAway and updatedAway.specID, 65, "LibSpecialization 广播补齐活动历史中的空专精")
+	G.History:OnSpecUpdate("队友甲-晨风号角", 70)
+	local retainedSpec
+	for _, member in ipairs(G.History:GetActiveRun().members) do if member.name == "队友甲" then retainedSpec = member.specID end end
+	T.eq(retainedSpec, 66, "晚到更新不覆盖记录时已取得的专精")
+	T.eq(rosterReads, 0, "历史专精更新不读取整张 roster")
+	T.eq(#Stubs.InspectRequests(), inspectRequests, "历史专精更新不发起新检视")
+	Stubs.SetUnit("party2", nil)
+	Fire("GROUP_ROSTER_UPDATE")
 
 	-- 只重载 History 文件模拟 /reload 后的局部内存丢失,角色存档保持。
 	local beforeReload = G.History:GetActiveRun()
@@ -997,9 +1022,14 @@ do
 		if m.isSelf then memberSelf = m end
 	end
 	T.eq(memberA and memberA.specID, 66, "已有专精数据的成员记录专精")
-	T.eq(memberSelf and memberSelf.specID, nil, "无专精数据的成员存 nil,不猜测")
+	T.eq(memberSelf and memberSelf.specID, 73, "完成记录保留自身本地专精")
+	G.History:OnSpecUpdate("队友乙-银松森林", 70)
+	local completedAway
+	for _, member in ipairs(run.members) do if member.name == "队友乙" then completedAway = member end end
+	T.eq(completedAway and completedAway.specID, 65, "完成 run 不被之后的广播追溯改写")
 	T.eq(#Stubs.FramesWithEvent("CHALLENGE_MODE_COMPLETED"), 0, "run 结束退订监听")
 	T.eq(#Stubs.FramesWithEvent("GROUP_ROSTER_UPDATE"), 1, "run结束后可见页面仍持有队伍监听")
+	Stubs.SetUnit("party2", { name = "队友乙", realm = "银松森林", class = "MAGE", classID = 1, guid = "P-2" })
 	S.challengeActive = false -- 地图信息仍可用,但挑战已经结束。
 	G.History:Restore()
 	Fire("CHALLENGE_MODE_COMPLETED")
@@ -1051,6 +1081,7 @@ do
 	Stubs.SetUnit("party2", nil)
 	Stubs.SetUnit("party3", nil)
 	Stubs.SetTime(nil)
+	C_SpecializationInfo.GetSpecialization, C_SpecializationInfo.GetSpecializationInfo = oldSelected, oldInfo
 end
 
 -- ---------------------------------------------------------------- 公开门面
@@ -1668,10 +1699,20 @@ do
  T.eq(S.soundKit,47615);T.eq(S.soundChannel,nil,"the native pulse retains the game's default channel")
  T.eq(#Stubs.FramesWithEvent("SOUNDKIT_FINISHED"),0,"no separate sound-completion listener is installed")
  T.eq(Stubs.PendingTimers(),0,"reminders add no Lua loop or audio timer")
+ local writes=S.glowWrites
+ for i=1,25 do G.Alerts:Sync() end
+ T.eq(S.glowWrites,writes,"unchanged unread state does not reapply the native animation lock")
+ eye:SetGlowLock("lfglist-applicant",true,6);writes=S.glowWrites
+ G.Alerts:Sync()
+ T.eq(eye.glowLocks["lfglist-applicant"],-1,"an external finite reminder still restores the existing repeating policy")
+ T.eq(S.glowWrites,writes+1,"changed external state is reconciled once")
 
  local main,popup={},{}
  G:SetApplicantView(main,true)
  T.eq(eye.glowLocks["lfglist-applicant"],false,"viewing applicants acknowledges the reminder")
+ writes=S.glowWrites
+ for i=1,25 do G:SetApplicantView(main,true) end
+ T.eq(S.glowWrites,writes,"refreshing the same visible viewer does not repeat native animation cleanup")
  G:SetApplicantView(popup,true);G:SetApplicantView(main,false)
  S.applicants[802]={applicationStatus="applied",numMembers=1,displayOrderID=2}
  S.applicantMembers[802]={{name="Visible-Away",class="WARRIOR",itemLevel=250}}

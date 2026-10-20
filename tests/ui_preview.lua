@@ -134,6 +134,7 @@ SetBinding("M","TOGGLEWORLDMAP");U.pages.settings:BeginBindingCapture();snapshot
 U.pages.settings.bindingCapture:Fire("OnKeyDown","M");snapshot("按键冲突")
 U:Hide(true)
 dofile("addon/LycheeGroup/Floating.lua")
+dofile("addon/LycheeGroup/API.lua")
 function G:ResolveMemberSpec(member) return member.specID,member.specName,nil,member.localizedClass end
 G.listing={activityID=2};G.applicants={}
 for i,member in ipairs(members) do G.applicants[i]={id=i,status="applied",activityID=2,comment=i==1 and "熟练机制，打断分配好。" or "",members={member}} end

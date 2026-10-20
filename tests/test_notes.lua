@@ -352,7 +352,7 @@ do
 	-- Snapshot:同步已有数据。
 	Stubs.SetUnit("party1", { name = "队友甲", realm = "晨风号角", class = "PALADIN", classID = 2, guid = "P-1" })
 	local previousGroup=A.Group
-	A.Group={Public=function(value) return value end,Notify=function() end}
+	A.Group={Public=function(value) return value end,Notify=function() end,History={OnSpecUpdate=function() end}}
 	Load.addon("LycheeGroup_Group","Roster.lua")
 	A.Group.Roster:OnLibrarySpec(66,"队友甲-晨风号角")
 	Stubs.SetInspectSpec("party1",70)

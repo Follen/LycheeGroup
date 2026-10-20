@@ -211,6 +211,8 @@ SlashCmdList.LYCHEEGROUP = function(message)
     local command, rest = (message or ""):match("^%s*(%S*)%s*(.-)$")
     if command == "test" then
         local ok,err=A:Preview(rest~="" and rest or "applications");if not ok then A:Print(err) end
+    elseif command == "floattest" then
+        A:Print(A.Floating:ToggleStandaloneTest() and A.L.floatingTestOn or A.L.floatingTestOff)
     elseif command == "note" then
         SlashNote(rest)
     elseif command == "" or command == "find" then

@@ -4,7 +4,7 @@
 
 魔兽世界正式服组队插件。在一个窗口里寻找队伍、管理招募，并记录与玩家的组队经历。
 
-当前版本 **1.1.3**，目标客户端为正式服 **12.1.5**（Interface `120105`），支持中文和英文。版本变化见[更新日志](CHANGELOG.md)。
+当前版本为 **1.1.5**，目标客户端为正式服 **12.1.5**（Interface `120105`），支持中文和英文。版本变更见[更新日志](CHANGELOG.md)。
 
 ## 功能
 
@@ -41,6 +41,7 @@
 | `/lg create` | 创建与管理组队 |
 | `/lg notes` | 打开玩家笔记 |
 | `/lg settings` | 打开设置 |
+| `/lg floattest` | 临时在屏幕中央显示独立悬浮窗，再次执行恢复；用于检查当前真实浮窗 |
 | `/lg note` | 记录当前目标玩家 |
 | `/lg note 玩家名-服务器 理由` | 按姓名记录玩家 |
 
@@ -49,6 +50,8 @@
 主窗默认快捷键为英文半角分号 `;`，只在尚无本插件绑定且该键未占用时初始化。可在设置“入口与快捷键”修改快捷键，在“界面与外观”将主窗整体缩放调整为 75%–125%，选择跟随游戏、简体中文或 English（重载后生效），以及切换界面字体。默认内置“荔枝字体 / LycheeFont”，中文界面整套使用雅黑，英文界面使用 Inter；也可继续使用游戏或共享字体。
 
 ## 开发
+
+1.1.5 提供 `LycheeGroup.API.Floating`，用于接入现有顶栏或其他入口。接口支持状态订阅、挂载、刷新、归还和展开同一份悬浮列表；接入合同见[架构文档](Architecture.md#92-浮窗公开接口)。RurutiaSuite 适配独立放在 [`Adapters/Rurutia.lua`](addon/LycheeGroup/Adapters/Rurutia.lua)，随主包分发，也作为接口使用示例。
 
 使用 Lua 5.1 在仓库根目录运行离线测试：
 
@@ -64,6 +67,6 @@ lua tests/runner.lua
 
 项目说明：[产品](Product.md) · [设计](Desgin.md) · [架构](Architecture.md) · [性能](perfermance.md) · [文档与变更记录规则](Agents.md)。当前实现与游戏内验证范围见产品文档。
 
-1.1.3 内置 LycheeUI 1.2.0（修订 22），包含共享选择与菜单动效；源库与内置副本保持一致。共享库已按用户要求解除 [.lock](../LycheeUI/.lock) 冻结。开发接入见 [README](../LycheeUI/README.md)、[API](../LycheeUI/API.md) 和 [组件设计规范](../LycheeUI/DESIGN.md)。
+1.1.5 内置 LycheeUI 1.2.0（修订 22），包含共享选择与菜单动效；源库与内置副本保持一致。共享库已按用户要求解除 [.lock](../LycheeUI/.lock) 冻结。开发接入见 [README](../LycheeUI/README.md)、[API](../LycheeUI/API.md) 和 [组件设计规范](../LycheeUI/DESIGN.md)。
 
 内置第三方库的来源与许可见[库说明](addon/LycheeGroup_Group/Libs/README.md)。

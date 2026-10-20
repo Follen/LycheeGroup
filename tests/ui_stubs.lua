@@ -58,11 +58,12 @@ function N:GetShadowOffset() return unpack(self.shadowOffset or {0,0}) end
 function N:SetText(v) assert(not self.secureText,"addon SetText on protected text");self.text=tostring(v);Fire(self,"OnTextChanged",false) end
 function N:UserType(v) self.text=v;Fire(self,"OnTextChanged",true) end
 function N:GetText() return self.text end
-function N:GetStringWidth()
+function N:GetUnboundedStringWidth()
  local width=0
  for ch in self.text:gsub("|c%x%x%x%x%x%x%x%x",""):gsub("|r",""):gmatch("[%z\1-\127\194-\244][\128-\191]*") do width=width+(#ch>1 and 1 or .55)*(self.font[2] or 14) end
  return width
 end
+function N:GetStringWidth() return self:GetUnboundedStringWidth() end
 function N:GetStringHeight()
  local lines=0
  for line in (self.text.."\n"):gmatch("(.-)\n") do

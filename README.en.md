@@ -4,7 +4,7 @@
 
 A group-finding addon for retail World of Warcraft. Find groups, manage recruitment, and keep notes on players you meet, all in one window.
 
-Version **1.1.3** targets retail **12.1.5** (Interface `120105`) and supports Chinese and English. See the [changelog](CHANGELOG.md) (in Chinese) for version changes.
+The current version is **1.1.5**, targeting retail **12.1.5** (Interface `120105`) with Chinese and English support. See the [changelog](CHANGELOG.md) for release notes (in Chinese).
 
 ## Features
 
@@ -41,6 +41,7 @@ See the [product document](Product.md) for implementation and verification cover
 | `/lg create` | Create and manage a group |
 | `/lg notes` | Open player notes |
 | `/lg settings` | Open settings |
+| `/lg floattest` | Temporarily show the standalone floating window at screen center; run again to restore. Uses the current live floating window. |
 | `/lg note` | Record your current player target |
 | `/lg note Name-Realm reason` | Record a player by name |
 
@@ -49,6 +50,8 @@ See the [product document](Product.md) for implementation and verification cover
 The default main-window key is the English semicolon `;`. It is assigned only when the addon has no binding and the key is free. Change it under Access & shortcuts. Under Appearance, adjust the main window from 75% to 125%, choose the game language, Simplified Chinese or English (applied after reloading), and select a font. The bundled LycheeFont uses the complete YaHei font for the Chinese UI and Inter for the English UI; game and shared fonts remain available.
 
 ## Development
+
+Version 1.1.5 exposes `LycheeGroup.API.Floating` for existing top bars and other entry points. It supports status subscriptions, attachment, refresh, release, and the shared popup. See the [interface contract](Architecture.md#92-浮窗公开接口). The bundled RurutiaSuite adapter lives in [`Adapters/Rurutia.lua`](addon/LycheeGroup/Adapters/Rurutia.lua) and demonstrates the public interface.
 
 Run the offline tests from the repository root with Lua 5.1:
 
@@ -64,6 +67,6 @@ For the local widget-tree preview, run `lua tests/ui_preview.lua`, then open [`t
 
 Project documents (in Chinese): [Product](Product.md) · [Design](Desgin.md) · [Architecture](Architecture.md) · [Performance](perfermance.md) · [Documentation and changelog rules](Agents.md). The product document describes the current implementation and in-game validation coverage.
 
-Version 1.1.3 bundles LycheeUI 1.2.0 (revision 22), with shared selection and menu transitions. The source library and embedded copy match. The user has lifted the freeze recorded in [.lock](../LycheeUI/.lock). See the [integration guide](../LycheeUI/README.md), [API](../LycheeUI/API.md), and [component design specification](../LycheeUI/DESIGN.md).
+Version 1.1.5 bundles LycheeUI 1.2.0 (revision 22), with shared selection and menu transitions. The source library and embedded copy match. The user has lifted the freeze recorded in [.lock](../LycheeUI/.lock). See the [integration guide](../LycheeUI/README.md), [API](../LycheeUI/API.md), and [component design specification](../LycheeUI/DESIGN.md).
 
 See the [library notes](addon/LycheeGroup_Group/Libs/README.md) for bundled third-party sources and licenses.

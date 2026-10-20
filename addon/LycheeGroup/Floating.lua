@@ -72,7 +72,7 @@ function F:Build()
  button:SetScript("OnDragStop",function()
   if not F.dragging then return end
   F.frame:StopMovingOrSizing();F.dragging=nil
-  local point,_,relativePoint,x,y=F.frame:GetPoint();A.db.floatingPosition={point=point,relativePoint=relativePoint,x=x,y=y}
+  if not F.standaloneTest then local point,_,relativePoint,x,y=F.frame:GetPoint();A.db.floatingPosition={point=point,relativePoint=relativePoint,x=x,y=y} end
  end)
  local panel=CreateFrame("Frame",nil,f);panel:SetSize(348,220);panel:SetPoint("BOTTOMLEFT",f,"TOPLEFT",0,8);panel:SetFrameStrata("DIALOG");panel:EnableMouse(true);panel:Hide();self.panel=panel
  panel:SetScript("OnShow",function(self) self:RegisterEvent("GLOBAL_MOUSE_DOWN") end)
@@ -167,7 +167,7 @@ function F:Build()
  for i=1,14 do self:CreateRow();self:CreateBatch() end
  self.emptyCard=CreateFrame("Frame",nil,panel);self.emptyCard:SetSize(324,44);self.emptyCard:SetPoint("TOPLEFT",12,-48)
  self.emptyCard.background=C.Surface(self.emptyCard,{variant="floating"})
- self.empty=Text(self.emptyCard,14,292);self.empty:SetPoint("CENTER");self.empty:SetJustifyH("CENTER");C.SetLineHeight(self.empty,20,true);self.empty:SetTextColor(unpack(T.muted))
+ self.empty=Text(self.emptyCard,14,292);self.empty:SetPoint("CENTER");self.empty:SetJustifyH("CENTER");self.empty:SetWordWrap(false);C.SetLineHeight(self.empty,20,true);self.empty:SetTextColor(unpack(T.muted))
  self.measure=Text(panel,14,300);self.measure:SetWordWrap(true);self.measure:Hide();self.empty:SetText(zh and "暂无申请" or "No applications")
  button:HookScript("OnEnter",function() F:ShowPanel() end);button:HookScript("OnLeave",function() F:ScheduleHide() end)
  f:SetScript("OnShow",function() F:Update() end)
@@ -289,11 +289,11 @@ function F:ScheduleHide()
 end
 function F:GetAnchor() return self.host or self.frame end
 function F:LayoutEntry()
- local countWidth=math.max(18,math.ceil(self.count:GetStringWidth()))
  if self.host then
   self.frame:SetSize(self.host:GetWidth(),self.host:GetHeight())
   self.logoAnchor:SetPoint("RIGHT",self.count,"LEFT",-4,0)
  else
+  local countWidth=math.max(18,math.ceil(self.count:GetUnboundedStringWidth()))
   self.count:SetWidth(countWidth)
   local width=math.max(80,58+countWidth)
   self.frame:SetSize(width,44);self.button:SetWidth(width)
@@ -301,15 +301,16 @@ function F:LayoutEntry()
  end
  self.panel:SetScale(A.db.floatingScale/100*UIParent:GetEffectiveScale()/self.frame:GetEffectiveScale())
 end
--- Integrations supply an existing mouse target; the same logo, count and list
--- move with it. The integration keeps ownership of that target's clicks.
+-- The public API supplies an existing mouse target; the same logo and list
+-- move with it. The adapter keeps ownership of that target's clicks.
 function F:SetHost(host,logoSize,count)
  count=count or self.ownCount
  local changed=self.host~=host or self.count~=count
  logoSize=host and logoSize or 38
- if changed or T.logoSize~=logoSize then self:SetAttention(false) end
+ local resized=T.logoSize~=logoSize
+ if changed or resized then self:SetAttention(false) end
  if changed then
-  self:Dismiss();self.host=host;self.count=count;self.lastCount=nil
+  self:Dismiss();self.host=host;self.count=count;self.lastCount=nil;self.popupBounds=nil
   self.frame:ClearAllPoints();self.frame:SetParent(host or UIParent)
   self.frame:SetClampedToScreen(host==nil)
   self.logoAnchor:ClearAllPoints();self.logoAnchor:SetParent(host and self.frame or self.button)
@@ -317,15 +318,17 @@ function F:SetHost(host,logoSize,count)
   if host then self.frame:SetPoint("CENTER",host,"CENTER",0,0) else self:ResetPosition(true) end
  end
  if host and self.statusText then self.count:SetText(self.statusText) end
- if T.logoSize~=logoSize then
+ if resized then
   T.logoSize=logoSize;self.logoAnchor:SetSize(logoSize,logoSize);self.context.Motion:StopBrand()
  end
  self.frame:SetScale(host and 1 or A.db.floatingScale/100)
  self:LayoutEntry()
- self:Update()
+ if changed or resized then self:Update()
+ elseif self.panel:IsShown() then self:LayoutPanel();self:Render() end
 end
 function F:ResetPosition(restore)
  if self.host then return end
+ if self.standaloneTest then self.frame:ClearAllPoints();self.frame:SetPoint("CENTER",UIParent,"CENTER",0,0);return end
  local p=restore and A.db.floatingPosition
  self.frame:ClearAllPoints();if p then self.frame:SetPoint(p.point,UIParent,p.relativePoint,p.x,p.y) else self.frame:SetPoint("TOPLEFT",UIParent,"TOPLEFT",25.660334,-2.884586) end
 end
@@ -335,11 +338,17 @@ function F:Bind(group)
  self:Update()
 end
 function F:UpdateSettings()
- if not self.frame then if not A.db.floating then return end;self:Build();if not self.frame then return end end
- if A.Integrations then A.Integrations.Rurutia:Sync() end
- self.frame:SetScale(self.host and 1 or A.db.floatingScale/100);self:LayoutEntry();self.frame:SetShown(A.db.floating==true)
- if not A.db.floating then self.panel:Hide();self.entries=nil;self:CancelHide() end
+ local enabled=A.db.floating or self.standaloneTest
+ if not self.frame then if not enabled then self:PublishStatus();return end;self:Build();if not self.frame then return end end
+ self.frame:SetScale(self.host and 1 or A.db.floatingScale/100);self:LayoutEntry();self.frame:SetShown(enabled==true)
+ if not enabled then self.panel:Hide();self.entries=nil;self:CancelHide() end
  self:Update()
+end
+function F:ToggleStandaloneTest()
+ self:Dismiss();self.standaloneTest=not self.standaloneTest
+ self:UpdateSettings();self:ResetPosition(true)
+ if self.standaloneTest then self:ShowPanel() end
+ return self.standaloneTest
 end
 function F:ApplyFont(path)
  if not self.frame then return end
@@ -347,7 +356,7 @@ function F:ApplyFont(path)
  self.lastCount=nil;self:Update()
 end
 function F:Update()
- if not self.frame or not A.db.floating then return end
+ if not self.frame or not (A.db.floating or self.standaloneTest) then self:PublishStatus();return end
  local group=A.Group;self.recruiting=group and group:GetListing()~=nil
  local count=0
  if group then
@@ -361,9 +370,10 @@ function F:Update()
  end
  self:SetAttention(self.recruiting and count>0)
  if self.panel:IsShown() then self:ShowPanel() end
+ self:PublishStatus()
 end
 function F:ShowPanel()
- if self.dragging or not A.db.floating or not self:GetAnchor():IsVisible() or next(exits) then return end
+ if self.dragging or not (A.db.floating or self.standaloneTest) or not self:GetAnchor():IsVisible() or next(exits) then return end
  local hadEntries=self.entries and #self.entries>0
  self:CancelHide();entryCount=0;self.entries,self.entryTops=entries,tops
  self.entriesVersion=(self.entriesVersion or 0)+1
@@ -432,21 +442,47 @@ function F:ShowPanel()
  if hadEntries and entryCount==0 then self:Dismiss();return end
  if entries[#entries] and entries[#entries].gap then local last=entries[#entries];local gap=last.gap;last.gap=0;last.height=last.height-gap;total=total-gap end
  canCancel=canCancel and (self.recruiting or #entries>0)
- local anchor=self:GetAnchor();local scale=anchor:GetEffectiveScale()/self.panel:GetEffectiveScale()
- local screenHeight=UIParent:GetHeight()*UIParent:GetEffectiveScale()/self.panel:GetEffectiveScale();local top=anchor:GetTop()*scale;local downRoom=top-anchor:GetHeight()*scale-8;local upRoom=screenHeight-top-8;local down=downRoom>upRoom
- local header=canCancel and 32 or 8;local padding=header+8
- self.scroll:SetPoint("TOPLEFT",12,-header);self.emptyCard:SetPoint("TOPLEFT",12,-header)
- local height=math.min(math.max(44,math.max(downRoom,upRoom)-padding),total);self.panel:SetHeight(math.max(44,height)+padding);self.scroll:SetHeight(math.max(44,height));self.body:SetHeight(math.max(1,total));self.syncScroll=true;self.scrollBar:SetHeight(self.scroll:GetHeight());self.scrollBar:SetMinMaxValues(0,math.max(0,total-self.scroll:GetHeight()));self.scrollBar:SetValue(self.scroll:GetVerticalScroll());self.thumb:SetHeight(math.max(24,self.scroll:GetHeight()*self.scroll:GetHeight()/math.max(1,total)));self.scrollBar:Hide();self.syncScroll=nil;self.empty:SetShown(#entries==0);self.emptyCard:SetShown(#entries==0)
- self.emptyCard:SetHeight(self.scroll:GetHeight())
+ self.body:SetHeight(math.max(1,total));self.empty:SetShown(#entries==0);self.emptyCard:SetShown(#entries==0)
+ if #entries==0 then self.empty:SetText(self.lastIdle and (zh and "暂无活动" or "No activity") or (zh and "暂无申请" or "No applications")) end
  self.cancel.label:SetText(self.recruiting and (zh and "取消招募" or "End listing") or (zh and "取消全部申请" or "Cancel all applications"));self.cancel:SetAvailable(canCancel and (self.recruiting or #entries>0));self.cancel:SetShown(canCancel)
  self.cancel:SetWidth(self.cancel.label:GetStringWidth()+8)
- self.scroll:SetVerticalScroll(math.max(0,math.min(self.scroll:GetVerticalScroll(),total-self.scroll:GetHeight())))
- self.panel:ClearAllPoints();local right=anchor:GetLeft()*anchor:GetEffectiveScale()>UIParent:GetWidth()*UIParent:GetEffectiveScale()*.6
- self.panel:SetPoint(down and (right and "TOPRIGHT" or "TOPLEFT") or (right and "BOTTOMRIGHT" or "BOTTOMLEFT"),anchor,down and (right and "BOTTOMRIGHT" or "BOTTOMLEFT") or (right and "TOPRIGHT" or "TOPLEFT"),0,down and -8 or 8)
+ self:LayoutPanel()
  self:Render();self:Fade(true)
  if group then group:SetApplicantView(self,self.recruiting and self.panel:IsVisible()) end
  if pending and not self.countdown then self.countdown=C_Timer.NewTicker(1,function() F:RefreshClock() end)
  elseif not pending and self.countdown then self.countdown:Cancel();self.countdown=nil end
+end
+-- Host movement changes viewport geometry without invalidating measured entries.
+function F:LayoutPanel()
+ local total=self.body:GetHeight();local canCancel=self.cancel:IsShown()
+ local width=324
+ if self.emptyCard:IsShown() then width=math.max(120,math.ceil(self.empty:GetUnboundedStringWidth())+32,canCancel and self.cancel:GetWidth()+24 or 0) end
+ self.panel:SetWidth(width+24);self.scroll:SetWidth(width);self.emptyCard:SetWidth(width);self.empty:SetWidth(width-32)
+ local anchor=self:GetAnchor();local panelScale=self.panel:GetEffectiveScale();local scale=anchor:GetEffectiveScale()/panelScale
+ local screenHeight=UIParent:GetHeight()*UIParent:GetEffectiveScale()/panelScale
+ local anchorTop=anchor:GetTop()*scale;local anchorBottom=anchorTop-anchor:GetHeight()*scale
+ local top,bottom=anchorTop,anchorBottom
+ local right=anchor:GetLeft()*anchor:GetEffectiveScale()>UIParent:GetWidth()*UIParent:GetEffectiveScale()*.6
+ local left=anchor:GetLeft()*scale+(right and anchor:GetWidth()*scale-self.panel:GetWidth() or 0)
+ if self.popupBounds then
+  for _,frame in ipairs(self.popupBounds) do
+   if frame:IsVisible() then
+    local frameScale=frame:GetEffectiveScale()/panelScale;local frameLeft=frame:GetLeft()*frameScale
+    if frameLeft<left+self.panel:GetWidth() and frameLeft+frame:GetWidth()*frameScale>left then
+     local frameTop=frame:GetTop()*frameScale
+     top=math.max(top,frameTop);bottom=math.min(bottom,frameTop-frame:GetHeight()*frameScale)
+    end
+   end
+  end
+ end
+ local downRoom=bottom-8;local upRoom=screenHeight-top-8;local down=downRoom>upRoom
+ local header=canCancel and 32 or 8;local padding=header+8
+ self.scroll:SetPoint("TOPLEFT",12,-header);self.emptyCard:SetPoint("TOPLEFT",12,-header)
+ local height=math.min(math.max(44,math.max(downRoom,upRoom)-padding),total);self.panel:SetHeight(math.max(44,height)+padding);self.scroll:SetHeight(math.max(44,height));self.syncScroll=true;self.scrollBar:SetHeight(self.scroll:GetHeight());self.scrollBar:SetMinMaxValues(0,math.max(0,total-self.scroll:GetHeight()));self.scrollBar:SetValue(self.scroll:GetVerticalScroll());self.thumb:SetHeight(math.max(24,self.scroll:GetHeight()*self.scroll:GetHeight()/math.max(1,total)));self.scrollBar:Hide();self.syncScroll=nil
+ self.emptyCard:SetHeight(self.scroll:GetHeight())
+ self.scroll:SetVerticalScroll(math.max(0,math.min(self.scroll:GetVerticalScroll(),total-self.scroll:GetHeight())))
+ self.panel:ClearAllPoints()
+ self.panel:SetPoint(down and (right and "TOPRIGHT" or "TOPLEFT") or (right and "BOTTOMRIGHT" or "BOTTOMLEFT"),anchor,down and (right and "BOTTOMRIGHT" or "BOTTOMLEFT") or (right and "TOPRIGHT" or "TOPLEFT"),0,down and bottom-anchorBottom-8 or top-anchorTop+8)
 end
 function F:RefreshClock()
  if self.recruiting then return end

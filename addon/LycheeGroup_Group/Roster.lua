@@ -41,17 +41,19 @@ end
 -- 回调在 Group 已加载期间接收事件，关窗不丢失队友之后广播的新专精。
 function R:OnLibrarySpec(specID,name)
  local key=A:PlayerKey(name)
- local seen,matched={},nil
+ local seen,matched,matchedKey={},nil,nil
  EachUnit(function(unit)
   local unitKey=A:UnitIdentity(unit)
   local guid=G.Public(UnitGUID(unit))
   if guid then
    seen[guid]=true
-   if unitKey==key and not G.Public(UnitIsUnit(unit,"player")) then matched=guid end
+   if unitKey==key and not G.Public(UnitIsUnit(unit,"player")) then matched,matchedKey=guid,unitKey end
   end
  end)
  Prune(seen)
- if not matched or self.librarySpecs[matched]==specID then return end
+ if not matched then return end
+ G.History:OnSpecUpdate(matchedKey,specID)
+ if self.librarySpecs[matched]==specID then return end
  self.librarySpecs[matched]=specID;self.changed[matched]=nil
  if self.pending and self.pending.guid==matched then CancelTimer();self.pending=nil
  elseif not self.pending then CancelTimer() end
@@ -127,6 +129,7 @@ function R:OnInspectReady(guid)
    if specID then
     self.inspected[guid]={specID=specID,itemLevel=Positive(C_PaperDollInfo.GetInspectItemLevel(member.unit))}
     self.changed[guid]=nil
+    G.History:OnSpecUpdate(member.nameKey,specID)
    end
    break
   end
@@ -143,6 +146,21 @@ function R:GetCachedSpec(guid)
  if self.changed[guid] then return nil end
  local cached=self.inspected[guid]
  return cached and Positive(cached.specID)
+end
+
+-- Read one unit from existing local/native caches; this never refreshes the
+-- roster or starts communication/inspection work.
+function R:GetUnitSpec(unit,guid,isSelf)
+ if isSelf then
+  local selected=C_SpecializationInfo.GetSpecialization()
+  return Positive(selected and C_SpecializationInfo.GetSpecializationInfo(selected))
+ end
+ local spec=self.librarySpecs[guid]
+ if not spec and not self.changed[guid] then
+  local cached=self.inspected[guid]
+  spec=Positive(C_SpecializationInfo.GetInspectSpecialization(unit)) or cached and cached.specID
+ end
+ return Positive(spec)
 end
 
 function R:Get()
@@ -170,20 +188,13 @@ function R:Get()
   member.assignedRole=G.Public(UnitGroupRolesAssigned(unit))
   member.isLeader=G.Public(UnitIsGroupLeader(unit))==true
   member.isSelf=G.Public(UnitIsUnit(unit,"player"))==true
-  local spec
   if member.isSelf then
-   local selected=C_SpecializationInfo.GetSpecialization()
-   spec=selected and C_SpecializationInfo.GetSpecializationInfo(selected)
    member.itemLevel=G.Public(select(2,GetAverageItemLevel()))
   else
    local cached=self.inspected[guid]
-   spec=self.librarySpecs[guid]
-   if not spec and not self.changed[guid] then
-    spec=Positive(C_SpecializationInfo.GetInspectSpecialization(unit)) or cached and cached.specID
-   end
    member.itemLevel=Positive(C_PaperDollInfo.GetInspectItemLevel(unit)) or cached and cached.itemLevel
   end
-  member.specID=Positive(spec)
+  member.specID=self:GetUnitSpec(unit,guid,member.isSelf)
   if member.specID and (not member.assignedRole or member.assignedRole=="NONE") then member.assignedRole=select(5,GetSpecializationInfoByID(member.specID)) end
   local summary=G.Public(C_PlayerInfo.GetPlayerMythicPlusRatingSummary(unit))
   member.dungeonScore=summary and G.Public(summary.currentSeasonScore)

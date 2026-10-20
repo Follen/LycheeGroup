@@ -9,7 +9,7 @@ LibStub=function(name,silent) T.eq(name,"LibSharedMedia-3.0");T.eq(silent,true);
 
 local unrelated=U.C.Text(UIParent,"Other addon",14)
 unrelated:SetFont(STANDARD_TEXT_FONT,14,"")
-dofile("addon/LycheeGroup/Floating.lua");A.Floating:UpdateSettings()
+dofile("addon/LycheeGroup/Floating.lua");dofile("addon/LycheeGroup/API.lua");A.Floating:UpdateSettings()
 A:Open("find");A:Open("settings",{section="interface"})
 local settings=U.pages.settings
 local choices=A.Fonts:Choices()
