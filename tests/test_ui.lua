@@ -3946,3 +3946,24 @@ for _,target in ipairs({"creationTitle","creationDescription","applicationDescri
  u:Hide(true)
  T.eq(next(u.context.nativeControls),nil,"closing after recovery releases all native controls")
 end
+
+-- Entering the creation page binds the current roster only after mode setup.
+do
+ local f=dofile("tests/ui_fixture.lua")("enUS");local a,u,g=f.A,f.U,f.G
+ a.db.reduceMotion=true
+ local members={}
+ for i=1,5 do members[i]={name="P"..i,nameKey="P"..i.."-Home",class="WARRIOR",assignedRole="DAMAGER"} end
+ g.GetRoster=function() return members end
+ local original,bindings=u.Members.BindRoster,0
+ u.Members.BindRoster=function(self,...) bindings=bindings+1;return original(self,...) end
+ a:Open("create")
+ local page=u.pages.create
+ T.eq(bindings,5,"first entry binds each current member once")
+ T.eq(page.rosterCount:GetText(),"5 members");T.eq(page.roster,members)
+ local height,error=page.rosterList.body:GetHeight(),page.formError:GetText()
+ u:Navigate("settings");bindings=0;u:Navigate("create")
+ T.eq(bindings,5,"re-entry binds each current member once")
+ T.eq(page.rosterCount:GetText(),"5 members");T.eq(page.roster,members)
+ T.eq(page.rosterList.body:GetHeight(),height);T.eq(page.formError:GetText(),error)
+ u:Hide(true)
+end

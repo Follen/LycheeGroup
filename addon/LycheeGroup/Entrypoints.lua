@@ -67,7 +67,7 @@ local function HasActiveLFGBusiness()
     return false
 end
 
-function A:SyncHistoryWake()
+function A:SyncHistoryWake(enabledNow)
     if groupReady or not self.db.history then
         events:UnregisterEvent("CHALLENGE_MODE_START")
         return
@@ -75,16 +75,20 @@ function A:SyncHistoryWake()
     events:RegisterEvent("CHALLENGE_MODE_START")
     if C_ChallengeMode.IsChallengeModeActive() then
         local group, err = self:Ensure("Group")
-        if not group then self:Print(self.L.loadFailed:format(tostring(err))) end
+        if not group then self:Print(self.L.loadFailed:format(tostring(err)))
+        elseif enabledNow then group.History:Discard();group.History:Restore() end
     end
 end
 
 local function HandOffToGroup(event, ...)
+    local newRun = not groupReady and event == "CHALLENGE_MODE_START"
     local group, err = A:Ensure("Group")
     if not group then
         A:Print(A.L.loadFailed:format(tostring(err)))
         return
     end
+    -- Loading on START means a new run, not recovery of an older LoD save.
+    if newRun then group.History:Discard() end
     group:OnEvent(event, ...)
 end
 

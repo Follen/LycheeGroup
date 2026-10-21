@@ -878,7 +878,7 @@ function P:Enter(context)
   if kind=="listing" or kind=="permissions" then P:RefreshMode();P:RefreshApplicants() elseif kind=="applicants" or kind=="applicant" then P:RefreshApplicants() elseif kind=="roster" then P:RefreshRoster() elseif kind=="relations" then P:OnNotesChanged() elseif kind=="creationPresets" then P:RefreshFavorites() elseif kind=="activities" then if P.formFrame:IsShown() then P:RefreshPicker() else P:RefreshRosterPresentation() end end
  end) end
  self:WatchNotes()
- self:RefreshRoster();self:RefreshMode();self:RefreshApplicants()
+ self:RefreshMode();self:RefreshRoster();self:RefreshApplicants()
  if context and context.applicantID then for i,id in ipairs(self.appIDs) do if id==context.applicantID then self:SetBatchOffset(self.batchTops[i],false);break end end end
 end
 function P:Leave()

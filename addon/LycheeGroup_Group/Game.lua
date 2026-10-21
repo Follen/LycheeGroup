@@ -51,11 +51,16 @@ function Game:Init()
 	SetEvents(frame, WAKE_EVENTS, true)
 end
 
-function Game:RefreshResultSubscription()
+function Game:RefreshApplicationSubscriptions()
 	local frame = self.frame
-	if G:HasViews("search") or G.Search:GetState()=="searching" or G.Applications:GetActiveCount()>0 then
+	local applications = G.Applications:GetActiveCount()>0
+	if G:HasViews("search") or G.Search:GetState()=="searching" or applications then
 		frame:RegisterEvent("LFG_LIST_SEARCH_RESULT_UPDATED")
 	else frame:UnregisterEvent("LFG_LIST_SEARCH_RESULT_UPDATED") end
+	local listing = C_LFGList.HasActiveEntryInfo()
+	local autoJoin = A.db.autoJoin and applications
+	SetEvents(frame, PERMISSION_EVENTS, listing or G:HasViews("create") or autoJoin)
+	if self.runTracking or G:HasViews() or listing or autoJoin then frame:RegisterEvent("GROUP_ROSTER_UPDATE") else frame:UnregisterEvent("GROUP_ROSTER_UPDATE") end
 end
 
 function Game:RefreshSubscriptions()
@@ -63,12 +68,10 @@ function Game:RefreshSubscriptions()
 	if not frame then return end
 	local browsing = G:HasViews("search") or G.Search:GetState()=="searching"
 	SetEvents(frame, SEARCH_EVENTS, browsing)
-	self:RefreshResultSubscription()
+	self:RefreshApplicationSubscriptions()
 	local listing = C_LFGList.HasActiveEntryInfo()
 	self:RefreshRelations()
 	SetEvents(frame, APPLICANT_EVENTS, listing)
-	SetEvents(frame, PERMISSION_EVENTS, listing or G:HasViews("create"))
-	if self.runTracking or G:HasViews() or listing then frame:RegisterEvent("GROUP_ROSTER_UPDATE") else frame:UnregisterEvent("GROUP_ROSTER_UPDATE") end
 	SetEvents(frame, ROSTER_EVENTS, G:HasViews("create"))
 	G.Roster:SetActive(G:HasViews("create"))
 end

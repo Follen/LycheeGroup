@@ -87,7 +87,7 @@ function Applications:SyncAll()
  end
  for id,seen in pairs(retired) do if seen~=generation then retired[id]=nil end end
  ScheduleRetirement()
- G.Game:RefreshResultSubscription()
+ G.Game:RefreshApplicationSubscriptions()
 end
 function Applications:Apply(id,roles)
  if C_LFGList.HasActiveEntryInfo() then return false,L.recruiting end
@@ -136,7 +136,7 @@ function Applications:DeclineInvite(id)
 end
 function Applications:TryAutoJoin()
  if not A.db.autoJoin or accepting or joined or C_LFGList.HasActiveEntryInfo() then return end
- if IsInGroup() and not UnitIsGroupLeader("player") then return end
+ if IsInGroup(LE_PARTY_CATEGORY_HOME) and not UnitIsGroupLeader("player",LE_PARTY_CATEGORY_HOME) then return end
  for _,record in ipairs(self:GetApplications()) do
   if record.status=="invited" and not record.pendingStatus and not record.autoAttempted then
    record.autoAttempted=true
@@ -154,7 +154,7 @@ function Applications:OnStatusUpdated(id,status,oldStatus,groupName)
   if status=="inviteaccepted" or status=="invitedaccepted" then joined=true end
  end
  self:TryAutoJoin()
- G.Game:RefreshResultSubscription()
+ G.Game:RefreshApplicationSubscriptions()
  G.Results:InvalidateView();G:Notify("applications");self:ReleaseFinished()
 end
 function Applications:Restore()

@@ -2799,6 +2799,43 @@ do
  G.Listing:Restore();G.Applicants:Restore()
 end
 
+-- Auto-join follows home-party authority and resumes after authority changes.
+do
+ local inGroup,isLeader,acceptInvite=IsInGroup,UnitIsGroupLeader,C_LFGList.AcceptInvite
+ local homeGrouped,homeLeader,accepts=false,false,0
+ IsInGroup=function(category) if category==LE_PARTY_CATEGORY_HOME then return homeGrouped end;return true end
+ UnitIsGroupLeader=function(_,category) return category==LE_PARTY_CATEGORY_HOME and homeLeader end
+ C_LFGList.AcceptInvite=function(id) T.eq(id,9001);accepts=accepts+1 end
+ S.activeEntry=nil;S.applications={9001};S.appStatus={[9001]="invited"};S.appPending={}
+ A.db.autoJoin=true
+ Load.addon("LycheeGroup_Group","Applications.lua");G.Applications:Restore()
+ T.eq(accepts,1,"an instance-party member with no home party can accept an LFG invitation")
+ homeGrouped=true
+ Load.addon("LycheeGroup_Group","Applications.lua");G.Applications:Restore()
+ T.eq(accepts,1,"a home-party member waits for authority")
+ T.eq(G:HasViews(),false,"authority recovery is exercised with every page closed")
+ T.eq(#Stubs.FramesWithEvent("PARTY_LEADER_CHANGED"),1,"a background auto-join owns its authority listener")
+ T.eq(#Stubs.FramesWithEvent("GROUP_ROSTER_UPDATE"),1,"a background auto-join observes leaving its home party")
+ A:SetSetting("autoJoin",false)
+ T.eq(#Stubs.FramesWithEvent("PARTY_LEADER_CHANGED"),0,"disabling auto-join releases its authority listener")
+ T.eq(#Stubs.FramesWithEvent("GROUP_ROSTER_UPDATE"),0)
+ A:SetSetting("autoJoin",true)
+ T.eq(accepts,1);homeLeader=true
+ Stubs.FireEvent("PARTY_LEADER_CHANGED")
+ T.eq(accepts,2,"promotion accepts the invitation that previously lacked authority")
+ Stubs.FireEvent("PARTY_LEADER_CHANGED");Stubs.FireEvent("GROUP_ROSTER_UPDATE")
+ T.eq(accepts,2,"authority notifications do not repeat an in-flight acceptance")
+ S.appStatus[9001]="inviteaccepted";Stubs.FireEvent("LFG_LIST_APPLICATION_STATUS_UPDATED",9001,"inviteaccepted","invited")
+ T.eq(#Stubs.FramesWithEvent("PARTY_LEADER_CHANGED"),0,"the final application releases its authority listener")
+ T.eq(#Stubs.FramesWithEvent("GROUP_ROSTER_UPDATE"),0)
+ homeLeader=false;S.appStatus[9001]="invited"
+ Load.addon("LycheeGroup_Group","Applications.lua");G.Applications:Restore()
+ T.eq(accepts,2);homeGrouped=false;Stubs.FireEvent("GROUP_ROSTER_UPDATE")
+ T.eq(accepts,3,"leaving the home party also resumes the pending automatic response")
+ A:SetSetting("autoJoin",false);S.applications={};G.Applications:SyncAll();G.Applications:ReleaseFinished()
+ IsInGroup,UnitIsGroupLeader,C_LFGList.AcceptInvite=inGroup,isLeader,acceptInvite
+end
+
 _G.LycheeGroupDB = nil
 _G.LycheeGroupGroupDB = nil
 _G.LycheeGroupCharacterDB = nil

@@ -177,6 +177,7 @@ do
 		A.Group = {
 			Initialize=function() inits=inits+1 end,
 			OnEvent=function(_, event) forwarded=forwarded+1; T.eq(event,"CHALLENGE_MODE_START") end,
+			History={Discard=function() end},
 		}
 		return true
 	end
@@ -208,7 +209,7 @@ do
 	T.eq(#loads,0,"关闭历史后秘境事件不唤醒 Group")
 	local ensure=A.Ensure
 	local historyRestores=0
-	A.Ensure=function(_,module) T.eq(module,"Group");historyRestores=historyRestores+1;return {} end
+	A.Ensure=function(_,module) T.eq(module,"Group");historyRestores=historyRestores+1;return {History={Discard=function() end,Restore=function() end}} end
 	A:SetSetting("history",true)
 	T.eq(historyRestores,1,"在进行中的秘境启用历史立即请求加载和恢复")
 	A:SetSetting("history",false)
@@ -415,3 +416,56 @@ do
 end
 
 _G.LycheeGroupDB = nil
+
+-- A START that first loads Group is a new run; login inside a run is recovery.
+for _,entry in ipairs({"start","login","enable"}) do
+ local loginInRun=entry=="login"
+ Stubs.Install({locale="enUS",realm="Home"});Stubs.SetTime(10000)
+ Stubs.SetUnit("player",{name="New",realm="Home",class="WARRIOR",guid="Player-new"})
+ Load.addon("LycheeGroup","Locale.lua");Load.addon("LycheeGroup","Core.lua")
+ local core=LycheeGroup;core:LoadDB();core.db.history=entry~="enable";core.db.nativeLFGEntry=false
+ core.Minimap={Initialize=function() end}
+ local active,loads=loginInRun,0
+ C_ChallengeMode={IsChallengeModeActive=function() return active end,GetActiveChallengeMapID=function() return active and 502 end,
+  GetActiveKeystoneInfo=function() return 10 end,GetMapUIInfo=function() return "Current map" end}
+ C_LFGList.GetApplications=function() return {} end
+ C_LFGList.HasActiveEntryInfo=function() return false end
+ local saved={runs={},activeRun={id="old-run",startedAt=100,mapChallengeModeID=502,level=10,mapName="Old map",
+  members={["Old-Away"]={key="Old-Away",name="Old",realm="Away",specID=71}},order={"Old-Away"}}}
+ C_AddOns.IsAddOnLoaded=function() return false,false end
+ C_AddOns.LoadAddOn=function()
+  loads=loads+1
+  local group={charDB=saved,Public=function(value) return value end,Notify=function() end,
+   Game={EnableRunTracking=function() end,DisableRunTracking=function() end},Roster={GetUnitSpec=function() end}}
+  core.Group=group;Load.addon("LycheeGroup_Group","History.lua")
+  function group:Initialize() self.History:Restore() end
+  function group:OnEvent(event)
+   if event=="CHALLENGE_MODE_START" then self.History:OnStart() elseif event=="CHALLENGE_MODE_COMPLETED" then self.History:OnCompleted() end
+  end
+  return true
+ end
+ Load.addon("LycheeGroup","Entrypoints.lua");Stubs.FireEvent("PLAYER_LOGIN")
+ if not loginInRun then
+  T.eq(loads,0,"outside a run the stale LoD baseline does not load Group")
+  active=true;Stubs.FireEvent("CHALLENGE_MODE_START")
+  if entry=="enable" then
+   T.eq(loads,0,"history disabled during START keeps Group unloaded")
+   core:SetSetting("history",true)
+  end
+ end
+ T.eq(loads,1)
+ local group=core.Group;local run=group.History:GetActiveRun()
+ if loginInRun then
+  T.eq(run.id,"old-run","login during the active run keeps its saved identity")
+  T.eq(run.startedAt,100);T.eq(#run.members,2,"recovery retains the earlier member baseline")
+ else
+  T.ok(run.id~="old-run","a new same-map same-level run must not reuse an abandoned saved run")
+  T.eq(run.startedAt,10000);T.eq(#run.members,1);T.eq(run.members[1].key,"New-Home")
+ end
+ T.eq(#saved.runs,0,"recovery and new-run handoff never complete the old run")
+ group:OnEvent("CHALLENGE_MODE_START")
+ T.eq(group.History:GetActiveRun().id,run.id,"duplicate delivery preserves the accepted current baseline")
+ group:OnEvent("CHALLENGE_MODE_COMPLETED")
+ T.eq(saved.runs[1].id,run.id);T.eq(saved.runs[1].startedAt,run.startedAt);T.eq(#saved.runs[1].members,#run.members)
+ T.eq(saved.activeRun,nil)
+end

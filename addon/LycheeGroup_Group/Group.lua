@@ -88,7 +88,10 @@ function G:OnSettingChanged(key,value)
  if key=="history" then
   if value then self.History:Restore() else self.History:Discard() end
  end
- if key=="autoJoin" and value then self.Applications:TryAutoJoin() end
+ if key=="autoJoin" then
+  self.Game:RefreshApplicationSubscriptions()
+  if value then self.Applications:TryAutoJoin() end
+ end
 end
 
 -- ---------------------------------------------------------------- 事件分发
@@ -125,8 +128,8 @@ local DISPATCH = {
 	LFG_LIST_APPLICANT_LIST_UPDATED = function(g) g.Applicants:RefreshList() end,
 	LFG_LIST_APPLICANT_UPDATED = function(g, applicantID) g.Applicants:OnApplicantUpdated(applicantID) end,
 	CHALLENGE_MODE_START = function(g) g.History:OnStart() end,
-	GROUP_ROSTER_UPDATE = function(g) g.History:OnRosterUpdate(); g:RefreshPermissions(); g:InvalidateRoster("group"); g.Applicants:TryAutoInvite() end,
-	PARTY_LEADER_CHANGED = function(g) g:RefreshPermissions(); g.Applicants:TryAutoInvite() end,
+	GROUP_ROSTER_UPDATE = function(g) g.History:OnRosterUpdate(); g:RefreshPermissions(); g:InvalidateRoster("group"); g.Applicants:TryAutoInvite(); g.Applications:TryAutoJoin() end,
+	PARTY_LEADER_CHANGED = function(g) g:RefreshPermissions(); g.Applicants:TryAutoInvite(); g.Applications:TryAutoJoin() end,
 	CHALLENGE_MODE_COMPLETED = function(g) g.History:OnCompleted() end,
 	CHALLENGE_MODE_RESET = function(g) g.History:Discard() end,
 	ACTIVE_PLAYER_SPECIALIZATION_CHANGED = function(g) g:InvalidateRoster() end,
