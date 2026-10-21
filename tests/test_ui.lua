@@ -418,10 +418,14 @@ do
  T.eq(solo.appID,nil);T.eq(solo.people[1].member,nil,"emptying recruitment releases pooled member bindings")
 end
 G.applicants[71]={id=71,status="applied",displayOrderID=1,comment="We join together",members={{name="One-Away",nameKey="One-Away",class="WARRIOR",assignedRole="TANK",specID=71,itemLevel=270,dungeonScore=2200,factionGroup=1,raceName="人类"},{name="Two-Away",nameKey="Two-Away",class="PALADIN",assignedRole="HEALER",specID=66,itemLevel=260,dungeonScore=2100,factionGroup=0,raceName="血精灵"}}}
+G.applicants[71].members[1].dungeonScores={mapScore=315.7}
+G.applicants[71].members[2].dungeonScores={mapScore=0}
 G:Notify("applicants")
 local batch=create.batchPool[1]
 T.eq(batch.people[2]:IsShown(),true,"every batch member has an individual row")
 T.eq(batch.comment:GetText(),"We join together");T.eq(batch.people[2].score:GetText(),"2100")
+T.eq(batch.people[1].mapScore:GetText(),"315");T.eq(batch.people[2].mapScore:GetText(),"0","a real zero map score remains numeric")
+T.near(batch.people[1]:GetHeight(),72*.7*.94,.001);T.near(batch:GetHeight(),172*.7*.94,.001,"the complete applicant batch retains the additional six percent compression")
 T.eq(batch.people[1].race:GetText(),"人类");T.eq(batch.people[2].race:GetText(),"血精灵")
 T.ok(batch.people[1].faction:IsShown());T.ok(batch.people[2].faction:IsShown())
 do
@@ -447,7 +451,7 @@ do
 end
 do
  local function X(region) local p={region:GetPoint()};return p[#p-1] end
- for _,pair in ipairs({{"role","role"},{"ilvl","ilvl"},{"rating","score"}}) do
+ for _,pair in ipairs({{"role","role"},{"ilvl","ilvl"},{"rating","score"},{"mapScore","mapScore"}}) do
   local header,value=create.applicantHeaders[pair[1]],batch.people[1][pair[2]]
   T.eq(header.justify,"CENTER");T.eq(X(header)+header:GetWidth()/2,X(value)+value:GetWidth()/2,"numeric header and value share their center")
  end
@@ -455,20 +459,21 @@ do
  local headings={};for _,header in pairs(create.applicantHeaders) do if header:IsShown() then headings[#headings+1]=header end end
  table.sort(headings,function(a,b) return X(a)<X(b) end)
  local labels={};for i,header in ipairs(headings) do labels[i]=header:GetText() end
- T.same(labels,{"申请者","职责","阵营","评分","装等","备注","操作"},"party applicant headings follow the visible data columns")
+ T.same(labels,{"申请者","职责","阵营","评分","单本分","装等","备注","操作"},"key applicant headings follow the visible data columns")
  T.ok(X(create.applicantHeaders.role)<250,"roles move substantially toward the applicant identity")
  local row=batch.people[1]
  local faction=create.applicantHeaders.faction
- T.eq(faction.justify,"CENTER","faction headings center over the icon and expanded race")
+ T.eq(faction.justify,"CENTER","faction headings center over the icon and replacement race")
  T.eq(row.faction:GetParent(),row.factionButton);T.eq(row.faction:GetPoint(),"CENTER")
  T.eq(X(row.factionButton)+row.factionButton:GetWidth()/2,X(faction)+faction:GetWidth()/2,"the icon button and heading share their center")
- T.eq(row.race.justify,"CENTER");T.eq(X(row.race)+row.race:GetWidth()/2,X(faction)+faction:GetWidth()/2)
+ T.eq(row.race.justify,"CENTER");T.eq(row.race:GetParent(),row.factionButton);T.eq(row.race:GetPoint(),"CENTER")
  T.ok(row.factionButton:GetWidth()<=row.faction:GetWidth()+16,"faction hover feedback stays close to the icon")
- T.ok(X(create.applicantHeaders.comment)-X(create.applicantHeaders.ilvl)-create.applicantHeaders.ilvl:GetWidth()>=32,"notes keep clear space after item level")
+ T.ok(X(create.applicantHeaders.comment)-X(create.applicantHeaders.ilvl)-create.applicantHeaders.ilvl:GetWidth()>=24,"notes keep clear space after item level")
+ T.ok(X(create.applicantHeaders.actions)-X(create.applicantHeaders.comment)-create.applicantHeaders.comment:GetWidth()>=12,"notes do not crowd the action buttons")
  local previous
- for _,key in ipairs({"role","faction","rating","ilvl"}) do
+ for _,key in ipairs({"rating","mapScore","ilvl"}) do
   local header=create.applicantHeaders[key];local center=X(header)+header:GetWidth()/2
-  if previous then T.eq(center-previous,96,"applicant metadata columns have equal center spacing") end
+  if previous then T.eq(center-previous,72,"all three numeric columns have equal center spacing") end
   previous=center
  end
  local height=row:GetHeight()
@@ -477,22 +482,24 @@ do
  create.batchScroll.mouseOver=true
  row.factionButton:Fire("OnClick","LeftButton")
  T.eq(row.race:IsShown(),true);T.eq(batch.people[2].race:IsShown(),false,"each member expands independently")
- local iconPoint,racePoint={row.factionButton:GetPoint()},{row.race:GetPoint()}
- T.eq(iconPoint[#iconPoint],11);T.eq(racePoint[#racePoint],-13)
- T.eq(row:GetHeight(),height,"expansion fits inside the existing row")
+ local iconPoint={row.factionButton:GetPoint()}
+ T.eq(iconPoint[#iconPoint],0);T.eq(row.race:GetPoint(),"CENTER");T.eq(row.faction:IsShown(),false,"the race replaces the faction icon")
+ T.eq(row.factionButton:GetWidth(),faction:GetWidth(),"the displayed race remains clickable across its full width")
+ T.eq(row:GetHeight(),height,"race switching keeps the compact row height")
  create:RefreshApplicants();T.eq(row.race:IsShown(),true,"ordinary applicant refresh preserves the current member's expansion")
  row.factionButton:Fire("OnClick","RightButton")
  T.ok(U.context:IsMenuOpen(row),"right clicking the faction cell keeps the member menu");T.eq(row.race:IsShown(),true)
  U:CloseMenu()
  row.factionButton:Fire("OnClick","LeftButton")
  iconPoint={row.factionButton:GetPoint()}
- T.eq(row.race:IsShown(),false);T.eq(iconPoint[#iconPoint],0,"collapsing recenters the icon vertically")
+ T.eq(row.race:IsShown(),false);T.eq(row.faction:IsShown(),true);T.eq(iconPoint[#iconPoint],0,"both states share the same vertical center")
+ T.eq(row.factionButton:GetWidth(),32,"switching back restores the compact icon hit area")
  local member=G.applicants[71].members[1];local race=member.raceName
  for _,name in ipairs({"人类","血精灵","赞达拉巨魔","光铸德莱尼","至高岭牛头人"}) do
   member.raceName=name;create:RefreshApplicants()
   T.ok(row.race:GetStringWidth()<=row.race:GetWidth(),"long Chinese race names fit on one line")
   T.eq(row.race.wrap,false,"race names never wrap as recycled applicant rows change")
-  T.eq(X(row.race)+row.race:GetWidth()/2,X(faction)+faction:GetWidth()/2,"all race names keep the icon's center")
+  T.eq(row.race:GetPoint(),"CENTER","all race names keep the icon's center")
  end
  row.factionButton:Fire("OnClick","LeftButton")
  local nameKey=member.nameKey;member.nameKey="Replacement-Away";create:RefreshApplicants()
@@ -504,6 +511,14 @@ do
  row:Hide();row:Show();T.eq(row.race:IsShown(),false,"hidden rows release transient expansion")
  member.factionGroup=factionGroup;create.batchScroll.mouseOver=nil
  member.raceName=race;create:RefreshApplicants()
+ local scores=member.dungeonScores;member.dungeonScores=nil;create:RefreshApplicants()
+ T.eq(row.mapScore:GetText(),"—","missing map scores do not reuse the previous applicant's value")
+ T.same({row.mapScore:GetTextColor()},U.Theme.muted,"missing map scores clear the previous rarity color")
+ member.dungeonScores=scores;create:RefreshApplicants()
+ T.same({row.mapScore:GetTextColor()},{.3,.8,.2},"map scores use the native dungeon-specific color")
+ member.dungeonScores={mapScore=0};create:RefreshApplicants()
+ T.eq(row.mapScore:GetText(),"0");T.same({row.mapScore:GetTextColor()},U.Theme.muted,"a reused zero-score row clears the known score color")
+ member.dungeonScores=scores;create:RefreshApplicants()
  T.eq(create.groupSummary:GetWidth(),create.groupStrip:GetWidth()+24,"the hover summary hugs its content with equal padding")
 end
 do
@@ -528,9 +543,13 @@ do
 end
 do
  local listing=G.listing;local oldActivity=listing.activityID
+ local memberHeight,batchHeight=batch.people[1]:GetHeight(),batch:GetHeight()
  Pick(create.sortChoice,"score")
  listing.activityID=1;G:Notify("listing")
+ T.eq(batch.people[1]:GetHeight(),memberHeight,"raid applicants retain the same compact member height as key applicants")
+ T.eq(batch:GetHeight(),batchHeight,"switching recruitment to a raid preserves batch spacing")
  T.eq(create.applicantHeaders.rating:IsShown(),false,"raid applicants have no unusable score column")
+ T.eq(create.applicantHeaders.mapScore:IsShown(),false);T.eq(batch.people[1].mapScore:IsShown(),false)
  T.eq(batch.people[1].score:IsShown(),false);T.eq(batch.people[1].score:GetText(),"")
  T.eq(create.sortChoice.value,"newest","changing to raid recruitment clears an unavailable score sort")
  local function X(region) local p={region:GetPoint()};return p[#p-1] end
@@ -542,9 +561,10 @@ do
  local faction=create.applicantHeaders.faction
  T.eq(faction.justify,"CENTER","raid faction headings also center over their content")
  T.eq(X(batch.people[1].factionButton)+batch.people[1].factionButton:GetWidth()/2,X(faction)+faction:GetWidth()/2,"raid faction icons share the heading center")
- T.eq(X(batch.people[1].race)+batch.people[1].race:GetWidth()/2,X(faction)+faction:GetWidth()/2,"raid race names share the same center")
+ T.eq(batch.people[1].race:GetParent(),batch.people[1].factionButton);T.eq(batch.people[1].race:GetPoint(),"CENTER","raid race names share the same center")
  create.batchScroll.mouseOver=true;batch.people[1].factionButton:Fire("OnClick","LeftButton")
- T.eq(batch.people[1].race:IsShown(),true,"raid applicants use the same race expansion")
+ T.eq(batch.people[1].race:IsShown(),true);T.eq(batch.people[1].faction:IsShown(),false,"raid race names also replace the faction icon")
+ T.eq(batch.people[1]:GetHeight(),memberHeight);T.eq(batch:GetHeight(),batchHeight,"showing a raid applicant's race leaves the row and batch heights unchanged")
  batch.people[1].factionButton:Fire("OnClick","LeftButton");create.batchScroll.mouseOver=nil
  for _,key in ipairs({"role","ilvl"}) do local header,value=create.applicantHeaders[key],batch.people[1][key];T.eq(header.justify,"CENTER");T.eq(X(header)+header:GetWidth()/2,X(value)+value:GetWidth()/2,"raid role and item level share their header centers") end
  T.ok(batch.comment:GetWidth()>115,"raid notes use the space released by the score column")
@@ -553,7 +573,12 @@ do
  U:CloseMenu()
  listing.activityID=oldActivity;G:Notify("listing")
  T.eq(create.applicantHeaders.rating:IsShown(),true);T.eq(batch.people[1].score:IsShown(),true)
- T.eq(batch.people[1].score:GetText(),"2200");T.near(batch.comment:GetWidth(),169.2,.001,"reused dungeon batches restore score space")
+ T.eq(create.applicantHeaders.mapScore:IsShown(),true);T.eq(batch.people[1].mapScore:IsShown(),true)
+ T.eq(batch.people[1].score:GetText(),"2200");T.eq(batch.people[1].mapScore:GetText(),"315");T.near(batch.comment:GetWidth(),129.2,.001,"reused key batches restore both score columns")
+ listing.activityID=3;G:Notify("listing")
+ T.eq(create.applicantHeaders.rating:IsShown(),true);T.eq(create.applicantHeaders.mapScore:IsShown(),false);T.eq(batch.people[1].mapScore:IsShown(),false,"ordinary dungeons do not have a listing map score")
+ T.near(batch.comment:GetWidth(),169.2,.001,"non-key activities reclaim map score space")
+ listing.activityID=oldActivity;G:Notify("listing")
  Pick(create.sortChoice,"score");Pick(create.sortChoice,"newest")
 end
 
@@ -626,15 +651,16 @@ do
  G.applicants[1].members={Member(1),Member(101),Member(102),Member(103),Member(104)}
  G.applicants[2].members={Member(2),Member(105)}
  create:RefreshApplicants();create:SetBatchOffset(0,false)
- T.eq(create.batchPool[1]:GetHeight(),400);T.eq(create.batchPool[2]:GetHeight(),172)
- T.eq(create.lastBatch,2,"two taller batches fill the visible viewport");T.eq(create.batchPool[1].people[5].member,G.applicants[1].members[5],"a tall batch keeps every member")
- create:SetBatchOffset(400,false);T.eq(create.firstBatch,1,"a batch touching the top edge keeps the established boundary semantics")
- create:SetBatchOffset(400.1,false);T.eq(create.firstBatch,2);T.eq(create.batchPool[1].appID,2,"cached geometry locates the next variable-height batch")
+ T.near(create.batchPool[1]:GetHeight(),400*.7*.94,.001);T.near(create.batchPool[2]:GetHeight(),172*.7*.94,.001)
+ T.eq(create.lastBatch,5,"compact batches expose more applicants in the same viewport");T.eq(create.batchPool[1].people[5].member,G.applicants[1].members[5],"a tall batch keeps every member")
+ local edge=create.batchTops[2]
+ create:SetBatchOffset(edge,false);T.eq(create.firstBatch,1,"a batch touching the top edge keeps the established boundary semantics")
+ create:SetBatchOffset(edge+.1,false);T.eq(create.firstBatch,2);T.eq(create.batchPool[1].appID,2,"cached geometry locates the next variable-height batch")
  create:SetBatchOffset(8000,false);create:SetBatchOffset(0,false)
  local nodes,pool=#S.nodes,#create.batchPool
  create:SetBatchOffset(8000,false);create:SetBatchOffset(0,false)
  T.eq(#S.nodes,nodes,"variable-height scrolling reuses the reached batch/member object high-water mark")
- T.eq(#create.batchPool,pool);T.ok(pool<=8,"one hundred applicant batches retain only a viewport-sized native pool")
+ T.eq(#create.batchPool,pool);T.ok(pool<=10,"one hundred applicant batches retain only a viewport-sized native pool")
  G.GetApplicant=get;G.applicants=saved;create:RefreshApplicants();create:SetBatchOffset(0,false)
 end
 A.db.reduceMotion=false;create.batchScroll:Fire("OnMouseWheel",-1);T.ok(U.Motion.jobs[create.batchScroll],"applicant wheel movement starts one finite animation");U.Motion:Tick(.2);T.eq(create.batchScroll:GetVerticalScroll(),56);T.eq(U.Motion.jobs[create.batchScroll],nil)
@@ -1730,6 +1756,12 @@ do
  T.eq(tip.member,nil,"clicking a search-result member never opens personal details")
  T.eq(tip.record,G.records[target.key]);T.ok(not tip.pinned)
  T.eq(view.back:IsShown(),false);T.eq(view.wcl:IsShown(),false);T.eq(view.note:IsShown(),false)
+ local knownLeader={id=-8001,name="Known leader",leaderName="Warrior-Away",details={members={{nameKey="Warrior-Away",class="WARRIOR",isLeader=true}}}}
+ local unknownLeader={id=-8002,name="Missing leader details",leaderName="Unknown-Away",details={members={}}}
+ tip:ShowGroup(target,knownLeader)
+ T.same({view.leader:GetTextColor()},{U:ClassColor("WARRIOR")},"known leader uses its current class color")
+ tip:ShowGroup(target,unknownLeader)
+ T.same({view.leader:GetTextColor()},U.Theme.muted,"a reused tooltip clears the previous leader's class color when details are missing")
  tip:Hide()
  local app={members=members}
  tip:ShowApplicants(target,app)
@@ -2149,7 +2181,7 @@ do
  page.favoritesToggle:Fire("OnClick");a:Open("find");a:Open("create");T.eq(page.favoritesExpanded,false,"returning to creation starts with favorites collapsed")
  -- Native summaries and both factions share the production tooltip and applicant rows.
  g.listing={activityID=2,name="Listing",requiredItemLevel=300}
- local one={name="Alliance-Away",nameKey="Alliance-Away",class="MAGE",assignedRole="DAMAGER",factionGroup=1,applicantID=91,dungeonScores={current={name="Current dungeon",level=18,timed=true},best={name="Best dungeon",level=19,timed=false}}}
+ local one={name="Alliance-Away",nameKey="Alliance-Away",class="MAGE",assignedRole="DAMAGER",factionGroup=1,applicantID=91,itemLevel=326,dungeonScore=3641,dungeonScores={mapScore=456,current={name="Current dungeon",level=18,timed=true},best={name="Best dungeon",level=19,timed=false}}}
  local two={name="Horde-Away",nameKey="Horde-Away",class="WARRIOR",assignedRole="TANK",factionGroup=0}
  g.applicants[91]={id=91,status="applied",activityID=2,members={one,two}};g:Notify("listing");g:Notify("applicants")
  local batch=page.batchPool[1];T.ok(batch.people[1].faction.texture:find("faction%-alliance"));T.ok(batch.people[2].faction.texture:find("faction%-horde"))
@@ -2160,6 +2192,40 @@ do
  end
  u.Tooltip:ShowPlayer(batch.people[1],one)
  local tip=u.Tooltip.interactive
+ T.same({tip.metrics[1].title:GetText(),tip.metrics[2].title:GetText(),tip.metrics[3].title:GetText()},{"装等","单本分","大秘境评分"})
+ T.same({tip.metrics[1].value:GetText(),tip.metrics[2].value:GetText(),tip.metrics[3].value:GetText()},{"326","456","3641"})
+ local previousX,valueY
+ for i=1,3 do
+  local metric=tip.metrics[i];local title,value={metric.title:GetPoint()},{metric.value:GetPoint()}
+  local alignment=i==1 and "LEFT" or "CENTER"
+  T.eq(metric.title.justify,alignment);T.eq(metric.value.justify,alignment)
+  T.eq(title[#title-1],value[#value-1]);T.eq(metric.title:GetWidth(),metric.value:GetWidth(),"each number shares its heading's column")
+  if i==1 then T.eq(title[#title-1],0,"item level starts at the portrait and body left edge") end
+  T.ok(value[#value]<title[#title]-metric.title:GetHeight(),"numbers sit on the second row below all headings")
+  if valueY then T.eq(value[#value],valueY,"all three numbers share one baseline") end
+  if previousX then T.near(title[#title-1]-previousX,metric.title:GetWidth()+16,.001,"tooltip numeric columns retain equal spacing") end
+  T.ok(metric.title:GetStringWidth()<=metric.title:GetWidth(),"the complete heading fits its column")
+  previousX,valueY=title[#title-1],value[#value]
+ end
+ T.same(tip.metrics[2].value.color,{.3,.8,.2},"the tooltip uses the same native map-score color as the applicant row")
+ local realAlign=tip.metrics[1].value.SetJustifyH
+ local realVertical=tip.metrics[1].value.SetJustifyV
+ local horizontalResets,middleResets=0,0
+ for i=1,3 do
+  local expectedAlignment=i==1 and "LEFT" or "CENTER"
+  tip.metrics[i].value.SetJustifyH=function(self,alignment)
+   if alignment~=expectedAlignment then horizontalResets=horizontalResets+1 end
+   return realAlign(self,alignment)
+  end
+  tip.metrics[i].value.SetJustifyV=function(self,alignment)
+   if alignment~="TOP" then middleResets=middleResets+1 end
+   return realVertical(self,alignment)
+  end
+ end
+ for i=1,3 do u.Tooltip:RefreshApplicant() end
+ for i=1,3 do tip.metrics[i].value.SetJustifyH=realAlign;tip.metrics[i].value.SetJustifyV=realVertical end
+ T.eq(horizontalResets,0,"refreshes preserve the left item-level column and centered score columns throughout measurement")
+ T.eq(middleResets,0,"refreshes keep the displayed numeric baseline throughout measurement")
  T.eq(select(2,tip.title:GetFont()),19);T.eq(tip.dungeonRows[1].keyLevel:GetText(),"+18");T.eq(tip.dungeonRows[2].status:GetText(),"未限时");T.ok(tip.playerFaction:IsShown())
  T.eq(tip.dungeonRows[1].label:GetText(),"当前");T.eq(tip.dungeonRows[2].label:GetText(),"最佳")
  T.same(tip.dungeonRows[1].keyLevel.color,{.64,.21,.93});T.same(tip.dungeonRows[2].keyLevel.color,{1,.5,0},"both levels use native keystone rarity colors")
@@ -2227,7 +2293,7 @@ do
  original.name,original.nameKey="Replacement-Away","Replacement-Away"
  local current=Member("Original",3100);app.members[2]=current;g:Notify("applicants")
  T.eq(tip.member,current,"an in-place applicant slot replacement follows the selected identity to its new slot")
- T.eq(tip.interactive.metrics[2].value:GetText(),"3100")
+ T.eq(tip.interactive.metrics[3].value:GetText(),"3100")
  current.name,current.nameKey="Another-Away","Another-Away";g:Notify("applicants")
  T.eq(tip.member,nil);T.eq(tip.interactive:IsShown(),false,"details never silently switch to the new occupant of a selected slot")
  local function OpenCopy()
@@ -2289,7 +2355,7 @@ do
   T.eq(role[1],"RIGHT");T.eq(role[2],view.canvas);T.eq(role[3],"TOPRIGHT")
   T.near(role[5],(title[#title]+bottom)/2,.001,"personal markers center on the complete name, realm and specialization block")
   T.eq(faction[2],view.playerRole);T.eq(faction[3],"LEFT");T.eq(faction[5],0)
-  T.eq(view.subtitle:GetWidth(),view.title:GetWidth());T.eq(view.summary:GetWidth(),view.title:GetWidth())
+  T.eq(view.subtitle:IsShown(),false,"the realm shares the name line instead of taking a third identity line");T.eq(view.summary:GetWidth(),view.title:GetWidth())
   T.ok(48+view.title:GetWidth()+12<=view.canvas:GetWidth()-38,"all identity text leaves room for both right-side markers")
  end
  CheckIdentity()
@@ -2298,8 +2364,8 @@ do
  local longName,longRealm=string.rep("长名字",8),string.rep("长服务器",6)
  person.name=longName.."-"..longRealm;person.nameKey=person.name;person.specName=string.rep("专精",10)
  tip:Hide();tip:ShowPlayer(row,person)
- T.eq(view.title:GetText(),longName);T.eq(view.subtitle:GetText(),longRealm)
- T.ok(view.title:GetStringHeight()>22);T.ok(view.subtitle:GetStringHeight()>20);T.ok(view:GetHeight()>baseHeight,"long identity fields grow the detail without overlap")
+ T.eq(view.title:GetText(),longName.."-"..longRealm)
+ T.ok(view.title:GetStringHeight()>22);T.ok(view:GetHeight()>baseHeight,"long identity fields grow the detail without overlap")
  CheckIdentity()
  person.name,person.nameKey,person.specName=name,key,spec
  tip:Hide();person.applicantID=nil;tip:ShowApplicants(row,app);view.memberButtons[1]:Fire("OnClick")
@@ -2307,7 +2373,8 @@ do
  T.eq(dungeonReads,0);T.ok(view.back:IsShown());view.back:Fire("OnClick");T.eq(tip.sourceApp,app)
  person.applicantID=81;app.activityID=2
  tip:Hide();tip:ShowPlayer(row,person)
- T.ok(view.metrics[2].value:IsShown());T.eq(view.metrics[2].value:GetText(),"暂无分数","dungeon zero rating stays visible even while the global listing is a raid")
+ T.ok(view.metrics[3].value:IsShown());T.eq(view.metrics[3].value:GetText(),"暂无分数","dungeon zero rating stays visible even while the global listing is a raid")
+ T.eq(view.metrics[2].value:GetText(),"—","an unavailable current-map score keeps its own placeholder")
  T.eq(dungeonReads,1);T.ok(view.dungeonTitle:IsShown())
  app.activityID=1;tip:Hide();tip:ShowPlayer(row,person)
  T.eq(dungeonReads,1);T.eq(view.metrics[2].value:IsShown(),false)
@@ -2326,17 +2393,17 @@ do
  T.ok(view.metrics[2].value:IsShown(),"PvP applicant rating is restored after raid details")
  local function TopOffset(region) local point={region:GetPoint()};return point[#point] end
  for _,metric in ipairs({view.metrics[1],view.metrics[2]}) do
-  T.eq(metric.title:GetHeight(),24);T.eq(metric.value:GetHeight(),24,"player labels and numbers share the same single-line box")
+  T.eq(metric.title:GetHeight(),24);T.eq(metric.value:GetHeight(),24,"player labels and numbers each use a single-line box")
   T.eq(metric.title.justifyV,"TOP");T.eq(metric.value.justifyV,"TOP")
-  T.eq(TopOffset(metric.title),TopOffset(metric.value),"player labels and numbers share the same top anchor")
+  T.eq(TopOffset(metric.title)-metric.title:GetHeight()-4,TopOffset(metric.value),"player numbers sit beneath their headings")
  end
  local actionTop=TopOffset(view.wcl)
  person.pvpRatingInfo.activityName=string.rep("Long rated arena ",5);tip:RenderPlayer(person)
  local wrappedHeight=view.metrics[2].title:GetStringHeight()
  T.ok(wrappedHeight>24,"the long rating label exercises real wrapping")
  for i=1,2 do
-  T.eq(view.metrics[i].title:GetHeight(),wrappedHeight);T.eq(view.metrics[i].value:GetHeight(),wrappedHeight)
-  T.eq(view.metrics[i].value.justifyV,"TOP","the number remains aligned with the label's first line")
+  T.eq(view.metrics[i].title:GetHeight(),wrappedHeight);T.eq(view.metrics[i].value:GetHeight(),24)
+  T.eq(TopOffset(view.metrics[i].value),TopOffset(view.metrics[i].title)-wrappedHeight-4,"both numbers clear the full wrapped heading")
  end
  T.ok(TopOffset(view.wcl)<actionTop,"actions move below the complete wrapped metric row")
  person.pvpRatingInfo.activityName="3v3";tip:RenderPlayer(person)
@@ -3054,7 +3121,7 @@ do
  T.eq(tip.interactive.memberButtons[1].name:GetText(),"Member1","current roster shows character names without realm suffixes")
  T.eq(tip.interactive.memberButtons[1].targetKey,"Member1-Home","display changes preserve full identity for member actions")
  tip.interactive.memberButtons[1]:Fire("OnClick")
- T.eq(tip.interactive.subtitle:GetText(),"Home","personal detail still displays the server")
+ T.eq(tip.interactive.title:GetText(),"Member1-Home","personal detail keeps the server on the name line")
  T.eq(tip.member.nameKey,"Member1-Home")
  do
   local person=tip.member;local class=person.class;person.class="PALADIN"

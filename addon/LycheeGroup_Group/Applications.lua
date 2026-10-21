@@ -176,7 +176,12 @@ function Applications:GetActiveCount()
 end
 function Applications:ReleaseFinished()
  if not G:HasViews("search") then
-  for id,record in pairs(records) do if not Active(record) then records[id]=nil;dirty=true end end
+  for id,record in pairs(records) do
+   if not Active(record) then
+    records[id]=nil;dirty=true
+    if finished[record.status] then retired[id]=generation end
+   end
+  end
   if dirty then wipe(ordered) end
  end
  ScheduleRetirement()

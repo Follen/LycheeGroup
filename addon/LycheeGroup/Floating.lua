@@ -173,7 +173,7 @@ function F:Build()
  f:SetScript("OnShow",function() F:Update() end)
  f:SetScript("OnHide",function()
   if F.dragging then F.frame:StopMovingOrSizing();F.dragging=nil end
-  F.dragClick=nil;F:SetAttention(false);F:Dismiss();F.context.Motion:StopAll()
+  F.dragClick=nil;F:SetAttention(false);F:Dismiss();F.context.Motion:StopAll();F:PublishStatus()
  end)
  panel:SetScript("OnEnter",function() F:CancelHide() end);panel:SetScript("OnLeave",function() F:ScheduleHide() end)
  f:RegisterEvent("DISPLAY_SIZE_CHANGED");f:RegisterEvent("UI_SCALE_CHANGED");f:SetScript("OnEvent",function() F:UpdateSettings() end)

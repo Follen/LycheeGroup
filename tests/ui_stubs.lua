@@ -201,7 +201,7 @@ function S.Install()
  _G.EJ_SelectTier=function() end
  _G.EJ_GetInstanceByIndex=function() return nil end
  _G.bit={bor=function(a,b) return a+b end}
- _G.C_ChallengeMode={GetDungeonScoreRarityColor=function() return {r=.2,g=.7,b=.9,WrapTextInColorCode=function(_,text) return "|cff33b3e6"..text.."|r" end} end,GetKeystoneLevelRarityColor=function() return {r=1,g=.5,b=0} end}
+ _G.C_ChallengeMode={GetDungeonScoreRarityColor=function() return {r=.2,g=.7,b=.9,WrapTextInColorCode=function(_,text) return "|cff33b3e6"..text.."|r" end} end,GetSpecificDungeonOverallScoreRarityColor=function() return {r=.3,g=.8,b=.2} end,GetKeystoneLevelRarityColor=function() return {r=1,g=.5,b=0} end}
  _G.C_AddOns={LoadAddOn=function() return true end,IsAddOnLoaded=function() return true end}
  _G.LFGListFrame=S.New("Frame",nil,UIParent)
  local searchPanel=S.New("Frame",nil,LFGListFrame);searchPanel:Hide();LFGListFrame.SearchPanel=searchPanel

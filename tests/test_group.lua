@@ -2340,6 +2340,13 @@ do
  T.eq(S.memberCountReads,counts)
  T.eq(record.status,"cancelled");T.eq(cancelled,1)
  T.eq(G:GetApplication(9901),nil);T.eq(G.Applications:GetActiveCount(),0)
+ G.Applications:SyncAll();Fire("LFG_LIST_APPLICATION_STATUS_UPDATED",9901,"cancelled","cancelled")
+ T.eq(cancelled,1,"hidden terminal cleanup retains cancellation deduplication across native snapshots and events")
+ T.eq(G:GetApplication(9901),nil,"duplicate terminal data does not recreate a hidden application")
+ S.appStatus[9901]="applied";Fire("LFG_LIST_APPLICATION_STATUS_UPDATED",9901,"applied","cancelled")
+ T.ok(G.Applications:IsActive(9901),"a new native application clears the retired marker")
+ S.appStatus[9901]="cancelled";Fire("LFG_LIST_APPLICATION_STATUS_UPDATED",9901,"cancelled","applied")
+ T.eq(cancelled,2,"a new application round still publishes its cancellation")
  unsub();S.applications={};G.Applications:SyncAll()
  S.results[9901],S.players[9901],S.appStatus[9901],ACTIVITY[9901]=nil,nil,nil,nil
 end
@@ -2459,7 +2466,7 @@ do
  local best,current=C_LFGList.GetApplicantBestDungeonScore,C_LFGList.GetApplicantDungeonScoreForListing
  local reads=0
  C_LFGList.GetApplicantBestDungeonScore=function(id,index) reads=reads+1;T.eq(id,8001);T.eq(index,1);return {mapName="Best dungeon",bestRunLevel=19,finishedSuccess=false} end
- C_LFGList.GetApplicantDungeonScoreForListing=function(id,index,activity) reads=reads+1;T.eq(id,8001);T.eq(index,1);T.eq(activity,502);return {mapName="Current dungeon",bestRunLevel=18,finishedSuccess=true} end
+ C_LFGList.GetApplicantDungeonScoreForListing=function(id,index,activity) reads=reads+1;T.eq(id,8001);T.eq(index,1);T.eq(activity,502);return {mapScore=315.7,mapName="Current dungeon",bestRunLevel=18,finishedSuccess=true} end
  S.activeEntry={activityIDs={502},name="Mythic listing"};S.applicants={[8001]={applicationStatus="applied",numMembers=2}};S.applicantMembers={[8001]={{name="Alliance-Away",class="MAGE",factionGroup=0,raceID=1},{name="Horde-Away",class="WARRIOR",factionGroup=0,raceID=2}}}
  G.Listing:OnEntryUpdate();G:RefreshApplicants()
  local member=G:GetApplicant(8001).members[1]
@@ -2467,8 +2474,10 @@ do
  T.eq(member.raceID,1);T.eq(member.raceName,"人类","applicants keep localized native race data")
  T.eq(G:GetApplicant(8001).members[2].raceName,"兽人")
  T.eq(reads,0,"list refresh does not query dungeon detail APIs")
+ T.eq(G:GetApplicantMapScore(member),315.7);T.eq(reads,1,"a visible map score reads only the listed dungeon")
+ T.eq(G:GetApplicantMapScore(member),315.7);T.eq(reads,1,"row repaint reuses the current-dungeon snapshot")
  local scores=G:GetApplicantDungeonScores(member)
- T.eq(reads,2);T.eq(scores.current.level,18);T.eq(scores.current.timed,true);T.eq(scores.best.level,19);T.eq(scores.best.timed,false)
+ T.eq(reads,2,"opening details only adds the best-run query");T.eq(scores.current.level,18);T.eq(scores.current.timed,true);T.eq(scores.best.level,19);T.eq(scores.best.timed,false)
  T.eq(G:GetApplicantDungeonScores(member),scores);T.eq(reads,2,"reopening unchanged details reuses the snapshot")
  S.applicantMembers[8001][1].raceID=24;S.applicantMembers[8001][1].factionGroup=1;G.Applicants:OnApplicantUpdated(8001)
  T.eq(member.raceName,"熊猫人");T.eq(member.factionGroup,1,"a neutral race uses the applicant's own faction")
@@ -2477,11 +2486,17 @@ do
  T.eq(member.raceName,nil,"missing native race clears the reused member's previous race")
  T.ok(G:GetApplicantDungeonScores(member)~=scores);T.eq(reads,4)
  C_LFGList.GetApplicantBestDungeonScore=function() return nil end
- C_LFGList.GetApplicantDungeonScoreForListing=function() return {bestRunLevel=0,mapName="Current dungeon"} end
+ C_LFGList.GetApplicantDungeonScoreForListing=function() return {mapScore=0,bestRunLevel=0,mapName="Current dungeon"} end
  G.Applicants:OnApplicantUpdated(8001);scores=G:GetApplicantDungeonScores(member)
  T.eq(scores.best,nil);T.eq(scores.current,nil,"empty native results remain unavailable, not fabricated level zero")
+ T.eq(G:GetApplicantMapScore(member),0,"a real zero map score is kept even without a completed run")
+ C_LFGList.GetApplicantDungeonScoreForListing=function() reads=reads+1;return nil end
+ G.Applicants:OnApplicantUpdated(8001);T.eq(G:GetApplicantMapScore(member),nil);local missingReads=reads
+ T.eq(G:GetApplicantMapScore(member),nil);T.eq(reads,missingReads,"unavailable map scores are cached until the next applicant event")
  S.activeEntry.activityIDs={501};G.Listing:OnEntryUpdate();G:RefreshApplicants();T.eq(G:GetApplicantDungeonScores(member),nil,"non-key activities do not show Mythic+ summaries")
+ T.eq(G:GetApplicantMapScore(member),nil)
  G.Applicants:Clear();T.eq(G:GetApplicantDungeonScores(member),nil,"a retired member cannot query another applicant")
+ T.eq(G:GetApplicantMapScore(member),nil)
  C_LFGList.GetApplicantBestDungeonScore,C_LFGList.GetApplicantDungeonScoreForListing=best,current
  S.activeEntry,S.applicants,S.applicantMembers=entry,applicants,members;G.Listing:OnEntryUpdate()
 end

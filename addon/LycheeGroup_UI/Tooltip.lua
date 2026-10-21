@@ -294,7 +294,9 @@ function Tip:EnsureMemberButtons(count)
   f.memberButtons[i]=b
  end
 end
-function Tip:ResetInteractive(owner,width)
+function Tip:ResetInteractive(owner,width,metricAlignment)
+ metricAlignment=metricAlignment or "LEFT"
+ local metricVertical=metricAlignment=="CENTER" and "TOP" or "MIDDLE"
  UI.Motion:Stop(self)
  wipe(self.orderedMembers)
  if not self.interactive then self:BuildInteractive() end
@@ -311,7 +313,15 @@ function Tip:ResetInteractive(owner,width)
  for _,b in ipairs(f.memberButtons) do b:Hide();b.member=nil;b.memberContext=nil;b.targetKey=nil end
  for _,title in pairs(f.rosterGroupTitles) do title:Hide() end
  for _,row in pairs(f.relationshipRows) do row:Hide() end
- for _,metric in ipairs(f.metrics) do metric.title:Hide();metric.value:Hide();metric.title:SetWordWrap(false);C.SetLineHeight(metric.title,20,true);C.SetLineHeight(metric.value,20,true) end
+ -- Measure reused text in its final alignment; temporary alignment changes can leave stale glyph positions.
+ for i,metric in ipairs(f.metrics) do
+  local alignment=i==1 and "LEFT" or metricAlignment
+  metric.title:Hide();metric.value:Hide();metric.title:SetWordWrap(false)
+  metric.title:SetJustifyH(alignment);metric.value:SetJustifyH(alignment)
+  metric.title:SetJustifyV(metricVertical);metric.value:SetJustifyV(metricVertical)
+  C.SetLineHeight(metric.title,20);C.SetLineHeight(metric.value,20)
+  metric.title:SetHeight(20+T.lineHeightDelta);metric.value:SetHeight(20+T.lineHeightDelta)
+ end
  f.back:Hide();f.note:Hide();f.wcl:Hide();f.playerRole:Hide();f.noteHeading:Hide();f.noteGlyph:Hide();f.noteDate:Hide();f.noteDivider:Hide();f.bossTitle:Hide();f.bossCount:Hide();f.bossText:Hide();f.composition:Hide();f.pvpRatings:Hide()
  for _,row in ipairs(f.bossRows) do row:Hide() end
  f.dungeonTitle:Hide();f.dungeonEmpty:Hide();f.playerFaction:Hide()
@@ -520,7 +530,7 @@ function Tip:RenderGroup()
  UI:SetText(f.leader,record.leaderName or L.unknown)
  local leader
  for _,member in ipairs(details and details.members or {}) do if member.isLeader or record.leaderKey and member.nameKey==record.leaderKey then leader=member;break end end
- if leader then f.leader:SetTextColor(UI:ClassColor(leader.class)) end
+ if leader then f.leader:SetTextColor(UI:ClassColor(leader.class)) else f.leader:SetTextColor(unpack(T.muted)) end
  do
   f.leader:SetWidth(0);local leaderWidth=math.min(mainWidth*.42,f.leader:GetStringWidth()+18)
   f.leader:SetWidth(leaderWidth-18);f.leader:SetWordWrap(true);f.leader:SetJustifyH("LEFT");f.leader:ClearAllPoints();f.leader:SetPoint("TOPRIGHT",f.canvas,"TOPLEFT",mainWidth,-4)
@@ -709,14 +719,16 @@ function Tip:RenderPlayer(member,fromGroup,adjustPoint)
  if context.source=="applicant" then
   if context.showDungeonRecords then scores=UI:GetGroup():GetApplicantDungeonScores(member) end
  else scores=member.dungeonScores end
- local f=self:ResetInteractive(nil,scores and 512 or 440);f:UnregisterEvent("MODIFIER_STATE_CHANGED")
+ local showMapScore=context.source=="applicant" and context.showDungeonRecords
+ local f=self:ResetInteractive(nil,(scores or showMapScore) and 512 or 440,"CENTER");f:UnregisterEvent("MODIFIER_STATE_CHANGED")
  local key,name,realm=Members:Identity(member)
  local top=fromGroup and 48 or 0
  f.back:SetShown(fromGroup==true);f.back:ClearAllPoints();f.back:SetPoint("TOPLEFT");f.back:SetWidth(f.back.label:GetStringWidth()+22)
  UI:SetFactionIcon(f.playerFaction,member);UI:SetRoleIcon(f.playerRole,member.assignedRole)
- UI:SetText(f.title,name or member.name or L.unknown);f.title:SetTextColor(UI:ClassColor(member.class));f.title._color=nil
+ local displayName=name or member.name or L.unknown
+ UI:SetText(f.title,realm and realm~="" and displayName.."-"..realm or displayName);f.title:SetTextColor(UI:ClassColor(member.class));f.title._color=nil
  C.SetFont(f.title,PLAYER_NAME_SIZE);C.SetLineHeight(f.title,PLAYER_NAME_HEIGHT)
- UI:SetText(f.subtitle,realm or member.realm or L.unknown);UI:SetMemberIcon(f.icon,member)
+ f.subtitle:Hide();UI:SetMemberIcon(f.icon,member)
  local className=member.localizedClass
  if not className and member.class then local _,name=A.Specializations:Class(member.class);className=name end
  local specName=UI:SpecName(member)
@@ -728,10 +740,8 @@ function Tip:RenderPlayer(member,fromGroup,adjustPoint)
  local identityWidth=width-identityX-(marks>0 and marks+12 or 0)
  f.icon:ClearAllPoints();f.icon:SetPoint("TOPLEFT",0,-top-2);f.icon:SetSize(PLAYER_ICON_SIZE,PLAYER_ICON_SIZE)
  f.title:ClearAllPoints();f.title:SetPoint("TOPLEFT",identityX,-top);f.title:SetWidth(identityWidth)
- local subtitleTop=top+math.max(PLAYER_NAME_HEIGHT,f.title:GetStringHeight())+2
- f.subtitle:ClearAllPoints();f.subtitle:SetPoint("TOPLEFT",identityX,-subtitleTop);f.subtitle:SetWidth(identityWidth);f.subtitle:SetWordWrap(true)
- local summaryTop=subtitleTop+math.max(20,f.subtitle:GetStringHeight())+2
- f.summary:ClearAllPoints();f.summary:SetPoint("TOPLEFT",identityX,-summaryTop);f.summary:SetWidth(identityWidth);f.summary:SetHeight(0);f.summary:SetWordWrap(true);UI:SetText(f.summary,(className or L.unknown)..(specName and " · "..specName or "")..(relation~="" and " · "..relation or ""))
+ local summaryTop=top+math.max(PLAYER_NAME_HEIGHT,f.title:GetStringHeight())+2
+ f.summary:ClearAllPoints();f.summary:SetPoint("TOPLEFT",identityX,-summaryTop);f.summary:SetWidth(identityWidth);f.summary:SetHeight(0);f.summary:SetWordWrap(true);UI:SetText(f.summary,(className or L.unknown)..(specName and "-"..specName or "")..(relation~="" and " · "..relation or ""))
  local identityBottom=summaryTop+math.max(20,f.summary:GetStringHeight())
  local identityCenter=-(top+identityBottom)/2
  f.icon:ClearAllPoints();f.icon:SetPoint("LEFT",f.canvas,"TOPLEFT",0,identityCenter)
@@ -740,25 +750,30 @@ function Tip:RenderPlayer(member,fromGroup,adjustPoint)
  if f.playerRole:IsShown() then f.playerFaction:SetPoint("RIGHT",f.playerRole,"LEFT",-6,0)
  else f.playerFaction:SetPoint("RIGHT",f.canvas,"TOPRIGHT",0,identityCenter) end
  local metricTop=math.max(top+PLAYER_ICON_SIZE+2,identityBottom)+16
- local columnWidth=context.showRating and (width-16)/2 or width;local metricHeight=f.metrics[1].title:GetHeight()
+ local metricCount=showMapScore and 3 or context.showRating and 2 or 1
+ local columnWidth=(width-(metricCount-1)*16)/metricCount
+ local metricHeight,valueHeight=f.metrics[1].title:GetHeight(),f.metrics[1].value:GetHeight()
  local rating,ratingKind,ratingActivity
  if context.showRating then rating,ratingKind,ratingActivity=UI:MemberRating(member) end
- for i=1,(context.showRating and 2 or 1) do
-  local label=i==1 and (ratingKind=="pvp" and Say("PvP 装等","PvP item level") or L.itemLevel) or (ratingKind=="pvp" and (ratingActivity or Say("PvP 评分","PvP rating")) or L.rating)
-  local metric=f.metrics[i];metric.title:ClearAllPoints();metric.value:ClearAllPoints();metric.title:SetWidth(0);metric.value:SetWidth(0)
+ for i=1,metricCount do
+  local isMapScore=showMapScore and i==2
+  local label=i==1 and (ratingKind=="pvp" and Say("PvP 装等","PvP item level") or L.itemLevel) or isMapScore and Say("单本分","Dungeon score") or (ratingKind=="pvp" and (ratingActivity or Say("PvP 评分","PvP rating")) or Say("大秘境评分","Mythic+ rating"))
+  local metric=f.metrics[i];metric.title:ClearAllPoints();metric.value:ClearAllPoints()
   UI:SetText(metric.title,label)
-  if i==2 then UI:SetScore(metric.value,rating,ratingKind) else UI:SetText(metric.value,member.itemLevel and math.floor(member.itemLevel) or "—");UI:Color(metric.value,T.text) end
-  local x=(i-1)*(columnWidth+16);local valueWidth=metric.value:GetStringWidth()
-  metric.title:SetPoint("TOPLEFT",x,-metricTop);metric.title:SetWidth(columnWidth-valueWidth-12);metric.title:SetHeight(0);metric.title:SetWordWrap(true)
-  metric.value:SetPoint("TOPRIGHT",f.canvas,"TOPLEFT",x+columnWidth,-metricTop);metric.value:SetWidth(valueWidth);metric.title:Show();metric.value:Show();metricHeight=math.max(metricHeight,metric.title:GetStringHeight())
+  if i==1 then UI:SetText(metric.value,member.itemLevel and math.floor(member.itemLevel) or "—");UI:Color(metric.value,T.text)
+  elseif isMapScore then UI:SetScore(metric.value,scores and scores.mapScore,"map")
+  else UI:SetScore(metric.value,rating,ratingKind) end
+  metric.title:SetPoint("TOPLEFT",(i-1)*(columnWidth+16),-metricTop);metric.title:SetWidth(columnWidth);metric.title:SetHeight(0);metric.title:SetWordWrap(true)
+  metric.value:SetWidth(columnWidth)
+  metric.title:Show();metric.value:Show();metricHeight=math.max(metricHeight,metric.title:GetStringHeight())
  end
- for i=1,(context.showRating and 2 or 1) do
+ for i=1,metricCount do
   local metric=f.metrics[i]
-  metric.title:SetHeight(metricHeight);metric.value:SetHeight(metricHeight)
-  metric.title:SetJustifyV("TOP");metric.value:SetJustifyV("TOP")
+  metric.value:SetPoint("TOPLEFT",(i-1)*(columnWidth+16),-metricTop-metricHeight-4)
+  metric.title:SetHeight(metricHeight);metric.value:SetHeight(valueHeight)
  end
  f.leader:Hide()
- top=metricTop+metricHeight+20
+ top=metricTop+metricHeight+4+valueHeight+20
  if scores then top=self:RenderDungeons(scores,top)+20 end
  local note=key and A.Notes and A.Notes:Find(key)
  if note then top=NoteHeader(f,note,top)+20 else f.comment:Hide() end

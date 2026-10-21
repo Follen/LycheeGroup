@@ -1,8 +1,8 @@
 # 荔枝组队 · Lychee LFG 程序架构
 
-更新日期：2026-10-21。
+更新日期：2026-10-22。
 
-状态：当前实现版本为 1.1.9，内置 LycheeUI 1.2.0（修订 22），源库与内置副本一致；共享库已按用户要求解除冻结。1.1.2 的循环审计、离线回归及有限实机验证已完成，当时发现的图标量化读回问题已修复并复测，详见 [perfermance.md 第 12 节](perfermance.md#12-当前内存测试与验证状态)。活动与来源显示规则由主包 Presentation 管理，成员名单共用 UI.Members，主窗和浮窗分别持有共享库 Context。1.0.6 发布前产品与组件库串行审计的范围、修复与验证见[审计记录](tests/results/serial-audit-1.0.5-2026-10-19.json)；该轮源码安装重载后，完成有限的页面、控件归还、菜单和关闭清理检查。此前以 `2b74449` 为基线的重构及实机检查保留为历史证据，该轮独立完成的 36 个布局场景对照与运行时范围见 [perfermance.md 第 12 节](perfermance.md#12-当前内存测试与验证状态)。历史真实列表自然内存峰值仍超过 20 MB，完整性能验收尚未通过。
+状态：当前实现版本为 1.2.0，内置 LycheeUI 1.2.0（修订 22），源库与内置副本一致；共享库已按用户要求解除冻结。1.1.2 的循环审计、离线回归及有限实机验证已完成，当时发现的图标量化读回问题已修复并复测，详见 [perfermance.md 第 12 节](perfermance.md#12-当前内存测试与验证状态)。活动与来源显示规则由主包 Presentation 管理，成员名单共用 UI.Members，主窗和浮窗分别持有共享库 Context。1.0.6 发布前产品与组件库串行审计的范围、修复与验证见[审计记录](tests/results/serial-audit-1.0.5-2026-10-19.json)；该轮源码安装重载后，完成有限的页面、控件归还、菜单和关闭清理检查。此前以 `2b74449` 为基线的重构及实机检查保留为历史证据，该轮独立完成的 36 个布局场景对照与运行时范围见 [perfermance.md 第 12 节](perfermance.md#12-当前内存测试与验证状态)。历史真实列表自然内存峰值仍超过 20 MB，完整性能验收尚未通过。
 
 产品范围见 [Product.md](Product.md)，视觉与动画轨迹见 [Desgin.md](Desgin.md)，资源额度与测量方法见 [perfermance.md](perfermance.md)。
 
@@ -211,7 +211,7 @@ Catalog 按分类保存活动 ID 成员集合，与该分类目录共同失效�
 
 申请倒计时已接入：原生 `LFGListSearchEntry_Update`（同文件 3271、3361 附近）读取 `GetApplicationInfo` 第四返回值 `appDuration`，`Applications` 以 `GetTime() + appDuration` 持有到期时刻，UI 只在可见等待申请期间更新显示。网页五分钟只是演示值，正式版不固定五分钟；UI 不将缺少期限解释为过期。Apply 只采纳原生列表和事件，不人为补出 pending 申请；Cancel 读回原生状态并通知界面，原生缺席或已结束条目不再占名额。Applications 在首次确认 cancelled 时发送 applicationCancelled 通知，Find 对当前结果调用已有搜索入口，满额提示显示期间也遵循同一刷新路径。提交入口读取原生取消状态，避免本地结束记录退场后把旧结果重新当成可申请项。UI 与浮窗复用 Applications 的有效性判断，取消按钮复用 CanCancel。2026-10-18 实测取消后的旧结果不接受再次提交，刷新取得新结果后申请成功；安装后用户确认取消会自动刷新，随后重新申请成功。
 
-Applications 与 Applicants 在收到原生已结束状态后设置一次展示清理期限；各自只安排最近期限，到期批量移除记录并通知页面。重复终态不重新计时，原生缺席可以提前清理；仅保留当前原生 ID 的移除标记防止迟到快照重新生成旧行，下一轮 applied 或原生列表移除时清除标记。邀请和待确认状态仍由原生事件推进；具体显示期限与任务约束见产品、性能文档。
+Applications 与 Applicants 在收到原生已结束状态后设置一次展示清理期限；各自只安排最近期限，到期批量移除记录并通知页面。重复终态不重新计时，原生缺席可以提前清理；仅保留当前原生 ID 的移除标记防止迟到快照重新生成旧行，下一轮 applied 或原生列表移除时清除标记。搜索视图关闭后即时清理终态也保留同一移除标记，避免重复取消快照重新通知。邀请和待确认状态仍由原生事件推进；具体显示期限与任务约束见产品、性能文档。
 
 邀请保留原生 `LFGListInviteDialog`，置顶申请只订阅邀请状态，不创建第二套回应按钮。共享 `autoJoin` 默认关闭；开启或收到状态事件后，`TryAutoJoin` 只选一条有效、未处理中且未尝试的申请邀请，持有单个 accepting ID，由事件确认结果，关窗不停止。上述固定源码 `LFGListInviteDialog_CheckPending` 对 invited 且无 pendingStatus 的记录显示弹窗并使用原生准备音。源码见 [固定版本源码](https://github.com/Gethe/wow-ui-source/tree/18c6d677b605b312f3d813d498404631fb941977/Interface/AddOns)中的 `LFGList.lua` 3684–3810 行。跨轮状态锁仅在新的 applied／pending applied 边沿解除，包含原生入口提交；重复同步不会重置已接受标志。实际接受权限与时序仍待实机验收。
 
@@ -235,9 +235,9 @@ Applicants 成员保存原生 `GetApplicantMemberInfo` 第 15 返回值 `raceID`
 
 Create 的申请者批次绘制若遇到已从服务移除、但排队通知尚未更新视图的 ID，立即重新获取申请名单及批次高度，再绘制当前成员，避免关系或笔记刷新先到时读取失效的申请记录。
 
-申请者种族展开状态由复用的成员行持有，以申请 ID 和成员身份判断是否仍为同一目标；普通刷新保留，换绑或隐藏时清除。点击阵营单元格只切换该行的图标锚点和种族可见性，右键仍打开成员菜单；状态不进入 Group 服务或 SavedVariables。
+申请者种族切换状态由复用的成员行持有，以申请 ID 和成员身份判断是否仍为同一目标；普通刷新保留，换绑或隐藏时清除。点击阵营单元格在同一中心切换图标与种族文字，并调整该按钮宽度；右键仍打开成员菜单，状态不进入 Group 服务或 SavedVariables。
 
-申请者成员详情首次打开时，`GetApplicantDungeonScores` 才读取 `C_LFGList.GetApplicantDungeonScoreForListing(applicantID, memberIndex, 当前活动)` 和 `GetApplicantBestDungeonScore`，保存当前副本与最佳一场记录；申请者事件使缓存失效，后续按需重新读取。不使用 RaiderIO，不扫描全部副本，不把最佳评分记录推断为生涯最高限时层数。Tooltip 的两条层数控件按 `C_ChallengeMode.GetKeystoneLevelRarityColor` 着色，控件所示层数改变时才重新读取颜色，与限时状态独立。缓存生命周期见 [perfermance.md](perfermance.md#6-招募申请者与通讯)。
+钥石招募的可见申请者行通过 `GetApplicantMapScore` 读取 `C_LFGList.GetApplicantDungeonScoreForListing(applicantID, memberIndex, 当前活动)`，保存 `mapScore` 和当前副本记录；未知结果同样缓存。成员详情通过 `GetApplicantDungeonScores` 复用当前副本快照，首次打开时补读 `GetApplicantBestDungeonScore`；详情先于列表打开时也能取得两条记录。申请者事件使该成员快照失效，后续按需重新读取。不使用 RaiderIO，不扫描全部副本，不把最佳评分记录推断为生涯最高限时层数。列表与 Tooltip 的单本分共用 `UI:SetScore` 的 `map` 类型及 `GetSpecificDungeonOverallScoreRarityColor`，Tooltip 的两条层数使用 `GetKeystoneLevelRarityColor`；对应数值改变时才读取颜色。缓存生命周期见 [perfermance.md](perfermance.md#6-招募申请者与通讯)。
 
 Create 与 Floating 根据当前招募活动的 `categoryID==3` 隐藏团队申请评分；Create 同时切换列布局和排序选项，已有评分排序切为最新，复用到其他分类时恢复原布局。此展示条件不按当前团队人数或 `IsInRaid()` 判断。
 
@@ -361,7 +361,7 @@ LycheeUI 提供通用主题、控件、动效、菜单、阴影和弹窗；产�
 | `api:Open()` | 从用户点击回调调用；当前招募模式打开创建／招募页，其余打开寻队页。 |
 | `api:ShowPopup(owner)` / `api:HidePopup(owner)` | 从宿主移入／移出事件请求展开或延迟收起同一列表，保留移入列表后的可操作性。 |
 
-Refresh、SetPopupBounds、Detach、ShowPopup、HidePopup 仅接受当前 owner，匹配时返回 true，否则返回 false。关闭浮窗、关闭兼容或进入独立测试时，接口先自动 Detach、清除避让区域并调用释放回调，再比较并发布状态；归还过程中发生的嵌套更新不会重复通知相同状态。适配方仍负责原生宿主隐藏、重建和刷新时的同步。停用适配时先取消状态订阅，再释放宿主。订阅与释放回调在外部边界捕获并报告错误，不阻断其他订阅者或归还；更换宿主触发释放回调后重新核对可用性与占用状态，尊重回调中的重新挂载。公共接口不改写宿主点击、拖动、字体或图标，相关恢复行为由适配方负责。
+Refresh、SetPopupBounds、Detach、ShowPopup、HidePopup 仅接受当前 owner，匹配时返回 true，否则返回 false。关闭浮窗、关闭兼容或进入独立测试时，接口先自动 Detach、清除避让区域并调用释放回调，再比较并发布状态；归还过程中发生的嵌套更新不会重复通知相同状态。入口因原生宿主隐藏而停止提醒时，也立即发布实际状态；适配方仍负责原生宿主隐藏、重建和刷新时的同步。停用适配时先取消状态订阅，再释放宿主。订阅与释放回调在外部边界捕获并报告错误，不阻断其他订阅者或归还；更换宿主触发释放回调后重新核对可用性与占用状态，尊重回调中的重新挂载。公共接口不改写宿主点击、拖动、字体或图标，相关恢复行为由适配方负责。
 
 Rurutia 适配在悬停和入口刷新时，从自身 TopBar records、microMenu 与 RaidMarker view 筛选可见的相邻控件：统一为屏幕坐标，控件与入口的垂直间隙不超过一个入口高度。独立拖远的控件不加入入口的避让区域，移动后重新筛选；候选数组就地复用，将结果交给 SetPopupBounds。控件识别与邻近判断留在适配层；Floating 仅读取通用 Frame 几何，不引用 Rurutia 模块。隐藏控件不参与避让，解除宿主后清空这些引用。完整示例见 [Rurutia 适配文件](addon/LycheeGroup/Adapters/Rurutia.lua)。
 

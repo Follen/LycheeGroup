@@ -202,26 +202,30 @@ function Applicants:GetApplicant(id)
  end
  return record
 end
--- Read Blizzard's current-dungeon and best-run summaries only on detail hover.
--- The applicant event invalidates this small snapshot; sorting and row painting do not read it.
+-- Visible rows read the listing's map score; details reuse that snapshot and add the best run.
+-- Applicant events invalidate the snapshot, including an unavailable native result.
 local function DungeonRun(info,activityID)
- info=G.Public(info)
  if type(info)~="table" then return nil end
  local level,name=G.Public(info.bestRunLevel),G.Public(info.mapName)
  if not level or level<=0 or not name or name=="" then return nil end
  return {activityID=activityID,name=name,level=level,timed=G.Public(info.finishedSuccess)==true}
 end
-function Applicants:GetDungeonScores(member)
+function Applicants:GetDungeonScores(member,currentOnly)
  local record=records[member.applicantID]
  if not record or record.members[member.applicantIndex]~=member then return nil end
  local activity=G.Catalog:GetActivity(record.activityID)
  if not activity or not activity.isMythicPlusActivity then return nil end
- if member.dungeonScores then return member.dungeonScores end
- local scores={}
  local id,index=record.id,member.applicantIndex
- scores.best=DungeonRun(C_LFGList.GetApplicantBestDungeonScore(id,index))
- scores.current=DungeonRun(C_LFGList.GetApplicantDungeonScoreForListing(id,index,record.activityID),record.activityID)
- member.dungeonScores=scores
+ local scores=member.dungeonScores
+ if not scores then
+  local info=G.Public(C_LFGList.GetApplicantDungeonScoreForListing(id,index,record.activityID))
+  scores={mapScore=type(info)=="table" and G.Public(info.mapScore) or nil,current=DungeonRun(info,record.activityID)}
+  member.dungeonScores=scores
+ end
+ if not currentOnly and not scores.bestLoaded then
+  scores.best=DungeonRun(G.Public(C_LFGList.GetApplicantBestDungeonScore(id,index)))
+  scores.bestLoaded=true
+ end
  return scores
 end
 function Applicants:GetCount()

@@ -70,6 +70,7 @@ local function NewProvider(scenario)
  function p:GetApplicants() return self.listing and self.applicantIDs or self.emptyIDs end
  function p:GetApplicant(id) return self.applicants[id] end
  function p:GetApplicantDungeonScores(member) return member.dungeonScores end
+ function p:GetApplicantMapScore(member) return member.dungeonScores and member.dungeonScores.mapScore end
  function p:GetResults()
   local ids={};local f=self.filters
   local text=(f.searchMode=="leader" and f.leaderText or f.searchMode=="group" and f.text or ""):lower()
@@ -131,7 +132,7 @@ local function NewProvider(scenario)
     member.ratingKind=profile.kind=="pvp" and "pvp" or "dungeon"
     if profile.kind=="pvp" then member.rating=profile.requirementRatingKind and 1800+index*75 or nil
     else member.rating=member.dungeonScore end
-    member.dungeonScores=profile.applicant.showDungeonRecords and {current={name=activity.fullName or activity.name,level=18,timed=true},best={name=activity.fullName or activity.name,level=19,timed=false}} or nil
+    member.dungeonScores=profile.applicant.showDungeonRecords and {mapScore=280+index*12,current={name=activity.fullName or activity.name,level=18,timed=true},best={name=activity.fullName or activity.name,level=19,timed=false}} or nil
    end
   end
  end

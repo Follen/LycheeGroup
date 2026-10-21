@@ -83,6 +83,7 @@ local function Applicant(id,people,comment,status)
  for index,source in ipairs(people) do
   local member={};for key,value in pairs(source) do member[key]=value end
   member.applicantID,member.applicantIndex=id,index;app.members[index]=member
+  member.dungeonScores={mapScore=300+index*12}
  end
  G.applicants[id]=app;return app
 end
@@ -90,10 +91,14 @@ local mainApplicant=Applicant(71,members,"五人一起，语音沟通，熟悉�
 Applicant(72,{members[2]},"单人治疗，随时可以出发。")
 Applicant(73,{members[3]},"有合剂和食物。","invited")
 U.pages.create:RefreshApplicants();U.pages.create.batchPool[1]:Fire("OnEnter");snapshot("管理申请");U.pages.create.batchPool[1]:Fire("OnLeave")
+U.pages.create.batchScroll.mouseOver=true
+U.pages.create.batchPool[1].people[4].factionButton:Fire("OnClick","LeftButton");snapshot("申请者种族替换")
+U.pages.create.batchPool[1].people[4].factionButton:Fire("OnClick","LeftButton");U.pages.create.batchScroll.mouseOver=nil
 G.listing.activityID=1;for _,app in pairs(G.applicants) do app.activityID=1 end;G:Notify("listing");snapshot("团队申请无评分")
 U.Tooltip:ShowPlayer(U.pages.create.batchPool[1].people[1],mainApplicant.members[1]);snapshot("团队申请者个人详情");U.Tooltip:Hide()
 G.listing.activityID=2;for _,app in pairs(G.applicants) do app.activityID=2 end;G:Notify("listing")
-mainApplicant.members[1].dungeonScores={current={name="红玉新生法池",level=18,timed=true},best={name="毒牙洞窟",level=19,timed=false}}
+mainApplicant.members[1].itemLevel=326;mainApplicant.members[1].dungeonScore=3641
+mainApplicant.members[1].dungeonScores={mapScore=456,current={name="红玉新生法池",level=18,timed=true},best={name="毒牙洞窟",level=19,timed=false}}
 U.Tooltip:ShowPlayer(U.pages.create.batchPool[1].people[1],mainApplicant.members[1]);snapshot("申请者大秘境纪录");U.Tooltip:Hide()
 A:Open("notes");U.pages.notes:OpenEdit("晚风听雨-晨风号角");snapshot("荔枝笔记")
 local notes=U.pages.notes;notes.list.clip.mouseOver=true;notes.list.rows[3]:Fire("OnEnter");snapshot("笔记列表悬停");notes.list.rows[3]:Fire("OnLeave");notes.list.clip.mouseOver=nil

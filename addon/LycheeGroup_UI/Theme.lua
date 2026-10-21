@@ -31,13 +31,16 @@ function UI:ScoreColor(score)
  return color
 end
 function UI:SetScore(region,score,kind)
- if type(score)~="number" or score<0 then self:SetText(region,A:GetLocale()=="zhCN" and "未知分数" or "Unknown");self:Color(region,self.Theme.dim);return end
- if score==0 then self:SetText(region,A:GetLocale()=="zhCN" and "暂无分数" or "Unrated");self:Color(region,self.Theme.muted);return end
+ local mapScore=kind=="map"
+ if type(score)~="number" or score<0 then self:SetText(region,mapScore and "—" or A:GetLocale()=="zhCN" and "未知分数" or "Unknown");self:Color(region,mapScore and self.Theme.muted or self.Theme.dim);return end
+ if score==0 then self:SetText(region,mapScore and "0" or A:GetLocale()=="zhCN" and "暂无分数" or "Unrated");self:Color(region,self.Theme.muted);return end
  self:SetText(region,math.floor(score))
  if kind=="pvp" then self:Color(region,self.Theme.text);return end
- if region._score~=score or region._color~=nil then
-  local color=self:ScoreColor(score)
-  region:SetTextColor(color.r,color.g,color.b);region._score=score;region._color=nil
+ if region._score~=score or region._scoreKind~=kind or region._color~=nil then
+  local color
+  if mapScore then color=C_ChallengeMode.GetSpecificDungeonOverallScoreRarityColor(score) else color=self:ScoreColor(score) end
+  if color then region:SetTextColor(color.r,color.g,color.b) else region:SetTextColor(unpack(self.Theme.muted)) end
+  region._score,region._scoreKind,region._color=score,kind,nil
  end
 end
 function UI:ScoreText(score,kind)
