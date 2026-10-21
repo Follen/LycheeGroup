@@ -3242,6 +3242,44 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  u:Hide(true)
 end
 
+-- Header widths can be unavailable during construction or until the first visible frame.
+for _,locale in ipairs({"zhCN","enUS"}) do
+ local fresh=dofile("tests/ui_fixture.lua")(locale)
+ local a,u,s=fresh.A,fresh.U,fresh.S
+ a.db.reduceMotion=true
+ local proto=getmetatable(s.nodes[1]);local measure=proto.GetStringWidth
+ local pending,factor=true,1
+ function proto:GetStringWidth()
+  local header=self.text==u.L.find or self.text==u.L.create or self.text==u.L.notes or self.text==u.L.settings
+  if header and u.frame then
+   if pending or not u.frame:IsShown() then return 0 end
+   return measure(self)*factor
+  end
+  return measure(self)
+ end
+ local function CheckHeader()
+  local x=0
+  for _,key in ipairs({"find","create","notes"}) do
+   local button=u.navItems[key]
+   T.near(button:GetWidth(),button.label:GetStringWidth()+38,.01,"navigation contains its full icon and label after text metrics become ready")
+   T.near(button.navX,x,.01,"navigation preserves the gap after the previous complete label")
+   x=x+button:GetWidth()+u.Theme.navGap
+  end
+  T.near(u.settingsButton:GetWidth(),u.settingsButton.label:GetStringWidth()+52,.01,"settings text stays inside its pill and away from the close control")
+  T.near(u.underline:GetWidth(),u.navItems.find.label:GetStringWidth(),.51,"the current underline follows the corrected label width")
+  T.eq(u.frame:GetScript("OnUpdate"),nil,"header correction detaches after one frame")
+ end
+ a:Open("find")
+ pending=false;u.frame:Fire("OnUpdate",.016);CheckHeader()
+ pending=true;factor=1.25;u:ApplyFont(u.Theme.font)
+ pending=false;u.frame:Fire("OnUpdate",.016);CheckHeader()
+ u:Hide(true);factor=1.5;u:ApplyFont(u.Theme.font)
+ a:Open("find");u.frame:Fire("OnUpdate",.016);CheckHeader()
+ pending=true;u:ApplyFont(u.Theme.font);u:Hide(true)
+ T.eq(u.frame:GetScript("OnUpdate"),nil,"closing the window cancels its pending header correction")
+ proto.GetStringWidth=measure
+end
+
 -- The settings pill centers its complete icon/label group, including after font changes.
 for _,locale in ipairs({"zhCN","enUS"}) do
  local fresh=dofile("tests/ui_fixture.lua")(locale)

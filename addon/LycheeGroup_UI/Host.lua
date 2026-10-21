@@ -59,6 +59,37 @@ function UI:OnSettingChanged(key)
 	self:OnNotesReady()
 end
 
+function UI:LayoutHeader()
+ local x,changed=0,false
+ for _,key in ipairs({"find","create","notes"}) do
+  local button=self.navItems[key]
+  local width=button.label:GetStringWidth()+38
+  if button:GetWidth()~=width then button:SetWidth(width);changed=true end
+  if button.navX~=x then
+   button:ClearAllPoints();button:SetPoint("TOPLEFT",button:GetParent(),"TOPLEFT",x,0)
+   button.navX=x;changed=true
+  end
+  x=x+button:GetWidth()+T.navGap
+ end
+ local nav=self.navItems.find:GetParent()
+ if nav:GetWidth()~=x-T.navGap then nav:SetWidth(x-T.navGap) end
+ local settings=self.settingsButton
+ local width=settings.label:GetStringWidth()+52
+ if settings:GetWidth()~=width then settings:SetWidth(width);changed=true end
+ if changed then self._nav=nil;self:UpdateNav() end
+end
+
+local function FinishHeaderLayout(frame)
+ frame:SetScript("OnUpdate",nil)
+ UI:LayoutHeader()
+end
+
+function UI:RefreshHeaderLayout()
+ self:LayoutHeader()
+ -- Font metrics may settle after hidden construction or a typeface change.
+ if self.frame:IsShown() then self.frame:SetScript("OnUpdate",FinishHeaderLayout) end
+end
+
 function UI:ApplyFont(path)
  T.font=path
  if not self.frame then return end
@@ -66,17 +97,7 @@ function UI:ApplyFont(path)
  A.Fonts:ApplyTree(self.frame,path)
  A.Fonts:ApplyTree(self.context:GetMenu(),path)
  A.Fonts:ApplyTree(self.Tooltip.interactive,path)
- local x=0
- for _,key in ipairs({"find","create","notes"}) do
-  local button=self.navItems[key]
-  button:SetWidth(button.label:GetStringWidth()+38)
-  button:ClearAllPoints();button:SetPoint("TOPLEFT",button:GetParent(),"TOPLEFT",x,0)
-  button.navX=x
-  x=x+button:GetWidth()+T.navGap
- end
- self.navItems.find:GetParent():SetWidth(x-T.navGap)
- self.settingsButton:SetWidth(self.settingsButton.label:GetStringWidth()+52)
- self._nav=nil;self:UpdateNav()
+ self:RefreshHeaderLayout()
  self.pages.find:LayoutFont()
  local create=self.pages.create
  if create.frame then create:LayoutFont() end
@@ -280,6 +301,7 @@ function UI:Build()
  }
  table.insert(UISpecialFrames,"LycheeGroupEscapeHandler")
  frame:HookScript("OnMouseDown",function() if UI.Tooltip.pinned then UI.Tooltip:Hide() end end)
+	frame:HookScript("OnHide",function() frame:SetScript("OnUpdate",nil) end)
 
 	frame:RegisterEvent("DISPLAY_SIZE_CHANGED")
 	frame:SetScript("OnEvent", function(_, event)
@@ -320,6 +342,7 @@ function UI:Show(page, context)
 	self.hiding = nil
 	self.blocker:Hide()
 	self.frame:Show()
+	if wasHidden then self:RefreshHeaderLayout() end
 	self:Navigate(page or "find", context)
 	if wasHidden then
 		M:Presence(true)
