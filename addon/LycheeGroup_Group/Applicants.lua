@@ -112,6 +112,7 @@ function Applicants:RefreshList(silent,immediate)
  for id,record in pairs(records) do if record.generation~=generation then records[id]=nil;dirty=true end end
  for id,seen in pairs(retired) do if seen~=generation then retired[id]=nil end end
  ScheduleRetirement()
+ self:TryAutoInvite()
  G.Alerts:Update(newBatch and not silent)
  NotifyChanged(immediate)
 end
@@ -120,6 +121,7 @@ function Applicants:OnApplicantUpdated(id)
  local record,isNew=Read(id,listing and listing.activityID)
  if not record then records[id]=nil;dirty=true end
  ScheduleRetirement()
+ self:TryAutoInvite()
  G.Alerts:Update(isNew and record.status=="applied")
  NotifyChanged()
 end
@@ -127,7 +129,7 @@ function Applicants:OnEntryUpdate(created)
  if not C_LFGList.HasActiveEntryInfo() then self:Clear()
  else
   local listing=G.Listing:GetListing()
-  if created or listing and listing.activityID~=currentActivityID then self:RefreshList() end
+  if created or listing and listing.activityID~=currentActivityID then self:RefreshList() else self:TryAutoInvite() end
  end
 end
 function Applicants:Restore() if C_LFGList.HasActiveEntryInfo() then self:RefreshList(true,true) end end
@@ -141,20 +143,48 @@ function Applicants:Clear()
  wipe(records);wipe(ordered);wipe(retired);ScheduleRetirement()
  currentActivityID=nil;dirty=false;G.Alerts:Stop();NotifyChanged(true)
 end
-local function Act(id,decline)
+local function InviteNative(id,convertToRaid)
+ if convertToRaid then C_PartyInfo.ConfirmConvertToRaid() end
+ C_LFGList.InviteApplicant(id)
+end
+local function Act(id,decline,convertToRaid)
  local allowed,reason=G:CanManageApplicants()
  if not allowed then return false,reason end
  local record=records[id]
  if not record or record.status~="applied" then return false,L.invalidAction end
  if record.acting or record.pendingStatus then return false,L.actionBusy end
- record.acting=true
- local ok=pcall(decline and C_LFGList.DeclineApplicant or C_LFGList.InviteApplicant,id)
+ record.acting=decline and "decline" or "invite"
+ local ok=pcall(decline and C_LFGList.DeclineApplicant or InviteNative,id,convertToRaid)
  if not ok then record.acting=nil;return false,decline and L.declineApplicantFailed or L.inviteFailed end
  NotifyChanged(true)
  return true
 end
-function Applicants:Invite(id) return Act(id,false) end
+function Applicants:Invite(id,convertToRaid) return Act(id,false,convertToRaid) end
 function Applicants:Decline(id) return Act(id,true) end
+-- Ordinary raids do not retain Blizzard's autoAccept flag. The listing's own
+-- option also handles those applicants, using the same action/state path.
+function Applicants:TryAutoInvite()
+ local listing=G.Listing:GetListing()
+ if self.autoInviting or not listing or not listing.autoInvite or listing.autoAccept or not G:CanManageListing() then return end
+ local activity=G.Catalog:GetActivity(listing.activityID)
+ if not activity then return end
+ local maximum=activity.maxNumPlayers
+ if maximum==0 then maximum=MAX_RAID_MEMBERS end
+ local count=math.max(1,GetNumGroupMembers(LE_PARTY_CATEGORY_HOME))+C_LFGList.GetNumInvitedApplicantMembers()
+ -- Locally submitted invitations reserve space until a native state event.
+ for _,record in pairs(records) do if record.acting=="invite" then count=count+record.numMembers end end
+ if count>=maximum then return end
+ if not GetCVarBool("profanityFilter") then ConsoleExec("profanityFilter 1") end
+ self.autoInviting=true
+ for _,id in ipairs(self:GetApplicants()) do
+  local record=records[id]
+  if record.status=="applied" and not record.pendingStatus and not record.acting and count+record.numMembers<=maximum then
+   local convertToRaid=count+record.numMembers>MAX_PARTY_MEMBERS+1 and not IsInRaid(LE_PARTY_CATEGORY_HOME)
+   if self:Invite(id,convertToRaid) then count=count+record.numMembers end
+  end
+ end
+ self.autoInviting=nil
+end
 function Applicants:GetApplicants()
  if dirty then
   wipe(ordered);for id in pairs(records) do ordered[#ordered+1]=id end

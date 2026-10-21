@@ -35,7 +35,7 @@ UI.L = {
  on=choose("开启", "On"), off=choose("关闭", "Off"), busy=choose("等待游戏确认…", "Waiting for game confirmation…"),
  failed=choose("操作失败，请检查游戏提示后重试。", "Action failed; check the game message and try again."), unavailable=choose("当前无法执行此操作。", "This action is currently unavailable."),
  noActivity=choose("请先选择活动。", "Choose an activity first."),
- count=choose("%d 项", "%d entries"), autoAccept=choose("自动接受", "Auto accept"), private=choose("私人队伍", "Private group"),
+ count=choose("%d 项", "%d entries"), autoAccept=choose("自动邀请", "Auto invite"), private=choose("私人队伍", "Private group"),
  ageNow=choose("刚刚", "just now"), ageMin=choose("%d 分钟前", "%d min ago"), ageHour=choose("%d 小时前", "%d h ago"), ageDay=choose("%d 天前", "%d d ago"),
  history=choose("历史队友", "Group History"),
  historyEmpty=choose("还没有大秘境历史。", "No Mythic+ history yet."),

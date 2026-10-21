@@ -7,6 +7,11 @@ local Listing = {}
 G.Listing = Listing
 local snapshot
 
+local function SaveAutoInvite(enabled)
+	G.prefs.listingAutoInvite = enabled == true
+	if snapshot then snapshot.autoInvite = G.prefs.listingAutoInvite end
+end
+
 local function NormalizeEntry()
 	if not C_LFGList.HasActiveEntryInfo() then return nil end
 	local data = C_LFGList.GetActiveEntryInfo()
@@ -29,6 +34,7 @@ local function NormalizeEntry()
 		requiredDungeonScore = data.requiredDungeonScore,
 		requiredPvpRating = data.requiredPvpRating,
 		autoAccept = data.autoAccept,
+		autoInvite = G.prefs.listingAutoInvite == true or G.prefs.listingAutoInvite == nil and data.autoAccept == true,
 		privateGroup = data.privateGroup,
 		questID = data.questID,
 		playstyle = data.playstyle,
@@ -48,7 +54,7 @@ local function BuildCreateData(data, current)
 	return {
 		activityIDs = current and current.activityID == data.activityID and current.activityIDs or { data.activityID },
 		questID = Value("questID"),
-		isAutoAccept = Value("isAutoAccept", "autoAccept"),
+		isAutoAccept = Value("isAutoAccept", "autoInvite"),
 		isCrossFactionListing = Value("isCrossFactionListing"),
 		isPrivateGroup = Value("isPrivateGroup", "privateGroup"),
 		newPlayerFriendly = Value("newPlayerFriendly"),
@@ -72,12 +78,14 @@ function Listing:Publish(data)
 	if type(data) ~= "table" or not data.activityID then
 		return false, L.invalidActivity
 	end
-	if not Create(BuildCreateData(data)) then
+	local createData = BuildCreateData(data)
+	if not Create(createData) then
 		if select(2, C_LFGList.GetNumApplications()) > 0 then
 			return false, L.publishApplications
 		end
 		return false, L.publishFailed
 	end
+	SaveAutoInvite(createData.isAutoAccept)
 	snapshot = NormalizeEntry()
 	G.Game:RefreshSubscriptions()
 	G:Notify("listing")
@@ -108,12 +116,15 @@ function Listing:Update(data)
 	end
 	-- Recreation can remove the old entry even when Create fails. Publish that
 	-- state before returning, while the caller still owns the submission draft.
+	if success then SaveAutoInvite(createData.isAutoAccept) end
 	if success or recreate then
 		snapshot = NormalizeEntry()
+		if not success and not snapshot then G.prefs.listingAutoInvite = nil end
 		G.Game:RefreshSubscriptions()
 		G:Notify("listing")
 	end
 	if not success then return false, L.updateFailed end
+	G.Applicants:TryAutoInvite()
 	return true
 end
 
@@ -128,6 +139,7 @@ function Listing:RemoveListing()
 		return false, L.removeFailed
 	end
 	snapshot = NormalizeEntry()
+	if not snapshot then G.prefs.listingAutoInvite = nil end
 	G.Game:RefreshSubscriptions()
 	G:Notify("listing")
 	return true
@@ -136,12 +148,14 @@ end
 -- LFG_LIST_ACTIVE_ENTRY_UPDATE also confirms asynchronous listing edits.
 function Listing:OnEntryUpdate()
 	snapshot = NormalizeEntry()
+	if not snapshot then G.prefs.listingAutoInvite = nil end
 	G.Game:RefreshSubscriptions()
 	G:Notify("listing")
 end
 
 function Listing:Restore()
 	snapshot = NormalizeEntry()
+	if not snapshot then G.prefs.listingAutoInvite = nil end
 	G.Game:RefreshSubscriptions()
 end
 

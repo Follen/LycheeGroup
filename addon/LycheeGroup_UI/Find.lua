@@ -72,10 +72,20 @@ local function RosterColumns(roster)
  end
 end
 local function LayoutMembers(row)
- row.membersButton:ClearAllPoints();row.membersButton:SetPoint("LEFT",row.membersX,row.membersExpanded and row.membersExpandedY or 0)
  -- Fixed raid columns keep one- and two-digit counts aligned across rows.
  row.roster:SetWidth(row.isParty and 110 or 132)
  row.roster:SetScale(row.isParty and row.partyScale or 1)
+ row.roster:ClearAllPoints()
+ local x=row.membersX
+ if row.isParty then
+  row.membersButton:SetWidth(138);row.roster:SetPoint("CENTER")
+ else
+  -- Keep the columns in place while the hover/click area fits the visible count.
+  x=x-3
+  row.membersButton:SetWidth(112+row.roster.counts[3].text:GetStringWidth()+12)
+  row.roster:SetPoint("LEFT",6,0)
+ end
+ row.membersButton:ClearAllPoints();row.membersButton:SetPoint("LEFT",x,row.membersExpanded and row.membersExpandedY or 0)
  row.count:SetShown(not row.isParty and row.membersExpanded==true)
 end
 local function BuildMembers(row,x,compact)

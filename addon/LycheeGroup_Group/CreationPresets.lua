@@ -18,6 +18,7 @@ local function Normalize(source)
  local id=tonumber(Public(source.activityID))
  if not id or id<=0 or id%1~=0 then return nil end
  local entry={activityID=id,autoAccept=Flag(source,"isAutoAccept","autoAccept"),privateGroup=Flag(source,"isPrivateGroup","privateGroup"),isCrossFactionListing=Flag(source,"isCrossFactionListing"),newPlayerFriendly=Flag(source,"newPlayerFriendly")}
+ if source.autoInvite~=nil then entry.autoAccept=Flag(source,"autoInvite") end
  for _,key in ipairs(requirements) do entry[key]=tonumber(Public(source[key])) or 0 end
  for _,key in ipairs(options) do local value=tonumber(Public(source[key]));if value and value~=0 then entry[key]=value end end
  return entry

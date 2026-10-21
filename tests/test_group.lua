@@ -2711,6 +2711,81 @@ do
  G:Detach(view)
 end
 
+-- Auto invitation is a listing-owned option even when ordinary raids reject
+-- Blizzard's native autoAccept flag. Exercise update -> native events -> actions.
+do
+ local active,applicants,members=S.activeEntry,S.applicants,S.applicantMembers
+ local groupCount,inRaid=GetNumGroupMembers,IsInRaid
+ local getCVar,console,partyMax,raidMax=GetCVarBool,ConsoleExec,MAX_PARTY_MEMBERS,MAX_RAID_MEMBERS
+ local invitedCount,convert=C_LFGList.GetNumInvitedApplicantMembers,C_PartyInfo.ConfirmConvertToRaid
+ local count,invited,raid,filter,conversions=27,0,true,false,0
+ _G.GetNumGroupMembers=function() return count end;_G.IsInRaid=function() return raid end
+ _G.MAX_PARTY_MEMBERS=4;_G.MAX_RAID_MEMBERS=40
+ _G.GetCVarBool=function(key) T.eq(key,"profanityFilter");return filter end
+ _G.ConsoleExec=function(command) T.eq(command,"profanityFilter 1");filter=true end
+ C_LFGList.GetNumInvitedApplicantMembers=function() return invited end
+ C_PartyInfo.ConfirmConvertToRaid=function() conversions=conversions+1;raid=true end
+ S.activeEntry=nil;S.applicants={};S.applicantMembers={};G.Listing:Restore();G.Applicants:Clear()
+ T.ok(G:Publish({activityID=501,isAutoAccept=false}))
+ local function Add(id,size,pending)
+  S.applicants[id]={applicationStatus="applied",pendingApplicationStatus=pending,numMembers=size,displayOrderID=id}
+ end
+ Add(6101,2);Add(6102,2);Add(6103,1);Add(6104,1,"invited")
+ Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE",true)
+ local before=#S.inviteCalls
+ T.eq(filter,false,"disabled auto invitation does not change language filtering")
+ T.ok(G:Update({activityID=501,isAutoAccept=true}))
+ T.eq(G:GetListing().autoAccept,false,"the raid's native flag remains disabled")
+ T.eq(G:GetListing().autoInvite,true,"the plugin retains the enabled option")
+ T.eq(#S.inviteCalls,before+2);T.eq(S.inviteCalls[before+1],6101);T.eq(S.inviteCalls[before+2],6103)
+ T.eq(filter,true,"automatic invitations enable the required language filter")
+ Fire("LFG_LIST_APPLICANT_LIST_UPDATED");Fire("GROUP_ROSTER_UPDATE")
+ T.eq(#S.inviteCalls,before+2,"unconfirmed invites reserve capacity and are not repeated")
+ invited=3;S.applicants[6101].applicationStatus="invited";S.applicants[6103].applicationStatus="invited"
+ Fire("LFG_LIST_APPLICANT_UPDATED",6101);Fire("LFG_LIST_APPLICANT_UPDATED",6103)
+ T.eq(#S.inviteCalls,before+2,"native pending invitations still occupy slots")
+ local update=C_LFGList.UpdateListing
+ C_LFGList.UpdateListing=function() return false end
+ T.eq(G:Update({activityID=501,isAutoAccept=false}),false)
+ T.eq(G:GetListing().autoInvite,true,"a failed update preserves the active option")
+ C_LFGList.UpdateListing=update
+ T.ok(G:Update({activityID=501,isAutoAccept=false}));count=20
+ Fire("GROUP_ROSTER_UPDATE");T.eq(#S.inviteCalls,before+2,"turning off stops queued automatic invitations")
+ T.ok(G:Update({activityID=501,isAutoAccept=true}))
+ T.eq(#S.inviteCalls,before+3);T.eq(S.inviteCalls[#S.inviteCalls],6102,"enabling processes existing applicants")
+ Load.addon("LycheeGroup_Group","Listing.lua");G.Listing:Restore()
+ T.eq(G:GetListing().autoInvite,true,"the active listing keeps its option across addon reload")
+ G.Presets:ToggleFavorite(G:GetListing())
+ local saved=G.Presets:Find(G:GetListing());T.eq(saved.autoAccept,true,"favorites save the actual auto invite option")
+ G.Presets:Remove(saved)
+ Add(6105,1);Fire("LFG_LIST_APPLICANT_UPDATED",6105)
+ T.eq(S.inviteCalls[#S.inviteCalls],6105,"new applicants are handled with the main window closed")
+ local permission=G.CanManageListing;G.CanManageListing=function() return false end
+ Add(6106,1);Fire("LFG_LIST_APPLICANT_UPDATED",6106)
+ T.eq(S.inviteCalls[#S.inviteCalls],6105,"a non-leader does not automatically invite")
+ G.CanManageListing=permission;Fire("PARTY_LEADER_CHANGED")
+ T.eq(S.inviteCalls[#S.inviteCalls],6106)
+ -- A solo publisher occupies one place; whole applicant parties must fit.
+ G:RemoveListing();Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE",false)
+ T.eq(G.prefs.listingAutoInvite,nil,"ending recruitment releases its option")
+ S.applicants={};count=0;invited=0;raid=false
+ T.ok(G:Publish({activityID=502,isAutoAccept=false}))
+ Add(6201,5);Add(6202,4);Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE",true)
+ before=#S.inviteCalls;T.ok(G:Update({activityID=502,isAutoAccept=true}))
+ T.eq(#S.inviteCalls,before+1);T.eq(S.inviteCalls[#S.inviteCalls],6202)
+ T.eq(conversions,0,"five-player activities stay a party")
+ G:RemoveListing();Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE",false)
+ S.applicants={};count=4
+ T.ok(G:Publish({activityID=501,isAutoAccept=false}));Add(6301,2);Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE",true)
+ T.ok(G:Update({activityID=501,isAutoAccept=true}));T.eq(conversions,1,"a raid activity can invite past the party size")
+ G:RemoveListing();Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE",false)
+ S.activeEntry,S.applicants,S.applicantMembers=active,applicants,members
+ _G.GetNumGroupMembers,_G.IsInRaid=groupCount,inRaid
+ _G.GetCVarBool,_G.ConsoleExec,_G.MAX_PARTY_MEMBERS,_G.MAX_RAID_MEMBERS=getCVar,console,partyMax,raidMax
+ C_LFGList.GetNumInvitedApplicantMembers,C_PartyInfo.ConfirmConvertToRaid=invitedCount,convert
+ G.Listing:Restore();G.Applicants:Restore()
+end
+
 _G.LycheeGroupDB = nil
 _G.LycheeGroupGroupDB = nil
 _G.LycheeGroupCharacterDB = nil

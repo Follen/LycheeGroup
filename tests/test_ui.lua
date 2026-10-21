@@ -1419,14 +1419,23 @@ do
  end
  T.eq(members[1].specID,900063,"rendering preserves provider member order")
  r.categoryID=3;r.maxNumPlayers=40;r.numMembers=40;r.details.counts={TANK=2,HEALER=8,DAMAGER=30};Render()
- T.eq(Geometry(target.roster).x,roster.x,"raid composition shares the membership column center")
+ T.eq(Geometry(target.membersButton).x+Geometry(target.roster).x+target.roster:GetWidth()/2,count.x+count.width/2,"raid composition shares the membership column center")
  local function MemberColumnPositions()
-  local offset=Geometry(target.membersButton).x+(target.membersButton:GetWidth()-target.roster:GetWidth())/2
+  local rosterGeometry=Geometry(target.roster)
+  local offset=Geometry(target.membersButton).x+(rosterGeometry.anchor=="CENTER" and (target.membersButton:GetWidth()-target.roster:GetWidth())/2 or rosterGeometry.x)
   local positions={}
   for i,item in ipairs(target.roster.counts) do
    positions[i]={icon=offset+Geometry(item.icon).x,text=offset+Geometry(item.text).x}
   end
   return positions
+ end
+ local function MemberHoverPadding()
+  local positions=MemberColumnPositions()
+  local buttonX=Geometry(target.membersButton).x
+  local left=positions[1].icon-buttonX
+  local right=buttonX+target.membersButton:GetWidth()-positions[3].text-target.roster.counts[3].text:GetStringWidth()
+  T.near(left,right,.001,"the hover background has equal padding around the first icon and the visible DPS number")
+  return left
  end
  local memberColumnPositions=MemberColumnPositions()
  T.eq(target.roster.slots[1].icon:IsShown(),false,"raid rows switch back to aggregate role counts")
@@ -1443,8 +1452,13 @@ do
  T.same(MemberColumnPositions(),memberColumnPositions,"all three raid columns remain aligned for different two-digit counts")
  r.details.counts={TANK=0,HEALER=0,DAMAGER=1};Render()
  T.same(MemberColumnPositions(),memberColumnPositions,"single-digit raid counts keep the same icon and text columns as two-digit counts")
+ local hoverPadding=MemberHoverPadding()
+ r.details.counts={TANK=2,HEALER=7,DAMAGER=20};Render()
+ T.eq(MemberHoverPadding(),hoverPadding,"single- and two-digit DPS counts retain the same hover padding")
+ T.same(MemberColumnPositions(),memberColumnPositions,"resizing the hover background never moves the role columns")
  target.membersButton:Fire("OnClick")
  T.same(MemberColumnPositions(),memberColumnPositions,"expanding the member total preserves horizontal column alignment")
+ T.eq(MemberHoverPadding(),hoverPadding,"expanding the member total preserves hover padding")
  target.membersButton:Fire("OnClick")
  r.categoryID=4;r.ratingKind="pvp";r.leaderRating=0;Render()
  T.eq(find.resultHeadings.rating:GetText(),"评分","PvP uses the shared score column")
@@ -2343,6 +2357,7 @@ do
  local active,pending
  local creates,titleChecks=0,0
  g.Game={RefreshSubscriptions=function() end}
+ g.Applicants={TryAutoInvite=function() end}
  dofile("addon/LycheeGroup_Group/Listing.lua")
  function g:GetListing() return self.Listing:GetListing() end
  function g:Publish(data) return self.Listing:Publish(data) end
@@ -2385,6 +2400,18 @@ do
  page:Submit()
  active,pending=pending,nil;g.Listing:OnEntryUpdate(false)
  T.eq(g.Presets:Get()[1].requiredItemLevel,321);T.eq(#g.Presets:Get(),1,"delayed updates do not add automatic history")
+ -- Ordinary raid listings can leave the native autoAccept flag disabled.
+ -- The plugin's automatic invitations must survive that native readback.
+ local update=C_LFGList.UpdateListing
+ C_LFGList.UpdateListing=function(data)
+  T.eq(data.isAutoAccept,true,"the enabled switch reaches the real Listing service")
+  local result=Stage(data);pending.autoAccept=false;return result
+ end
+ page.editListing:Fire("OnClick");page.autoAccept:Fire("OnClick");page:Submit()
+ active,pending=pending,nil;g.Listing:OnEntryUpdate(false)
+ page.editListing:Fire("OnClick")
+ T.eq(page.autoAccept.value,true,"automatic invitations remain enabled after a raid update and native readback")
+ C_LFGList.UpdateListing=update
  page.cancelListing:Fire("OnClick");g.Listing:OnEntryUpdate(false)
  T.eq(page.formFrame:IsShown(),true);T.eq(page.publish:IsEnabled(),true,"delisting restores an enabled publish button")
  T.eq(page.submitting,nil,"the previous request does not lock a new listing")

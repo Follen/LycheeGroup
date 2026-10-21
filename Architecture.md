@@ -142,6 +142,8 @@ flowchart LR
 
 Listing 更新跨阵营时执行下架再创建。即使创建失败，也在 Update 返回前同步原生招募快照并通知消费者；Create 在提交期间保留编辑草稿，随后只切换为可再次发布的表单。提交错误由页面状态持有，被动招募通知不清除错误，用户修改输入或再次提交时重新校验；预览沿用独立页面状态。Create 独立持有装等纠正 Notice 和单个到期任务，与失败 Notice 分别保存消息、共同计算表单让位；表单隐藏或离页时释放纠正提示和任务，Host 不再持有底部 Toast。
 
+Listing 在当前角色偏好 `listingAutoInvite` 保存本插件的自动邀请选择，成功发布／更新后写入，失败保留原值，原生确认招募结束时清除。招募快照的 `autoInvite` 与原生 `autoAccept` 分开：创建表单和收藏使用前者，原生标记为真时由游戏处理邀请；否则 Applicants 在已有申请、招募及队伍事件中调用同一 Invite 动作。`acting` 区分邀请与拒绝，尚未取得原生状态的邀请先占用容量，状态变化后释放该占位；同一轮自动处理避免事件重入。页面关闭不持有或停止这项业务。
+
 [Host.lua](addon/LycheeGroup_UI/Host.lua) 持有 `UI:GetGroup()` 和组队设置访问入口；显式模拟开启时选择 [Preview.lua](addon/LycheeGroup_UI/Preview.lua) 的独立内存 provider，否则返回真实 `A.Group`。Preview 按正式接口的聚合关系计数、队长查询规范化和有效申请状态筛选。页面与提示经同一入口读取组队数据；真实 Group 服务、原生登记输入对象和 SavedVariables 不被替换或写入。模拟命令与退出行为见 [Product.md 第 5.2 节](Product.md#52-显式模拟入口)，分配及释放边界见 [perfermance.md](perfermance.md)。
 
 `Results:BlockTitle`、`ClearBlockedTitles` 和 `GetBlockedTitleCount` 管理独立于搜索快照的标题集合。键直接使用现有记录的原生标题值，不解析、规范化或序列化；仅改变结果视图，不删除记录或修改 Applications。新增标题或清除非空集合时使视图失效并发送一次 results 通知。Find 的右键菜单经 provider 调用屏蔽；Preview 持有自己的同接口集合，不影响真实服务或 SavedVariables。刷新、分类切换和 EndBrowse 只释放搜索快照，标题集合保留到当前 Lua 会话结束；清除与计数接口用于服务管理，筛选栏不创建对应控件。

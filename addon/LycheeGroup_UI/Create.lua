@@ -120,6 +120,7 @@ function P:Build(parent)
  self.private=C.Check(req,L.private,function() P:ValidateForm() end);self.private:SetPoint("TOPLEFT",0,-112)
  self.crossFaction=C.Check(req,L.crossFaction,function(value) form.crossFaction=value;P:ValidateForm() end);self.crossFaction:SetPoint("TOPLEFT",136,-112)
  self.autoAccept=C.Check(req,L.autoAccept,function() P:ValidateForm() end);self.autoAccept:SetPoint("TOPLEFT",258,-112)
+ self.autoInviteHint=C.Text(req,S("自动邀请会开启游戏语言过滤。","Auto invite enables the game's language filter."),12,T.muted,FORM);self.autoInviteHint:SetPoint("TOPLEFT",0,-158)
  self.publish=C.Button(f,L.publish,120,function() P:Submit() end);self.publish:SetPoint("BOTTOMRIGHT");self.publish:SetHeight(40);self.publish:SetPrimary(true)
  self.formCancel=C.Button(f,L.cancel,120,function() state.editing=false;UI.Native:ReleaseCreation();P:RefreshMode() end);self.formCancel:SetHeight(40);self.formCancel:SetPoint("RIGHT",self.publish,"LEFT",-8,0)
  self.formNotice=C.Notice(f,FORM,function() P:SetFormError("") end);self.formNotice:SetPoint("TOPLEFT",0,-44);self.formError=self.formNotice.text
@@ -682,6 +683,7 @@ function P:OnCreationInputLost()
 end
 function P:ValidateForm(preserveSubmissionError)
  if self.preparing or UI.hiding or not self.formFrame:IsShown() then return end
+ self.autoInviteHint:SetShown(self.autoAccept.value==true)
  if not preserveSubmissionError then state.submissionError=nil end
  self:RefreshFavoriteState()
  local ok,err=UI:GetGroup():CanManageListing()
@@ -713,7 +715,7 @@ function P:PrepareForm(editing)
   state.category=UI:GetGroup().Catalog:GetContextForActivity(form.activityID,state.category) or tostring(act.categoryID);state.group=UI:GetGroup().Catalog:GetGroupKey(state.category,act);state.tier=UI:GetGroup().Catalog:GetActivityTier(act)
   local itemLevel=l.requiredItemLevel or 0;local score=act.isRatedPvpActivity and l.requiredPvpRating or l.requiredDungeonScore or 0
   form.generalPlaystyle=l.generalPlaystyle;self.ilvl.box:SetText(itemLevel>0 and tostring(itemLevel) or "");self.score.box:SetText(score>0 and tostring(score) or "")
-  form.crossFaction=l.isCrossFactionListing==true;self.private:SetValue(l.privateGroup);self.crossFaction:SetValue(form.crossFaction);self.autoAccept:SetValue(l.autoAccept)
+  form.crossFaction=l.isCrossFactionListing==true;self.private:SetValue(l.privateGroup);self.crossFaction:SetValue(form.crossFaction);self.autoAccept:SetValue(l.autoInvite==true or l.autoInvite==nil and l.autoAccept==true)
   if UI.preview then UI.Native:SetPreviewCreationText(l.name,l.comment) else C_LFGList.CopyActiveEntryInfoToCreationFields() end
  elseif not self.started then if UI.preview then UI.Native:SetPreviewCreationText("","") else C_LFGList.ClearCreationTextFields() end;self.started=true end
  self:RefreshPicker();self.preparing=nil;self:ValidateForm();return true
