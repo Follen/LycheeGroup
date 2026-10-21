@@ -186,6 +186,8 @@ do
 	local challengeActive=true
 	C_ChallengeMode.IsChallengeModeActive=function() return challengeActive end
 	A.db.history=false
+	local notesEnabled,notesHasRecords,reminders=A.db.notesEnabled,A.db.notesHasRecords,A.db.reminders
+	A.db.notesEnabled=true;A.db.notesHasRecords=true;A.db.reminders="off"
 	Load.addon("LycheeGroup", "Entrypoints.lua")
 	Stubs.FireEvent("ADDON_LOADED", "UnrelatedBefore")
 	T.eq(#loads, 0, "其他插件不唤醒业务")
@@ -199,6 +201,8 @@ do
 	T.eq(minimapInits,1,"登录创建独立小地图入口")
 	T.eq(#Stubs.FramesWithEvent("PLAYER_LOGIN"), 0, "登录初始化只运行一次")
 	T.eq(#loads, 0, "只有已结束的申请时不加载业务包")
+	T.eq(A.Notes,nil,"登录时关闭记录提醒不提前加载完整笔记存档")
+	A.db.notesEnabled,A.db.notesHasRecords,A.db.reminders=notesEnabled,notesHasRecords,reminders
 	T.eq(#Stubs.FramesWithEvent("CHALLENGE_MODE_START"),0,"关闭历史的秘境内登录不加载 Group 或监听开始事件")
 	Stubs.FireEvent("CHALLENGE_MODE_START")
 	T.eq(#loads,0,"关闭历史后秘境事件不唤醒 Group")
@@ -257,9 +261,21 @@ do
 	end}
 	local notesEnabled=A.db.notesEnabled;A.db.notesEnabled=true
 	Stubs.SetUnit("raid2",{name="右键目标",realm="Foreign",class="PALADIN",classID=2,guid="P-menu"})
-	local click
-	local menu={CreateDivider=function() end,CreateTitle=function() end,CreateButton=function(_,_,callback) click=callback end}
+	local click,label
+	local menu={CreateDivider=function() end,CreateTitle=function() end,CreateButton=function(_,text,callback) label=text;click=callback end}
+	local notes,ensure,hasRecords=A.Notes,A.Ensure,A.db.notesHasRecords
+	local menuLoads,removed=0,nil
+	A.Notes=nil;A.db.notesHasRecords=true
+	notes.Find=function() return {} end
+	notes.Remove=function(_,key) removed=key;return true end
+	A.Ensure=function(_,module) T.eq(module,"Notes");menuLoads=menuLoads+1;A.Notes=notes;return notes end
+	nativeMenu(nil,menu,{unit="raid2"})
+	T.eq(menuLoads,1,"原生玩家菜单按需读取关闭提醒后的已有记录")
+	T.eq(label,A.L.removeRecord,"延迟加载后仍显示取消记录")
+	click();T.eq(removed,"右键目标-Foreign")
+	A.Ensure=ensure;A.db.notesHasRecords=hasRecords;notes.Find=function() return nil end
 	nativeMenu(nil,menu,{unit="raid2"});T.eq(type(click),"function")
+	T.eq(label,A.L.recordPlayer)
 	click()
 	T.eq(call[1],"右键目标");T.eq(call[5],"圣骑士-神圣")
 	T.ok(call[6],"原生团队右键路径保留结构化查询结果")

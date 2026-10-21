@@ -2734,10 +2734,15 @@ do
  Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE",true)
  local before=#S.inviteCalls
  T.eq(filter,false,"disabled auto invitation does not change language filtering")
+ local updates=0
+ local unsubscribe=G:Subscribe(function(kind) if kind=="applicants" then updates=updates+1 end end)
  T.ok(G:Update({activityID=501,isAutoAccept=true}))
  T.eq(G:GetListing().autoAccept,false,"the raid's native flag remains disabled")
  T.eq(G:GetListing().autoInvite,true,"the plugin retains the enabled option")
  T.eq(#S.inviteCalls,before+2);T.eq(S.inviteCalls[before+1],6101);T.eq(S.inviteCalls[before+2],6103)
+ T.eq(updates,0,"automatic invitations submit immediately without repainting for each batch")
+ Stubs.AdvanceClock(0);T.eq(updates,1,"all automatic invitation actions share one display update")
+ unsubscribe()
  T.eq(filter,true,"automatic invitations enable the required language filter")
  Fire("LFG_LIST_APPLICANT_LIST_UPDATED");Fire("GROUP_ROSTER_UPDATE")
  T.eq(#S.inviteCalls,before+2,"unconfirmed invites reserve capacity and are not repeated")
@@ -2778,6 +2783,14 @@ do
  S.applicants={};count=4
  T.ok(G:Publish({activityID=501,isAutoAccept=false}));Add(6301,2);Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE",true)
  T.ok(G:Update({activityID=501,isAutoAccept=true}));T.eq(conversions,1,"a raid activity can invite past the party size")
+ G:RemoveListing();Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE",false)
+ -- Rated battlegrounds report zero capacity but still have ten-player teams.
+ S.applicants={};count=9;invited=0;raid=true
+ T.ok(G:Publish({activityID=999,isAutoAccept=false}))
+ Add(6401,2);Add(6402,1);Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE",true)
+ before=#S.inviteCalls;T.ok(G:Update({activityID=999,isAutoAccept=true}))
+ T.eq(#S.inviteCalls,before+1,"a rated battleground never auto-invites a party beyond its tenth slot")
+ T.eq(S.inviteCalls[#S.inviteCalls],6402,"the final single applicant still fits")
  G:RemoveListing();Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE",false)
  S.activeEntry,S.applicants,S.applicantMembers=active,applicants,members
  _G.GetNumGroupMembers,_G.IsInRaid=groupCount,inRaid

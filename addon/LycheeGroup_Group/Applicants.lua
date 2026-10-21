@@ -156,7 +156,7 @@ local function Act(id,decline,convertToRaid)
  record.acting=decline and "decline" or "invite"
  local ok=pcall(decline and C_LFGList.DeclineApplicant or InviteNative,id,convertToRaid)
  if not ok then record.acting=nil;return false,decline and L.declineApplicantFailed or L.inviteFailed end
- NotifyChanged(true)
+ NotifyChanged(not Applicants.autoInviting)
  return true
 end
 function Applicants:Invite(id,convertToRaid) return Act(id,false,convertToRaid) end
@@ -169,7 +169,7 @@ function Applicants:TryAutoInvite()
  local activity=G.Catalog:GetActivity(listing.activityID)
  if not activity then return end
  local maximum=activity.maxNumPlayers
- if maximum==0 then maximum=MAX_RAID_MEMBERS end
+ if maximum==0 then maximum=activity.categoryID==9 and CONQUEST_SIZES[5] or MAX_RAID_MEMBERS end
  local count=math.max(1,GetNumGroupMembers(LE_PARTY_CATEGORY_HOME))+C_LFGList.GetNumInvitedApplicantMembers()
  -- Locally submitted invitations reserve space until a native state event.
  for _,record in pairs(records) do if record.acting=="invite" then count=count+record.numMembers end end

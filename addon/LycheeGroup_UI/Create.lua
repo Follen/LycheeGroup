@@ -80,6 +80,18 @@ local function Minimum(app,key)
  end
  return value or -1
 end
+function P:LayoutFont()
+ local optionX=0
+ for _,option in ipairs({self.private,self.crossFaction,self.autoAccept}) do
+  option:SetHeight(40);option.label:ClearAllPoints();option.label:SetPoint("LEFT",option.track,"RIGHT",8,0);option:SetWidth(52+FitText(option.label))
+  option:ClearAllPoints();option:SetPoint("TOPLEFT",optionX,-112);optionX=optionX+option:GetWidth()+28
+ end
+ self.cancelListing:SetWidth(FitText(self.cancelListing.label)+34);self.editListing:SetWidth(FitText(self.editListing.label)+34)
+ local summaryWidth=CONTENT-116-self.cancelListing:GetWidth()-8-self.editListing:GetWidth();self.sMeta:SetWidth(summaryWidth);self.sName:SetWidth(summaryWidth)
+ local filterX=3
+ for _,key in ipairs({"ALL","TANK","HEALER","DAMAGER"}) do local button=self.roleFilters[key];C.SetLineHeight(button.label,20,true);button:SetWidth(FitText(button.label)+24+(key~="ALL" and 22 or 0));button:ClearAllPoints();button:SetPoint("TOPLEFT",filterX,-3);filterX=filterX+button:GetWidth()+4 end
+ self.roleFilterSurface:SetWidth(filterX-1)
+end
 function P:Build(parent)
  local root=CreateFrame("Frame",nil,parent);root:SetAllPoints();self.frame=root
  local surface=CreateFrame("Frame",nil,root);surface:SetSize(MAIN,T.contentHeight);surface:SetPoint("TOPLEFT");C.Panel(surface,T.surfaceLow,24);self.surface=surface
@@ -126,11 +138,6 @@ function P:Build(parent)
  self.formNotice=C.Notice(f,FORM,function() P:SetFormError("") end);self.formNotice:SetPoint("TOPLEFT",0,-44);self.formError=self.formNotice.text
  self.correctionNotice=C.Notice(f,FORM,function() P:HideCorrectionNotice() end);self.correctionNotice:SetPoint("TOPLEFT",0,-44)
  f:HookScript("OnHide",function() P:HideCorrectionNotice() end)
- local optionX=0
- for _,option in ipairs({self.private,self.crossFaction,self.autoAccept}) do
-  option:SetHeight(40);option.label:ClearAllPoints();option.label:SetPoint("LEFT",option.track,"RIGHT",8,0);option:SetWidth(52+FitText(option.label))
-  option:ClearAllPoints();option:SetPoint("TOPLEFT",optionX,-112);optionX=optionX+option:GetWidth()+28
- end
  for _,label in ipairs({self.ilvlLabel,self.scoreLabel,self.styleLabel}) do C.SetLineHeight(label,20,true) end
  self.ilvl.box:HookScript("OnTextChanged",function(_,userInput)
   if userInput then P:CorrectItemLevel() end
@@ -150,9 +157,7 @@ function P:Build(parent)
   if listing then group.Presets:ToggleFavorite(listing) end
  end,{iconSize=24});self.listingFavorite:SetPoint("TOPRIGHT",0,-3)
  self.cancelListing:ClearAllPoints();self.cancelListing:SetPoint("RIGHT",self.listingFavorite,"LEFT",-8,0)
- self.cancelListing:SetWidth(FitText(self.cancelListing.label)+34);self.editListing:SetWidth(FitText(self.editListing.label)+34)
  self.editListing:ClearAllPoints();self.editListing:SetPoint("RIGHT",self.cancelListing,"LEFT",-8,0)
- local summaryWidth=CONTENT-116-self.cancelListing:GetWidth()-8-self.editListing:GetWidth();self.sMeta:SetWidth(summaryWidth);self.sName:SetWidth(summaryWidth)
  self.applicantsHeading=C.Text(manage,L.manageApplicants,18);C.SetLineHeight(self.applicantsHeading,24,true);self.applicantsHeading:SetPoint("TOPLEFT",0,-70)
  self.appCount=C.Text(manage,"",14,T.muted);C.SetLineHeight(self.appCount,20,true);self.appCount:SetPoint("TOPRIGHT",0,-73)
  self.roleFilters={}
@@ -161,9 +166,7 @@ function P:Build(parent)
   local b=C.Button(filterSurface,key=="ALL" and L.all or roles[key],84,function() state.role=key~="ALL" and key or nil;P:RefreshApplicants() end,{variant="compact"});b:SetPoint("TOPLEFT",3+(i-1)*88,-3);if key~="ALL" then local roleIcon=C.Icon(b,16);roleIcon:SetPoint("LEFT",12,0);UI:SetRoleIcon(roleIcon,key);b.label:ClearAllPoints();b.label:SetPoint("LEFT",roleIcon,"RIGHT",6,0) end;self.roleFilters[key]=b
  end
  self.sortChoice=C.Choice(manage,144,function() return P.hideApplicantRating and noRatingApplicantSorts or applicantSorts end,function(value) state.sort=value;P:RefreshApplicants() end);self.sortChoice:SetHeight(44);self.sortChoice:SetPoint("TOPRIGHT",0,-110);self.sortChoice:SetValue("newest",L.newest)
- local filterX=3
- for _,key in ipairs({"ALL","TANK","HEALER","DAMAGER"}) do local button=self.roleFilters[key];C.SetLineHeight(button.label,20,true);button:SetWidth(FitText(button.label)+24+(key~="ALL" and 22 or 0));button:ClearAllPoints();button:SetPoint("TOPLEFT",filterX,-3);filterX=filterX+button:GetWidth()+4 end
- filterSurface:SetWidth(filterX-1)
+ self:LayoutFont()
  self.applicantHeaders={}
  for _,h in ipairs({{"name",S("申请者","Applicant")},{"role",L.role},{"faction",S("阵营","Faction")},{"rating",L.rating},{"ilvl",L.itemLevel},{"comment",S("备注","Note")},{"actions",S("操作","Actions")}}) do
   local col=columns[h[1]];local label=C.Header(manage,h[2],col.x,-167,col.width);label:SetJustifyH(col.align);self.applicantHeaders[h[1]]=label
@@ -862,6 +865,7 @@ function P:OnNotesChanged()
  if not UI.Tooltip.sourceRoster then UI.Tooltip:RefreshRelations() end
 end
 function P:WatchNotes()
+ UI:PrepareNotes()
  local wanted=not UI.preview and A.db.notesEnabled==true and A.Notes~=nil
  if (self.notesUnsub~=nil)==wanted then return false end
  if self.notesUnsub then self.notesUnsub();self.notesUnsub=nil end

@@ -23,6 +23,12 @@ function UI:SetGroupSetting(key,value)
  if self.preview then self.preview.provider.settings[key]=value else A:SetSetting(key,value) end
 end
 
+function UI:PrepareNotes()
+ if self.preview or not A.db.notesEnabled or not A.db.notesHasRecords or A.Notes then return end
+ local notes,err=A:Ensure("Notes")
+ if not notes then A:NoteMessage(A.L.loadFailed:format(tostring(err))) end
+end
+
 function UI:GetNote(key)
  if self.preview or not A.db.notesEnabled or not key or not A.Notes then return nil end
  return A.Notes:Find(key)
@@ -72,6 +78,8 @@ function UI:ApplyFont(path)
  self.settingsButton:SetWidth(self.settingsButton.label:GetStringWidth()+52)
  self._nav=nil;self:UpdateNav()
  self.pages.find:LayoutFont()
+ local create=self.pages.create
+ if create.frame then create:LayoutFont() end
  local notes=self.pages.notes
  if notes.frame then notes:LayoutFont() end
  local settings=self.pages.settings

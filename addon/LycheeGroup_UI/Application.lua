@@ -58,7 +58,7 @@ function Application:BuildApplication()
  modal.noteLabel=C.Text(content,Say("给队长的备注","Note to the leader"),14,T.muted);C.SetLineHeight(modal.noteLabel,20,true)
  modal.note=C.Field(content,464,112,false,"modal")
  modal.error=C.Text(content,"",14,T.warning,464,20);modal.error:SetMaxLines(1)
- modal.cancel=C.Button(modal.frame,L.cancel,nil,function() UI:CloseModal() end);modal.cancel:SetWidth(math.max(72,modal.cancel.label:GetStringWidth()+40));modal.cancel:SetHeight(40)
+ modal.cancel=C.Button(modal.frame,L.cancel,nil,function() UI:CloseModal() end);modal.cancel:SetHeight(40)
  modal.submit=C.Button(modal.frame,L.apply,112,function() Application:ConfirmApplication() end);modal.submit:SetPrimary(true);modal.submit:SetHeight(40)
  self.applicationModal=modal
  return modal
@@ -73,7 +73,7 @@ function Application:LayoutApplication()
  modal.roleLabel:SetPoint("TOPLEFT",0,-groupOffset)
  local x=0
  for _,role in ipairs(roleKeys) do
-  local button=modal.roles[role];button:SetPoint("TOPLEFT",x,-groupOffset-32);x=x+button:GetWidth()+8
+  local button=modal.roles[role];button:SetWidth(button.label:GetStringWidth()+60);button:SetPoint("TOPLEFT",x,-groupOffset-32);x=x+button:GetWidth()+8
  end
  modal.noteLabel:SetPoint("TOPLEFT",0,-groupOffset-96)
  modal.note:SetPoint("TOPLEFT",0,-groupOffset-128)
@@ -81,7 +81,7 @@ function Application:LayoutApplication()
  modal.error:SetShown(hasError);modal.error:SetPoint("TOPLEFT",0,-groupOffset-252);modal.error:SetHeight(hasError and 24 or 0)
  modal.frame:SetHeight(408+groupOffset+(hasError and 28 or 0))
  modal.submit:SetWidth(math.max(96,modal.submit.label:GetStringWidth()+40));modal.submit:SetPoint("BOTTOMRIGHT",-24,24)
- modal.cancel:SetPoint("RIGHT",modal.submit,"LEFT",-8,0)
+ modal.cancel:SetWidth(math.max(72,modal.cancel.label:GetStringWidth()+40));modal.cancel:SetPoint("RIGHT",modal.submit,"LEFT",-8,0)
 end
 function Application:SetApplicationRole(role)
  local lease=self.previewApplication or self.applicationLease;if not lease or not lease.available[role] then return end

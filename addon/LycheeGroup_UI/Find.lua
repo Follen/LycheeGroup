@@ -924,6 +924,7 @@ function P:OnNotesChanged()
  if self.frame and self.frame:IsVisible() and not UI.hiding then UI:GetGroup().Results:InvalidateView();self:RefreshResults(true) end
 end
 function P:WatchNotes()
+ UI:PrepareNotes()
  local wanted=not UI.preview and A.db.notesEnabled==true and A.Notes~=nil
  if (self.notesUnsub~=nil)==wanted then return false end
  if self.notesUnsub then self.notesUnsub();self.notesUnsub=nil end

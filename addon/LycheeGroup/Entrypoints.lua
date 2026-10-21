@@ -129,6 +129,10 @@ local function RegisterPlayerMenus()
             unit = nil
         end
         if not key or key == A:UnitIdentity("player") then return end
+        if not A.Notes and A.db.notesHasRecords then
+            local notes, err = A:Ensure("Notes")
+            if not notes then A:NoteMessage(A.L.loadFailed:format(tostring(err))); return end
+        end
         local record = A.Notes and A.Notes:Find(key)
         root:CreateDivider()
         root:CreateTitle(A.L.brand)
@@ -152,7 +156,7 @@ local function OnPlayerLogin()
     A.Minimap:Initialize()
     A:SyncNativeLFGEntry()
     RegisterPlayerMenus()
-    if A.db.notesEnabled and A.db.notesHasRecords then
+    if A.db.notesEnabled and A.db.notesHasRecords and A.db.reminders ~= "off" then
         local notes, err = A:Ensure("Notes")
         if not notes then A:NoteMessage(A.L.loadFailed:format(tostring(err))) end
     end

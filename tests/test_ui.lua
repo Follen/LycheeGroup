@@ -3266,6 +3266,44 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  u:ApplyFont(u.Theme.font)
  T.near(CenterOffset(page.autoJoin),CenterOffset(page.appsTitle),.01,"changing typeface preserves header alignment")
  T.near(page.autoJoin:GetWidth(),math.ceil(page.autoJoin.label:GetStringWidth())+56,.01,"font changes update the complete auto-join label width")
+ fresh.A:Open("create")
+ local create=u.pages.create;local widths={}
+ T.eq(u.Application:OpenApplicationSettings(),true)
+ local modal=u.Application.applicationModal;u:CloseModal()
+ local controls={create.private,create.crossFaction,create.autoAccept,create.cancelListing,create.editListing,modal.cancel}
+ for _,role in ipairs({"ALL","TANK","HEALER","DAMAGER"}) do controls[#controls+1]=create.roleFilters[role] end
+ for _,role in ipairs({"TANK","HEALER","DAMAGER"}) do controls[#controls+1]=modal.roles[role] end
+ for _,option in ipairs(controls) do
+  local width=option.label.GetStringWidth;widths[option]=width
+  option.label.GetStringWidth=function(self) return width(self)*1.5 end
+ end
+ fresh.A:Open("settings");u:ApplyFont(u.Theme.font);fresh.A:Open("create")
+ local right=0
+ for _,option in ipairs({create.private,create.crossFaction,create.autoAccept}) do
+  local point={option:GetPoint()};local left=point[#point-1]
+  T.ok(left>=right,"a wider font never overlaps the previous creation option")
+  T.ok(option:GetWidth()>=52+option.label:GetStringWidth(),"each option's hitbox contains its complete wider label")
+  right=left+option:GetWidth()+28
+ end
+ for _,button in ipairs({create.cancelListing,create.editListing}) do T.ok(button:GetWidth()>=button.label:GetStringWidth()+34,"listing actions retain their label padding after a font change") end
+ T.near(create.sName:GetWidth(),create.manage:GetWidth()-116-create.cancelListing:GetWidth()-8-create.editListing:GetWidth(),.01,"the listing summary reserves the resized action area")
+ right=3
+ for _,role in ipairs({"ALL","TANK","HEALER","DAMAGER"}) do
+  local button=create.roleFilters[role];local point={button:GetPoint()};local x=point[#point-1]
+  T.ok(x>=right,"role filters do not overlap after a font change")
+  T.ok(button:GetWidth()>=button.label:GetStringWidth()+24+(role~="ALL" and 22 or 0))
+  right=x+button:GetWidth()+4
+ end
+ T.near(create.roleFilterSurface:GetWidth(),right-1,.01)
+ T.eq(u.Application:OpenApplicationSettings(),true)
+ for _,role in ipairs({"TANK","HEALER","DAMAGER"}) do
+  local button=modal.roles[role]
+  T.near(button:GetWidth(),button.label:GetStringWidth()+60,.01,"reopened application roles include the new font width")
+ end
+ T.ok(modal.cancel:GetWidth()>=modal.cancel.label:GetStringWidth()+40,"application cancel retains full text padding")
+ u:CloseModal()
+ for _,option in ipairs(controls) do option.label.GetStringWidth=widths[option] end
+ u:ApplyFont(u.Theme.font)
  u:Hide(true)
 end
 
@@ -3642,11 +3680,13 @@ end
 
 -- A visible consumer joins Notes when its real command first loads the service.
 do
- local function LateNotes(pageName,settings)
+ local function LateNotes(pageName,settings,existing)
   local fresh=dofile("tests/ui_fixture.lua")("enUS",nil,settings)
   local a,u,g=fresh.A,fresh.U,fresh.G
   a.db.reduceMotion=true
-  local notes=a.Notes;a.Notes=nil
+  local notes=a.Notes
+  if existing then notes:Add("LateNote","Away","Existing before login") end
+  a.Notes=nil
   local person={name="LateNote-Away",nameKey="LateNote-Away",class="MAGE",assignedRole="DAMAGER",isLeader=true}
   g.records[8101]={id=8101,name="Late note group",leaderName=person.name,leaderKey=person.nameKey,activity=g.Catalog:GetActivity(2),activityID=2,activityName="Dungeon",categoryID=2,maxNumPlayers=5,numMembers=1,charFriends=0,bnetFriends=0,guildMates=0,details={members={person},counts={TANK=0,HEALER=0,DAMAGER=1}}}
   if pageName=="create" then g.listing={activityID=2,name="Late note listing"};g.applicants[81]={id=81,status="applied",activityID=2,displayOrderID=1,members={person}} end
@@ -3670,7 +3710,17 @@ do
   return a,u,g,page,row,function() return loads end,notes
  end
  for _,pageName in ipairs({"find","create"}) do
-  local a,u,g,page,row,loads,notes=LateNotes(pageName,{notesEnabled=false})
+  local a,u,g,page,row,loads,notes=LateNotes(pageName,{reminders="off"},true)
+  T.eq(loads(),1,"opening "..pageName.." loads existing notes even with reminders off")
+  T.eq(a.Notes,notes);T.ok(page.notesUnsub)
+  T.eq(row.marks.flags.neutral,true,"the first displayed member retains its existing note marker")
+  a.db.noteMarks=false
+  T.eq(u:GetNote("LateNote-Away").reason,"Existing before login","note details remain available when markers are hidden")
+  T.eq(u:HasNote("LateNote-Away"),true,"existing records still open for viewing rather than creation")
+  u:Hide(true)
+ end
+ for _,pageName in ipairs({"find","create"}) do
+  local a,u,g,page,row,loads,notes=LateNotes(pageName,{notesEnabled=false,reminders="off"})
   T.eq(notes:Add("LateNote","Away","Existing before loading"),true)
   local changes,subscriptions=0,0
   local changed,subscribe=page.OnNotesChanged,notes.Subscribe
