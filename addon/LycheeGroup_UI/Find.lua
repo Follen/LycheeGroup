@@ -301,7 +301,7 @@ function P:Build(parent)
  self.filterChevron=C.Icon(self.filterToggle,12);self.filterChevron:SetTexture(T.media.."chevron.tga");self.filterChevron:SetPoint("RIGHT",-10,0)
  self.searchModeToggle=C.Button(self.search,"",82,function() P:SetSearchMode(state.searchMode=="group" and "leader" or "group") end);self.searchModeToggle:SetHeight(32);self.searchModeToggle:SetTextColors(T.muted,T.text,T.onSecondaryContainer);self.searchModeToggle:SetPoint("RIGHT",self.filterToggle,"LEFT",-6,0)
  self.searchModeToggle:HookScript("OnEnter",function(button)
-  GameTooltip:SetOwner(button,"ANCHOR_TOP");GameTooltip:SetText(Say("切换搜索：队伍标题/队长名字","Search by: group title/leader name"));GameTooltip:Show()
+  GameTooltip:SetOwner(button,"ANCHOR_TOP");GameTooltip:SetText(Say("按队伍标题搜索/按队长名字搜索","Search by: group title/leader name"));GameTooltip:Show()
  end)
  local function HideSearchModeTip() if GameTooltip:IsOwned(P.searchModeToggle) then GameTooltip:Hide() end end
  self.searchModeToggle:HookScript("OnLeave",HideSearchModeTip);self.searchModeToggle:HookScript("OnHide",HideSearchModeTip)
