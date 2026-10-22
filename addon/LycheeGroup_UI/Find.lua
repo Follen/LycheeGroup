@@ -743,7 +743,6 @@ function P:BuildQuickFilters()
  end
  self.quickSame=QuickToggle(Say("同专精过滤","Same spec"),"hideSameSpec")
  self.quickClass=QuickToggle(Say("同职过滤","Same class"),"hideSameClass")
- self.quickZero=QuickToggle(Say("过滤队长0分","Hide 0-score leaders"),"hideZeroScore")
 end
 
 function P:SyncQuickFilters(seasonDungeon)
@@ -753,11 +752,10 @@ function P:SyncQuickFilters(seasonDungeon)
   UI:SetText(entry.button.label,value=="missing" and Say("缺少","Lacks") or value=="present" and (entry.role=="DAMAGER" and Say("已齐","Full") or Say("已有","Has")) or Say("不限","Any"))
   entry.button:SetActive(value~=nil and value~=false)
  end
- UI:SetText(self.quickLogic.label,state.filters.roleMatchAny and Say("[或]","[OR]") or Say("[全部]","[All]"))
+ UI:SetText(self.quickLogic.label,state.filters.roleMatchAny and Say("或","OR") or Say("全部","All"))
  self.quickLogic:SetActive(state.filters.roleMatchAny==true)
  self.quickSame:SetValue(state.filters.hideSameSpec)
  self.quickClass:SetValue(state.filters.hideSameClass)
- self.quickZero:SetValue(state.filters.hideZeroScore)
  self:LayoutQuickFilters()
  self:LayoutResults()
 end
@@ -769,7 +767,7 @@ function P:LayoutQuickFilters()
  elseif self.scopeToggle:IsShown() then left=left+self.scopeToggle:GetWidth()+20 end
  local right=16+self.autoJoin:GetWidth()+20+44+10+self.applicationSettings:GetWidth()+20
  local needed=376
- for _,toggle in ipairs({self.quickSame,self.quickClass,self.quickZero}) do
+ for _,toggle in ipairs({self.quickSame,self.quickClass}) do
   local width=toggle.label:GetStringWidth()+54
   toggle:SetWidth(width);toggle:ClearAllPoints();toggle:SetPoint("LEFT",needed,0)
   needed=needed+width+16

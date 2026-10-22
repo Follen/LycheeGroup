@@ -21,20 +21,21 @@ p.quickChoices.tankPresence.button:Fire("OnClick","RightButton");assert(G.filter
 p.quickLogic:Fire("OnClick");assert(G.filters.roleMatchAny==true)
 U:SetWindowSize(1450,960)
 assert(U.pages.find.columnWidths and U.pages.find.quickFilters)
-assert(p.quickLogic.label:GetText()=="[或]")
-p.quickLogic:Fire("OnClick");assert(p.quickLogic.label:GetText()=="[全部]")
+assert(p.quickLogic.label:GetText()=="或")
+p.quickLogic:Fire("OnClick");assert(p.quickLogic.label:GetText()=="全部")
 assert(p.quickSame.label:GetText()=="同专精过滤")
-for _,toggle in ipairs({p.quickSame,p.quickClass,p.quickZero}) do
+for _,toggle in ipairs({p.quickSame,p.quickClass}) do
  assert(select(1,toggle.label:GetPoint())=="LEFT")
  assert(select(1,toggle.track:GetPoint())=="RIGHT")
 end
 p.quickClass:Fire("OnClick");assert(G.filters.hideSameClass==true)
-p.quickZero:Fire("OnClick");assert(G.filters.hideZeroScore==true and p.hideZeroScore.value==true)
-p.hideZeroScore:Fire("OnClick");assert(not G.filters.hideZeroScore and not p.quickZero.value)
+assert(p.quickZero==nil)
+p.hideZeroScore:Fire("OnClick");assert(G.filters.hideZeroScore==true)
+p.hideZeroScore:Fire("OnClick");assert(not G.filters.hideZeroScore)
 local members={numMembers=2,details={members={{class="MAGE"},{class="PALADIN"}}}}
 assert(G.Results:HasMemberClass(members,"MAGE"))
 assert(not G.Results:HasMemberClass(members,"DRUID"))
 assert(not G.Results:HasMemberClass(members,nil))
 p:ClearFilters();assert(not G.filters.hideSameClass and not p.quickClass.value)
 U:Hide(true)
-print("PASS: upstream fixture builds merged UI, keyword input/apply/reopen/clear, missing-role controls, column sizing and stable filter scale; compact labels, right-side toggles, class matching and shared zero-score filter")
+print("PASS: upstream fixture builds merged UI, keyword input/apply/reopen/clear, missing-role controls, column sizing and stable filter scale; compact labels, right-side toggles, class matching and popup-only zero-score filter")
