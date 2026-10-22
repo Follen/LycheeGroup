@@ -239,7 +239,20 @@ function P:BuildRow(parent,row,index)
    A:SetSetting(row[1],value)
   end) end
   control.valueLabel=C.Text(control,"",14,T.muted,52);control.valueLabel:SetPoint("LEFT",control,"RIGHT",12,0);control.valueLabel:SetJustifyH("RIGHT")
-  control:SetPoint("RIGHT",-76,0)
+  function control:LayoutValueWidth()
+   local text=self.valueLabel:GetText()
+   self.valueLabel:SetWidth(0);self.valueLabel:SetWordWrap(false)
+   local width=52
+   for digit=0,9 do
+    UI:SetText(self.valueLabel,string.rep(tostring(digit),3).."%")
+    width=math.max(width,math.ceil(self.valueLabel:GetStringWidth())+6)
+   end
+   UI:SetText(self.valueLabel,text)
+   self.valueLabel:SetWidth(width)
+   self:ClearAllPoints();self:SetPoint("RIGHT",-24-width,0)
+   self:SetWidth(math.max(60,220-12-width))
+  end
+  control:LayoutValueWidth()
  elseif row[4]=="binding" then
   control=C.Button(holder,A.L.bindingChange,controlWidth,function() P:BeginBindingCapture() end);control:SetPoint("RIGHT",-12,0)
   holder:HookScript("OnHide",function() if P.bindingCapture==holder then P:CancelBindingCapture(true) end end)
@@ -365,7 +378,7 @@ function P:Sync()
    if not self.bindingCapture and conflict then text=text.."\n"..A.L.bindingDefaultConflict:format(GetBindingName(conflict)) end
    UI:SetText(entry.help,text)
    UI:SetText(c.label,self.bindingCapture and S("按下新按键…","Press a key…") or A.L.bindingChange)
-  elseif row[4]=="range" then if not c:IsDragging() then c:SetValue(value);UI:SetText(c.valueLabel,value.."%") end
+  elseif row[4]=="range" then c:LayoutValueWidth();if not c:IsDragging() then c:SetValue(value);UI:SetText(c.valueLabel,value.."%") end
   elseif row[4] then local label;local choices=type(row[4])=="function" and row[4]() or row[4];for _,choice in ipairs(choices) do if choice.value==value then label=choice.label;break end end;c:SetValue(value,label)
   else c:SetValue(value==true);UI:SetText(c.label,value and S("已开启","On") or S("已关闭","Off"));c:SetWidth(math.ceil(c.label:GetStringWidth())+c.track:GetWidth()+36);UI:Color(c.label,c._inside and T.text or T.muted) end
  end

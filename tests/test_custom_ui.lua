@@ -46,5 +46,15 @@ assert(G.Results:HasMemberClass(members,"MAGE"))
 assert(not G.Results:HasMemberClass(members,"DRUID"))
 assert(not G.Results:HasMemberClass(members,nil))
 p:ClearFilters();assert(not G.filters.hideSameClass and p.quickIdentity.label:GetText()=="不限")
+A:SetSetting("uiScale",80);A:SetSetting("fontScale",130)
+A:Open("settings")
+local settings=U.pages.settings
+settings:SelectSection("interface");settings:Sync()
+for _,key in ipairs({"uiScale","fontScale","rurutiaRailIconScale","rurutiaMemberIconScale"}) do
+ local widget=settings.controls[key].widget
+ assert(widget.valueLabel:GetWidth()>=widget.valueLabel:GetStringWidth())
+ assert(widget:GetWidth()+12+widget.valueLabel:GetWidth()==220)
+ local point={widget:GetPoint()};local x=point[4] or point[2];assert(x+12+widget.valueLabel:GetWidth()==-12)
+end
 U:Hide(true)
 print("PASS: upstream fixture builds merged UI, keyword input/apply/reopen/clear, missing-role controls, column sizing and stable filter scale; compact labels, three-state identity filter and legacy migration, class matching and popup-only zero-score filter")
