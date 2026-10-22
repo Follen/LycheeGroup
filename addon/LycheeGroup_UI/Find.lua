@@ -733,16 +733,18 @@ function P:BuildQuickFilters()
   P:UpdateFilters()
  end,{height=32,radius=8})
  Tip(self.quickLogic,Say("筛选切换：全部/任意条件符合","Filter matching: all/any conditions."))
- self.quickLogic:SetPoint("LEFT",288,0);C.SetFont(self.quickLogic.label,13)
- local function QuickToggle(label,key)
-  local toggle=C.Check(self.quickFilters,label,function(value) state.filters[key]=value or nil;P:UpdateFilters() end)
-  toggle:SetHeight(32);C.SetFont(toggle.label,13)
-  toggle.label:ClearAllPoints();toggle.label:SetPoint("LEFT")
-  toggle.track:ClearAllPoints();toggle.track:SetPoint("RIGHT")
-  return toggle
- end
- self.quickSame=QuickToggle(Say("同专精过滤","Same spec"),"hideSameSpec")
- self.quickClass=QuickToggle(Say("同职过滤","Same class"),"hideSameClass")
+ self.quickLogic:SetPoint("LEFT",386,0);C.SetFont(self.quickLogic.label,13)
+ self.quickIdentity=C.Button(self.quickFilters,"",90,function(_,mouseButton)
+  local mode=state.filters.hideSameClass and "class" or state.filters.hideSameSpec and "spec" or "any"
+  if mouseButton=="RightButton" then mode="any"
+  else mode=mode=="any" and "spec" or mode=="spec" and "class" or "any" end
+  state.filters.hideSameSpec=mode=="spec" or nil
+  state.filters.hideSameClass=mode=="class" or nil
+  P:UpdateFilters()
+ end,{height=32,radius=8})
+ self.quickIdentity:RegisterForClicks("LeftButtonUp","RightButtonUp")
+ self.quickIdentity:SetPoint("LEFT",288,0);C.SetFont(self.quickIdentity.label,13)
+ Tip(self.quickIdentity,Say("隐藏含同专精/同职业成员的队伍","Hide groups containing the same spec/class"))
 end
 
 function P:SyncQuickFilters(seasonDungeon)
@@ -754,8 +756,8 @@ function P:SyncQuickFilters(seasonDungeon)
  end
  UI:SetText(self.quickLogic.label,state.filters.roleMatchAny and Say("或","OR") or Say("全部","All"))
  self.quickLogic:SetActive(state.filters.roleMatchAny==true)
- self.quickSame:SetValue(state.filters.hideSameSpec)
- self.quickClass:SetValue(state.filters.hideSameClass)
+ UI:SetText(self.quickIdentity.label,state.filters.hideSameClass and Say("同职业","Same class") or state.filters.hideSameSpec and Say("同专精","Same spec") or Say("不限","Any"))
+ self.quickIdentity:SetActive(state.filters.hideSameClass==true or state.filters.hideSameSpec==true)
  self:LayoutQuickFilters()
  self:LayoutResults()
 end
@@ -766,13 +768,7 @@ function P:LayoutQuickFilters()
  if self.appsEmpty:IsShown() then left=left+self.appsEmpty:GetStringWidth()+20
  elseif self.scopeToggle:IsShown() then left=left+self.scopeToggle:GetWidth()+20 end
  local right=16+self.autoJoin:GetWidth()+20+44+10+self.applicationSettings:GetWidth()+20
- local needed=366
- for _,toggle in ipairs({self.quickSame,self.quickClass}) do
-  local width=toggle.label:GetStringWidth()+54
-  toggle:SetWidth(width);toggle:ClearAllPoints();toggle:SetPoint("LEFT",needed,0)
-  needed=needed+width+16
- end
- needed=needed-16
+ local needed=456
  self.quickFilters:SetWidth(needed)
  local extra=self.quickFilters:IsShown() and (MAIN-left-right<needed) and 40 or 0
  self.quickFilters:ClearAllPoints();self.quickFilters:SetPoint("TOPLEFT",extra>0 and 16 or left,extra>0 and -46 or -6)
@@ -1149,6 +1145,7 @@ function P:RememberCategory()
  prefs.social=state.social;prefs.sort=state.filters.sort;prefs.sortAscending=state.filters.sortAscending
 end
 function P:RestoreCategory(prefs)
+ if prefs.hideSameClass then prefs.hideSameSpec=nil end
  self.loading=true
  for _,key in ipairs(advancedKeys) do state.filters[key]=prefs[key] end
  state.groupKeys=CopyGroupKeys(prefs.groupKeys)
@@ -1239,6 +1236,7 @@ function P:UpdateFilters(reset)
  filters.personKey=state.personKey
  filters.minMembers=tonumber(self.fMinMembers.box:GetText());filters.maxMembers=tonumber(self.fMembers.box:GetText());filters.neededRole=not seasonDungeon and keys and self.roleChoice.value or nil
  if not seasonDungeon then filters.hideSameClass=nil;filters.roleMatchAny=nil;filters.tankPresence,filters.healerPresence,filters.damagePresence,filters.hideZeroScore,filters.hideSameSpec=nil,nil,nil,nil,nil end
+ if filters.hideSameClass then filters.hideSameSpec=nil end
  self.hideZeroScore:SetShown(seasonDungeon);self.hideZeroScore:SetValue(filters.hideZeroScore)
  self.filterDivider:SetShown(seasonDungeon)
  filters.friends=state.social=="friend";filters.guild=state.social=="guild";filters.notes=(state.social=="any" or state.social=="positive" or state.social=="noCaution") and state.social or nil
