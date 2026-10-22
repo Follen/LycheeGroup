@@ -734,7 +734,7 @@ function P:BuildQuickFilters()
  end,{height=32,radius=8})
  Tip(self.quickLogic,Say("筛选切换：全部/任意条件符合","Filter matching: all/any conditions."))
  self.quickLogic:SetPoint("LEFT",436,0);C.SetFont(self.quickLogic.label,13)
- self.quickIdentity=C.Button(self.quickFilters,"",140,function(_,mouseButton)
+ self.quickIdentity=C.Button(self.quickFilters,"",100,function(_,mouseButton)
   local mode=state.filters.hideSameClass and "class" or state.filters.hideSameSpec and "spec" or "any"
   if mouseButton=="RightButton" then mode="any"
   else mode=mode=="any" and "spec" or mode=="spec" and "class" or "any" end
@@ -744,6 +744,7 @@ function P:BuildQuickFilters()
  end,{height=32,radius=8})
  self.quickIdentity:RegisterForClicks("LeftButtonUp","RightButtonUp")
  self.quickIdentity:SetPoint("LEFT",288,0);C.SetFont(self.quickIdentity.label,13)
+ self.identityMeasure=C.Text(self.quickIdentity,"",13);self.identityMeasure:Hide()
  self.quickIdentity.label:ClearAllPoints();self.quickIdentity.label:SetPoint("LEFT",32,0)
  self.quickIdentityIcon=C.GameIcon(self.quickIdentity,18);self.quickIdentityIcon:SetPoint("LEFT",8,0)
  self.quickIdentityFunnel=CreateFrame("Frame",nil,self.quickIdentity);self.quickIdentityFunnel:SetSize(18,18);self.quickIdentityFunnel:SetPoint("LEFT",8,0)
@@ -764,7 +765,7 @@ function P:SyncQuickFilters(seasonDungeon)
  end
  UI:SetText(self.quickLogic.label,state.filters.roleMatchAny and Say("或","OR") or Say("全部","All"))
  self.quickLogic:SetActive(state.filters.roleMatchAny==true)
- UI:SetText(self.quickIdentity.label,state.filters.hideSameClass and Say("同职过滤","Same class") or state.filters.hideSameSpec and Say("同专精过滤","Same spec") or Say("不限","Any"))
+ UI:SetText(self.quickIdentity.label,state.filters.hideSameClass and Say("同职过滤","Same class") or state.filters.hideSameSpec and Say("专精过滤","Same spec") or Say("不限","Any"))
  self.quickIdentity:SetActive(state.filters.hideSameClass==true or state.filters.hideSameSpec==true)
  local enabled=state.filters.hideSameClass==true or state.filters.hideSameSpec==true
  self.quickIdentityIcon:SetShown(enabled);self.quickIdentityFunnel:SetShown(not enabled)
@@ -783,7 +784,14 @@ function P:LayoutQuickFilters()
  if self.appsEmpty:IsShown() then left=left+self.appsEmpty:GetStringWidth()+20
  elseif self.scopeToggle:IsShown() then left=left+self.scopeToggle:GetWidth()+20 end
  local right=16+self.autoJoin:GetWidth()+20+44+10+self.applicationSettings:GetWidth()+20
- local needed=506
+ local labelWidth=0
+ for _,label in ipairs({Say("专精过滤","Same spec"),Say("同职过滤","Same class"),Say("不限","Any")}) do
+  UI:SetText(self.identityMeasure,label);labelWidth=math.max(labelWidth,self.identityMeasure:GetStringWidth())
+ end
+ local identityWidth=math.ceil(labelWidth)+40
+ self.quickIdentity:SetWidth(identityWidth)
+ self.quickLogic:ClearAllPoints();self.quickLogic:SetPoint("LEFT",288+identityWidth+8,0)
+ local needed=288+identityWidth+8+70
  self.quickFilters:SetWidth(needed)
  local extra=self.quickFilters:IsShown() and (MAIN-left-right<needed) and 40 or 0
  self.quickFilters:ClearAllPoints();self.quickFilters:SetPoint("TOPLEFT",extra>0 and 16 or left,extra>0 and -46 or -6)
