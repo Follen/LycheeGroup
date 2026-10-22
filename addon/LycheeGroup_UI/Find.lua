@@ -737,7 +737,7 @@ function P:BuildQuickFilters()
  self.quickIdentity=C.Button(self.quickFilters,"",100,function(_,mouseButton)
   local mode=state.filters.hideSameClass and "class" or state.filters.hideSameSpec and "spec" or "any"
   if mouseButton=="RightButton" then mode="any"
-  else mode=mode=="any" and "spec" or mode=="spec" and "class" or "any" end
+  else mode=mode=="any" and "class" or mode=="class" and "spec" or "any" end
   state.filters.hideSameSpec=mode=="spec" or nil
   state.filters.hideSameClass=mode=="class" or nil
   P:UpdateFilters()
