@@ -295,9 +295,14 @@ end
 -- native addon and settings changes use the same one-time hooks.
 do
  local oldOpen=A.Open
+ local oldGetLFGMode,oldCategoryCount=GetLFGMode,NUM_LE_LFG_CATEGORYS
+ local modes={}
+ NUM_LE_LFG_CATEGORYS=8
+ GetLFGMode=function(category) local state=modes[category];if state then return unpack(state) end end
  local nativeCalls,opened,hooks=0,nil,0
  local eye=CreateFrame("Button");_G.QueueStatusButton=eye
  _G.QueueStatusFrame=CreateFrame("Frame");QueueStatusFrame:Show()
+ function QueueStatusFrame:Update() return "native update" end
  eye.alpha=.8;eye.mouse=true;eye.EyeHighlightAnim={playing=true}
  function eye:GetAlpha() return self.alpha end
  function eye:SetAlpha(alpha) self.alpha=alpha end
@@ -330,6 +335,38 @@ do
  T.eq(eye:GetAlpha(),0);T.eq(hooks,1,"setting changes reuse the same hooks")
  A:SetSetting("nativeLFGEntry",false);T.eq(eye:GetAlpha(),.6)
  A:SetSetting("nativeLFGEntry",true)
+
+ -- The native update also runs when the eye was already shown for a premade
+ -- group. Matchmade dungeon/raid queues must release both opacity and mouse.
+ local oldActiveEntry=C_LFGList.HasActiveEntryInfo
+ C_LFGList.HasActiveEntryInfo=function() return true end
+ for _,mode in ipairs({"rolecheck","queued","proposal","lfgparty","abandonedInDungeon"}) do
+  modes[1]={mode}
+  T.eq(QueueStatusFrame:Update(),"native update","the original native updater still runs")
+  T.eq(eye:GetAlpha(),.6,"a native dungeon queue remains visible during "..mode)
+  T.eq(eye:IsMouseEnabled(),true,"native queue actions remain available")
+ end
+ QueueStatusFrame:Show();eye:SetAlpha(.7);QueueStatusFrame:Update()
+ T.eq(eye:GetAlpha(),.7,"native opacity changes are allowed while a dungeon queue is active")
+ T.eq(QueueStatusFrame:IsShown(),true,"native queue details are not dismissed")
+ T.eq(eye:GetScript("OnClick"),original,"native queue and leave actions keep their callback")
+ T.eq(eye.EyeHighlightAnim.playing,true)
+ A:SetSetting("nativeLFGEntry",false);A:SetSetting("nativeLFGEntry",true)
+ T.eq(eye:GetAlpha(),.7,"enabling concealment during a native queue leaves it visible")
+ modes[3]={"queued"};modes[1]=nil;QueueStatusFrame:Update()
+ T.eq(eye:GetAlpha(),.7,"a remaining raid finder queue keeps the eye visible")
+ T.eq(eye:IsMouseEnabled(),true)
+ modes[3]=nil;QueueStatusFrame:Update()
+ T.eq(eye:GetAlpha(),0,"leaving every native queue restores premade concealment without OnShow")
+ T.eq(eye:IsMouseEnabled(),false);T.eq(QueueStatusFrame:IsShown(),false)
+ T.eq(eye.EyeHighlightAnim.playing,true,"premade applicant sounds still have their native animation")
+ modes[3]={"lfgparty","noteleport"};QueueStatusFrame:Update()
+ T.eq(eye:GetAlpha(),0,"a state excluded by the native queue display does not reveal the eye")
+ modes[3]={"queued"};eye:Show()
+ T.eq(eye:GetAlpha(),.7,"OnShow also restores an active native queue")
+ T.eq(eye:IsMouseEnabled(),true);T.eq(hooks,1)
+ C_LFGList.HasActiveEntryInfo=oldActiveEntry
+ GetLFGMode,NUM_LE_LFG_CATEGORYS=oldGetLFGMode,oldCategoryCount
  A.Open=oldOpen;_G.QueueStatusButton,_G.QueueStatusFrame=nil,nil
 end
 

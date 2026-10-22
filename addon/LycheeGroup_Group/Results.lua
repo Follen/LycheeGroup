@@ -76,6 +76,18 @@ local function Normalize(id,record,invalidateDetails,expectedScan,metadataDirty)
  else record.leaderRating,record.requiredRating=record.leaderOverallDungeonScore,record.requiredDungeonScore end
  record.isDelisted=Public(info.isDelisted)==true
  record.bnetFriends,record.charFriends,record.guildMates=Public(info.numBNetFriends) or 0,Public(info.numCharFriends) or 0,Public(info.numGuildMates) or 0
+ -- Native guild summaries can include the observer. Correct the shared count
+ -- before list marks and filters consume it, without reading the member roster.
+ if record.guildMates>0 then
+  local _,_,guild=C_LFGList.GetSearchResultFriends(id)
+  guild=Public(guild)
+  local ownKey=A:UnitIdentity("player")
+  if ownKey and type(guild)=="table" then
+   for _,name in ipairs(guild) do
+    if A:PlayerKey(name)==ownKey then record.guildMates=record.guildMates-1;break end
+   end
+  end
+ end
  -- Bulk list events retain unchanged snapshots. A specific result event also
  -- covers member/spec/progress changes that do not change the member count.
  if invalidateDetails or previousActivity~=record.activityID or previousMembers~=record.numMembers or previousLeader~=record.leaderKey or previousFaction~=record.leaderFactionGroup or previousRating~=record.leaderRating or previousRatingActivity~=record.pvpRatingActivity or previousBnet~=record.bnetFriends or previousChar~=record.charFriends or previousGuild~=record.guildMates then
@@ -93,13 +105,13 @@ function Results:GetMemberCounts(record)
  record.memberCounts=counts
  return counts
 end
-local function RelationNames(values)
+local function RelationNames(values,excludeKey)
  values=Public(values)
  if type(values)~="table" then return {} end
  local names={}
  for _,value in ipairs(values) do
   value=Public(value)
-  if type(value)=="string" and value~="" then names[#names+1]=value end
+  if type(value)=="string" and value~="" and (not excludeKey or A:PlayerKey(value)~=excludeKey) then names[#names+1]=value end
  end
  return names
 end
@@ -155,7 +167,7 @@ function Results:GetDetails(idOrRecord)
  details.relationships=nil
  if record.bnetFriends+record.charFriends+record.guildMates>0 then
   local bnet,character,guild=C_LFGList.GetSearchResultFriends(record.id)
-  local relations={bnet=RelationNames(bnet),character=RelationNames(character),guild=RelationNames(guild)}
+  local relations={bnet=RelationNames(bnet),character=RelationNames(character),guild=RelationNames(guild,A:UnitIdentity("player"))}
   details.relationships=relations
  end
  if record.categoryID==3 then

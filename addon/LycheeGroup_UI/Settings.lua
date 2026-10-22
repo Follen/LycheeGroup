@@ -10,7 +10,7 @@ local types={{value="positive",label=S("推荐","Positive")},{value="neutral",la
 local definitions={
  general={{"toggleBinding",A.L.bindingToggle,"","binding"},
  {"minimap",S("显示小地图按钮","Show minimap button"),S("左键开关主窗口，右键打开设置；拖动调整位置。","Left-click toggles the window; right-click opens settings. Drag to reposition.")},
- {"nativeLFGEntry",S("隐藏原生组队眼睛","Hide the native LFG eye"),S("隐藏原生队列入口，保留申请提示音；关闭后恢复原生入口。","Hide the native queue button while keeping applicant sounds; turn this off to restore the native button.")}},
+ {"nativeLFGEntry",S("隐藏原生组队眼睛","Hide the native LFG eye"),S("预组队时隐藏眼睛并保留申请提示音；随机／指定副本、节日副本和随机团队排队时仍显示。","Hide the eye for premade groups and keep applicant sounds. Dungeon and Raid Finder queues still show the native eye.")}},
  interface={{"language",S("界面语言","Interface language"),S("仅改变插件文字，重载界面后生效。","Change addon text. Reload the UI to apply."),{{value="auto",label=S("跟随游戏","Game language")},{value="zhCN",label="简体中文"},{value="enUS",label="English"}}},
  {"uiScale",S("主窗口缩放","Main window scale"),S("等比调整整个主窗口。","Scale the entire main window proportionally."),"range",75,125},
  {"font",S("界面字体","Interface font"),S("默认使用荔枝字体，也可选择游戏或共享字体，立即生效。","Use LycheeFont, a game font or an installed shared font. Changes apply immediately."),function() return A.Fonts:Choices() end},

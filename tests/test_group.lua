@@ -478,6 +478,29 @@ do
 	T.same(G:GetResults(),{12},"只有战网好友计数时仍命中好友筛选")
 	G.Search:SetFilters({guild=true});T.same(G:GetResults(),{12},"原生公会聚合计数保留公会筛选")
 	T.eq(S.playerReads,relationshipReads,"原生关系筛选无需扫描成员名单")
+	-- 原生公会名单可能包含当前角色；列表标记、筛选和详情都只计算其他成员。
+	local originalFriends=S.friends[12]
+	S.friends[12]={bnet={"本人"},guild={"本人"}}
+	G.Results:OnResultUpdated(12)
+	T.eq(G:GetResult(12).guildMates,0,"只有自己的公会结果不显示公会标记")
+	T.eq(S.playerReads,relationshipReads,"排除自身只读取关系姓名，不扫描队伍成员")
+	T.same(G:GetResults(),{},"只有自己时不命中同公会筛选")
+	details=G:GetResultDetails(12)
+	T.same(details.relationships.guild,{},"详情公会姓名排除当前角色短名")
+	T.same(details.relationships.bnet,{"本人"},"战网昵称不按角色姓名排除")
+	S.friends[12].guild={"本人-晨风号角"};G.Results:OnResultUpdated(12)
+	T.eq(G:GetResult(12).guildMates,0,"带服务器的当前角色同样排除")
+	T.same(G:GetResultDetails(12).relationships.guild,{},"详情也排除当前角色全名")
+	S.results[12].numGuildMates=3
+	S.friends[12].guild={"本人-晨风号角","公会队友-晨风号角","本人-其他服务器"}
+	G.Results:OnResultUpdated(12)
+	T.eq(G:GetResult(12).guildMates,2,"公会计数保留其他成员及异服同名角色")
+	T.same(G:GetResults(),{12},"还有其他公会成员时继续命中筛选")
+	T.same(G:GetResultDetails(12).relationships.guild,{"公会队友-晨风号角","本人-其他服务器"},"详情保留其他公会成员")
+	S.results[12].numBNetFriends=0;S.results[12].numGuildMates=1;S.friends[12].guild={"本人"}
+	G.Results:OnResultUpdated(12)
+	T.eq(G:GetResultDetails(12).relationships,nil,"排除自身后没有其他关系时隐藏整块关系信息")
+	S.friends[12]=originalFriends
 	S.results[12].numCharFriends=0;S.results[12].numBNetFriends=0;S.results[12].numGuildMates=0
 	G.Results:OnResultUpdated(12);details=G:GetResultDetails(12)
 	T.eq(details.members[1].isCharFriend,nil,"名单变化不生成成员关系标记")
@@ -2812,6 +2835,60 @@ do
  _G.GetCVarBool,_G.ConsoleExec,_G.MAX_PARTY_MEMBERS,_G.MAX_RAID_MEMBERS=getCVar,console,partyMax,raidMax
  C_LFGList.GetNumInvitedApplicantMembers,C_PartyInfo.ConfirmConvertToRaid=invitedCount,convert
  G.Listing:Restore();G.Applicants:Restore()
+end
+
+-- Leadership changes reconcile the listing and applicants even when no separate
+-- applicant notification follows; the former leader keeps the read-only list.
+do
+ local active,applicants,members=S.activeEntry,S.applicants,S.applicantMembers
+ local inGroup,isLeader,isAssistant=IsInGroup,UnitIsGroupLeader,UnitIsGroupAssistant
+ local autoInvite=G.prefs.listingAutoInvite
+ local leader=true
+ IsInGroup=function() return true end
+ UnitIsGroupLeader=function() return leader end
+ UnitIsGroupAssistant=function() return false end
+ G.prefs.listingAutoInvite=false
+ S.activeEntry={activityIDs={502},name="Before handoff",autoAccept=false}
+ S.applicants={};S.applicantMembers={}
+ G.Listing:Restore();G.Applicants:Clear();G:RefreshPermissions()
+ local view={};G:Attach(view,"create")
+ local visible
+ local unsubscribe=G:Subscribe(function(kind)
+  if kind=="applicants" then visible=table.concat(G:GetApplicants(),",") end
+ end)
+ local function Add(id,name)
+  S.applicants[id]={applicationStatus="applied",numMembers=1,displayOrderID=id}
+  S.applicantMembers[id]={{name=name,class="WARRIOR",damage=true,assignedRole="DAMAGER",itemLevel=270}}
+ end
+ Add(6501,"B-Away");leader=false
+ S.activeEntry={activityIDs={502},name="After handoff",autoAccept=false}
+ T.ok(Stubs.FireEvent("PARTY_LEADER_CHANGED")>0)
+ T.ok(G:GetApplicant(6501),"the former leader reads B on the leadership event without waiting for an applicant event")
+ T.eq(G:GetListing().name,"After handoff","leadership changes refresh the current listing too")
+ T.eq(G:CanManageApplicants(),false,"the former leader can read B without retaining invitation permission")
+ Stubs.AdvanceClock(0);T.eq(visible,"6501","the open applicant view receives the reconciled list")
+ S.applicants[6501]=nil;S.applicantMembers[6501]=nil;Add(6502,"Next-Away");leader=true
+ Stubs.FireEvent("PARTY_LEADER_CHANGED")
+ T.eq(G:GetApplicant(6501),nil,"a new leader drops applicants no longer in the native list")
+ T.ok(G:GetApplicant(6502),"a new leader also sees newly available applicants")
+ T.eq(G:CanManageApplicants(),true)
+ -- A visible recruitment page still receives leadership changes while its old
+ -- listing is inactive; the new listing must restore applicant subscriptions.
+ S.activeEntry=nil;Stubs.FireEvent("LFG_LIST_ACTIVE_ENTRY_UPDATE",false)
+ T.eq(G.Game.frame.events.LFG_LIST_APPLICANT_LIST_UPDATED,nil)
+ S.activeEntry={activityIDs={502},name="Transferred listing",autoAccept=false};leader=false
+ Stubs.FireEvent("PARTY_LEADER_CHANGED")
+ T.ok(G:GetApplicant(6502),"handoff recovers applicants after the old listing became inactive")
+ T.eq(G.Game.frame.events.LFG_LIST_APPLICANT_LIST_UPDATED,true,"handoff restores applicant-list notifications")
+ T.eq(G.Game.frame.events.LFG_LIST_APPLICANT_UPDATED,true,"handoff restores individual applicant notifications")
+ Add(6503,"Later-Away");Stubs.FireEvent("LFG_LIST_APPLICANT_LIST_UPDATED")
+ T.ok(G:GetApplicant(6503),"later applications continue reaching the former leader")
+ Stubs.AdvanceClock(0);T.eq(visible,"6502,6503")
+ unsubscribe();G:Detach(view)
+ IsInGroup,UnitIsGroupLeader,UnitIsGroupAssistant=inGroup,isLeader,isAssistant
+ S.activeEntry,S.applicants,S.applicantMembers=active,applicants,members
+ G.prefs.listingAutoInvite=autoInvite
+ G.Listing:Restore();G.Applicants:Clear();G.Applicants:Restore();G:RefreshPermissions()
 end
 
 -- Auto-join follows home-party authority and resumes after authority changes.

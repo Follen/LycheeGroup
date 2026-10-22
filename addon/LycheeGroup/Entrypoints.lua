@@ -10,14 +10,31 @@ local WAKE_EVENTS = {
 -- Keep the stock animation running: its OnLoop owns applicant sounds.
 local nativeLFGHooked = false
 local nativeLFGState
-local function ConcealNativeLFGEntry(button)
-    if not A.db.nativeLFGEntry then return end
-    if not nativeLFGState then
-        nativeLFGState = {alpha = button:GetAlpha(), mouse = button:IsMouseEnabled()}
+local function ShouldConcealNativeLFGEntry()
+    if not A.db.nativeLFGEntry then return false end
+    -- Match QueueStatusFrame's dungeon/raid entries, including role checks,
+    -- proposals and in-instance teleport actions, not just the queued phase.
+    for category = 1, NUM_LE_LFG_CATEGORYS do
+        local mode, submode = GetLFGMode(category)
+        if mode and submode ~= "noteleport" then return false end
     end
-    button:SetAlpha(0)
-    button:EnableMouse(false)
-    QueueStatusFrame:Hide()
+    return true
+end
+
+local function UpdateNativeLFGEntry(button)
+    if ShouldConcealNativeLFGEntry() then
+        if not nativeLFGState then
+            nativeLFGState = {alpha = button:GetAlpha(), mouse = button:IsMouseEnabled()}
+        end
+        button:SetAlpha(0)
+        button:EnableMouse(false)
+        QueueStatusFrame:Hide()
+    elseif nativeLFGState then
+        local state = nativeLFGState
+        nativeLFGState = nil
+        button:SetAlpha(state.alpha)
+        button:EnableMouse(state.mouse)
+    end
 end
 
 function A:SyncNativeLFGEntry()
@@ -29,19 +46,16 @@ function A:SyncNativeLFGEntry()
     end
     if not nativeLFGHooked and self.db.nativeLFGEntry then
         nativeLFGHooked = true
-        button:HookScript("OnShow", ConcealNativeLFGEntry)
+        button:HookScript("OnShow", UpdateNativeLFGEntry)
         hooksecurefunc(button, "SetAlpha", function(eye, alpha)
-            if A.db.nativeLFGEntry and alpha ~= 0 then eye:SetAlpha(0) end
+            if nativeLFGState and alpha ~= 0 then eye:SetAlpha(0) end
+        end)
+        hooksecurefunc(QueueStatusFrame, "Update", function()
+            UpdateNativeLFGEntry(button)
         end)
     end
     events:UnregisterEvent("ADDON_LOADED")
-    if self.db.nativeLFGEntry then
-        ConcealNativeLFGEntry(button)
-    elseif nativeLFGState then
-        button:SetAlpha(nativeLFGState.alpha)
-        button:EnableMouse(nativeLFGState.mouse)
-        nativeLFGState = nil
-    end
+    UpdateNativeLFGEntry(button)
 end
 
 local function StopGroupWake()
