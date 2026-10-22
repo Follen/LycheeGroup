@@ -191,8 +191,21 @@ function Library.AttachNative(context)
   -- Other browsers reparent and lay out these same fields when their pages
   -- open. Return our presentation on that layout event, before the next key
   -- or focus event; no polling or permanent method hook is needed.
+  local function ResizeContent(control,previous,...)
+   Forward(control,previous,...)
+   if not lease:IsOwned() then lease:Release();return end
+   -- The native template sizes its EditBox only on load. A borrowed viewport
+   -- can resize later, so keep its text and instructions at the current width.
+   box:SetWidth(shell:GetWidth()-(options.contentInset or 36))
+   if not lease:IsOwned() then lease:Release();return end
+   if instructions then
+    instructions:SetWidth(box:GetWidth());appliedInstructionWidth=instructions:GetWidth()
+   end
+  end
   for _,event in ipairs({"OnShow","OnSizeChanged"}) do
-   if container~=box or scripts[event]==nil then lease:Bind(container,event,Forward) end
+   if container~=box or scripts[event]==nil then
+    lease:Bind(container,event,container~=box and event=="OnSizeChanged" and ResizeContent or Forward)
+   end
   end
   function lease:RefreshStyle()
    if not self:IsOwned() then return end

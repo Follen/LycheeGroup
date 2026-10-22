@@ -5,7 +5,7 @@ local C,T,L=UI.C,UI.Theme,UI.L
 local P={section="general"};UI.pages.settings=P
 local zh=A:GetLocale()=="zhCN"
 local function S(cn,en) return zh and cn or en end
-local sections={{"general",S("入口与快捷键","Access & shortcuts")},{"interface",S("界面与外观","Appearance")},{"browse",S("队伍与成员","Groups & members")},{"notes",S("笔记与提醒","Notes and reminders")},{"floating",S("悬浮窗","Floating window")},{"about",L.about}}
+local sections={{"general",S("入口与快捷键","Access & shortcuts")},{"interface",S("界面与外观","Appearance")},{"browse",S("队伍与成员","Groups & members")},{"blocks",S("屏蔽","Blocks")},{"notes",S("笔记与提醒","Notes and reminders")},{"floating",S("悬浮窗","Floating window")},{"about",L.about}}
 local types={{value="positive",label=S("推荐","Positive")},{value="neutral",label=S("中性","Neutral")},{value="caution",label=S("拉黑","Blocked")}}
 local definitions={
  general={{"toggleBinding",A.L.bindingToggle,"","binding"},
@@ -40,7 +40,7 @@ function P:Build(parent)
   end
  end)
  root:HookScript("OnHide",function() P:CancelBindingCapture(true) end)
- local rail=CreateFrame("Frame",nil,root);rail:SetSize(RAIL,T.contentHeight);rail:SetPoint("TOPLEFT")
+ local rail=CreateFrame("Frame",nil,root);rail:SetSize(RAIL,T.contentHeight);rail:SetPoint("TOPLEFT");self.rail=rail
  self.nav={};for i,entry in ipairs(sections) do
   local b=C.Navigation(rail,entry[2],RAIL,function() P:SelectSection(entry[1]) end,nil,{radius=8,fontSize=14});b:SetPoint("TOPLEFT",0,-12-(i-1)*52);b.label:SetWidth(176)
   self.nav[entry[1]]=b
@@ -57,8 +57,83 @@ function P:Build(parent)
  self.reloadLanguage=C.Button(self.panels.interface,S("重载界面","Reload UI"),220,function() C_UI.Reload() end)
  self:BuildAbout(self.panels.about)
 end
+function P:BuildBlocks()
+ local panel=self.panels.blocks
+ self.blocksHelp=C.Text(panel,S("屏蔽相同标题队伍时，也会屏蔽对应队长。","Blocking groups with the same title also blocks their leaders."),14,T.muted,BODY_WIDTH)
+ self.blocksHelp:SetPoint("TOPLEFT");self.blocksHelp:SetWordWrap(true);C.SetLineHeight(self.blocksHelp,20)
+ self.blocksCount=C.Text(panel,"",14,T.muted);C.SetLineHeight(self.blocksCount,20,true)
+ self.blocksClear=C.Button(panel,S("全部清空","Clear all"),120,function() if P.blockGroup then P.blockGroup.Results:ClearBlockedTitles() end end,{variant="text"})
+ local list=C.List(panel,BODY_WIDTH+12,T.contentHeight-120,52)
+ list:SetStyle({selectionFill=false,selectionMark=false,hoverFill=false});self.blocksList=list
+ list:SetRowInitializer(function(row)
+  row.title:ClearAllPoints();row.title:SetPoint("LEFT",12,0);row.title:SetWordWrap(false);C.SetFont(row.title,15);C.SetLineHeight(row.title,20,true)
+  row.meta:ClearAllPoints();row.meta:Show();row.meta:SetWordWrap(false);C.SetFont(row.meta,13);C.SetLineHeight(row.meta,18,true);UI:Color(row.meta,T.muted)
+  row:SetScript("OnClick",nil)
+  row.remove=C.Button(row,S("移除","Remove"),96,function(button)
+   if P.blockGroup and row.key==button.targetKey and row._hitVisible and list.clip:IsMouseOver() then P.blockGroup.Results:RemoveBlockedLeader(button.targetKey) end
+  end,{variant="text"});row.remove:SetPoint("RIGHT",-12,0)
+ end)
+ self.blocksEmpty=C.Text(panel,"",18,T.dim,BODY_WIDTH);C.SetLineHeight(self.blocksEmpty,24);self.blocksEmpty:SetJustifyH("CENTER");self.blocksEmpty:SetWordWrap(true)
+end
+function P:LayoutBlocks()
+ if not self.blocksList then return end
+ local top=self.blocksHelp:GetStringHeight()+8
+ self.blocksHelp:SetHeight(self.blocksHelp:GetStringHeight())
+ local list=self.blocksList
+ local toolbarHeight=math.max(32,math.ceil(self.blocksClear.label:GetStringHeight())+12)
+ self.blocksClear:SetHeight(toolbarHeight)
+ self.blocksClear:SetWidth(math.ceil(self.blocksClear.label:GetStringWidth())+32)
+ self.blocksClear:ClearAllPoints();self.blocksClear:SetPoint("TOPRIGHT",-list.gutter-12,-top)
+ self.blocksCount:ClearAllPoints();self.blocksCount:SetPoint("LEFT",self.panels.blocks,"TOPLEFT",0,-top-toolbarHeight/2)
+ top=top+toolbarHeight+8
+ local rowHeight=math.max(52,math.ceil((20+T.lineHeightDelta)*UI.context.fontScale+24))
+ local changed=list.rowHeight~=rowHeight
+ list.rowHeight=rowHeight;list.capacity=math.min(list.poolCapacity-1,math.ceil(list:GetHeight()/rowHeight))
+ list.canvas:SetHeight(list:GetHeight()+rowHeight*2)
+ local viewport=math.max(rowHeight,self.panels.blocks:GetHeight()-top)
+ local sameViewport=list.viewportHeight==viewport
+ list:ClearAllPoints();list:SetPoint("TOPLEFT",-12,-top);list:SetViewport(viewport)
+ for i,row in ipairs(list.rows) do
+  row:SetHeight(rowHeight);row:SetPoint("TOPLEFT",0,-(i-1)*rowHeight)
+  row.remove:SetHeight(toolbarHeight)
+  row.remove:SetWidth(math.ceil(row.remove.label:GetStringWidth())+32)
+  local contentWidth=row:GetWidth()-row.remove:GetWidth()-72
+  local nameWidth=math.floor(contentWidth*.55)
+  row.title:SetWidth(nameWidth)
+  row.meta:SetPoint("LEFT",row,"LEFT",12+nameWidth+24,0);row.meta:SetWidth(contentWidth-nameWidth)
+ end
+ if changed and sameViewport then list:Refresh(true) end
+ self.blocksEmpty:ClearAllPoints();self.blocksEmpty:SetPoint("TOPLEFT",0,-top-48)
+end
+function P:RefreshBlocks()
+ local results=self.blockGroup and self.blockGroup.Results
+ local leaders=results and results:GetBlockedLeaders() or {}
+ UI:SetText(self.blocksCount,S("已屏蔽 %d 位队长","%d blocked leaders"):format(#leaders))
+ self.blocksClear:SetAvailable(results~=nil and (#leaders>0 or results:GetBlockedTitleCount()>0))
+ self.blocksList:SetShown(#leaders>0);self.blocksEmpty:SetShown(#leaders==0)
+ UI:SetText(self.blocksEmpty,self.blockError or S("暂无屏蔽的队长","No blocked leaders"))
+ self.blocksList:SetItems(leaders,function(row,key)
+  local _,name,realm=A:PlayerKey(key)
+  UI:SetText(row.title,name);UI:SetText(row.meta,realm);row.remove.targetKey=key
+ end)
+ self:LayoutBlocks()
+end
+function P:StopBlocks()
+ if self.blocksUnsub then self.blocksUnsub();self.blocksUnsub=nil end
+ self.blockGroup,self.blockError=nil,nil
+ if self.blocksList then self.blocksList:Clear();for _,row in ipairs(self.blocksList.rows) do row.remove.targetKey=nil end end
+end
+function P:EnterBlocks()
+ if not self.blocksList then self:BuildBlocks() end
+ if not self.blockGroup then
+  local group,err
+  if UI.preview then group=UI:GetGroup() else group,err=A:Ensure("Group") end
+  self.blockGroup,self.blockError=group,err
+  if group then self.blocksUnsub=group:Subscribe(function(kind) if kind=="results" then P:RefreshBlocks() end end) end
+ end
+end
 function P:BuildAbout(parent)
- local header=CreateFrame("Frame",nil,parent);header:SetSize(BODY_WIDTH,80);header:SetPoint("TOPLEFT");UI.drag:AddHandle(header)
+ local header=CreateFrame("Frame",nil,parent);header:SetSize(BODY_WIDTH,80);header:SetPoint("TOPLEFT");UI.drag:AddHandle(header);self.aboutHeader=header
  local logo=C.Icon(header,44);logo:SetTexture(T.media.."lychee-logo.tga");logo:SetPoint("TOPLEFT",12,-4)
  self.aboutValues={}
  local name=C.Text(header,"",18,T.text,BODY_WIDTH-84);C.SetLineHeight(name,24,true);name:SetWordWrap(false);name:SetPoint("TOPLEFT",72,-4);self.aboutValues.name=name
@@ -228,9 +303,10 @@ function P:BeginBindingCapture()
 end
 function P:LayoutRows()
  local offset=self.bindingNotice and self.bindingNotice:IsShown() and self.bindingNotice:GetHeight()+12 or 0
- for _,panel in pairs(self.panels) do
+ for key,panel in pairs(self.panels) do
   UI.Motion:FinishPlacement(panel)
-  panel:ClearAllPoints();panel:SetPoint("TOPLEFT",self.main,"TOPLEFT",PAD,-80-offset);panel:SetHeight(T.contentHeight-120-offset)
+  panel.layoutTop=(key=="blocks" and PAD+self.heading:GetHeight()+12 or 80)+offset
+  panel:ClearAllPoints();panel:SetPoint("TOPLEFT",self.main,"TOPLEFT",PAD,-panel.layoutTop);panel:SetHeight((self.layoutHeight or T.contentHeight)-panel.layoutTop-40)
   local top=0
   for _,row in ipairs(panel.rows or {}) do
    if row.action then row.action:SetWidth(math.ceil(row.action.label:GetStringWidth())+32) end
@@ -241,14 +317,36 @@ function P:LayoutRows()
  end
  self.reloadLanguage:ClearAllPoints();self.reloadLanguage:SetPoint("TOPRIGHT",0,-self.panels.interface.nextRowY-16)
 end
+function P:LayoutSize(width,height)
+ self.layoutHeight=height;BODY_WIDTH=width-MAIN_X-PAD*2-12
+ self.rail:SetHeight(height);self.main:SetSize(width-MAIN_X,height)
+ local content=BODY_WIDTH-24-220-48;local labelWidth=content*.4;local helpWidth=content-labelWidth
+ for _,panel in pairs(self.panels) do
+  panel:SetWidth(BODY_WIDTH)
+  for _,row in ipairs(panel.rows or {}) do
+   row.frame:SetWidth(BODY_WIDTH);row.label:SetWidth(labelWidth);row.help:SetWidth(helpWidth)
+   row.help:SetPoint("LEFT",36+labelWidth,0)
+  end
+ end
+ self.aboutHeader:SetWidth(BODY_WIDTH);self.aboutValues.name:SetWidth(BODY_WIDTH-84)
+ self.otherAddonsHeading:SetWidth(BODY_WIDTH-24)
+ for _,row in ipairs(self.otherAddons) do row.frame:SetWidth(BODY_WIDTH);row.title:SetWidth(BODY_WIDTH-84);row.summary:SetWidth(BODY_WIDTH-96) end
+ if self.bindingNotice then self.bindingNotice:SetWidth(BODY_WIDTH) end
+ self:LayoutRows()
+ if self.blocksList then
+  self.blocksHelp:SetWidth(BODY_WIDTH);self.blocksEmpty:SetWidth(BODY_WIDTH);self.blocksList:SetWidth(BODY_WIDTH+12);self:LayoutBlocks()
+ end
+ if self.section=="about" then self:RefreshAbout() end
+end
 function P:SelectSection(key)
  local changed=self.section~=key
- if changed then self:CancelBindingCapture(true) end
+ if changed then self:CancelBindingCapture(true);self:StopBlocks() end
  for _,panel in pairs(self.panels) do UI.Motion:FinishPlacement(panel) end
  self.section=key;for id,panel in pairs(self.panels) do panel:SetShown(id==key);self.nav[id]:SetActive(id==key);UI:Color(self.nav[id].label,id==key and T.text or T.muted) end
  for _,entry in ipairs(sections) do if entry[1]==key then UI:SetText(self.heading,entry[2]);break end end
+ if key=="blocks" then self:EnterBlocks() end
  self:Sync()
- if changed then UI.Motion:Reveal(self.panels[key],"TOPLEFT",self.main,"TOPLEFT",PAD,-80,4,0,.14) end
+ if changed then UI.Motion:Reveal(self.panels[key],"TOPLEFT",self.main,"TOPLEFT",PAD,-self.panels[key].layoutTop,4,0,.14) end
 end
 function P:Sync()
  for key,entry in pairs(self.controls) do
@@ -273,9 +371,11 @@ function P:Sync()
  self.reloadLanguage:SetShown(A:NeedsLanguageReload())
  self:LayoutRows()
  if self.section=="about" then self:RefreshAbout() end
+ if self.section=="blocks" then self:RefreshBlocks() end
 end
 function P:Enter(context) self.frame:RegisterEvent("UPDATE_BINDINGS");self:SelectSection(context and context.section or self.section) end
 function P:Leave()
+ self:StopBlocks()
  self.frame:UnregisterEvent("UPDATE_BINDINGS")
  self.aboutClicks=0;self:HideDedicationToast()
  self.controls.uiScale.widget:FinishDrag(false)

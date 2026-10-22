@@ -35,6 +35,7 @@ function G:Initialize()
 	db.schema = 1
 
 	self.db = db
+ db.blockedLeaders=db.blockedLeaders or {}
  self.prefs=A.charPrefs
  -- Keep the old account snapshot as the seed for characters not opened yet.
  -- Each character gets its own nested tables once; future edits never alias it.

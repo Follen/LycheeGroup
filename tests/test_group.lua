@@ -428,6 +428,64 @@ do
 		G.Results:BeginSearch(G.Results.gen);G.Results:CommitResults(G.Results.gen)
 	end
 
+	do
+		-- Live Retail refreshes replace both result IDs and |Kt...|k title tokens.
+		local oldResults,oldIDs=S.results,S.resultIDs
+		S.results={
+			[21]={searchResultID=21,activityIDs={502},name="|Kt4774|k",partyGUID="Party-block-a",leaderName="甲-晨风号角",numMembers=1,age=1},
+			[22]={searchResultID=22,activityIDs={502},name="|Kt4774|k",partyGUID="Party-block-b",leaderName="乙-晨风号角",numMembers=1,age=2},
+			[23]={searchResultID=23,activityIDs={502},name="|Kt4798|k",partyGUID="Party-keep",leaderName="丙-晨风号角",numMembers=1,age=3},
+		}
+		S.resultIDs={21,22,23}
+		G.Results:BeginSearch(G.Results.gen);G.Results:CommitResults(G.Results.gen)
+		local reads,searches=S.resultReads,#S.searchCalls
+		G.Results:BlockTitle(S.results[21].name)
+		T.same(G.Results:GetResults(),{23},"the native title blocks every current matching group")
+		T.eq(G.db.blockedLeaders["甲-晨风号角"],true);T.eq(G.db.blockedLeaders["乙-晨风号角"],true)
+		T.eq(S.resultReads,reads);T.eq(#S.searchCalls,searches,"saving matching leaders reuses the current result snapshot")
+		local blocked=G.Results:GetBlockedLeaders()
+		T.eq(#blocked,2);T.eq(G.Results:GetBlockedLeaders(),blocked,"unchanged block-list reads reuse the sorted key array")
+		T.ok(G.Results:RemoveBlockedLeader("乙-晨风号角"))
+		G.Results:OnResultUpdated(22)
+		T.same(G.Results:GetResults(),{22,23},"removing one leader overrides the still-active title rule after native updates")
+		T.eq(#G.Results:GetBlockedLeaders(),1);T.eq(G.db.blockedLeaders["甲-晨风号角"],true,"removing one leader keeps every other saved block")
+		local notices=notifications.results
+		T.eq(G.Results:RemoveBlockedLeader("missing-晨风号角"),false);T.eq(notifications.results,notices)
+		T.ok(G.Results:BlockTitle(S.results[21].name))
+		T.same(G.Results:GetResults(),{23},"explicitly blocking the title again can re-add a removed leader")
+		S.results={
+			[31]={searchResultID=31,activityIDs={502},name="|Kt4898|k",partyGUID="Party-block-a",leaderName="甲-晨风号角",numMembers=1,age=1},
+			[32]={searchResultID=32,activityIDs={502},name="|Kt4898|k",partyGUID="Party-block-b",leaderName="乙-晨风号角",numMembers=1,age=2},
+			[33]={searchResultID=33,activityIDs={502},name="|Kt4920|k",partyGUID="Party-keep",leaderName="丙-晨风号角",numMembers=1,age=3},
+		}
+		S.resultIDs={31,32,33}
+		G.Results:BeginSearch(G.Results.gen);G.Results:CommitResults(G.Results.gen)
+		T.same(G.Results:GetResults(),{33},"blocked groups remain hidden when refresh replaces native result IDs and title tokens")
+		S.results[31].name="Changed title";G.Results:OnResultUpdated(31)
+		S.results[34]={searchResultID=34,activityIDs={502},name="A new group",partyGUID="Party-new",leaderName="甲-晨风号角",numMembers=1,age=1}
+		S.results[35]={searchResultID=35,activityIDs={502},name="Changed title",partyGUID="Party-foreign",leaderName="甲-其他服务器",numMembers=1,age=4}
+		S.results[36]={searchResultID=36,activityIDs={502},name="|Kt4774|k",numMembers=1,age=5}
+		S.resultIDs={31,32,33,34,35,36}
+		G.Results:CommitResults(G.Results.gen)
+		T.same(G.Results:GetResults(),{33,35},"saved leaders stay blocked after changing titles or creating groups; another realm is distinct")
+		S.results[36].leaderName="迟到-晨风号角";G.Results:OnResultUpdated(36)
+		T.eq(G.db.blockedLeaders["迟到-晨风号角"],true,"a title-matched result saves its leader when the native name becomes available")
+		S.results[36].name="Another title";G.Results:OnResultUpdated(36)
+		T.same(G.Results:GetResults(),{33,35},"the late leader keeps the block after its title changes")
+		G.Results:BlockTitle("Application outside this search","申请队长-晨风号角")
+		T.eq(G.db.blockedLeaders["申请队长-晨风号角"],true,"an application's selected leader can be blocked outside the current result snapshot")
+		Load.addon("LycheeGroup_Group","Results.lua")
+		T.eq(G.Results:GetBlockedTitleCount(),0,"native title tokens are not retained across a module reload")
+		T.eq(#G.Results:GetBlockedLeaders(),4,"the settings list reconstructs all saved leader identities after reload")
+		G.Results:BeginSearch(G.Results.gen);G.Results:CommitResults(G.Results.gen)
+		T.same(G.Results:GetResults(),{33,35},"account leader blocks survive loading a fresh Results owner")
+		G.Results:ClearBlockedTitles()
+		T.eq(next(G.db.blockedLeaders),nil,"clearing after reload removes saved leaders even without session title tokens")
+		T.eq(#G.Results:GetResults(),6)
+		S.results,S.resultIDs=oldResults,oldIDs
+		G.Results:BeginSearch(G.Results.gen);G.Results:CommitResults(G.Results.gen)
+	end
+
 	-- 好友优先作为所有常用排序的第一关键字。
 	do
 		S.results[11].numBNetFriends=1;S.results[12].numCharFriends=1;S.results[13].numGuildMates=1
@@ -1481,7 +1539,7 @@ do
  T.eq(G.Game.frame:GetScript("OnUpdate"),nil,"completion leaves no duplicate deferred full read")
  Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED")
  T.eq(S.resultReads,reads+3,"a duplicate completion event does not reread a finished search")
- T.eq(lists,1,"queued bulk and completion share one native ID array")
+ T.eq(lists,2,"completion shares its queued bulk read; a duplicate only checks current native IDs")
 
  S.results[93001].name="After completion";G:OnEvent("LFG_LIST_SEARCH_RESULT_UPDATED",93001)
  G.Game.frame:GetScript("OnUpdate")()
@@ -1978,6 +2036,25 @@ do
  T.eq(G.Catalog:GetGroupShortName("seasonDungeon",20),"RLP")
  group.activity.mapID=map;A.locale=locale
  T.eq(G.Catalog:GetGroupShortName("seasonDungeon",20),group.name,"unmapped future dungeons retain their actual catalog name")
+end
+
+do
+ -- Collections compare by contents, and queued selections keep their own snapshot.
+ local view={};G:Attach(view,"search");G.Search:EndBrowse()
+ local calls=#S.searchCalls
+ T.ok(G.Search:Search("seasonDungeon",{502}))
+ G.Search:Search("seasonDungeon",{503});T.ok(G.Search.pending)
+ G.Search:Search("seasonDungeon",{502});T.eq(G.Search.pending,nil,"reselecting the in-flight activities cancels a superseded queue")
+ local selection={502,503};G.Search:Search("seasonDungeon",selection);selection[2]=504
+ Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED");Stubs.AdvanceClock(0)
+ T.eq(#S.searchCalls,calls+2)
+ T.same(S.searchCalls[#S.searchCalls].activityFilter,{502,503},"a later picker edit cannot change an already queued collection")
+ G.Search:Search("seasonDungeon",{502,503});T.eq(G.Search.pending,nil,"equivalent new arrays do not queue another request")
+ Fire("LFG_LIST_SEARCH_FAILED","throttled");local timer=G.Search.timer
+ Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED")
+ T.eq(G.Search:GetState(),"waiting","another browser's completion cannot consume a throttled selection")
+ T.eq(G.Search.timer,timer);T.same(G.Search.pending.activityIDs,{502,503})
+ G:Detach(view);T.eq(timer.cancelled,true)
 end
 
 do
@@ -3008,6 +3085,85 @@ do
  GetNumClasses,GetClassInfo,GetSpecializationInfoForClassID=getNum,getClass,getClassSpec
  C_SpecializationInfo.GetSpecialization,C_SpecializationInfo.GetSpecializationInfo=getSelected,getInfo
  C_SpecializationInfo.GetNumSpecializationsForClassID=getClassCount
+end
+
+-- Declines follow a native party across search IDs, title tickets and roster changes.
+do
+ local savedResults,savedIDs,savedApps,savedStatus,savedPending,savedNow=S.results,S.resultIDs,S.applications,S.appStatus,S.appPending,S.now
+ local function Result(guid,name,age,friend)
+  return {activityIDs={502},partyGUID=guid,name=name,leaderName="DeclineLeader-Away",numMembers=3,age=age,numCharFriends=friend and 1 or 0,leaderOverallDungeonScore=3000-age,requiredItemLevel=300-age}
+ end
+ S.results={[95001]=Result("Party-declined","|Kt100|k",1,true),[95002]=Result("Party-friend","Other",10,true),[95003]=Result("Party-normal","|Kt100|k",20)}
+ S.resultIDs={95001,95002,95003};S.applications={95001};S.appStatus={[95001]="applied"};S.appPending={};S.now=1000
+ local view={};G:Attach(view,"search");G.Search:SetFilters({sort="newest"})
+ G.Results:BeginSearch(95001);G.Results:CommitResults(95001);G.Applications:SyncAll()
+ T.eq(G:GetResult(95001).partyGUID,"Party-declined","result snapshots retain the native party identity")
+ T.eq(G:GetApplication(95001).partyGUID,"Party-declined","active applications retain the identity before a terminal event")
+ G:Detach(view);S.results[95001]=nil
+ local reads,players=S.resultReads,S.playerReads
+ S.appStatus[95001]="declined";Fire("LFG_LIST_APPLICATION_STATUS_UPDATED",95001,"declined","applied")
+ T.eq(G.Applications:GetDeclinedAt("Party-declined"),1000,"a decline uses the cached identity after search and native metadata disappear")
+ T.eq(S.resultReads,reads);T.eq(S.playerReads,players,"a cached rejection needs no metadata or member reread")
+ T.eq(G:GetApplication(95001),nil,"hidden terminal application data still retires immediately")
+ S.now=1060;G.Applications:SyncAll();Fire("LFG_LIST_APPLICATION_STATUS_UPDATED",95001,"declined","declined")
+ T.eq(G.Applications:GetDeclinedAt("Party-declined"),1000,"duplicate snapshots and events do not restart the rejection clock")
+
+ S.results[95011]=Result("Party-declined","|Kt999|k",0,true);S.results[95011].numMembers=5
+ S.results[95012]=Result("Party-rebuilt","|Kt100|k",2)
+ S.resultIDs={95011,95012,95002,95003};S.applications={};G.Applications:SyncAll()
+ G:Attach(view,"search");G.Results:BeginSearch(95002);G.Results:CommitResults(95002)
+ for _,sort in ipairs({"newest","rating","itemLevel","members"}) do
+  G.Search:SetFilters({sort=sort})
+  T.same(G:GetResults(),{95002,95012,95003,95011},"a rejected friend stays behind every un-rejected party under each sort")
+ end
+ T.eq(G.Applications:GetDeclinedAt(G:GetResult(95011).partyGUID),1000,"a new result ID, title and member count preserve the same party's decline")
+ T.eq(G.Applications:GetDeclinedAt(G:GetResult(95012).partyGUID),nil,"a new party with the same title and leader does not inherit the decline")
+
+ S.applications={95011};S.appStatus[95011]="applied";Fire("LFG_LIST_APPLICATION_STATUS_UPDATED",95011,"applied","none")
+ S.now=1120;S.appStatus[95011]="declined";Fire("LFG_LIST_APPLICATION_STATUS_UPDATED",95011,"declined","applied")
+ T.eq(G.Applications:GetDeclinedAt("Party-declined"),1120,"a second application rejected by the same party records the newer refusal")
+ S.now=1126;Stubs.AdvanceClock(6)
+ T.eq(G:GetApplication(95011),nil)
+ T.eq(G.Applications:GetDeclinedAt("Party-declined"),1120,"the rejection survives the five-second application retirement")
+
+ for index,status in ipairs({"cancelled","timedout","expired","declined_full","declined_delisted","invitedeclined"}) do
+  local id=95100+index;local guid="Party-other-terminal-"..index
+  S.results[id]=Result(guid,"Other terminal",index);S.applications={id};S.appStatus[id]="applied";G.Applications:SyncAll()
+  S.appStatus[id]=status;Fire("LFG_LIST_APPLICATION_STATUS_UPDATED",id,status,"applied")
+  T.eq(G.Applications:GetDeclinedAt(guid),nil,"only an explicit rejection is marked, not "..status)
+ end
+ S.applications={};G.Applications:SyncAll()
+ S.results[95201]=Result("Party-first-event","First event",1)
+ reads,players=S.resultReads,S.playerReads
+ G.Applications:OnStatusUpdated(95201,"declined","applied")
+ T.eq(G.Applications:GetDeclinedAt("Party-first-event"),1126,"an externally submitted application can recover identity when the decline is its first observed event")
+ T.eq(S.resultReads,reads+1);T.eq(S.playerReads,players,"identity recovery reads only the result metadata")
+ G.Applications:OnStatusUpdated(95202,"declined","applied")
+ T.eq(G.Applications:GetDeclinedAt(nil),nil,"unavailable identity never falls back to title, leader or result ID")
+ G:Detach(view);S.applications={};G.Applications:SyncAll()
+ S.results,S.resultIDs,S.applications,S.appStatus,S.appPending,S.now=savedResults,savedIDs,savedApps,savedStatus,savedPending,savedNow
+end
+
+-- Another native browser completes a search while our visible browser is idle.
+do
+ local savedResults,savedIDs,savedApps=S.results,S.resultIDs,S.applications
+ S.applications={};G.Applications:SyncAll()
+ S.results={
+  [96001]={activityIDs={502},name="Previous global search",numMembers=2,age=1},
+  [96002]={activityIDs={502},name="Current global search A",numMembers=2,age=1},
+  [96003]={activityIDs={502},name="Current global search B",numMembers=3,age=2},
+ }
+ S.resultIDs={96001}
+ local view={};G:Attach(view,"search")
+ G.Search.state="idle";G.Search.pending=nil;G.Search:SetFilters({category="seasonDungeon"})
+ T.ok(G.Search:Search("seasonDungeon",nil,"native"))
+ Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED")
+ T.same(G:GetResults(),{96001});T.eq(G.Search:GetState(),"done")
+ S.resultIDs={96002,96003}
+ Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED")
+ T.same(G:GetResults(),{96002,96003},"a visible browser must replace old tickets when another native search completes")
+ T.eq(G:GetResult(96001),nil,"the obsolete native ticket must not remain available to row tooltips")
+ G:Detach(view);S.results,S.resultIDs,S.applications=savedResults,savedIDs,savedApps
 end
 
 _G.LycheeGroupDB = nil

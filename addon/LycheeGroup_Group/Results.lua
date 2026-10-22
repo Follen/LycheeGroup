@@ -4,8 +4,11 @@ local G = A.Group
 local Results={gen=0}
 G.Results=Results
 local records,ids,detailQueue,pendingIDs,changedIDs={},{},{},{},{}
--- Exact native title keys live only for this login; never serialize or parse them.
+-- Native title tokens change across searches. Keep them in-session only;
+-- matching leaders use their complete player keys in the account saved data.
 local blockedTitles,blockedTitleCount={},0
+local unblockedLeaders,blockedLeaderIDs={},{}
+local blockedLeadersDirty=true
 local pendingBulk,committing
 local updateVersion=0
 local BULK_INTERVAL=.2
@@ -16,6 +19,13 @@ local DETAIL_CAPACITY=64
 local count,scan=0,0
 local dirty=true
 local Public=G.Public
+local function RememberBlockedLeader(record)
+ if blockedTitles[record.name] and record.leaderKey and not unblockedLeaders[record.leaderKey] and not G.db.blockedLeaders[record.leaderKey] then
+  G.db.blockedLeaders[record.leaderKey]=true
+  blockedLeadersDirty=true
+  return true
+ end
+end
 local function Normalize(id,record,invalidateDetails,expectedScan,metadataDirty)
  -- Repeated consumers can share a same-frame read. A new native event makes
  -- its metadata dirty even when GetTime has not advanced to another frame.
@@ -44,8 +54,10 @@ local function Normalize(id,record,invalidateDetails,expectedScan,metadataDirty)
  -- Rated battleground activity 19 reports 0; Blizzard's queue uses this team size.
  if record.categoryID==9 and record.maxNumPlayers==0 then record.maxNumPlayers=CONQUEST_SIZES[5] end
  record.name,record.comment=Public(info.name),Public(info.comment)
+ record.partyGUID=Public(info.partyGUID)
  record.leaderName=Public(info.leaderName)
  record.leaderKey=G:RemotePlayerKey(record.leaderName)
+ RememberBlockedLeader(record)
  record.leaderFactionGroup=Public(info.leaderFactionGroup)
  record.numMembers=Public(info.numMembers) or 0
  record.age=Public(info.age) or 0
@@ -212,7 +224,7 @@ local function MatchesLeaderText(record,text)
  return type(leader)=="string" and leader:lower():find(text,1,true)~=nil
 end
 local function Pass(record,filters,leaderText,playerSpecID)
- if blockedTitles[record.name] then return false end
+ if blockedTitles[record.name] and not unblockedLeaders[record.leaderKey] or G.db.blockedLeaders[record.leaderKey] then return false end
  if G.Applications:IsActive(record.id) then return false end
  if leaderText and not MatchesLeaderText(record,leaderText) then return false end
  if filters.category and not G.Catalog:Matches(record.activity,filters.category,filters.groupKey,filters.difficultyID,filters.tier,filters.groupKeys) then return false end
@@ -251,6 +263,8 @@ end
 local sorting
 local function Sort(a,b)
  local x,y=records[a],records[b]
+ local xd,yd=G.Applications:GetDeclinedAt(x.partyGUID)~=nil,G.Applications:GetDeclinedAt(y.partyGUID)~=nil
+ if xd~=yd then return not xd end
  local xf,yf=x.bnetFriends+x.charFriends>0,y.bnetFriends+y.charFriends>0
  if xf~=yf then return xf end
  local av,bv
@@ -262,19 +276,47 @@ local function Sort(a,b)
  return a<b
 end
 function Results:InvalidateView() dirty=true end
-function Results:BlockTitle(title)
- if title==nil or blockedTitles[title] then return false end
- blockedTitles[title]=true;blockedTitleCount=blockedTitleCount+1
+function Results:BlockTitle(title,leaderKey)
+ if title==nil then return false end
+ local changed=not blockedTitles[title]
+ if changed then blockedTitles[title]=true;blockedTitleCount=blockedTitleCount+1 end
+ -- The selected application may no longer belong to the current search.
+ if leaderKey then
+  unblockedLeaders[leaderKey]=nil
+  if not G.db.blockedLeaders[leaderKey] then G.db.blockedLeaders[leaderKey]=true;blockedLeadersDirty=true;changed=true end
+ end
+ for _,record in pairs(records) do
+  if record.name==title and record.leaderKey then unblockedLeaders[record.leaderKey]=nil end
+  if RememberBlockedLeader(record) then changed=true end
+ end
+ if not changed then return false end
  self:InvalidateView();G:Notify("results")
  return true
 end
 function Results:ClearBlockedTitles()
- if blockedTitleCount==0 then return false end
- wipe(blockedTitles);blockedTitleCount=0
+ if blockedTitleCount==0 and not next(G.db.blockedLeaders) then return false end
+ wipe(blockedTitles);wipe(G.db.blockedLeaders);wipe(unblockedLeaders);blockedTitleCount=0;blockedLeadersDirty=true
  self:InvalidateView();G:Notify("results")
  return true
 end
 function Results:GetBlockedTitleCount() return blockedTitleCount end
+function Results:GetBlockedLeaders()
+ if blockedLeadersDirty then
+  wipe(blockedLeaderIDs)
+  for key in pairs(G.db.blockedLeaders) do blockedLeaderIDs[#blockedLeaderIDs+1]=key end
+  table.sort(blockedLeaderIDs);blockedLeadersDirty=false
+ end
+ return blockedLeaderIDs
+end
+function Results:RemoveBlockedLeader(key)
+ if not G.db.blockedLeaders[key] then return false end
+ G.db.blockedLeaders[key]=nil;blockedLeadersDirty=true
+ -- A deliberate removal wins over this session's still-matching title token.
+ -- Explicitly blocking that title again can add the leader back.
+ unblockedLeaders[key]=true
+ self:InvalidateView();G:Notify("results")
+ return true
+end
 local function FinishUpdates(version,fullSnapshot)
  for id,queued in pairs(pendingIDs) do if queued<=version then pendingIDs[id]=nil end end
  if fullSnapshot and pendingBulk and pendingBulk<=version then pendingBulk=nil end
@@ -328,7 +370,12 @@ function Results:BeginSearch(gen)
  self:CancelUpdates(true)
  self.gen=gen;scan=scan+1;wipe(records);wipe(detailQueue);wipe(ids);count=0;self:InvalidateView();G:Notify("results")
 end
-function Results:CommitResults(gen,updatedIDs)
+function Results:GetChangedResults()
+ local _,list=C_LFGList.GetFilteredSearchResults()
+ if #list~=count then return list end
+ for _,id in ipairs(list) do if not records[id] then return list end end
+end
+function Results:CommitResults(gen,updatedIDs,list)
  if gen~=self.gen then return end
  nextBulkAt=GetTime()+BULK_INTERVAL
  scan=scan+1
@@ -336,7 +383,7 @@ function Results:CommitResults(gen,updatedIDs)
  local applicationsChanged=false
  local metadataDirty=pendingBulk~=nil
  committing=currentScan
- local _,list=C_LFGList.GetFilteredSearchResults()
+ if not list then local _;_,list=C_LFGList.GetFilteredSearchResults() end
  if scan~=currentScan then return end
  for _,id in ipairs(list or {}) do
   local old=records[id]

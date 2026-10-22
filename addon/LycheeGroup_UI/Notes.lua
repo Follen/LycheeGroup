@@ -104,7 +104,7 @@ end
 
 function P:Build(parent)
  local root=CreateFrame("Frame",nil,parent);root:SetAllPoints();self.frame=root
- local rail=CreateFrame("Frame",nil,root);rail:SetSize(RAIL,HEIGHT);rail:SetPoint("TOPLEFT")
+ local rail=CreateFrame("Frame",nil,root);rail:SetSize(RAIL,HEIGHT);rail:SetPoint("TOPLEFT");self.rail=rail
  self.tabs={};self.tabSelection=C.Selection(rail,{radius=8,mark=true})
  for i,entry in ipairs({{"all",S("全部记录","All notes")},{"positive",S("推荐","Positive")},{"neutral",S("中性","Neutral")},{"caution",S("拉黑","Blocked")},{"history",S("历史队友","History")}}) do
   local button=C.Button(rail,entry[2],RAIL,function() P:SelectTab(entry[1]) end,{height=60,radius=8,fontSize=16,lineHeight=22,selectionFill=false});button:SetTextColors(T.muted,T.text,T.onSecondaryContainer);button:SetFrameLevel(self.tabSelection:GetFrameLevel()+1)
@@ -130,7 +130,7 @@ function P:Build(parent)
  self.listTitle=C.Text(self.left,S("玩家记录","Player notes"),14,T.muted);self.listTitle:SetPoint("TOPLEFT",CARD_INSET,0);C.SetLineHeight(self.listTitle,20,true)
  self.countText=C.Text(self.left,"",14,T.dim);self.countText:SetPoint("TOPRIGHT",-C.listRightInset-CARD_RIGHT_INSET,0);C.SetLineHeight(self.countText,20,true)
  self.list=C.List(self.left,LIST_WIDTH,LIST_HEIGHT,ROW_HEIGHT,function(key,button) P:OnSelect(key,button) end);self.list:SetPoint("TOPLEFT",0,-32);self.list.selectionMark=false
- for _,row in ipairs(self.list.rows) do
+ self.list:SetRowInitializer(function(row)
   UI:BindTooltipArea(row,.25,
    function(r) return r:IsEnabled() and r.key and r._hitVisible and P.list.clip:IsMouseOver() end,
    function(r) if P.list.selectedKey~=r.key then UI.Tooltip:ShowNote(r,r.key) end end)
@@ -142,7 +142,10 @@ function P:Build(parent)
   row.kindIcons={}
   for _,entry in ipairs(NOTE_TYPES) do local glyph=C.Glyph(row,entry.key=="positive" and "heart" or entry.key=="caution" and "caution" or "book",12,entry.key=="positive" and T.good or entry.key=="caution" and T.warning or T.muted);glyph:SetPoint("TOPRIGHT",-14-(zh and 26 or 68),-13);glyph:Hide();row.kindIcons[entry.key]=glyph end
   row.date=C.Text(row,"",14,T.dim,132);row.date:SetPoint("TOPRIGHT",-12,-40);row.date:SetJustifyH("RIGHT");C.SetLineHeight(row.date,20,true)
- end
+  local metaTop=math.max(40,8+row.title:GetHeight()+4)
+  row.meta:SetPoint("TOPLEFT",50,-metaTop);row.date:SetPoint("TOPRIGHT",-12,-metaTop)
+  row.reason:SetPoint("TOPLEFT",50,-math.max(68,metaTop+row.meta:GetHeight()+4))
+ end)
  local empty=CreateFrame("Frame",nil,self.left);empty:SetSize(CARD_WIDTH,220);empty:SetPoint("TOPLEFT",self.list,"TOPLEFT");self.emptyState=empty
  self.emptyTitle=C.Text(empty,L.notesEmptyTitle,18,T.muted,CARD_WIDTH-24);C.SetLineHeight(self.emptyTitle,24,true);self.emptyTitle:SetPoint("CENTER");self.emptyTitle:SetJustifyH("CENTER")
  self.editorEmpty=C.Text(main,S("选择玩家查看记录","Select a player to view their note"),18,T.dim,DRAWER_W-32);C.SetLineHeight(self.editorEmpty,24,true);self.editorEmpty:SetPoint("CENTER",main,"TOPLEFT",EDITOR_X-MAIN_X+DRAWER_W/2,-WORK_TOP-(HEIGHT-WORK_TOP-PAD)/2);self.editorEmpty:SetJustifyH("CENTER")
@@ -176,17 +179,20 @@ function P:Build(parent)
  self.historyCaption=C.Text(self.historyFrame,S("当前角色完成的大秘境","Mythic+ runs completed by this character"),14,T.muted);self.historyCaption:SetPoint("TOPLEFT");C.SetLineHeight(self.historyCaption,20,true)
  local historyRowWidth=BODY_WIDTH-C.listRightInset;local activityColumn=(historyRowWidth-24-48-108-20)/2.1;local teammateX=12+activityColumn+16
  local activityHeading=C.Text(self.historyFrame,S("活动","Activity"),14,T.dim);C.SetLineHeight(activityHeading,20,true);activityHeading:SetPoint("TOPLEFT",13,-40)
- local teammateHeading=C.Text(self.historyFrame,S("队友","Teammates"),14,T.dim);C.SetLineHeight(teammateHeading,20,true);teammateHeading:SetPoint("TOPLEFT",teammateX,-40)
+ local teammateHeading=C.Text(self.historyFrame,S("队友","Teammates"),14,T.dim);C.SetLineHeight(teammateHeading,20,true);teammateHeading:SetPoint("TOPLEFT",teammateX,-40);self.teammateHeading=teammateHeading
  local dateHeading=C.Text(self.historyFrame,S("完成时间","Completed"),14,T.dim,108);C.SetLineHeight(dateHeading,20,true);dateHeading:SetPoint("TOPRIGHT",-C.listRightInset-48,-40)
  self.historyList=C.List(self.historyFrame,BODY_WIDTH,HEIGHT-148-PAD,80,function(index) P:OpenRun(index) end);self.historyList:SetPoint("TOPLEFT",0,-72)
- for _,row in ipairs(self.historyList.rows) do
+ self.historyList:SetRowInitializer(function(row)
+  local activityColumn=(BODY_WIDTH-C.listRightInset-24-48-108-20)/2.1
+  local teammateX=12+activityColumn+16
   row.icon=C.Icon(row,36);row.icon:SetPoint("LEFT",12,0)
   row.title:ClearAllPoints();row.title:SetPoint("TOPLEFT",60,-12);row.title:SetWidth(activityColumn-48);C.SetFont(row.title,T.listTitleSize);C.SetLineHeight(row.title,T.listTitleLineHeight,true)
   row.meta:ClearAllPoints();row.meta:SetPoint("TOPLEFT",60,-44);row.meta:SetWidth(activityColumn-48)
   row.roster=C.Roster(row,23,5);row.roster:SetPoint("TOPLEFT",teammateX,-28.5)
   row.date=C.Text(row,"",14,T.muted,108);row.date:SetPoint("RIGHT",-48,0);row.date:SetJustifyH("LEFT");C.SetLineHeight(row.date,20,true)
   C.Glyph(row,"chevron",16):SetPoint("RIGHT",-16,0)
- end
+  row.meta:SetPoint("TOPLEFT",60,-math.max(44,12+row.title:GetHeight()+4))
+ end)
  self.historyEmpty=C.Text(self.historyFrame,L.historyEmpty,16,T.dim,BODY_WIDTH);self.historyEmpty:SetPoint("TOP",0,-140);self.historyEmpty:SetJustifyH("CENTER")
  self:LayoutRows()
 end
@@ -224,6 +230,7 @@ end
 function P:SetEditorStatus(text,kind)
  UI:SetText(self.eStatus,text)
  UI:Color(self.eStatus,kind=="error" and T.warning or kind=="success" and T.good or T.muted)
+ self:LayoutEditor()
 end
 function P:SelectTab(tab,skipDefault)
  local previous=state.tab;local changed=previous~=nil and previous~=tab
@@ -337,6 +344,51 @@ function P:LayoutFont()
  end
 end
 
+function P:LayoutSize(width,height)
+ WIDTH,HEIGHT=width,height
+ MAIN_WIDTH=WIDTH-MAIN_X;BODY_WIDTH=MAIN_WIDTH-PAD*2
+ DRAWER_W=BODY_WIDTH-LIST_WIDTH-GAP
+ LIST_HEIGHT=HEIGHT-WORK_TOP-32-PAD;EDITOR_HEIGHT=math.min(620,HEIGHT-WORK_TOP-PAD)
+ self.rail:SetHeight(HEIGHT);self.main:SetSize(MAIN_WIDTH,HEIGHT);self.toolbar:SetWidth(BODY_WIDTH)
+ self.left:SetHeight(HEIGHT-WORK_TOP-PAD);self.list:SetViewport(LIST_HEIGHT)
+ self.editor:SetSize(DRAWER_W,EDITOR_HEIGHT);self.editorEmpty:SetWidth(DRAWER_W-32)
+ self.editorEmpty:SetPoint("CENTER",self.main,"TOPLEFT",EDITOR_X-MAIN_X+DRAWER_W/2,-WORK_TOP-(HEIGHT-WORK_TOP-PAD)/2)
+ local inner=DRAWER_W-32;local half=(inner-12)/2
+ self.eName:SetWidth(inner);self.eNameHint:SetWidth(inner-24)
+ self.eIdentity:SetWidth(inner-52);self.eRealm:SetWidth(inner-52)
+ self.classChoice:SetWidth(half);self.specChoice:SetWidth(half);self.typeSwitch:SetWidth(inner)
+ for i,entry in ipairs(NOTE_TYPES) do
+  local button=self.typeButtons[entry.key];local w=(inner-14)/3
+  button:SetWidth(w);button:SetPoint("TOPLEFT",3+(i-1)*(w+4),-3)
+ end
+ self.eReason:SetWidth(inner);self.eDate:SetWidth(inner);self.eStatus:SetWidth(inner)
+ self:LayoutEditor()
+ self.historyFrame:SetSize(BODY_WIDTH,HEIGHT-76-PAD);self.historyList:SetWidth(BODY_WIDTH)
+ self.historyList:SetViewport(HEIGHT-148-PAD);self.historyEmpty:SetWidth(BODY_WIDTH)
+ local activityColumn=(BODY_WIDTH-C.listRightInset-24-48-108-20)/2.1;local teammateX=12+activityColumn+16
+ self.teammateHeading:SetPoint("TOPLEFT",teammateX,-40)
+ for _,row in ipairs(self.historyList.rows) do
+  row.title:SetWidth(activityColumn-48);row.meta:SetWidth(activityColumn-48);row.roster:SetPoint("TOPLEFT",teammateX,-28.5)
+ end
+end
+
+function P:LayoutEditor()
+ if not state.panel then return end
+ local add,missing=state.panel=="add",state.panel=="missing"
+ local classTop=add and 156 or 128
+ self.classLabel:SetPoint("TOPLEFT",16,-classTop)
+ self.specLabel:SetPoint("TOPLEFT",28+(DRAWER_W-44)/2,-classTop)
+ self.classChoice:SetPoint("TOPLEFT",16,-classTop-32)
+ self.specChoice:SetPoint("TOPLEFT",28+(DRAWER_W-44)/2,-classTop-32)
+ self.typeLabel:SetPoint("TOPLEFT",16,-classTop-92);self.typeSwitch:SetPoint("TOPLEFT",16,-classTop-124)
+ self.eReasonLabel:SetPoint("TOPLEFT",16,-classTop-172);self.eReason:SetPoint("TOPLEFT",16,-classTop-204)
+ local statusHeight=math.max(24,self.eStatus:GetStringHeight())
+ local reasonHeight=math.max(32,math.min(112,EDITOR_HEIGHT-64-classTop-204-(add and 12 or 48)-statusHeight))
+ self.eReason:SetHeight(reasonHeight)
+ self.eDate:SetPoint("TOPLEFT",16,-classTop-204-reasonHeight-12)
+ self.eStatus:SetPoint("TOPLEFT",self.editor,"TOPLEFT",16,missing and -76 or -classTop-204-reasonHeight-(add and 12 or 48))
+end
+
 function P:OnSelect(key, button)
 	if button == "RightButton" then
 		UI:OpenMenu(self.list, {
@@ -372,19 +424,9 @@ local function ShowEditorChrome(mode,reveal)
  P.eIdentity:SetShown(edit);P.eAvatar:SetShown(edit);P.eRealm:SetShown(edit);P.eDate:SetShown(edit)
  P.eNameLabel:SetShown(add);P.eName:SetShown(add)
  P.classLabel:SetShown(not missing);P.specLabel:SetShown(not missing);P.typeLabel:SetShown(not missing);P.typeSwitch:SetShown(not missing)
- local classTop=add and 156 or 128
- P.classLabel:ClearAllPoints();P.classLabel:SetPoint("TOPLEFT",16,-classTop)
- P.specLabel:ClearAllPoints();P.specLabel:SetPoint("TOPLEFT",28+(DRAWER_W-44)/2,-classTop)
- P.classChoice:ClearAllPoints();P.classChoice:SetPoint("TOPLEFT",16,-classTop-32)
- P.specChoice:ClearAllPoints();P.specChoice:SetPoint("TOPLEFT",28+(DRAWER_W-44)/2,-classTop-32)
- P.typeLabel:ClearAllPoints();P.typeLabel:SetPoint("TOPLEFT",16,-classTop-92)
- P.typeSwitch:ClearAllPoints();P.typeSwitch:SetPoint("TOPLEFT",16,-classTop-124)
- P.eReasonLabel:ClearAllPoints();P.eReasonLabel:SetPoint("TOPLEFT",16,-classTop-172)
- P.eReason:ClearAllPoints();P.eReason:SetPoint("TOPLEFT",16,-classTop-204)
- P.eDate:ClearAllPoints();P.eDate:SetPoint("TOPLEFT",16,-classTop-328)
  P.eReasonLabel:SetShown(not missing);P.eReason:SetShown(not missing);P.eSave:SetShown(not missing);P.eCancel:SetShown(not missing)
  P.eDelete:SetShown(edit);P.classChoice:SetShown(not missing);P.specChoice:SetShown(not missing);for _,button in pairs(P.typeButtons) do button:SetShown(not missing) end
- P.eStatus:ClearAllPoints();P.eStatus:SetPoint("TOPLEFT",P.editor,"TOPLEFT",16,missing and -76 or -classTop-(add and 328 or 364))
+ P:LayoutEditor()
 end
 
 function P:OpenEdit(key)

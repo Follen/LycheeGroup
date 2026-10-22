@@ -3,6 +3,15 @@ local UI = _G.LycheeGroup.UI
 local context = UI.context
 local T = context.Theme
 UI.C = context.C
+local categoryTextures={
+ ["pvp-arena"]="Interface\\AddOns\\LycheeGroup_UI\\Media\\pvp-arena.tga",
+ ["pvp-skirmish"]="Interface\\AddOns\\LycheeGroup_UI\\Media\\pvp-skirmish.tga",
+ ["pvp-battleground"]="Interface\\AddOns\\LycheeGroup_UI\\Media\\pvp-battleground.tga",
+ ["pvp-rated-battleground"]="Interface\\AddOns\\LycheeGroup_UI\\Media\\pvp-rated-battleground.tga",
+}
+function UI:CategoryIcon(kind)
+ return categoryTextures[kind] or T.media..kind..".tga"
+end
 function UI:SetRoleIcon(icon,role)
  return _G.LycheeUI.Context.SetRoleIcon(context,icon,role)
 end
@@ -81,7 +90,7 @@ function UI:SetCategoryIcon(icon,categoryID)
    if category.id==categoryID then kind=category.icon;break end
   end
  end
- icon:SetTexture(T.media..kind..".tga");icon:SetTexCoord(0,1,0,1)
+ icon:SetTexture(self:CategoryIcon(kind));icon:SetTexCoord(0,1,0,1)
 end
 local function SetDelveIcon(icon,atlas)
  local info=C_Texture.GetAtlasInfo(atlas)

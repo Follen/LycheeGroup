@@ -23,7 +23,7 @@ local function NewProvider(scenario)
  local category,activity=Seed(catalog)
  if not activity then return nil,S("当前客户端活动目录尚未就绪，请稍后再打开预览。","The client activity catalog is not ready. Open preview again shortly.") end
  local p={isPreview=true,Catalog=catalog,L=A.Group.L,category=category,activity=activity,db={},prefs={find={category=category}},settings={autoJoin=false},applicationPrefs={},subs={},views={},records={},apps={},applicants={},roster={},filters={},state="done"}
- p.Results={};p.Applications={};p.Search={categoryKey=category};p.Relations={}
+ p.Results={};p.Applications={};p.Search={categoryKey=category};p.Relations={};p.declinedParties={}
  function p.Relations:Apply(member) return member end
  function p:Subscribe(callback) self.subs[callback]=true;return function() self.subs[callback]=nil end end
  function p:Notify(kind,id) for fn in pairs(self.subs) do fn(kind,id) end end
@@ -33,7 +33,7 @@ local function NewProvider(scenario)
  function p:SetApplicantView() end
  function p:GetSearchState() return self.state end
  function p:GetSearchError() return nil end
- function p.Search:Search(key,id) self.categoryKey=key;self.activityID=id;p.state="done";p:Notify("search");return true end
+ function p.Search:Search(key,ids) self.categoryKey=key;self.activityIDs=ids;p.state="done";p:Notify("search");return true end
  function p.Search:EndBrowse() end
  function p:SetFilters(filters) self.filters=Copy(filters);self:Notify("results") end
  function p.Results:GetDetails(record) if type(record)=="number" then record=p.records[record] end;return record.details end
@@ -44,20 +44,52 @@ local function NewProvider(scenario)
  end
  function p.Results:InvalidateView() end
  local blockedTitles,blockedTitleCount={},0
- function p.Results:BlockTitle(title)
-  if title==nil or blockedTitles[title] then return false end
-  blockedTitles[title]=true;blockedTitleCount=blockedTitleCount+1;p:Notify("results");return true
+ local unblockedLeaders,blockedLeaderIDs={},{}
+ local blockedLeadersDirty=true
+ p.db.blockedLeaders={}
+ local function RememberBlockedLeader(record)
+  if blockedTitles[record.name] and record.leaderKey and not unblockedLeaders[record.leaderKey] and not p.db.blockedLeaders[record.leaderKey] then
+   p.db.blockedLeaders[record.leaderKey]=true;blockedLeadersDirty=true;return true
+  end
+ end
+ function p.Results:BlockTitle(title,leaderKey)
+  if title==nil then return false end
+  local changed=not blockedTitles[title]
+  if changed then blockedTitles[title]=true;blockedTitleCount=blockedTitleCount+1 end
+  if leaderKey then
+   unblockedLeaders[leaderKey]=nil
+   if not p.db.blockedLeaders[leaderKey] then p.db.blockedLeaders[leaderKey]=true;blockedLeadersDirty=true;changed=true end
+  end
+  for _,record in pairs(p.records) do
+   if record.name==title and record.leaderKey then unblockedLeaders[record.leaderKey]=nil end
+   if RememberBlockedLeader(record) then changed=true end
+  end
+  if not changed then return false end
+  p:Notify("results");return true
  end
  function p.Results:ClearBlockedTitles()
-  if blockedTitleCount==0 then return false end
-  wipe(blockedTitles);blockedTitleCount=0;p:Notify("results");return true
+  if blockedTitleCount==0 and not next(p.db.blockedLeaders) then return false end
+  wipe(blockedTitles);wipe(p.db.blockedLeaders);wipe(unblockedLeaders);blockedTitleCount=0;blockedLeadersDirty=true;p:Notify("results");return true
  end
  function p.Results:GetBlockedTitleCount() return blockedTitleCount end
+ function p.Results:GetBlockedLeaders()
+  if blockedLeadersDirty then
+   wipe(blockedLeaderIDs)
+   for key in pairs(p.db.blockedLeaders) do blockedLeaderIDs[#blockedLeaderIDs+1]=key end
+   table.sort(blockedLeaderIDs);blockedLeadersDirty=false
+  end
+  return blockedLeaderIDs
+ end
+ function p.Results:RemoveBlockedLeader(key)
+  if not p.db.blockedLeaders[key] then return false end
+  p.db.blockedLeaders[key]=nil;unblockedLeaders[key]=true;blockedLeadersDirty=true;p:Notify("results");return true
+ end
  function p:GetResult(id) return self.records[id] end
  function p:GetResultCount() return #self.recordIDs end
  function p:GetApplications() return self.apps end
  function p:GetApplication(id) for _,app in ipairs(self.apps) do if app.id==id then return app end end end
  function p.Applications:IsActive(id) return Active(p:GetApplication(id)) end
+ function p.Applications:GetDeclinedAt(partyGUID) return partyGUID and p.declinedParties[partyGUID] end
  function p.Applications:CanCancel(id) local app=p:GetApplication(id);return app~=nil and app.status=="applied" and not app.pendingStatus end
  function p.Applications:GetActiveCount() local count=0;for _,app in ipairs(p.apps) do if Active(app) then count=count+1 end end;return count end
  function p.Applications:TryAutoJoin() end
@@ -84,7 +116,8 @@ local function NewProvider(scenario)
   if minLevel then minLevel,maxLevel=tonumber(minLevel),tonumber(maxLevel) end
   for _,id in ipairs(self.recordIDs) do
    local r=self.records[id];local counts=r.details.counts
-   local pass=not blockedTitles[r.name] and not self.Applications:IsActive(id) and self.Catalog:Matches(r.activity,f.category or self.category,f.groupKey,f.difficultyID,f.tier,f.groupKeys)
+   RememberBlockedLeader(r)
+   local pass=(not blockedTitles[r.name] or unblockedLeaders[r.leaderKey]) and not self.db.blockedLeaders[r.leaderKey] and not self.Applications:IsActive(id) and self.Catalog:Matches(r.activity,f.category or self.category,f.groupKey,f.difficultyID,f.tier,f.groupKeys)
    if pass and text~="" then
     if f.searchMode=="group" and minLevel then pass=r.level and r.level>=minLevel and r.level<=maxLevel
     elseif f.searchMode=="leader" then
@@ -112,6 +145,8 @@ local function NewProvider(scenario)
   end
   table.sort(ids,function(a,b)
    local x,y=self.records[a],self.records[b];local key=f.sort=="rating" and "leaderRating" or f.sort=="itemLevel" and "requiredItemLevel" or f.sort=="members" and "numMembers"
+   local xd,yd=self.Applications:GetDeclinedAt(x.partyGUID)~=nil,self.Applications:GetDeclinedAt(y.partyGUID)~=nil
+   if xd~=yd then return not xd end
    local xf,yf=x.bnetFriends+x.charFriends>0,y.bnetFriends+y.charFriends>0
    if xf~=yf then return xf end
    if key and x[key]~=y[key] then return x[key]>y[key] end
@@ -178,6 +213,7 @@ local function NewProvider(scenario)
   r.ratingKind=profile.kind=="pvp" and "pvp" or "dungeon"
   if profile.kind=="pvp" then r.leaderRating=profile.requirementRatingKind and 1600+i*75 or nil
   else r.leaderRating=members[1].dungeonScore end
+  r.partyGUID="PreviewParty-"..i
   p.records[id]=r;p.recordIDs[#p.recordIDs+1]=id
   if scenario=="applications" and i<=3 then p.apps[#p.apps+1]={id=id,status=i==1 and "invited" or "applied",name=r.name,result=r,categoryID=r.categoryID,leaderName=r.leaderName,expiresAt=GetTime()+300-i*30} end
  end

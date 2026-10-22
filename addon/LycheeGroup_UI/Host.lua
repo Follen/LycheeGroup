@@ -91,6 +91,7 @@ function UI:RefreshHeaderLayout()
 end
 
 function UI:ApplyFont(path,scale)
+ self:StopWindowResize()
  self.context:SetFont(path,scale)
  if not self.frame then return end
  self:CloseMenu();self.Tooltip:Hide()
@@ -106,13 +107,18 @@ function UI:ApplyFont(path,scale)
 end
 
 function UI:FitToScreen()
+	self:StopWindowResize()
 	local find = self.pages.find
 	local filterWidth = find.filterPanel and find.filterPanel:IsShown() and find.filterPanel:GetWidth()+12 or 0
 	local width = T.width + filterWidth
 	self.frame:SetClampRectInsets(0,filterWidth,0,0)
 	local scale = math.min(1, (UIParent:GetWidth() - 40) / width, (UIParent:GetHeight() - 40) / T.height) * A.db.uiScale / 100
-	if self.frame:GetScale() == scale then return end
-	self.frame:SetScale(scale)
+	local minWidth,minHeight=self:GetWindowMinimum()
+	scale=math.min(scale,(UIParent:GetWidth()-40)/(minWidth+filterWidth),(UIParent:GetHeight()-40)/minHeight)
+	local changed=self.frame:GetScale()~=scale
+	if changed then self.frame:SetScale(scale) end
+	self:SetWindowSize(self.preferredWindowWidth,self.preferredWindowHeight)
+	if not changed then return end
 	self:CloseMenu()
 	local tooltip = self.Tooltip
 	if tooltip.interactive and tooltip.interactive:IsShown() then tooltip:Place(tooltip.interactive.canvas:GetHeight()) end
@@ -214,6 +220,7 @@ local function BuildNavButton(nav, page, x)
 end
 
 function UI:Build()
+	self:LoadWindowSize()
 	local frame = CreateFrame("Frame", nil, UIParent)
 	frame:SetSize(T.width, T.height)
 	frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
@@ -226,6 +233,7 @@ function UI:Build()
 	self.frame = frame
 	self.drag=C.Draggable(frame,{onStart=function()
 		if UI.activeModal then return false end
+		UI:StopWindowResize()
 		UI:CloseMenu();UI.Tooltip:Hide()
 		local page=UI.pages[UI.page];if page and page.ClosePicker then page:ClosePicker() end
 	end})
@@ -291,6 +299,8 @@ function UI:Build()
 	blocker:EnableMouseWheel(true)
 	blocker:Hide()
 	self.blocker = blocker
+	self:BuildResizeHandle()
+	self:LayoutWindow()
  -- CloseSpecialWindows asks only IsShown/Hide. Route that request through
  -- our layered close handling, preserving cleanup and the exit animation.
  _G.LycheeGroupEscapeHandler={
@@ -299,7 +309,7 @@ function UI:Build()
  }
  table.insert(UISpecialFrames,"LycheeGroupEscapeHandler")
  frame:HookScript("OnMouseDown",function() if UI.Tooltip.pinned then UI.Tooltip:Hide() end end)
-	frame:HookScript("OnHide",function() frame:SetScript("OnUpdate",nil) end)
+	frame:HookScript("OnHide",function() UI:StopWindowResize();frame:SetScript("OnUpdate",nil) end)
 
 	frame:RegisterEvent("DISPLAY_SIZE_CHANGED")
 	frame:SetScript("OnEvent", function(_, event)
@@ -349,6 +359,7 @@ function UI:Show(page, context)
 end
 
 function UI:Navigate(page, context)
+ self:StopWindowResize()
  if self.preview and page~="find" and page~="create" then self:StopPreview(false);self:Show(page,context);return end
 	if A.Floating then A.Floating:Dismiss() end
 	if not self.pages[page] then page = "find" end
@@ -372,10 +383,11 @@ function UI:Navigate(page, context)
 	local p = self.pages[page]
 	if not p.frame then p:Build(self.content) end
 	p.frame:Show()
-	p.frame:SetSize(T.contentWidth,T.contentHeight)
+	self:LayoutWindow()
 	p.frame:ClearAllPoints();p.frame:SetPoint("TOPLEFT",self.content,"TOPLEFT",0,0)
 	self:UpdateNav()
 	p:Enter(context)
+	self:FitToScreen()
 	local direction=previous and PAGE_ORDER[page]<PAGE_ORDER[previous] and -1 or 1
 	M:Reveal(p.frame,"TOPLEFT",self.content,"TOPLEFT",0,0,direction*(previous and 32 or 4),0,.18)
 end
@@ -386,6 +398,7 @@ function UI:Hide(immediate)
 	local frame = self.frame
 	if not frame or not frame:IsShown() or (self.hiding and not immediate) then return end
 	self.drag:Stop()
+	self:StopWindowResize()
 	self.hiding = true
 	self.blocker:Show()
 	local token = (self.exitToken or 0) + 1

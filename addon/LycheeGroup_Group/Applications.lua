@@ -8,6 +8,9 @@ local sequence,generation=0,0
 local dirty=true
 local accepting,joined
 local retired={}
+-- Rejection belongs to the party, not a search result ID or title ticket.
+-- Keep only its timestamp for this session after the application retires.
+local declinedParties={}
 local retirementTimer,retirementAt
 local finished={failed=true,cancelled=true,declined=true,declined_full=true,declined_delisted=true,invitedeclined=true,timedout=true,expired=true,inviteaccepted=true,invitedaccepted=true}
 local function ScheduleRetirement()
@@ -39,6 +42,7 @@ local function Sort(a,b)
 end
 local function AdoptResult(record,result)
  record.result=result;record.categoryID=result.categoryID
+ record.partyGUID=result.partyGUID or record.partyGUID
  record.name=result.name;record.leaderName=result.leaderName;record.activityName=result.activityName
  record.activityArt=result.activity and result.activity.journalID and select(6,EJ_GetInstanceInfo(result.activity.journalID))
  local activity=result.activity
@@ -60,16 +64,29 @@ local function Update(id,status,pending,remaining,groupName)
  local record=records[id]
  if not record then sequence=sequence+1;record={id=id,seq=sequence};records[id]=record end
  local cancelled=status=="cancelled" and record.status~="cancelled"
+ local declined=status=="declined" and record.status~="declined"
  local wasApplying=record.status=="applied" or record.pendingStatus=="applied"
  -- Native and other UI submissions must start a new round too. Refreshing an
  -- existing application must keep the latch that protects the previous join.
- if (status=="applied" or pending=="applied") and not wasApplying then joined=nil end
+ if (status=="applied" or pending=="applied") and not wasApplying then joined=nil;record.partyGUID=nil end
  if record.status~=status then record.autoAttempted=nil end
  record.status,record.pendingStatus=status,pending
  if finished[status] then record.removeAt=record.removeAt or GetTime()+5 else record.removeAt=nil end
  if type(remaining)=="number" then record.expiresAt=GetTime()+remaining end
  local result=Active(record) and (G.Results:GetResult(id) or G.Results:Capture(id,record.result,true) or record.result)
  if result then AdoptResult(record,result) end
+ if declined then
+  local partyGUID=record.partyGUID
+  if not partyGUID then
+   local cached=G.Results:GetResult(id)
+   partyGUID=cached and cached.partyGUID
+   if not partyGUID then
+    local info=G.Public(C_LFGList.GetSearchResultInfo(id))
+    partyGUID=type(info)=="table" and G.Public(info.partyGUID) or nil
+   end
+  end
+  if partyGUID and (wasApplying or not declinedParties[partyGUID]) then declinedParties[partyGUID]=GetTime() end
+ end
  if groupName and groupName~="" then record.name=groupName end
  dirty=true
  if cancelled then G:Notify("applicationCancelled",id) end
@@ -168,6 +185,7 @@ function Applications:GetApplications()
  return ordered
 end
 function Applications:GetApplication(id) return records[id] end
+function Applications:GetDeclinedAt(partyGUID) return declinedParties[partyGUID] end
 function Applications:IsActive(id) local record=records[id];return record and Active(record) or false end
 function Applications:GetActiveCount()
  local count=0

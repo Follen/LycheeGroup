@@ -39,6 +39,7 @@ do
  T.eq(icon:GetTexture(),1900003);T.eq(calls,5,"metadata first read by a core consumer is reused by UI icons")
  GetSpecializationInfoByID=original
 end
+
 -- Delve thumbnails use the native member's UV rectangle, including when it is
 -- offset within the shared 2048x2048 entrance sheet, and remain square.
 do
@@ -241,8 +242,8 @@ do
  activity.allowCrossFaction=true;create:RefreshPicker();T.eq(create.crossFaction.value,true,"returning to an allowed activity restores the draft choice")
  T.eq(create.roleFilters.DAMAGER:GetParent(),create.roleFilterSurface,"selected role fill renders above its own track")
 end
-T.eq(create.formFrame:GetWidth(),820);T.eq(create.rail:GetWidth(),288)
-T.eq(create.descriptionShell:GetHeight(),80,"native description shell matches one-screen mock")
+T.eq(create.formFrame:GetWidth(),create.surface:GetWidth()-48);T.eq(create.rail:GetWidth(),288)
+T.ok(create.descriptionShell:GetHeight()>=80,"the native description retains a readable minimum height")
 T.eq(create.ilvl.placeholder:GetText(),"不限");T.eq(create.ilvl.placeholder:IsShown(),true,"unrestricted item level has an explicit placeholder")
 do
  local summary=create.groupSummary
@@ -281,6 +282,7 @@ do
 end
 do
  local function PointY(region) local points={region:GetPoint()};return points[#points] end
+ local originalRequirementsY=PointY(create.req)
  local validator=native.ItemLevel.validateFunc;local ownLevel=200;local warning="要求的物品等级高于你自己的物品等级。"
  native.ItemLevel.validateFunc=function(_,value) if tonumber(value)>ownLevel then return warning end end
  create.ilvl.box:SetText("220");create:ValidateForm()
@@ -288,11 +290,11 @@ do
  T.ok(create.formNotice:IsShown());T.eq(create.formError.justify,"LEFT")
  local point={create.formNotice:GetPoint()};T.eq(point[1],"TOPLEFT");T.eq(point[#point],-44,"the notice appears immediately after the heading")
  T.eq(PointY(create.desc),-56-create.formNotice:GetHeight()-12,"the notice pushes the form content down only while shown")
- T.eq(PointY(create.req),-356-create.formNotice:GetHeight()-12)
+ T.eq(PointY(create.req),PointY(create.desc)+PointY(create.descriptionShell)-create.descriptionShell:GetHeight()-24)
  T.eq(create.ilvl.box:GetText(),"220","validation alone preserves programmatically filled requirements until submission")
  ownLevel=240;create:ValidateForm();T.eq(create.formNotice:IsShown(),false,"unchanged text is revalidated after the player's equipment changes")
  T.eq(PointY(create.desc),-56,"clearing the notice removes its layout space")
- T.eq(PointY(create.req),-356)
+ T.eq(PointY(create.req),originalRequirementsY)
  native.ItemLevel.validateFunc=validator;create.ilvl.box:SetText("");create:ValidateForm()
  local height=create.batchScroll:GetHeight()
  create:SetManageError("An applicant action failed. Please check the current application.")
@@ -1173,10 +1175,10 @@ find.rolePresenceChoices.TANK.buttons[2]:Fire("OnClick")
 T.eq(G.filters.tankPresence,nil,"clicking the selected seasonal condition clears it at normal difficulty")
 local searchMethod=G.Search.Search;local requestedActivity
 G.Search.Search=function(_,category,id) requestedActivity=id;return true end
-find:DoSearch();T.eq(requestedActivity,3,"a selected seasonal map and normal difficulty request its unique native activity")
+find:DoSearch();T.same(requestedActivity,{3},"a selected seasonal map and normal difficulty request its unique native activity")
 for _,button in ipairs(find.difficultyButtons) do if button.value==false and button:IsShown() then button:Fire("OnClick") end end
 T.eq(find.searchHint:GetText(),"队伍标题或钥石范围，如 12-15");T.eq(find.searchModeToggle:IsShown(),true,"title and leader modes remain available with Mythic+ selected")
-find:DoSearch();T.eq(requestedActivity,nil,"multiple valid native difficulties are not replaced by a guessed activity")
+find:DoSearch();T.same(requestedActivity,{2,3},"all difficulties request every valid native activity for the selected dungeon")
 G.Search.Search=searchMethod
 find:SetFiltersOpen(true);Pick(find.socialChoice,"noCaution")
 T.eq(find.socialChoice.label:GetText(),"不含拉黑记录");T.eq(G.filters.notes,"noCaution","the note choice requests exclusion rather than blocked-only results")
@@ -1222,7 +1224,7 @@ do
  T.eq(find.pickerConfirm:IsShown(),true);T.eq(find.pickerConfirm:GetHeight(),40);T.eq(find.pickerConfirm.primary,true)
  Check(202);Check(201);T.eq(find.pickerConfirm:IsShown(),false,"unchecking the whole draft hides confirmation")
  Check(202);Check(201);find.pickerConfirm:Fire("OnClick")
- T.eq(calls,before+1);T.eq(lastActivity,nil,"confirming multiple dungeons submits one complete native search")
+ T.eq(calls,before+1);T.same(lastActivity,{2001,2002},"confirming multiple dungeons submits only their selected keystone activities")
  T.same(G.filters.groupKeys,{[201]=true,[202]=true});T.eq(G.filters.groupKey,nil)
  T.eq(find.context:GetText(),"毒牙·红玉  ·  "..GetDifficultyInfo(8),"multi-selection titles use catalog order and short names")
  T.eq(find.draftGroupKeys,nil);T.eq(find.picker:IsShown(),false)
@@ -1238,14 +1240,14 @@ do
  T.eq(find.draftGroupKeys,nil);T.eq(find.pickerConfirm:IsShown(),false,"closing the picker releases the draft controls")
  find:SelectCategory("seasonDungeon");T.eq(Row(202).multiSelect:GetChecked(),true,"reopening restores the active checks")
  Check(202);find.pickerConfirm:Fire("OnClick")
- T.same(G.filters.groupKeys,{[201]=true});T.eq(lastActivity,nil,"even one checked dungeon uses the complete-search multi-selection path")
+ T.same(G.filters.groupKeys,{[201]=true});T.same(lastActivity,{2001},"one checked dungeon narrows the native request to its keystone activity")
  T.eq(find.context:GetText(),"毒牙洞窟  ·  "..GetDifficultyInfo(8),"a one-item collection retains the complete dungeon name")
  find:SelectCategory("seasonDungeon");local draftCalls=calls
  Row(201):Fire("OnClick","LeftButton");Row(202):Fire("OnClick","LeftButton")
  T.eq(calls,draftCalls,"keystone row clicks edit the default checkbox draft without searching")
  T.same(G.filters.groupKeys,{[201]=true},"the active result filter stays unchanged until confirmation")
  find.pickerConfirm:Fire("OnClick")
- T.same(G.filters.groupKeys,{[202]=true});T.eq(G.filters.groupKey,nil);T.eq(lastActivity,nil)
+ T.same(G.filters.groupKeys,{[202]=true});T.eq(G.filters.groupKey,nil);T.same(lastActivity,{2002})
  local singleCalls=calls
  find:SelectCategory("seasonDungeon");T.eq(Row(202).multiSelect:GetChecked(),true);T.eq(G.filters.difficultyID,8);T.eq(calls,singleCalls,"same-category reopening preserves the confirmed one-item collection and difficulty")
  find:SelectCategory("seasonRaid");singleCalls=calls;find:SelectCategory("seasonDungeon")
@@ -1286,8 +1288,8 @@ do
  Row(0):Fire("OnClick","LeftButton");Difficulty(false)
  local getCategories=catalog.GetCategories
  local activityGroups,activityLists,extraCategories={},{},{}
- local allLabels={[1]="全部任务",[4]="全部竞技场",[5]="全部竞技场练习赛",[6]="全部自定义活动",[121]="全部地下堡"}
- for _,entry in ipairs({{1,"任务"},{4,"竞技场"},{5,"竞技场练习赛"},{6,"自定义"},{9,"评级战场"},{121,"地下堡"}}) do
+ local allLabels={[1]="全部任务",[4]="全部竞技场",[7]="全部竞技场练习赛",[6]="全部自定义活动",[121]="全部地下堡"}
+ for _,entry in ipairs({{1,"任务"},{4,"竞技场"},{7,"竞技场练习赛"},{6,"自定义"},{9,"评级战场"},{121,"地下堡"}}) do
   local id,name=entry[1],entry[2];local key=tostring(id)
   extraCategories[#extraCategories+1]={key=key,id=id,name=name,icon="pvp"}
   local activity={id=9000+id,groupKey=900+id,categoryID=id,fixtureTier=1}
@@ -1297,7 +1299,7 @@ do
  catalog.GetCategories=function(self) local list={};for _,cat in ipairs(getCategories(self)) do list[#list+1]=cat end;for _,cat in ipairs(extraCategories) do list[#list+1]=cat end;return list end
  catalog.GetActivities=function(self,key) return activityLists[key] or priorActivities(self,key) end
  catalog.GetGroups=function(self,key) return activityGroups[key] or priorGroups(self,key) end
- for _,id in ipairs({1,4,5,6,121}) do
+ for _,id in ipairs({1,4,7,6,121}) do
   find:SelectCategory(tostring(id));local unopenedCalls=calls
   T.eq(find.emptyText:GetText(),"请选择活动");T.ok(find.emptyHelp:GetText():find(allLabels[id],1,true),"pending non-dungeon copy names the matching all-activity choice")
   T.eq(Row(0).title:GetText(),allLabels[id],"all-activity rows name their own activity category")
@@ -1307,7 +1309,7 @@ do
  end
  find:SelectCategory("9");local ratedCalls=calls
  T.same(find.activityIDs,{909},"rated battlegrounds alone omit the redundant all-activities row")
- T.eq(calls,ratedCalls);Row(909):Fire("OnClick","LeftButton");T.eq(calls,ratedCalls+1);T.eq(lastActivity,9009)
+ T.eq(calls,ratedCalls);Row(909):Fire("OnClick","LeftButton");T.eq(calls,ratedCalls+1);T.same(lastActivity,{9009})
  find:SelectCategory("seasonRaid");catalog.GetCategories=getCategories
  catalog.GetActivities,catalog.GetGroups,catalog.GetActivityTier,catalog.GetGroupShortName=getActivities,getGroups,getTier,getShort
  G.Search.Search=search;A.charPrefs.rememberFilters=remember
@@ -2264,6 +2266,74 @@ do
  T.eq(#page.appIDs,0);T.ok(page.empty:IsShown());T.eq(page.batchPool[1]:IsShown(),false)
  u:Hide(true)
 end
+-- Rejection text follows party identity and its timer only repaints visible labels.
+for _,locale in ipairs({"zhCN","enUS"}) do
+ local fresh=dofile("tests/ui_fixture.lua")(locale)
+ local a,u,g=fresh.A,fresh.U,fresh.G;a.db.reduceMotion=true
+ local now=0;GetTime=function() return now end
+ g.prefs.find={category="seasonDungeon",categoryPrefs={seasonDungeon={selected=true,difficultyID=8}}}
+ for id=1,3 do g.records[id]={id=id,partyGUID="Party-"..id,name="Group "..id,activityID=2,activity=g.Catalog:GetActivity(2),categoryID=2,numMembers=1,maxNumPlayers=5,age=10} end
+ a:Open("find");local page=u.pages.find
+ T.eq(page.declineClock,nil);T.eq(page.results.rowHeight,76,"ordinary results retain their existing row height")
+ now=59;g.declinedParties["Party-2"]=0;g:Notify("applications")
+ T.same(page.results.ids,{1,3,2});T.ok(page.declineClock);T.eq(page.countdown,nil,"rejection text does not need an active application")
+ local function Row(id) for _,row in ipairs(page.results.rows) do if row.key==id then return row end end;error("missing result "..id) end
+ T.eq(Row(2).declined:GetText(),locale=="zhCN" and "刚刚拒绝了你" or "Rejected you just now")
+ T.eq(Row(1).declined:IsShown(),false)
+ local reads,sorts,binds=0,0,0
+ local details,getResults,setItems=g.Results.GetDetails,g.GetResults,page.results.SetItems
+ g.Results.GetDetails=function(self,...) reads=reads+1;return details(self,...) end
+ g.GetResults=function(self,...) sorts=sorts+1;return getResults(self,...) end
+ page.results.SetItems=function(self,...) binds=binds+1;return setItems(self,...) end
+ now=60;fresh.base.AdvanceClock(1)
+ T.eq(Row(2).declined:GetText(),locale=="zhCN" and "1分钟前拒绝了你" or "Rejected you 1 min ago","the first refresh occurs at the rejection's minute boundary")
+ now=120;fresh.base.AdvanceClock(60)
+ T.eq(Row(2).declined:GetText(),locale=="zhCN" and "2分钟前拒绝了你" or "Rejected you 2 min ago")
+ T.eq(reads,0,"minute updates never read member details");T.eq(sorts,0,"minute updates never sort results");T.eq(binds,0,"minute updates never rebind lists")
+ g.Results.GetDetails,g.GetResults,page.results.SetItems=details,getResults,setItems
+ local rejected=g.records[2];g.records[2]=nil;rejected.id=20;rejected.name="Changed group title";g.records[20]=rejected
+ g.records[3].name=rejected.name;g:Notify("results")
+ T.eq(Row(20).declined:GetText(),locale=="zhCN" and "2分钟前拒绝了你" or "Rejected you 2 min ago","new tickets and titles retain the same party's rejection")
+ T.eq(Row(3).declined:IsShown(),false,"another party with the same title is not marked")
+ for id=4,19 do g.records[id]={id=id,partyGUID="Party-"..id,name="Group "..id,activityID=2,activity=g.Catalog:GetActivity(2),categoryID=2,numMembers=1,maxNumPlayers=5,age=10} end
+ g:Notify("results");T.eq(page.declineClock,nil,"offscreen rejected results do not keep a display timer")
+ page.results:SetPixelOffset(100000,false)
+ local declineReads,visible,readDecline=0,0,g.Applications.GetDeclinedAt
+ for _,row in ipairs(page.results.rows) do if row.key and row._hitVisible then visible=visible+1 end end
+ g.Applications.GetDeclinedAt=function(self,...) declineReads=declineReads+1;return readDecline(self,...) end
+ now=180;fresh.base.AdvanceClock(60)
+ T.eq(declineReads,visible,"the minute callback reads rejection times for visible rows only")
+ g.Applications.GetDeclinedAt=readDecline
+ page.results:SetPixelOffset(0,false);T.eq(page.declineClock,nil,"scrolling the final rejection out of view stops its timer")
+ g.declinedParties["Party-19"]=now-59;g:Notify("results")
+ T.eq(page.declineClock,nil)
+ local edge=(#page.results.ids-2)*page.results.rowHeight-page.results:GetHeight()
+ page.results:SetPixelOffset(edge,false);local edgeRow=Row(19)
+ T.eq(page.declineClock,nil,"a rejected row merely touching the viewport does not start a timer")
+ reads=0;g.Results.GetDetails=function(self,...) reads=reads+1;return details(self,...) end
+ page.results:SetPixelOffset(edge+1,false)
+ T.eq(Row(19),edgeRow);T.eq(reads,0,"revealing a bound partial row does not re-read its details")
+ T.ok(page.declineClock,"revealing an already-bound rejection also restarts its timer")
+ g.Results.GetDetails=details
+ page.results:SetPixelOffset(100000,false);local reused=page.results.rows[1]
+ T.ok(page.declineClock,"binding a visible rejection restarts the unique minute timer")
+ now=181;fresh.base.AdvanceClock(1)
+ T.eq(Row(19).declined:GetText(),locale=="zhCN" and "1分钟前拒绝了你" or "Rejected you 1 min ago","scrolling uses the newly visible rejection's minute boundary")
+ local timer=page.declineClock
+ page.results:SetPixelOffset(0,false);T.eq(reused.declined:GetText(),"");T.eq(reused.declined:IsShown(),false,"row reuse removes the old rejection label")
+ T.eq(page.declineClock,nil);T.eq(timer.cancelled,true)
+ local normal=g.records[1];g.records={[1]=normal};g:Notify("results")
+ T.eq(page.declineClock,nil);T.eq(timer.cancelled,true);T.eq(page.results.rowHeight,76,"a view without rejected results restores the original layout")
+ g.records[20]=rejected;g:Notify("results");timer=page.declineClock
+ u:Hide(true);T.eq(timer.cancelled,true);T.eq(page.declineClock,nil)
+ for _,row in ipairs(page.results.rows) do T.eq(row.declined:GetText(),"") end
+ now=240;a:Open("find");T.ok(page.declineClock);T.eq(Row(20).declined:GetText(),locale=="zhCN" and "4分钟前拒绝了你" or "Rejected you 4 min ago","re-entering recovers the session's rejection time")
+ a.db.reduceMotion=false;u:Hide();T.eq(u.hiding,true)
+ now=300;fresh.base.AdvanceClock(60);T.eq(page.declineClock,nil,"a callback during window exit cannot renew the timer")
+ u:Show("find");T.ok(page.declineClock,"reversing the exit restores the current visible rejection timer")
+ u:Hide(true)
+end
+
 -- Offscreen applications still own the countdown until the final deadline.
 do
  local fresh=dofile("tests/ui_fixture.lua")("zhCN")
@@ -2738,7 +2808,7 @@ do
  page.favoritesToggle:Fire("OnClick")
  T.ok(page.buffList.slider:IsShown(),"expanded favorites leave the remaining buffs in a bounded scroll area")
  local p={page.rosterCard:GetPoint()}
- T.ok(-p[#p]+page.rosterCard:GetHeight()<=u.Theme.contentHeight,"expanded favorites leave the roster card inside the rail")
+ T.ok(-p[#p]+page.rosterCard:GetHeight()<=page.rail:GetHeight(),"expanded favorites leave the roster card inside the resized rail")
  members={}
  for _,class in ipairs({"WARRIOR","PALADIN","HUNTER","ROGUE","ROGUE","PRIEST","DEATHKNIGHT","SHAMAN","MAGE","WARLOCK","MONK","DRUID","DEMONHUNTER","EVOKER"}) do members[#members+1]={name=class,nameKey=class.."-Away",class=class,subgroup=1} end
  g:Notify("roster");T.ok(page.buffComplete:IsShown());T.eq(page.buffList:IsShown(),false)
@@ -3038,19 +3108,24 @@ do
  IsMouseButtonDown=mouseDown
  T.eq(a.db.floatingScale,floatingScale,"main-window scale leaves the floating window's setting unchanged")
  u:Navigate("find");local find=u.pages.find;find:SetFiltersOpen(true)
+ local function ScreenScale(filterWidth)
+  local minWidth,minHeight=u:GetWindowMinimum();filterWidth=filterWidth or 0
+  local desired=math.min(1,(UIParent:GetWidth()-40)/(u.Theme.width+filterWidth),(UIParent:GetHeight()-40)/u.Theme.height)*a.db.uiScale/100
+  return math.min(desired,(UIParent:GetWidth()-40)/(minWidth+filterWidth),(UIParent:GetHeight()-40)/minHeight)
+ end
  T.same(u.frame.clampInsets,{0,396,0,0},"the native screen clamp includes the open filter panel")
  local expanded=math.min(1,(UIParent:GetWidth()-40)/(u.Theme.width+396),(UIParent:GetHeight()-40)/u.Theme.height)
- T.near(u.frame:GetScale(),expanded*1.25,.00001,"opening filters keeps the user's chosen scale")
+ T.near(u.frame:GetScale(),ScreenScale(396),.00001,"opening filters fits the minimum readable window and panel on screen")
  find:SetFiltersOpen(false);T.near(u.frame:GetScale(),baseline*1.25,.00001)
  T.same(u.frame.clampInsets,{0,0,0,0},"closing filters restores the normal window boundary")
  find:SetFiltersOpen(true)
  UIParent:SetSize(1100,800);u.frame:Fire("OnEvent","DISPLAY_SIZE_CHANGED")
- T.near(u.frame:GetScale(),math.min(1,1060/(u.Theme.width+396),760/u.Theme.height)*1.25,.00001,"screen resizing includes the open filter panel")
+ T.near(u.frame:GetScale(),ScreenScale(396),.00001,"screen resizing includes the open filter panel")
  UIParent:SetSize(1280,860);u:Navigate("settings")
  baseline=math.min(1,1240/u.Theme.width,820/u.Theme.height)
- u:Hide(true);a:Open("settings");T.near(u.frame:GetScale(),baseline*1.25,.00001)
+ u:Hide(true);a:Open("settings");T.near(u.frame:GetScale(),ScreenScale(),.00001)
  UIParent:SetSize(1100,800);u.frame:Fire("OnEvent","DISPLAY_SIZE_CHANGED")
- T.near(u.frame:GetScale(),math.min(1,1060/u.Theme.width,760/u.Theme.height)*1.25,.00001)
+ T.near(u.frame:GetScale(),ScreenScale(),.00001)
  u:Hide(true)
 end
 
@@ -3063,6 +3138,8 @@ do
  a:Open("create");local page=u.pages.create
  page:UsePreset({activityID=2,generalPlaystyle=2})
  LFGListFrame.EntryCreation.Name:UserType("Item level test")
+ local function FormY(region) local point={region:GetPoint()};return point[#point] end
+ local originalRequirementsY=FormY(page.req)
  page.ilvl.box:UserType("999")
  T.eq(page.ilvl.box:GetText(),"400","manual input clamps to floored highest item level, not equipped level")
  T.ok(page.correctionNotice and page.correctionNotice:IsShown(),"the actual correction appears inline in the creation form")
@@ -3070,9 +3147,8 @@ do
  T.eq(page.correctionNotice:GetWidth(),page.formFrame:GetWidth(),"correction feedback spans the activity form instead of the window footer")
  local correctionPoint={page.correctionNotice:GetPoint()}
  T.eq(correctionPoint[1],"TOPLEFT");T.eq(correctionPoint[#correctionPoint],-44,"correction feedback starts below the form heading")
- local function FormY(region) local point={region:GetPoint()};return point[#point] end
  T.eq(FormY(page.desc),-56-page.correctionNotice:GetHeight()-12,"inline correction reserves space above the activity form")
- T.eq(FormY(page.req),-356-page.correctionNotice:GetHeight()-12)
+ T.eq(FormY(page.req),FormY(page.desc)+FormY(page.descriptionShell)-page.descriptionShell:GetHeight()-24,"the requirements follow the resized description with a clear gap")
  local notice,timer=page.correctionNotice,page.correctionTimer
  T.ok(notice.text:GetText():find("400",1,true))
  clock.AdvanceClock(2);page.ilvl.box:UserType("999")
@@ -3080,7 +3156,7 @@ do
  T.eq(timer.cancelled,true,"a replacement correction cancels the old expiration")
  clock.AdvanceClock(2);T.ok(notice:IsShown(),"the cancelled old expiration does not hide the new message")
  clock.AdvanceClock(2);T.eq(notice:IsShown(),false);T.eq(page.correctionTimer,nil)
- T.eq(FormY(page.desc),-56);T.eq(FormY(page.req),-356,"expiration returns the form to its original layout")
+ T.eq(FormY(page.desc),-56);T.eq(FormY(page.req),originalRequirementsY,"expiration returns the form to its original layout")
  for _,value in ipairs({"","0","350"}) do page.ilvl.box:UserType(value);T.eq(page.ilvl.box:GetText(),value) end
  T.eq(page.correctionTimer,nil,"empty, zero and valid requirements do not create a correction timer")
  local activity=g.Catalog:GetActivity(2);local oldPvp=activity.isPvpActivity
@@ -3102,7 +3178,8 @@ do
  T.eq(notice.text:GetText(),"Transient correction","failure feedback does not replace the correction message")
  T.eq(FormY(notice),-44-page.formNotice:GetHeight()-12,"errors and corrections occupy separate rows under the title")
  local offset=page.formNotice:GetHeight()+notice:GetHeight()+24
- T.eq(FormY(page.desc),-56-offset);T.eq(FormY(page.req),-356-offset)
+ T.eq(FormY(page.desc),-56-offset)
+ T.eq(FormY(page.req),FormY(page.desc)+FormY(page.descriptionShell)-page.descriptionShell:GetHeight()-24,"both notices preserve the description-to-requirements gap")
  T.ok(-FormY(page.req)+page.req:GetHeight()<=page.formFrame:GetHeight()-page.publish:GetHeight()-12,"both notices reserve space without reaching the fixed publish action")
  page.formNotice.close:Fire("OnClick")
  T.ok(notice:IsShown(),"dismissing a failure keeps correction feedback")
@@ -3112,7 +3189,7 @@ do
  T.eq(timer.cancelled,true);T.eq(page.correctionTimer,nil)
  T.eq(page.formError:GetText(),"Persistent form error","dismissing the correction keeps the failure reason")
  T.ok(page.formNotice:IsShown());T.eq(FormY(page.desc),-56-page.formNotice:GetHeight()-12)
- page:SetFormError("");T.eq(FormY(page.desc),-56);T.eq(FormY(page.req),-356)
+ page:SetFormError("");T.eq(FormY(page.desc),-56);T.eq(FormY(page.req),originalRequirementsY)
  page:ShowCorrectionNotice("Page change test");local active=page.correctionTimer;u:Navigate("notes")
  T.eq(active.cancelled,true);T.eq(page.correctionTimer,nil);T.eq(notice:IsShown(),false,"page changes clear transient feedback")
  u:Navigate("create");page.editListing:Fire("OnClick");page:ShowCorrectionNotice("Close test");active=page.correctionTimer;u:Hide(true)
@@ -3294,7 +3371,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  local a,u,g=fresh.A,fresh.U,fresh.G
  a.db.reduceMotion=true
  g.prefs.find={category="seasonDungeon",categoryPrefs={seasonDungeon={selected=true,difficultyID=8}}}
- for id=1,4 do g.records[id]={id=id,activityID=2,activity=g.Catalog:GetActivity(2),categoryID=2,name=id==3 and "Different title" or "Repeated title",leaderName="Leader"..id.."-Home",numMembers=1,maxNumPlayers=5,age=10} end
+ for id=1,4 do g.records[id]={id=id,activityID=2,activity=g.Catalog:GetActivity(2),categoryID=2,name=id==3 and "Different title" or "Repeated title",leaderName="Leader"..id.."-Home",leaderKey="Leader"..id.."-Home",numMembers=1,maxNumPlayers=5,age=10} end
  local application={id=4,status="applied",categoryID=2,result=g.records[4],expiresAt=GetTime()+300}
  g.apps={application}
  a:Open("find")
@@ -3316,7 +3393,78 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  page:ClearFilters();T.same(page.results.ids,{3},"ordinary filter clearing preserves the separate title blocks")
  u:Hide(true);a:Open("find")
  T.same(page.results.ids,{3},"closing and reopening Find keeps session title blocks")
+ g.records[4]=nil;application.result.name="Application-only title";application.result.leaderKey="ApplicationOnly-Home"
+ page:OpenResultMenu(page.appList,4);ChooseBlock()
+ T.eq(g.db.blockedLeaders["ApplicationOnly-Home"],true,"the application menu passes the selected leader even outside current results")
+ page:OpenResultMenu(page.results,3)
+ for _,item in ipairs(u.context.menu.items) do if item.value=="block" then T.eq(item.label,locale=="zhCN" and "荔枝笔记：拉黑" or "Player Notes: Block","note blocking remains distinct from blocked leaders") end end
+ u:CloseMenu()
+ g.records[1].name="Changed title";g:Notify("results")
+ T.same(page.results.ids,{3},"the clicked leader remains blocked after changing the title")
  u:Hide(true)
+end
+
+-- Block management loads Group only on entry and reuses the existing list pool.
+for _,locale in ipairs({"zhCN","enUS"}) do
+ local fresh=dofile("tests/ui_fixture.lua")(locale)
+ local a,u,g=fresh.A,fresh.U,fresh.G;a.db.reduceMotion=true
+ local ensure,loads=a.Ensure,0
+ a.Ensure=function(self,module) if module=="Group" then loads=loads+1 end;return ensure(self,module) end
+ a:Open("settings");local page=u.pages.settings
+ T.eq(loads,0,"ordinary settings do not load Group");T.eq(page.blocksList,nil,"the block list is created on first use")
+ for id=1,40 do g.Results:BlockTitle("Blocked title "..id,("Blocked%02d-Away"):format(id)) end
+ page.nav.blocks:Fire("OnClick")
+ T.eq(page.heading:GetText(),locale=="zhCN" and "屏蔽" or "Blocks")
+ T.eq(loads,1);T.eq(fresh.Count(g.subs),1,"only the active block section subscribes to result changes")
+ local list=page.blocksList;local nodes=#fresh.S.nodes
+ T.eq(#list.ids,40);T.ok(#list.rows<40,"blocked leaders use a virtualized row pool")
+ T.eq(list.rows[1].title:GetText(),"Blocked01","rows display the player name")
+ T.eq(list.rows[1].meta:GetText(),"Away","the complete realm has its own column")
+ local first=list.rows[1].remove
+ first:Fire("OnClick");T.eq(#g.Results:GetBlockedLeaders(),40,"clipped action buttons cannot remove a player")
+ list.clip.mouseOver=true
+ first:Fire("OnMouseDown");list:SetPixelOffset(list.rowHeight*3,false);first:Fire("OnClick")
+ T.eq(#g.Results:GetBlockedLeaders(),40,"rebinding a pressed remove button cannot remove another player")
+ local key=list.rows[1].key
+ first:Fire("OnMouseDown");first:Fire("OnClick")
+ T.eq(g.db.blockedLeaders[key],nil);T.eq(#list.ids,39,"single removal refreshes the active list")
+ g.Results:BlockTitle("Another title","Another-Home");T.eq(#list.ids,40,"external blocking updates the visible list")
+ for _,percent in ipairs({70,100,130}) do
+  a:SetSetting("fontScale",percent);list:SetPixelOffset(0,false)
+  local row=list.rows[1];local point={list:GetPoint()};local top=-point[#point]
+  T.ok(top+list:GetHeight()<=page.panels.blocks:GetHeight()+.001,"the block list fits at each font size")
+  T.ok(row.title:GetStringHeight()+16<=row:GetHeight(),"complete identities fit their scaled row")
+  T.near(row.remove:GetWidth(),math.ceil(row.remove.label:GetStringWidth())+32,.001,"remove buttons retain text padding")
+  T.near(page.blocksClear:GetWidth(),math.ceil(page.blocksClear.label:GetStringWidth())+32,.001,"clear buttons retain text padding")
+  T.ok(row.title:GetWidth()+row.meta:GetWidth()+row.remove:GetWidth()+72<=row:GetWidth()+.001,"name, realm and action columns remain separate")
+  T.ok(row.meta:GetStringWidth()<=row.meta:GetWidth(),"realm text fits at each font size")
+ end
+ T.eq(#fresh.S.nodes,nodes,"font changes reuse the block-list controls")
+ page.blocksClear:Fire("OnClick")
+ T.eq(#list.ids,0);T.eq(g.Results:GetBlockedTitleCount(),0);T.eq(page.blocksClear:IsEnabled(),false)
+ T.eq(page.blocksEmpty:IsShown(),true);T.eq(list:IsShown(),false)
+ g.Results:BlockTitle("Title without a known leader")
+ T.eq(#list.ids,0);T.eq(page.blocksClear:IsEnabled(),true,"title rules can be cleared even when no leader is known")
+ page.blocksClear:Fire("OnClick");T.eq(page.blocksClear:IsEnabled(),false)
+ page:SelectSection("general")
+ T.eq(fresh.Count(g.subs),0);T.eq(page.blockGroup,nil);T.eq(list.ids,nil,"leaving the section releases list identities")
+ for _,row in ipairs(list.rows) do T.eq(row.remove.targetKey,nil) end
+ page:SelectSection("blocks");T.eq(loads,2);T.eq(fresh.Count(g.subs),1)
+ a:Open("settings",{section="blocks"});T.eq(loads,2);T.eq(fresh.Count(g.subs),1,"same-section entry reuses the subscription")
+ u:Hide(true);T.eq(fresh.Count(g.subs),0);T.eq(page.blockGroup,nil,"closing settings unsubscribes from block changes")
+end
+
+-- A failed lazy load stays local to block management and can be retried on entry.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("zhCN")
+ local a,u,g=fresh.A,fresh.U,fresh.G;a.db.reduceMotion=true
+ local ensure=a.Ensure
+ a.Ensure=function(self,module) if module=="Group" then return nil,"Group load failed" end;return ensure(self,module) end
+ a:Open("settings",{section="blocks"});local page=u.pages.settings
+ T.eq(page.blocksEmpty:GetText(),"Group load failed");T.eq(page.blocksClear:IsEnabled(),false);T.eq(fresh.Count(g.subs),0)
+ a.Ensure=ensure;a:Open("settings",{section="blocks"})
+ T.eq(page.blockGroup,g);T.eq(page.blocksEmpty:GetText(),"暂无屏蔽的队长");T.eq(fresh.Count(g.subs),1)
+ u:Hide(true);T.eq(fresh.Count(g.subs),0)
 end
 
 -- Header widths can be unavailable during construction or until the first visible frame.
@@ -3533,6 +3681,48 @@ do
  T.eq(fills,1,"preview search needs only its filter notification to bind results")
  T.eq(#page.results.ids,3);T.eq(#page.appList.ids,3);T.eq(nativeCalls,calls,"preview never submits a native search")
  u:Hide(true)
+end
+
+-- Selected dungeon groups must narrow the native request, before local filtering.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("enUS")
+ local a,u,g=fresh.A,fresh.U,fresh.G;a.db.reduceMotion=true
+ local nativeActivity,nativeGroups=C_LFGList.GetActivityInfoTable,C_LFGList.GetActivityGroupInfo
+ local activities={}
+ for index,entry in ipairs({{2001,201,8},{2002,201,1},{2003,201,2},{2101,202,8},{2102,202,1},{2201,203,8}}) do
+  activities[entry[1]]={categoryID=2,groupFinderActivityGroupID=entry[2],difficultyID=entry[3],isMythicPlusActivity=entry[3]==8,fullName="Dungeon "..entry[2],shortName="Dungeon "..entry[2],maxNumPlayers=5,orderIndex=index}
+ end
+ C_LFGList.GetActivityInfoTable=function(id) return activities[id] or nativeActivity(id) end
+ C_LFGList.GetAvailableActivities=function(category) if category==2 then return {2001,2002,2003,2101,2102,2201} end;return {1} end
+ C_LFGList.GetActivityGroupInfo=function(id) return ({[201]="Ruby Life Pools",[202]="Second dungeon",[203]="Third dungeon"})[id] or nativeGroups(id) end
+ g.Catalog:Invalidate()
+ g.Game={RefreshSubscriptions=function() end}
+ function g:HasViews(kind) for _,value in pairs(self.views) do if not kind or value==kind then return true end end;return false end
+ function g.Results:BeginSearch() g.records={};g:Notify("results") end
+ function g.Results:CommitResults() end
+ dofile("addon/LycheeGroup_Group/Search.lua")
+ function g:GetSearchState() return self.Search:GetState() end
+ function g:GetSearchError() return self.Search:GetSearchError() end
+ C_LFGList.GetLanguageSearchFilter=function() return 0 end
+ local nativeFilters={}
+ C_LFGList.Search=function(category,filter,preferred,language,search,filterOptions,activityIDsFilter)
+  local ids={};for _,id in ipairs(activityIDsFilter or {}) do ids[#ids+1]=id end;table.sort(ids)
+  nativeFilters[#nativeFilters+1]=table.concat(ids,",")
+ end
+ a:Open("find");local page=u.pages.find
+ local function Row(key) for _,row in ipairs(page.activities.rows) do if row.key==key then return row end end;error("missing activity row "..key) end
+ local function Difficulty(id) for _,button in ipairs(page.difficultyButtons) do if button:IsShown() and button.value==id then button:Fire("OnClick");return end end;error("missing difficulty "..tostring(id)) end
+ page:SelectCategory("seasonDungeon");Difficulty(8)
+ Row(201).multiSelect:Fire("OnClick");page.pickerConfirm:Fire("OnClick")
+ T.eq(#nativeFilters,1,"the first confirmed collection reaches the real native search")
+ g.Search:OnResultsReceived()
+ page:SelectCategory("seasonDungeon");Row(202).multiSelect:Fire("OnClick");page.pickerConfirm:Fire("OnClick")
+ T.eq(#nativeFilters,2,"the second confirmed collection reaches the real native search")
+ g.Search:OnResultsReceived()
+ page:SelectCategory("seasonDungeon");Difficulty(false);Row(201):Fire("OnClick","LeftButton")
+ T.eq(#nativeFilters,3,"an explicit single-group All choice reaches the real native search")
+ g.Search:OnResultsReceived();u:Hide(true)
+ T.eq(table.concat(nativeFilters," | "),"2001 | 2001,2101 | 2001,2002,2003","native activityIDsFilter must contain only the selected dungeon groups and difficulty: single keystone | multiple keystones | one group's complete variants")
 end
 
 -- Closing skips applicant presentation, while the real service keeps terminal deadlines.
@@ -4118,5 +4308,113 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  end
  page:ClearFilters();page:SelectCategory("seasonRaid");page:SelectCategory("seasonDungeon")
  T.eq(g.filters.hideSameSpec,nil,"cleared specialization preferences do not return")
+ u:Hide(true)
+end
+
+-- The category rail changes geometry only; filters, search and row bindings survive.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("enUS")
+ local a,u,g=fresh.A,fresh.U,fresh.G;a.db.reduceMotion=true
+ a.charPrefs.rememberFilters=false;g.prefs.find={railCollapsed=true}
+ a:Open("find");local page=u.pages.find
+ T.eq(page.rail:GetWidth(),48,"interface preferences restore even when filter memory is off")
+ T.eq(page.sidebarToggle:GetWidth(),40);T.eq(page.sidebarToggle:GetHeight(),40)
+ T.eq(page.main:GetWidth(),1155.2);T.eq(page.sidebarToggle.label:IsShown(),false)
+ for _,list in ipairs({page.seasonCategories,page.categories}) do
+  for _,row in ipairs(list.rows) do T.eq(row.title:IsShown(),false);T.eq(row.chevron:IsShown(),false) end
+ end
+ page:UpdateFilters();T.eq(g.prefs.find.railCollapsed,true,"saving filters preserves the interface preference")
+ page.sidebarToggle:Fire("OnClick");T.eq(page.rail:GetWidth(),208);T.eq(page.sidebarToggle:GetWidth(),192)
+ T.eq(page.main:GetWidth(),995.2);T.eq(page.sidebarToggle.label:IsShown(),true)
+ page:SelectCategory("seasonDungeon")
+ local point={page.picker:GetPoint()};T.eq(point[2],page.rail);T.eq(point[3],"TOPRIGHT","the activity picker follows the animated rail edge")
+ page:ClosePicker();u.Motion:Tick(1)
+ local results,details,search,items=g.GetResults,g.Results.GetDetails,g.Search.Search,page.results.SetItems
+ local reads,bindings,searches=0,0,0
+ g.GetResults=function(self,...) reads=reads+1;return results(self,...) end
+ g.Results.GetDetails=function(self,...) reads=reads+1;return details(self,...) end
+ g.Search.Search=function(self,...) searches=searches+1;return search(self,...) end
+ page.results.SetItems=function(self,...) bindings=bindings+1;return items(self,...) end
+ -- The shared animation driver is lazy and is not a sidebar control.
+ u.Motion:Start("rail-test",function() return true end);u.Motion:Stop("rail-test")
+ local nodes=#fresh.S.nodes;local originalRow=page.results.rows[1]
+ a.db.reduceMotion=false;page.sidebarToggle:Fire("OnClick");u.Motion:Tick(.06)
+ T.eq(page.sidebarToggle.label:GetText(),"Collapse","collapsing fades the current caption without flashing Expand")
+ local middle=page.rail:GetWidth();T.ok(middle>48 and middle<208,"the rail interpolates its width")
+ page.sidebarToggle:Fire("OnClick");T.eq(page.rail:GetWidth(),middle,"reversing starts at the current geometry")
+ u.Motion:Tick(.03);T.ok(page.rail:GetWidth()>middle,"the same animation reverses continuously")
+ page.sidebarToggle:Fire("OnClick");u.Motion:Tick(.2)
+ T.eq(page.rail:GetWidth(),48);T.eq(u.Motion.jobs[u.Motion.rects[page.rail]],nil)
+ T.eq(reads,0);T.eq(bindings,0);T.eq(searches,0,"rail animation does not submit a search")
+ T.eq(#fresh.S.nodes,nodes,"rail animation reuses existing controls");T.eq(page.results.rows[1],originalRow)
+ g.GetResults,g.Results.GetDetails,g.Search.Search,page.results.SetItems=results,details,search,items
+ page.sidebarToggle:Fire("OnClick");u.Motion:Tick(.03);a:SetSetting("reduceMotion",true)
+ T.eq(page.rail:GetWidth(),208);T.eq(u.Motion.jobs[u.Motion.rects[page.rail]],nil,"reduced motion settles the active rail")
+ a.db.reduceMotion=false;page.sidebarToggle:Fire("OnClick");u.Motion:Tick(.03);u:Navigate("settings")
+ T.eq(page.rail:GetWidth(),48);T.eq(u.Motion.jobs[u.Motion.rects[page.rail]],nil,"leaving settles the rail")
+ u:Navigate("find");T.eq(page.rail:GetWidth(),48)
+ page.sidebarToggle:Fire("OnClick");u.Motion:Tick(.03);u:Hide()
+ T.eq(page.rail:GetWidth(),208);T.eq(u.Motion.jobs[u.Motion.rects[page.rail]],nil,"closing settles before the window fade completes")
+ u:Hide(true);a.db.reduceMotion=true;a:Open("find");page:SetSidebarCollapsed(true,false)
+ dofile("addon/LycheeGroup/Entrypoints.lua");T.eq(a:Preview("applications"),true)
+ T.eq(page.rail:GetWidth(),208,"preview starts with its independent interface preference")
+ local provider=u.preview.provider;page:SetSidebarCollapsed(true,false);page:UpdateFilters()
+ T.eq(provider.prefs.find.railCollapsed,true);T.eq(g.prefs.find.railCollapsed,true)
+ page:SetSidebarCollapsed(false,false);u:StopPreview(true)
+ T.eq(page.rail:GetWidth(),48,"returning from preview restores the real rail preference")
+ T.eq(g.prefs.find.railCollapsed,true);u:Hide(true)
+end
+
+-- Native PvP category identities use distinct color assets and shared icon states.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("zhCN");local a,u,g=fresh.A,fresh.U,fresh.G
+ local available=C_LFGList.GetAvailableCategories
+ C_LFGList.GetAvailableCategories=function() return {4,7,8,9} end
+ g.Catalog:Invalidate();a.db.reduceMotion=true;a:Open("find")
+ local page=u.pages.find;local expected={[4]="arena",[7]="skirmish",[8]="battleground",[9]="rated-battleground"};local textures={}
+ for _,row in ipairs(page.categories.rows) do
+  local suffix=expected[tonumber(row.key)]
+  if suffix then
+   T.eq(row.symbol:GetTexture(),"Interface\\AddOns\\LycheeGroup_UI\\Media\\pvp-"..suffix..".tga")
+   T.eq(textures[row.symbol:GetTexture()],nil);textures[row.symbol:GetTexture()]=true
+   T.eq(row.symbol:IsDesaturated(),true);T.eq(row.symbol:GetAlpha(),.72)
+   page.categories:Select(row.key,true)
+   T.eq(row.symbol:IsDesaturated(),false);T.eq(row.symbol:GetAlpha(),1)
+   page.categories:Select(nil,true)
+   T.eq(row.symbol:IsDesaturated(),true);T.eq(row.symbol:GetAlpha(),.72)
+  end
+ end
+ T.eq(fresh.Count(textures),4,"all four native PvP categories bind distinct assets")
+ C_LFGList.GetAvailableCategories=available;u:Hide(true)
+end
+
+-- Relationship marks stay beside the activity text across data and geometry refreshes.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("zhCN");local a,u,g=fresh.A,fresh.U,fresh.G
+ a.db.reduceMotion=true
+ g.prefs.find={category="seasonDungeon",railCollapsed=true,categoryPrefs={seasonDungeon={selected=true,difficultyID=8}}}
+ local record={id=1,activityID=2,activity=g.Catalog:GetActivity(2),activityName="Dungeon",categoryID=2,name="21/22",leaderName="Player-Home",numMembers=2,maxNumPlayers=5,age=10,bnetFriends=1}
+ g.records[1]=record;a:Open("find");g:Notify("results")
+ local page=u.pages.find;local row=page.results.rows[1];local width=row.meta:GetWidth()
+ T.ok(row.marks.icons.bnet:IsShown())
+ for i=1,3 do
+  page:LayoutSize(u.content:GetWidth(),u.content:GetHeight())
+  T.eq(row.meta:GetWidth(),width,"same-size layout must not move the Battle.net mark")
+  g:Notify("relations")
+  T.eq(row.meta:GetWidth(),width,"relationship refresh must preserve the same mark position")
+  page:SetSidebarCollapsed(i%2==1,false)
+  T.eq(row.meta:GetWidth(),width,"short activity text keeps its mark while the sidebar changes")
+ end
+ u:SetWindowSize(1400,900)
+ a:SetSetting("fontScale",130)
+ T.eq(row.meta:GetWidth(),math.ceil(row.meta:GetUnboundedStringWidth())+2,"font changes remeasure the activity without waiting for new data")
+ record.activityName=string.rep("Long activity ",8);record.charFriends=1;record.guildMates=1;g:Notify("relations")
+ u:SetWindowSize(1,1)
+ width=row.meta:GetWidth()
+ T.eq(width+6+row.marks:GetWidth(),row.title:GetWidth(),"long text reserves space for every relationship mark at the minimum window width")
+ g:Notify("results");T.eq(row.meta:GetWidth(),width,"data refresh preserves the compact column layout")
+ page:LayoutResultColumns();T.eq(row.meta:GetWidth(),width,"column layout preserves the same truncation boundary")
+ record.bnetFriends,record.charFriends,record.guildMates=0,0,0;g:Notify("relations")
+ T.eq(row.marks:IsShown(),false);T.eq(row.meta:GetWidth(),row.title:GetWidth(),"removing the final mark restores the full text column")
  u:Hide(true)
 end

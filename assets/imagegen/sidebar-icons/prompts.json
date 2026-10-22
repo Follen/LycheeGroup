@@ -1,0 +1,35 @@
+{
+  "mode": "built-in image_gen",
+  "transparent_background": true,
+  "game_export": {
+    "format": "uncompressed RGBA TGA",
+    "width": 128,
+    "height": 128
+  },
+  "assets": [
+    {
+      "key": "pvp-arena",
+      "prompt": "Use case: stylized-concept. Asset type: production raster navigation icon for the World of Warcraft addon LycheeGroup. Generate exactly ONE isolated icon, no grid, no atlas, no text. Match the existing Lychee menu pictograms: chunky solid flat filled forms, cream/off-white #F6F1D7, light silver-blue #ACBBC3, a restrained red #E73745 accent. Simple slightly rounded silhouettes, clear shapes recognizable at 22 to 28 pixels on a charcoal UI. Centered square composition, shape fills about 80 percent of square, consistent 10 percent transparent padding. Crisp clean alpha edges. No gradients, no 3D, no texture, no realistic material, no cast shadow, no glow, no black outline, no framing circle, no watermarks. Genuine transparent alpha background, including empty spaces within the icon. This is the selected color state; the app will display the same artwork in gray for the unselected state. Subject: A front-facing gladiator helmet: bold silver-blue rounded helmet silhouette with a broad cream T-shaped faceguard and a short red crest rising from the crown. The eye opening is a simple transparent gap. No human head, no shoulders, no horns, no weapons. Strong symmetric silhouette and very few broad shapes.",
+      "source": "assets/imagegen/sidebar-icons/pvp-arena.png",
+      "gameTexture": "addon/LycheeGroup_UI/Media/pvp-arena.tga"
+    },
+    {
+      "key": "pvp-skirmish",
+      "prompt": "Use case: stylized-concept. Asset type: production raster navigation icon for the World of Warcraft addon LycheeGroup. Generate exactly ONE isolated icon, no grid, no atlas, no text. Match the existing Lychee menu pictograms: chunky solid flat filled forms, cream/off-white #F6F1D7, light silver-blue #ACBBC3, a restrained red #E73745 accent. Simple slightly rounded silhouettes, clear shapes recognizable at 22 to 28 pixels on a charcoal UI. Centered square composition, shape fills about 80 percent of square, consistent 10 percent transparent padding. Crisp clean alpha edges. No gradients, no 3D, no texture, no realistic material, no cast shadow, no glow, no black outline, no framing circle, no watermarks. Genuine transparent alpha background, including empty spaces within the icon. This is the selected color state; the app will display the same artwork in gray for the unselected state. Subject: An arena practice target on a short sturdy stand: broad round cream target face, one thick silver-blue target ring and a simple red bullseye, resting on a compact silver-blue stem and two short feet. A single small cream wooden practice sword leans at the right side with red pommel, but the round target dominates. All forms flat, no thin detailing.",
+      "source": "assets/imagegen/sidebar-icons/pvp-skirmish.png",
+      "gameTexture": "addon/LycheeGroup_UI/Media/pvp-skirmish.tga"
+    },
+    {
+      "key": "pvp-battleground",
+      "prompt": "Use case: stylized-concept. Asset type: production raster navigation icon for the World of Warcraft addon LycheeGroup. Generate exactly ONE isolated icon, no grid, no atlas, no text. Match the existing Lychee menu pictograms: chunky solid flat filled forms, cream/off-white #F6F1D7, light silver-blue #ACBBC3, a restrained red #E73745 accent. Simple slightly rounded silhouettes, clear shapes recognizable at 22 to 28 pixels on a charcoal UI. Centered square composition, shape fills about 80 percent of square, consistent 10 percent transparent padding. Crisp clean alpha edges. No gradients, no 3D, no texture, no realistic material, no cast shadow, no glow, no black outline, no framing circle, no watermarks. Genuine transparent alpha background, including empty spaces within the icon. This is the selected color state; the app will display the same artwork in gray for the unselected state. Subject: A single bold waving battlefield banner on a stout silver-blue pole: broad cream swallowtail cloth with one simple red vertical stripe, large easy to read two-point silhouette. A small silver-blue ground base. No weapons, no text, no crest, no scenery. Distinct flag silhouette.",
+      "source": "assets/imagegen/sidebar-icons/pvp-battleground.png",
+      "gameTexture": "addon/LycheeGroup_UI/Media/pvp-battleground.tga"
+    },
+    {
+      "key": "pvp-rated-battleground",
+      "prompt": "Use case: stylized-concept. Asset type: production raster navigation icon for the World of Warcraft addon LycheeGroup. Generate exactly ONE isolated icon, no grid, no atlas, no text. Match the existing Lychee menu pictograms: chunky solid flat filled forms, cream/off-white #F6F1D7, light silver-blue #ACBBC3, a restrained red #E73745 accent. Simple slightly rounded silhouettes, clear shapes recognizable at 22 to 28 pixels on a charcoal UI. Centered square composition, shape fills about 80 percent of square, consistent 10 percent transparent padding. Crisp clean alpha edges. No gradients, no 3D, no texture, no realistic material, no cast shadow, no glow, no black outline, no framing circle, no watermarks. Genuine transparent alpha background, including empty spaces within the icon. This is the selected color state; the app will display the same artwork in gray for the unselected state. Subject: A ranked battlefield honor badge: a broad cream heater shield with silver-blue rim, a small red five-point star centered on its face, and a compact three-point silver-blue crown directly above it. A pair of short silver-blue ribbon tails below. Solid simple symmetric shapes, no tiny ornament, no lettering. Immediately distinct from a helmet, target, or flag.",
+      "source": "assets/imagegen/sidebar-icons/pvp-rated-battleground.png",
+      "gameTexture": "addon/LycheeGroup_UI/Media/pvp-rated-battleground.tga"
+    }
+  ]
+}

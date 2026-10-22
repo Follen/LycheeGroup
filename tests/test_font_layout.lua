@@ -36,6 +36,38 @@ for _,locale in ipairs({"zhCN","enUS"}) do
    check(row:GetHeight()==76 and top(row.meta)==42,"100% result geometry changed")
    check(find.appList.rowHeight==36,"100% application stride changed")
   end
+  local descriptionWidth=row.description:GetWidth()
+  for _,collapsed in ipairs({true,false}) do
+   find:SetSidebarCollapsed(collapsed,false)
+   check(near(find.rail:GetWidth(),collapsed and 48 or 208),"category rail width changes with its state")
+   check(near(find.main:GetWidth(),collapsed and 1155.2 or 995.2),"main content uses the available rail width")
+   check(near(row.description:GetWidth(),descriptionWidth+(collapsed and 160 or 0)),"the result description uses reclaimed width")
+   check(find.sidebarToggle:GetHeight()==40 and find.sidebarToggle:GetWidth()==(collapsed and 40 or 192),"sidebar toggle keeps its hit area")
+   check(find.sidebarToggle.label:IsShown()~=collapsed,"toggle caption visibility matches the rail")
+   if not collapsed then check(find.sidebarToggle.label:GetStringWidth()+52<=find.sidebarToggle:GetWidth(),"translated toggle caption fits the largest font") end
+   for _,list in ipairs({find.seasonCategories,find.categories}) do
+    for _,categoryRow in ipairs(list.rows) do
+     check(categoryRow.title:IsShown()~=collapsed and categoryRow.chevron:IsShown()~=collapsed,"collapsed categories hide captions and arrows")
+     check(left(categoryRow.symbol)>=0 and left(categoryRow.symbol)+categoryRow.symbol:GetWidth()<=find.rail:GetWidth(),"category icon stays within the rail")
+    end
+   end
+   check(top(find.categories)+find.categories:GetHeight()+8<=find.rail:GetHeight()-48,"category viewport remains above the sidebar toggle")
+   check(separated(row.title,row.meta),"changing rail width preserves result line separation")
+  end
+  g.records[99]={id=99,partyGUID="Font-rejection",name="Rejected group",activityID=2,activity=g.Catalog:GetActivity(2),activityName="Dungeon activity",categoryID=2,numMembers=1,maxNumPlayers=5,age=1}
+  g.declinedParties["Font-rejection"]=GetTime();find:CommitChoice();find:DoSearch()
+  local rejected=find.results.rows[1]
+  local function CheckRejectionLayout()
+   check(rejected.key==99 and rejected.declined:IsShown(),"geometry checks render a rejected result")
+   check(separated(rejected.meta,rejected.declined),"rejection text overlaps the activity line")
+   check(top(rejected.declined)+rejected.declined:GetHeight()+10<=rejected:GetHeight()+.001,"rejection text exceeds the result row")
+   check(rejected.declined:GetStringWidth()<=rejected.declined:GetWidth(),"the complete rejection text fits at the selected font size")
+   check(rejected:GetHeight()/2+rejected.leader:GetHeight()/2<=top(rejected.declined),"rejection text overlaps the leader column")
+  end
+  CheckRejectionLayout()
+  a:SetSetting("fontScale",percent==130 and 70 or 130);CheckRejectionLayout();a:SetSetting("fontScale",percent)
+  g.records[99]=nil;g.declinedParties["Font-rejection"]=nil;g:Notify("results")
+  check(find.declineClock==nil,"clearing the rejected result releases its clock")
   local name=locale=="zhCN" and "很长的玩家姓名-很长的服务器" or "Longplayer-Longrealm"
   local people={{nameKey=name,class="WARRIOR",assignedRole="TANK",isFriend=true},{nameKey=name,class="PALADIN",assignedRole="HEALER"}}
   g.listing={name="Test listing",activityID=2,comment="",requiredItemLevel=0}

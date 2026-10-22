@@ -18,6 +18,7 @@ Tooltip.lua
 Native.lua
 Application.lua
 Transfer.lua
+Resize.lua
 Host.lua
 Find.lua
 Create.lua

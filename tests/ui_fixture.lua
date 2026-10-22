@@ -10,8 +10,9 @@ _G.LycheeGroupDB=settings;_G.LycheeGroupPrefsDB=preferences
 local A=LycheeGroup;A:LoadDB();dofile("addon/LycheeGroup/Bindings.lua")
 for _,file in ipairs({"Locale.lua","Notes.lua","Records.lua","PlayerInfo.lua","RosterReminder.lua"}) do dofile("addon/LycheeGroup_Notes/"..file) end
 A.Notes:Initialize()
-local G={db={prefs={}},prefs=A.charPrefs,subs={},views={},records={},apps={},applicants={},state="idle"}
+local G={db={prefs={},blockedLeaders={}},prefs=A.charPrefs,subs={},views={},records={},apps={},applicants={},state="idle",declinedParties={}}
 local blockedTitles,blockedTitleCount={},0
+local unblockedLeaders={}
 A.Group=G
 dofile("addon/LycheeGroup_Group/CreationPresets.lua")
 dofile("addon/LycheeGroup_Group/RaidBuffs.lua")
@@ -27,7 +28,13 @@ function G:OnSettingChanged(key,value)
 end
 function G:GetActivities() return {{id=1,name="Raid activity",fullName="A full raid activity name"}} end
 function G:GetHistory() return {} end
-function G:GetResults() local ids={};for id,record in pairs(self.records) do if not blockedTitles[record.name] and not self.Applications:IsActive(id) then ids[#ids+1]=id end end;table.sort(ids);return ids end
+function G:GetResults()
+ local ids={};for id,record in pairs(self.records) do if (not blockedTitles[record.name] or unblockedLeaders[record.leaderKey]) and not self.db.blockedLeaders[record.leaderKey] and not self.Applications:IsActive(id) then ids[#ids+1]=id end end
+ table.sort(ids,function(a,b)
+  local x,y=self.Applications:GetDeclinedAt(self.records[a].partyGUID)~=nil,self.Applications:GetDeclinedAt(self.records[b].partyGUID)~=nil
+  if x~=y then return not x end;return a<b
+ end);return ids
+end
 function G:GetResult(id) return self.records[id] end
 function G:GetResultCount() local n=0;for _ in pairs(self.records) do n=n+1 end;return n end
 function G:GetResultDetails(id) return self.records[id] and {members={},counts={TANK=1,HEALER=1,DAMAGER=2},encounters={}} end
@@ -69,16 +76,32 @@ function G.Search:ReleaseInput(lease) if self.inputLease==lease then self.inputL
 G.Results={}
 function G.Results:GetDetails(record) return record.details or {members={},counts={TANK=1,HEALER=1,DAMAGER=2},encounters={}} end
 function G.Results:InvalidateView() end
-function G.Results:BlockTitle(title)
- if title==nil or blockedTitles[title] then return false end
- blockedTitles[title]=true;blockedTitleCount=blockedTitleCount+1;G:Notify("results");return true
+function G.Results:BlockTitle(title,leaderKey)
+ if title==nil then return false end
+ local changed=not blockedTitles[title]
+ if changed then blockedTitles[title]=true;blockedTitleCount=blockedTitleCount+1 end
+ if leaderKey then unblockedLeaders[leaderKey]=nil;if not G.db.blockedLeaders[leaderKey] then G.db.blockedLeaders[leaderKey]=true;changed=true end end
+ for _,record in pairs(G.records) do
+  if record.name==title and record.leaderKey then
+   unblockedLeaders[record.leaderKey]=nil
+   if not G.db.blockedLeaders[record.leaderKey] then G.db.blockedLeaders[record.leaderKey]=true;changed=true end
+  end
+ end
+ if changed then G:Notify("results") end
+ return changed
 end
 function G.Results:ClearBlockedTitles()
- if blockedTitleCount==0 then return false end
- wipe(blockedTitles);blockedTitleCount=0;G:Notify("results");return true
+ if blockedTitleCount==0 and not next(G.db.blockedLeaders) then return false end
+ wipe(blockedTitles);wipe(G.db.blockedLeaders);wipe(unblockedLeaders);blockedTitleCount=0;G:Notify("results");return true
 end
 function G.Results:GetBlockedTitleCount() return blockedTitleCount end
+function G.Results:GetBlockedLeaders() local keys={};for key in pairs(G.db.blockedLeaders) do keys[#keys+1]=key end;table.sort(keys);return keys end
+function G.Results:RemoveBlockedLeader(key)
+ if not G.db.blockedLeaders[key] then return false end
+ G.db.blockedLeaders[key]=nil;unblockedLeaders[key]=true;G:Notify("results");return true
+end
 G.Applications={}
+function G.Applications:GetDeclinedAt(partyGUID) return partyGUID and G.declinedParties[partyGUID] end
 function G.Applications:IsActive(id)
  local app=G:GetApplication(id);if not app then return false end
  local status,pending=app.status,app.pendingStatus
@@ -136,7 +159,7 @@ dofile("addon/LycheeGroup_Group/Locale.lua");G.L=A.GroupLocale;dofile("addon/Lyc
 _G.LycheeUI=nil
 local libraryPrivate={}
 for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Components.lua","Native.lua","Menu.lua"}) do assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/"..file))("LycheeGroup",libraryPrivate) end
-for _,file in ipairs({"Locale.lua","Theme.lua","Motion.lua","Components.lua","Members.lua","Preview.lua","Tooltip.lua","Native.lua","Application.lua","Transfer.lua","Host.lua","Find.lua","Create.lua","Notes.lua","Settings.lua"}) do dofile("addon/LycheeGroup_UI/"..file) end
+for _,file in ipairs({"Locale.lua","Theme.lua","Motion.lua","Components.lua","Members.lua","Preview.lua","Tooltip.lua","Native.lua","Application.lua","Transfer.lua","Resize.lua","Host.lua","Find.lua","Create.lua","Notes.lua","Settings.lua"}) do dofile("addon/LycheeGroup_UI/"..file) end
 local U=A.UI;local C=U.C
 local Open=A.Open
 function A:Open(page,ctx) self.lastOpen=page;return Open(self,page,ctx) end

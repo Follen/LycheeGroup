@@ -3,9 +3,11 @@ local A=_G.LycheeGroup
 local UI=A.UI
 local T,L,C=UI.Theme,UI.L,UI.C
 local MAIN=T.contentWidth-288-16
-local FORM=math.min(820,MAIN-48)
+local FORM=MAIN-48
+local DESCRIPTION_MIN_HEIGHT=80
 local CONTENT=MAIN-48
 local BATCH_WIDTH=CONTENT-C.listRightInset
+local BASE_BATCH_WIDTH=BATCH_WIDTH
 local columns={
  name={x=12,width=224,align="LEFT"},role={x=242,width=68,align="CENTER"},
  faction={x=316,width=112,align="CENTER"},
@@ -92,6 +94,10 @@ local function Minimum(app,key)
  return value or -1
 end
 function P:LayoutRequirements()
+ local ilvlWidth=self.hasPlaystyle and (self.scoreKind and (FORM-32)/3.25 or (FORM-16)/2.25) or (self.scoreKind and (FORM-16)/2 or FORM)
+ self.ilvl:SetWidth(ilvlWidth);self.score:SetWidth(ilvlWidth)
+ local styleLeft=self.scoreKind and 2*(ilvlWidth+16) or ilvlWidth+16
+ self.playstyle:SetWidth(math.max(1,FORM-styleLeft))
  local large=UI.context.fontScale>1
  local inputTop=large and math.max(56,32+self.ilvlLabel:GetHeight(),32+self.scoreLabel:GetHeight(),32+self.styleLabel:GetHeight()) or 56
  local scoreX=self.ilvl:GetWidth()+16
@@ -108,6 +114,7 @@ function P:LayoutRequirements()
   option:ClearAllPoints();option:SetPoint("TOPLEFT",optionX,-optionTop);optionX=optionX+option:GetWidth()+28
  end
  self.autoInviteHint:SetPoint("TOPLEFT",0,-optionTop-46)
+ self.requirementsBottom=optionTop+46+self.autoInviteHint:GetStringHeight()
 end
 function P:LayoutFont()
  local large=UI.context.fontScale>1
@@ -122,7 +129,8 @@ function P:LayoutFont()
  local descriptionInputTop=large and math.max(196,descriptionTop+self.descriptionLabel:GetHeight()) or 196
  self.titleLabel:SetPoint("TOPLEFT",0,-titleTop);self.titleShell:SetPoint("TOPLEFT",0,-titleInputTop)
  self.descriptionLabel:SetPoint("TOPLEFT",0,-descriptionTop);self.descriptionShell:SetPoint("TOPLEFT",0,-descriptionInputTop)
- self.requirementsTop=math.max(356,56+descriptionInputTop+self.descriptionShell:GetHeight()+24)
+ self.descriptionInputTop=descriptionInputTop
+ self.minimumRequirementsTop=math.max(356,56+descriptionInputTop+DESCRIPTION_MIN_HEIGHT+24)
  self:LayoutRequirements()
  self:LayoutFormNotices()
  self.cancelListing:SetWidth(FitText(self.cancelListing.label)+34);self.editListing:SetWidth(FitText(self.editListing.label)+34)
@@ -157,7 +165,7 @@ function P:Build(parent)
  self.titleLabel=C.Text(desc,L.title,14,T.muted);C.SetLineHeight(self.titleLabel,20,true);self.titleLabel:SetPoint("TOPLEFT",0,-92)
  self.titleShell=Shell(desc,FORM,44,0,-116)
  self.descriptionLabel=C.Text(desc,L.comment,14,T.muted);C.SetLineHeight(self.descriptionLabel,20,true);self.descriptionLabel:SetPoint("TOPLEFT",0,-172)
- self.descriptionShell=Shell(desc,FORM,80,0,-196)
+ self.descriptionShell=Shell(desc,FORM,DESCRIPTION_MIN_HEIGHT,0,-196)
  for _,shell in ipairs({self.titleShell,self.descriptionShell}) do
   shell:EnableMouse(true)
   shell:SetScript("OnEnter",function() P:EnsureCreationInput() end)
@@ -245,17 +253,65 @@ function P:Build(parent)
  summary:EnableMouse(false);summary:EnableMouseMotion(true)
  self:RefreshFavorites()
 end
+function P:LayoutSize(width,height)
+ self.layoutHeight=height
+ MAIN=width-288-16;CONTENT=MAIN-48;FORM=CONTENT;BATCH_WIDTH=CONTENT-C.listRightInset
+ BATCH_MAX_HEIGHT=height-242
+ local previousNameWidth=columns.name.width
+ local compact=math.min(50,math.max(0,BASE_BATCH_WIDTH-BATCH_WIDTH))
+ columns.name.width=224-compact;columns.role.x=242-compact;columns.faction.x=316-compact
+ columns.rating.x=432-compact;columns.mapScore.x=504-compact;columns.ilvl.x=588-compact
+ columns.comment.x=660-compact;columns.comment.width=BATCH_WIDTH-768+compact;columns.actions.x=BATCH_WIDTH-96
+ noMapScoreColumns.ilvl.x=540-compact;noMapScoreColumns.comment.x=620-compact;noMapScoreColumns.comment.width=BATCH_WIDTH-728+compact
+ noRatingColumns.ilvl.x=444-compact;noRatingColumns.comment.x=532-compact;noRatingColumns.comment.width=BATCH_WIDTH-640+compact
+ self.surface:SetSize(MAIN,height);self.formFrame:SetSize(FORM,height-48);self.manage:SetSize(CONTENT,height-48)
+ self.desc:SetWidth(FORM);self.req:SetWidth(FORM);self.titleShell:SetWidth(FORM);self.descriptionShell:SetWidth(FORM)
+ for _,notice in ipairs({self.formNotice,self.correctionNotice}) do
+  notice:SetWidth(FORM)
+  if notice:IsShown() then notice:SetMessage(notice.text:GetText()) end
+ end
+ self.autoInviteHint:SetWidth(FORM)
+ self:LayoutRequirements();self:LayoutFormNotices()
+ if self.pickerVariants then self:LayoutActivityChoice(self.pickerVariants) end
+ local summaryWidth=CONTENT-116-self.cancelListing:GetWidth()-8-self.editListing:GetWidth()
+ self.sMeta:SetWidth(summaryWidth);self.sName:SetWidth(summaryWidth)
+ self.manageNotice:SetWidth(CONTENT);self.empty:SetWidth(CONTENT-48)
+ self.batchScroll:SetWidth(BATCH_WIDTH);self.batchBody:SetWidth(BATCH_WIDTH)
+ for _,batch in ipairs(self.batchPool) do
+  batch:SetWidth(BATCH_WIDTH)
+  batch.invite:SetPoint("LEFT",columns.actions.x,0);batch.decline:SetPoint("LEFT",columns.actions.x+44,0);batch.status:SetPoint("LEFT",columns.actions.x,0)
+  for _,row in ipairs(batch.people) do
+   row:SetWidth(columns.actions.x);row.applicantColumns=nil
+   row.score:SetPoint("LEFT",columns.rating.x,0);row.mapScore:SetPoint("LEFT",columns.mapScore.x,0)
+  end
+ end
+ if previousNameWidth~=columns.name.width and self.appIDs then self:LayoutBatches() else self:LayoutApplicantViewport() end
+ self.rail:SetHeight(height);self:LayoutRosterCard()
+end
+function P:GetMinimumHeight()
+ if not self.formFrame:IsShown() then return 0 end
+ local offset=self.formNotice:IsShown() and self.formNotice:GetHeight()+12 or 0
+ if self.correctionNotice:IsShown() then offset=offset+self.correctionNotice:GetHeight()+12 end
+ return (self.minimumRequirementsTop or 356)+offset+self.requirementsBottom+24+40+48+T.headerHeight+T.pageInset
+end
 function P:LayoutFormNotices()
  local offset=self.formNotice:IsShown() and self.formNotice:GetHeight()+12 or 0
  self.correctionNotice:ClearAllPoints();self.correctionNotice:SetPoint("TOPLEFT",0,-44-offset)
  if self.correctionNotice:IsShown() then offset=offset+self.correctionNotice:GetHeight()+12 end
+ local minimumTop=self.minimumRequirementsTop or 356
+ local extra=math.max(0,self.formFrame:GetHeight()-minimumTop-offset-self.requirementsBottom-24-40)
+ self.requirementsTop=minimumTop+extra
+ self.descriptionShell:SetHeight(DESCRIPTION_MIN_HEIGHT+extra)
+ self.desc:SetHeight((self.descriptionInputTop or 196)+self.descriptionShell:GetHeight())
  self.desc:ClearAllPoints();self.desc:SetPoint("TOPLEFT",0,-56-offset)
- self.req:ClearAllPoints();self.req:SetPoint("TOPLEFT",0,-(self.requirementsTop or 356)-offset)
+ self.req:ClearAllPoints();self.req:SetPoint("TOPLEFT",0,-self.requirementsTop-offset)
 end
 function P:SetFormError(message)
  local wasShown=self.formNotice:IsShown()
  self.formNotice:SetMessage(message)
- if wasShown or self.formNotice:IsShown() then self:LayoutFormNotices() end
+ if not wasShown and not self.formNotice:IsShown() then return end
+ self:LayoutFormNotices()
+ if UI.page=="create" then UI:RefreshWindowSize() end
 end
 function P:HideCorrectionNotice()
  if self.correctionTimer then self.correctionTimer:Cancel();self.correctionTimer=nil end
@@ -265,6 +321,7 @@ end
 function P:ShowCorrectionNotice(message)
  if self.correctionTimer then self.correctionTimer:Cancel() end
  self.correctionNotice:SetMessage(message);self:LayoutFormNotices()
+ UI:RefreshWindowSize()
  self.correctionTimer=C_Timer.NewTimer(4,function() P:HideCorrectionNotice() end)
 end
 function P:RefreshFavoriteState()
@@ -414,7 +471,7 @@ function P:LayoutRosterCard()
  self.rosterCard:ClearAllPoints();self.rosterCard:SetPoint("TOPLEFT",0,-top)
  local height=112
  if self.rosterContext and self.rosterContext.rosterMode=="list" and self.rosterList then
-  local list=self.rosterList;local available=math.max(44,T.contentHeight-top-76)
+  local list=self.rosterList;local available=math.max(44,(self.layoutHeight or T.contentHeight)-top-76)
   -- Decide from full-width text so wrapping in the narrower scroll area cannot keep an unnecessary gutter.
   local gutter=list.fullHeight>available and C.listRightInset or 0
   if list.gutter~=gutter then self:RefreshRosterList(gutter) end
@@ -423,7 +480,7 @@ function P:LayoutRosterCard()
   list.slider:SetShown(list.body:GetHeight()>viewport);self:SetRosterOffset(list.clip:GetVerticalScroll());height=76+viewport
  elseif self.buffReport then
   local rows=math.ceil(#self.buffReport.missing/2)
-  local viewport=math.min(math.max(1,rows)*32,math.floor((T.contentHeight-top-164)/32)*32)
+  local viewport=math.min(math.max(1,rows)*32,math.max(32,math.floor(((self.layoutHeight or T.contentHeight)-top-164)/32)*32))
   height=164+viewport;self.buffArea:SetHeight(height-132)
   self.buffList:SetViewport(viewport)
   local gutter=rows*32>viewport and C.listRightInset or 0
@@ -710,9 +767,6 @@ function P:RefreshPicker()
  self.score:SetShown(self.scoreKind~=nil);self.scoreLabel:SetShown(self.scoreKind~=nil)
  UI:SetText(self.ilvlLabel,A.GroupPresentation.Activity(act).kind=="pvp" and S("最低 PvP 装等","Minimum PvP item level") or L.minItemLevel)
  UI:SetText(self.scoreLabel,self.scoreKind=="pvp" and S("最低 PvP 评分","Minimum PvP rating") or L.minRating)
- local ilvlWidth=self.hasPlaystyle and (self.scoreKind and (FORM-32)/3.25 or (FORM-16)/2.25) or (self.scoreKind and (FORM-16)/2 or FORM)
- self.ilvl:SetWidth(ilvlWidth);self.score:SetWidth(ilvlWidth)
- local x=self.scoreKind and 2*(ilvlWidth+16) or ilvlWidth+16;self.playstyle:SetWidth(math.max(1,FORM-x))
  self:LayoutRequirements()
  if not form.generalPlaystyle then local options=self:PlaystyleItems();form.generalPlaystyle=options[1] and options[1].value end
  self.playstyle:SetValue(form.generalPlaystyle,form.generalPlaystyle and PlaystyleLabel(form.generalPlaystyle) or L.choosePlaystyle)
@@ -801,6 +855,7 @@ function P:RefreshMode()
   UI:SetText(self.sMeta,(group and group.name or listing.activityName or "")..(difficulty and " · "..difficulty or "").." · "..L.requiredItemLevel.." "..(listing.requiredItemLevel or 0))
  end
  self:RefreshRosterPresentation();self:RefreshFavorites()
+ UI:RefreshWindowSize()
 end
 function P:Submit()
  if self.submitting then return end

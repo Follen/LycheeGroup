@@ -55,7 +55,7 @@ do
 	T.eq(A.db.notesHasRecords, false, "默认无记录摘要")
 	T.eq(A.db.askReason, true, "默认询问理由")
 	T.eq(A.db.reduceMotion, false, "默认完整动效")
-	T.eq(A.db.nativeLFGEntry, true, "默认隐藏原生组队眼睛并保留声音")
+	T.eq(A.db.nativeLFGEntry, false, "默认保留原生组队眼睛")
 	T.eq(A.db.uiScale, 100, "主窗口缩放以当前尺寸 100% 为默认值")
 	T.eq(A.db.schema, 1)
 end
@@ -64,11 +64,12 @@ do
 	-- 已存在的存档值不被默认值覆盖。
 	_G.LycheeGroupDB = nil
 	A.db = nil
-	_G.LycheeGroupDB = { notesEnabled = false, uiScale = 115 }
+	_G.LycheeGroupDB = { notesEnabled = false, uiScale = 115, nativeLFGEntry = true }
 	A:LoadDB()
 	T.eq(A.db.notesEnabled, false, "保留已有值")
 	T.eq(A.db.askReason, true, "缺失项补默认")
 	T.eq(A.db.uiScale, 115, "保存的主窗口比例不被默认值覆盖")
+	T.eq(A.db.nativeLFGEntry, true, "保留已保存的原生眼睛隐藏设置")
 	T.eq(A.db.keywordFilters,nil,"fresh settings do not recreate keyword filters")
 end
 
@@ -294,6 +295,7 @@ end
 -- Concealing the eye leaves its native animation and callbacks alive. A late
 -- native addon and settings changes use the same one-time hooks.
 do
+ A:SetSetting("nativeLFGEntry",true)
  local oldOpen=A.Open
  local oldGetLFGMode,oldCategoryCount=GetLFGMode,NUM_LE_LFG_CATEGORYS
  local modes={}

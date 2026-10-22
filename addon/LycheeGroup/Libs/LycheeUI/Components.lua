@@ -540,6 +540,7 @@ function C.Selection(parent,options)
 end
 function C.List(parent,width,height,rowHeight,onSelect,onHover)
  local list=CreateFrame("Frame",nil,parent);list:SetSize(width,height)
+ local CreateRow
  list.rows={};list.offset=0;list.pixelOffset=0;list.rowHeight=rowHeight or 64;list.viewportHeight=height;list.gutter=C.listRightInset
  list.capacity=math.ceil(height/list.rowHeight);list.poolCapacity=list.capacity+2
  local clip=CreateFrame("ScrollFrame",nil,list);clip:SetPoint("TOPLEFT");clip:SetPoint("BOTTOMRIGHT",-C.listRightInset,0)
@@ -643,11 +644,24 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover)
   scrollFrom,scrollElapsed=self.pixelOffset,0
   M:Start(self,ScrollStep)
  end
- function list:SetItems(ids,render) self.ids=ids;self.render=render;self:Refresh() end
+ local function EnsureRows(height)
+  local visible=math.ceil(height/list.rowHeight)
+  if list.initializeRow then
+   local required=math.min(visible,list.ids and #list.ids or 0)+2
+   for i=list.poolCapacity+1,required do CreateRow(i);list.initializeRow(list.rows[i]) end
+   list.poolCapacity=math.max(list.poolCapacity,required)
+  end
+  list.capacity=math.min(list.poolCapacity-1,visible)
+ end
+ function list:SetItems(ids,render) self.ids=ids;self.render=render;EnsureRows(self:GetHeight());self:Refresh() end
+ function list:SetRowInitializer(initialize)
+  self.initializeRow=initialize
+  for _,row in ipairs(self.rows) do initialize(row) end
+ end
  function list:SetViewport(value)
   if self.viewportHeight==value then return end
   self.viewportHeight=value
-  self:SetHeight(value);self.capacity=math.min(self.poolCapacity-1,math.ceil(value/self.rowHeight));canvas:SetHeight(value+self.rowHeight*2);self:Refresh()
+  self:SetHeight(value);EnsureRows(value);canvas:SetHeight(value+self.rowHeight*2);self:Refresh()
  end
  local function ResizeContent()
   local width=list:GetWidth()-list.gutter
@@ -708,8 +722,8 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover)
   end
  end)
  list:SetScript("OnShow",function(self) self:Refresh(true) end)
- for i=1,list.poolCapacity do
-  local row=CreateFrame("Button",nil,canvas);row:SetSize(width-C.listRightInset,list.rowHeight);row:SetPoint("TOPLEFT",0,-(i-1)*list.rowHeight)
+ CreateRow=function(i)
+  local row=CreateFrame("Button",nil,canvas);row:SetSize(list:GetWidth()-list.gutter,list.rowHeight);row:SetPoint("TOPLEFT",0,-(i-1)*list.rowHeight)
   row.alternate=C.Panel(row,T.rowAlternate,12)
   row.selected=C.Panel(row,T.secondaryContainer,12);row.selected:Hide()
   row.hover=C.Panel(row,T.rowHover,12);row.hover:Hide()
@@ -730,6 +744,7 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover)
   row:SetScript("OnHide",function(self) self._inside=nil;self._pressed=nil;M:Stop(self.hover);self.hover:Hide();if self.pressedKey then self.pressCancelled=true end end)
   list.rows[i]=row
  end
+ for i=1,list.poolCapacity do CreateRow(i) end
  Hook(list,"OnSizeChanged",ResizeContent)
  return list
 end

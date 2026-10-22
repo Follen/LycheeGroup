@@ -4,6 +4,10 @@ local G = A.Group
 local Catalog = {activities={},groups={},journalTiers={}}
 G.Catalog = Catalog
 local F = Enum.LFGListFilter
+local categoryIcons={
+ [1]="flag",[2]="mountain",[3]="tower",[4]="pvp-arena",[6]="plus",[7]="pvp-skirmish",
+ [8]="pvp-battleground",[9]="pvp-rated-battleground",[121]="delve",
+}
 -- Labels only: membership remains the live catalog's native group identity.
 local dungeonAbbreviations={
  [2993]={"毒牙","AoF"},[2825]={"洞穴","DoN"},[1877]={"神庙","ToS"},[1762]={"诸王","KR"},
@@ -48,7 +52,7 @@ function Catalog:GetCategories()
    if value==id then
     local info=C_LFGList.GetLfgCategoryInfo(id)
     list[#list+1]={key=tostring(id),id=id,name=info.name,
-     icon=id==2 and "mountain" or id==3 and "tower" or id==121 and "delve" or id==1 and "flag" or id==6 and "plus" or "pvp"}
+     icon=categoryIcons[id] or "pvp"}
     return
    end
   end

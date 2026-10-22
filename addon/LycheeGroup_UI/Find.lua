@@ -14,11 +14,13 @@ local function FitText(label)
  local width=math.ceil(label:GetStringWidth())+2;label:SetWidth(width);return width
 end
 local LEFT=208
+local COLLAPSED_LEFT=48
 local PICKER_GAP=24
 local MAIN=T.contentWidth-LEFT-T.contentGap-48
 local HEIGHT=T.contentHeight-48
 local LIST_GUTTER=14
 local BODY=MAIN-LIST_GUTTER
+local BASE_BODY=BODY
 local APP_BODY=MAIN-32-LIST_GUTTER
 local AGE_WIDTH=zh and 88 or 96
 local APP_ROW_HEIGHT,RESULT_ROW_HEIGHT=36,76
@@ -123,6 +125,58 @@ local function UpdateMembers(row,id,record,details)
  UI:SetText(row.count,record and not row.isParty and UI:MemberCountText(record) or "")
  LayoutMembers(row)
 end
+local function DeclinedAt(record)
+ return record and record.partyGUID and UI:GetGroup().Applications:GetDeclinedAt(record.partyGUID)
+end
+local EnsureDeclineClock
+local function UpdateDeclineLabel(row,record,now)
+ local declinedAt=DeclinedAt(record)
+ local text=""
+ if declinedAt then
+  local minutes=math.floor((now-declinedAt)/60)
+  text=minutes<1 and Say("刚刚拒绝了你","Rejected you just now") or Say("%d分钟前拒绝了你","Rejected you %d min ago"):format(minutes)
+ end
+ UI:SetText(row.declined,text);row.declined:SetShown(declinedAt~=nil)
+ return declinedAt and 60-(now-declinedAt)%60
+end
+local function StopDeclineClock()
+ if P.declineClock then P.declineClock:Cancel();P.declineClock=nil end
+ P.declineDeadline=nil
+end
+local function RefreshVisibleDeclines()
+ if UI.hiding or UI.page~="find" or not P.frame:IsVisible() or not P.hasDeclinedResults then StopDeclineClock();return end
+ local group,now=UI:GetGroup(),GetTime()
+ local delay
+ for _,row in ipairs(P.results.rows) do
+  if row.key and row._hitVisible then
+   local nextMinute=UpdateDeclineLabel(row,group:GetResult(row.key),now)
+   if nextMinute then delay=math.min(delay or nextMinute,nextMinute) end
+  end
+ end
+ if delay then EnsureDeclineClock(delay) else StopDeclineClock() end
+end
+local function RefreshDeclineClock()
+ P.declineClock,P.declineDeadline=nil,nil
+ RefreshVisibleDeclines()
+end
+EnsureDeclineClock=function(delay)
+ local deadline=GetTime()+delay
+ if P.declineClock and P.declineDeadline<=deadline then return end
+ StopDeclineClock();P.declineDeadline=deadline;P.declineClock=C_Timer.NewTimer(delay,RefreshDeclineClock)
+end
+function P:RefreshDeclineState(ids)
+ local declined=false
+ for _,id in ipairs(ids) do if DeclinedAt(UI:GetGroup():GetResult(id)) then declined=true;break end end
+ if (self.hasDeclinedResults==true)~=declined then self.hasDeclinedResults=declined;self:LayoutListRows() end
+end
+local function LayoutResultActivity(row)
+ local width=RESULT_COLUMNS.title.width
+ if row.marks:IsShown() then
+  width=math.min(math.ceil(row.meta:GetUnboundedStringWidth())+2,width-row.marks:GetWidth()-6)
+ end
+ -- Data refresh and window layout must use the same text edge for the marks.
+ if row.meta:GetWidth()~=width then row.meta:SetWidth(width) end
+end
 local function RenderResult(row,id)
  local r=Record(id);if not r then return end
  UI:SetText(row.title,r.name or L.unknown)
@@ -139,10 +193,8 @@ local function RenderResult(row,id)
   local shade=missing and .7 or 1
   slot.role:SetDesaturated(missing);slot.role:SetVertexColor(shade,shade,shade)
  end
- local marksWidth=UI.Members:BindGroupMarks(row.marks,r)
- local activityWidth=FitText(row.meta)
- row.meta:SetWidth(marksWidth>0 and math.min(activityWidth,RESULT_COLUMNS.title.width-marksWidth-6) or RESULT_COLUMNS.title.width)
- row.marks:ClearAllPoints();row.marks:SetPoint("LEFT",row.meta,"RIGHT",6,0)
+ UI.Members:BindGroupMarks(row.marks,r)
+ LayoutResultActivity(row)
  local leaderClass
  for _,member in ipairs(d.members) do if member.isLeader or r.leaderKey and member.nameKey==r.leaderKey then leaderClass=member.class;break end end
  row.leader:SetTextColor(UI:ClassColor(leaderClass))
@@ -152,6 +204,7 @@ local function RenderResult(row,id)
  else UI:SetScore(row.score,r.leaderRating,r.ratingKind) end
  UI:SetText(row.ilvl,(r.requiredItemLevel or 0)>0 and math.floor(r.requiredItemLevel) or Say("不限","Any"))
  UI:SetText(row.age,UI:AgeText(r.age))
+ UpdateDeclineLabel(row,r,GetTime())
  row.noteDot:Hide()
 end
 local function UpdateApplicationStatus(row,app)
@@ -198,12 +251,12 @@ function P:Build(parent)
  local seasonStride=zh and 52 or 72
  local seasonHeight=seasonStride*2;local categoriesTop=seasonHeight+24
  self.seasonCategories=C.List(rail,LEFT,seasonHeight,seasonStride,function(key,button,row) P:SelectCategory(key,row) end);self.seasonCategories:SetPoint("TOPLEFT",0,-8)
- self.categories=C.List(rail,LEFT,T.contentHeight-categoriesTop-8,52,function(key,button,row) P:SelectCategory(key,row) end);self.categories:SetPoint("TOPLEFT",0,-categoriesTop)
+ self.categories=C.List(rail,LEFT,T.contentHeight-categoriesTop-72,52,function(key,button,row) P:SelectCategory(key,row) end);self.categories:SetPoint("TOPLEFT",0,-categoriesTop)
  self.seasonIDs={};self.catIDs={};self.catMap={}
- for _,list in ipairs({self.seasonCategories,self.categories}) do list:SetGutter(0);list.alternateRows=false;list.selectionFill=true;list.idleTextColor=T.muted;for _,row in ipairs(list.rows) do
+ for _,list in ipairs({self.seasonCategories,self.categories}) do list:SetGutter(0);list.alternateRows=false;list.selectionFill=true;list.idleTextColor=T.muted;list:SetRowInitializer(function(row)
   row:SetHeight(list.rowHeight-4);row.selected:SetRadius(8);row.hover:SetRadius(8);row.alternate:SetRadius(8);row.title:ClearAllPoints();row.title:SetPoint("LEFT",52,0);row.title:SetWidth(116);C.SetFont(row.title,T.railFontSize+2);row.title:SetWordWrap(true);row.title:SetHeight(0);C.SetLineHeight(row.title,22);row.meta:Hide()
   row.symbol=C.Icon(row,T.railIconSize);row.symbol:SetPoint("LEFT",16,0);row.chevron=C.Glyph(row,"chevron",12);row.chevron:SetPoint("RIGHT",-16,0)
- end;list:SetStyle({selectionMotion=true,radius=8}) end
+ end);list:SetStyle({selectionMotion=true,radius=8}) end
  local surface=CreateFrame("Frame",nil,f);surface:SetSize(MAIN+48,T.contentHeight);surface:SetPoint("TOPLEFT",LEFT+T.contentGap,0);C.Panel(surface,T.surfaceLow,24);self.surface=surface
  local main=CreateFrame("Frame",nil,surface);main:SetSize(MAIN,HEIGHT);main:SetPoint("TOPLEFT",24,-24);self.main=main
  self.searchInputRight=SEARCH_RIGHT
@@ -285,11 +338,13 @@ function P:Build(parent)
  end
  self.results=C.List(main,MAIN,HEIGHT-180,RESULT_ROW_HEIGHT,function(id,button,row) P:OnResultSelect(id,button,row) end)
  self.results:SetGutter(LIST_GUTTER);self.results.tooltipFraction=.25
- for _,row in ipairs(self.results.rows) do
+ self.results:SetRowInitializer(function(row)
   ResultTooltipArea(row,self.results)
   row.title:ClearAllPoints();row.title:SetPoint("TOPLEFT",RESULT_COLUMNS.title.x,-10);row.title:SetWidth(RESULT_COLUMNS.title.width);C.SetFont(row.title,T.listTitleSize);C.SetLineHeight(row.title,T.listTitleLineHeight,true)
   row.meta:ClearAllPoints();row.meta:SetPoint("TOPLEFT",RESULT_COLUMNS.title.x,-42);row.meta:SetWidth(RESULT_COLUMNS.title.width);C.SetLineHeight(row.meta,20,true)
-  row.marks=UI.Members:CreateMarks(row)
+  row.declined=C.Text(row,"",12,T.warning,RESULT_COLUMNS.leader.x+RESULT_COLUMNS.leader.width-RESULT_COLUMNS.title.x);C.SetLineHeight(row.declined,18,true);row.declined:SetWordWrap(false);row.declined:Hide()
+  row:HookScript("OnHide",function() UI:SetText(row.declined,"");row.declined:Hide() end)
+  row.marks=UI.Members:CreateMarks(row);row.marks:SetPoint("LEFT",row.meta,"RIGHT",6,0)
   row:HookScript("OnHide",function(self) UI.Members:ClearMarks(self.marks) end)
   row.description=C.Text(row,"",14,T.muted,RESULT_COLUMNS.description.width,20);row.description:SetPoint("LEFT",RESULT_COLUMNS.description.x,0);row.description:SetHeight(48);row.description:SetMaxLines(2);row.description:SetWordWrap(true);row.description:SetJustifyV("MIDDLE")
   row.leaderIcon=C.Icon(row,12);row.leaderIcon:SetTexture(T.media.."leader.tga");row.leaderIcon:SetPoint("LEFT",RESULT_COLUMNS.leader.x-17,0)
@@ -299,7 +354,16 @@ function P:Build(parent)
   row.ilvl=C.Text(row,"",14,T.text,RESULT_COLUMNS.ilvl.width);C.SetLineHeight(row.ilvl,20,true);row.ilvl:SetPoint("LEFT",RESULT_COLUMNS.ilvl.x,0);row.ilvl:SetJustifyH("CENTER");row.ilvl:SetWordWrap(false)
   BuildMembers(row,RESULT_COLUMNS.members.x)
   row.age=C.Text(row,"",14,T.dim,RESULT_COLUMNS.age.width);row.age:SetPoint("LEFT",RESULT_COLUMNS.age.x,0);row.age:SetJustifyH("RIGHT");C.SetLineHeight(row.age,20,true);row.age:SetWordWrap(false)
+  local metaTop=math.max(42,10+row.title:GetHeight()+4)
+  row.meta:SetPoint("TOPLEFT",RESULT_COLUMNS.title.x,-metaTop)
+  row.declined:SetPoint("TOPLEFT",RESULT_COLUMNS.title.x,-metaTop-row.meta:GetHeight()-4)
+  row.description:SetHeight(math.max(48,row.meta:GetHeight()*2));LayoutMembers(row)
   row:SetScript("OnDoubleClick",function(b,button) if button=="LeftButton" and b.key then P:Apply(b.key) end end)
+ end)
+ local refreshResultsList=self.results.Refresh
+ function self.results:Refresh(...)
+  refreshResultsList(self,...)
+  RefreshVisibleDeclines()
  end
  self.emptyPanel=CreateFrame("Frame",nil,main);self.emptyPanel:SetSize(MAIN,280);self.emptyPanel:SetPoint("CENTER",0,-12)
  self.busyIcon=C.Icon(self.emptyPanel,44);self.busyIcon:SetTexture(T.media.."lychee-logo.tga");self.busyIcon:SetPoint("TOP",self.emptyPanel,"TOP",0,-26)
@@ -321,7 +385,97 @@ function P:Build(parent)
  else EnableShortcuts() end
  self:BuildFilters()
  for _,label in ipairs({self.membersLabel,self.maxMembersLabel,self.roleLabel,self.socialLabel,self.sortLabel}) do C.SetLineHeight(label,20,true) end
+ self:BuildSidebarToggle()
  self:LayoutListRows()
+end
+function P:LayoutResultColumns()
+ local raid=self.raidResultColumns
+ local descriptionX=raid and RESULT_COLUMNS.rating.x or RESULT_COLUMNS.description.x
+ local ratingX=raid and RESULT_COLUMNS.description.x+RESULT_COLUMNS.description.width-RESULT_COLUMNS.rating.width or RESULT_COLUMNS.rating.x
+ for key,label in pairs(self.resultHeadings) do
+  local column=RESULT_COLUMNS[key]
+  label:SetWidth(column.width);label:SetPoint("TOPLEFT",key=="title" and 12 or column.x,0)
+ end
+ self.resultHeadings.description:SetPoint("TOPLEFT",descriptionX,0);self.resultHeadings.rating:SetPoint("TOPLEFT",ratingX,0)
+ self.resultHeadings.age:SetPoint("TOPLEFT",RESULT_COLUMNS.age.x,0)
+ for _,row in ipairs(self.results.rows) do
+  row.title:SetWidth(RESULT_COLUMNS.title.width);LayoutResultActivity(row)
+  row.leaderIcon:SetPoint("LEFT",RESULT_COLUMNS.leader.x-17,0);row.leader:SetPoint("LEFT",RESULT_COLUMNS.leader.x,0)
+  row.declined:SetWidth(RESULT_COLUMNS.leader.x+RESULT_COLUMNS.leader.width-RESULT_COLUMNS.title.x)
+  row.membersX=RESULT_COLUMNS.members.x;LayoutMembers(row)
+  row.ilvl:SetPoint("LEFT",RESULT_COLUMNS.ilvl.x,0)
+  row.description:SetWidth(RESULT_COLUMNS.description.width);row.description:SetPoint("LEFT",descriptionX,0)
+  row.score:SetPoint("LEFT",ratingX,0);row.age:SetPoint("LEFT",RESULT_COLUMNS.age.x,0)
+ end
+end
+function P:LayoutSidebar(width)
+ self.sidebarWidth=width
+ MAIN=(self.layoutWidth or T.contentWidth)-width-T.contentGap-48;BODY=MAIN-LIST_GUTTER;APP_BODY=MAIN-32-LIST_GUTTER
+ local compact=math.min(70,math.max(0,BASE_BODY-BODY))
+ RESULT_COLUMNS.title.width=210-compact
+ RESULT_COLUMNS.leader.x=303-compact;RESULT_COLUMNS.members.x=427-compact;RESULT_COLUMNS.ilvl.x=581-compact
+ RESULT_COLUMNS.rating.x=649-compact;RESULT_COLUMNS.description.x=741-compact
+ RESULT_COLUMNS.description.width=BODY-765-AGE_WIDTH+compact;RESULT_COLUMNS.age.x=BODY-12-AGE_WIDTH
+ APPLICATION_COLUMNS.title.width=APP_BODY-591;APPLICATION_COLUMNS.leader.x=APP_BODY-522
+ local alpha=math.max(0,math.min(1,(width-COLLAPSED_LEFT)/(LEFT-COLLAPSED_LEFT)))
+ if math.abs(width-(state.railCollapsed and COLLAPSED_LEFT or LEFT))<1/self.rail:GetEffectiveScale() then alpha=state.railCollapsed and 0 or 1 end
+ for _,list in ipairs({self.seasonCategories,self.categories}) do
+  list:SetWidth(width)
+  if list.indicator then list.indicator:SetWidth(width) end
+  for _,row in ipairs(list.rows) do
+   row.symbol:SetPoint("LEFT",12+4*alpha,0)
+   row.title:SetShown(alpha>0);row.title:SetAlpha(alpha);row.chevron:SetShown(alpha>0);row.chevron:SetAlpha(alpha)
+  end
+ end
+ local buttonInset=4+4*alpha
+ self.sidebarToggle:SetPoint("BOTTOMLEFT",buttonInset,8);self.sidebarToggle:SetWidth(width-buttonInset*2)
+ self.sidebarToggle.label:SetShown(alpha>0);self.sidebarToggle.label:SetAlpha(alpha)
+ self.surface:SetPoint("TOPLEFT",width+T.contentGap,0);self.surface:SetWidth(MAIN+48);self.main:SetWidth(MAIN)
+ self.search:SetWidth(MAIN-60);self.searchHint:SetWidth(self.search:GetWidth()-52-self.searchInputRight)
+ self.applicationPanel:SetWidth(MAIN);self.appList:SetWidth(MAIN-32)
+ for _,row in ipairs(self.appList.rows) do
+  row.title:SetWidth(APPLICATION_COLUMNS.title.width)
+  row.leaderIcon:SetPoint("LEFT",APPLICATION_COLUMNS.leader.x-17,0);row.leader:SetPoint("LEFT",APPLICATION_COLUMNS.leader.x,0)
+  row.membersX=APP_BODY-386;LayoutMembers(row);row.status:SetPoint("LEFT",APP_BODY-224,0)
+ end
+ self.results:SetWidth(MAIN);self.resultsHeader:SetWidth(BODY);self.emptyPanel:SetWidth(MAIN)
+ self.context:SetWidth(math.min(MAIN-180,self.contextNaturalWidth or self.context:GetStringWidth()))
+ self.limitNotice:SetWidth(BODY);self.limitText:SetWidth(BODY-52)
+ self:LayoutResultColumns()
+ if self.limitNotice:IsShown() then
+  local height=math.max(40,math.ceil(self.limitText:GetStringHeight())+16)
+  if self.limitNotice:GetHeight()~=height then self.resultsTop=nil;self:LayoutResults() end
+ end
+end
+function P:LayoutSize(width,height)
+ self.layoutWidth,self.layoutHeight=width,height
+ HEIGHT=height-48
+ self.rail:SetHeight(height);self.surface:SetHeight(height);self.main:SetHeight(HEIGHT)
+ local categoriesTop=self.seasonCategories:GetHeight()+24
+ self.categories:SetViewport(height-categoriesTop-72)
+ self:LayoutSidebar(self.rail:GetWidth())
+ self.resultsTop=nil;self:LayoutResults()
+end
+function P:SetSidebarCollapsed(collapsed,animate)
+ state.railCollapsed=collapsed==true
+ local prefs=UI:GetGroup().prefs.find or {};UI:GetGroup().prefs.find=prefs;prefs.railCollapsed=state.railCollapsed
+ for _,list in ipairs({self.seasonCategories,self.categories}) do if list.indicator then M:FinishRect(list.indicator) end end
+ M:Rect(self.rail,0,0,state.railCollapsed and COLLAPSED_LEFT or LEFT,self.layoutHeight or T.contentHeight,animate and .18 or 0)
+ self:LayoutSidebar(self.rail:GetWidth())
+end
+function P:FinishSidebar()
+ M:FinishRect(self.rail)
+end
+function P:BuildSidebarToggle()
+ local button=C.Button(self.rail,Say("收起","Collapse"),LEFT-16,function() P:SetSidebarCollapsed(not state.railCollapsed,true) end,{height=40,radius=8,textColor=T.muted})
+ button:SetPoint("BOTTOMLEFT",8,8);button.label:ClearAllPoints();button.label:SetPoint("LEFT",44,0);self.sidebarToggle=button
+ local icon=C.Icon(button,24);icon:SetPoint("LEFT",8,0)
+ icon:SetTexture("Interface\\AddOns\\LycheeGroup_UI\\Media\\sidebar-toggle.tga");UI.context:SetIconState(icon,false,false);self.sidebarIcon=icon
+ self.rail:HookScript("OnSizeChanged",function(_,width) P:LayoutSidebar(width) end)
+ self.frame:HookScript("OnHide",function() P:FinishSidebar() end)
+ UI.blocker:HookScript("OnShow",function() if UI.page=="find" then P:FinishSidebar() end end)
+ M:Rect(self.rail,0,0,LEFT,T.contentHeight,0)
+ self:LayoutSidebar(LEFT)
 end
 function P:BuildFilters()
  local f=CreateFrame("Frame",nil,UI.frame);f:SetSize(384,400);f:SetPoint("TOPLEFT",UI.frame,"TOPRIGHT",12,0);f:SetFrameLevel(UI.frame:GetFrameLevel()+5);C.Panel(f,T.panel,28);self.filterPanel=f
@@ -573,7 +727,7 @@ function P:RefreshPicker()
  self.pickerConfirm:SetShown(confirm);self.pickerConfirm:SetWidth(menuWidth-16);self.pickerConfirm:ClearAllPoints();self.pickerConfirm:SetPoint("TOPLEFT",8,-top-listHeight-8)
  if state.groupKeys then self.activities.selectedKey=nil else self.activities.selectedKey=state.groupKey or 0 end
  self.activities:SetItems(self.activityIDs,function(row,key)
-  local group=self.activityMap[key];UI:SetText(row.title,group and group.name or AllActivitiesLabel(cat));row.icon:Show();if group then UI:SetActivityIcon(row.icon,group.activity) else row.icon:SetTexture(T.media..cat.icon..".tga");row.icon:SetTexCoord(0,1,0,1) end
+  local group=self.activityMap[key];UI:SetText(row.title,group and group.name or AllActivitiesLabel(cat));row.icon:Show();if group then UI:SetActivityIcon(row.icon,group.activity) else row.icon:SetTexture(UI:CategoryIcon(cat.icon));row.icon:SetTexCoord(0,1,0,1) end
   local selectable=multiGroups and multiGroups[key]
   row.multiSelect:SetShown(selectable or false)
   local checked=self.draftGroupKeys or state.groupKeys
@@ -589,7 +743,7 @@ function P:RefreshCategories()
  end
  if not self.catMap[state.category] then state.category=self.seasonIDs[1] or self.catIDs[1] end
  local function RenderCategory(row,key)
-  local cat=self.catMap[key];UI:SetText(row.title,cat.name);if row.kind~=cat.icon then row.kind=cat.icon;row.symbol:SetTexture(T.media..cat.icon..".tga") end
+  local cat=self.catMap[key];UI:SetText(row.title,cat.name);if row.kind~=cat.icon then row.kind=cat.icon;row.symbol:SetTexture(UI:CategoryIcon(cat.icon)) end
  end
  self.seasonCategories.selectedKey=state.category;self.categories.selectedKey=state.category
  self.seasonCategories:SetItems(self.seasonIDs,RenderCategory);self.categories:SetItems(self.catIDs,RenderCategory)
@@ -750,15 +904,15 @@ function P:UpdateFilters(reset)
   if #names==1 then name=selected.name elseif #names>1 then name=table.concat(names,"·") end
  end
  if state.difficultyID then name=name.."  ·  "..(GetDifficultyInfo(state.difficultyID) or L.unknown) end
- UI:SetText(self.context,name);self.context:SetWidth(math.min(MAIN-180,FitText(self.context)))
+ UI:SetText(self.context,name);self.contextNaturalWidth=FitText(self.context);self.context:SetWidth(math.min(MAIN-180,self.contextNaturalWidth))
  self:SavePrefs()
  -- The provider notifies results after all filter controls and context are ready.
  UI:GetGroup():SetFilters(filters)
 end
 function P:SavePrefs()
+ local prefs=UI:GetGroup().prefs.find or {};UI:GetGroup().prefs.find=prefs;prefs.railCollapsed=state.railCollapsed==true
  if not A:GetSetting("rememberFilters") then return end
  self:RememberCategory()
- local prefs=UI:GetGroup().prefs.find or {};UI:GetGroup().prefs.find=prefs
  prefs.category=state.category;prefs.categoryPrefs=state.categoryPrefs;prefs.social=state.social
  prefs.filters=prefs.filters or {};wipe(prefs.filters);for k,v in pairs(state.filters) do if k~="text" and k~="leaderText" and k~="searchMode" then prefs.filters[k]=v end end
  local choice=state.confirmedChoice or {}
@@ -792,21 +946,19 @@ function P:DoSearch(keepPicker)
  if not self:EnsureSearchInput() then return end
  if not keepPicker then self:ClosePicker() end
  UI.Tooltip:Hide();self:UpdateFilters()
- local activityID
- if state.groupKey then
-  local matched=0
-  for _,activity in ipairs(UI:GetGroup().Catalog:GetActivities(state.category)) do
-   if UI:GetGroup().Catalog:GetGroupKey(state.category,activity)==state.groupKey and (not state.difficultyID or activity.difficultyID==state.difficultyID) then
-    matched=matched+1;activityID=activity.id
-   end
+ local activityIDs
+ if state.groupKey or state.groupKeys or state.difficultyID or state.tier then
+  local catalog=UI:GetGroup().Catalog;activityIDs={}
+  for _,activity in ipairs(catalog:GetActivities(state.category)) do
+   local key=catalog:GetGroupKey(state.category,activity)
+   if (not state.groupKey or key==state.groupKey) and (not state.groupKeys or state.groupKeys[key])
+    and (not state.difficultyID or activity.difficultyID==state.difficultyID)
+    and (not state.tier or catalog:GetActivityTier(activity)==state.tier) then activityIDs[#activityIDs+1]=activity.id end
   end
-  -- Only a unique native activity narrows the request. Multiple valid variants
-  -- retain the complete category request and the existing local selection.
-  if matched~=1 then activityID=nil end
  end
  local mode=UI.preview and "preview" or state.searchMode
  local text=mode=="leader" and self.search.box:GetText() or nil
- local ok,err=UI:GetGroup().Search:Search(state.category,activityID,mode,text)
+ local ok,err=UI:GetGroup().Search:Search(state.category,activityIDs,mode,text)
  if not ok then self:SetStatus(err or L.failed) end
  self:ReadSearchState()
 end
@@ -887,16 +1039,10 @@ function P:RefreshResults(refreshTooltip)
  local raid=Category().id==3
  if self.raidResultColumns~=raid then
   self.raidResultColumns=raid
-  local descriptionX=raid and RESULT_COLUMNS.rating.x or RESULT_COLUMNS.description.x
-  local ratingX=raid and RESULT_COLUMNS.description.x+RESULT_COLUMNS.description.width-RESULT_COLUMNS.rating.width or RESULT_COLUMNS.rating.x
-  local function PlaceColumns(rating,description,point)
-   rating:ClearAllPoints();rating:SetPoint(point,ratingX,0)
-   description:ClearAllPoints();description:SetPoint(point,descriptionX,0)
-  end
-  PlaceColumns(self.resultHeadings.rating,self.resultHeadings.description,"TOPLEFT")
-  for _,row in ipairs(self.results.rows) do PlaceColumns(row.score,row.description,"LEFT") end
+  self:LayoutResultColumns()
  end
  self:RefreshApplications();local ids=state.browseReady and UI:GetGroup():GetResults() or {};self.results:SetItems(ids,RenderResult);UI:SetText(self.resultCount,Say("%d 支队伍","%d groups"):format(#ids))
+ self:RefreshDeclineState(ids)
  self:RefreshSearchState()
  if refreshTooltip or tooltipResultID and UI.Tooltip:IsResult(tooltipResultID) then UI.Tooltip:RefreshRelations() end
 end
@@ -940,9 +1086,12 @@ end
 function P:LayoutListRows()
  local first=self.results.rows[1]
  local metaTop=math.max(42,10+first.title:GetHeight()+4)
- local height=math.max(RESULT_ROW_HEIGHT,math.ceil(metaTop+first.meta:GetHeight()+10))
+ local declineTop=metaTop+first.meta:GetHeight()+4
+ local height=math.max(RESULT_ROW_HEIGHT,math.ceil(self.hasDeclinedResults and declineTop+first.declined:GetHeight()+10 or metaTop+first.meta:GetHeight()+10))
  for _,row in ipairs(self.results.rows) do
   row.meta:SetPoint("TOPLEFT",RESULT_COLUMNS.title.x,-metaTop)
+  LayoutResultActivity(row)
+  row.declined:SetPoint("TOPLEFT",RESULT_COLUMNS.title.x,-declineTop)
   row.description:SetHeight(math.max(48,row.meta:GetHeight()*2))
   LayoutMembers(row)
  end
@@ -971,12 +1120,12 @@ end
 function P:OpenResultMenu(anchor,id,cursor)
  local r=Record(id);if not r then return end
  local applications=UI:GetGroup().Applications;local active=applications:IsActive(id);local application=UI:GetGroup():GetApplication(id);local invited=application and application.status=="invited"
- UI:OpenMenu(anchor,{{value="apply",label=invited and Say("已收到邀请","Invited") or active and L.cancelApplication or L.editAndApply,disabled=active and not applications:CanCancel(id)},{value="whisper",label=Say("与队长密聊","Whisper leader"),disabled=UI.preview~=nil or not r.leaderName},{value="copy",label=Say("复制队长名称","Copy leader name"),disabled=UI.preview~=nil or not r.leaderName},{value="blockTitle",label=Say("屏蔽相同标题队伍","Block groups with this title"),disabled=r.name==nil},{value="block",label=Say("拉黑队长","Block leader"),disabled=UI.preview~=nil or not r.leaderKey}},function(action)
+ UI:OpenMenu(anchor,{{value="apply",label=invited and Say("已收到邀请","Invited") or active and L.cancelApplication or L.editAndApply,disabled=active and not applications:CanCancel(id)},{value="whisper",label=Say("与队长密聊","Whisper leader"),disabled=UI.preview~=nil or not r.leaderName},{value="copy",label=Say("复制队长名称","Copy leader name"),disabled=UI.preview~=nil or not r.leaderName},{value="blockTitle",label=Say("屏蔽相同标题队伍","Block groups with this title"),disabled=r.name==nil},{value="block",label=Say("荔枝笔记：拉黑","Player Notes: Block"),disabled=UI.preview~=nil or not r.leaderKey}},function(action)
   local target=Record(id);if not target then return end
   if action=="apply" then if applications:CanCancel(id) then local ok,err=UI:GetGroup():Cancel(id);if not ok then P:SetStatus(err or L.failed) end elseif not applications:IsActive(id) then P:Apply(id,true) end
   elseif action=="whisper" and target.leaderName and not UI.preview then ChatFrame_SendTell(target.leaderName)
   elseif action=="copy" then UI:CopyText(L.leader,target.leaderName,nil,nil,Say("完整名称","Full name"))
-  elseif action=="blockTitle" then UI:GetGroup().Results:BlockTitle(target.name)
+  elseif action=="blockTitle" then UI:GetGroup().Results:BlockTitle(target.name,target.leaderKey)
   elseif action=="block" and not UI.preview then local _,n,r=A:PlayerKey(target.leaderKey);A:Open("notes",{add={name=n,realm=r,type="caution"}}) end
  end,{cursor=cursor~=false})
 end
@@ -1003,7 +1152,8 @@ function P:Enter(context)
  end
  if not self.loaded then
   self.loaded=true;self.loading=true
-  local prefs=A:GetSetting("rememberFilters") and UI:GetGroup().prefs.find or {};local filters=prefs.filters or {}
+  local stored=UI:GetGroup().prefs.find or {};state.railCollapsed=stored.railCollapsed==true
+  local prefs=A:GetSetting("rememberFilters") and stored or {};local filters=prefs.filters or {}
   state.category=prefs.category or "seasonDungeon";state.categoryPrefs=prefs.categoryPrefs or {};state.filters.sort=filters.sort or A:GetSetting("defaultSort");state.social=prefs.social
   if UI.preview then self.previewSearchBox:SetText(filters.text or "") end
   local saved=state.categoryPrefs[state.category] or filters
@@ -1011,6 +1161,7 @@ function P:Enter(context)
   self:RestoreCategory(state.categoryPrefs[state.category] or {groupKey=filters.groupKey,groupKeys=filters.groupKeys,difficultyID=filters.difficultyID,tier=filters.tier,selected=filters.selected,minMembers=filters.minMembers,maxMembers=filters.maxMembers,neededRole=filters.neededRole,tankPresence=filters.tankPresence,healerPresence=filters.healerPresence,damagePresence=filters.damagePresence,hideZeroScore=filters.hideZeroScore,hideSameSpec=filters.hideSameSpec,needsDamage=filters.needsDamage,sort=filters.sort,social=prefs.social})
   self.loading=nil
  end
+ self:SetSidebarCollapsed(state.railCollapsed,false)
  self:UpdateApplicationSettings()
  if not self.restoredInitial then
   local saved=state.categoryPrefs[state.category]
@@ -1050,12 +1201,13 @@ function P:Enter(context)
   if context and context.leaderKey or UI:GetGroup().Search.abandoned or searchState=="idle" or searchState~="searching" and UI:GetGroup().Search.categoryKey~=state.category then self:DoSearch() end
 end
 function P:Leave()
+ self:FinishSidebar()
  M:Stop(self);self.pendingTooltipResultID=nil
  UI.Native:ReleaseSearch();self.searchAvailable,self.searchError=nil,nil
  self:DismissApplicationNotice()
  if self.unsub then self.unsub();self.unsub=nil end;if self.notesUnsub then self.notesUnsub();self.notesUnsub=nil end
  self.results:Clear();self.appList:Clear();self.seasonCategories:Clear();self.categories:Clear();if self.picker then self.activities:Clear();self:ClosePicker() end;M:FinishPlacement(self.filterPanel);self.filterPanel:Hide()
- StopCountdown();M:Waiting(self.busyIcon,false);M:Spin(self.refreshIcon,false);self.busyState=nil
+ StopCountdown();StopDeclineClock();M:Waiting(self.busyIcon,false);M:Spin(self.refreshIcon,false);self.busyState=nil
  wipe(state.apps);wipe(state.appIDs);state.selected=nil
  state.showGlobal=nil
  UI:GetGroup():Detach(self);UI:FitToScreen()

@@ -1,0 +1,12 @@
+{
+  "mode": "built-in image_gen",
+  "transparent_background": true,
+  "prompt": "Use case: stylized-concept. Asset type: one production raster sidebar-toggle icon for the World of Warcraft addon LycheeGroup, displayed at 24 pixels in a dark charcoal navigation rail. Primary request: a simple two-pane application panel symbol, matching the addon's chunky flat pictograms. One compact horizontally oriented rounded rectangle, with a narrow left sidebar pane and a wider right content pane. Use broad clean cream/off-white #F6F1D7 outer frame and divider, with a solid light silver-blue #ACBBC3 narrow left pane. The wider right pane is a clear transparent opening. Very simple geometry and generous thickness readable at 24 pixels, softly rounded outer corners, no fine detail. Center the single symbol in a square canvas, around 80 percent width, leave transparent padding. Genuine transparent alpha background and transparent right opening. Flat filled forms only, no gradients, texture, bevel, shadow or glow. No arrows, no chevrons, no less-than or greater-than signs, no text, no letters, no controls, no additional symbols, no colored background, no watermark. The symbol will remain the same for both collapsed and expanded states.",
+  "source": "assets/imagegen/sidebar-icons/sidebar-toggle.png",
+  "gameTexture": "addon/LycheeGroup_UI/Media/sidebar-toggle.tga",
+  "gameExport": {
+    "format": "uncompressed RGBA TGA",
+    "width": 128,
+    "height": 128
+  }
+}

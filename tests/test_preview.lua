@@ -73,6 +73,33 @@ do
 end
 local beforeNoteFilter=preview:GetResults()
 do
+ local first,second,third=preview.records[preview.recordIDs[4]],preview.records[preview.recordIDs[5]],preview.records[preview.recordIDs[6]]
+ T.ok(first.partyGUID and second.partyGUID and third.partyGUID)
+ T.ok(first.partyGUID~=second.partyGUID and second.partyGUID~=third.partyGUID,"every preview result has a distinct party identity")
+ local old={first.bnetFriends,first.charFriends,second.bnetFriends,second.charFriends,third.bnetFriends,third.charFriends}
+ first.bnetFriends,first.charFriends,second.bnetFriends,second.charFriends,third.bnetFriends,third.charFriends=1,0,0,0,0,0
+ preview.declinedParties[first.partyGUID]=0
+ preview:SetFilters({sort="newest"})
+ T.same(preview:GetResults(),{second.id,third.id,first.id},"a rejected friend follows every un-rejected preview group")
+ T.eq(preview.Applications:GetDeclinedAt(first.partyGUID),0,"the preview interface preserves a rejection at session time zero")
+ preview.declinedParties[third.partyGUID]=0
+ preview:SetFilters({sort="itemLevel"})
+ T.same(preview:GetResults(),{second.id,first.id,third.id},"both buckets retain friend priority before the selected sort")
+ first.bnetFriends=0;preview:SetFilters({sort="itemLevel"})
+ T.same(preview:GetResults(),{second.id,third.id,first.id},"the rejected bucket still applies the selected item-level ordering")
+ local oldID,oldName=first.id,first.name
+ first.id,first.name=oldID-1000,"A changed preview title";preview.records[oldID]=nil;preview.records[first.id]=first;preview.recordIDs[4]=first.id
+ preview:Notify("results")
+ T.same(preview:GetResults(),{second.id,third.id,first.id},"a result ID and title change retain the party's rejection")
+ local originalGUID=first.partyGUID;first.partyGUID="A different party"
+ preview:SetFilters({sort="newest"})
+ T.same(preview:GetResults(),{first.id,second.id,third.id},"a new party does not inherit a matching title's rejection")
+ first.partyGUID=originalGUID;preview.records[first.id]=nil;first.id,first.name=oldID,oldName;preview.records[oldID]=first;preview.recordIDs[4]=oldID
+ first.bnetFriends,first.charFriends,second.bnetFriends,second.charFriends,third.bnetFriends,third.charFriends=unpack(old)
+ wipe(preview.declinedParties);find:ClearFilters()
+ T.eq(find.declineClock,nil,"clearing preview rejections releases the minute timer")
+end
+do
  local player=A.Specializations.Player
  local first,second,third=preview.records[preview.recordIDs[4]],preview.records[preview.recordIDs[5]],preview.records[preview.recordIDs[6]]
  local saved={first.details.members,second.details.members,third.details.members}
@@ -102,9 +129,18 @@ do
  T.eq(G.Results:GetBlockedTitleCount(),0,"preview never blocks titles in the real provider")
  T.eq(#find.appList.ids,3,"title blocks preserve pinned applications")
  T.eq(find.clearBlockedTitles,nil,"the removed clear-title button stays absent")
+ T.eq(#preview.Results:GetBlockedLeaders(),2)
+ preview.Results:RemoveBlockedLeader(first.leaderKey)
+ T.eq(#preview:GetResults(),2,"preview removal restores a leader even while the title rule remains")
+ preview.Results:BlockTitle(first.name,first.leaderKey)
+ T.eq(#preview:GetResults(),1,"preview can explicitly block the removed leader again")
+ local firstName=first.name
+ first.name,second.name="Changed title","Another title"
+ T.same(preview:GetResults(),{preview.recordIDs[6]},"preview remembers the matched leaders when titles change")
+ T.eq(next(G.db.blockedLeaders),nil,"preview never saves blocked leaders in the real provider")
  preview.Results:ClearBlockedTitles()
  T.eq(preview.Results:GetBlockedTitleCount(),0);T.eq(#preview:GetResults(),3)
- second.name=secondName
+ first.name,second.name=firstName,secondName
 end
 do
  local saved={}

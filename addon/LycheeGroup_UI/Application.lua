@@ -54,6 +54,8 @@ function Application:BuildApplication()
  modal.roles={}
  for _,role in ipairs(roleKeys) do
   modal.roles[role]=C.RoleButton(content,role,nil,roleLabels[role],function() Application:SetApplicationRole(role) end)
+  modal.roles[role]:SetSurfaceColors(nil)
+  modal.roles[role]:SetStyle({radius=T.compactRadius,textColor=T.muted,hoverTextColor=T.text,selectedTextColor=T.onSecondaryContainer})
  end
  modal.noteLabel=C.Text(content,Say("给队长的备注","Note to the leader"),14,T.muted);C.SetLineHeight(modal.noteLabel,20,true)
  modal.note=C.Field(content,464,112,false,"modal")

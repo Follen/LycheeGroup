@@ -2,6 +2,12 @@ local A = _G.LycheeGroup
 local G,L = A.Group,A.GroupLocale
 local Search={filters={},generation=0,state="idle"}
 G.Search=Search
+local function SameActivities(a,b)
+ if a==b then return true end
+ if not a or not b or #a~=#b then return false end
+ for i,id in ipairs(a) do if id~=b[i] then return false end end
+ return true
+end
 function Search:BindInput(lease) self.inputLease=lease end
 function Search:ReleaseInput(expected)
  if self.inputLease==expected then self.inputLease=nil end
@@ -36,13 +42,17 @@ end
 -- Only one native request runs at a time; each new selection replaces the pending one.
 function Search:Search(categoryKey,activityID,mode,text)
  if not G.Catalog:GetCategory(categoryKey) then return false,L.invalidActivity end
+ local activityIDs
+ if type(activityID)=="table" then
+  activityIDs={};for i,id in ipairs(activityID) do activityIDs[i]=id end
+ elseif activityID then activityIDs={activityID} end
  local lease=self.inputLease
  local revision=lease and lease.revision or 0
  mode=mode or "native"
- local request={categoryKey=categoryKey,activityID=activityID,revision=revision,lease=lease,mode=mode,text=text}
+ local request={categoryKey=categoryKey,activityIDs=activityIDs,revision=revision,lease=lease,mode=mode,text=text}
  if self.state=="searching" then
   self.abandoned=nil
-  if self.request and self.request.categoryKey==categoryKey and self.request.activityID==activityID and self.request.revision==revision and self.request.lease==lease and self.request.mode==mode and self.request.text==text then
+  if self.request and self.request.categoryKey==categoryKey and SameActivities(self.request.activityIDs,activityIDs) and self.request.revision==revision and self.request.lease==lease and self.request.mode==mode and self.request.text==text then
    self.pending=nil;self.error=nil
   else self.pending=request;self.error=L.searchQueued end
   G:Notify("search");return true
@@ -52,21 +62,20 @@ function Search:Search(categoryKey,activityID,mode,text)
  return self:Submit(request)
 end
 function Search:Submit(request)
- local categoryKey,activityID=request.categoryKey,request.activityID
+ local categoryKey=request.categoryKey
  local category=G.Catalog:GetCategory(categoryKey)
  if not category then
   self.state,self.error,self.pending="failed",L.invalidActivity,nil;G:Notify("search")
   return false,self.error
  end
- local filter
- if activityID then filter={activityID}
- elseif category.season then
+ local filter=request.activityIDs
+ if not filter and category.season then
   filter={}
   for _,activity in ipairs(G.Catalog:GetActivities(categoryKey)) do filter[#filter+1]=activity.id end
-  if #filter==0 then
-   self.state,self.error,self.pending="failed",L.invalidActivity,nil;G:Notify("search")
-   return false,self.error
-  end
+ end
+ if filter and #filter==0 then
+  self.state,self.error,self.pending="failed",L.invalidActivity,nil;G:Notify("search")
+  return false,self.error
  end
  self.generation=self.generation+1
  self.request=request
@@ -97,13 +106,22 @@ function Search:SetFilters(filters)
  G.Results:InvalidateView();G:Notify("results")
 end
 function Search:OnResultsReceived()
- if self.state~="searching" then return end
+ local resultIDs
+ if self.state~="searching" then
+  if self.state=="waiting" or self.abandoned or not G:HasViews("search") then return end
+  -- Native result IDs and kstrings are shared by every group browser. Another
+  -- browser's completed search invalidates our previous snapshot as well.
+  resultIDs=G.Results:GetChangedResults()
+  if not resultIDs then return end
+  self.generation=self.generation+1
+  G.Results:BeginSearch(self.generation)
+ end
  self.backoff=nil;self.error=nil
  if self.abandoned or not G:HasViews("search") then
   self.state,self.request="idle",nil;G.Game:RefreshSubscriptions();G:Notify("search");return
  end
  if self.pending then self:SchedulePending(0);return end
- self.state="done";G.Results:CommitResults(self.generation);G:Notify("search")
+ self.state="done";G.Results:CommitResults(self.generation,nil,resultIDs);G:Notify("search")
 end
 function Search:OnResultsUpdated()
  if not self.pending and G:HasViews("search") and (self.state=="searching" or self.state=="done") then G.Results:QueueUpdate() end
