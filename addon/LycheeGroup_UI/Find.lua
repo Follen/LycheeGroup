@@ -727,7 +727,7 @@ function P:BuildQuickFilters()
   button.label:ClearAllPoints();button.label:SetPoint("LEFT",32,0);C.SetFont(button.label,13)
   self.quickChoices[key]={button=button,role=role}
  end
- self.quickLogic=C.Button(self.quickFilters,"",80,function()
+ self.quickLogic=C.Button(self.quickFilters,"",70,function()
   state.filters.roleMatchAny=not state.filters.roleMatchAny or nil
   if not state.filters.roleMatchAny and state.filters.tankPresence=="present" and state.filters.healerPresence=="present" and state.filters.damagePresence=="present" then state.filters.damagePresence=nil end
   P:UpdateFilters()
@@ -766,7 +766,7 @@ function P:LayoutQuickFilters()
  if self.appsEmpty:IsShown() then left=left+self.appsEmpty:GetStringWidth()+20
  elseif self.scopeToggle:IsShown() then left=left+self.scopeToggle:GetWidth()+20 end
  local right=16+self.autoJoin:GetWidth()+20+44+10+self.applicationSettings:GetWidth()+20
- local needed=376
+ local needed=366
  for _,toggle in ipairs({self.quickSame,self.quickClass}) do
   local width=toggle.label:GetStringWidth()+54
   toggle:SetWidth(width);toggle:ClearAllPoints();toggle:SetPoint("LEFT",needed,0)
