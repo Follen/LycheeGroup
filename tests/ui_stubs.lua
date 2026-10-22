@@ -42,6 +42,7 @@ function N:GetPoint(i) return unpack(self.points[i or 1] or {}) end
 function N:SetAllPoints(parent) self.allPoints=parent or self.parent;self.points={} end
 function N:GetRight() return self:GetWidth() end
 function N:GetLeft() return 0 end
+function N:GetCenter() return self:GetLeft()+self:GetWidth()/2,self:GetTop()-self:GetHeight()/2 end
 function N:GetBottom() return 0 end
 function N:GetTop() return self:GetHeight() end
 function N:UnregisterAllEvents() self.events={} end

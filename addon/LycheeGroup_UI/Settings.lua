@@ -5,7 +5,7 @@ local C,T,L=UI.C,UI.Theme,UI.L
 local P={section="general"};UI.pages.settings=P
 local zh=A:GetLocale()=="zhCN"
 local function S(cn,en) return zh and cn or en end
-local sections={{"general",S("入口与快捷键","Access & shortcuts")},{"interface",S("界面与外观","Appearance")},{"browse",S("队伍与成员","Groups & members")},{"blocks",S("屏蔽","Blocks")},{"notes",S("笔记与提醒","Notes and reminders")},{"floating",S("悬浮窗","Floating window")},{"about",L.about}}
+local sections={{"general",S("入口与快捷键","Access & shortcuts")},{"interface",S("界面与外观","Appearance")},{"browse",S("队伍与成员","Groups & members")},{"memberIcons",S("成员图标","Member icons")},{"blocks",S("屏蔽","Blocks")},{"notes",S("笔记与提醒","Notes and reminders")},{"floating",S("悬浮窗","Floating window")},{"about",L.about}}
 local types={{value="positive",label=S("推荐","Positive")},{value="neutral",label=S("中性","Neutral")},{value="caution",label=S("拉黑","Blocked")}}
 local definitions={
  general={{"toggleBinding",A.L.bindingToggle,"","binding"},
@@ -13,9 +13,16 @@ local definitions={
  {"nativeLFGEntry",S("隐藏原生组队眼睛","Hide the native LFG eye"),S("预组队隐藏原生眼睛按钮","Hide the native eye button for premade groups.")}},
  interface={{"language",S("界面语言","Interface language"),S("仅改变插件文字，重载界面后生效。","Change addon text. Reload the UI to apply."),{{value="auto",label=S("跟随游戏","Game language")},{value="zhCN",label="简体中文"},{value="enUS",label="English"}}},
  {"uiScale",S("主窗口缩放","Main window scale"),S("等比调整整个主窗口。","Scale the entire main window proportionally."),"range",75,125},
+ {"rurutiaRailIconScale",S("左栏图标缩放","Sidebar icon scale"),S("只调整寻求组队左栏的分类图标。","Resize category icons in the finder sidebar only."),"range",75,175},
  {"fontScale",S("字体大小","Font size"),S("调节插件全局文字","Adjust text size throughout the addon."),"range",70,130},
  {"font",S("界面字体","Interface font"),S("界面字体选择","Choose the interface font."),function() return A.Fonts:Choices() end},
  {"reduceMotion",L.reduceMotion,S("关闭开窗位移、Logo 动作和局部过渡。","Disable window movement, logo animation and local transitions.")}},
+ memberIcons={
+ {"rurutiaMemberIconShape",S("图标形状","Icon shape"),S("圆形或方形，职业色边框跟随图标轮廓。","Choose a circle or square with a matching class-color border."),{{value="circle",label=S("圆形","Circle")},{value="square",label=S("方形","Square")}}},
+ {"rurutiaMemberLeaderMark",S("成员队长标记","Roster leader mark"),S("在实际队长的成员图标上方显示小皇冠。","Show a crown above the actual leader's roster icon.")},
+ {"rurutiaMemberClassBorder",S("成员职业色边框","Class-color borders"),S("为队伍列表已有成员的图标显示职业色细边框。","Show class-color borders on occupied roster icons in search results.")},
+ {"rurutiaMemberIconScale",S("成员图标缩放","Member icon scale"),S("调整队伍列表的五人成员图标，成员列自动预留空间。","Resize five-player roster icons in search results; reserve column space automatically."),"range",75,175},
+ },
  browse={
  {"defaultSort",S("默认排序","Default sorting"),S("本角色进入其他活动分类时采用的排序。","Default sorting for this character's activity categories."),{{value="newest",label=L.newest},{value="rating",label=L.leaderRating},{value="itemLevel",label=L.requiredItemLevel},{value="members",label=L.members}}},
  {"rememberFilters",S("记住本角色的筛选","Remember character filters"),S("本角色独立保存各分类筛选。","Save category filters for this character.")},

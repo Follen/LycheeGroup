@@ -3,6 +3,37 @@ local A = _G.LycheeGroup
 local G = A.Group
 local Results={gen=0}
 G.Results=Results
+-- Only combine the three role conditions; other filters still all apply.
+local function MatchPresence(value,count,target)
+ if not value then return 0,0 end
+ return 1,count~=nil and (count>=target)==(value=="present") and 1 or 0
+end
+function Results:MatchesRolePresence(counts,filters,maximum)
+ local te,tm=MatchPresence(filters.tankPresence,counts and counts.TANK,1)
+ local he,hm=MatchPresence(filters.healerPresence,counts and counts.HEALER,1)
+ local de,dm=MatchPresence(filters.damagePresence,counts and counts.DAMAGER,3)
+ local enabled,matched=te+he+de,tm+hm+dm
+ if enabled==0 then return true end
+ if maximum~=5 or not counts then return false end
+ if filters.roleMatchAny==true then return matched>0 end
+ return matched==enabled
+end
+local function InRange(value,minimum,maximum)
+ if not minimum and not maximum then return true end
+ return type(value)=="number" and value>=0 and (not minimum or value>=minimum) and (not maximum or value<=maximum)
+end
+function Results:MatchesAdvancedFilters(record,filters)
+ if not InRange(record.requiredItemLevel,filters.minItemLevel,filters.maxItemLevel) then return false end
+ if not InRange(record.leaderRating,filters.minRating,filters.maxRating) then return false end
+ if filters.blockedKeywords then
+  local title=type(record.name)=="string" and record.name:lower() or ""
+  local comment=type(record.comment)=="string" and record.comment:lower() or ""
+  for _,word in ipairs(filters.blockedKeywords) do
+   if title:find(word,1,true) or comment:find(word,1,true) then return false end
+  end
+ end
+ return true
+end
 local records,ids,detailQueue,pendingIDs,changedIDs={},{},{},{},{}
 -- Native title tokens change across searches. Keep them in-session only;
 -- matching leaders use their complete player keys in the account saved data.
@@ -225,6 +256,7 @@ local function MatchesLeaderText(record,text)
 end
 local function Pass(record,filters,leaderText,playerSpecID)
  if blockedTitles[record.name] and not unblockedLeaders[record.leaderKey] or G.db.blockedLeaders[record.leaderKey] then return false end
+ if not Results:MatchesAdvancedFilters(record,filters) then return false end
  if G.Applications:IsActive(record.id) then return false end
  if leaderText and not MatchesLeaderText(record,leaderText) then return false end
  if filters.category and not G.Catalog:Matches(record.activity,filters.category,filters.groupKey,filters.difficultyID,filters.tier,filters.groupKeys) then return false end
@@ -243,10 +275,7 @@ local function Pass(record,filters,leaderText,playerSpecID)
  end
  if filters.tankPresence or filters.healerPresence or filters.damagePresence then
   local counts=Results:GetMemberCounts(record)
-  if record.maxNumPlayers~=5 or not counts then return false end
-  if filters.tankPresence and (counts.TANK==nil or (counts.TANK>0)~=(filters.tankPresence=="present")) then return false end
-  if filters.healerPresence and (counts.HEALER==nil or (counts.HEALER>0)~=(filters.healerPresence=="present")) then return false end
-  if filters.damagePresence and (counts.DAMAGER==nil or (counts.DAMAGER>=3)~=(filters.damagePresence=="present")) then return false end
+  if not Results:MatchesRolePresence(counts,filters,record.maxNumPlayers) then return false end
  end
  if filters.friends and record.bnetFriends+record.charFriends==0 or filters.guild and record.guildMates==0 then return false end
  if filters.notes then
@@ -260,20 +289,28 @@ local function Pass(record,filters,leaderText,playerSpecID)
  if playerSpecID and Results:HasMemberSpec(record,playerSpecID) then return false end
  return true
 end
-local sorting
-local function Sort(a,b)
- local x,y=records[a],records[b]
+local sorting,sortAscending
+function Results:CompareRecords(x,y,a,b,mode,ascending)
  local xd,yd=G.Applications:GetDeclinedAt(x.partyGUID)~=nil,G.Applications:GetDeclinedAt(y.partyGUID)~=nil
  if xd~=yd then return not xd end
- local xf,yf=x.bnetFriends+x.charFriends>0,y.bnetFriends+y.charFriends>0
+ -- Preserve upstream friend priority and deterministic ties in either direction.
+ local xf,yf=(x.bnetFriends or 0)+(x.charFriends or 0)>0,(y.bnetFriends or 0)+(y.charFriends or 0)>0
  if xf~=yf then return xf end
- local av,bv
- if sorting=="rating" then av,bv=x.leaderRating or -1,y.leaderRating or -1
- elseif sorting=="members" then av,bv=x.numMembers,y.numMembers
- elseif sorting=="itemLevel" then av,bv=x.requiredItemLevel,y.requiredItemLevel end
- if av and av~=bv then return av>bv end
- if x.age~=y.age then return x.age<y.age end
+ local key=mode=="rating" and "leaderRating" or mode=="members" and "numMembers" or mode=="itemLevel" and "requiredItemLevel"
+ if key then
+  local av,bv=x[key],y[key]
+  local ak,bk=type(av)=="number" and av>=0,type(bv)=="number" and bv>=0
+  if ak~=bk then return ak end
+  if ak and av~=bv then if ascending then return av<bv else return av>bv end end
+ end
+ if x.age~=y.age then
+  if not key and ascending then return x.age>y.age end
+  return x.age<y.age
+ end
  return a<b
+end
+local function Sort(a,b)
+ return Results:CompareRecords(records[a],records[b],a,b,sorting,sortAscending)
 end
 function Results:InvalidateView() dirty=true end
 function Results:BlockTitle(title,leaderKey)
@@ -439,7 +476,7 @@ function Results:GetResults()
   local leaderText=type(filters.leaderText)=="string" and filters.leaderText:lower():match("^%s*(.-)%s*$") or nil
   if leaderText=="" then leaderText=nil end
   for id,record in pairs(records) do if not record.isDelisted and Pass(record,filters,leaderText,playerSpecID) then ids[#ids+1]=id end end
-  sorting=filters.sort or A:GetSetting("defaultSort");table.sort(ids,Sort);dirty=false
+  sorting=filters.sort or A:GetSetting("defaultSort");sortAscending=filters.sortAscending==true;table.sort(ids,Sort);dirty=false
  end
  return ids
 end

@@ -44,6 +44,11 @@ local DEFAULTS = {
 	floatingLocked = false,
 	floatingScale = 130,
 	uiScale = 100,
+ rurutiaRailIconScale = 100,
+ rurutiaMemberIconScale = 100,
+ rurutiaMemberClassBorder = true,
+ rurutiaMemberLeaderMark = true,
+ rurutiaMemberIconShape = "circle",
 }
 
 local CHARACTER_DEFAULTS = { rememberFilters = true, defaultSort = "newest" }

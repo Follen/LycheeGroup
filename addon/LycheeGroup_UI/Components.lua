@@ -13,7 +13,16 @@ function UI:CategoryIcon(kind)
  return categoryTextures[kind] or T.media..kind..".tga"
 end
 function UI:SetRoleIcon(icon,role)
- return _G.LycheeUI.Context.SetRoleIcon(context,icon,role)
+ _G.LycheeUI.Context.SetRoleIcon(context,icon,role)
+ -- Keep the original Lychee shield artwork and neutral vertex color.
+ icon:SetVertexColor(1,1,1,1)
+end
+function UI:StyleRosterRole(icon,missing,emptySize)
+ local shade=missing and .7 or 1
+ icon:SetDesaturated(false)
+ icon:SetVertexColor(shade,shade,shade)
+ -- Use the member slot size, never the previously reduced placeholder size.
+ if emptySize then icon:SetSize(emptySize*.8,emptySize*.8) end
 end
 function UI:MemberHasRole(member,role)
  if member.requestedRoles then return member.requestedRoles[role]==true end
@@ -51,7 +60,48 @@ function UI:SpecName(member)
  if member.specName then return member.specName end
  if member.specID and member.specID>0 then local name=Specializations:Get(member.specID);return name end
 end
+-- Analytic 128px masks and continuous rings share exactly the same contour.
+function UI:UpdateMemberBorder(icon,visible)
+ local shape=_G.LycheeGroup.db.rurutiaMemberIconShape=="square" and "square" or "circle"
+ local media="Interface\\AddOns\\LycheeGroup_UI\\Media\\member-"..shape
+ context:RoundIcon(icon)
+ if icon.rurutiaShape~=shape then
+  icon._lycheeMask:SetTexture(media.."-mask.tga","CLAMPTOBLACKADDITIVE","CLAMPTOBLACKADDITIVE")
+  icon.rurutiaShape=shape
+ end
+ local colors=CUSTOM_CLASS_COLORS or RAID_CLASS_COLORS
+ local color=icon.rurutiaMemberClass and colors and colors[icon.rurutiaMemberClass]
+ local show=visible and _G.LycheeGroup.db.rurutiaMemberClassBorder~=false and color~=nil
+ local border=icon.rurutiaBorder
+ if show and not border then
+  border=icon:GetParent():CreateTexture(nil,"OVERLAY",nil,0);border:SetAllPoints(icon)
+  icon.rurutiaBorder=border
+ end
+ if border then
+  if border.shape~=shape then border:SetTexture(media.."-border.tga");border.shape=shape end
+  if show then border:SetVertexColor(color.r,color.g,color.b,1) end
+  border:SetShown(show==true)
+ end
+end
+function UI:UpdateMemberLeader(icon,visible)
+ local show=visible and icon.rurutiaMemberLeader==true and _G.LycheeGroup.db.rurutiaMemberLeaderMark~=false
+ local mark=icon.rurutiaLeaderMark
+ if show and not mark then
+  mark=icon:GetParent():CreateTexture(nil,"OVERLAY",nil,1)
+  mark:SetTexture("Interface\\GroupFrame\\UI-Group-LeaderIcon");mark:SetSize(14,14)
+  mark:SetPoint("BOTTOM",icon,"TOP",0,-3)
+  icon.rurutiaLeaderMark=mark
+ end
+ if mark then
+  local size=math.min(14,19/icon:GetParent():GetScale());mark:SetSize(size,size)
+  mark:SetShown(show==true)
+ end
+end
 function UI:SetMemberIcon(icon,member)
+ if icon.rurutiaClassBorder then
+  icon.rurutiaMemberClass=member and member.class
+  icon.rurutiaMemberLeader=member and (member.isLeader==true or icon.rurutiaLeaderKey~=nil and member.nameKey==icon.rurutiaLeaderKey) or false
+ end
  local spec=member and member.specID
  local texture=spec and spec>0 and select(2,Specializations:Get(spec))
  if not texture and member and member.specName and member.class then
@@ -133,5 +183,6 @@ function UI:StatusColor(status)
 end
 
 
+function context:SetRoleIcon(icon,role) return UI:SetRoleIcon(icon,role) end
 function context:SetMemberIcon(icon,member) return UI:SetMemberIcon(icon,member) end
 function context:SetActivityIcon(icon,activity) return UI:SetActivityIcon(icon,activity) end

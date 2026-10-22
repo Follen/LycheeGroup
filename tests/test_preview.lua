@@ -186,9 +186,9 @@ end
 local previewCounts=captainRecord.details.counts
 local savedTank,savedHealer,savedDamage=previewCounts.TANK,previewCounts.HEALER,previewCounts.DAMAGER
 previewCounts.TANK,previewCounts.HEALER,previewCounts.DAMAGER=0,1,2
-Click(find.rolePresenceChoices.TANK.buttons[3])
-Click(find.rolePresenceChoices.HEALER.buttons[2])
-Click(find.rolePresenceChoices.DAMAGER.buttons[3])
+Click(find.quickChoices.tankPresence.button)
+Click(find.quickChoices.healerPresence.button);Click(find.quickChoices.healerPresence.button)
+Click(find.quickChoices.damagePresence.button)
 T.same(preview:GetResults(),{captainRecord.id},"preview combines missing tank, present healer and missing damage")
 previewCounts.TANK,previewCounts.HEALER,previewCounts.DAMAGER=savedTank,savedHealer,savedDamage
 find:ClearFilters()
@@ -212,8 +212,8 @@ T.eq(U.activeModal,nil)
 T.eq(U.Application:IsAutoApplyEnabled(),false,"a temporary preview application leaves automation off")
 T.same(preview.prefs.applicationRoles,{TANK=true,HEALER=false,DAMAGER=true},"manual preview confirmation saves only to the sample provider")
 T.same(A.charPrefs,savedPrefs,"preview role and filter edits do not alter the real character's preferences")
-Click(find.autoApply);T.eq(find.autoApply.value,false)
-Click(U.Application.applicationModal.submit);T.eq(U.Application:IsAutoApplyEnabled(),true)
+Click(find.autoApply);T.eq(find.autoApply.value,true)
+T.eq(U.Application:IsAutoApplyEnabled(),true)
 local nextResult=preview:GetResults()[1];find:Apply(nextResult)
 T.eq(U.activeModal,nil,"preview has the same configured quick-apply path")
 T.eq(preview:GetApplication(nextResult).comment,"Preview note")

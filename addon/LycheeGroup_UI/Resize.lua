@@ -8,11 +8,11 @@ function UI:GetWindowMinimum()
  local large=math.max(0,self.context.fontScale-1)
  local page=self.page and self.pages[self.page]
  local pageHeight=page and page.frame and page.GetMinimumHeight and page:GetMinimumHeight() or 0
- return 1200+math.floor(large*220+.5),math.max(760+math.floor(large*240+.5),pageHeight)
+ return math.max(T.width,1200+math.floor(large*220+.5)),math.max(T.height,760+math.floor(large*240+.5),pageHeight)
 end
 
 function UI:LoadWindowSize()
- local saved=A.charPrefs.windowSize
+ local saved=A.charPrefs.windowSize or A.db.rurutiaWindowSize
  local width,height
  if type(saved)=="table" then width,height=tonumber(saved.width),tonumber(saved.height) end
  self.windowWidth=width and width==width and width or T.width
@@ -35,7 +35,7 @@ function UI:SetWindowSize(width,height)
  local minWidth,minHeight=self:GetWindowMinimum()
  local scale=self.frame:GetScale()
  local filters=self.pages.find.filterPanel
- local filterWidth=filters and filters:IsShown() and filters:GetWidth()+12 or 0
+ local filterWidth=0
  local maxWidth=math.max(minWidth,(UIParent:GetWidth()-40)/scale-filterWidth)
  local maxHeight=math.max(minHeight,(UIParent:GetHeight()-40)/scale)
  width=math.max(minWidth,math.min(maxWidth,width))
@@ -55,6 +55,7 @@ end
 
 function UI:RefreshResizeState()
  local handle=self.resizeHandle
+ handle.icon:SetAlpha((self.resizing or handle.inside) and 1 or 0)
  local state=self.resizing and "pressed" or handle.inside and "hover" or "normal"
  if state~=handle.state then handle.state=state;handle.icon:SetTexture(MEDIA..state..".tga") end
 end
@@ -73,6 +74,7 @@ function UI:StopWindowResize()
  self.resizeHandle:SetScript("OnUpdate",nil)
  self.preferredWindowWidth,self.preferredWindowHeight=self.windowWidth,self.windowHeight
  A.charPrefs.windowSize={width=self.windowWidth,height=self.windowHeight}
+ UI:SaveWindowPosition()
  M:CapturePosition();M:SetPresence(1)
  self:RefreshResizeState()
 end
@@ -90,7 +92,7 @@ function UI:BeginWindowResize()
  local parentScale=UIParent:GetEffectiveScale()
  local minWidth,minHeight=self:GetWindowMinimum()
  local filters=self.pages.find.filterPanel
- local filterWidth=filters and filters:IsShown() and filters:GetWidth()+12 or 0
+ local filterWidth=0
  local x,y=GetCursorPosition()
  self.resizing={cursorX=x,cursorY=y,width=self.windowWidth,height=self.windowHeight,scale=scale,
   maxWidth=math.max(minWidth,(UIParent:GetWidth()*parentScale-20*parentScale-left)/scale-filterWidth),

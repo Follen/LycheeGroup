@@ -125,15 +125,13 @@ local function NewProvider(scenario)
      pass=leaderText~="" and r.leaderName and r.leaderName:lower():find(leaderText,1,true)~=nil
     else pass=r.name:lower():find(text,1,true)~=nil end
    end
+   if pass then pass=A.Group.Results:MatchesAdvancedFilters(r,f) end
    if pass and f.minMembers then pass=r.numMembers>=f.minMembers end
    if pass and f.maxMembers then pass=r.numMembers<=f.maxMembers end
    if pass and f.hideZeroScore then pass=(r.leaderOverallDungeonScore or 0)>=1 end
    if pass and f.neededRole then pass=r.maxNumPlayers==5 and counts[f.neededRole]<(f.neededRole=="DAMAGER" and 3 or 1) end
    if pass and (f.tankPresence or f.healerPresence or f.damagePresence) then
-    pass=r.maxNumPlayers==5
-    if pass and f.tankPresence then pass=counts.TANK~=nil and (counts.TANK>0)==(f.tankPresence=="present") end
-    if pass and f.healerPresence then pass=counts.HEALER~=nil and (counts.HEALER>0)==(f.healerPresence=="present") end
-    if pass and f.damagePresence then pass=counts.DAMAGER~=nil and (counts.DAMAGER>=3)==(f.damagePresence=="present") end
+    pass=A.Group.Results:MatchesRolePresence(counts,f,r.maxNumPlayers)
    end
    if pass and (f.friends or f.guild) then
     local friends=r.bnetFriends+r.charFriends>0;local guild=r.guildMates>0
@@ -147,10 +145,7 @@ local function NewProvider(scenario)
    local x,y=self.records[a],self.records[b];local key=f.sort=="rating" and "leaderRating" or f.sort=="itemLevel" and "requiredItemLevel" or f.sort=="members" and "numMembers"
    local xd,yd=self.Applications:GetDeclinedAt(x.partyGUID)~=nil,self.Applications:GetDeclinedAt(y.partyGUID)~=nil
    if xd~=yd then return not xd end
-   local xf,yf=x.bnetFriends+x.charFriends>0,y.bnetFriends+y.charFriends>0
-   if xf~=yf then return xf end
-   if key and x[key]~=y[key] then return x[key]>y[key] end
-   return x.age<y.age
+   return A.Group.Results:CompareRecords(self.records[a],self.records[b],a,b,f.sort,f.sortAscending==true)
   end)
   return ids
  end

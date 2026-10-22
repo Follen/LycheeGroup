@@ -1,0 +1,25 @@
+local f=dofile("tests/ui_fixture.lua")("zhCN")
+local A,U,G=f.A,f.U,f.G
+A.db.reduceMotion=true
+assert(A:Open("find"))
+local p=U.pages.find
+p:SetFiltersOpen(true)
+assert(p.filterPanel:GetWidth()==368)
+assert(p.rolePresenceChoices==nil and p.hideSameSpec==nil)
+for _,row in ipairs(p.results.rows) do assert(not row.leaderIcon:IsShown()) end
+p.filterWords.box:UserType("小号")
+assert(G.filters.blockedKeywords and G.filters.blockedKeywords[1]=="小号")
+assert(not G.Results:MatchesAdvancedFilters({name="正常",comment="小号来"},G.filters))
+assert(not G.Results:MatchesAdvancedFilters({name="小号",comment=""},G.filters))
+p.filterDone:Fire("OnClick")
+assert(not p.filtersOpen)
+p:SetFiltersOpen(true);assert(p.filterWords.box:GetText()=="小号")
+p:ClearFilters();assert(G.filters.blockedKeywords==nil and p.filterWords.box:GetText()=="")
+local scale=U.frame:GetScale();p:SetFiltersOpen(false);p:SetFiltersOpen(true);assert(U.frame:GetScale()==scale)
+p.quickChoices.tankPresence.button:Fire("OnClick","LeftButton");assert(G.filters.tankPresence=="missing")
+p.quickChoices.tankPresence.button:Fire("OnClick","RightButton");assert(G.filters.tankPresence==nil)
+p.quickLogic:Fire("OnClick");assert(G.filters.roleMatchAny==true)
+U:SetWindowSize(1450,960)
+assert(U.pages.find.columnWidths and U.pages.find.quickFilters)
+U:Hide(true)
+print("PASS: upstream fixture builds merged UI, keyword input/apply/reopen/clear, missing-role controls, column sizing and stable filter scale")

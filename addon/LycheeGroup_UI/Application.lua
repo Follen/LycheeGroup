@@ -21,7 +21,7 @@ local function CopyRoles(source)
 end
 local function ApplicationPrefs()
  if UI.preview then return UI:GetGroup().applicationPrefs end
- Application.applicationPrefs=Application.applicationPrefs or {roles=CopyRoles(A.charPrefs.applicationRoles)}
+ Application.applicationPrefs=Application.applicationPrefs or {roles=CopyRoles(A.charPrefs.applicationRoles),enabled=A.charPrefs.rurutiaAutoApply==true}
  return Application.applicationPrefs
 end
 local function SaveRoles(roles)
@@ -33,15 +33,27 @@ function Application:IsAutoApplyEnabled()
  return ApplicationPrefs().enabled==true
 end
 local function RefreshApplicationEntry()
+ if Application.applicationModal then Application.applicationModal.autoApply:SetValue(Application:IsAutoApplyEnabled()) end
  if Application.onPreferencesChanged then Application.onPreferencesChanged() end
 end
 function Application:SetAutoApply(enabled)
+ local prefs=ApplicationPrefs()
+ local lease=self.previewApplication or self.applicationLease
  if enabled then
-  local ok,err=self:OpenApplicationSettings(nil,true)
-  RefreshApplicationEntry()
-  return ok,err
+  if not lease and not prefs.roles then
+   local ok,err=self:OpenApplicationSettings(nil,false)
+   if not ok then RefreshApplicationEntry();return false,err end
+   lease=self.previewApplication or self.applicationLease
+  end
+  local roles=lease and lease.roles or prefs.roles
+  local tank,healer,damage=C_LFGList.GetAvailableRoles()
+  if not roles or not next(roles) or roles.TANK and not tank or roles.HEALER and not healer or roles.DAMAGER and not damage then
+   RefreshApplicationEntry();return false,L.applicationRoleUnavailable
+  end
+  SaveRoles(roles)
  end
- ApplicationPrefs().enabled=false
+ prefs.enabled=enabled==true
+ if not UI.preview then A.charPrefs.rurutiaAutoApply=prefs.enabled end
  RefreshApplicationEntry()
  return true
 end
@@ -62,6 +74,25 @@ function Application:BuildApplication()
  modal.error=C.Text(content,"",14,T.warning,464,20);modal.error:SetMaxLines(1)
  modal.cancel=C.Button(modal.frame,L.cancel,nil,function() UI:CloseModal() end);modal.cancel:SetHeight(40)
  modal.submit=C.Button(modal.frame,L.apply,112,function() Application:ConfirmApplication() end);modal.submit:SetPrimary(true);modal.submit:SetHeight(40)
+ -- One explicit click target includes both the square and its label.
+ modal.autoApply=C.Button(modal.frame,Say("自动申请","Auto apply"),150,function()
+  local ok,err=Application:SetAutoApply(not Application:IsAutoApplyEnabled())
+  if not ok then UI:SetText(modal.error,err or L.failed);Application:LayoutApplication() end
+ end,{height=40,variant="text"})
+ modal.autoApply:SetPoint("BOTTOMLEFT",24,24)
+ modal.autoApply.label:ClearAllPoints();modal.autoApply.label:SetPoint("LEFT",32,0)
+ local box=CreateFrame("Frame",nil,modal.autoApply);box:SetSize(20,20);box:SetPoint("LEFT",2,0);box:EnableMouse(false)
+ local fill=C.Panel(box,T.surfaceLow,3)
+ local mark=C.CheckMark(box,T.onPrimary);mark:SetPoint("CENTER")
+ for i=1,4 do
+  local edge=box:CreateTexture(nil,"OVERLAY");edge:SetColorTexture(unpack(T.muted))
+  if i<=2 then edge:SetHeight(1);edge:SetPoint(i==1 and "TOPLEFT" or "BOTTOMLEFT");edge:SetPoint(i==1 and "TOPRIGHT" or "BOTTOMRIGHT")
+  else edge:SetWidth(1);edge:SetPoint(i==3 and "TOPLEFT" or "TOPRIGHT");edge:SetPoint(i==3 and "BOTTOMLEFT" or "BOTTOMRIGHT") end
+ end
+ function modal.autoApply:SetValue(value)
+  self.value=value==true;mark:SetShown(self.value);fill:SetColor(self.value and T.primary or T.surfaceLow)
+ end
+ modal.autoApply:SetValue(self:IsAutoApplyEnabled())
  self.applicationModal=modal
  return modal
 end
@@ -161,6 +192,7 @@ function Application:OpenApplicationSettings(resultID,enableOnSave)
  local result=resultID and UI:GetGroup():GetResult(resultID)
  UI:SetText(modal.group,result and result.name or "")
  UI:SetText(modal.submit.label,resultID and L.apply or L.save)
+ modal.autoApply:SetValue(self:IsAutoApplyEnabled())
  self:RefreshApplicationRoles()
  return true
 end
@@ -176,7 +208,7 @@ function Application:ConfirmApplication()
   if not ok and self.applicationModal.frame:IsShown() then UI:SetText(self.applicationModal.error,err or L.failed);self:LayoutApplication() end
  else
   SaveRoles(lease.roles)
-  if lease.enableOnSave then prefs.enabled=true end
+  if lease.enableOnSave then self:SetAutoApply(true) end
   RefreshApplicationEntry();self:ReleaseApplication()
  end
 end
@@ -198,7 +230,7 @@ function Application:Apply(resultID,manual,confirmedRoles)
  if UI.preview then ok,err=group:Apply(resultID,submittedRoles,prefs.note or "")
  else ok,err=group:Apply(resultID,submittedRoles) end
  if ok then
-  if confirmedRoles and not prefs.enabled then SaveRoles(confirmedRoles);RefreshApplicationEntry() end
+  if confirmedRoles then SaveRoles(confirmedRoles);RefreshApplicationEntry() end
   self:ReleaseApplication()
  end
  return ok,err

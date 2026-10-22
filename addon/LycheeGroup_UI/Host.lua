@@ -46,6 +46,18 @@ function UI:OnNotesReady()
 end
 
 function UI:OnSettingChanged(key)
+ if key=="rurutiaMemberClassBorder" or key=="rurutiaMemberLeaderMark" or key=="rurutiaMemberIconShape" then
+  self.pages.find:RefreshMemberBorders()
+  return
+ end
+ if key=="rurutiaMemberIconScale" then
+  if self.pages.find.frame then self.pages.find:LayoutColumns() end
+  return
+ end
+ if key=="rurutiaRailIconScale" then
+  if self.pages.find.frame then self.pages.find:LayoutRailIcons() end
+  return
+ end
 	if key == "language" then
 		if self.pages.settings.frame then self.pages.settings:Sync() end
 		return
@@ -109,7 +121,7 @@ end
 function UI:FitToScreen()
 	self:StopWindowResize()
 	local find = self.pages.find
-	local filterWidth = find.filterPanel and find.filterPanel:IsShown() and find.filterPanel:GetWidth()+12 or 0
+	local filterWidth = 0
 	local width = T.width + filterWidth
 	self.frame:SetClampRectInsets(0,filterWidth,0,0)
 	local scale = math.min(1, (UIParent:GetWidth() - 40) / width, (UIParent:GetHeight() - 40) / T.height) * A.db.uiScale / 100
@@ -219,10 +231,29 @@ local function BuildNavButton(nav, page, x)
 	return b
 end
 
+-- Store center offsets in UIParent units, independent of window scale and entrance animation.
+function UI:SaveWindowPosition()
+ local frame=self.frame
+ local x,y=frame:GetCenter()
+ local px,py=UIParent:GetCenter()
+ if not x or not y or not px or not py then return end
+ local ratio=frame:GetEffectiveScale()/UIParent:GetEffectiveScale()
+ A.db.rurutiaWindowPosition={x=x*ratio-px,y=y*ratio-py}
+end
+function UI:RestoreWindowPosition()
+ local saved=A.db.rurutiaWindowPosition
+ if type(saved)~="table" then return end
+ local x,y=tonumber(saved.x),tonumber(saved.y)
+ if not x or not y or x~=x or y~=y or math.abs(x)==math.huge or math.abs(y)==math.huge then return end
+ local ratio=UIParent:GetEffectiveScale()/self.frame:GetEffectiveScale()
+ self.frame:ClearAllPoints()
+ self.frame:SetPoint("CENTER",UIParent,"CENTER",x*ratio,y*ratio)
+end
+
 function UI:Build()
 	self:LoadWindowSize()
 	local frame = CreateFrame("Frame", nil, UIParent)
-	frame:SetSize(T.width, T.height)
+ frame:SetSize(self.windowWidth,self.windowHeight)
 	frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
 	frame:SetFrameStrata("HIGH")
 	frame:EnableMouse(true)
@@ -236,11 +267,12 @@ function UI:Build()
 		UI:StopWindowResize()
 		UI:CloseMenu();UI.Tooltip:Hide()
 		local page=UI.pages[UI.page];if page and page.ClosePicker then page:ClosePicker() end
-	end})
-	frame:SetClampedToScreen(true)
+	end,onStop=function() UI:SaveWindowPosition() end})
+	frame:SetClampedToScreen(false)
 	self:FitToScreen()
+ self:RestoreWindowPosition()
 
-	-- 72-unit header, with navigation aligned to the main content at x264.
+ -- 72-unit header, with navigation aligned to the main content at x264.
 	local logo = CreateFrame("Button", nil, frame)
 	logo:SetSize(LOGO, LOGO)
 	logo:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD+8, -(NAV_H-LOGO)/2)
@@ -311,7 +343,7 @@ function UI:Build()
  frame:HookScript("OnMouseDown",function() if UI.Tooltip.pinned then UI.Tooltip:Hide() end end)
 	frame:HookScript("OnHide",function() UI:StopWindowResize();frame:SetScript("OnUpdate",nil) end)
 
-	frame:RegisterEvent("DISPLAY_SIZE_CHANGED")
+ frame:RegisterEvent("DISPLAY_SIZE_CHANGED")
 	frame:SetScript("OnEvent", function(_, event)
 		if event == "DISPLAY_SIZE_CHANGED" and UI.frame:IsShown() then
 			UI:FitToScreen()
@@ -386,6 +418,7 @@ function UI:Navigate(page, context)
 	self:LayoutWindow()
 	p.frame:ClearAllPoints();p.frame:SetPoint("TOPLEFT",self.content,"TOPLEFT",0,0)
 	self:UpdateNav()
+ if p.LayoutWindow then p:LayoutWindow(self.frame:GetWidth()-PAD*2,self.frame:GetHeight()-NAV_H-PAD) end
 	p:Enter(context)
 	self:FitToScreen()
 	local direction=previous and PAGE_ORDER[page]<PAGE_ORDER[previous] and -1 or 1
