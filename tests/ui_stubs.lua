@@ -34,7 +34,7 @@ function N:SetSize(w,h) local changed=self.w~=w or self.h~=h;self.w=w;self.h=h;i
 function N:SetWidth(w) self:SetSize(w,self.h) end
 function N:SetHeight(h) self:SetSize(self.w,h) end
 function N:GetWidth() return self.w>0 and self.w or self.parent and self.parent:GetWidth() or 0 end
-function N:GetHeight() return self.h>0 and self.h or self.parent and self.parent:GetHeight() or 0 end
+function N:GetHeight() if self.kind=="FontString" and self.h<=0 then return self:GetStringHeight() end;return self.h>0 and self.h or self.parent and self.parent:GetHeight() or 0 end
 function N:ClearAllPoints() self.points={};self.allPoints=nil end
 function N:SetPoint(...) local p={...};for i,v in ipairs(self.points) do if v[1]==p[1] then self.points[i]=p;return end end;self.points[#self.points+1]=p end
 function N:GetNumPoints() return #self.points end

@@ -578,7 +578,7 @@ function P:LayoutColumns(override)
   if handle then handle:ClearAllPoints();handle:SetPoint("TOPLEFT",x-4,2) end
  end
  for _,row in ipairs(self.results.rows) do
-  row.title:SetWidth(RESULT_COLUMNS.title.width);row.meta:SetWidth(RESULT_COLUMNS.title.width)
+  row.title:SetWidth(RESULT_COLUMNS.title.width);LayoutResultActivity(row)
   row.leader:ClearAllPoints();row.leader:SetPoint("LEFT",RESULT_COLUMNS.leader.x,0);row.leader:SetWidth(RESULT_COLUMNS.leader.width)
   row.leaderIcon:ClearAllPoints();row.leaderIcon:SetPoint("LEFT",RESULT_COLUMNS.leader.x-17,0)
   row.membersX=RESULT_COLUMNS.members.x;LayoutMembers(row)
@@ -795,10 +795,10 @@ function P:LayoutQuickFilters()
  self.quickFilters:SetWidth(needed)
  local extra=self.quickFilters:IsShown() and (MAIN-left-right<needed) and 40 or 0
  self.quickFilters:ClearAllPoints();self.quickFilters:SetPoint("TOPLEFT",extra>0 and 16 or left,extra>0 and -46 or -6)
+ if self.quickFilterHeight~=extra then self.resultsTop=nil end
  self.quickFilterHeight=extra
  self.applicationPanel:SetHeight(44+(self.appsHeight or 0)+extra)
  self.appList:ClearAllPoints();self.appList:SetPoint("TOPLEFT",16,-40-extra)
- self.resultsTop=nil
 end
 
 local advancedKeys={"minItemLevel","maxItemLevel","minRating","maxRating","blockedKeywords","blockedKeywordsText"}

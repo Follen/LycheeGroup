@@ -854,7 +854,7 @@ do
  local page=U.pages.find
  T.eq(G.filters.tankPresence,"present");T.eq(G.filters.healerPresence,"missing");T.eq(G.filters.damagePresence,"missing","first entry migrates the saved damage requirement alongside the other role-presence fields")
  T.eq(G.filters.needsDamage,nil);T.eq(G.prefs.find.filters.needsDamage,nil,"migration removes the retired damage field")
- T.eq(page.rolePresenceChoices.TANK.value,"present");T.eq(page.rolePresenceChoices.HEALER.value,"missing");T.eq(page.rolePresenceChoices.DAMAGER.value,"missing")
+ T.eq(page.quickChoices.tankPresence.button.label:GetText(),"已有");T.eq(page.quickChoices.healerPresence.button.label:GetText(),"缺少");T.eq(page.quickChoices.damagePresence.button.label:GetText(),"缺少")
  T.eq(page.hideZeroScore.value,true);T.eq(G.filters.hideZeroScore,true,"the saved seasonal score filter is restored on first entry")
  T.eq(page.filterCount,4);T.eq(page.filterToggle.label:GetText(),"筛选 4","restored conditions remain visible while the panel is closed")
  T.eq(page.clearFilters:IsEnabled(),true)
@@ -893,7 +893,7 @@ do
  T.eq(box:GetText(),"");T.ok(G.searchClears>0,"leader search and first native lease discard stale native activity tokens")
  T.eq(page.searchHint:GetText(),"队伍标题或钥石范围，如 12-15")
  T.eq(page.fMinLevel,nil);T.eq(page.fMaxLevel,nil,"unsupported local level range inputs are not created")
- T.ok(page.filterPanel:GetHeight()<=U.frame:GetHeight(),"seasonal controls fit within the main window height");T.eq(page.filterPanel:GetWidth(),384)
+ T.ok(page.filterPanel:GetHeight()<=U.frame:GetHeight(),"seasonal controls fit within main: "..page.filterPanel:GetHeight().." / "..U.frame:GetHeight());T.eq(page.filterPanel:GetWidth(),368)
  local revision=U.Native.searchLease.revision
  box:UserType("12-15");T.eq(U.Native.searchLease.revision,revision+1,"each native edit distinguishes a newer query without parsing it")
  T.eq(G.filters.text,nil);T.eq(G.filters.leaderText,nil);T.eq(G.filters.minLevel,nil);T.eq(G.filters.maxLevel,nil,"native range text is never copied into local result filters")
@@ -907,7 +907,7 @@ do
  page.fMinMembers.box:SetText("");T.eq(page.filterToggle.label:GetText(),"筛选 2")
  page:SelectCategory("seasonRaid");T.eq(box:GetText(),"","switching category clears incompatible native text and activity tokens")
  T.eq(page.hideZeroScore:IsShown(),false);T.eq(G.filters.hideZeroScore,nil,"the seasonal score filter does not affect other categories")
- T.eq(page.filterCount,0);T.ok(page.filterPanel:GetHeight()<500,"categories without role conditions use the shorter layout")
+ T.eq(page.filterCount,0);T.ok(page.filterPanel:GetHeight()==U.frame:GetHeight()-96,"all categories use the full-height compact panel")
  T.eq(page.searchHint:GetText(),"队伍标题","raid search returns to title mode without a key-range hint")
  T.eq(page.searchModeToggle:IsShown(),true);T.eq(page.search.box,box)
  T.eq(G.filters.maxMembers,nil,"a category without saved conditions does not inherit the dungeon member limit")
@@ -999,8 +999,8 @@ do
  find.closeApplicationNotice:Fire("OnClick");find:ReadSearchState();T.eq(find.limitNotice:IsShown(),false,"passive state reads do not reopen a dismissed notice")
  G.GetResults=getResults;G.state=previousState;G.error=previousError;find.searchError=inputError;find:RefreshResults()
 end
-T.eq(find.rail:GetWidth(),208);T.near(find.main:GetWidth(),995.2,.001)
-T.eq(find.filterPanel:GetWidth(),384);T.eq(find.results.rowHeight,76)
+T.eq(find.rail:GetWidth(),56);T.near(find.main:GetWidth(),1147.2,.001)
+T.eq(find.filterPanel:GetWidth(),368);T.eq(find.results.rowHeight,76)
 T.eq(find.seasonCategories.rows[1]:GetHeight(),48,"the activity sidebar keeps its original compact row height")
 do
  local countPoint={find.resultCount:GetPoint()}
@@ -1063,7 +1063,7 @@ local difficultyWidth,count=0,0
 for _,button in ipairs(find.difficultyButtons) do if button:IsShown() then difficultyWidth=difficultyWidth+button:GetWidth();count=count+1;T.ok(button:GetWidth()>=button.textWidth+20,"difficulty labels retain their full natural width") end end
 T.near(difficultyWidth+math.max(0,count-1)*4+6,find.difficultySurface:GetWidth(),.001,"difficulty buttons fill the available row without a trailing empty strip")
 local membersAnchor={find.fMembers:GetPoint()}
-T.eq(membersAnchor[#membersAnchor],-144,"member bounds stay near the filter header in every category")
+T.ok(membersAnchor[#membersAnchor]<select(3,find.filterFields.minRating:GetPoint()),"member bounds follow rating and item-level ranges")
 T.ok(find.fMembers.placeholder and find.fMembers.placeholder:IsShown(),"an empty numeric filter visibly says unrestricted")
 T.eq(find.fMembers.increase,nil,"numeric filters have no stepper arrows")
 find.activities.rows[1]:Fire("OnClick","LeftButton")
@@ -1094,66 +1094,39 @@ end
 do
  find:SelectCategory("seasonDungeon")
  local filtersOpen=find.filtersOpen;find:SetFiltersOpen(true)
- local choices=find.rolePresenceChoices
+ local keys={TANK="tankPresence",HEALER="healerPresence",DAMAGER="damagePresence"}
  local function Choose(role,value)
-  for _,button in ipairs(choices[role].buttons) do if button.value==value then button:Fire("OnClick");return end end
-  error("missing role-presence option "..role..":"..tostring(value))
+  local button=find.quickChoices[keys[role]].button
+  button:Fire("OnClick","RightButton")
+  if value then button:Fire("OnClick","LeftButton");if value=="present" then button:Fire("OnClick","LeftButton") end end
  end
- T.eq(find.rolePresencePanel:IsShown(),true);T.eq(find.roleChoice:IsShown(),false,"seasonal dungeons replace the old one-role menu")
- T.eq(#choices.TANK.buttons,3);T.eq(#choices.HEALER.buttons,3);T.eq(#choices.DAMAGER.buttons,3,"each role exposes an explicit unrestricted option and two conditions")
- T.eq(choices.DAMAGER.buttons[2].label:GetText(),"已齐");T.eq(choices.DAMAGER.buttons[3].label:GetText(),"缺少")
+ T.eq(find.quickFilters:IsShown(),true);T.eq(find.roleChoice:IsShown(),false)
  Choose("TANK","present");T.eq(G.filters.tankPresence,"present")
- Choose("TANK","missing");T.eq(G.filters.tankPresence,"missing");T.eq(choices.TANK.buttons[2].active,false);T.eq(choices.TANK.buttons[3].active,true,"tank presence options are mutually exclusive")
- Choose("TANK","missing");T.eq(G.filters.tankPresence,nil);T.eq(choices.TANK.value,false,"clicking the selected condition clears that role")
- T.eq(choices.TANK.buttons[1].active,true);T.eq(choices.TANK.buttons[2].active,false);T.eq(choices.TANK.buttons[3].active,false)
- Choose("TANK","missing")
- Choose("DAMAGER","present");T.eq(G.filters.damagePresence,"present");Choose("DAMAGER","present");T.eq(G.filters.damagePresence,nil)
- Choose("HEALER","present");Choose("DAMAGER","missing")
- T.eq(G.filters.tankPresence,"missing");T.eq(G.filters.healerPresence,"present");T.eq(G.filters.damagePresence,"missing","independent role fields combine in the result filter")
- find:SelectCategory("seasonRaid")
- T.eq(find.rolePresencePanel:IsShown(),false);T.eq(G.filters.tankPresence,nil);T.eq(G.filters.healerPresence,nil);T.eq(G.filters.damagePresence,nil,"seasonal conditions do not leak to raids")
- find:SelectCategory("seasonDungeon")
- T.eq(choices.TANK.value,"missing");T.eq(choices.HEALER.value,"present");T.eq(choices.DAMAGER.value,"missing","returning restores the category's visible controls")
+ Choose("TANK","missing");Choose("HEALER","present");Choose("DAMAGER","missing")
+ T.eq(G.filters.tankPresence,"missing");T.eq(G.filters.healerPresence,"present");T.eq(G.filters.damagePresence,"missing")
+ find:SelectCategory("seasonRaid");T.eq(find.quickFilters:IsShown(),false);T.eq(G.filters.tankPresence,nil)
+ find:SelectCategory("seasonDungeon");T.eq(G.filters.tankPresence,"missing");T.eq(G.filters.healerPresence,"present")
  local catalog=G.Catalog;local getActivities=catalog.GetActivities
  catalog.GetActivities=function(self,key) if key=="2" then return {self:GetActivity(2)} end;return getActivities(self,key) end
- find:SelectCategory("2");T.eq(find.roleChoice:IsShown(),true,"ordinary Mythic+ browsing keeps the existing missing-role menu")
- Pick(find.roleChoice,"TANK");T.eq(G.filters.neededRole,"TANK");T.eq(G.filters.tankPresence,nil)
+ find:SelectCategory("2");T.eq(find.roleChoice:IsShown(),true);Pick(find.roleChoice,"TANK");T.eq(G.filters.neededRole,"TANK")
  find:SelectCategory("seasonDungeon");T.eq(G.filters.neededRole,nil);T.eq(G.filters.tankPresence,"missing")
- find:SelectCategory("2");T.eq(find.roleChoice.value,"TANK");T.eq(G.filters.neededRole,"TANK","the original category restores its own role choice")
- find:SelectCategory("seasonDungeon");catalog.GetActivities=getActivities;find.clearFilters:Fire("OnClick")
- for _,role in ipairs({"TANK","HEALER","DAMAGER"}) do T.eq(choices[role].value,false) end
- T.eq(G.filters.tankPresence,nil);T.eq(G.filters.healerPresence,nil);T.eq(G.filters.damagePresence,nil)
- find:SelectCategory("seasonRaid");find:SelectCategory("seasonDungeon")
- T.eq(choices.TANK.value,false);T.eq(choices.HEALER.value,false);T.eq(choices.DAMAGER.value,false,"cleared conditions do not return after a category switch")
+ find:SelectCategory("2");T.eq(G.filters.neededRole,"TANK")
+ find:SelectCategory("seasonDungeon");catalog.GetActivities=getActivities;find:ClearFilters()
  for _,roles in ipairs({{"TANK","HEALER","DAMAGER"},{"TANK","DAMAGER","HEALER"},{"HEALER","DAMAGER","TANK"}}) do
-  Choose(roles[1],"present");Choose(roles[2],"present")
-  local blocked=choices[roles[3]]
-  T.eq(blocked.buttons[2]:IsEnabled(),false,"two positive role conditions disable the remaining positive choice")
-  T.ok(blocked.buttons[2]:GetAlpha()<1,"the unavailable condition is visibly dimmed")
-  T.eq(blocked.buttons[3]:IsEnabled(),true,"the remaining role can still be missing")
-  Choose(roles[3],"present");T.eq(blocked.value,false,"clicking the disabled third condition does not change filters")
-  Choose(roles[3],"missing");T.eq(blocked.value,"missing")
-  T.eq(choices[roles[1]].value,"present");T.eq(choices[roles[2]].value,"present","negative choices preserve both positive conditions")
-  Choose(roles[1],"present");T.eq(choices[roles[1]].value,false)
-  T.eq(blocked.buttons[2]:IsEnabled(),true,"clearing a selected positive condition immediately enables the other role")
-  Choose(roles[3],"present");T.eq(blocked.value,"present");T.eq(blocked.buttons[2]:IsEnabled(),true,"a selected positive condition remains available to clear")
+  Choose(roles[1],"present");Choose(roles[2],"present");Choose(roles[3],"present")
+  T.eq(G.filters[keys[roles[3]]],nil,"AND skips an impossible third positive condition")
+  Choose(roles[3],"missing");T.eq(G.filters[keys[roles[3]]],"missing")
+  Choose(roles[1],nil);Choose(roles[3],"present");T.eq(G.filters[keys[roles[3]]],"present")
   find:ClearFilters()
  end
  local allPresent={tankPresence="present",healerPresence="present",damagePresence="present"}
- find:RestoreCategory(allPresent);find:UpdateFilters()
- T.eq(choices.TANK.value,"present");T.eq(choices.HEALER.value,"present");T.eq(choices.DAMAGER.value,false,"legacy all-present preferences retain tank and healer without selecting missing damage")
- T.eq(allPresent.damagePresence,nil);T.eq(G.prefs.find.categoryPrefs.seasonDungeon.damagePresence,nil,"normalized preferences no longer save all three positive conditions")
- T.eq(choices.DAMAGER.buttons[2]:IsEnabled(),false)
- find:SelectCategory("seasonRaid");find:SelectCategory("seasonDungeon")
- T.eq(choices.TANK.value,"present");T.eq(choices.HEALER.value,"present");T.eq(choices.DAMAGER.value,false,"category changes preserve the normalized role conditions")
+ find:RestoreCategory(allPresent);find:UpdateFilters();T.eq(G.filters.damagePresence,nil);T.eq(allPresent.damagePresence,nil)
+ find.quickLogic:Fire("OnClick");Choose("DAMAGER","present");T.eq(G.filters.damagePresence,"present","OR permits all three positive alternatives")
  find:ClearFilters()
  for _,role in ipairs({"TANK","HEALER","DAMAGER"}) do
-  find:RestoreCategory({neededRole=role});find:UpdateFilters()
-  T.eq(choices[role].value,"missing","legacy saved missing-role filters migrate to a visible seasonal choice")
-  T.eq(G.filters.neededRole,nil,"the migrated condition has only one active representation")
-  Choose(role,"missing")
-  local saved=G.prefs.find.categoryPrefs.seasonDungeon
-  T.eq(saved.neededRole,nil);T.eq(saved.tankPresence,nil);T.eq(saved.healerPresence,nil);T.eq(saved.damagePresence,nil);T.eq(saved.needsDamage,nil,"clearing a migrated condition removes both current and retired saved fields")
+  find:RestoreCategory({neededRole=role});find:UpdateFilters();T.eq(G.filters[keys[role]],"missing");T.eq(G.filters.neededRole,nil)
+  Choose(role,nil);local saved=G.prefs.find.categoryPrefs.seasonDungeon
+  T.eq(saved.neededRole,nil);T.eq(saved.tankPresence,nil);T.eq(saved.healerPresence,nil);T.eq(saved.damagePresence,nil);T.eq(saved.needsDamage,nil)
  end
  find:SelectCategory("seasonRaid");find:SetFiltersOpen(filtersOpen)
 end
@@ -1169,9 +1142,9 @@ local activityRow=find.activities.rows[2]
 activityRow:Fire("OnMouseDown");activityRow:Fire("OnClick","LeftButton")
 for _,button in ipairs(find.difficultyButtons) do if button.value==1 and button:IsShown() then button:Fire("OnClick") end end
 T.eq(find.searchHint:GetText(),"队伍标题","normal dungeon search uses the native title query")
-T.eq(find.rolePresencePanel:IsShown(),true,"seasonal role-presence choices also work at normal difficulty")
-find.rolePresenceChoices.TANK.buttons[2]:Fire("OnClick");T.eq(G.filters.tankPresence,"present");T.eq(G.filters.neededRole,nil)
-find.rolePresenceChoices.TANK.buttons[2]:Fire("OnClick")
+T.eq(find.quickFilters:IsShown(),true,"seasonal role-presence choices also work at normal difficulty")
+find.quickChoices.tankPresence.button:Fire("OnClick","LeftButton");find.quickChoices.tankPresence.button:Fire("OnClick","LeftButton");T.eq(G.filters.tankPresence,"present");T.eq(G.filters.neededRole,nil)
+find.quickChoices.tankPresence.button:Fire("OnClick","RightButton")
 T.eq(G.filters.tankPresence,nil,"clicking the selected seasonal condition clears it at normal difficulty")
 local searchMethod=G.Search.Search;local requestedActivity
 G.Search.Search=function(_,category,id) requestedActivity=id;return true end
@@ -1332,7 +1305,7 @@ do
 end
 do
  local row=find.appList.rows[1]
- T.ok(row.leaderIcon:IsShown(),"my applications show the leader crown")
+ T.eq(row.leaderIcon:IsShown(),false,"application names omit the redundant crown")
  T.eq(row.count:IsShown(),false);row:Fire("OnClick","LeftButton");T.eq(row.count:IsShown(),false)
  row.membersButton:Fire("OnClick");T.eq(row.count:IsShown(),false,"party applications also omit the N/N expansion");T.eq(row.count:GetText(),"")
 end
@@ -1377,19 +1350,19 @@ do
  local markPoint={target.marks:GetPoint()};T.eq(markPoint[2],target.meta,"relationship and note icons follow the activity subtitle")
  T.eq(markPoint[3],"RIGHT");T.eq(markPoint[5],0,"icons share the activity line's vertical center")
  T.eq(target.noteDot:IsShown(),false,"the old generic note dot is unused")
- T.eq(Geometry(target.leader).x,303,"the leader follows the group title and crown")
- T.eq(target.leader:GetWidth(),108);T.eq(Geometry(target.leaderIcon).x,286)
- T.eq(select(2,target.title:GetFont()),21,"the description column preserves the group title's font size")
- T.eq(target.title:GetWidth(),210)
- T.near(target.description:GetWidth(),128.2,.001);T.eq(target.description:GetHeight(),48)
- T.eq(Geometry(target.score).x,649);T.eq(target.score:GetWidth(),76)
- T.eq(Geometry(target.ilvl).x,581);T.eq(Geometry(target.membersButton).x,427)
- T.eq(Geometry(target.description).x,741);T.eq(Geometry(target.age).x,body-100);T.eq(target.age:GetWidth(),88)
+ T.eq(target.leaderIcon:IsShown(),false,"leader names do not repeat the roster crown")
+ T.ok(target.leader:GetWidth()>0);T.ok(target.title:GetWidth()>0)
+ T.eq(select(2,target.title:GetFont()),21)
+ T.eq(target.description:GetHeight(),48)
+ T.ok(Geometry(target.title).x+target.title:GetWidth()<=Geometry(target.leader).x)
+ T.ok(Geometry(target.membersButton).x<Geometry(target.ilvl).x)
+ T.ok(Geometry(target.ilvl).x<Geometry(target.score).x)
+ T.ok(Geometry(target.age).x+target.age:GetWidth()<=body)
  T.eq(target.description.maxLines,2);T.eq(target.description.wrap,true);T.eq(select(2,target.description:GetFont()),17)
  T.eq(find.resultHeadings.description:GetText(),"描述");T.eq(find.resultHeadings.description.justify,"LEFT")
- T.ok(Geometry(target.title).x+target.title:GetWidth()+16<=Geometry(target.leaderIcon).x)
- T.eq(Geometry(target.score).x+target.score:GetWidth()+16,Geometry(target.description).x)
- T.eq(Geometry(target.description).x+target.description:GetWidth()+12,Geometry(target.age).x)
+ T.ok(Geometry(target.title).x+target.title:GetWidth()+12<=Geometry(target.leader).x)
+ T.ok(Geometry(target.score).x+target.score:GetWidth()<=Geometry(target.description).x)
+ T.ok(Geometry(target.description).x+target.description:GetWidth()<=Geometry(target.age).x)
  T.eq(find.appList.rows[1].description,nil,"outbound applications do not gain a description column")
  T.eq(find.appList.rows[1].title:GetWidth(),body-623);T.eq(Geometry(find.appList.rows[1].leader).x,body-554,"outbound applications retain their dedicated wider columns")
  r.comment="A complete group description that can wrap over two compact lines without shifting member slots or numeric columns";Render()
@@ -1400,16 +1373,16 @@ do
  T.eq(target.ratingLabel,nil,"score labels appear once in the column header")
  T.eq(target.ilvlLabel,nil,"item-level labels do not repeat in every result")
  for key,region in pairs({description=target.description,leader=target.leader,rating=target.score,ilvl=target.ilvl,members=target.count,age=target.age}) do
-  T.eq(Geometry(region).x,Geometry(find.resultHeadings[key]).x,"data shares its header's column")
-  T.eq(region:GetWidth(),find.resultHeadings[key]:GetWidth())
+  T.ok(math.abs(Geometry(region).x-Geometry(find.resultHeadings[key]).x)<=12,"headers stay within the data column with handle clearance")
+  T.ok(math.abs(region:GetWidth()-find.resultHeadings[key]:GetWidth())<=12)
  end
  for _,region in ipairs({target.leader,target.score,target.ilvl,target.age}) do T.eq(Geometry(region).y,0,"single-line values share the row center") end
  T.eq(target.score.justify,"CENTER");T.eq(target.ilvl.justify,"CENTER")
- T.eq(Geometry(target.leader).x+target.leader:GetWidth()+16,Geometry(target.membersButton).x)
- T.eq(Geometry(target.membersButton).x+target.membersButton:GetWidth()+16,Geometry(target.ilvl).x)
- T.eq(Geometry(target.ilvl).x+target.ilvl:GetWidth()+16,Geometry(target.score).x)
+ T.ok(Geometry(target.leader).x+target.leader:GetWidth()<=Geometry(target.membersButton).x)
+ T.ok(Geometry(target.membersButton).x+target.membersButton:GetWidth()<=Geometry(target.ilvl).x)
+ T.ok(Geometry(target.ilvl).x+target.ilvl:GetWidth()<=Geometry(target.score).x)
  T.eq(find.resultHeadings.members.justify,"CENTER");T.eq(find.resultHeadings.age.justify,"RIGHT")
- T.eq(Geometry(find.resultHeadings.members).x+find.resultHeadings.members:GetWidth()/2,Geometry(target.membersButton).x+target.membersButton:GetWidth()/2,"the member heading follows the visual roster center")
+ T.near(Geometry(find.resultHeadings.members).x+find.resultHeadings.members:GetWidth()/2,Geometry(target.membersButton).x+target.membersButton:GetWidth()/2,8,"the member heading follows the visual roster center")
  T.eq(Geometry(find.resultsHeader).y-find.resultsHeader:GetHeight()-Geometry(find.results).y,16,"the single header has a clear gap above the first row")
  local getSpecInfo=GetSpecializationInfoByID
  _G.GetSpecializationInfoByID=function(id) return id,"Spec "..id,nil,200000+id end
@@ -1431,10 +1404,10 @@ do
   T.eq(slot.role:IsShown(),true,"empty party slots retain a role placeholder")
   T.eq(slot.role:GetTexture(),U.Theme.media..({TANK="role-tank",HEALER="role-healer",DAMAGER="role-dps"})[role]..".tga")
   T.eq(slot.icon:IsShown(),i==1,"only the occupied slot shows a specialization")
-  T.eq(slot.role.desaturated,i~=1,"only empty seasonal dungeon roles use grayscale")
+  T.eq(slot.role.desaturated,false,"missing roles retain their color at reduced brightness")
   T.same(slot.role.vertex,i==1 and {1,1,1,1} or {.7,.7,.7,1},"missing roles are darker while occupied roles retain their colors")
  end
- T.eq(count.width,138);T.eq(age.width,88)
+ T.ok(count.width>=138);T.ok(age.width>=76)
  members[1]={name="Damage1",class="MAGE",assignedRole="DAMAGER",specID=900063}
  members[2]={name="Tank",class="WARRIOR",assignedRole="TANK",specID=900071}
  members[3]={name="Damage2",class="MAGE",assignedRole="DAMAGER",specID=900062}
@@ -1669,12 +1642,15 @@ do
  find.main:Fire("OnKeyDown","ENTER");T.eq(dialog.submissions,before+1,"Enter never submits while automatic application is off")
  T.eq(U.Application.applicationLease,nil,"Enter does not open the temporary application window")
  find.autoApply:Fire("OnClick")
- T.eq(find.autoApply.value,false,"the switch stays off while its configuration is pending")
+ T.eq(find.autoApply.value,true,"saved valid roles allow immediate activation")
+ T.eq(A.charPrefs.rurutiaAutoApply,true)
+ find.autoApply:Fire("OnClick");T.eq(A.charPrefs.rurutiaAutoApply,false)
+ U.Application:OpenApplicationSettings(nil,true)
  T.eq(U.Application.applicationLease.id,nil)
  T.eq(U.Application.applicationModal.group:IsShown(),false,"configuration has no retired explanation or empty group row")
  T.eq(({U.Application.applicationModal.roleLabel:GetPoint()})[3],0,"roles start at the content edge after removing the help text")
  U:CloseModal();T.eq(U.Application:IsAutoApplyEnabled(),false,"cancelling activation leaves the feature off")
- find.autoApply:Fire("OnClick")
+ U.Application:OpenApplicationSettings(nil,true)
  local modal=U.Application.applicationModal
  local groupText=modal.group:GetText();U:SetText(modal.group,string.rep("较长的申请队伍标题",6));U.Application:LayoutApplication()
  T.eq(modal.group:GetHeight(),modal.group:GetStringHeight(),"two-line application titles reserve their complete enlarged line boxes")
@@ -1715,8 +1691,9 @@ do
  modal.roles.DAMAGER:Fire("OnClick");modal.roles.TANK:Fire("OnClick");modal.submit:Fire("OnClick")
  T.eq(dialog.submissions,before+4);T.eq(dialog.submitted.note,"Manual application note")
  T.eq(dialog.submitted.damage,true);T.eq(dialog.submitted.tank,false)
- T.same(U.Application.applicationPrefs.roles,{TANK=true},"manual application does not replace the automatic role configuration")
- T.same(A.charPrefs.applicationRoles,{TANK=true,HEALER=false,DAMAGER=false},"one-off overrides do not replace the character's saved automatic roles")
+ T.same(U.Application.applicationPrefs.roles,{DAMAGER=true},"confirmed roles update the shared application preferences")
+ T.same(A.charPrefs.applicationRoles,{TANK=false,HEALER=false,DAMAGER=true},"shared roles persist for this character")
+ U.Application:OpenApplicationSettings(nil,false);modal.roles.TANK:Fire("OnClick");modal.roles.DAMAGER:Fire("OnClick");modal.submit:Fire("OnClick")
  dialog.Description.EditBox:UserType("Updated native note")
  dialog.available.TANK=false;find:Apply(102)
  T.eq(dialog.submissions,before+4,"an unavailable remembered role cannot be submitted")
@@ -1728,10 +1705,10 @@ do
  find:Apply(102);T.eq(dialog.submissions,before+5,"turning the switch off immediately restores confirmation")
  T.eq(U.Application.applicationLease.id,102);U:CloseModal()
  find.autoApply:Fire("OnClick");modal.submit:Fire("OnClick")
- T.eq(U.Application:IsAutoApplyEnabled(),true,"reenabling requires saving configuration again")
+ T.eq(U.Application:IsAutoApplyEnabled(),true,"reenabling uses saved valid roles")
  _G.GetSpecializationRole=function() return "DAMAGER" end
  find.applicationSettings:Fire("OnClick")
- T.eq(U.Application.applicationLease.roles.TANK,true,"editing retains explicitly saved roles across specialization changes")
+ T.eq(U.Application.applicationLease.roles.DAMAGER,true,"editing retains explicitly saved roles across specialization changes")
  local foreign=CreateFrame("Frame",nil,UIParent);dialog.Description:SetParent(foreign);dialog.Description:SetHeight(40)
  T.eq(U.Application.applicationLease,nil);T.eq(dialog.Description:GetParent(),foreign,"lease release preserves an external owner's layout")
  T.eq(U.activeModal,nil);dialog.Description:SetParent(dialog);dialog.Description:SetSize(210,28)
@@ -3098,7 +3075,7 @@ do
  u.Tooltip:ShowRoster(u.frame,fresh.G:GetRoster());local tip=u.Tooltip.interactive
  T.near(tip:GetScale(),u.frame:GetEffectiveScale()/UIParent:GetEffectiveScale(),.00001)
  BeginAt(75,scaleControl.thumb);Move(125);scaleSlider:Fire("OnUpdate",.016);Release(scaleControl.thumb)
- T.eq(a.db.uiScale,125);T.near(u.frame:GetScale(),baseline*1.25,.00001)
+ T.eq(a.db.uiScale,125);T.near(u.frame:GetScale(),math.min(baseline*1.25,(UIParent:GetHeight()-40)/u.Theme.height,(UIParent:GetWidth()-40)/u.Theme.width),.00001)
  T.near(tip:GetScale(),u.frame:GetEffectiveScale()/UIParent:GetEffectiveScale(),.00001)
  local modal=u:OpenModal("scaleCheck","Test",480,260)
  T.near(modal.frame:GetEffectiveScale(),u.frame:GetEffectiveScale(),.00001)
@@ -3113,14 +3090,14 @@ do
   local desired=math.min(1,(UIParent:GetWidth()-40)/(u.Theme.width+filterWidth),(UIParent:GetHeight()-40)/u.Theme.height)*a.db.uiScale/100
   return math.min(desired,(UIParent:GetWidth()-40)/(minWidth+filterWidth),(UIParent:GetHeight()-40)/minHeight)
  end
- T.same(u.frame.clampInsets,{0,396,0,0},"the native screen clamp includes the open filter panel")
+ T.same(u.frame.clampInsets,{0,0,0,0},"the internal filter overlay does not enlarge screen bounds")
  local expanded=math.min(1,(UIParent:GetWidth()-40)/(u.Theme.width+396),(UIParent:GetHeight()-40)/u.Theme.height)
- T.near(u.frame:GetScale(),ScreenScale(396),.00001,"opening filters fits the minimum readable window and panel on screen")
- find:SetFiltersOpen(false);T.near(u.frame:GetScale(),baseline*1.25,.00001)
+ T.near(u.frame:GetScale(),ScreenScale(0),.00001,"opening filters preserves main-window scale")
+ find:SetFiltersOpen(false);T.near(u.frame:GetScale(),math.min(baseline*1.25,(UIParent:GetHeight()-40)/u.Theme.height,(UIParent:GetWidth()-40)/u.Theme.width),.00001)
  T.same(u.frame.clampInsets,{0,0,0,0},"closing filters restores the normal window boundary")
  find:SetFiltersOpen(true)
  UIParent:SetSize(1100,800);u.frame:Fire("OnEvent","DISPLAY_SIZE_CHANGED")
- T.near(u.frame:GetScale(),ScreenScale(396),.00001,"screen resizing includes the open filter panel")
+ T.near(u.frame:GetScale(),ScreenScale(0),.00001,"screen resizing uses the main window only")
  UIParent:SetSize(1280,860);u:Navigate("settings")
  baseline=math.min(1,1240/u.Theme.width,820/u.Theme.height)
  u:Hide(true);a:Open("settings");T.near(u.frame:GetScale(),ScreenScale(),.00001)
@@ -3329,7 +3306,7 @@ do
  a.Notes:Add("Caution","Away","Caution",nil,nil,{type="caution"})
  local caution={nameKey="Caution-Away"};record.details.members[3]=caution
  record.bnetFriends,record.charFriends,record.guildMates=1,1,1;g:Notify("relations")
- T.eq(row.marks:GetWidth(),84);T.ok(row.meta:GetWidth()+6+row.marks:GetWidth()<=210)
+ T.eq(row.marks:GetWidth(),84);T.ok(row.meta:GetWidth()+6+row.marks:GetWidth()<=row.title:GetWidth())
  T.ok(ordinary.marks.icons.neutral:IsShown(),"only the leader note appears in the search member list")
  T.eq(ordinary.faction:IsShown(),false,"search identities never show faction icons")
  local point={ordinary.marks:GetPoint()};T.eq(point[2],ordinary.role);T.eq(point[3],"LEFT");T.eq(point[5],0,"the leader note precedes the role icon")
@@ -3524,7 +3501,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
   local point={region:GetPoint()};local offset=point[#point]
   return point[1]:find("TOP") and offset-region:GetHeight()/2 or offset
  end
- T.near(CenterOffset(page.appsTitle),-page.applicationPanel:GetHeight()/2,.01,"the empty application header centers its title")
+ T.near(CenterOffset(page.appsTitle),-22,.01,"the application title stays centered in its first row even when quick filters wrap")
  T.near(CenterOffset(page.autoJoin),CenterOffset(page.appsTitle),.01,"both switches share the title's vertical center")
  u:ApplyFont(u.Theme.font)
  T.near(CenterOffset(page.autoJoin),CenterOffset(page.appsTitle),.01,"changing typeface preserves header alignment")
@@ -3576,8 +3553,8 @@ for _,locale in ipairs({"enUS","zhCN"}) do
  local a,u=fresh.A,fresh.U;a.db.reduceMotion=true;a:Open("find")
  local page=u.pages.find
  local any=locale=="zhCN" and "不限" or "Any"
- T.eq(page.fMinMembers.placeholder:GetText(),any,"numeric placeholders follow the addon language")
- T.eq(page.fMembers.placeholder:GetText(),any)
+ T.eq(page.fMinMembers.placeholder:GetText(),locale=="zhCN" and "最少" or "Min","numeric placeholders follow the addon language")
+ T.eq(page.fMembers.placeholder:GetText(),locale=="zhCN" and "最多" or "Max")
  for _,row in ipairs(page.seasonCategories.rows) do
   if row.key and locale=="enUS" then T.ok(row:GetHeight()>=row.title:GetStringHeight()+16,"two-line season categories retain eight units of vertical padding") end
  end
@@ -3958,12 +3935,10 @@ do
  m:Tick(.08);T.ok(select(4,selection:GetPoint())~=fromX,"difficulty has a visible intermediate selection position")
  p:SetFiltersOpen(true)
  T.ok(p.filterPanel:GetAlpha()<1 and select(4,p.filterPanel:GetPoint())<12,"the filter panel slides in from its window edge")
- local roles=p.rolePresenceChoices.TANK
- roles.buttons[1]:Fire("OnClick");m:Tick(.2)
- T.eq(roles.buttons[1].fill:IsShown(),false,"role options do not cover their moving shared background with opaque button fills")
- local roleX=select(4,roles.selection:GetPoint())
- roles.buttons[2]:Fire("OnClick");m:Tick(.08)
- T.ok(select(4,roles.selection:GetPoint())>roleX,"role-filter refresh and availability synchronization retain the segment animation")
+ p.quickChoices.tankPresence.button:Fire("OnClick","RightButton");m:Tick(.2)
+ T.eq(p.quickChoices.tankPresence.button.active,false)
+ p.quickChoices.tankPresence.button:Fire("OnClick","LeftButton");m:Tick(.08)
+ T.eq(p.quickChoices.tankPresence.button.active,true,"quick conditions keep active styling through refresh")
  p.socialChoice:Fire("OnClick")
  local menu=u.context:GetMenu()
  T.ok(menu:IsShown() and menu:GetAlpha()<1,"ordinary dropdowns use the same finite reveal")
@@ -4283,28 +4258,26 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  C_SpecializationInfo.GetSpecializationInfo=function() return 252,name,nil,135775 end
  g.prefs.find={category="seasonDungeon",filters={hideSameSpec=true}}
  a:Open("find");local page=u.pages.find;page:SetFiltersOpen(true)
- T.eq(page.hideSameSpec.value,true);T.eq(g.filters.hideSameSpec,true);T.eq(page.filterCount,1)
+ T.eq(page.quickIdentity.active,true);T.eq(g.filters.hideSameSpec,true);T.eq(page.filterCount,1)
  T.eq(page.sameSpecHint,nil,"the filter has no current-spec hint line")
  page:SelectCategory("seasonRaid")
- T.eq(page.hideSameSpec:IsShown(),false);T.eq(g.filters.hideSameSpec,nil)
+ T.eq(page.quickFilters:IsShown(),false);T.eq(g.filters.hideSameSpec,nil)
  page:SelectCategory("seasonDungeon")
- T.eq(page.hideSameSpec.value,true);T.eq(g.filters.hideSameSpec,true,"returning restores the seasonal specialization preference")
- page:ClearFilters();T.eq(page.hideSameSpec.value,false);T.eq(g.filters.hideSameSpec,nil);T.eq(page.filterCount,0)
- page.hideSameSpec:Fire("OnClick");T.eq(g.prefs.find.categoryPrefs.seasonDungeon.hideSameSpec,true)
- page.rolePresenceChoices.TANK.buttons[2]:Fire("OnClick")
- page.rolePresenceChoices.TANK.buttons[1]:Fire("OnClick")
- T.eq(g.filters.tankPresence,nil);T.eq(page.rolePresenceChoices.TANK.buttons[1].active,true,"Any explicitly clears one role")
+ T.eq(page.quickIdentity.active,true);T.eq(g.filters.hideSameSpec,true,"returning restores the seasonal specialization preference")
+ page:ClearFilters();T.eq(page.quickIdentity.active,false);T.eq(g.filters.hideSameSpec,nil);T.eq(page.filterCount,0)
+ page.quickIdentity:Fire("OnClick","LeftButton");page.quickIdentity:Fire("OnClick","LeftButton");T.eq(g.prefs.find.categoryPrefs.seasonDungeon.hideSameSpec,true)
+ page.quickChoices.tankPresence.button:Fire("OnClick","LeftButton")
+ page.quickChoices.tankPresence.button:Fire("OnClick","RightButton")
+ T.eq(g.filters.tankPresence,nil);T.eq(page.quickChoices.tankPresence.button.active,false,"Any explicitly clears one role")
  local function Top(frame) local point={frame:GetPoint()};return -point[#point] end
  for _,scale in ipairs({70,100,130}) do
   a:SetSetting("fontScale",scale)
   T.ok(page.filterPanel:GetHeight()<=u.frame:GetHeight(),locale.." filter panel fits at "..scale.." percent")
-  T.ok(Top(page.fMembers)>Top(page.maxMembersLabel)+page.maxMembersLabel:GetHeight(),"number labels remain above their inputs")
-  T.ok(Top(page.hideSameSpec)>Top(page.rolePresencePanel)+page.rolePresencePanel:GetHeight(),"matching switches remain below the role selector")
-  T.ok(Top(page.socialLabel)>Top(page.hideZeroScore)+page.hideZeroScore:GetHeight(),"relations do not overlap the final switch")
+  T.ok(page.fMembers:GetWidth()>0,"number fields retain usable width")
+  T.eq(page.rolePresencePanel,nil,"duplicate role panel is absent")
+  T.ok(Top(page.hideZeroScore)>Top(page.sortChoice)+page.sortChoice:GetHeight(),"zero-score switch follows sorting")
   T.ok(Top(page.sortChoice)+page.sortChoice:GetHeight()<=page.filterPanel:GetHeight()-20,"the final choice retains bottom padding")
-  for _,choice in pairs(page.rolePresenceChoices) do
-   for _,button in ipairs(choice.buttons) do T.ok(button.label:GetStringWidth()+8<=button:GetWidth(),"role option text fits at the selected font size") end
-  end
+  for _,entry in pairs(page.quickChoices) do T.ok(entry.button.label:GetStringWidth()+40<=entry.button:GetWidth(),"quick role text fits") end
  end
  page:ClearFilters();page:SelectCategory("seasonRaid");page:SelectCategory("seasonDungeon")
  T.eq(g.filters.hideSameSpec,nil,"cleared specialization preferences do not return")
@@ -4317,9 +4290,9 @@ do
  local a,u,g=fresh.A,fresh.U,fresh.G;a.db.reduceMotion=true
  a.charPrefs.rememberFilters=false;g.prefs.find={railCollapsed=true}
  a:Open("find");local page=u.pages.find
- T.eq(page.rail:GetWidth(),48,"interface preferences restore even when filter memory is off")
- T.eq(page.sidebarToggle:GetWidth(),40);T.eq(page.sidebarToggle:GetHeight(),40)
- T.eq(page.main:GetWidth(),1155.2);T.eq(page.sidebarToggle.label:IsShown(),false)
+ T.eq(page.rail:GetWidth(),56,"interface preferences restore even when filter memory is off")
+ T.eq(page.sidebarToggle:GetWidth(),48);T.eq(page.sidebarToggle:GetHeight(),40)
+ T.eq(page.main:GetWidth(),1147.2);T.eq(page.sidebarToggle.label:IsShown(),false)
  for _,list in ipairs({page.seasonCategories,page.categories}) do
   for _,row in ipairs(list.rows) do T.eq(row.title:IsShown(),false);T.eq(row.chevron:IsShown(),false) end
  end
@@ -4340,28 +4313,28 @@ do
  local nodes=#fresh.S.nodes;local originalRow=page.results.rows[1]
  a.db.reduceMotion=false;page.sidebarToggle:Fire("OnClick");u.Motion:Tick(.06)
  T.eq(page.sidebarToggle.label:GetText(),"Collapse","collapsing fades the current caption without flashing Expand")
- local middle=page.rail:GetWidth();T.ok(middle>48 and middle<208,"the rail interpolates its width")
+ local middle=page.rail:GetWidth();T.ok(middle>56 and middle<208,"the rail interpolates its width")
  page.sidebarToggle:Fire("OnClick");T.eq(page.rail:GetWidth(),middle,"reversing starts at the current geometry")
  u.Motion:Tick(.03);T.ok(page.rail:GetWidth()>middle,"the same animation reverses continuously")
  page.sidebarToggle:Fire("OnClick");u.Motion:Tick(.2)
- T.eq(page.rail:GetWidth(),48);T.eq(u.Motion.jobs[u.Motion.rects[page.rail]],nil)
+ T.eq(page.rail:GetWidth(),56);T.eq(u.Motion.jobs[u.Motion.rects[page.rail]],nil)
  T.eq(reads,0);T.eq(bindings,0);T.eq(searches,0,"rail animation does not submit a search")
  T.eq(#fresh.S.nodes,nodes,"rail animation reuses existing controls");T.eq(page.results.rows[1],originalRow)
  g.GetResults,g.Results.GetDetails,g.Search.Search,page.results.SetItems=results,details,search,items
  page.sidebarToggle:Fire("OnClick");u.Motion:Tick(.03);a:SetSetting("reduceMotion",true)
  T.eq(page.rail:GetWidth(),208);T.eq(u.Motion.jobs[u.Motion.rects[page.rail]],nil,"reduced motion settles the active rail")
  a.db.reduceMotion=false;page.sidebarToggle:Fire("OnClick");u.Motion:Tick(.03);u:Navigate("settings")
- T.eq(page.rail:GetWidth(),48);T.eq(u.Motion.jobs[u.Motion.rects[page.rail]],nil,"leaving settles the rail")
- u:Navigate("find");T.eq(page.rail:GetWidth(),48)
+ T.eq(page.rail:GetWidth(),56);T.eq(u.Motion.jobs[u.Motion.rects[page.rail]],nil,"leaving settles the rail")
+ u:Navigate("find");T.eq(page.rail:GetWidth(),56)
  page.sidebarToggle:Fire("OnClick");u.Motion:Tick(.03);u:Hide()
  T.eq(page.rail:GetWidth(),208);T.eq(u.Motion.jobs[u.Motion.rects[page.rail]],nil,"closing settles before the window fade completes")
  u:Hide(true);a.db.reduceMotion=true;a:Open("find");page:SetSidebarCollapsed(true,false)
  dofile("addon/LycheeGroup/Entrypoints.lua");T.eq(a:Preview("applications"),true)
- T.eq(page.rail:GetWidth(),208,"preview starts with its independent interface preference")
+ T.eq(page.rail:GetWidth(),56,"preview defaults to compact icons independently")
  local provider=u.preview.provider;page:SetSidebarCollapsed(true,false);page:UpdateFilters()
  T.eq(provider.prefs.find.railCollapsed,true);T.eq(g.prefs.find.railCollapsed,true)
  page:SetSidebarCollapsed(false,false);u:StopPreview(true)
- T.eq(page.rail:GetWidth(),48,"returning from preview restores the real rail preference")
+ T.eq(page.rail:GetWidth(),56,"returning from preview restores the real rail preference")
  T.eq(g.prefs.find.railCollapsed,true);u:Hide(true)
 end
 

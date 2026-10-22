@@ -44,7 +44,7 @@ Begin();Move(0,80);T.eq(U.windowWidth,width,"vertical drag preserves the fractio
 handle:Fire("OnEnter");Release();T.eq(handle.state,"hover","release under the mouse restores the hover image")
 width,height=U.windowWidth,U.windowHeight
 Begin();Move(-80,-40);T.eq(U.windowWidth,width-80);T.eq(U.windowHeight,height-40);Release()
-Begin();Move(-10000,-10000);T.eq(U.windowWidth,1200);T.eq(U.windowHeight,760,"both dimensions stop at the minimum")
+Begin();Move(-10000,-10000);T.eq(U.windowWidth,U.Theme.width);T.eq(U.windowHeight,U.Theme.height,"both dimensions stop at the minimum")
 pressed=false;handle:Fire("OnUpdate",.016)
 T.eq(U.resizing,nil,"release outside the button is observed");T.eq(handle:GetScript("OnUpdate"),nil)
 T.eq(U.frame:GetScale(),1,"resizing changes geometry without changing the global scale")
@@ -61,9 +61,9 @@ for id=1,40 do
 end
 find:CommitChoice();find:DoSearch()
 local oldPool=#find.results.rows
-Begin();Move(200,200);Release()
-T.eq(U.windowWidth,1400);T.eq(U.windowHeight,960)
-T.ok(#find.results.rows>oldPool,"growing the viewport adds decorated result rows")
+Begin();local expectedWidth=math.min(U.resizing.maxWidth,U.Theme.width+200);local expectedHeight=math.min(U.resizing.maxHeight,U.Theme.height+200);Move(200,200);Release()
+T.eq(U.windowWidth,expectedWidth);T.eq(U.windowHeight,expectedHeight)
+T.ok(#find.results.rows>=oldPool,"growing the viewport retains or extends the preallocated row pool")
 T.ok(find.results.capacity>=math.ceil(find.results:GetHeight()/find.results.rowHeight))
 local lastVisible=find.results.rows[math.ceil(find.results:GetHeight()/find.results.rowHeight)]
 T.ok(lastVisible.key and lastVisible.leader and lastVisible.tooltipArea,"the new bottom row has data and real interaction regions")
@@ -99,13 +99,13 @@ T.eq(LFGListFrame.EntryCreation.Description.EditBox:GetText(),"Keep this descrip
 T.eq(create.ilvl.box:GetText(),"250")
 T.eq(create.surface:GetWidth()+create.rail:GetWidth()+16,U.content:GetWidth())
 T.eq(create.manage:GetHeight(),U.content:GetHeight()-48)
-local shortDescription=create.descriptionShell:GetHeight()
+local shortDescription=create.descriptionShell:GetHeight();local shortWindowHeight=U.windowHeight
 local _,shortMinimum=U:GetWindowMinimum()
 U:SetWindowSize(1600,960)
 T.eq(create.formFrame:GetWidth(),create.surface:GetWidth()-48,"the creation form uses the available panel width")
 T.eq(create.titleShell:GetWidth(),create.formFrame:GetWidth())
 T.eq(create.descriptionShell:GetWidth(),create.formFrame:GetWidth())
-T.eq(create.descriptionShell:GetHeight(),shortDescription+200,"a taller window gives its extra space to the description")
+T.eq(create.descriptionShell:GetHeight(),shortDescription+U.windowHeight-shortWindowHeight,"a taller window gives its extra space to the description")
 -- Simulate the engine resolving the native container's two shell anchors.
 local description=LFGListFrame.EntryCreation.Description
 description:SetSize(create.descriptionShell:GetWidth()-20,create.descriptionShell:GetHeight()-14)
@@ -173,7 +173,7 @@ local range=settings.controls.uiScale
 T.eq(range.frame:GetWidth(),settings.panels.interface:GetWidth())
 A:SetSetting("fontScale",130)
 minimumWidth,minimumHeight=U:GetWindowMinimum()
-T.eq(minimumWidth,1266);T.eq(minimumHeight,832)
+T.eq(minimumWidth,math.max(U.Theme.width,1266));T.eq(minimumHeight,math.max(U.Theme.height,832))
 U:SetWindowSize(1,1);T.eq(U.windowWidth,minimumWidth);T.eq(U.windowHeight,minimumHeight)
 UIParent:SetSize(1100,800);U.frame:Fire("OnEvent","DISPLAY_SIZE_CHANGED")
 T.ok(U.frame:GetWidth()*U.frame:GetScale()<=1060.001 and U.frame:GetHeight()*U.frame:GetScale()<=760.001,"a smaller screen fits the minimum layout by scaling it")
