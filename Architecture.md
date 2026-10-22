@@ -404,3 +404,5 @@ Rurutia 适配在悬停和入口刷新时，从自身 TopBar records、microMenu
 ## 自用 UI 集成草案状态
 
 保留上游 Resize 控制器及按角色 windowSize；兼容私有 rurutiaWindowSize。窗口位置、成员外观、列宽和排序字段沿用 rurutia 前缀，避免覆盖原字段。主界面与申请弹窗共用 Application:SetAutoApply；预览仍使用隔离偏好。Results 在已有队长屏蔽之后执行高级过滤，排序保留拒绝置底和好友优先。关键词实机字段可用性尚未证实，当前不得作为可靠屏蔽能力发布。
+
+同职条件 hideSameClass 沿用分类筛选保存/恢复/清空，赛季地下城以外清除；成员职业结果在记录上缓存，沿用成员详情失效事件清除，关闭时不读取职业列表。预览复用职业匹配方法。

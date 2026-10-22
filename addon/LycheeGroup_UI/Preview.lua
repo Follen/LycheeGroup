@@ -110,6 +110,7 @@ local function NewProvider(scenario)
  function p:GetResults()
   local ids={};local f=self.filters
   local playerSpecID=f.hideSameSpec and A.Specializations:Player() or nil
+  local playerClass=f.hideSameClass and select(2,UnitClass("player")) or nil
   local text=(f.searchMode=="leader" and f.leaderText or f.searchMode=="group" and f.text or ""):lower()
   local minLevel,maxLevel
   if f.searchMode=="group" then minLevel,maxLevel=text:match("^%s*(%d+)%s*%-%s*(%d+)%s*$") end
@@ -139,6 +140,7 @@ local function NewProvider(scenario)
    end
    if pass and (f.notes and f.notes~="noCaution" or f.personKey and f.personKey~=r.leaderKey) then pass=false end
    if pass and playerSpecID then pass=not self.Results:HasMemberSpec(r,playerSpecID) end
+   if pass and playerClass then pass=not A.Group.Results:HasMemberClass(r,playerClass) end
    if pass then ids[#ids+1]=id end
   end
   table.sort(ids,function(a,b)

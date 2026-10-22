@@ -716,7 +716,7 @@ function P:BuildQuickFilters()
    state.filters[key]=value;P:UpdateFilters()
   end,{height=32,radius=8})
   button:RegisterForClicks("LeftButtonUp","RightButtonUp")
-  Tip(button,Say("左键切换：不限 → 缺少 → 已有/已齐；右键恢复不限。","Left-click: Any → Lacks → Has/Full; right-click: Any."))
+  Tip(button,Say("左键切换，右键恢复","Left-click to cycle; right-click to reset."))
   button:SetPoint("LEFT",(i-1)*96,0)
   local icon=C.Icon(button,18);icon:SetPoint("LEFT",8,0);UI:SetRoleIcon(icon,role)
   button.label:ClearAllPoints();button.label:SetPoint("LEFT",32,0);C.SetFont(button.label,13)
@@ -727,10 +727,18 @@ function P:BuildQuickFilters()
   if not state.filters.roleMatchAny and state.filters.tankPresence=="present" and state.filters.healerPresence=="present" and state.filters.damagePresence=="present" then state.filters.damagePresence=nil end
   P:UpdateFilters()
  end,{height=32,radius=8})
- Tip(self.quickLogic,Say("仅组合 T/H/D 条件：且需全部满足，或只需满足任意一项；不限不参与。其他筛选仍需满足。","Combines T/H/D only: AND requires all, OR requires any. Any is ignored; other filters still apply."))
+ Tip(self.quickLogic,Say("筛选切换：全部/任意条件符合","Filter matching: all/any conditions."))
  self.quickLogic:SetPoint("LEFT",288,0);C.SetFont(self.quickLogic.label,13)
- self.quickSame=C.Check(self.quickFilters,Say("排除同专精","Same spec"),function(value) state.filters.hideSameSpec=value or nil;P:UpdateFilters() end)
- self.quickSame:SetSize(156,32);self.quickSame:SetPoint("LEFT",376,0);C.SetFont(self.quickSame.label,13)
+ local function QuickToggle(label,key)
+  local toggle=C.Check(self.quickFilters,label,function(value) state.filters[key]=value or nil;P:UpdateFilters() end)
+  toggle:SetHeight(32);C.SetFont(toggle.label,13)
+  toggle.label:ClearAllPoints();toggle.label:SetPoint("LEFT")
+  toggle.track:ClearAllPoints();toggle.track:SetPoint("RIGHT")
+  return toggle
+ end
+ self.quickSame=QuickToggle(Say("同专精过滤","Same spec"),"hideSameSpec")
+ self.quickClass=QuickToggle(Say("同职过滤","Same class"),"hideSameClass")
+ self.quickZero=QuickToggle(Say("过滤队长0分","Hide 0-score leaders"),"hideZeroScore")
 end
 
 function P:SyncQuickFilters(seasonDungeon)
@@ -740,9 +748,11 @@ function P:SyncQuickFilters(seasonDungeon)
   UI:SetText(entry.button.label,value=="missing" and Say("缺少","Lacks") or value=="present" and (entry.role=="DAMAGER" and Say("已齐","Full") or Say("已有","Has")) or Say("不限","Any"))
   entry.button:SetActive(value~=nil and value~=false)
  end
- UI:SetText(self.quickLogic.label,state.filters.roleMatchAny and Say("或 · 任一","OR · Any") or Say("且 · 全部","AND · All"))
+ UI:SetText(self.quickLogic.label,state.filters.roleMatchAny and Say("[或]","[OR]") or Say("[全部]","[All]"))
  self.quickLogic:SetActive(state.filters.roleMatchAny==true)
  self.quickSame:SetValue(state.filters.hideSameSpec)
+ self.quickClass:SetValue(state.filters.hideSameClass)
+ self.quickZero:SetValue(state.filters.hideZeroScore)
  self:LayoutQuickFilters()
  self:LayoutResults()
 end
@@ -753,8 +763,13 @@ function P:LayoutQuickFilters()
  if self.appsEmpty:IsShown() then left=left+self.appsEmpty:GetStringWidth()+20
  elseif self.scopeToggle:IsShown() then left=left+self.scopeToggle:GetWidth()+20 end
  local right=16+self.autoJoin:GetWidth()+20+44+10+self.applicationSettings:GetWidth()+20
- local needed=376+56+self.quickSame.label:GetStringWidth()
- self.quickSame:SetWidth(needed-376)
+ local needed=376
+ for _,toggle in ipairs({self.quickSame,self.quickClass,self.quickZero}) do
+  local width=toggle.label:GetStringWidth()+54
+  toggle:SetWidth(width);toggle:ClearAllPoints();toggle:SetPoint("LEFT",needed,0)
+  needed=needed+width+16
+ end
+ needed=needed-16
  self.quickFilters:SetWidth(needed)
  local extra=self.quickFilters:IsShown() and (MAIN-left-right<needed) and 40 or 0
  self.quickFilters:ClearAllPoints();self.quickFilters:SetPoint("TOPLEFT",extra>0 and 16 or left,extra>0 and -46 or -6)
@@ -898,7 +913,7 @@ function P:UpdateFilterSummary()
  if filters.minRating or filters.maxRating then advanced=advanced+1 end
  if filters.blockedKeywords and #filters.blockedKeywords>0 then advanced=advanced+1 end
  count=count+advanced
- for _,key in ipairs({"neededRole","tankPresence","healerPresence","damagePresence","hideZeroScore","hideSameSpec"}) do if filters[key] then count=count+1 end end
+ for _,key in ipairs({"neededRole","tankPresence","healerPresence","damagePresence","hideZeroScore","hideSameSpec","hideSameClass"}) do if filters[key] then count=count+1 end end
  if state.social then count=count+1 end
  local sortChanged=filters.sort~=A:GetSetting("defaultSort")
  self.filterCount=count
@@ -1125,6 +1140,7 @@ function P:RememberCategory()
  prefs.tankPresence,prefs.healerPresence,prefs.damagePresence=state.filters.tankPresence,state.filters.healerPresence,state.filters.damagePresence
  prefs.hideZeroScore=state.filters.hideZeroScore
  prefs.hideSameSpec=state.filters.hideSameSpec
+ prefs.hideSameClass=state.filters.hideSameClass
  prefs.roleMatchAny=state.filters.roleMatchAny
  for _,key in ipairs(advancedKeys) do prefs[key]=state.filters[key] end
  prefs.social=state.social;prefs.sort=state.filters.sort;prefs.sortAscending=state.filters.sortAscending
@@ -1151,6 +1167,7 @@ function P:RestoreCategory(prefs)
  state.filters.damagePresence=seasonDungeon and prefs.damagePresence or nil
  state.filters.hideZeroScore=seasonDungeon and prefs.hideZeroScore or nil
  state.filters.hideSameSpec=seasonDungeon and prefs.hideSameSpec or nil
+ state.filters.hideSameClass=seasonDungeon and prefs.hideSameClass or nil
  state.filters.roleMatchAny=seasonDungeon and prefs.roleMatchAny==true or nil
  self.roleChoice:SetValue(role or false,role and ({TANK=L.tank,HEALER=L.healer,DAMAGER=L.damage})[role] or L.anyRole)
  state.social=prefs.social=="caution" and "noCaution" or prefs.social;self.socialChoice:SetValue(state.social or false,state.social and ({friend=L.friendChar,guild=L.friendGuild,any=L.notes,positive=Say("含推荐玩家","Recommended players"),noCaution=Say("不含拉黑记录","Without blocked players")})[state.social] or Say("全部关系","All relations"))
@@ -1218,7 +1235,7 @@ function P:UpdateFilters(reset)
  filters.minLevel,filters.maxLevel=nil,nil
  filters.personKey=state.personKey
  filters.minMembers=tonumber(self.fMinMembers.box:GetText());filters.maxMembers=tonumber(self.fMembers.box:GetText());filters.neededRole=not seasonDungeon and keys and self.roleChoice.value or nil
- if not seasonDungeon then filters.roleMatchAny=nil;filters.tankPresence,filters.healerPresence,filters.damagePresence,filters.hideZeroScore,filters.hideSameSpec=nil,nil,nil,nil,nil end
+ if not seasonDungeon then filters.hideSameClass=nil;filters.roleMatchAny=nil;filters.tankPresence,filters.healerPresence,filters.damagePresence,filters.hideZeroScore,filters.hideSameSpec=nil,nil,nil,nil,nil end
  self.hideZeroScore:SetShown(seasonDungeon);self.hideZeroScore:SetValue(filters.hideZeroScore)
  self.filterDivider:SetShown(seasonDungeon)
  filters.friends=state.social=="friend";filters.guild=state.social=="guild";filters.notes=(state.social=="any" or state.social=="positive" or state.social=="noCaution") and state.social or nil
@@ -1258,6 +1275,7 @@ function P:SavePrefs()
 end
 function P:ClearFilters()
  for _,key in ipairs(advancedKeys) do state.filters[key]=nil end
+ state.filters.hideSameClass=nil
  state.filters.hideZeroScore,state.filters.hideSameSpec=nil,nil
  self.loading=true;self.fMinMembers.box:SetText("");self.fMembers.box:SetText("");self.roleChoice:SetValue(false,L.anyRole);state.filters.tankPresence,state.filters.healerPresence,state.filters.damagePresence=nil,nil,nil;state.filters.roleMatchAny=nil;state.social=nil;self.socialChoice:SetValue(false,Say("全部关系","All relations"));state.filters.sortAscending=nil;state.filters.sort=A:GetSetting("defaultSort");self.sortChoice:SetValue(state.filters.sort,L[state.filters.sort] or L.newest);self.loading=nil;self:SyncFilterFields();self:UpdateFilters()
 end
@@ -1496,7 +1514,7 @@ function P:Enter(context)
   if UI.preview then self.previewSearchBox:SetText(filters.text or "") end
   local saved=state.categoryPrefs[state.category] or filters
   state.groupKey=saved.groupKey;state.difficultyID=saved.difficultyID;state.tier=saved.tier
-  self:RestoreCategory(state.categoryPrefs[state.category] or {groupKey=filters.groupKey,groupKeys=filters.groupKeys,difficultyID=filters.difficultyID,tier=filters.tier,selected=filters.selected,minMembers=filters.minMembers,maxMembers=filters.maxMembers,neededRole=filters.neededRole,tankPresence=filters.tankPresence,healerPresence=filters.healerPresence,damagePresence=filters.damagePresence,hideZeroScore=filters.hideZeroScore,minItemLevel=filters.minItemLevel,maxItemLevel=filters.maxItemLevel,minRating=filters.minRating,maxRating=filters.maxRating,blockedKeywords=filters.blockedKeywords,blockedKeywordsText=filters.blockedKeywordsText,hideSameSpec=filters.hideSameSpec,roleMatchAny=filters.roleMatchAny,needsDamage=filters.needsDamage,sort=filters.sort,sortAscending=filters.sortAscending,social=prefs.social})
+  self:RestoreCategory(state.categoryPrefs[state.category] or {groupKey=filters.groupKey,groupKeys=filters.groupKeys,difficultyID=filters.difficultyID,tier=filters.tier,selected=filters.selected,minMembers=filters.minMembers,maxMembers=filters.maxMembers,neededRole=filters.neededRole,tankPresence=filters.tankPresence,healerPresence=filters.healerPresence,damagePresence=filters.damagePresence,hideZeroScore=filters.hideZeroScore,minItemLevel=filters.minItemLevel,maxItemLevel=filters.maxItemLevel,minRating=filters.minRating,maxRating=filters.maxRating,blockedKeywords=filters.blockedKeywords,blockedKeywordsText=filters.blockedKeywordsText,hideSameSpec=filters.hideSameSpec,hideSameClass=filters.hideSameClass,roleMatchAny=filters.roleMatchAny,needsDamage=filters.needsDamage,sort=filters.sort,sortAscending=filters.sortAscending,social=prefs.social})
   self.loading=nil
  end
  self:SetSidebarCollapsed(state.railCollapsed,false)

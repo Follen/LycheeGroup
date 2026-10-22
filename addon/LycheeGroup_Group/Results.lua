@@ -136,6 +136,7 @@ local function Normalize(id,record,invalidateDetails,expectedScan,metadataDirty)
  if invalidateDetails or previousActivity~=record.activityID or previousMembers~=record.numMembers or previousLeader~=record.leaderKey or previousFaction~=record.leaderFactionGroup or previousRating~=record.leaderRating or previousRatingActivity~=record.pvpRatingActivity or previousBnet~=record.bnetFriends or previousChar~=record.charFriends or previousGuild~=record.guildMates then
   record.detailsDirty=record.details and true or nil;record.memberCounts=nil
   record.checkedSpecID,record.hasMemberSpec=nil,nil
+  record.checkedClass,record.hasMemberClass=nil,nil
  end
  return record
 end
@@ -164,6 +165,23 @@ function Results:HasMemberSpec(record,playerSpecID)
   end
  end
  record.checkedSpecID,record.hasMemberSpec=playerSpecID,found
+ return found
+end
+function Results:HasMemberClass(record,playerClass)
+ if not playerClass then return false end
+ if record.checkedClass==playerClass then return record.hasMemberClass end
+ local found=false
+ if record.details and not record.detailsDirty then
+  for _,member in ipairs(record.details.members) do
+   if member.class==playerClass or member.classFilename==playerClass then found=true;break end
+  end
+ else
+  for index=1,record.numMembers do
+   local member=Public(C_LFGList.GetSearchResultPlayerInfo(record.id,index))
+   if type(member)=="table" and Public(member.classFilename)==playerClass then found=true;break end
+  end
+ end
+ record.checkedClass,record.hasMemberClass=playerClass,found
  return found
 end
 local function RelationNames(values,excludeKey)
@@ -254,7 +272,7 @@ local function MatchesLeaderText(record,text)
  local leader=record.leaderName
  return type(leader)=="string" and leader:lower():find(text,1,true)~=nil
 end
-local function Pass(record,filters,leaderText,playerSpecID)
+local function Pass(record,filters,leaderText,playerSpecID,playerClass)
  if blockedTitles[record.name] and not unblockedLeaders[record.leaderKey] or G.db.blockedLeaders[record.leaderKey] then return false end
  if not Results:MatchesAdvancedFilters(record,filters) then return false end
  if G.Applications:IsActive(record.id) then return false end
@@ -287,6 +305,7 @@ local function Pass(record,filters,leaderText,playerSpecID)
   elseif not exclude then return false end
  end
  if playerSpecID and Results:HasMemberSpec(record,playerSpecID) then return false end
+ if playerClass and Results:HasMemberClass(record,playerClass) then return false end
  return true
 end
 local sorting,sortAscending
@@ -473,9 +492,10 @@ function Results:GetResults()
   wipe(ids)
   local filters=G.Search:GetFilters()
   local playerSpecID=filters.hideSameSpec and A.Specializations:Player() or nil
+  local playerClass=filters.hideSameClass and select(2,UnitClass("player")) or nil
   local leaderText=type(filters.leaderText)=="string" and filters.leaderText:lower():match("^%s*(.-)%s*$") or nil
   if leaderText=="" then leaderText=nil end
-  for id,record in pairs(records) do if not record.isDelisted and Pass(record,filters,leaderText,playerSpecID) then ids[#ids+1]=id end end
+  for id,record in pairs(records) do if not record.isDelisted and Pass(record,filters,leaderText,playerSpecID,playerClass) then ids[#ids+1]=id end end
   sorting=filters.sort or A:GetSetting("defaultSort");sortAscending=filters.sortAscending==true;table.sort(ids,Sort);dirty=false
  end
  return ids
