@@ -20,9 +20,18 @@ local function CopyRoles(source)
  return roles
 end
 local function ApplicationPrefs()
- if UI.preview then return UI:GetGroup().applicationPrefs end
- Application.applicationPrefs=Application.applicationPrefs or {roles=CopyRoles(A.charPrefs.applicationRoles)}
+ if UI.preview then
+  local group=UI:GetGroup();local prefs=group.applicationPrefs
+  if prefs.enabled==nil then prefs.enabled=group.prefs.autoApply==true end
+  return prefs
+ end
+ Application.applicationPrefs=Application.applicationPrefs or {roles=CopyRoles(A.charPrefs.applicationRoles),enabled=A.charPrefs.autoApply==true}
  return Application.applicationPrefs
+end
+local function SaveEnabled(enabled)
+ ApplicationPrefs().enabled=enabled==true
+ local saved=UI.preview and UI:GetGroup().prefs or A.charPrefs
+ saved.autoApply=enabled==true
 end
 local function SaveRoles(roles)
  ApplicationPrefs().roles=CopyRoles(roles)
@@ -33,15 +42,32 @@ function Application:IsAutoApplyEnabled()
  return ApplicationPrefs().enabled==true
 end
 local function RefreshApplicationEntry()
+ local modal=Application.applicationModal
+ if modal then
+  local lease=Application.previewApplication or Application.applicationLease
+  modal.autoApply:SetValue(Application:IsAutoApplyEnabled() or lease and lease.enableOnSave==true)
+ end
  if Application.onPreferencesChanged then Application.onPreferencesChanged() end
 end
+local function ValidRoles(roles)
+ if not roles or not next(roles) then return false end
+ local tank,healer,damage=C_LFGList.GetAvailableRoles()
+ return not (roles.TANK and not tank or roles.HEALER and not healer or roles.DAMAGER and not damage)
+end
 function Application:SetAutoApply(enabled)
+ local lease=self.previewApplication or self.applicationLease
  if enabled then
-  local ok,err=self:OpenApplicationSettings(nil,true)
-  RefreshApplicationEntry()
-  return ok,err
+  if ValidRoles(ApplicationPrefs().roles) then
+   SaveEnabled(true);if lease then lease.enableOnSave=nil end
+  elseif lease then lease.enableOnSave=true
+  else
+   local ok,err=self:OpenApplicationSettings(nil,true)
+   RefreshApplicationEntry();return ok,err
+  end
+ else
+  if lease then lease.enableOnSave=nil end
+  SaveEnabled(false)
  end
- ApplicationPrefs().enabled=false
  RefreshApplicationEntry()
  return true
 end
@@ -62,6 +88,17 @@ function Application:BuildApplication()
  modal.error=C.Text(content,"",14,T.warning,464,20);modal.error:SetMaxLines(1)
  modal.cancel=C.Button(modal.frame,L.cancel,nil,function() UI:CloseModal() end);modal.cancel:SetHeight(40)
  modal.submit=C.Button(modal.frame,L.apply,112,function() Application:ConfirmApplication() end);modal.submit:SetPrimary(true);modal.submit:SetHeight(40)
+ modal.autoApply=C.Button(modal.frame,Say("自动申请","Auto apply"),150,function()
+  local lease=Application.previewApplication or Application.applicationLease
+  local requested=Application:IsAutoApplyEnabled() or lease and lease.enableOnSave==true
+  local ok,err=Application:SetAutoApply(not requested)
+  if not ok then UI:SetText(modal.error,err or L.failed);Application:LayoutApplication() end
+ end,{height=40,variant="text"})
+ modal.autoApply.label:ClearAllPoints();modal.autoApply.label:SetPoint("LEFT",32,0)
+ modal.autoApply.box=C.Checkbox(modal.autoApply,nil,{size=20,boxSize=18,radius=3})
+ modal.autoApply.box:SetPoint("LEFT",2,0);modal.autoApply.box:EnableMouse(false);modal.autoApply.box:EnableMouseMotion(false)
+ function modal.autoApply:SetValue(value) self.value=value==true;self.box:SetValue(self.value) end
+ modal.autoApply:SetValue(self:IsAutoApplyEnabled())
  self.applicationModal=modal
  return modal
 end
@@ -84,6 +121,7 @@ function Application:LayoutApplication()
  modal.frame:SetHeight(408+groupOffset+(hasError and 28 or 0))
  modal.submit:SetWidth(math.max(96,modal.submit.label:GetStringWidth()+40));modal.submit:SetPoint("BOTTOMRIGHT",-24,24)
  modal.cancel:SetWidth(math.max(72,modal.cancel.label:GetStringWidth()+40));modal.cancel:SetPoint("RIGHT",modal.submit,"LEFT",-8,0)
+ modal.autoApply:SetWidth(modal.autoApply.label:GetStringWidth()+40);modal.autoApply:SetPoint("BOTTOMLEFT",24,24)
 end
 function Application:SetApplicationRole(role)
  local lease=self.previewApplication or self.applicationLease;if not lease or not lease.available[role] then return end
@@ -128,6 +166,7 @@ function Application:ReleaseApplication()
  local preview=self.previewApplication~=nil
  self.previewApplication,self.applicationLease=nil,nil
  local modal=self.applicationModal
+ RefreshApplicationEntry()
  modal.onClose=nil
  if preview then modal.previewNote.box:ClearFocus();modal.previewNote.box:SetText("");modal.previewNote:Hide()
  elseif lease.description then lease.description:Release() end
@@ -162,6 +201,7 @@ function Application:OpenApplicationSettings(resultID,enableOnSave)
  UI:SetText(modal.group,result and result.name or "")
  UI:SetText(modal.submit.label,resultID and L.apply or L.save)
  self:RefreshApplicationRoles()
+ RefreshApplicationEntry()
  return true
 end
 function Application:ConfirmApplication()
@@ -176,7 +216,7 @@ function Application:ConfirmApplication()
   if not ok and self.applicationModal.frame:IsShown() then UI:SetText(self.applicationModal.error,err or L.failed);self:LayoutApplication() end
  else
   SaveRoles(lease.roles)
-  if lease.enableOnSave then prefs.enabled=true end
+  if lease.enableOnSave then SaveEnabled(true) end
   RefreshApplicationEntry();self:ReleaseApplication()
  end
 end
@@ -194,11 +234,16 @@ function Application:Apply(resultID,manual,confirmedRoles)
  if not confirmedRoles and (manual or not prefs.enabled or not roles) then return self:OpenApplicationSettings(resultID) end
  if not next(roles) or roles.TANK and not tank or roles.HEALER and not healer or roles.DAMAGER and not damage then return self:OpenApplicationSettings(resultID) end
  local submittedRoles={tank=roles.TANK==true,healer=roles.HEALER==true,damage=roles.DAMAGER==true}
+ local lease=self.previewApplication or self.applicationLease
  local ok,err
  if UI.preview then ok,err=group:Apply(resultID,submittedRoles,prefs.note or "")
  else ok,err=group:Apply(resultID,submittedRoles) end
  if ok then
-  if confirmedRoles and not prefs.enabled then SaveRoles(confirmedRoles);RefreshApplicationEntry() end
+  if confirmedRoles and not prefs.enabled then
+   SaveRoles(confirmedRoles)
+   if lease and lease.enableOnSave then SaveEnabled(true) end
+   RefreshApplicationEntry()
+  end
   self:ReleaseApplication()
  end
  return ok,err

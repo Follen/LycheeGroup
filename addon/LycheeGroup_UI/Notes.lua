@@ -19,7 +19,6 @@ local DRAWER_W = BODY_WIDTH - LIST_WIDTH - GAP
 local EDITOR_X = LEFT + LIST_WIDTH + GAP
 local WORK_TOP = 128
 local CARD_WIDTH=LIST_WIDTH-C.listRightInset
-local CARD_INSET=12
 local CARD_RIGHT_INSET=12
 local zh=A:GetLocale()=="zhCN"
 local function S(cn,en) return zh and cn or en end
@@ -47,6 +46,70 @@ local state = {
 	unsub = nil,
 	revision = 0,
 }
+
+local function SortNumbers(ids,value,descending)
+ table.sort(ids,function(a,b)
+  local av,bv=value(a),value(b)
+  if av==bv then return a<b end
+  if av==nil then return false end
+  if bv==nil then return true end
+  return descending and av>bv or not descending and av<bv
+ end)
+end
+local function RunDuration(run)
+ return run.completedAt and run.startedAt and math.max(0,run.completedAt-run.startedAt) or nil
+end
+
+function P:LayoutNoteColumns(header)
+ if not self.list then return end
+ local player,date=header.columns.player,header.columns.timestamp
+ for _,row in ipairs(self.list.rows) do
+  row.icon:ClearAllPoints();row.icon:SetPoint("TOPLEFT",player.x+12,-21)
+  row.title:ClearAllPoints();row.title:SetPoint("TOPLEFT",player.x+50,-8);row.title:SetWidth(player.width-56)
+  row.meta:SetWidth(player.width-56)
+  row.kind:ClearAllPoints();row.kind:SetPoint("TOPLEFT",date.x+6,-8);row.kind:SetWidth(date.width-12)
+  row.date:SetWidth(date.width-12)
+  row.reason:SetWidth(CARD_WIDTH-player.x-50-CARD_RIGHT_INSET)
+ end
+ self:LayoutNoteRows()
+end
+function P:LayoutHistoryColumns(header)
+ if not self.historyList then return end
+ local col=header.columns
+ for _,row in ipairs(self.historyList.rows) do
+  row.icon:ClearAllPoints();row.icon:SetPoint("LEFT",col.activity.x+12,0)
+  row.title:ClearAllPoints();row.title:SetPoint("TOPLEFT",col.activity.x+60,-12);row.title:SetWidth(col.activity.width-66)
+  row.meta:SetWidth(col.activity.width-66)
+  row.level:ClearAllPoints();row.level:SetPoint("LEFT",col.level.x+6,0);row.level:SetWidth(col.level.width-12)
+  row.duration:ClearAllPoints();row.duration:SetPoint("LEFT",col.duration.x+6,0);row.duration:SetWidth(col.duration.width-12)
+  row.roster:ClearAllPoints();row.roster:SetPoint("LEFT",col.teammates.x+6,0)
+  row.date:ClearAllPoints();row.date:SetPoint("LEFT",col.completed.x+6,0);row.date:SetWidth(col.completed.width-12)
+ end
+ LayoutHistoryRows(self.historyList,col.activity.x+60)
+end
+function P:LayoutHistoryMemberColumns(header)
+ local modal=self.historyModal
+ if not modal or not modal.list then return end
+ local player,actions=header.columns.player,header.columns.actions
+ for _,row in ipairs(modal.list.rows) do
+  row.icon:ClearAllPoints();row.icon:SetPoint("LEFT",player.x+12,0)
+  row.title:ClearAllPoints();row.title:SetPoint("TOPLEFT",player.x+56,-12);row.title:SetWidth(player.width-62)
+  row.meta:SetWidth(player.width-62)
+  row.action:ClearAllPoints();row.action:SetPoint("LEFT",actions.x+6,0);row.action:SetWidth(actions.width-12)
+ end
+ LayoutHistoryRows(modal.list,player.x+56)
+end
+
+function P:BindTableStates()
+ self.noteTableState=UI:GetTablePrefs("notesRecords")
+ self.noteHeader:SetState(self.noteTableState)
+ if not self.noteTableState.sortKey then self.noteHeader:SetSort("timestamp",true) end
+ self.historyTableState=UI:GetTablePrefs("notesHistory")
+ self.historyHeader:SetState(self.historyTableState)
+ if not self.historyTableState.sortKey then self.historyHeader:SetSort("completed",true) end
+ if self.historyModal then self.historyModal.header:SetState(UI:GetTablePrefs("notesHistoryMembers")) end
+ self:LayoutRows()
+end
 
 local function CancelPending()
 	state.revision = state.revision + 1
@@ -95,9 +158,9 @@ local function RenderNote(row,key)
  UI:SetText(row.reason,r.reason~="" and r.reason or L.noReason)
  local label;for _,entry in ipairs(NOTE_TYPES) do if r.type==entry.key then label=entry.label end end
  UI:SetText(row.kind,label);UI:Color(row.kind,r.type=="positive" and T.good or r.type=="caution" and T.warning or T.muted)
- for kind,glyph in pairs(row.kindIcons) do glyph:SetShown(kind==r.type);if kind==r.type then glyph:ClearAllPoints();glyph:SetPoint("TOPRIGHT",-16-row.kind:GetStringWidth(),-15) end end
+ local dateColumn=P.noteHeader.columns.timestamp
+ for kind,glyph in pairs(row.kindIcons) do glyph:SetShown(kind==r.type);if kind==r.type then glyph:ClearAllPoints();glyph:SetPoint("TOPLEFT",dateColumn.x+dateColumn.width-22-row.kind:GetStringWidth(),-15) end end
  UI:SetText(row.date,UI:DateText(r.timestamp))
- local metaWidth=math.min(132,math.max(80,row.date:GetStringWidth(),row.kind:GetStringWidth()+20));row.title:SetWidth(CARD_WIDTH-CARD_RIGHT_INSET-metaWidth-8-50);row.meta:SetWidth(CARD_WIDTH-CARD_RIGHT_INSET-metaWidth-8-50)
 end
 
 -- ---------------------------------------------------------------- 构建
@@ -127,8 +190,12 @@ function P:Build(parent)
  self.exportButton=C.Button(self.toolbar,L.export,72,function() P:DoExport() end);self.exportButton:SetWidth(self.exportButton.label:GetStringWidth()+34);self.exportButton:SetPoint("RIGHT",self.addButton,"LEFT",-8,0)
  self.importButton=C.Button(self.toolbar,L.import,72,function() P:OpenTransfer("import") end);self.importButton:SetWidth(self.importButton.label:GetStringWidth()+34);self.importButton:SetPoint("RIGHT",self.exportButton,"LEFT",-8,0)
  self.left=CreateFrame("Frame",nil,main);self.left:SetSize(LIST_WIDTH,HEIGHT-WORK_TOP-PAD);self.left:SetPoint("TOPLEFT",PAD,-WORK_TOP)
- self.listTitle=C.Text(self.left,S("玩家记录","Player notes"),14,T.muted);self.listTitle:SetPoint("TOPLEFT",CARD_INSET,0);C.SetLineHeight(self.listTitle,20,true)
- self.countText=C.Text(self.left,"",14,T.dim);self.countText:SetPoint("TOPRIGHT",-C.listRightInset-CARD_RIGHT_INSET,0);C.SetLineHeight(self.countText,20,true)
+ self.noteHeader=C.TableHeader(self.left,{
+  {key="player",label=S("玩家记录","Player notes"),width=264,min=180},
+  {key="timestamp",label=S("类型 / 时间","Type / Date"),width=144,min=132,align="RIGHT",sortable=true},
+ },{onLayout=function(header) P:LayoutNoteColumns(header) end,onSort=function() P:RefreshList() end})
+ self.noteHeader:SetPoint("TOPLEFT");self.listTitle=self.noteHeader.labels.player
+ self.countText=C.Text(main,"",14,T.dim);self.countText:SetPoint("TOPRIGHT",-PAD,-PAD-8);C.SetLineHeight(self.countText,20,true)
  self.list=C.List(self.left,LIST_WIDTH,LIST_HEIGHT,ROW_HEIGHT,function(key,button) P:OnSelect(key,button) end);self.list:SetPoint("TOPLEFT",0,-32);self.list.selectionMark=false
  self.list:SetRowInitializer(function(row)
   UI:BindTooltipArea(row,.25,
@@ -177,18 +244,22 @@ function P:Build(parent)
  self.eDelete=C.Button(editor,S("删除记录","Delete note"),96,function() P:Delete() end);self.eDelete:SetWidth(math.max(96,math.ceil(self.eDelete.label:GetStringWidth())+32));self.eDelete:SetTextColors(T.muted,T.accent);self.eDelete:SetPoint("BOTTOMLEFT",16,16)
  self.historyFrame=CreateFrame("Frame",nil,main);self.historyFrame:SetSize(BODY_WIDTH,HEIGHT-76-PAD);self.historyFrame:SetPoint("TOPLEFT",PAD,-76);self.historyFrame:Hide()
  self.historyCaption=C.Text(self.historyFrame,S("当前角色完成的大秘境","Mythic+ runs completed by this character"),14,T.muted);self.historyCaption:SetPoint("TOPLEFT");C.SetLineHeight(self.historyCaption,20,true)
- local historyRowWidth=BODY_WIDTH-C.listRightInset;local activityColumn=(historyRowWidth-24-48-108-20)/2.1;local teammateX=12+activityColumn+16
- local activityHeading=C.Text(self.historyFrame,S("活动","Activity"),14,T.dim);C.SetLineHeight(activityHeading,20,true);activityHeading:SetPoint("TOPLEFT",13,-40)
- local teammateHeading=C.Text(self.historyFrame,S("队友","Teammates"),14,T.dim);C.SetLineHeight(teammateHeading,20,true);teammateHeading:SetPoint("TOPLEFT",teammateX,-40);self.teammateHeading=teammateHeading
- local dateHeading=C.Text(self.historyFrame,S("完成时间","Completed"),14,T.dim,108);C.SetLineHeight(dateHeading,20,true);dateHeading:SetPoint("TOPRIGHT",-C.listRightInset-48,-40)
+ self.historyHeader=C.TableHeader(self.historyFrame,{
+  {key="activity",label=S("活动","Activity"),width=260,min=180},
+  {key="level",label=S("层数","Level"),width=76,min=64,align="CENTER",sortable=true},
+  {key="duration",label=S("耗时","Duration"),width=108,min=90,align="CENTER",sortable=true},
+  {key="teammates",label=S("队友","Teammates"),width=165,min=147},
+  {key="completed",label=S("完成时间","Completed"),width=172,min=144,sortable=true},
+ },{onLayout=function(header) P:LayoutHistoryColumns(header) end,onSort=function() P:RefreshHistory() end})
+ self.historyHeader:SetPoint("TOPLEFT",0,-36);self.teammateHeading=self.historyHeader.labels.teammates
  self.historyList=C.List(self.historyFrame,BODY_WIDTH,HEIGHT-148-PAD,80,function(index) P:OpenRun(index) end);self.historyList:SetPoint("TOPLEFT",0,-72)
  self.historyList:SetRowInitializer(function(row)
-  local activityColumn=(BODY_WIDTH-C.listRightInset-24-48-108-20)/2.1
-  local teammateX=12+activityColumn+16
   row.icon=C.Icon(row,36);row.icon:SetPoint("LEFT",12,0)
-  row.title:ClearAllPoints();row.title:SetPoint("TOPLEFT",60,-12);row.title:SetWidth(activityColumn-48);C.SetFont(row.title,T.listTitleSize);C.SetLineHeight(row.title,T.listTitleLineHeight,true)
-  row.meta:ClearAllPoints();row.meta:SetPoint("TOPLEFT",60,-44);row.meta:SetWidth(activityColumn-48)
-  row.roster=C.Roster(row,23,5);row.roster:SetPoint("TOPLEFT",teammateX,-28.5)
+  row.title:ClearAllPoints();row.title:SetPoint("TOPLEFT",60,-12);C.SetFont(row.title,T.listTitleSize);C.SetLineHeight(row.title,T.listTitleLineHeight,true)
+  row.meta:ClearAllPoints();row.meta:SetPoint("TOPLEFT",60,-44);row.meta:Hide()
+  row.level=C.Text(row,"",14,T.muted);row.level:SetJustifyH("CENTER");C.SetLineHeight(row.level,20,true)
+  row.duration=C.Text(row,"",14,T.muted);row.duration:SetJustifyH("CENTER");C.SetLineHeight(row.duration,20,true)
+  row.roster=C.Roster(row,23,5)
   row.date=C.Text(row,"",14,T.muted,108);row.date:SetPoint("RIGHT",-48,0);row.date:SetJustifyH("LEFT");C.SetLineHeight(row.date,20,true)
   C.Glyph(row,"chevron",16):SetPoint("RIGHT",-16,0)
   row.meta:SetPoint("TOPLEFT",60,-math.max(44,12+row.title:GetHeight()+4))
@@ -234,6 +305,7 @@ function P:SetEditorStatus(text,kind)
 end
 function P:SelectTab(tab,skipDefault)
  local previous=state.tab;local changed=previous~=nil and previous~=tab
+ if changed then self.noteHeader:StopDrag(false);self.historyHeader:StopDrag(false) end
  local direction=previous and self.tabs[tab].order<self.tabs[previous].order and -1 or 1
  state.tab=tab;local history=tab=="history"
  for key,button in pairs(self.tabs) do button:SetActive(key==tab);UI:Color(button.label,key==tab and T.text or T.muted);button.glyph:SetSelected(key==tab) end
@@ -241,6 +313,7 @@ function P:SelectTab(tab,skipDefault)
  self:CloseTransfer();if changed then self:CloseEditor(true) end
  UI.Motion:FinishPlacement(history and self.left or self.historyFrame)
  self.toolbar:SetShown(not history);self.left:SetShown(not history);self.historyFrame:SetShown(history);self.editorEmpty:SetShown(not history and state.panel==nil)
+ self.countText:SetShown(not history)
  UI:SetText(self.pageTitle,history and L.history or L.notes)
  self:RefreshCounts()
  if history then self:RefreshHistory() else self:RefreshList();local keys=self.list.ids;if not skipDefault and keys and keys[1] and state.panel==nil then self:OpenEdit(keys[1]) end end
@@ -249,13 +322,23 @@ end
 function P:RefreshHistory()
  local group,err=A:Ensure("Group");if not group then A:NoteMessage(err);return end
  self.runs=group:GetHistory();local indices={};for i in ipairs(self.runs) do indices[#indices+1]=i end
+ local sorting=self.historyTableState
+ if sorting and sorting.sortKey then
+  SortNumbers(indices,function(index)
+   local run=P.runs[index]
+   if sorting.sortKey=="level" then return run.level end
+   if sorting.sortKey=="duration" then return RunDuration(run) end
+   local completed=run.completedAt or run.startedAt;return completed and completed>0 and completed or nil
+  end,sorting.descending)
+ end
  self.historyList:SetItems(indices,function(row,index)
   local run=P.runs[index]
   local texture=run.mapChallengeModeID and select(4,C_ChallengeMode.GetMapUIInfo(run.mapChallengeModeID))
   if texture then UI.context:SetGameTexture(row.icon,texture) else UI:SetActivityIcon(row.icon,run.activity or run) end
   UI:SetText(row.title,run.mapName or L.unknown)
-  local duration=run.completedAt and run.startedAt and math.max(0,run.completedAt-run.startedAt)
-  UI:SetText(row.meta,"+"..(run.level or "?")..(duration and (" · "..math.floor(duration/60)..":"..("%02d"):format(duration%60)) or ""))
+  local duration=RunDuration(run)
+  UI:SetText(row.level,run.level and "+"..run.level or "—")
+  UI:SetText(row.duration,duration and (math.floor(duration/60)..":"..("%02d"):format(duration%60)) or "—")
   row.roster:Update(run.members,nil,5);UI:SetText(row.date,UI:DateText(run.completedAt or run.startedAt))
  end);self.historyEmpty:SetShown(#indices==0)
 end
@@ -264,21 +347,26 @@ function P:OpenRun(index)
  local modal=UI:OpenModal("history",L.history,560,576);self.historyModal=modal
  if not modal.built then
   modal.caption=C.Text(modal.content,"",14,T.muted,512);modal.caption:SetPoint("TOPLEFT");C.SetLineHeight(modal.caption,22,true)
-  modal.list=C.List(modal.content,512,400,80,function(memberIndex)
+  modal.header=C.TableHeader(modal.content,{
+   {key="player",label=S("玩家","Player"),width=364,min=220},
+   {key="actions",label=S("操作","Actions"),width=136,min=124,align="RIGHT"},
+  },{onLayout=function(header) P:LayoutHistoryMemberColumns(header) end})
+  modal.header:SetPoint("TOPLEFT",0,-34)
+  modal.list=C.List(modal.content,512,368,80,function(memberIndex)
    local member=P.historyRun.members[memberIndex];local key=A:PlayerKey(member.name,member.realm)
    modal:Close();P:SelectTab("all")
    if A.Notes:Find(key) then P:OpenEdit(key);P.list:Select(key,true) else P:OpenAdd({name=member.name,realm=member.realm,class=member.class,specID=member.specID}) end
-  end);modal.list:SetPoint("TOPLEFT",0,-42)
+  end);modal.list:SetPoint("TOPLEFT",0,-66)
   for _,row in ipairs(modal.list.rows) do
    row.icon=C.Icon(row,32);row.icon:SetPoint("LEFT",12,0)
    row.title:ClearAllPoints();row.title:SetPoint("TOPLEFT",56,-12);row.title:SetWidth(310);C.SetFont(row.title,T.listTitleSize);C.SetLineHeight(row.title,T.listTitleLineHeight,true)
    row.meta:ClearAllPoints();row.meta:SetPoint("TOPLEFT",56,-44);row.meta:SetWidth(310)
    row.action=C.Text(row,"",14,T.dim,110);row.action:SetPoint("RIGHT",-12,0);row.action:SetJustifyH("RIGHT");C.SetLineHeight(row.action,20,true)
   end
-  modal.onClose=function() modal.list:Clear();P.historyRun=nil end;modal.built=true
+  modal.onClose=function() modal.header:StopDrag(false);modal.list:Clear();P.historyRun=nil end;modal.built=true
  end
  self.historyRun=run
- LayoutHistoryRows(modal.list,56)
+ modal.header:SetState(UI:GetTablePrefs("notesHistoryMembers"));modal.header:Layout(modal.list:GetWidth()-C.listRightInset)
  UI:SetText(modal.caption,(run.mapName or L.unknown).." · +"..(run.level or "?").." · "..UI:DateText(run.completedAt or run.startedAt))
  local ids={};for i in ipairs(run.members) do ids[#ids+1]=i end
  modal.list:SetItems(ids,function(row,i)
@@ -299,6 +387,9 @@ end
 function P:RefreshList()
 	local notes = A.Notes
  local keys = (notes and notes.List and notes:List({ text = state.search, type = state.tab~="all" and state.tab~="history" and state.tab or nil })) or {}
+ if self.noteTableState and self.noteTableState.sortKey=="timestamp" then
+  SortNumbers(keys,function(key) local timestamp=notes:Find(key).timestamp;return timestamp and timestamp>0 and timestamp or nil end,self.noteTableState.descending)
+ end
 	self.list.selectedKey = state.editKey
 	self.list:SetItems(keys, RenderNote)
 	self.emptyState:SetShown(#keys == 0)
@@ -319,17 +410,22 @@ function P:OnSearchChanged()
 	self:RefreshList()
 end
 
-function P:LayoutRows()
+function P:LayoutNoteRows()
  local row=self.list.rows[1]
+ local player,date=self.noteHeader.columns.player,self.noteHeader.columns.timestamp
  local metaTop=math.max(40,8+row.title:GetHeight()+4)
  local reasonTop=math.max(68,metaTop+row.meta:GetHeight()+4)
  for _,item in ipairs(self.list.rows) do
-  item.meta:SetPoint("TOPLEFT",50,-metaTop);item.date:SetPoint("TOPRIGHT",-12,-metaTop)
-  item.reason:SetPoint("TOPLEFT",50,-reasonTop)
+  item.meta:ClearAllPoints();item.meta:SetPoint("TOPLEFT",player.x+50,-metaTop)
+  item.date:ClearAllPoints();item.date:SetPoint("TOPLEFT",date.x+6,-metaTop)
+  item.reason:ClearAllPoints();item.reason:SetPoint("TOPLEFT",player.x+50,-reasonTop)
  end
  SizeRows(self.list,math.max(ROW_HEIGHT,math.ceil(reasonTop+row.reason:GetHeight()+8)))
- LayoutHistoryRows(self.historyList,60)
- if self.historyModal then LayoutHistoryRows(self.historyModal.list,56) end
+end
+function P:LayoutRows()
+ self.noteHeader:Layout(CARD_WIDTH)
+ self.historyHeader:Layout(BODY_WIDTH-C.listRightInset-32)
+ if self.historyModal then self.historyModal.header:Layout(self.historyModal.list:GetWidth()-C.listRightInset) end
 end
 function P:LayoutFont()
  self.addButton:SetWidth(math.ceil(self.addButton.label:GetStringWidth())+56)
@@ -365,11 +461,7 @@ function P:LayoutSize(width,height)
  self:LayoutEditor()
  self.historyFrame:SetSize(BODY_WIDTH,HEIGHT-76-PAD);self.historyList:SetWidth(BODY_WIDTH)
  self.historyList:SetViewport(HEIGHT-148-PAD);self.historyEmpty:SetWidth(BODY_WIDTH)
- local activityColumn=(BODY_WIDTH-C.listRightInset-24-48-108-20)/2.1;local teammateX=12+activityColumn+16
- self.teammateHeading:SetPoint("TOPLEFT",teammateX,-40)
- for _,row in ipairs(self.historyList.rows) do
-  row.title:SetWidth(activityColumn-48);row.meta:SetWidth(activityColumn-48);row.roster:SetPoint("TOPLEFT",teammateX,-28.5)
- end
+ self:LayoutRows()
 end
 
 function P:LayoutEditor()
@@ -664,6 +756,7 @@ end
 -- ---------------------------------------------------------------- 页面生命周期
 
 function P:Enter(context)
+ self:BindTableStates()
 	Subscribe()
  self:SelectTab(context and "all" or state.tab or "all",context~=nil)
 	self.searchHint:SetShown(state.search == "" and not self.search.box:HasFocus())
@@ -683,6 +776,7 @@ end
 
 -- 隐藏退订、清编辑临时态与导出文本;搜索词保留。
 function P:Leave()
+ self.noteHeader:StopDrag(false);self.historyHeader:StopDrag(false)
  UI.Motion:FinishPlacement(self.left);UI.Motion:FinishPlacement(self.historyFrame)
  self.tabSelection:Clear()
 	if state.unsub then state.unsub(); state.unsub = nil end

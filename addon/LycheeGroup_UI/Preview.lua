@@ -37,6 +37,7 @@ local function NewProvider(scenario)
  function p.Search:EndBrowse() end
  function p:SetFilters(filters) self.filters=Copy(filters);self:Notify("results") end
  function p.Results:GetDetails(record) if type(record)=="number" then record=p.records[record] end;return record.details end
+ function p.Results:GetProgressCount(record) return record.details.encounters and #record.details.encounters end
  function p.Results:GetMemberCounts(record) return self:GetDetails(record).counts end
  function p.Results:HasMemberSpec(record,playerSpecID)
   for _,member in ipairs(record.details.members) do if member.specID==playerSpecID then return true end end
@@ -110,6 +111,7 @@ local function NewProvider(scenario)
  function p:GetResults()
   local ids={};local f=self.filters
   local playerSpecID=f.hideSameSpec and A.Specializations:Player() or nil
+  local playerClass=f.hideSameClass and select(2,UnitClass("player")) or nil
   local text=(f.searchMode=="leader" and f.leaderText or f.searchMode=="group" and f.text or ""):lower()
   local minLevel,maxLevel
   if f.searchMode=="group" then minLevel,maxLevel=text:match("^%s*(%d+)%s*%-%s*(%d+)%s*$") end
@@ -125,15 +127,13 @@ local function NewProvider(scenario)
      pass=leaderText~="" and r.leaderName and r.leaderName:lower():find(leaderText,1,true)~=nil
     else pass=r.name:lower():find(text,1,true)~=nil end
    end
+   if pass then pass=A.Group.Results:MatchesNumericFilters(r,f) end
    if pass and f.minMembers then pass=r.numMembers>=f.minMembers end
    if pass and f.maxMembers then pass=r.numMembers<=f.maxMembers end
    if pass and f.hideZeroScore then pass=(r.leaderOverallDungeonScore or 0)>=1 end
    if pass and f.neededRole then pass=r.maxNumPlayers==5 and counts[f.neededRole]<(f.neededRole=="DAMAGER" and 3 or 1) end
    if pass and (f.tankPresence or f.healerPresence or f.damagePresence) then
-    pass=r.maxNumPlayers==5
-    if pass and f.tankPresence then pass=counts.TANK~=nil and (counts.TANK>0)==(f.tankPresence=="present") end
-    if pass and f.healerPresence then pass=counts.HEALER~=nil and (counts.HEALER>0)==(f.healerPresence=="present") end
-    if pass and f.damagePresence then pass=counts.DAMAGER~=nil and (counts.DAMAGER>=3)==(f.damagePresence=="present") end
+    pass=A.Group.Results:MatchesRolePresence(counts,f,r.maxNumPlayers)
    end
    if pass and (f.friends or f.guild) then
     local friends=r.bnetFriends+r.charFriends>0;local guild=r.guildMates>0
@@ -141,6 +141,7 @@ local function NewProvider(scenario)
    end
    if pass and (f.notes and f.notes~="noCaution" or f.personKey and f.personKey~=r.leaderKey) then pass=false end
    if pass and playerSpecID then pass=not self.Results:HasMemberSpec(r,playerSpecID) end
+   if pass and playerClass then pass=not A.Group.Results:HasMemberClass(r,playerClass) end
    if pass then ids[#ids+1]=id end
   end
   table.sort(ids,function(a,b)

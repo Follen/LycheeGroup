@@ -25,8 +25,10 @@ local function Release()
 end
 
 T.eq(handle.state,"normal")
+T.eq(handle.icon:GetAlpha(),0,"the idle grip artwork is hidden while its hit target remains available")
+T.eq(U.frame.clamped,false,"the window may be dragged past screen edges")
 T.ok(handle.icon:GetTexture():find("resize%-grip%-lines%-normal.tga$")~=nil)
-handle:Fire("OnEnter");T.eq(handle.state,"hover")
+handle:Fire("OnEnter");T.eq(handle.state,"hover");T.eq(handle.icon:GetAlpha(),1)
 handle:Fire("OnMouseDown","RightButton");T.eq(U.resizing,nil,"right-click does not resize")
 local width,height=U.windowWidth,U.windowHeight
 Begin();T.eq(handle.state,"pressed")
@@ -37,6 +39,7 @@ T.eq(A.charPrefs.windowSize,nil,"drag samples do not save preferences")
 local anchor={U.frame:GetPoint()};T.eq(anchor[1],"TOPLEFT");T.eq(anchor[3],"BOTTOMLEFT")
 T.near(anchor[4],100/U.frame:GetEffectiveScale(),.001);T.near(anchor[5],1000/U.frame:GetEffectiveScale(),.001)
 Release();T.eq(handle.state,"normal");T.eq(handle:GetScript("OnUpdate"),nil)
+T.eq(handle.icon:GetAlpha(),0,"releasing outside hides the grip artwork")
 T.near(A.charPrefs.windowSize.width,width+180,.001)
 
 width,height=U.windowWidth,U.windowHeight

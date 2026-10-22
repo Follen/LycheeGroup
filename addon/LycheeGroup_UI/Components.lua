@@ -3,6 +3,15 @@ local UI = _G.LycheeGroup.UI
 local context = UI.context
 local T = context.Theme
 UI.C = context.C
+function UI:GetTablePrefs(id)
+ local prefs=self.preview and self.preview.provider.prefs or _G.LycheeGroup.charPrefs
+ prefs.tableLayouts=prefs.tableLayouts or {}
+ prefs.tableLayouts[id]=prefs.tableLayouts[id] or {}
+ return prefs.tableLayouts[id]
+end
+function UI:StopTableDrags()
+ for header in pairs(context.tableHeaders or {}) do header:StopDrag(false) end
+end
 local categoryTextures={
  ["pvp-arena"]="Interface\\AddOns\\LycheeGroup_UI\\Media\\pvp-arena.tga",
  ["pvp-skirmish"]="Interface\\AddOns\\LycheeGroup_UI\\Media\\pvp-skirmish.tga",
@@ -51,7 +60,55 @@ function UI:SpecName(member)
  if member.specName then return member.specName end
  if member.specID and member.specID>0 then local name=Specializations:Get(member.specID);return name end
 end
+-- These decorations belong only to opted-in search-result member slots.
+function UI:UpdateMemberIconStyle(icon,visible)
+ local settings=_G.LycheeGroup.db
+ local shape=settings.memberIconShape
+ local media="Interface\\AddOns\\LycheeGroup_UI\\Media\\member-"..shape
+ context:RoundIcon(icon)
+ if icon.memberShape~=shape then
+  icon._lycheeMask:SetTexture(shape=="square" and T.media.."icon-mask.tga" or media.."-mask.tga","CLAMPTOBLACKADDITIVE","CLAMPTOBLACKADDITIVE")
+  icon.memberShape=shape
+ end
+ local colors=CUSTOM_CLASS_COLORS or RAID_CLASS_COLORS
+ local color=icon.memberClass and colors and colors[icon.memberClass]
+ local bordered=visible and settings.memberClassBorder and color~=nil
+ local border=icon.memberBorder
+ if bordered and not border then
+  border=icon:GetParent():CreateTexture(nil,"OVERLAY",nil,0);icon.memberBorder=border
+ end
+ if border then
+  if border.memberShape~=shape then
+   border:ClearAllPoints()
+   if shape=="square" then
+    -- Reuse the original rounded silhouette underneath the unchanged avatar.
+    border:SetTexture(T.media.."icon-mask.tga");border:SetDrawLayer("ARTWORK",-1)
+    border:SetPoint("TOPLEFT",icon,"TOPLEFT",-.5,.5);border:SetPoint("BOTTOMRIGHT",icon,"BOTTOMRIGHT",.5,-.5)
+   else
+    border:SetTexture(media.."-border.tga");border:SetDrawLayer("OVERLAY",0);border:SetAllPoints(icon)
+   end
+   border.memberShape=shape
+  end
+  if bordered then border:SetVertexColor(color.r,color.g,color.b,1) end
+  border:SetShown(bordered==true)
+ end
+ local leader=visible and icon.memberIsLeader and settings.memberLeaderMark
+ local mark=icon.memberLeaderMark
+ if leader and not mark then
+  mark=icon:GetParent():CreateTexture(nil,"OVERLAY",nil,1)
+  mark:SetTexture(T.media.."leader.tga")
+  icon.memberLeaderMark=mark
+ end
+ if mark then
+  local scale=icon:GetParent():GetScale();local size=math.min(14,19/scale)
+  mark:SetSize(size,size);mark:ClearAllPoints();mark:SetPoint("BOTTOM",icon,"TOP",0,1/scale);mark:SetShown(leader==true)
+ end
+end
 function UI:SetMemberIcon(icon,member)
+ if icon.memberStyle then
+  icon.memberClass=member and member.class
+  icon.memberIsLeader=member and (member.isLeader==true or icon.memberLeaderKey~=nil and member.nameKey==icon.memberLeaderKey) or false
+ end
  local spec=member and member.specID
  local texture=spec and spec>0 and select(2,Specializations:Get(spec))
  if not texture and member and member.specName and member.class then

@@ -294,6 +294,7 @@ function Stubs.Install(overrides)
 
 	local env = {
 		CONQUEST_SIZES = {1,1,2,3,10},
+		MAX_RAID_MEMBERS = 40,
 		GetLocale = function() return locale end,
 		GetRealmName = function() return realm end,
 		GetNormalizedRealmName = function() return (realm:gsub("%s+", "")) end,

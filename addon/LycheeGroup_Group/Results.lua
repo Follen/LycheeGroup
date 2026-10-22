@@ -3,6 +3,30 @@ local A = _G.LycheeGroup
 local G = A.Group
 local Results={gen=0}
 G.Results=Results
+local function InRange(value,minimum,maximum)
+ if not minimum and not maximum then return true end
+ return type(value)=="number" and value>=0 and (not minimum or value>=minimum) and (not maximum or value<=maximum)
+end
+function Results:MatchesNumericFilters(record,filters)
+ return InRange(record.requiredItemLevel,filters.minItemLevel,filters.maxItemLevel)
+  and InRange(record.leaderRating,filters.minRating,filters.maxRating)
+end
+local ROLE_FILTERS={{"tankPresence","TANK",1},{"healerPresence","HEALER",1},{"damagePresence","DAMAGER",3}}
+function Results:MatchesRolePresence(counts,filters,maximum)
+ local enabled,matched=0,0
+ for _,entry in ipairs(ROLE_FILTERS) do
+  local value=filters[entry[1]]
+  if value then
+   enabled=enabled+1
+   local count=counts and counts[entry[2]]
+   if count~=nil and (count>=entry[3])==(value=="present") then matched=matched+1 end
+  end
+ end
+ if enabled==0 then return true end
+ if maximum~=5 or not counts then return false end
+ if filters.roleMatchAny then return matched>0 end
+ return matched==enabled
+end
 local records,ids,detailQueue,pendingIDs,changedIDs={},{},{},{},{}
 -- Native title tokens change across searches. Keep them in-session only;
 -- matching leaders use their complete player keys in the account saved data.
@@ -104,7 +128,9 @@ local function Normalize(id,record,invalidateDetails,expectedScan,metadataDirty)
  -- covers member/spec/progress changes that do not change the member count.
  if invalidateDetails or previousActivity~=record.activityID or previousMembers~=record.numMembers or previousLeader~=record.leaderKey or previousFaction~=record.leaderFactionGroup or previousRating~=record.leaderRating or previousRatingActivity~=record.pvpRatingActivity or previousBnet~=record.bnetFriends or previousChar~=record.charFriends or previousGuild~=record.guildMates then
   record.detailsDirty=record.details and true or nil;record.memberCounts=nil
+  record.progressKnown,record.progressCount=nil,nil
   record.checkedSpecID,record.hasMemberSpec=nil,nil
+  record.checkedClass,record.hasMemberClass=nil,nil
  end
  return record
 end
@@ -135,6 +161,22 @@ function Results:HasMemberSpec(record,playerSpecID)
  record.checkedSpecID,record.hasMemberSpec=playerSpecID,found
  return found
 end
+function Results:HasMemberClass(record,playerClass)
+ if record.checkedClass==playerClass then return record.hasMemberClass end
+ local found=false
+ if record.details and not record.detailsDirty then
+  for _,member in ipairs(record.details.members) do
+   if member.class==playerClass then found=true;break end
+  end
+ else
+  for index=1,record.numMembers do
+   local member=Public(C_LFGList.GetSearchResultPlayerInfo(record.id,index))
+   if type(member)=="table" and Public(member.classFilename)==playerClass then found=true;break end
+  end
+ end
+ record.checkedClass,record.hasMemberClass=playerClass,found
+ return found
+end
 local function RelationNames(values,excludeKey)
  values=Public(values)
  if type(values)~="table" then return {} end
@@ -150,6 +192,18 @@ local function TouchDetails(record)
  for i=#detailQueue,1,-1 do if detailQueue[i]==record.id then table.remove(detailQueue,i);break end end
  detailQueue[#detailQueue+1]=record.id
  if #detailQueue>DETAIL_CAPACITY then local old=records[table.remove(detailQueue,1)];if old then old.details=nil;old.detailsDirty=nil end end
+end
+-- Sorting raid progress needs only this count, never every member's details.
+function Results:GetProgressCount(record)
+ if record.progressKnown then return record.progressCount end
+ local encounters=Public(C_LFGList.GetSearchResultEncounterInfo(record.id))
+ local count
+ if type(encounters)=="table" then
+  count=0
+  for _,value in ipairs(encounters) do if type(Public(value))=="string" then count=count+1 end end
+ end
+ record.progressKnown,record.progressCount=true,count
+ return count
 end
 function Results:GetDetails(idOrRecord)
  local record=type(idOrRecord)=="table" and idOrRecord or records[idOrRecord]
@@ -209,6 +263,7 @@ function Results:GetDetails(idOrRecord)
     if type(name)=="string" then details.encounters[#details.encounters+1]=name end
    end
   else details.encounters=nil end
+  record.progressKnown,record.progressCount=true,details.encounters and #details.encounters
  else details.encounters=nil end
  record.details=details;record.detailsDirty=nil
  -- 队列仅存 ID，旧结果不会被缓存队列继续强引用。
@@ -223,8 +278,9 @@ local function MatchesLeaderText(record,text)
  local leader=record.leaderName
  return type(leader)=="string" and leader:lower():find(text,1,true)~=nil
 end
-local function Pass(record,filters,leaderText,playerSpecID)
+local function Pass(record,filters,leaderText,playerSpecID,playerClass)
  if blockedTitles[record.name] and not unblockedLeaders[record.leaderKey] or G.db.blockedLeaders[record.leaderKey] then return false end
+ if not Results:MatchesNumericFilters(record,filters) then return false end
  if G.Applications:IsActive(record.id) then return false end
  if leaderText and not MatchesLeaderText(record,leaderText) then return false end
  if filters.category and not G.Catalog:Matches(record.activity,filters.category,filters.groupKey,filters.difficultyID,filters.tier,filters.groupKeys) then return false end
@@ -243,10 +299,7 @@ local function Pass(record,filters,leaderText,playerSpecID)
  end
  if filters.tankPresence or filters.healerPresence or filters.damagePresence then
   local counts=Results:GetMemberCounts(record)
-  if record.maxNumPlayers~=5 or not counts then return false end
-  if filters.tankPresence and (counts.TANK==nil or (counts.TANK>0)~=(filters.tankPresence=="present")) then return false end
-  if filters.healerPresence and (counts.HEALER==nil or (counts.HEALER>0)~=(filters.healerPresence=="present")) then return false end
-  if filters.damagePresence and (counts.DAMAGER==nil or (counts.DAMAGER>=3)~=(filters.damagePresence=="present")) then return false end
+  if not Results:MatchesRolePresence(counts,filters,record.maxNumPlayers) then return false end
  end
  if filters.friends and record.bnetFriends+record.charFriends==0 or filters.guild and record.guildMates==0 then return false end
  if filters.notes then
@@ -258,6 +311,7 @@ local function Pass(record,filters,leaderText,playerSpecID)
   elseif not exclude then return false end
  end
  if playerSpecID and Results:HasMemberSpec(record,playerSpecID) then return false end
+ if playerClass and Results:HasMemberClass(record,playerClass) then return false end
  return true
 end
 local sorting
@@ -436,9 +490,10 @@ function Results:GetResults()
   wipe(ids)
   local filters=G.Search:GetFilters()
   local playerSpecID=filters.hideSameSpec and A.Specializations:Player() or nil
+  local playerClass=filters.hideSameClass and select(2,UnitClass("player")) or nil
   local leaderText=type(filters.leaderText)=="string" and filters.leaderText:lower():match("^%s*(.-)%s*$") or nil
   if leaderText=="" then leaderText=nil end
-  for id,record in pairs(records) do if not record.isDelisted and Pass(record,filters,leaderText,playerSpecID) then ids[#ids+1]=id end end
+  for id,record in pairs(records) do if not record.isDelisted and Pass(record,filters,leaderText,playerSpecID,playerClass) then ids[#ids+1]=id end end
   sorting=filters.sort or A:GetSetting("defaultSort");table.sort(ids,Sort);dirty=false
  end
  return ids

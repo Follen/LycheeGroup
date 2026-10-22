@@ -5,7 +5,7 @@ local C,T,L=UI.C,UI.Theme,UI.L
 local P={section="general"};UI.pages.settings=P
 local zh=A:GetLocale()=="zhCN"
 local function S(cn,en) return zh and cn or en end
-local sections={{"general",S("入口与快捷键","Access & shortcuts")},{"interface",S("界面与外观","Appearance")},{"browse",S("队伍与成员","Groups & members")},{"blocks",S("屏蔽","Blocks")},{"notes",S("笔记与提醒","Notes and reminders")},{"floating",S("悬浮窗","Floating window")},{"about",L.about}}
+local sections={{"general",S("入口与快捷键","Access & shortcuts")},{"interface",S("界面与外观","Appearance")},{"browse",S("队伍与成员","Groups & members")},{"memberIcons",S("成员图标","Member icons")},{"blocks",S("屏蔽","Blocks")},{"notes",S("笔记与提醒","Notes and reminders")},{"floating",S("悬浮窗","Floating window")},{"about",L.about}}
 local types={{value="positive",label=S("推荐","Positive")},{value="neutral",label=S("中性","Neutral")},{value="caution",label=S("拉黑","Blocked")}}
 local definitions={
  general={{"toggleBinding",A.L.bindingToggle,"","binding"},
@@ -15,12 +15,18 @@ local definitions={
  {"uiScale",S("主窗口缩放","Main window scale"),S("等比调整整个主窗口。","Scale the entire main window proportionally."),"range",75,125},
  {"fontScale",S("字体大小","Font size"),S("调节插件全局文字","Adjust text size throughout the addon."),"range",70,130},
  {"font",S("界面字体","Interface font"),S("界面字体选择","Choose the interface font."),function() return A.Fonts:Choices() end},
+ {"showImportantFilters",S("在主界面显示重要过滤","Show key filters on the main page"),S("开启后在“我的申请”内显示；关闭时在筛选弹窗内调整。","Show them in My applications, or keep them in the filter panel when off.")},
  {"reduceMotion",L.reduceMotion,S("关闭开窗位移、Logo 动作和局部过渡。","Disable window movement, logo animation and local transitions.")}},
  browse={
  {"defaultSort",S("默认排序","Default sorting"),S("本角色进入其他活动分类时采用的排序。","Default sorting for this character's activity categories."),{{value="newest",label=L.newest},{value="rating",label=L.leaderRating},{value="itemLevel",label=L.requiredItemLevel},{value="members",label=L.members}}},
  {"rememberFilters",S("记住本角色的筛选","Remember character filters"),S("本角色独立保存各分类筛选。","Save category filters for this character.")},
  {"relations",S("好友与公会标记","Friend and guild markers"),S("在队伍、申请者和成员提示中显示关系。","Show relationships in group, applicant and player details.")},
  {"raidMembers",S("团本成员列表","Raid members"),S("控制团本悬停提示中何时展开成员。","Choose when raid tooltips expand the member list."),{{value="shift",label=S("按 Shift 切换","Press Shift to toggle")},{value="alt",label=S("按 Alt 切换","Press Alt to toggle")},{value="ctrl",label=S("按 Ctrl 切换","Press Ctrl to toggle")},{value="always",label=S("始终展开","Always expand")}}}},
+ memberIcons={
+ {"memberIconShape",S("图标形状","Icon shape"),S("调整寻队五人成员图标及职业色边框的轮廓。","Choose the shape of five-player search-result icons and their borders."),{{value="circle",label=S("圆形","Circle")},{value="square",label=S("圆角方形","Rounded square")}}},
+ {"memberLeaderMark",S("成员队长标记","Roster leader mark"),S("在实际队长的成员头像上方显示皇冠。","Show a crown above the actual leader's member icon.")},
+ {"memberClassBorder",S("成员职业色边框","Class-color borders"),S("为寻队结果已有成员显示职业色边框。","Show class-color borders around occupied search-result member icons.")},
+ {"memberIconScale",S("成员图标缩放","Member icon scale"),S("调整寻队结果五人成员图标大小，成员列自动预留空间。","Resize five-player search-result icons; reserve column space automatically."),"range",75,175}},
  notes={{"defaultNote",S("新记录的默认类型","Default note type"),S("每次记笔记时仍可选择其他类型。","Choose a different type whenever you record a player."),types},
  {"noteMarks",S("荔枝笔记标记","Player note markers"),S("分别显示推荐、中性和拉黑记录；包含队伍成员。","Show recommendation, neutral and block markers, including group members.")},
  {"reminders",S("组队与邀请提醒","Group and invite reminders"),S("收到邀请、邀请玩家或再次组队时，提示符合范围的记录。","Show matching player notes when receiving an invite, inviting a player or grouping again."),{{value="all",label=S("全部记录","All notes")},{value="positive",label=S("仅推荐","Recommended only")},{value="caution",label=S("仅拉黑","Blocked only")},{value="off",label=S("不提醒","Off")}}},
@@ -73,7 +79,21 @@ function P:BuildBlocks()
    if P.blockGroup and row.key==button.targetKey and row._hitVisible and list.clip:IsMouseOver() then P.blockGroup.Results:RemoveBlockedLeader(button.targetKey) end
   end,{variant="text"});row.remove:SetPoint("RIGHT",-12,0)
  end)
+ self.blocksHeader=C.TableHeader(panel,{
+  {key="name",label=S("名字","Name"),width=340,min=140},
+  {key="realm",label=S("服务器","Realm"),width=280,min=120},
+  {key="actions",label=S("操作","Actions"),width=148,min=132,align="CENTER"},
+ },{onLayout=function(header) P:LayoutBlockColumns(header) end})
  self.blocksEmpty=C.Text(panel,"",18,T.dim,BODY_WIDTH);C.SetLineHeight(self.blocksEmpty,24);self.blocksEmpty:SetJustifyH("CENTER");self.blocksEmpty:SetWordWrap(true)
+end
+function P:LayoutBlockColumns(header)
+ if not self.blocksList then return end
+ local name,realm,actions=header.columns.name,header.columns.realm,header.columns.actions
+ for _,row in ipairs(self.blocksList.rows) do
+  row.title:ClearAllPoints();row.title:SetPoint("LEFT",name.x+6,0);row.title:SetWidth(name.width-12)
+  row.meta:ClearAllPoints();row.meta:SetPoint("LEFT",realm.x+6,0);row.meta:SetWidth(realm.width-12)
+  row.remove:ClearAllPoints();row.remove:SetPoint("LEFT",actions.x+(actions.width-row.remove:GetWidth())/2,0)
+ end
 end
 function P:LayoutBlocks()
  if not self.blocksList then return end
@@ -86,6 +106,8 @@ function P:LayoutBlocks()
  self.blocksClear:ClearAllPoints();self.blocksClear:SetPoint("TOPRIGHT",-list.gutter-12,-top)
  self.blocksCount:ClearAllPoints();self.blocksCount:SetPoint("LEFT",self.panels.blocks,"TOPLEFT",0,-top-toolbarHeight/2)
  top=top+toolbarHeight+8
+ self.blocksHeader:ClearAllPoints();self.blocksHeader:SetPoint("TOPLEFT",-12,-top)
+ top=top+self.blocksHeader:GetHeight()+8
  local rowHeight=math.max(52,math.ceil((20+T.lineHeightDelta)*UI.context.fontScale+24))
  local changed=list.rowHeight~=rowHeight
  list.rowHeight=rowHeight;list.capacity=math.min(list.poolCapacity-1,math.ceil(list:GetHeight()/rowHeight))
@@ -97,11 +119,8 @@ function P:LayoutBlocks()
   row:SetHeight(rowHeight);row:SetPoint("TOPLEFT",0,-(i-1)*rowHeight)
   row.remove:SetHeight(toolbarHeight)
   row.remove:SetWidth(math.ceil(row.remove.label:GetStringWidth())+32)
-  local contentWidth=row:GetWidth()-row.remove:GetWidth()-72
-  local nameWidth=math.floor(contentWidth*.55)
-  row.title:SetWidth(nameWidth)
-  row.meta:SetPoint("LEFT",row,"LEFT",12+nameWidth+24,0);row.meta:SetWidth(contentWidth-nameWidth)
  end
+ self.blocksHeader:Layout(list:GetWidth()-list.gutter)
  if changed and sameViewport then list:Refresh(true) end
  self.blocksEmpty:ClearAllPoints();self.blocksEmpty:SetPoint("TOPLEFT",0,-top-48)
 end
@@ -110,7 +129,7 @@ function P:RefreshBlocks()
  local leaders=results and results:GetBlockedLeaders() or {}
  UI:SetText(self.blocksCount,S("已屏蔽 %d 位队长","%d blocked leaders"):format(#leaders))
  self.blocksClear:SetAvailable(results~=nil and (#leaders>0 or results:GetBlockedTitleCount()>0))
- self.blocksList:SetShown(#leaders>0);self.blocksEmpty:SetShown(#leaders==0)
+ self.blocksList:SetShown(#leaders>0);self.blocksHeader:SetShown(#leaders>0);self.blocksEmpty:SetShown(#leaders==0)
  UI:SetText(self.blocksEmpty,self.blockError or S("暂无屏蔽的队长","No blocked leaders"))
  self.blocksList:SetItems(leaders,function(row,key)
   local _,name,realm=A:PlayerKey(key)
@@ -119,12 +138,14 @@ function P:RefreshBlocks()
  self:LayoutBlocks()
 end
 function P:StopBlocks()
+ if self.blocksHeader then self.blocksHeader:StopDrag(false) end
  if self.blocksUnsub then self.blocksUnsub();self.blocksUnsub=nil end
  self.blockGroup,self.blockError=nil,nil
  if self.blocksList then self.blocksList:Clear();for _,row in ipairs(self.blocksList.rows) do row.remove.targetKey=nil end end
 end
 function P:EnterBlocks()
  if not self.blocksList then self:BuildBlocks() end
+ self.blocksHeader:SetState(UI:GetTablePrefs("blockedLeaders"))
  if not self.blockGroup then
   local group,err
   if UI.preview then group=UI:GetGroup() else group,err=A:Ensure("Group") end
@@ -232,7 +253,19 @@ function P:BuildRow(parent,row,index)
    A:SetSetting(row[1],value)
   end) end
   control.valueLabel=C.Text(control,"",14,T.muted,52);control.valueLabel:SetPoint("LEFT",control,"RIGHT",12,0);control.valueLabel:SetJustifyH("RIGHT")
-  control:SetPoint("RIGHT",-76,0)
+  function control:LayoutValueWidth()
+   local text=self.valueLabel:GetText()
+   self.valueLabel:SetWidth(0);self.valueLabel:SetWordWrap(false)
+   local width=52
+   for digit=0,9 do
+    UI:SetText(self.valueLabel,string.rep(tostring(digit),3).."%")
+    width=math.max(width,math.ceil(self.valueLabel:GetStringWidth())+6)
+   end
+   UI:SetText(self.valueLabel,text);self.valueLabel:SetWidth(width)
+   self:ClearAllPoints();self:SetPoint("RIGHT",-24-width,0)
+   self:SetWidth(math.max(60,controlWidth-12-width))
+  end
+  control:LayoutValueWidth()
  elseif row[4]=="binding" then
   control=C.Button(holder,A.L.bindingChange,controlWidth,function() P:BeginBindingCapture() end);control:SetPoint("RIGHT",-12,0)
   holder:HookScript("OnHide",function() if P.bindingCapture==holder then P:CancelBindingCapture(true) end end)
@@ -358,7 +391,7 @@ function P:Sync()
    if not self.bindingCapture and conflict then text=text.."\n"..A.L.bindingDefaultConflict:format(GetBindingName(conflict)) end
    UI:SetText(entry.help,text)
    UI:SetText(c.label,self.bindingCapture and S("按下新按键…","Press a key…") or A.L.bindingChange)
-  elseif row[4]=="range" then if not c:IsDragging() then c:SetValue(value);UI:SetText(c.valueLabel,value.."%") end
+  elseif row[4]=="range" then c:LayoutValueWidth();if not c:IsDragging() then c:SetValue(value);UI:SetText(c.valueLabel,value.."%") end
   elseif row[4] then local label;local choices=type(row[4])=="function" and row[4]() or row[4];for _,choice in ipairs(choices) do if choice.value==value then label=choice.label;break end end;c:SetValue(value,label)
   else c:SetValue(value==true);UI:SetText(c.label,value and S("已开启","On") or S("已关闭","Off"));c:SetWidth(math.ceil(c.label:GetStringWidth())+c.track:GetWidth()+36);UI:Color(c.label,c._inside and T.text or T.muted) end
  end

@@ -7,7 +7,6 @@ local FORM=MAIN-48
 local DESCRIPTION_MIN_HEIGHT=80
 local CONTENT=MAIN-48
 local BATCH_WIDTH=CONTENT-C.listRightInset
-local BASE_BATCH_WIDTH=BATCH_WIDTH
 local columns={
  name={x=12,width=224,align="LEFT"},role={x=242,width=68,align="CENTER"},
  faction={x=316,width=112,align="CENTER"},
@@ -17,16 +16,8 @@ local columns={
 local MEMBER_HEIGHT,MEMBER_STRIDE=47.376,50.008
 local BATCH_PADDING,MEMBER_TOP=13.16,7.896
 local FAVORITE_HEIGHT=128
-local noMapScoreColumns={
- name=columns.name,role=columns.role,faction=columns.faction,rating=columns.rating,mapScore=columns.mapScore,
- ilvl={x=540,width=48,align="CENTER"},comment={x=620,width=BATCH_WIDTH-728,align="LEFT"},actions=columns.actions,
-}
-local noRatingColumns={
- name=columns.name,role=columns.role,faction=columns.faction,ilvl={x=444,width=48,align="CENTER"},
- comment={x=532,width=BATCH_WIDTH-640,align="LEFT"},
- rating=columns.rating,mapScore=columns.mapScore,actions=columns.actions,
-}
 local applicantSorts={{value="newest",label=L.newest},{value="score",label=L.rating},{value="ilvl",label=L.itemLevel}}
+local dungeonApplicantSorts={{value="newest",label=L.newest},{value="score",label=L.rating},{value="mapScore",label=""},{value="ilvl",label=L.itemLevel}}
 local noRatingApplicantSorts={{value="newest",label=L.newest},{value="ilvl",label=L.itemLevel}}
 local BATCH_TOP,BATCH_MAX_HEIGHT=194,T.contentHeight-242
 local P={};UI.pages.create=P
@@ -42,6 +33,27 @@ local state={category="seasonDungeon",editing=false,sort="newest"}
 local form={crossFaction=true}
 local zh=A:GetLocale()=="zhCN"
 local function S(cn,en) return zh and cn or en end
+dungeonApplicantSorts[3].label=S("单本分","Dungeon")
+local headerLabels={name=S("申请者","Applicant"),role=L.role,faction=S("阵营","Faction"),rating=L.rating,mapScore=S("单本分","Dungeon"),ilvl=L.itemLevel,comment=S("备注","Note"),actions=S("操作","Actions")}
+local sortColumns={score="rating",mapScore="mapScore",ilvl="ilvl"}
+local columnSorts={rating="score",mapScore="mapScore",ilvl="ilvl"}
+local function ApplicantDefinitions(kind)
+ local definitions={
+  {key="name",width=238,min=150,align="LEFT"},{key="role",width=75,min=74,align="CENTER"},
+  {key="faction",width=117,min=72,align="CENTER"},
+ }
+ if kind~="none" then definitions[#definitions+1]={key="rating",width=kind=="dungeon" and 74 or 88,min=72,align="CENTER",sortable=true} end
+ if kind=="dungeon" then definitions[#definitions+1]={key="mapScore",width=78,min=72,align="CENTER",sortable=true} end
+ definitions[#definitions+1]={key="ilvl",width=kind=="dungeon" and 66 or 90,min=64,align="CENTER",sortable=true}
+ definitions[#definitions+1]={key="comment",width=BATCH_WIDTH-(kind=="dungeon" and 750 or kind=="rating" and 710 or 622),min=68,align="LEFT"}
+ definitions[#definitions+1]={key="actions",width=102,min=102,align="CENTER"}
+ for _,definition in ipairs(definitions) do definition.label=headerLabels[definition.key] end
+ return definitions
+end
+local function ApplicantPadding(key)
+ if key=="name" then return 12,2 elseif key=="comment" then return 12,6 elseif key=="actions" then return 6,12 end
+ return 6,6
+end
 -- Measure unconstrained text: recycled labels may still carry the previous row width.
 local function FitText(label)
  label:SetWordWrap(false);label:SetWidth(0)
@@ -87,11 +99,11 @@ local function Minimum(app,key)
  local value
  for _,m in ipairs(app.members) do
   local current
-  if key=="rating" then current=UI:MemberRating(m) else current=m[key] end
-  if current==nil then return -1 end
+  if key=="rating" then current=UI:MemberRating(m) elseif key=="mapScore" then current=UI:GetGroup():GetApplicantMapScore(m) else current=m[key] end
+  if current==nil then return nil end
   value=math.min(value or current,current)
  end
- return value or -1
+ return value
 end
 function P:LayoutRequirements()
  local ilvlWidth=self.hasPlaystyle and (self.scoreKind and (FORM-32)/3.25 or (FORM-16)/2.25) or (self.scoreKind and (FORM-16)/2 or FORM)
@@ -140,6 +152,7 @@ function P:LayoutFont()
  for _,key in ipairs({"ALL","TANK","HEALER","DAMAGER"}) do local button=self.roleFilters[key];C.SetLineHeight(button.label,20,true);button:SetHeight(math.max(30,button.label:GetHeight()));button:SetWidth(FitText(button.label)+24+(key~="ALL" and 22 or 0));button:ClearAllPoints();button:SetPoint("TOPLEFT",filterX,-3);filterX=filterX+button:GetWidth()+4 end
  self.roleFilterSurface:SetWidth(filterX-1)
  if self.pickerVariants then self:LayoutActivityChoice(self.pickerVariants) end
+ if self.applicantTable then self.applicantTable:Layout(BATCH_WIDTH) end
  if self.appIDs then self:LayoutBatches() end
 end
 function P:Build(parent)
@@ -222,12 +235,16 @@ function P:Build(parent)
    P:RefreshApplicants()
   end,{variant="compact"});b:SetPoint("TOPLEFT",3+(i-1)*88,-3);if key~="ALL" then local roleIcon=C.Icon(b,16);roleIcon:SetPoint("LEFT",12,0);UI:SetRoleIcon(roleIcon,key);b.label:ClearAllPoints();b.label:SetPoint("LEFT",roleIcon,"RIGHT",6,0) end;self.roleFilters[key]=b
  end
- self.sortChoice=C.Choice(manage,144,function() return P.hideApplicantRating and noRatingApplicantSorts or applicantSorts end,function(value) state.sort=value;P:RefreshApplicants() end);self.sortChoice:SetHeight(44);self.sortChoice:SetPoint("TOPRIGHT",0,-110);self.sortChoice:SetValue("newest",L.newest)
+ self.sortChoice=C.Choice(manage,144,function() return P.hideApplicantRating and noRatingApplicantSorts or P.showApplicantMapScore and dungeonApplicantSorts or applicantSorts end,function(value)
+  state.sort=value;state.descending=value~="newest";P.applicantTable:SetSort(sortColumns[value],state.descending);P:RefreshApplicants()
+ end);self.sortChoice:SetHeight(44);self.sortChoice:SetPoint("TOPRIGHT",0,-110);self.sortChoice:SetValue("newest",L.newest)
  self:LayoutFont()
- self.applicantHeaders={}
- for _,h in ipairs({{"name",S("申请者","Applicant")},{"role",L.role},{"faction",S("阵营","Faction")},{"rating",L.rating},{"mapScore",S("单本分","Dungeon")},{"ilvl",L.itemLevel},{"comment",S("备注","Note")},{"actions",S("操作","Actions")}}) do
-  local col=columns[h[1]];local label=C.Header(manage,h[2],col.x,-167,col.width);label:SetJustifyH(col.align);self.applicantHeaders[h[1]]=label
- end
+ self.applicantTableKind="dungeon"
+ self.applicantTable=C.TableHeader(manage,ApplicantDefinitions("dungeon"),{
+  onLayout=function(header) P:LayoutApplicantColumns(header) end,
+  onSort=function(key,descending) state.sort=columnSorts[key] or "newest";state.descending=descending;P:RefreshApplicants() end,
+ })
+ self.applicantHeaders=self.applicantTable.labels
  self.batchScroll=CreateFrame("ScrollFrame",nil,manage);self.batchScroll:SetPoint("TOPLEFT",0,-BATCH_TOP);self.batchScroll:SetSize(BATCH_WIDTH,BATCH_MAX_HEIGHT)
  self.batchBody=CreateFrame("Frame",nil,self.batchScroll);self.batchBody:SetWidth(BATCH_WIDTH);self.batchBody:SetHeight(1);self.batchScroll:SetScrollChild(self.batchBody)
  self.batchSlider=C.ScrollBar(manage);self.batchSlider:SetHeight(BATCH_MAX_HEIGHT);self.batchSlider:SetPoint("TOPRIGHT",0,-BATCH_TOP)
@@ -251,19 +268,13 @@ function P:Build(parent)
  summary:SetScript("OnLeave",function() ClearSummaryHover();UI.Tooltip:LeaveOwner(summary) end)
  summary:SetScript("OnHide",function() ClearSummaryHover();HideMemberTooltip(summary) end)
  summary:EnableMouse(false);summary:EnableMouseMotion(true)
+ self.applicantTable:Layout(BATCH_WIDTH)
  self:RefreshFavorites()
 end
 function P:LayoutSize(width,height)
  self.layoutHeight=height
  MAIN=width-288-16;CONTENT=MAIN-48;FORM=CONTENT;BATCH_WIDTH=CONTENT-C.listRightInset
  BATCH_MAX_HEIGHT=height-242
- local previousNameWidth=columns.name.width
- local compact=math.min(50,math.max(0,BASE_BATCH_WIDTH-BATCH_WIDTH))
- columns.name.width=224-compact;columns.role.x=242-compact;columns.faction.x=316-compact
- columns.rating.x=432-compact;columns.mapScore.x=504-compact;columns.ilvl.x=588-compact
- columns.comment.x=660-compact;columns.comment.width=BATCH_WIDTH-768+compact;columns.actions.x=BATCH_WIDTH-96
- noMapScoreColumns.ilvl.x=540-compact;noMapScoreColumns.comment.x=620-compact;noMapScoreColumns.comment.width=BATCH_WIDTH-728+compact
- noRatingColumns.ilvl.x=444-compact;noRatingColumns.comment.x=532-compact;noRatingColumns.comment.width=BATCH_WIDTH-640+compact
  self.surface:SetSize(MAIN,height);self.formFrame:SetSize(FORM,height-48);self.manage:SetSize(CONTENT,height-48)
  self.desc:SetWidth(FORM);self.req:SetWidth(FORM);self.titleShell:SetWidth(FORM);self.descriptionShell:SetWidth(FORM)
  for _,notice in ipairs({self.formNotice,self.correctionNotice}) do
@@ -277,15 +288,7 @@ function P:LayoutSize(width,height)
  self.sMeta:SetWidth(summaryWidth);self.sName:SetWidth(summaryWidth)
  self.manageNotice:SetWidth(CONTENT);self.empty:SetWidth(CONTENT-48)
  self.batchScroll:SetWidth(BATCH_WIDTH);self.batchBody:SetWidth(BATCH_WIDTH)
- for _,batch in ipairs(self.batchPool) do
-  batch:SetWidth(BATCH_WIDTH)
-  batch.invite:SetPoint("LEFT",columns.actions.x,0);batch.decline:SetPoint("LEFT",columns.actions.x+44,0);batch.status:SetPoint("LEFT",columns.actions.x,0)
-  for _,row in ipairs(batch.people) do
-   row:SetWidth(columns.actions.x);row.applicantColumns=nil
-   row.score:SetPoint("LEFT",columns.rating.x,0);row.mapScore:SetPoint("LEFT",columns.mapScore.x,0)
-  end
- end
- if previousNameWidth~=columns.name.width and self.appIDs then self:LayoutBatches() else self:LayoutApplicantViewport() end
+ self.applicantTable:SetColumns(ApplicantDefinitions(self.applicantTableKind));self.applicantTable:Layout(BATCH_WIDTH)
  self.rail:SetHeight(height);self:LayoutRosterCard()
 end
 function P:GetMinimumHeight()
@@ -542,15 +545,39 @@ function P:UsePreset(entry)
  self:RefreshPicker();self.preparing=nil;self:ValidateForm()
  UI.Native.entry.Name:SetFocus()
 end
+function P:LayoutApplicantColumns(header)
+ local previousNameWidth=columns.name.width
+ local layout={rating=columns.rating,mapScore=columns.mapScore}
+ for _,definition in ipairs(header.definitions) do
+  local key=definition.key;local cell=header.columns[key];local before,after=ApplicantPadding(key)
+  layout[key]={x=cell.x+before,width=math.max(1,cell.width-before-after),align=definition.align}
+ end
+ columns=layout;self.applicantColumns=layout
+ if not self.batchPool then return end
+ for _,batch in ipairs(self.batchPool) do
+  batch:SetWidth(BATCH_WIDTH);batch.invite:SetPoint("LEFT",layout.actions.x,0);batch.decline:SetPoint("LEFT",layout.actions.x+44,0)
+  batch.status:SetPoint("LEFT",layout.actions.x,0);batch.status:SetWidth(layout.actions.width)
+  for _,row in ipairs(batch.people) do
+   row:SetWidth(header.columns.actions.x);row.icon:SetPoint("LEFT",layout.name.x,0);row.title:SetPoint("LEFT",layout.name.x+44,0)
+   for key,field in pairs({rating="score",mapScore="mapScore",ilvl="ilvl"}) do
+    row[field]:SetPoint("LEFT",layout[key].x,0);row[field]:SetWidth(layout[key].width)
+   end
+   row.race:SetWidth(layout.faction.width);LayoutApplicantFaction(row)
+   if row.member then UpdateApplicantRoles(row,row.member,layout) end
+  end
+ end
+ if self.appIDs and previousNameWidth~=layout.name.width then self:LayoutBatches() else self:LayoutApplicantViewport() end
+end
 function P:LayoutApplicantViewport()
  local offset=self.manageNotice:IsShown() and self.manageNotice:GetHeight()+12 or 0
- local layout=self.applicantColumns or columns
+ self.applicantTable:ClearAllPoints();self.applicantTable:SetPoint("TOPLEFT",0,-167-offset)
  local headerHeight=0
  for key,label in pairs(self.applicantHeaders) do
-  label:ClearAllPoints();label:SetPoint("TOPLEFT",layout[key].x,-167-offset);label:SetWidth(layout[key].width)
-  label:SetShown((key~="rating" or not self.hideApplicantRating) and (key~="mapScore" or self.showApplicantMapScore))
   if label:IsShown() then headerHeight=math.max(headerHeight,label:GetHeight()) end
  end
+ self.applicantTable:SetHeight(math.max(24,headerHeight))
+ for _,button in ipairs(self.applicantTable.buttons) do button:SetHeight(self.applicantTable:GetHeight()) end
+ for _,handle in ipairs(self.applicantTable.handles) do handle:SetHeight(self.applicantTable:GetHeight()) end
  local batchTop=math.max(BATCH_TOP,167+headerHeight+3)
  self.batchScroll:ClearAllPoints();self.batchScroll:SetPoint("TOPLEFT",0,-batchTop-offset)
  self.batchSlider:ClearAllPoints();self.batchSlider:SetPoint("TOPRIGHT",0,-batchTop-offset)
@@ -908,9 +935,14 @@ function P:RefreshApplicants()
  local listing=group:GetListing();local activity=listing and group.Catalog:GetActivity(listing.activityID)
  self.applicantContext=A.GroupPresentation.Member("applicant",activity);self.hideApplicantRating=not self.applicantContext.showRating
  self.showApplicantMapScore=self.applicantContext.showDungeonRecords
- self.applicantColumns=self.hideApplicantRating and noRatingColumns or self.showApplicantMapScore and columns or noMapScoreColumns
- if self.hideApplicantRating and state.sort=="score" then state.sort="newest";self.sortChoice:SetValue("newest",L.newest) end
- local sortKey=state.sort~="newest" and (state.sort=="score" and "rating" or "itemLevel")
+ local kind=self.hideApplicantRating and "none" or self.showApplicantMapScore and "dungeon" or "rating"
+ if kind~=self.applicantTableKind then self.applicantTableKind=kind;self.applicantTable:SetColumns(ApplicantDefinitions(kind)) end
+ if self.hideApplicantRating and state.sort=="score" or not self.showApplicantMapScore and state.sort=="mapScore" then state.sort="newest";state.descending=false end
+ local column=sortColumns[state.sort]
+ if self.applicantTable.state.sortKey~=column or self.applicantTable.state.descending~=(state.descending==true) then self.applicantTable:SetSort(column,state.descending) end
+ local label=state.sort=="score" and L.rating or state.sort=="mapScore" and headerLabels.mapScore or state.sort=="ilvl" and L.itemLevel or L.newest
+ self.sortChoice:SetValue(state.sort,label)
+ local sortKey=state.sort=="score" and "rating" or state.sort=="mapScore" and "mapScore" or state.sort=="ilvl" and "itemLevel"
  local values=sortKey and {}
  local ids={};for _,id in ipairs(group:GetApplicants()) do
   local app=group:GetApplicant(id);local match=not state.roles
@@ -923,7 +955,10 @@ function P:RefreshApplicants()
   if match then ids[#ids+1]=id;if sortKey then values[id]=Minimum(app,sortKey) end end
  end
  table.sort(ids,function(a,b)
-  if sortKey and values[a]~=values[b] then return values[a]>values[b] end
+  if sortKey and values[a]~=values[b] then
+   if values[a]==nil then return false elseif values[b]==nil then return true end
+   if state.descending then return values[a]>values[b] else return values[a]<values[b] end
+  end
   local x,y=group:GetApplicant(a),group:GetApplicant(b)
   return x.displayOrderID==y.displayOrderID and a>b or x.displayOrderID<y.displayOrderID
  end)
@@ -973,6 +1008,7 @@ function P:RenderBatches()
    f:ClearAllPoints();f:SetPoint("TOPLEFT",0,-top);f:SetHeight(height);f:Show();f.appID=id;f.alternate=index%2==0;f.bg:SetColor(T.rowAlternate);f.bg:SetShown(f.alternate)
    local sharedY=-MEMBER_TOP
    local memberLayout=self.batchLayouts[id]
+   f.invite:SetPoint("LEFT",layout.actions.x,0);f.decline:SetPoint("LEFT",layout.actions.x+44,0);f.status:SetPoint("LEFT",layout.actions.x,0);f.status:SetWidth(layout.actions.width)
    f.comment:ClearAllPoints();f.comment:SetPoint("TOPLEFT",layout.comment.x,sharedY);f.comment:SetWidth(layout.comment.width);f.comment:SetHeight(height-MEMBER_TOP*2);UI:SetText(f.comment,app.comment or "")
    f.invite.targetKey=id;f.decline.targetKey=id
     local actionable=canManage and app.status=="applied" and not app.pendingStatus and not app.acting
@@ -982,14 +1018,18 @@ function P:RenderBatches()
    for i,row in ipairs(f.people) do
     UI:CloseMenuFor(row)
     local m=app.members[i];if row.member~=m then HideMemberTooltip(row) end;row:SetShown(m~=nil);row.member=m
-    if m then row.memberContext=self.applicantContext;row:SetHeight(memberLayout.heights[i]);row:ClearAllPoints();row:SetPoint("TOPLEFT",0,sharedY-memberLayout.tops[i]);UI:SetMemberIcon(row.icon,m);UI:SetText(row.title,ApplicantName(m));row.title:SetTextColor(UI:ClassColor(m.class))
+    if m then row.memberContext=self.applicantContext;row:SetWidth(self.applicantTable.columns.actions.x);row:SetHeight(memberLayout.heights[i]);row:ClearAllPoints();row:SetPoint("TOPLEFT",0,sharedY-memberLayout.tops[i]);row.icon:SetPoint("LEFT",layout.name.x,0);row.title:SetPoint("LEFT",layout.name.x+44,0);UI:SetMemberIcon(row.icon,m);UI:SetText(row.title,ApplicantName(m));row.title:SetTextColor(UI:ClassColor(m.class))
      UpdateApplicantFaction(row,m,id)
      local marksWidth=UI.Members:BindMarks(row.marks,m)
      local available=columns.name.x+columns.name.width-56-(marksWidth>0 and marksWidth+6 or 0)
      row.title:SetWidth(math.min(available,FitText(row.title)));row.title:SetHeight(0);row.title:SetWordWrap(true)
      row.marks:ClearAllPoints();row.marks:SetPoint("LEFT",row.title,"RIGHT",6,0)
      UpdateApplicantRoles(row,m,layout);UI:SetText(row.ilvl,m.itemLevel and math.floor(m.itemLevel) or "—")
-     if row.applicantColumns~=layout then row.applicantColumns=layout;row.ilvl:ClearAllPoints();row.ilvl:SetPoint("LEFT",layout.ilvl.x,0);row.score:SetShown(not self.hideApplicantRating);row.mapScore:SetShown(self.showApplicantMapScore) end
+     if row.applicantColumns~=layout then
+      row.applicantColumns=layout
+      for key,field in pairs({rating="score",mapScore="mapScore",ilvl="ilvl"}) do row[field]:ClearAllPoints();row[field]:SetPoint("LEFT",layout[key].x,0);row[field]:SetWidth(layout[key].width) end
+      row.race:SetWidth(layout.faction.width);row.score:SetShown(not self.hideApplicantRating);row.mapScore:SetShown(self.showApplicantMapScore)
+     end
      if self.hideApplicantRating then UI:SetText(row.score,"") else UI:SetScore(row.score,UI:MemberRating(m)) end
      if self.showApplicantMapScore then
       UI:SetScore(row.mapScore,UI:GetGroup():GetApplicantMapScore(m),"map")
@@ -1024,6 +1064,8 @@ function P:WatchNotes()
  return true
 end
 function P:Enter(context)
+ local tablePrefs=UI:GetTablePrefs("createApplicants");self.applicantTable:SetState(tablePrefs)
+ state.sort=columnSorts[tablePrefs.sortKey] or "newest";state.descending=tablePrefs.descending==true
  local group=UI:GetGroup();group:Attach(self,"create");group:RefreshApplicants()
  if not self.unsub then self.unsub=group:Subscribe(function(kind)
   if kind=="listing" or kind=="permissions" then P:RefreshMode();P:RefreshApplicants() elseif kind=="applicants" or kind=="applicant" then P:RefreshApplicants() elseif kind=="roster" then P:RefreshRoster() elseif kind=="relations" then P:OnNotesChanged() elseif kind=="creationPresets" then P:RefreshFavorites() elseif kind=="activities" then if P.formFrame:IsShown() then P:RefreshPicker() else P:RefreshRosterPresentation() end end
@@ -1033,6 +1075,7 @@ function P:Enter(context)
  if context and context.applicantID then for i,id in ipairs(self.appIDs) do if id==context.applicantID then self:SetBatchOffset(self.batchTops[i],false);break end end end
 end
 function P:Leave()
+ self.applicantTable:StopDrag(true)
  self:HideCorrectionNotice()
  UI:GetGroup():SetApplicantView(self,false)
  self.favoritesExpanded=false;self:RefreshFavorites()

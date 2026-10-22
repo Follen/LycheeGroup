@@ -1,0 +1,15 @@
+{
+  "tool": "image_gen.imagegen (built-in)",
+  "transparent_background": true,
+  "source": "filter-any.png",
+  "runtime": "../../../addon/LycheeGroup_UI/Media/filter-any.tga",
+  "runtime_size": [
+    64,
+    64
+  ],
+  "display_size": [
+    18,
+    18
+  ],
+  "prompt": "Use case: logo-brand. Asset type: a single tiny UI icon for the Chinese “不限” (Any / no class or specialization restriction) filter in a dark World of Warcraft addon. Primary request: create one clean neutral-gray funnel icon, replacing a flimsy thin-line funnel. The funnel has a wide straight mouth, a balanced tapered bowl, and a short centered stem. Style: simple flat bitmap UI pictogram with a crisp substantial silhouette and a little open negative space, consistent stroke weight and lightly softened corners, readable when displayed at 18 × 18 pixels. Color: one muted light gray #B8B8B8. Composition: square canvas, icon centered, filling about 84 percent of the width and height. Actual transparent background, including the negative space. No text or Chinese characters, no label, no button background, no border box, no shadow, no glow, no gradient, no 3D, no game scene, no tiny ornamental details, no watermark. Deliver only the isolated icon."
+}

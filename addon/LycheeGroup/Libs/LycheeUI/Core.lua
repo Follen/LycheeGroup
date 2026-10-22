@@ -1,5 +1,5 @@
 local addonName, private = ...
-local REVISION=26
+local REVISION=31
 local Library=_G.LycheeUI
 private.LycheeUILoad,private.LycheeUILoadVersion=nil,nil
 if Library and Library.version and Library.version>=REVISION then private.LycheeUI=Library;return end
@@ -62,6 +62,7 @@ function Context:ClearFocus()
  for _,box in ipairs(self.inputs) do box:ClearFocus() end
 end
 function Context:Hide()
+ if self.tableHeaders then for header in pairs(self.tableHeaders) do header:StopDrag(false) end end
  self.hiding=true;self:CloseMenu();self:ReleaseNativeControls();self:ClearFocus();self.Motion:StopAll()
 end
 function Context:Resume() self.hiding=false end

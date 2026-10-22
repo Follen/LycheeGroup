@@ -3,7 +3,7 @@
 --   lua tests/runner.lua core notes (runs selected modules only)
 -- Business logic and UI controllers use offline substitutes; passing these
 -- proves nothing about in-game API permissions, rendering or event ordering.
-local ALL = { "core", "notes", "group", "transfer", "ui", "resize", "preview", "floating", "minimap", "fonts" }
+local ALL = { "core", "notes", "group", "transfer", "ui", "resize", "table_find", "table_create", "table_notes", "filters", "auto_apply", "preview", "floating", "minimap", "fonts" }
 
 local requested = {}
 local known = {}

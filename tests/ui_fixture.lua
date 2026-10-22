@@ -73,8 +73,9 @@ function G:Decline(id) local allowed,reason=self:CanManageApplicants();if not al
 G.Search={}
 function G.Search:BindInput(lease) self.inputLease=lease end
 function G.Search:ReleaseInput(lease) if self.inputLease==lease then self.inputLease=nil end end
-G.Results={}
+dofile("addon/LycheeGroup_Group/Results.lua")
 function G.Results:GetDetails(record) return record.details or {members={},counts={TANK=1,HEALER=1,DAMAGER=2},encounters={}} end
+function G.Results:GetProgressCount(record) return record.details and record.details.encounters and #record.details.encounters end
 function G.Results:InvalidateView() end
 function G.Results:BlockTitle(title,leaderKey)
  if title==nil then return false end

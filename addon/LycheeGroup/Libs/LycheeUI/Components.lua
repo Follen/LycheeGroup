@@ -764,6 +764,155 @@ function C.Columns(list,columns,titleWidth)
  end
 end
 
+-- Column geometry belongs to the header; applications own rows, data and prefs.
+function C.TableHeader(parent,definitions,options)
+ options=options or {}
+ local h=CreateFrame("Frame",nil,parent);h:SetSize(1,24);h:EnableMouse(true)
+ h.columns,h.labels,h.buttons,h.handles={},{},{},{}
+ h.state={}
+ UI.tableHeaders=UI.tableHeaders or setmetatable({},{__mode="k"});UI.tableHeaders[h]=true
+ local function Hover()
+  local inside=h.drag~=nil or h:IsMouseOver()
+  for i,handle in ipairs(h.handles) do
+   local active=h.drag and h.drag.index==i
+   local hovered=not h.drag and handle:IsMouseOver()
+   handle.line:SetShown(inside and i<#h.definitions)
+   handle.line:SetColorTexture(unpack(active and T.accent or T.dim))
+   handle.line:SetAlpha(active and 1 or hovered and .7 or .22)
+   handle.line:SetWidth((active or hovered) and 2 or 1)
+  end
+ end
+ local function Paint()
+  local x=0
+  for i,def in ipairs(h.definitions) do
+   local cell=h.columns[def.key];cell.x=x
+   local button=h.buttons[i];button:ClearAllPoints();button:SetPoint("TOPLEFT",x,0);button:SetSize(cell.width,h:GetHeight())
+   local sorted=h.state.sortKey==def.key and def.sortable
+   UI:Color(button.label,sorted and T.text or T.dim)
+   button.label:SetWidth(math.max(1,cell.width-12))
+   local handle=h.handles[i]
+   handle:ClearAllPoints();handle:SetPoint("TOPLEFT",x+cell.width-5,0);handle:SetSize(10,h:GetHeight())
+   handle:SetShown(i<#h.definitions)
+   x=x+cell.width
+  end
+  Hover()
+  if options.onLayout then options.onLayout(h) end
+ end
+ function h:SetSort(key,descending)
+  self.state.sortKey,self.state.descending=key,descending==true
+  if self.layoutWidth then Paint() end
+ end
+ function h:Layout(width)
+  if self.drag then self:StopDrag(true) end
+  self.layoutWidth=math.max(1,width);self:SetWidth(self.layoutWidth)
+  local totalWeight,minimum,defaultTotal=0,0,0
+  for _,def in ipairs(self.definitions) do defaultTotal=defaultTotal+def.width end
+  for i,def in ipairs(self.definitions) do
+   local cell=self.columns[def.key]
+   cell.weight=self.state.widths and self.state.widths[def.key] or def.width/defaultTotal
+   cell.weight=math.max(.001,tonumber(cell.weight) or def.width/defaultTotal)
+   cell.minimum=math.max(def.min or 32,self.buttons[i].label:GetUnboundedStringWidth()+12);cell.fixed=nil
+   minimum=minimum+cell.minimum;totalWeight=totalWeight+cell.weight
+  end
+  local remaining=self.layoutWidth
+  -- Tiny hosts still fit; normal host minima keep each column fully usable.
+  local minimumScale=math.min(1,self.layoutWidth/minimum)
+  for _,def in ipairs(self.definitions) do self.columns[def.key].minimum=self.columns[def.key].minimum*minimumScale end
+  for _=1,#self.definitions do
+   local clamped=false
+   for _,def in ipairs(self.definitions) do
+    local cell=self.columns[def.key]
+    if not cell.fixed and remaining*cell.weight/totalWeight<cell.minimum then
+     cell.width,cell.fixed=cell.minimum,true;remaining=remaining-cell.width;totalWeight=totalWeight-cell.weight;clamped=true
+    end
+   end
+   if not clamped then break end
+  end
+  for _,def in ipairs(self.definitions) do
+   local cell=self.columns[def.key]
+   if not cell.fixed then cell.width=remaining*cell.weight/totalWeight end
+  end
+  Paint()
+ end
+ function h:SetState(state)
+  if self.state==state then return end
+  self:StopDrag(false);self.state=state
+  if self.layoutWidth then self:Layout(self.layoutWidth) end
+ end
+ function h:ResetWidths()
+  self:StopDrag(false);self.state.widths=nil
+  if self.layoutWidth then self:Layout(self.layoutWidth) end
+ end
+ function h:StopDrag(commit)
+  if not self.drag then return end
+  self.drag=nil;self:SetScript("OnUpdate",nil)
+  if commit then
+   local widths={}
+   for _,def in ipairs(self.definitions) do widths[def.key]=self.columns[def.key].width/self.layoutWidth end
+   self.state.widths=widths
+   Hover()
+  else self:Layout(self.layoutWidth) end
+ end
+ function h:UpdateDrag()
+  local drag=self.drag
+  local released=not IsMouseButtonDown("LeftButton")
+  local left=self.columns[self.definitions[drag.index].key]
+  local right=self.columns[self.definitions[drag.index+1].key]
+  local delta=GetCursorPosition()/drag.scale-drag.startX
+  local width=math.max(left.minimum,math.min(drag.total-right.minimum,drag.width+delta))
+  if math.abs(width-left.width)>=.01 then left.width,right.width=width,drag.total-width;Paint() end
+  if released then self:StopDrag(true) end
+ end
+ function h:StartDrag(index)
+  if UI:IsHiding() then return end
+  self:StopDrag(true)
+  if options.onDragStart then options.onDragStart(self) end
+  local left=self.columns[self.definitions[index].key]
+  local right=self.columns[self.definitions[index+1].key]
+  local scale=self:GetEffectiveScale()
+  self.drag={index=index,startX=GetCursorPosition()/scale,scale=scale,width=left.width,total=left.width+right.width}
+  self:SetScript("OnUpdate",self.UpdateDrag);Hover()
+ end
+ function h:SetColumns(defs)
+  self:StopDrag(true);self.definitions=defs;wipe(self.labels)
+  for i,def in ipairs(defs) do
+   local button=self.buttons[i]
+   if not button then
+    button=CreateFrame("Button",nil,self);self.buttons[i]=button
+    button.label=C.Text(button,"",14,T.dim);C.SetLineHeight(button.label,20,true)
+    button.label:SetPoint("LEFT",6,0);button.label:SetWordWrap(false)
+    button:SetScript("OnEnter",Hover);button:SetScript("OnLeave",Hover)
+    button:SetScript("OnClick",function(b)
+     local col=b.definition
+     if not col.sortable or UI:IsHiding() then return end
+     local descending=self.state.sortKey==col.key and not self.state.descending or false
+     self:SetSort(col.key,descending)
+     if options.onSort then options.onSort(col.key,descending) end
+    end)
+    local handle=CreateFrame("Button",nil,self);self.handles[i]=handle
+    handle:SetFrameLevel(button:GetFrameLevel()+2)
+    handle.line=handle:CreateTexture(nil,"OVERLAY");handle.line:SetSize(1,10);handle.line:SetPoint("CENTER")
+    handle:SetScript("OnEnter",Hover);handle:SetScript("OnLeave",Hover)
+    handle:SetScript("OnMouseDown",function(_,mouse)
+     if UI:IsHiding() then return end
+     if mouse=="LeftButton" then self:StartDrag(i)
+     elseif mouse=="RightButton" then self:ResetWidths() end
+    end)
+    handle:SetScript("OnMouseUp",function(_,mouse) if mouse=="LeftButton" and self.drag then self:UpdateDrag();self:StopDrag(true) end end)
+   end
+   self.columns[def.key]=self.columns[def.key] or {x=0,width=def.width}
+   button.definition=def;button:Show();button.label:SetJustifyH(def.align or "LEFT");UI:SetText(button.label,def.label)
+   self.labels[def.key]=button.label
+  end
+  for i=#defs+1,#self.buttons do self.buttons[i]:Hide();self.handles[i]:Hide() end
+  if self.layoutWidth then self:Layout(self.layoutWidth) end
+ end
+ h:SetScript("OnEnter",Hover);h:SetScript("OnLeave",Hover)
+ h:SetScript("OnHide",function() h:StopDrag(false) end)
+ h:SetColumns(definitions)
+ return h
+end
+
 function C.Header(parent,label,x,y,width,align)
  local text=C.Text(parent,label,14,T.dim,width)
  C.SetLineHeight(text,20,true)

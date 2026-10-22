@@ -348,6 +348,18 @@ do
 	local ids = G.Results:GetResults()
 	T.eq(table.concat(ids, ","), "13,12,11", "默认最新在前")
 	do
+		local reads,players,searches=S.resultReads,S.playerReads,#S.searchCalls
+		G.Search:SetFilters({minItemLevel=180,maxItemLevel=180,minRating=1800,maxRating=1800})
+		T.same(G.Results:GetResults(),{12},"score and item-level ranges include both endpoints and combine")
+		G.Search:SetFilters({maxItemLevel=179})
+		T.same(G.Results:GetResults(),{13},"zero item-level requirement is a valid value below the maximum")
+		G.Search:SetFilters({maxRating=1799})
+		T.same(G.Results:GetResults(),{},"unknown leader ratings do not pass a numeric range")
+		G.Search:SetFilters({})
+		T.same(G.Results:GetResults(),{13,12,11},"clearing ranges restores all prior results")
+		T.eq(S.resultReads,reads);T.eq(S.playerReads,players);T.eq(#S.searchCalls,searches,"range filters use the retained result snapshot")
+	end
+	do
 		S.results[12].leaderOverallDungeonScore=0;G.Results:OnResultUpdated(12)
 		local reads,players,counts,searches=S.resultReads,S.playerReads,S.memberCountReads,#S.searchCalls
 		G.Search:SetFilters({category="seasonDungeon",hideZeroScore=true})
@@ -572,6 +584,12 @@ do
 	T.eq(table.concat(G.Results:GetResults(),","),"13")
 	G.Search:SetFilters({tankPresence="missing",healerPresence="present"})
 	T.eq(table.concat(G.Results:GetResults(),","),"12","缺坦克与已有治疗可组合")
+	G.Search:SetFilters({tankPresence="missing",healerPresence="missing",roleMatchAny=true})
+	T.same(G.Results:GetResults(),{13,12},"OR combines only the enabled role conditions")
+	G.Search:SetFilters({tankPresence="missing",healerPresence="missing",roleMatchAny=true,maxMembers=3})
+	T.same(G.Results:GetResults(),{13},"non-role conditions still apply to role OR matches")
+	G.Search:SetFilters({tankPresence="missing",healerPresence="missing"})
+	T.same(G.Results:GetResults(),{},"AND requires every enabled role condition")
 	G.Search:SetFilters({tankPresence="present",healerPresence="missing",damagePresence="missing"})
 	T.eq(table.concat(G.Results:GetResults(),","),"13","已有坦克、缺治疗、缺输出共同过滤")
 	G.Search:SetFilters({healerPresence="present",damagePresence="missing"})
@@ -1440,6 +1458,14 @@ G.Results:BeginSearch(900);G.Results:CommitResults(900)
 S.players[165]={{name="Cached-Away",classFilename="PRIEST",className="牧师",assignedRole="HEALER",specName="神圣",isLeader=true}}
 S.counts[165]={TANK=0,HEALER=1,DAMAGER=0};S.encounters[165]={"Boss A"}
 S.results[165].activityIDs={501};G.Results:OnResultUpdated(165)
+do
+ local record=G:GetResult(165);local players,encounters=S.playerReads,S.encounterReads or 0
+ T.eq(G.Results:GetProgressCount(record),1,"raid header sorting can read the numeric encounter count alone")
+ T.eq(G.Results:GetProgressCount(record),1)
+ T.eq(S.encounterReads,encounters+1,"reversing a progress sort reuses the same result snapshot")
+ T.eq(S.playerReads,players,"progress sorting does not expand member details")
+ T.eq(record.details,nil,"the count cache does not retain a roster")
+end
 for id=101,165 do G:GetResultDetails(id) end
 T.eq(G:GetResultCount(),65)
 T.eq(G:GetResult(101).details,nil,"old member snapshots leave the cache without dropping groups")
@@ -1473,6 +1499,7 @@ do
 	local resultEvents=notifications.result or 0;local resultsEvents=notifications.results or 0
 	S.players[165][1].specName="戒律";S.encounters[165]={"Boss A","Boss B"}
 	G.Results:OnResultUpdated(165)
+	T.eq(G.Results:GetProgressCount(G:GetResult(165)),2,"a native result event invalidates the progress sort value")
 	local changed=G:GetResultDetails(165)
 	T.eq(changed,details,"specific updates refill the cached detail container")
 	T.eq(changed.members[1].specName,"戒律","a specific update refreshes members even when their count is unchanged")
@@ -1480,8 +1507,10 @@ do
 	T.eq(notifications.result,resultEvents+1);T.eq(notifications.results or 0,resultsEvents,"one result update publishes only one refresh notification")
 	S.encounters[165]=nil;G.Results:OnResultUpdated(165)
 	T.eq(G:GetResultDetails(165).encounters,nil,"unavailable native progress stays unknown after a previously known snapshot")
+	T.eq(G.Results:GetProgressCount(G:GetResult(165)),nil,"missing progress stays unknown for numeric sorting")
 	S.encounters[165]={};G.Results:OnResultUpdated(165)
 	T.same(G:GetResultDetails(165).encounters,{},"an explicit empty progress array remains a known zero-boss result")
+	T.eq(G.Results:GetProgressCount(G:GetResult(165)),0,"zero completed bosses remains a real sort value")
 	S.encounters[165]={"Boss A","Boss B"};G.Results:OnResultUpdated(165)
 	T.same(G:GetResultDetails(165).encounters,{"Boss A","Boss B"},"progress recovers through the same cached detail container")
 	S.results[164].numMembers=2;S.now=S.now+.02;G.Results:CommitResults(900)
@@ -3085,6 +3114,38 @@ do
  GetNumClasses,GetClassInfo,GetSpecializationInfoForClassID=getNum,getClass,getClassSpec
  C_SpecializationInfo.GetSpecialization,C_SpecializationInfo.GetSpecializationInfo=getSelected,getInfo
  C_SpecializationInfo.GetNumSpecializationsForClassID=getClassCount
+end
+
+-- Same-class exclusion includes every role and reuses answers until a roster changes.
+do
+ local unitClass,oldIDs=UnitClass,S.resultIDs
+ UnitClass=function() return "Death Knight","DEATHKNIGHT",6 end
+ S.resultIDs={94101,94102,94103,94104}
+ for index,id in ipairs(S.resultIDs) do
+  S.results[id]={activityIDs={502},name="Class group "..index,numMembers=index==1 and 2 or 1,age=index}
+ end
+ S.players[94101]={{classFilename="MAGE",assignedRole="DAMAGER"},{classFilename="DEATHKNIGHT",assignedRole="TANK"}}
+ S.players[94102]={{classFilename="DEATHKNIGHT",assignedRole="DAMAGER"}}
+ S.players[94103]={{classFilename="MAGE",assignedRole="HEALER"}}
+ S.players[94104]={{assignedRole="DAMAGER"}}
+ G.Results:BeginSearch(941);G.Results:CommitResults(941)
+ local reads,searches=S.playerReads,#S.searchCalls
+ G.Search:SetFilters({hideSameClass=true,minMembers=3})
+ T.same(G:GetResults(),{});T.eq(S.playerReads,reads,"cheap conditions reject records before native class reads")
+ G:GetResultDetails(94103);reads=S.playerReads
+ G.Search:SetFilters({hideSameClass=true})
+ T.same(G:GetResults(),{94103,94104},"any matching member class excludes a group; an unknown class stays available")
+ T.eq(S.playerReads,reads+4,"clean display details avoid another native roster read")
+ T.eq(G:GetResult(94101).details,nil,"class filtering does not populate full display details")
+ reads=S.playerReads
+ G.Search:SetFilters({hideSameClass=true,sort="members"});G:GetResults()
+ T.eq(S.playerReads,reads,"warm sorting reuses positive and negative class answers")
+ S.players[94101][2].classFilename="PRIEST";G.Results:OnResultUpdated(94101)
+ T.same(G:GetResults(),{94101,94103,94104},"a same-count roster update invalidates the cached class answer")
+ T.eq(S.playerReads,reads+2,"only the updated roster is reread")
+ G.Search:SetFilters({});T.same(G:GetResults(),{94101,94102,94103,94104})
+ T.eq(#S.searchCalls,searches,"class filtering does not submit another server search")
+ UnitClass,S.resultIDs=unitClass,oldIDs
 end
 
 -- Declines follow a native party across search IDs, title tickets and roster changes.

@@ -123,6 +123,7 @@ function N:CreateFontString(name,layer) local n=S.New("FontString",name,self);n.
 function N:SetBackdropColor(...) self.backdropColor={...} end
 for _,k in ipairs({"SetMovable","RegisterForDrag","StartMoving","StopMovingOrSizing","SetMaxLetters","SetMultiLine","SetAutoFocus","SetBackdrop","SetBackdropBorderColor","SetCursorPosition","HighlightText","SetNumeric","RegisterForClicks","EnableMouseWheel","SetOrientation","SetValueStep","SetObeyStepOnDrag","SetThumbTexture","SetClampedToScreen"}) do N[k]=function() end end
 function N:SetShadowOffset(x,y) self.shadowOffset={x,y} end
+function N:SetClampedToScreen(value) self.clamped=value end
 function N:SetTextInsets(...) self.textInsets={...} end
 function N:GetTextInsets() return unpack(self.textInsets or {0,0,0,0}) end
 

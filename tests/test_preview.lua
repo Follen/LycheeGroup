@@ -22,6 +22,10 @@ for _,key in ipairs({"Search","ApplyToGroup","CreateListing","UpdateListing","Re
 for _,key in ipairs({"Publish","Update","RemoveListing","Invite","Decline","Cancel"}) do Trap(G,key) end
 Trap(G.Search,"Search");Trap(_G,"SetLFGRoles")
 local function Click(button) button:Fire("OnMouseDown");button:Fire("OnClick","LeftButton") end
+local function Segment(choice,value)
+ for _,button in ipairs(choice.buttons) do if button.value==value then Click(button);return end end
+ error("missing segment "..tostring(value))
+end
 local combat=InCombatLockdown;_G.InCombatLockdown=function() return true end
 T.eq(A:Preview("applications"),true,"preview has no blanket combat gate")
 _G.InCombatLockdown=combat;U.pages.find.main:Fire("OnEvent","PLAYER_REGEN_ENABLED")
@@ -32,6 +36,8 @@ T.ok(preview.prefs~=A.charPrefs,"preview owns a separate character-preference ta
 T.eq(preview.applicationPrefs.roles,nil,"preview does not inherit the real character's application configuration")
 T.eq(U.page,"find");T.eq(U.previewExit:IsShown(),true)
 local find=U.pages.find
+T.eq(find.quickFilters:IsShown(),false);T.eq(find.quickFilterHeight,0)
+T.near(find.search:GetWidth(),find.main:GetWidth()-60,.001,"preview also keeps the search row clear")
 T.eq(find.search.box,find.previewSearchBox,"preview keeps its own ordinary search input")
 T.eq(U.Native.searchLease,nil);T.eq(nativeSearch:GetParent(),LFGListFrame.SearchPanel)
 find.search.box:SetText("Preview group 2");T.eq(preview.filters.text,"Preview group 2","preview group mode uses simulated title filtering")
@@ -58,7 +64,7 @@ find.search.box:SetText("");T.eq(nativeSearch:GetText(),"Real native range 12-15
 preview.records[preview.recordIDs[5]].numMembers=3;preview.records[preview.recordIDs[6]].numMembers=4
 find.fMembers.box:SetText("3");find.fMinMembers.box:SetText("3")
 T.same(preview:GetResults(),{preview.recordIDs[5]},"preview applies inclusive minimum and maximum independently")
-find.fMinMembers.box:SetText("4");T.eq(preview.filters.maxMembers,3);T.eq(#preview:GetResults(),0,"a contradictory range honestly has no results")
+find.fMinMembers.box:SetText("4");T.eq(preview.filters.minMembers,3);T.eq(preview.filters.maxMembers,3);T.same(preview:GetResults(),{preview.recordIDs[5]},"an inverted member draft preserves the last valid preview range")
 find:ClearFilters();T.eq(preview.filters.minMembers,nil);T.eq(preview.filters.maxMembers,nil)
 do
  local zero,unknown=preview.records[preview.recordIDs[4]],preview.records[preview.recordIDs[5]]
@@ -186,10 +192,16 @@ end
 local previewCounts=captainRecord.details.counts
 local savedTank,savedHealer,savedDamage=previewCounts.TANK,previewCounts.HEALER,previewCounts.DAMAGER
 previewCounts.TANK,previewCounts.HEALER,previewCounts.DAMAGER=0,1,2
-Click(find.rolePresenceChoices.TANK.buttons[3])
-Click(find.rolePresenceChoices.HEALER.buttons[2])
-Click(find.rolePresenceChoices.DAMAGER.buttons[3])
+T.eq(find.filterStatus:GetText(),"0 项条件 · 待搜索","unselected sample activities retain the no-search footer state")
+find:CommitChoice()
+find:SetFiltersOpen(true);T.ok(find.importantFilters:IsShown());T.eq(find.filterPanel:GetWidth(),592)
+Segment(find.presenceChoices.tankPresence,"missing")
+Segment(find.presenceChoices.healerPresence,"present")
+Segment(find.presenceChoices.damagePresence,"missing")
 T.same(preview:GetResults(),{captainRecord.id},"preview combines missing tank, present healer and missing damage")
+T.eq(find.filteredResultCount,1);T.eq(find.filterStatus:GetText(),"3 项条件 · 1 支队伍","sample choices immediately refresh both footer counts")
+T.eq(A.charPrefs.find and A.charPrefs.find.categoryPrefs and A.charPrefs.find.categoryPrefs.seasonDungeon and A.charPrefs.find.categoryPrefs.seasonDungeon.tankPresence,nil,"popup sample choices never change the real role preferences")
+Click(find.filterDone);T.ok(not find.filtersOpen);T.eq(preview.filters.healerPresence,"present","preview Done preserves direct role choices")
 previewCounts.TANK,previewCounts.HEALER,previewCounts.DAMAGER=savedTank,savedHealer,savedDamage
 find:ClearFilters()
 T.eq(#find.appList.ids,3,"samples bind the production pinned-application list")
@@ -212,8 +224,10 @@ T.eq(U.activeModal,nil)
 T.eq(U.Application:IsAutoApplyEnabled(),false,"a temporary preview application leaves automation off")
 T.same(preview.prefs.applicationRoles,{TANK=true,HEALER=false,DAMAGER=true},"manual preview confirmation saves only to the sample provider")
 T.same(A.charPrefs,savedPrefs,"preview role and filter edits do not alter the real character's preferences")
-Click(find.autoApply);T.eq(find.autoApply.value,false)
-Click(U.Application.applicationModal.submit);T.eq(U.Application:IsAutoApplyEnabled(),true)
+Click(find.autoApply);T.eq(find.autoApply.value,true,"valid sample roles enable directly")
+T.eq(U.activeModal,nil,"valid preview roles do not open redundant configuration")
+T.eq(U.Application:IsAutoApplyEnabled(),true);T.eq(preview.prefs.autoApply,true)
+T.same(A.charPrefs,savedPrefs,"preview activation never saves the real character's switch")
 local nextResult=preview:GetResults()[1];find:Apply(nextResult)
 T.eq(U.activeModal,nil,"preview has the same configured quick-apply path")
 T.eq(preview:GetApplication(nextResult).comment,"Preview note")

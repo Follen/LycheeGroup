@@ -7,8 +7,9 @@ local MEDIA="Interface\\AddOns\\LycheeGroup_UI\\Media\\resize-grip-lines-"
 function UI:GetWindowMinimum()
  local large=math.max(0,self.context.fontScale-1)
  local page=self.page and self.pages[self.page]
+ local pageWidth=page and page.frame and page.GetMinimumWidth and page:GetMinimumWidth() or 0
  local pageHeight=page and page.frame and page.GetMinimumHeight and page:GetMinimumHeight() or 0
- return 1200+math.floor(large*220+.5),math.max(760+math.floor(large*240+.5),pageHeight)
+ return math.max(1200+math.floor(large*220+.5),pageWidth),math.max(760+math.floor(large*240+.5),pageHeight)
 end
 
 function UI:LoadWindowSize()
@@ -34,9 +35,7 @@ end
 function UI:SetWindowSize(width,height)
  local minWidth,minHeight=self:GetWindowMinimum()
  local scale=self.frame:GetScale()
- local filters=self.pages.find.filterPanel
- local filterWidth=filters and filters:IsShown() and filters:GetWidth()+12 or 0
- local maxWidth=math.max(minWidth,(UIParent:GetWidth()-40)/scale-filterWidth)
+ local maxWidth=math.max(minWidth,(UIParent:GetWidth()-40)/scale)
  local maxHeight=math.max(minHeight,(UIParent:GetHeight()-40)/scale)
  width=math.max(minWidth,math.min(maxWidth,width))
  height=math.max(minHeight,math.min(maxHeight,height))
@@ -55,6 +54,7 @@ end
 
 function UI:RefreshResizeState()
  local handle=self.resizeHandle
+ handle.icon:SetAlpha((self.resizing or handle.inside) and 1 or 0)
  local state=self.resizing and "pressed" or handle.inside and "hover" or "normal"
  if state~=handle.state then handle.state=state;handle.icon:SetTexture(MEDIA..state..".tga") end
 end
@@ -89,11 +89,9 @@ function UI:BeginWindowResize()
  local left,top=frame:GetLeft()*scale,frame:GetTop()*scale
  local parentScale=UIParent:GetEffectiveScale()
  local minWidth,minHeight=self:GetWindowMinimum()
- local filters=self.pages.find.filterPanel
- local filterWidth=filters and filters:IsShown() and filters:GetWidth()+12 or 0
  local x,y=GetCursorPosition()
  self.resizing={cursorX=x,cursorY=y,width=self.windowWidth,height=self.windowHeight,scale=scale,
-  maxWidth=math.max(minWidth,(UIParent:GetWidth()*parentScale-20*parentScale-left)/scale-filterWidth),
+  maxWidth=math.max(minWidth,(UIParent:GetWidth()*parentScale-20*parentScale-left)/scale),
   maxHeight=math.max(minHeight,(top-20*parentScale)/scale)}
  frame:ClearAllPoints();frame:SetPoint("TOPLEFT",UIParent,"BOTTOMLEFT",left/scale,top/scale)
  M:CapturePosition()

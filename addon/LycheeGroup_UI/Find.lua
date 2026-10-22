@@ -40,6 +40,22 @@ local RESULT_COLUMNS={
  description={x=741,width=BODY-765-AGE_WIDTH},age={x=BODY-12-AGE_WIDTH,width=AGE_WIDTH},
 }
 local APPLICATION_COLUMNS={title={x=36,width=APP_BODY-591},leader={x=APP_BODY-522,width=120}}
+local resultDefinitions={
+ {key="title",label=Say("队伍","Group"),width=286,min=176},
+ {key="leader",label=Say("队长","Leader"),width=133,min=98},
+ {key="members",label=Say("成员","Members"),width=154,min=154,align="CENTER",sortable=true},
+ {key="ilvl",label=Say("装等","iLvl"),width=68,min=60,align="CENTER",sortable=true},
+ {key="rating",label=Say("评分","Score"),width=92,min=80,align="CENTER",sortable=true},
+ {key="description",label=Say("描述","Description"),width=140,min=70},
+ {key="age",label=Say("发布","Posted"),width=AGE_WIDTH+20,min=88,align="RIGHT",sortable=true},
+}
+local applicationDefinitions={
+ {key="title",label=Say("队伍","Group"),width=APP_BODY-542,min=180},
+ {key="leader",label=Say("队长","Leader"),width=148,min=102},
+ {key="members",label=Say("成员","Members"),width=154,min=138,align="CENTER",sortable=true},
+ {key="status",label=Say("状态 / 剩余","Status / time"),width=136,min=116,align="CENTER",sortable=true},
+ {key="actions",label=Say("操作","Actions"),width=104,min=100,align="CENTER"},
+}
 local state={category="seasonDungeon",searchMode="group",apps={},appIDs={},categoryPrefs={},filters={sort="newest"}}
 local function Category() return UI:GetGroup().Catalog:GetCategory(state.category) end
 local function AllActivitiesLabel(cat)
@@ -80,26 +96,42 @@ local function RosterColumns(roster)
   item.text:SetWidth(20);item.text:SetJustifyH("LEFT");item.text:ClearAllPoints();item.text:SetPoint("LEFT",(i-1)*46+20,0)
  end
 end
+local function MemberIconScale() return A.db.memberIconScale/100 end
+local function ResultMemberWidth()
+ -- Include the one-unit role-badge overhang on either side of the roster.
+ return math.max(138,math.ceil(100*1.2*1.15*MemberIconScale()))
+end
 local function LayoutMembers(row)
  -- Fixed raid columns keep one- and two-digit counts aligned across rows.
  row.roster:SetWidth(row.isParty and row.partyWidth or 132)
- row.roster:SetScale(row.isParty and row.partyScale or 1)
+ local scale=row.partyScale*(row.membersCompact and 1 or MemberIconScale())
+ row.roster:SetScale(row.isParty and scale or 1)
+ if not row.membersCompact then for _,slot in ipairs(row.roster.slots) do UI:UpdateMemberIconStyle(slot.icon,row.isParty and slot.icon:IsShown()) end end
  row.roster:ClearAllPoints()
  local x=row.membersX
  if row.isParty then
-  row.membersButton:SetWidth(138);row.roster:SetPoint("CENTER")
+  row.membersButton:SetSize(row.membersCompact and 138 or ResultMemberWidth(),math.max(row.membersCompact and 18 or 24,math.ceil(18*scale)));row.roster:SetPoint("CENTER")
  else
   -- Keep the columns in place while the hover/click area fits the visible count.
   x=x-3
+  row.membersButton:SetHeight(row.membersCompact and 18 or 24)
   row.membersButton:SetWidth(112+row.roster.counts[3].text:GetStringWidth()+12)
   row.roster:SetPoint("LEFT",6,0)
  end
  local extra=math.max(0,row.count:GetHeight()-row.memberCountLine)/2
- row.membersButton:ClearAllPoints();row.membersButton:SetPoint("LEFT",x,row.membersExpanded and row.membersExpandedY+extra or 0)
+ if row.membersWidth then x=row.membersX+(row.membersWidth-(row.isParty and row.membersButton:GetWidth() or 138))/2-(row.isParty and 0 or 3) end
+ local y=row.membersExpanded and row.membersExpandedY+extra or 0
+ if row.isParty and not row.membersCompact and A.db.memberLeaderMark then
+  local crownHeight=math.min(14*scale,19)
+  y=-math.max(0,10*scale+crownHeight+1-row:GetHeight()/2+2)
+ end
+ row.membersButton:ClearAllPoints();row.membersButton:SetPoint("LEFT",x,y)
+ row.count:SetWidth(row.membersWidth or 138)
  row.count:SetPoint("LEFT",row.membersX,row.memberCountY-extra)
  row.count:SetShown(not row.isParty and row.membersExpanded==true)
 end
 local function BuildMembers(row,x,compact)
+ row.membersCompact=compact
  row.membersX=x;row.membersExpandedY=compact and 9 or 11
  row.memberCountY=compact and -9 or -13;row.memberCountLine=(compact and 14 or 20)+T.lineHeightDelta
  local partyGap=compact and 5 or 2
@@ -111,6 +143,7 @@ local function BuildMembers(row,x,compact)
  end)
  row.membersButton:SetStyle({height=compact and 18 or 24,radius=6})
  row.roster=C.Roster(row.membersButton,18,partyGap);row.roster:SetSize(132,compact and 18 or 20);row.roster:SetPoint("CENTER");RosterColumns(row.roster)
+ if not compact then for _,slot in ipairs(row.roster.slots) do slot.icon.memberStyle=true end end
  if compact then for _,item in ipairs(row.roster.counts) do C.SetFont(item.text,12);C.SetLineHeight(item.text,14,true) end end
  row.count=C.Text(row,"",compact and 12 or 14,T.muted,138);C.SetLineHeight(row.count,compact and 14 or 20,true);row.count:SetPoint("LEFT",x,compact and -9 or -13);row.count:SetJustifyH("CENTER");row.count:SetWordWrap(false)
  LayoutMembers(row)
@@ -121,12 +154,49 @@ local function UpdateMembers(row,id,record,details)
  if row.isParty then row.membersExpanded=nil end
  row.membersButton:EnableMouse(not row.isParty)
  local counts=details and details.counts
+ if not row.membersCompact then for _,slot in ipairs(row.roster.slots) do
+  slot.icon.memberClass=nil;slot.icon.memberIsLeader=false;slot.icon.memberLeaderKey=record and record.leaderKey
+ end end
  row.roster:Update(details and details.members,counts,record and record.maxNumPlayers,true)
  UI:SetText(row.count,record and not row.isParty and UI:MemberCountText(record) or "")
  LayoutMembers(row)
 end
 local function DeclinedAt(record)
  return record and record.partyGUID and UI:GetGroup().Applications:GetDeclinedAt(record.partyGUID)
+end
+function P:SortResultIDs(ids)
+ local prefs=self.resultsHeader.state;local key=prefs.sortKey
+ if not key then return ids end
+ self.sortedResults=self.sortedResults or {};self.sortValues=self.sortValues or {}
+ local sorted,values=self.sortedResults,self.sortValues;wipe(sorted);wipe(values)
+ local group=UI:GetGroup()
+ for i,id in ipairs(ids) do
+  local r=group:GetResult(id);local value
+  if key=="members" then value=r.numMembers
+  elseif key=="ilvl" then value=r.requiredItemLevel
+  elseif key=="age" then value=r.age
+  elseif key=="rating" then
+   if self.raidResultColumns then value=group.Results:GetProgressCount(r) else value=r.leaderRating end
+  end
+  sorted[i]=id;values[id]=value
+ end
+ table.sort(sorted,function(a,b)
+  local ad,bd=DeclinedAt(group:GetResult(a))~=nil,DeclinedAt(group:GetResult(b))~=nil
+  if ad~=bd then return not ad end
+  local av,bv=values[a],values[b]
+  if av~=bv then
+   if av==nil then return false elseif bv==nil then return true end
+   if prefs.descending then return av>bv else return av<bv end
+  end
+  return a<b
+ end)
+ return sorted
+end
+function P:OnHeaderSort(key,descending)
+ local values={members="members",ilvl="itemLevel",rating="rating",age="newest"}
+ state.filters.sort=values[key]
+ self.sortChoice:SetValue(values[key],self.resultsHeader.labels[key]:GetText())
+ self:RefreshResults()
 end
 local EnsureDeclineClock
 local function UpdateDeclineLabel(row,record,now)
@@ -266,20 +336,22 @@ function P:Build(parent)
  self.search:SetScript("OnMouseDown",function(_,button) if button=="LeftButton" and P:EnsureSearchInput() then P.search.box:SetFocus() end end)
   self.previewSearchBox=self.search.box
  self.search.box:ClearAllPoints();self.search.box:SetPoint("TOPLEFT",52,-4);self.search.box:SetPoint("BOTTOMRIGHT",-SEARCH_RIGHT,4)
- C.Glyph(self.search,"search",22):SetPoint("LEFT",18,0)
-  self.searchHint=C.Text(self.search,SEARCH_HINT,14,T.dim,MAIN-350);self.searchHint:SetPoint("LEFT",52,0)
+ C.Glyph(self.search,"search",22):SetPoint("LEFT",self.search,"TOPLEFT",18,-24)
+  self.searchHint=C.Text(self.search,SEARCH_HINT,14,T.dim,MAIN-350);self.searchHint:SetPoint("LEFT",self.search,"TOPLEFT",52,-24)
+  self.searchHint:SetWordWrap(false)
   self.search.box:SetScript("OnTextChanged",function(box) self:OnSearchTextChanged(box,true) end)
  self.search.box:SetScript("OnEnterPressed",function(box) box:ClearFocus();self:DoSearch() end)
- self.filterToggle=C.Button(self.search,Say("筛选","Filters"),FILTER_BUTTON_WIDTH,function() P:SetFiltersOpen(not P.filtersOpen) end);self.filterToggle:SetHeight(36);self.filterToggle:SetTextColors(T.muted,T.text,T.onSecondaryContainer);self.filterToggle:SetPoint("RIGHT",-6,0)
+ self.filterToggle=C.Button(self.search,Say("筛选","Filters"),FILTER_BUTTON_WIDTH,function() P:SetFiltersOpen(not P.filtersOpen) end);self.filterToggle:SetHeight(36);self.filterToggle:SetTextColors(T.muted,T.text,T.onSecondaryContainer);self.filterToggle:SetPoint("RIGHT",self.search,"TOPRIGHT",-6,-24)
  self.filterToggle.label:ClearAllPoints();self.filterToggle.label:SetPoint("LEFT",12,0)
  self.filterToggle.label:SetWidth(FILTER_BUTTON_WIDTH-42);self.filterToggle.label:SetJustifyH("LEFT");self.filterToggle.label:SetWordWrap(false)
  self.filterChevron=C.Icon(self.filterToggle,12);self.filterChevron:SetTexture(T.media.."chevron.tga");self.filterChevron:SetPoint("RIGHT",-10,0)
  self.searchModeToggle=C.Button(self.search,"",82,function() P:SetSearchMode(state.searchMode=="group" and "leader" or "group") end);self.searchModeToggle:SetHeight(32);self.searchModeToggle:SetTextColors(T.muted,T.text,T.onSecondaryContainer);self.searchModeToggle:SetPoint("RIGHT",self.filterToggle,"LEFT",-6,0)
+ UI.Tooltip:BindText(self.searchModeToggle,Say("按队伍标题搜索/按队长名字搜索","Search by: group title/leader name"))
  self.searchClear=C.Button(self.search,"",28,function() P:ClearSearch() end);self.searchClear:SetSize(28,28);self.searchClear:SetPoint("RIGHT",self.searchModeToggle,"LEFT",-6,0);C.Glyph(self.searchClear,"close",14):SetPoint("CENTER");self.searchClear:Hide()
  self.search.box:ClearAllPoints();self.search.box:SetPoint("TOPLEFT",52,-4);self.search.box:SetPoint("BOTTOMRIGHT",self.searchModeToggle,"LEFT",-40,4)
  self.applicationPanel=CreateFrame("Frame",nil,main);self.applicationPanel:SetPoint("TOPLEFT",0,-68);self.applicationPanel:SetWidth(MAIN);self.applicationPanel.fill=C.Panel(self.applicationPanel,T.panel,20)
  self.appsTitle=C.Text(self.applicationPanel,L.applications,14,T.text);C.SetLineHeight(self.appsTitle,20,true);self.appsTitle:SetPoint("LEFT",self.applicationPanel,"TOPLEFT",16,-22)
- self.appsBadge=CreateFrame("Frame",nil,self.applicationPanel);self.appsBadge:SetSize(48,24);self.appsBadge:SetPoint("LEFT",self.appsTitle,"RIGHT",10,0);C.Panel(self.appsBadge,T.selected,12)
+ self.appsBadge=CreateFrame("Frame",nil,self.applicationPanel);self.appsBadge:SetSize(48,24);self.appsBadge:SetPoint("LEFT",self.appsTitle,"RIGHT",10,0)
  self.appsCount=C.Text(self.appsBadge,"0",14,T.text);C.SetLineHeight(self.appsCount,20,true);self.appsCount:SetPoint("CENTER")
  self.appsEmpty=C.Text(self.applicationPanel,Say("本分类暂无申请","No applications in this category"),14,T.dim);self.appsEmpty:SetPoint("LEFT",self.appsBadge,"RIGHT",12,0)
  self.scopeToggle=C.Button(self.applicationPanel,Say("全部申请","All applications"),112,function()
@@ -287,6 +359,9 @@ function P:Build(parent)
   if not state.showGlobal then P:DismissApplicationNotice() end
   P:RefreshApplications()
  end,{height=32,radius=16});self.scopeToggle:SetPoint("LEFT",self.appsBadge,"RIGHT",10,0)
+ C.SetFont(self.scopeToggle.label,14);C.SetLineHeight(self.scopeToggle.label,20,true)
+ UI.Tooltip:BindText(self.scopeToggle,Say("点击切换本分类／全部申请","Click to switch category / all applications."))
+ self.applicationInfoMeasure=C.Text(self.applicationPanel,"",14);self.applicationInfoMeasure:Hide()
  self.autoJoin=C.Check(self.applicationPanel,Say("自动进组","Auto join"),function(value) UI:SetGroupSetting("autoJoin",value) end);C.SetFont(self.autoJoin.label,14);C.SetLineHeight(self.autoJoin.label,20,true);self.autoJoin:SetSize(54+FitText(self.autoJoin.label),26);self.autoJoin:SetPoint("RIGHT",self.applicationPanel,"TOPRIGHT",-16,-22);self.autoJoin.track:ClearAllPoints();self.autoJoin.track:SetPoint("RIGHT",0,0);self.autoJoin.label:ClearAllPoints();self.autoJoin.label:SetPoint("RIGHT",self.autoJoin.track,"LEFT",-10,0)
  self.autoApply=C.Check(self.applicationPanel,"",function(value)
   local ok,err=UI.Application:SetAutoApply(value);if not ok then P:SetStatus(err or L.failed) end
@@ -316,7 +391,7 @@ function P:Build(parent)
   ResultTooltipArea(row,self.appList)
   row.title:ClearAllPoints();row.title:SetPoint("LEFT",APPLICATION_COLUMNS.title.x,0);row.title:SetWidth(APPLICATION_COLUMNS.title.width);C.SetFont(row.title,15);C.SetLineHeight(row.title,20,true);row.meta:Hide()
   row.icon=C.Icon(row,24);row.icon:SetPoint("LEFT",0,0)
-  row.leaderIcon=C.Icon(row,12);row.leaderIcon:SetTexture(T.media.."leader.tga");row.leaderIcon:SetPoint("LEFT",APPLICATION_COLUMNS.leader.x-17,0)
+  row.leaderIcon=C.Icon(row,12);row.leaderIcon:Hide()
   row.leader=C.Text(row,"",14,T.muted,APPLICATION_COLUMNS.leader.width);row.leader:SetPoint("LEFT",APPLICATION_COLUMNS.leader.x,0);C.SetLineHeight(row.leader,20,true);row.leader:SetWordWrap(false)
   BuildMembers(row,APP_BODY-386,true)
   row.status=C.Text(row,"",14,T.dim,112);row.status:SetPoint("LEFT",APP_BODY-224,0);C.SetLineHeight(row.status,20,true);row.status:SetJustifyH("CENTER")
@@ -330,12 +405,17 @@ function P:Build(parent)
  end
  self.context=C.Text(main,"",20,T.text,MAIN-180)
  self.resultCount=C.Text(main,"",14,T.dim,132);C.SetLineHeight(self.context,28,true);C.SetLineHeight(self.resultCount,20,true);self.resultCount:SetJustifyH("LEFT")
- self.resultsHeader=CreateFrame("Frame",nil,main);self.resultsHeader:SetSize(BODY,24);self.resultHeadings={}
- for _,entry in ipairs({{"title",Say("队伍","Group")},{"leader",Say("队长","Leader")},{"members",Say("成员","Members")},{"ilvl",Say("装等","iLvl")},{"rating",Say("评分","Score")},{"description",Say("描述","Description")},{"age",Say("发布","Posted")}}) do
-  local key,label=entry[1],entry[2];local column=RESULT_COLUMNS[key]
-  local text=C.Text(self.resultsHeader,label,14,T.dim,column.width);C.SetLineHeight(text,20,true);text:SetPoint("TOPLEFT",key=="title" and 12 or column.x,0);text:SetWordWrap(false)
-  text:SetJustifyH((key=="title" or key=="description" or key=="leader") and "LEFT" or key=="age" and "RIGHT" or "CENTER");self.resultHeadings[key]=text
- end
+ self.resultsHeader=C.TableHeader(main,resultDefinitions,{
+  onLayout=function() if P.results then P:ApplyResultColumns() end end,
+  onSort=function(key,descending) P:OnHeaderSort(key,descending) end,
+ })
+ self.resultHeadings=self.resultsHeader.labels
+ self.applicationHeader=C.TableHeader(self.applicationPanel,applicationDefinitions,{
+  onLayout=function() P:LayoutApplicationColumns() end,
+  onSort=function() P:RefreshApplications() end,
+ })
+ self.applicationHeader:SetPoint("TOPLEFT",16,-40)
+ self.appList:SetPoint("TOPLEFT",16,-68)
  self.results=C.List(main,MAIN,HEIGHT-180,RESULT_ROW_HEIGHT,function(id,button,row) P:OnResultSelect(id,button,row) end)
  self.results:SetGutter(LIST_GUTTER);self.results.tooltipFraction=.25
  self.results:SetRowInitializer(function(row)
@@ -347,7 +427,7 @@ function P:Build(parent)
   row.marks=UI.Members:CreateMarks(row);row.marks:SetPoint("LEFT",row.meta,"RIGHT",6,0)
   row:HookScript("OnHide",function(self) UI.Members:ClearMarks(self.marks) end)
   row.description=C.Text(row,"",14,T.muted,RESULT_COLUMNS.description.width,20);row.description:SetPoint("LEFT",RESULT_COLUMNS.description.x,0);row.description:SetHeight(48);row.description:SetMaxLines(2);row.description:SetWordWrap(true);row.description:SetJustifyV("MIDDLE")
-  row.leaderIcon=C.Icon(row,12);row.leaderIcon:SetTexture(T.media.."leader.tga");row.leaderIcon:SetPoint("LEFT",RESULT_COLUMNS.leader.x-17,0)
+  row.leaderIcon=C.Icon(row,12);row.leaderIcon:Hide()
   row.leader=C.Text(row,"",14,T.muted,RESULT_COLUMNS.leader.width);row.leader:SetPoint("LEFT",RESULT_COLUMNS.leader.x,0);C.SetLineHeight(row.leader,20,true);row.leader:SetWordWrap(false)
   row.icon=C.Icon(row,36);row.icon:SetPoint("LEFT",12,0)
   row.score=C.Text(row,"",14,T.text,RESULT_COLUMNS.rating.width);C.SetLineHeight(row.score,20,true);row.score:SetPoint("LEFT",RESULT_COLUMNS.rating.x,0);row.score:SetJustifyH("CENTER");row.score:SetWordWrap(false)
@@ -358,6 +438,8 @@ function P:Build(parent)
   row.meta:SetPoint("TOPLEFT",RESULT_COLUMNS.title.x,-metaTop)
   row.declined:SetPoint("TOPLEFT",RESULT_COLUMNS.title.x,-metaTop-row.meta:GetHeight()-4)
   row.description:SetHeight(math.max(48,row.meta:GetHeight()*2));LayoutMembers(row)
+  row.membersWidth=RESULT_COLUMNS.members.width;LayoutMembers(row)
+  row.tooltipArea:SetWidth(self.resultsHeader.columns.title.width)
   row:SetScript("OnDoubleClick",function(b,button) if button=="LeftButton" and b.key then P:Apply(b.key) end end)
  end)
  local refreshResultsList=self.results.Refresh
@@ -383,40 +465,68 @@ function P:Build(parent)
  if InCombatLockdown() then
   main:RegisterEvent("PLAYER_REGEN_ENABLED");main:SetScript("OnEvent",EnableShortcuts)
  else EnableShortcuts() end
- self:BuildFilters()
- for _,label in ipairs({self.membersLabel,self.maxMembersLabel,self.roleLabel,self.socialLabel,self.sortLabel}) do C.SetLineHeight(label,20,true) end
+ self:BuildFilters();self:BuildQuickFilters()
+ for _,label in ipairs({self.ratingLabel,self.ilvlLabel,self.membersLabel,self.roleLabel,self.socialLabel,self.sortLabel}) do C.SetLineHeight(label,20,true) end
  self:BuildSidebarToggle()
  self:LayoutListRows()
 end
-function P:LayoutResultColumns()
- local raid=self.raidResultColumns
- local descriptionX=raid and RESULT_COLUMNS.rating.x or RESULT_COLUMNS.description.x
- local ratingX=raid and RESULT_COLUMNS.description.x+RESULT_COLUMNS.description.width-RESULT_COLUMNS.rating.width or RESULT_COLUMNS.rating.x
- for key,label in pairs(self.resultHeadings) do
+function P:ApplyResultColumns()
+ local titleLabel=self.resultsHeader.labels.title
+ titleLabel:ClearAllPoints();titleLabel:SetPoint("LEFT",12,0);titleLabel:SetWidth(self.resultsHeader.columns.title.width-18)
+ for key,cell in pairs(self.resultsHeader.columns) do
   local column=RESULT_COLUMNS[key]
-  label:SetWidth(column.width);label:SetPoint("TOPLEFT",key=="title" and 12 or column.x,0)
+  local inset=key=="title" and 60 or 8
+  column.x=cell.x+inset;column.width=cell.width-inset-(key=="title" and 16 or key=="age" and 12 or 8)
  end
- self.resultHeadings.description:SetPoint("TOPLEFT",descriptionX,0);self.resultHeadings.rating:SetPoint("TOPLEFT",ratingX,0)
- self.resultHeadings.age:SetPoint("TOPLEFT",RESULT_COLUMNS.age.x,0)
  for _,row in ipairs(self.results.rows) do
   row.title:SetWidth(RESULT_COLUMNS.title.width);LayoutResultActivity(row)
-  row.leaderIcon:SetPoint("LEFT",RESULT_COLUMNS.leader.x-17,0);row.leader:SetPoint("LEFT",RESULT_COLUMNS.leader.x,0)
+  row.title:SetPoint("TOPLEFT",RESULT_COLUMNS.title.x,-10)
+  row.leader:SetPoint("LEFT",RESULT_COLUMNS.leader.x,0);row.leader:SetWidth(RESULT_COLUMNS.leader.width)
   row.declined:SetWidth(RESULT_COLUMNS.leader.x+RESULT_COLUMNS.leader.width-RESULT_COLUMNS.title.x)
-  row.membersX=RESULT_COLUMNS.members.x;LayoutMembers(row)
-  row.ilvl:SetPoint("LEFT",RESULT_COLUMNS.ilvl.x,0)
-  row.description:SetWidth(RESULT_COLUMNS.description.width);row.description:SetPoint("LEFT",descriptionX,0)
-  row.score:SetPoint("LEFT",ratingX,0);row.age:SetPoint("LEFT",RESULT_COLUMNS.age.x,0)
+  row.membersX,row.membersWidth=RESULT_COLUMNS.members.x,RESULT_COLUMNS.members.width;LayoutMembers(row)
+  row.ilvl:SetPoint("LEFT",RESULT_COLUMNS.ilvl.x,0);row.ilvl:SetWidth(RESULT_COLUMNS.ilvl.width)
+  row.description:SetWidth(RESULT_COLUMNS.description.width);row.description:SetPoint("LEFT",RESULT_COLUMNS.description.x,0)
+  row.score:SetPoint("LEFT",RESULT_COLUMNS.rating.x,0);row.score:SetWidth(RESULT_COLUMNS.rating.width)
+  row.age:SetPoint("LEFT",RESULT_COLUMNS.age.x,0);row.age:SetWidth(RESULT_COLUMNS.age.width)
+  row.tooltipArea:SetWidth(self.resultsHeader.columns.title.width)
+ end
+end
+function P:LayoutResultColumns()
+ local raid=self.raidResultColumns
+ resultDefinitions[3].min=raid and 154 or ResultMemberWidth()+16
+ local rating,description=resultDefinitions[5],resultDefinitions[6]
+ if rating.key~="rating" then rating,description=description,rating end
+ rating.label=raid and Say("进度","Progress") or Say("评分","Score")
+ resultDefinitions[5],resultDefinitions[6]=raid and description or rating,raid and rating or description
+ self.resultsHeader:SetColumns(resultDefinitions)
+ self.resultsHeader:SetState(UI:GetTablePrefs(raid and "findRaidResults" or "findResults"))
+ self.resultsHeader:Layout(BODY)
+end
+function P:RefreshMemberStyle()
+ if not self.results then return end
+ self:LayoutResultColumns();self.results:Refresh()
+end
+function P:LayoutApplicationColumns()
+ if not self.applicationHeader then return end
+ local cols=self.applicationHeader.columns
+ APPLICATION_COLUMNS.title.width=cols.title.width-48
+ APPLICATION_COLUMNS.leader.x,APPLICATION_COLUMNS.leader.width=cols.leader.x+6,cols.leader.width-12
+ for _,row in ipairs(self.appList.rows) do
+  row.title:SetWidth(APPLICATION_COLUMNS.title.width)
+  row.leader:SetPoint("LEFT",APPLICATION_COLUMNS.leader.x,0);row.leader:SetWidth(APPLICATION_COLUMNS.leader.width)
+  row.membersX,row.membersWidth=cols.members.x+6,cols.members.width-12;LayoutMembers(row)
+  row.status:SetPoint("LEFT",cols.status.x+6,0);row.status:SetWidth(cols.status.width-12)
+  row.cancel:ClearAllPoints();row.cancel:SetPoint("CENTER",row,"LEFT",cols.actions.x+cols.actions.width/2,0)
+  row.tooltipArea:SetWidth(cols.title.width)
  end
 end
 function P:LayoutSidebar(width)
  self.sidebarWidth=width
  MAIN=(self.layoutWidth or T.contentWidth)-width-T.contentGap-48;BODY=MAIN-LIST_GUTTER;APP_BODY=MAIN-32-LIST_GUTTER
  local compact=math.min(70,math.max(0,BASE_BODY-BODY))
- RESULT_COLUMNS.title.width=210-compact
- RESULT_COLUMNS.leader.x=303-compact;RESULT_COLUMNS.members.x=427-compact;RESULT_COLUMNS.ilvl.x=581-compact
- RESULT_COLUMNS.rating.x=649-compact;RESULT_COLUMNS.description.x=741-compact
- RESULT_COLUMNS.description.width=BODY-765-AGE_WIDTH+compact;RESULT_COLUMNS.age.x=BODY-12-AGE_WIDTH
- APPLICATION_COLUMNS.title.width=APP_BODY-591;APPLICATION_COLUMNS.leader.x=APP_BODY-522
+ resultDefinitions[1].width=286-compact
+ for _,def in ipairs(resultDefinitions) do if def.key=="description" then def.width=BODY-753-AGE_WIDTH+compact end end
+ applicationDefinitions[1].width=APP_BODY-542
  local alpha=math.max(0,math.min(1,(width-COLLAPSED_LEFT)/(LEFT-COLLAPSED_LEFT)))
  if math.abs(width-(state.railCollapsed and COLLAPSED_LEFT or LEFT))<1/self.rail:GetEffectiveScale() then alpha=state.railCollapsed and 0 or 1 end
  for _,list in ipairs({self.seasonCategories,self.categories}) do
@@ -431,17 +541,12 @@ function P:LayoutSidebar(width)
  self.sidebarToggle:SetPoint("BOTTOMLEFT",buttonInset,8);self.sidebarToggle:SetWidth(width-buttonInset*2)
  self.sidebarToggle.label:SetShown(alpha>0);self.sidebarToggle.label:SetAlpha(alpha)
  self.surface:SetPoint("TOPLEFT",width+T.contentGap,0);self.surface:SetWidth(MAIN+48);self.main:SetWidth(MAIN)
- self.search:SetWidth(MAIN-60);self.searchHint:SetWidth(self.search:GetWidth()-52-self.searchInputRight)
  self.applicationPanel:SetWidth(MAIN);self.appList:SetWidth(MAIN-32)
- for _,row in ipairs(self.appList.rows) do
-  row.title:SetWidth(APPLICATION_COLUMNS.title.width)
-  row.leaderIcon:SetPoint("LEFT",APPLICATION_COLUMNS.leader.x-17,0);row.leader:SetPoint("LEFT",APPLICATION_COLUMNS.leader.x,0)
-  row.membersX=APP_BODY-386;LayoutMembers(row);row.status:SetPoint("LEFT",APP_BODY-224,0)
- end
+ self.applicationHeader:SetState(UI:GetTablePrefs("findApplications"));self.applicationHeader:Layout(APP_BODY)
  self.results:SetWidth(MAIN);self.resultsHeader:SetWidth(BODY);self.emptyPanel:SetWidth(MAIN)
  self.context:SetWidth(math.min(MAIN-180,self.contextNaturalWidth or self.context:GetStringWidth()))
  self.limitNotice:SetWidth(BODY);self.limitText:SetWidth(BODY-52)
- self:LayoutResultColumns()
+ self:LayoutResultColumns();self:LayoutQuickFilters()
  if self.limitNotice:IsShown() then
   local height=math.max(40,math.ceil(self.limitText:GetStringHeight())+16)
   if self.limitNotice:GetHeight()~=height then self.resultsTop=nil;self:LayoutResults() end
@@ -454,7 +559,7 @@ function P:LayoutSize(width,height)
  local categoriesTop=self.seasonCategories:GetHeight()+24
  self.categories:SetViewport(height-categoriesTop-72)
  self:LayoutSidebar(self.rail:GetWidth())
- self.resultsTop=nil;self:LayoutResults()
+ self.resultsTop=nil;self:LayoutResults();self:LayoutFilters()
 end
 function P:SetSidebarCollapsed(collapsed,animate)
  state.railCollapsed=collapsed==true
@@ -477,107 +582,407 @@ function P:BuildSidebarToggle()
  M:Rect(self.rail,0,0,LEFT,T.contentHeight,0)
  self:LayoutSidebar(LEFT)
 end
+local numericFilterKeys={"minRating","maxRating","minItemLevel","maxItemLevel","minMembers","maxMembers"}
+function P:BuildQuickFilters()
+ self.quickFilters=CreateFrame("Frame",nil,self.applicationPanel);self.quickChoices={}
+ for _,entry in ipairs({{"TANK","tankPresence"},{"HEALER","healerPresence"},{"DAMAGER","damagePresence"}}) do
+  local role,key=entry[1],entry[2]
+  local button=C.Button(self.quickFilters,"",90,function(_,mouse)
+   local value=state.filters[key]
+   if mouse=="RightButton" then value=nil
+   elseif not value then value="missing"
+   elseif value=="missing" then
+    local presentCount=(state.filters.tankPresence=="present" and 1 or 0)+(state.filters.healerPresence=="present" and 1 or 0)+(state.filters.damagePresence=="present" and 1 or 0)
+    value=(state.filters.roleMatchAny or presentCount<2) and "present" or nil
+   else value=nil end
+   state.filters[key]=value;P:UpdateFilters()
+  end,{height=32,radius=8})
+  button:RegisterForClicks("LeftButtonUp","RightButtonUp")
+  UI.Tooltip:BindText(button,Say("左键切换，右键恢复","Left-click to cycle; right-click to reset."))
+  local icon=C.Icon(button,18);icon:SetPoint("LEFT",8,0);UI:SetRoleIcon(icon,role)
+  button.label:ClearAllPoints();button.label:SetPoint("LEFT",32,0);C.SetFont(button.label,13)
+  self.quickChoices[key]={button=button,role=role}
+ end
+ self.quickLogic=C.Button(self.quickFilters,"",70,function()
+  P:SetRoleMatchAny(not state.filters.roleMatchAny)
+ end,{height=32,radius=8});C.SetFont(self.quickLogic.label,13)
+ UI.Tooltip:BindText(self.quickLogic,Say("筛选切换：全部/任意条件符合","Filter matching: all/any conditions."))
+ self.quickIdentity=C.Button(self.quickFilters,"",100,function(_,mouse)
+  local mode=state.filters.hideSameClass and "class" or state.filters.hideSameSpec and "spec" or "any"
+  if mouse=="RightButton" then mode="any"
+  else mode=mode=="any" and "class" or mode=="class" and "spec" or "any" end
+  P:SetIdentityFilter(mode)
+ end,{height=32,radius=8})
+ self.quickIdentity:RegisterForClicks("LeftButtonUp","RightButtonUp")
+ C.SetFont(self.quickIdentity.label,13);self.quickIdentity.label:ClearAllPoints();self.quickIdentity.label:SetPoint("LEFT",32,0)
+ self.identityMeasure=C.Text(self.quickIdentity,"",13);self.identityMeasure:Hide()
+ self.quickIdentityIcon=C.GameIcon(self.quickIdentity,18);self.quickIdentityIcon:SetPoint("LEFT",8,0)
+ self.quickIdentityFunnel=C.Icon(self.quickIdentity,18);self.quickIdentityFunnel:SetTexture("Interface\\AddOns\\LycheeGroup_UI\\Media\\filter-any.tga");self.quickIdentityFunnel:SetPoint("LEFT",8,0)
+ UI.Tooltip:BindText(self.quickIdentity,Say("同职过滤/同专精过滤","Same class/spec filter"))
+ self.quickFilters:Hide()
+end
+function P:SetRoleMatchAny(value)
+ state.filters.roleMatchAny=value or nil
+ if not value and state.filters.tankPresence=="present" and state.filters.healerPresence=="present" and state.filters.damagePresence=="present" then state.filters.damagePresence=nil end
+ self:UpdateFilters()
+end
+function P:SetIdentityFilter(mode)
+ state.filters.hideSameClass=mode=="class" or nil
+ state.filters.hideSameSpec=mode=="spec" or nil
+ self:UpdateFilters()
+end
+function P:SyncQuickFilters(seasonDungeon)
+ self.quickFilters:SetShown(seasonDungeon and A:GetSetting("showImportantFilters")==true)
+ self.importantFilters:SetShown(seasonDungeon and not A:GetSetting("showImportantFilters"))
+ local presentCount=(state.filters.tankPresence=="present" and 1 or 0)+(state.filters.healerPresence=="present" and 1 or 0)+(state.filters.damagePresence=="present" and 1 or 0)
+ for key,entry in pairs(self.quickChoices) do
+  local value=state.filters[key]
+  UI:SetText(entry.button.label,value=="missing" and Say("缺少","Lacks") or value=="present" and (entry.role=="DAMAGER" and Say("已齐","Full") or Say("已有","Has")) or Say("不限","Any"))
+  entry.button:SetActive(value~=nil and value~=false)
+  self.presenceChoices[key]:SetValue(value or false)
+  self.presenceChoices[key].buttons[3]:SetAvailable(state.filters.roleMatchAny or presentCount<2 or value=="present")
+ end
+ self.presenceLogic:SetValue(state.filters.roleMatchAny==true)
+ self.identityChoice:SetValue(state.filters.hideSameClass and "class" or state.filters.hideSameSpec and "spec" or "any")
+ UI:SetText(self.quickLogic.label,state.filters.roleMatchAny and Say("或","OR") or Say("全部","All"))
+ self.quickLogic:SetActive(state.filters.roleMatchAny==true)
+ local enabled=state.filters.hideSameClass==true or state.filters.hideSameSpec==true
+ UI:SetText(self.quickIdentity.label,state.filters.hideSameClass and Say("同职过滤","Same class") or state.filters.hideSameSpec and Say("专精过滤","Same spec") or Say("不限","Any"))
+ self.quickIdentity:SetActive(enabled)
+ self.quickIdentityIcon:SetShown(enabled);self.quickIdentityFunnel:SetShown(not enabled)
+ if enabled then
+  local class=select(2,UnitClass("player"))
+  local spec=state.filters.hideSameSpec and A.Specializations:Player() or nil
+  UI:SetMemberIcon(self.quickIdentityIcon,{class=class,specID=spec})
+ end
+ self:LayoutQuickFilters()
+end
+function P:RefreshFilterPlacement()
+ self:SyncQuickFilters(self.filterLayout=="presence")
+ self:LayoutFilters()
+ if UI.page=="find" then UI:FitToScreen() end
+end
+function P:LayoutQuickFilters()
+ if not self.quickFilters then return end
+ local height=32
+ local roleWidth=0
+ for _,label in ipairs({Say("不限","Any"),Say("缺少","Lacks"),Say("已有","Has"),Say("已齐","Full")}) do
+  UI:SetText(self.identityMeasure,label);roleWidth=math.max(roleWidth,self.identityMeasure:GetStringWidth())
+ end
+ roleWidth=math.max(74,math.ceil(roleWidth)+44)
+ for _,key in ipairs({"tankPresence","healerPresence","damagePresence"}) do
+  local button=self.quickChoices[key].button
+  FitText(button.label)
+  height=math.max(height,button.label:GetHeight()+12)
+  button:SetWidth(roleWidth)
+ end
+ local labelWidth=0
+ for _,label in ipairs({Say("专精过滤","Same spec"),Say("同职过滤","Same class"),Say("不限","Any")}) do
+  UI:SetText(self.identityMeasure,label);labelWidth=math.max(labelWidth,self.identityMeasure:GetStringWidth())
+ end
+ local identityWidth=math.ceil(labelWidth)+40
+ local logicWidth=54
+ for _,label in ipairs({Say("全部","All"),Say("或","OR")}) do UI:SetText(self.identityMeasure,label);logicWidth=math.max(logicWidth,math.ceil(self.identityMeasure:GetStringWidth())+22) end
+ FitText(self.quickLogic.label)
+ height=math.max(height,self.quickLogic.label:GetHeight()+12,self.quickIdentity.label:GetHeight()+12)
+ for _,entry in pairs(self.quickChoices) do entry.button:SetHeight(height) end
+ self.quickIdentity:SetSize(identityWidth,height)
+ self.quickLogic:SetSize(logicWidth,height)
+ local filterWidth=math.max(84,math.ceil(self.filterToggle.label:GetUnboundedStringWidth())+42)
+ self.filterToggle:SetWidth(filterWidth);self.filterToggle.label:SetWidth(filterWidth-42)
+ self.searchModeToggle:SetWidth(math.max(56,FitText(self.searchModeToggle.label)+24))
+ local right=filterWidth+self.searchModeToggle:GetWidth()+52
+ self.search:SetSize(MAIN-60,48)
+ local rowX=0
+ for _,button in ipairs({self.quickChoices.tankPresence.button,self.quickChoices.healerPresence.button,self.quickChoices.damagePresence.button,self.quickIdentity,self.quickLogic}) do
+  local gap=rowX>0 and 6 or 0
+  button:ClearAllPoints();button:SetPoint("LEFT",rowX+gap,0)
+  rowX=rowX+gap+button:GetWidth()
+ end
+ self.quickFilters:SetSize(rowX,height)
+ self.quickFilters:ClearAllPoints();self.quickFilters:SetPoint("RIGHT",self.applicationSettings,"LEFT",-12,0)
+ self.quickFilterHeight=0
+ local inline=self.quickFilters:IsShown()
+ local scope=inline and self.hasOtherApplications
+ self.appsTitle:SetShown(not scope)
+ self.scopeToggle:SetShown(self.hasOtherApplications==true)
+ UI:SetText(self.scopeToggle.label,scope and (state.showGlobal and Say("全部申请","All applications") or Say("本分类申请","This category")) or (state.showGlobal and Say("仅看本分类","This category") or Say("查看全部申请","All applications")))
+ self.scopeToggle:SetWidth(FitText(self.scopeToggle.label)+(scope and 12 or 24))
+ self.scopeToggle:ClearAllPoints()
+ self.appsBadge:ClearAllPoints()
+ if scope then
+  self.scopeToggle:SetPoint("LEFT",self.applicationPanel,"TOPLEFT",16,-22)
+  self.appsBadge:SetPoint("LEFT",self.scopeToggle,"RIGHT",10,0)
+ else
+  self.appsBadge:SetPoint("LEFT",self.appsTitle,"RIGHT",10,0)
+  self.scopeToggle:SetPoint("LEFT",self.appsBadge,"RIGHT",10,0)
+ end
+ local infoWidth=self.appsTitle:GetStringWidth()
+ for _,label in ipairs({Say("全部申请","All applications"),Say("本分类申请","This category")}) do
+  UI:SetText(self.applicationInfoMeasure,label);infoWidth=math.max(infoWidth,self.applicationInfoMeasure:GetStringWidth()+14)
+ end
+ local autoWidth=16+self.autoJoin:GetWidth()+20+self.autoApply:GetWidth()+10+self.applicationSettings:GetWidth()
+ self.minimumMainWidth=math.ceil(16+infoWidth+10+self.appsBadge:GetWidth()+12+rowX+12+autoWidth)
+ local emptyWidth=MAIN-autoWidth-(inline and rowX+24 or 12)-(16+self.appsTitle:GetStringWidth()+10+self.appsBadge:GetWidth()+12)
+ self.appsEmpty:SetShown(self.noApplications==true and emptyWidth>=self.appsEmpty:GetStringWidth())
+ self.searchInputRight=right
+ self:LayoutSearchInput()
+ self.applicationPanel:SetPoint("TOPLEFT",0,-68);self.applicationPanel:SetHeight(44+(self.appsHeight or 0))
+ self.applicationHeader:ClearAllPoints();self.applicationHeader:SetPoint("TOPLEFT",16,-40)
+ self.appList:ClearAllPoints();self.appList:SetPoint("TOPLEFT",16,-44-self.applicationHeader:GetHeight())
+end
+function P:GetMinimumWidth()
+ if not self.quickFilters or not self.quickFilters:IsShown() then return 0 end
+ return UI.frame:GetWidth()-MAIN+self.minimumMainWidth
+end
+function P:LayoutSearchInput()
+ local right,bottom=self.searchInputRight,4
+ local function Layout(box)
+  box:ClearAllPoints();box:SetPoint("TOPLEFT",self.search,"TOPLEFT",52,-4);box:SetPoint("BOTTOMRIGHT",self.search,"BOTTOMRIGHT",-right,bottom)
+  box:SetSize(self.search:GetWidth()-52-right,40)
+ end
+ Layout(self.previewSearchBox)
+ local lease=UI.Native.searchLease
+ if lease and lease.owner==self and lease:IsOwned() then Layout(lease.box) end
+ self.searchHint:SetWidth(self.search:GetWidth()-52-right)
+ self.searchClear:ClearAllPoints();self.searchClear:SetPoint("RIGHT",self.searchModeToggle,"LEFT",-6,0)
+end
+function P:SyncFilterFields()
+ self.syncingFilterFields=true
+ for _,key in ipairs(numericFilterKeys) do self.filterFields[key].box:SetText(state.filters[key] and tostring(state.filters[key]) or "") end
+ UI:SetText(self.filterError,"");self.syncingFilterFields=nil
+end
+function P:UpdateMemberLimit()
+ local catalog=UI:GetGroup().Catalog;local maximum=0
+ for _,activity in ipairs(catalog:GetActivities(state.category)) do
+  if catalog:Matches(activity,state.category,state.groupKey,state.difficultyID,state.tier,state.groupKeys) then
+   local capacity=activity.maxNumPlayers
+   if capacity==0 then capacity=activity.categoryID==9 and CONQUEST_SIZES[5] or MAX_RAID_MEMBERS end
+   maximum=math.max(maximum,capacity)
+  end
+ end
+ if maximum==0 then maximum=Category().id==2 and 5 or MAX_RAID_MEMBERS end
+ if self.memberLimit==maximum then return end
+ self.memberLimit=maximum
+ self.fMinMembers:SetPlaceholder(Say("最少 1","Min 1"));self.fMembers:SetPlaceholder(Say("最多 %d","Max %d"):format(maximum))
+ local filters=state.filters
+ for _,key in ipairs({"minMembers","maxMembers"}) do
+  local value=tonumber(filters[key])
+  filters[key]=value and math.max(1,math.min(maximum,math.floor(value))) or nil
+ end
+ if filters.minMembers and filters.maxMembers and filters.minMembers>filters.maxMembers then
+  filters.minMembers,filters.maxMembers=filters.maxMembers,filters.minMembers
+ end
+ self.syncingFilterFields=true
+ for _,key in ipairs({"minMembers","maxMembers"}) do self.filterFields[key].box:SetText(filters[key] and tostring(filters[key]) or "") end
+ self.syncingFilterFields=nil
+end
+function P:ApplyFilterFields()
+ if self.loading or self.syncingFilterFields then return true end
+ local values,err={}
+ for _,key in ipairs(numericFilterKeys) do
+  local raw=self.filterFields[key].box:GetText():match("^%s*(.-)%s*$")
+  if raw~="" then
+   local value=tonumber(raw)
+   local members=key=="minMembers" or key=="maxMembers"
+   local minimum,maximum=members and 1 or 0,members and self.memberLimit or 99999
+   if not value or value<minimum or value>maximum or value%1~=0 then
+    err=members and Say("队伍人数请输入 1 至 %d 的整数，或留空。","Group size must be an integer from 1 to %d, or blank."):format(maximum) or Say("请输入 0 至 99999 的整数，或留空。","Enter an integer from 0 to 99999, or leave blank.");break
+   end
+   values[key]=value
+  end
+ end
+ if not err and (values.minRating and values.maxRating and values.minRating>values.maxRating or values.minItemLevel and values.maxItemLevel and values.minItemLevel>values.maxItemLevel or values.minMembers and values.maxMembers and values.minMembers>values.maxMembers) then err=Say("最低值不能大于最高值。","Minimum must not exceed maximum.") end
+ UI:SetText(self.filterError,err or "");self:LayoutFilters()
+ if err then return false end
+ for _,key in ipairs(numericFilterKeys) do state.filters[key]=values[key] end
+ self:UpdateFilters();return true
+end
 function P:BuildFilters()
- local f=CreateFrame("Frame",nil,UI.frame);f:SetSize(384,400);f:SetPoint("TOPLEFT",UI.frame,"TOPRIGHT",12,0);f:SetFrameLevel(UI.frame:GetFrameLevel()+5);C.Panel(f,T.panel,28);self.filterPanel=f
+ local f=CreateFrame("Frame",nil,UI.frame);f:SetSize(368,500);f:SetPoint("TOPRIGHT",UI.frame,"TOPRIGHT",-20,-76);f:SetFrameLevel(UI.frame:GetFrameLevel()+5);f:SetFrameStrata("DIALOG");f:EnableMouse(true);C.Panel(f,T.panel,28);self.filterPanel=f
+ local scrim=CreateFrame("Button",nil,UI.frame);scrim:SetAllPoints(UI.frame);scrim:SetFrameStrata("DIALOG");scrim:SetFrameLevel(UI.frame:GetFrameLevel()+4)
+ C.Fill(scrim,{0,0,0,.18});scrim:SetScript("OnClick",function() P:SetFiltersOpen(false) end);scrim:Hide();self.filterScrim=scrim
+ f:HookScript("OnShow",function() scrim:Show() end)
+ f:HookScript("OnHide",function() scrim:Hide() end)
  self.filterTitle=C.Text(f,Say("筛选队伍","Filter groups"),20);C.SetLineHeight(self.filterTitle,24,true)
  local close=C.IconButton(f,"close",36,function() P:SetFiltersOpen(false) end,{iconSize=20});close:SetPoint("TOPRIGHT",-14,-14)
  self.filterStatus=C.Text(f,"",14,T.dim,240);C.SetLineHeight(self.filterStatus,20,true)
  self.clearFilters=C.Button(f,Say("重置","Reset"),72,function() P:ClearFilters() end,{variant="text",height=32})
- local function Changed() if not P.loading then P:UpdateFilters() end end
- self.membersLabel=C.Text(f,Say("最少人数","Min. players"),14,T.muted,164)
- self.maxMembersLabel=C.Text(f,Say("最多人数","Max. players"),14,T.muted,164)
- self.fMinMembers=C.Number(f,164,44,Changed);self.fMembers=C.Number(f,164,44,Changed)
- self.roleLabel=C.Text(f,Say("队伍缺少职责","Role needed"),14,T.muted,344)
- self.roleChoice=C.Choice(f,344,{{value=false,label=L.anyRole},{value="TANK",label=L.tank},{value="HEALER",label=L.healer},{value="DAMAGER",label=L.damage}},function(value) state.filters.neededRole=value or nil;P:UpdateFilters() end)
- self.rolePresencePanel=CreateFrame("Frame",nil,f);self.rolePresencePanel:SetSize(344,136)
- self.rolePresenceChoices={};self.rolePresenceRows={}
- local presenceOptions={{"TANK",L.tank,"tankPresence"},{"HEALER",L.healer,"healerPresence"},{"DAMAGER",Say("输出","DPS"),"damagePresence"}}
- for i,option in ipairs(presenceOptions) do
-  local role,key=option[1],option[3]
-  local row=CreateFrame("Frame",nil,self.rolePresencePanel);row:SetWidth(344)
-  local icon=C.Icon(row,20);icon:SetPoint("LEFT");UI:SetRoleIcon(icon,role)
-  local label=C.Text(row,option[2],14,T.muted,72);C.SetLineHeight(label,20,true);label:SetPoint("LEFT",28,0)
-  local options={{value=false,label=Say("不限","Any")},{value="present",label=role=="DAMAGER" and Say("已齐","Full") or Say("已有","Has")},{value="missing",label=Say("缺少","Lacks")}}
-  local choice=C.Segmented(row,244,options,function(value)
-   state.filters[key]=state.filters[key]~=value and value or nil;P:UpdateFilters()
-  end)
-  choice:SetPoint("RIGHT");self.rolePresenceChoices[role]=choice;self.rolePresenceRows[i]=row
+ local important=CreateFrame("Frame",nil,f);important:SetWidth(552);self.importantFilters=important
+ local function Segments(entries,onChange)
+  local control=CreateFrame("Frame",nil,important);control:SetSize(328,36);C.Panel(control,T.surfaceContainer,8);control.buttons={}
+  for _,entry in ipairs(entries) do
+   local value=entry.value
+   local button=C.Button(control,entry.label,100,function() control:SetValue(value);onChange(value) end,{variant="compact",radius=8})
+   button.value=value;C.SetFont(button.label,13);C.SetLineHeight(button.label,20,true);button.label:SetWordWrap(false)
+   control.buttons[#control.buttons+1]=button
+  end
+  function control:SetValue(value)
+   self.value=value
+   for _,button in ipairs(self.buttons) do button:SetActive(button.value==value) end
+  end
+  function control:Layout(width,height)
+   self:SetSize(width,height)
+   local itemWidth=(width-6-(#self.buttons-1)*4)/#self.buttons
+   for i,button in ipairs(self.buttons) do
+    button:SetSize(itemWidth,height-6);button:ClearAllPoints();button:SetPoint("LEFT",3+(i-1)*(itemWidth+4),0)
+    button.label:SetWidth(itemWidth-12)
+   end
+  end
+  return control
  end
- self.filterDivider=f:CreateTexture(nil,"ARTWORK");self.filterDivider:SetColorTexture(unpack(T.field));self.filterDivider:SetSize(344,1)
- self.hideSameSpec=C.Check(f,Say("排除相同专精","Exclude same spec"),function(value) state.filters.hideSameSpec=value or nil;P:UpdateFilters() end)
+ self.presenceChoices={};self.presenceLabels={};self.presenceIcons={}
+ for _,entry in ipairs({{"TANK","tankPresence",L.tank},{"HEALER","healerPresence",L.healer},{"DAMAGER","damagePresence",L.damage}}) do
+  local role,key=entry[1],entry[2]
+  local label=C.Text(important,entry[3],14,T.muted);C.SetLineHeight(label,20,true);self.presenceLabels[key]=label
+  local icon=C.Icon(important,18);UI:SetRoleIcon(icon,role);self.presenceIcons[key]=icon
+  self.presenceChoices[key]=Segments({{value=false,label=Say("不限","Any")},{value="missing",label=Say("缺少","Missing")},{value="present",label=role=="DAMAGER" and Say("已齐","Full") or Say("已有","Present")}},function(value) state.filters[key]=value or nil;P:UpdateFilters() end)
+  UI.Tooltip:BindText(self.presenceChoices[key].buttons[3],Say("全部满足时，最多选择两项已有／已齐。","Match all allows at most two Present / Full conditions."))
+ end
+ self.presenceLogicLabel=C.Text(important,Say("匹配方式","Match mode"),14,T.muted);C.SetLineHeight(self.presenceLogicLabel,20,true)
+ self.presenceLogic=Segments({{value=false,label=Say("全部满足","Match all")},{value=true,label=Say("任一满足","Match any")}},function(value) P:SetRoleMatchAny(value) end)
+ self.identityLabel=C.Text(important,Say("同职过滤","Class/spec filter"),14,T.muted);C.SetLineHeight(self.identityLabel,20,true)
+ self.identityChoice=Segments({{value="any",label=Say("不限","Any")},{value="class",label=Say("同职业","My class")},{value="spec",label=Say("同专精","My spec")}},function(value) P:SetIdentityFilter(value) end)
+ for _,button in ipairs(self.identityChoice.buttons) do UI.Tooltip:BindText(button,Say("排除已有同职业或同专精成员的队伍，始终与其他条件共同满足。","Hide groups with your class or specialization. This always combines with the other filters.")) end
+ important:Hide()
+ self.filterFields={}
+ for _,key in ipairs(numericFilterKeys) do
+  local field=C.Number(f,104,36,function() P:ApplyFilterFields() end);field.box:SetMaxLetters(5)
+  field:SetPlaceholder(key:sub(1,3)=="min" and Say("最低","Min") or Say("最高","Max"));self.filterFields[key]=field
+ end
+ self.ratingLabel=C.Text(f,Say("队长评分","Leader rating"),14,T.muted,100)
+ self.ilvlLabel=C.Text(f,Say("要求装等","Required item level"),14,T.muted,100)
+ self.membersLabel=C.Text(f,Say("队伍人数","Group size"),14,T.muted,100)
+ self.fMinMembers,self.fMembers=self.filterFields.minMembers,self.filterFields.maxMembers
+ self.roleLabel=C.Text(f,Say("队伍缺少职责","Role needed"),14,T.muted,328)
+ self.roleChoice=C.Choice(f,328,{{value=false,label=L.anyRole},{value="TANK",label=L.tank},{value="HEALER",label=L.healer},{value="DAMAGER",label=L.damage}},function(value) state.filters.neededRole=value or nil;P:UpdateFilters() end)
  self.hideZeroScore=C.Check(f,Say("过滤队长 0 分队伍","Hide 0-score leaders"),function(value) state.filters.hideZeroScore=value or nil;P:UpdateFilters() end)
- for _,toggle in ipairs({self.hideSameSpec,self.hideZeroScore}) do
-  toggle:SetSize(344,32);C.SetFont(toggle.label,14);C.SetLineHeight(toggle.label,20,true)
-  toggle.label:ClearAllPoints();toggle.label:SetPoint("LEFT");toggle.label:SetWidth(288)
-  toggle.track:ClearAllPoints();toggle.track:SetPoint("RIGHT")
- end
+ self.hideZeroScore:SetSize(328,32);C.SetFont(self.hideZeroScore.label,14);C.SetLineHeight(self.hideZeroScore.label,20,true)
+ self.hideZeroScore.label:ClearAllPoints();self.hideZeroScore.label:SetPoint("LEFT");self.hideZeroScore.label:SetWidth(274)
+ self.hideZeroScore.track:ClearAllPoints();self.hideZeroScore.track:SetPoint("RIGHT")
  self.socialLabel=C.Text(f,Say("关系与笔记","Relations and notes"),14,T.muted)
- self.socialChoice=C.Choice(f,344,{{value=false,label=Say("全部关系","All relations")},{value="friend",label=Say("好友在队","Friends in group")},{value="guild",label=Say("同公会成员","Guildmates")},{value="any",label=Say("含笔记记录","With player notes")},{value="positive",label=Say("含推荐玩家","Recommended players")},{value="noCaution",label=Say("不含拉黑记录","Without blocked players")}},function(value) state.social=value or nil;P:UpdateFilters() end)
+ self.socialChoice=C.Choice(f,328,{{value=false,label=Say("全部关系","All relations")},{value="friend",label=Say("好友在队","Friends in group")},{value="guild",label=Say("同公会成员","Guildmates")},{value="any",label=Say("含笔记记录","With player notes")},{value="positive",label=Say("含推荐玩家","Recommended players")},{value="noCaution",label=Say("不含拉黑记录","Without blocked players")}},function(value) state.social=value or nil;P:UpdateFilters() end)
  self.sortLabel=C.Text(f,L.sort,14,T.muted)
- self.sortChoice=C.Choice(f,344,{{value="newest",label=L.newest},{value="rating",label=Say("队长评分","Leader rating")},{value="itemLevel",label=Say("要求装等","Required item level")},{value="members",label=L.members}},function(value) state.filters.sort=value;P:UpdateFilters() end)
+ self.sortChoice=C.Choice(f,328,{{value="newest",label=L.newest},{value="rating",label=Say("队长评分","Leader rating")},{value="itemLevel",label=Say("要求装等","Required item level")},{value="members",label=L.members}},function(value)
+  state.filters.sort=value;P.resultsHeader:SetSort(nil);P:UpdateFilters()
+ end)
+ self.filterError=C.Text(f,"",13,T.warning,328);C.SetLineHeight(self.filterError,20,true)
+ self.filterDone=C.Button(f,Say("完成","Done"),88,function() if P:ApplyFilterFields() then P:SetFiltersOpen(false) end end,{height=34});self.filterDone:SetPrimary(true)
  f:Hide()
 end
 function P:LayoutFilters()
  if not self.filterPanel then return end
  local function Place(frame,x,y) frame:ClearAllPoints();frame:SetPoint("TOPLEFT",x,-y) end
- local y=20
- Place(self.filterTitle,20,y);y=y+self.filterTitle:GetHeight()+12
- local resetWidth=math.max(72,FitText(self.clearFilters.label)+24)
- self.clearFilters:SetWidth(resetWidth);Place(self.clearFilters,384-20-resetWidth,y)
- self.filterStatus:SetWidth(344-resetWidth-12);Place(self.filterStatus,20,y+(32-self.filterStatus:GetHeight())/2)
- y=y+32+20
- Place(self.membersLabel,20,y);Place(self.maxMembersLabel,200,y)
- y=y+math.max(self.membersLabel:GetHeight(),self.maxMembersLabel:GetHeight())+8
- local fieldHeight=math.max(44,math.ceil(self.socialChoice.label:GetHeight()+16))
- self.fMinMembers:SetHeight(fieldHeight);self.fMembers:SetHeight(fieldHeight)
- Place(self.fMinMembers,20,y);Place(self.fMembers,200,y);y=y+fieldHeight+20
- if self.filterLayout~="basic" then
-  Place(self.roleLabel,20,y);y=y+self.roleLabel:GetHeight()+10
+ local expanded=self.importantFilters:IsShown()
+ local width=expanded and 592 or 368
+ local inner=width-40
+ self.filterPanel:SetWidth(width)
+ Place(self.filterTitle,20,18)
+ local y=18+self.filterTitle:GetHeight()+18
+ local fieldHeight=math.max(36,math.ceil(self.socialChoice.label:GetHeight()+12))
+ if expanded then
+  Place(self.importantFilters,20,y)
+  self.importantFilters:SetWidth(inner)
+  local labelWidth=math.max(FitText(self.presenceLogicLabel),FitText(self.identityLabel))
+  for _,label in pairs(self.presenceLabels) do labelWidth=math.max(labelWidth,FitText(label)+26) end
+  local controlX=labelWidth+16
+  local top=0
+  local function SegmentRow(label,control,icon)
+   local height=math.max(36,control.buttons[1].label:GetHeight()+18)
+   Place(label,icon and 26 or 0,top+(height-label:GetHeight())/2)
+   if icon then Place(icon,0,top+(height-18)/2) end
+   control:Layout(inner-controlX,height);Place(control,controlX,top)
+   top=top+height+6
+  end
+  for _,key in ipairs({"tankPresence","healerPresence","damagePresence"}) do SegmentRow(self.presenceLabels[key],self.presenceChoices[key],self.presenceIcons[key]) end
+  SegmentRow(self.presenceLogicLabel,self.presenceLogic)
+  SegmentRow(self.identityLabel,self.identityChoice)
+  self.importantFilters:SetHeight(top-6);y=y+top+14
+  local column=(inner-20)/2
+  local right=20+column+20
+  local function Range(label,low,high,x)
+   label:SetWidth(column);Place(label,x,y)
+   local top=y+label:GetHeight()+6
+   low:SetSize((column-8)/2,fieldHeight);high:SetSize((column-8)/2,fieldHeight)
+   Place(low,x,top);Place(high,x+(column+8)/2,top)
+   return top+fieldHeight
+  end
+  local function Choice(label,control,x)
+   label:SetWidth(column);Place(label,x,y)
+   local top=y+label:GetHeight()+6
+   control:SetSize(column,fieldHeight);Place(control,x,top)
+   return top+fieldHeight
+  end
+  y=math.max(Range(self.ratingLabel,self.filterFields.minRating,self.filterFields.maxRating,20),Range(self.ilvlLabel,self.filterFields.minItemLevel,self.filterFields.maxItemLevel,right))+14
+  y=math.max(Range(self.membersLabel,self.fMinMembers,self.fMembers,20),Choice(self.socialLabel,self.socialChoice,right))+14
+  local bottom=Choice(self.sortLabel,self.sortChoice,right)
+  self.hideZeroScore.label:SetWidth(column-54)
+  self.hideZeroScore:SetSize(column,math.max(32,self.hideZeroScore.label:GetStringHeight()))
+  Place(self.hideZeroScore,20,y+(bottom-y-self.hideZeroScore:GetHeight())/2)
+  y=math.max(bottom,y+self.hideZeroScore:GetHeight())+18
+ else
+  for _,row in ipairs({{self.ratingLabel,self.filterFields.minRating,self.filterFields.maxRating},{self.ilvlLabel,self.filterFields.minItemLevel,self.filterFields.maxItemLevel},{self.membersLabel,self.fMinMembers,self.fMembers}}) do
+   row[1]:SetWidth(100)
+   local height=math.max(fieldHeight,row[1]:GetStringHeight())
+   Place(row[1],20,y+(height-row[1]:GetHeight())/2)
+   for i=2,3 do row[i]:SetSize(104,height);Place(row[i],132+(i-2)*112,y) end
+   y=y+height+12
+  end
+  for _,row in ipairs({{self.socialLabel,self.socialChoice},{self.sortLabel,self.sortChoice}}) do
+   row[1]:SetWidth(inner);Place(row[1],20,y);y=y+row[1]:GetHeight()+6
+   row[2]:SetSize(inner,fieldHeight);Place(row[2],20,y);y=y+fieldHeight+14
+  end
   if self.filterLayout=="presence" then
-   local rowY=0
-   for i,role in ipairs({"TANK","HEALER","DAMAGER"}) do
-    local choice=self.rolePresenceChoices[role]
-    local buttonHeight=math.max(30,math.ceil(choice.buttons[1].label:GetHeight()+8))
-    for _,button in ipairs(choice.buttons) do button:SetHeight(buttonHeight) end
-    choice:SetHeight(buttonHeight+6);choice:SetValue(choice.value)
-    local row=self.rolePresenceRows[i];local rowHeight=math.max(40,buttonHeight+6)
-    row:SetHeight(rowHeight);Place(row,0,rowY);rowY=rowY+rowHeight+8
-   end
-   self.rolePresencePanel:SetHeight(rowY-8);Place(self.rolePresencePanel,20,y);y=y+rowY-8+20
-   Place(self.filterDivider,20,y);y=y+21
-   local toggleHeight=math.max(32,math.ceil(self.hideSameSpec.label:GetHeight()))
-   self.hideSameSpec:SetHeight(toggleHeight);Place(self.hideSameSpec,20,y);y=y+toggleHeight+16
-   self.hideZeroScore:SetHeight(toggleHeight);Place(self.hideZeroScore,20,y);y=y+toggleHeight+24
-  else
-   self.roleChoice:SetHeight(fieldHeight);Place(self.roleChoice,20,y);y=y+fieldHeight+24
+   self.hideZeroScore.label:SetWidth(inner-54)
+   self.hideZeroScore:SetSize(inner,math.max(32,self.hideZeroScore.label:GetStringHeight()))
+   Place(self.hideZeroScore,20,y);y=y+self.hideZeroScore:GetHeight()+12
+  elseif self.filterLayout=="needed" then
+   self.roleLabel:SetWidth(inner);Place(self.roleLabel,20,y);y=y+self.roleLabel:GetHeight()+6
+   self.roleChoice:SetSize(inner,fieldHeight);Place(self.roleChoice,20,y);y=y+fieldHeight+12
   end
  end
- Place(self.socialLabel,20,y);y=y+self.socialLabel:GetHeight()+8
- self.socialChoice:SetHeight(fieldHeight);Place(self.socialChoice,20,y);y=y+fieldHeight+20
- Place(self.sortLabel,20,y);y=y+self.sortLabel:GetHeight()+8
- self.sortChoice:SetHeight(fieldHeight);Place(self.sortChoice,20,y)
- self.filterPanel:SetHeight(y+fieldHeight+20)
+ local hasError=self.filterError:GetText()~=""
+ self.filterError:SetWidth(inner)
+ self.filterError:SetShown(hasError)
+ if hasError then self.filterError:SetHeight(math.ceil(self.filterError:GetStringHeight()));Place(self.filterError,20,y);y=y+self.filterError:GetHeight()+8 end
+ self.filterDone:SetSize(math.max(88,self.filterDone.label:GetStringWidth()+28),math.max(34,self.filterDone.label:GetHeight()+12))
+ self.clearFilters:SetSize(math.max(72,self.clearFilters.label:GetStringWidth()+20),math.max(32,self.clearFilters.label:GetHeight()+8))
+ self.filterStatus:SetWidth(inner-self.clearFilters:GetWidth()-self.filterDone:GetWidth()-24)
+ self.filterStatus:SetHeight(math.ceil(self.filterStatus:GetStringHeight()))
+ local footerHeight=math.max(self.filterStatus:GetHeight(),self.clearFilters:GetHeight(),self.filterDone:GetHeight())
+ Place(self.filterStatus,20,y+(footerHeight-self.filterStatus:GetHeight())/2)
+ Place(self.clearFilters,width-32-self.filterDone:GetWidth()-self.clearFilters:GetWidth(),y+(footerHeight-self.clearFilters:GetHeight())/2)
+ Place(self.filterDone,width-20-self.filterDone:GetWidth(),y+(footerHeight-self.filterDone:GetHeight())/2)
+ self.filterPanel:SetHeight(y+footerHeight+20)
 end
 function P:UpdateFilterSummary()
  local filters=state.filters
  local count=(filters.minMembers or filters.maxMembers) and 1 or 0
- for _,key in ipairs({"neededRole","tankPresence","healerPresence","damagePresence","hideZeroScore","hideSameSpec"}) do if filters[key] then count=count+1 end end
+ if filters.minRating or filters.maxRating then count=count+1 end
+ if filters.minItemLevel or filters.maxItemLevel then count=count+1 end
+ for _,key in ipairs({"neededRole","tankPresence","healerPresence","damagePresence","hideZeroScore","hideSameSpec","hideSameClass"}) do if filters[key] then count=count+1 end end
  if state.social then count=count+1 end
  local sortChanged=filters.sort~=A:GetSetting("defaultSort")
  self.filterCount=count
  UI:SetText(self.filterToggle.label,count>0 and Say("筛选 ","Filters ")..count or Say("筛选","Filters"))
  self.filterToggle:SetTextColors(count>0 and T.brand or T.muted,T.text,T.onSecondaryContainer)
- UI:SetText(self.filterStatus,count>0 and Say("已启用 %d 项","%d active filters"):format(count) or sortChanged and Say("已更改排序","Sort changed") or Say("未启用条件","No active filters"))
  self.clearFilters:SetAvailable(count>0 or sortChanged)
+ self:UpdateFilterResultSummary()
+end
+function P:UpdateFilterResultSummary()
+ local count=self.filterCount or 0
+ UI:SetText(self.filterStatus,state.browseReady and Say("%d 项条件 · %d 支队伍","%d filters · %d groups"):format(count,self.filteredResultCount or 0) or Say("%d 项条件 · 待搜索","%d filters · No search yet"):format(count))
+ self:LayoutFilters()
 end
 function P:SetFiltersOpen(open)
  local wasOpen=self.filterPanel:IsShown()
  self.filtersOpen=open==true
+ if self.filtersOpen and not wasOpen then UI:StopTableDrags();self:SyncFilterFields();self:LayoutFilters() end
  if not self.filtersOpen then M:FinishPlacement(self.filterPanel) end
  self.filterPanel:SetShown(self.filtersOpen);self:ClosePicker();UI.Tooltip:Hide()
  UI:FitToScreen()
  self.filterToggle:SetActive(self.filtersOpen);self.filterChevron:SetRotation(self.filtersOpen and math.pi or 0);self.filterChevron:SetVertexColor(unpack(self.filtersOpen and T.accent or T.muted))
- if self.filtersOpen and not wasOpen then M:Reveal(self.filterPanel,"TOPLEFT",UI.frame,"TOPRIGHT",12,0,-8,0,.18) end
+ if self.filtersOpen and not wasOpen then M:Reveal(self.filterPanel,"TOPRIGHT",UI.frame,"TOPRIGHT",-20,-76,8,0,.18) end
 end
 function P:TierItems()
  local catalog=UI:GetGroup().Catalog;local used
@@ -781,28 +1186,30 @@ function P:RememberCategory()
  prefs.groupKey,prefs.tier,prefs.difficultyID=choice.groupKey,choice.tier,choice.difficultyID
  prefs.groupKeys=CopyGroupKeys(choice.groupKeys)
  prefs.selected=choice.selected==true
- prefs.minLevel,prefs.maxLevel=nil,nil;prefs.minMembers=self.fMinMembers.box:GetText();prefs.maxMembers=self.fMembers.box:GetText()
+ prefs.minLevel,prefs.maxLevel=nil,nil
  local cat=Category();local seasonDungeon=cat.id==2 and cat.season
  prefs.neededRole=not seasonDungeon and self.roleChoice.value or nil
  prefs.tankPresence,prefs.healerPresence,prefs.damagePresence=state.filters.tankPresence,state.filters.healerPresence,state.filters.damagePresence
  prefs.hideZeroScore=state.filters.hideZeroScore
  prefs.hideSameSpec=state.filters.hideSameSpec
+ prefs.hideSameClass=state.filters.hideSameClass
+ prefs.roleMatchAny=state.filters.roleMatchAny
+ for _,key in ipairs(numericFilterKeys) do prefs[key]=state.filters[key] end
  prefs.social=state.social;prefs.sort=state.filters.sort
 end
 function P:RestoreCategory(prefs)
+ if prefs.hideSameClass then prefs.hideSameSpec=nil end
  self.loading=true
  state.groupKeys=CopyGroupKeys(prefs.groupKeys)
  state.confirmedChoice=ChoiceSnapshot(prefs);self.restoringChoice=true
- self.fMinMembers.box:SetText(prefs.minMembers or "")
- self.fMembers.box:SetText(prefs.maxMembers or "")
  local cat=Category();local seasonDungeon=cat and cat.id==2 and cat.season
  local role=not seasonDungeon and prefs.neededRole or nil
  if seasonDungeon then
   prefs.tankPresence=prefs.tankPresence or prefs.neededRole=="TANK" and "missing" or nil
   prefs.healerPresence=prefs.healerPresence or prefs.neededRole=="HEALER" and "missing" or nil
   prefs.damagePresence=prefs.damagePresence or (prefs.needsDamage or prefs.neededRole=="DAMAGER") and "missing" or nil
+  if not prefs.roleMatchAny and prefs.tankPresence=="present" and prefs.healerPresence=="present" and prefs.damagePresence=="present" then prefs.damagePresence=nil end
   prefs.neededRole=nil
-  if prefs.tankPresence=="present" and prefs.healerPresence=="present" and prefs.damagePresence=="present" then prefs.damagePresence=nil end
  end
  prefs.needsDamage=nil
  state.filters.tankPresence=seasonDungeon and prefs.tankPresence or nil
@@ -810,6 +1217,11 @@ function P:RestoreCategory(prefs)
  state.filters.damagePresence=seasonDungeon and prefs.damagePresence or nil
  state.filters.hideZeroScore=seasonDungeon and prefs.hideZeroScore or nil
  state.filters.hideSameSpec=seasonDungeon and prefs.hideSameSpec or nil
+ state.filters.hideSameClass=seasonDungeon and prefs.hideSameClass or nil
+ state.filters.roleMatchAny=seasonDungeon and prefs.roleMatchAny or nil
+ for _,key in ipairs(numericFilterKeys) do state.filters[key]=prefs[key] end
+ self.memberLimit=nil;self:UpdateMemberLimit()
+ self:SyncFilterFields()
  self.roleChoice:SetValue(role or false,role and ({TANK=L.tank,HEALER=L.healer,DAMAGER=L.damage})[role] or L.anyRole)
  state.social=prefs.social=="caution" and "noCaution" or prefs.social;self.socialChoice:SetValue(state.social or false,state.social and ({friend=L.friendChar,guild=L.friendGuild,any=L.notes,positive=Say("含推荐玩家","Recommended players"),noCaution=Say("不含拉黑记录","Without blocked players")})[state.social] or Say("全部关系","All relations"))
  state.filters.sort=prefs.sort or A:GetSetting("defaultSort");self.sortChoice:SetValue(state.filters.sort,L[state.filters.sort] or L.newest)
@@ -821,10 +1233,7 @@ function P:SyncSearchInputMode()
  self.searchModeToggle:Show()
  self.searchModeToggle:SetActive(state.searchMode=="leader")
  UI:SetText(self.searchModeToggle.label,state.searchMode=="leader" and Say("队长","Leader") or Say("标题","Title"))
- local right=self.searchInputRight
- self.previewSearchBox:ClearAllPoints();self.previewSearchBox:SetPoint("TOPLEFT",52,-4);self.previewSearchBox:SetPoint("BOTTOMRIGHT",-right,4)
- self.searchHint:SetWidth(self.search:GetWidth()-52-right)
- self.searchClear:ClearAllPoints();self.searchClear:SetPoint("RIGHT",self.searchModeToggle,"LEFT",-6,0)
+ self:LayoutQuickFilters()
  if UI.preview then
   self.search.box=self.previewSearchBox;self.previewSearchBox:Show();self.searchAvailable=true;self.searchError=nil
   return true
@@ -863,6 +1272,7 @@ end
 function P:UpdateFilters(reset)
  if not self.frame then return end
  local filters=state.filters;local cat=Category();local keys=false
+ self:UpdateMemberLimit()
  if cat.id==2 then for _,activity in ipairs(UI:GetGroup().Catalog:GetActivities(state.category)) do if activity.isMythicPlusActivity and (not state.groupKey or UI:GetGroup().Catalog:GetGroupKey(state.category,activity)==state.groupKey) and (not state.difficultyID or activity.difficultyID==state.difficultyID) and (not state.tier or UI:GetGroup().Catalog:GetActivityTier(activity)==state.tier) then keys=true;break end end end
  local seasonDungeon=cat.id==2 and cat.season
  self:SyncSearchInputMode()
@@ -874,27 +1284,19 @@ function P:UpdateFilters(reset)
  filters.leaderText=query
  filters.minLevel,filters.maxLevel=nil,nil
  filters.personKey=state.personKey
- filters.minMembers=tonumber(self.fMinMembers.box:GetText());filters.maxMembers=tonumber(self.fMembers.box:GetText());filters.neededRole=not seasonDungeon and keys and self.roleChoice.value or nil
- if not seasonDungeon then filters.tankPresence,filters.healerPresence,filters.damagePresence,filters.hideZeroScore,filters.hideSameSpec=nil,nil,nil,nil,nil end
+ filters.neededRole=not seasonDungeon and keys and self.roleChoice.value or nil
+ if not seasonDungeon then filters.tankPresence,filters.healerPresence,filters.damagePresence,filters.hideZeroScore,filters.hideSameSpec,filters.hideSameClass,filters.roleMatchAny=nil,nil,nil,nil,nil,nil,nil end
+ if filters.hideSameClass then filters.hideSameSpec=nil end
  self.hideZeroScore:SetShown(seasonDungeon);self.hideZeroScore:SetValue(filters.hideZeroScore)
- self.hideSameSpec:SetShown(seasonDungeon);self.hideSameSpec:SetValue(filters.hideSameSpec)
- self.filterDivider:SetShown(seasonDungeon)
  filters.friends=state.social=="friend";filters.guild=state.social=="guild";filters.notes=(state.social=="any" or state.social=="positive" or state.social=="noCaution") and state.social or nil
- self.roleChoice:SetShown(keys and not seasonDungeon);self.roleLabel:SetShown(keys or seasonDungeon);self.rolePresencePanel:SetShown(seasonDungeon)
- UI:SetText(self.roleLabel,seasonDungeon and Say("队伍职责","Group roles") or Say("队伍缺少职责","Role needed"))
- self.rolePresenceChoices.TANK:SetValue(filters.tankPresence or false)
- self.rolePresenceChoices.HEALER:SetValue(filters.healerPresence or false)
- self.rolePresenceChoices.DAMAGER:SetValue(filters.damagePresence or false)
- local presentCount=(filters.tankPresence=="present" and 1 or 0)+(filters.healerPresence=="present" and 1 or 0)+(filters.damagePresence=="present" and 1 or 0)
- self.rolePresenceChoices.TANK.buttons[2]:SetAvailable(filters.tankPresence=="present" or presentCount<2)
- self.rolePresenceChoices.HEALER.buttons[2]:SetAvailable(filters.healerPresence=="present" or presentCount<2)
- self.rolePresenceChoices.DAMAGER.buttons[2]:SetAvailable(filters.damagePresence=="present" or presentCount<2)
+ self.roleChoice:SetShown(keys and not seasonDungeon);self.roleLabel:SetShown(keys and not seasonDungeon)
+ self:UpdateFilterSummary()
+ self:SyncQuickFilters(seasonDungeon)
  local layout=seasonDungeon and "presence" or keys and "needed" or "basic"
  if self.filterLayout~=layout then
   self.filterLayout=layout
   self:LayoutFilters()
  end
- self:UpdateFilterSummary()
  if reset then self.results:SetPixelOffset(0,false) end
  local group=state.groupKey and UI:GetGroup().Catalog:GetGroup(state.category,state.groupKey)
  local name=group and group.name or state.browseReady and AllActivitiesLabel(cat) or cat.name
@@ -920,8 +1322,9 @@ function P:SavePrefs()
  prefs.filters.selected=choice.selected==true
 end
 function P:ClearFilters()
- state.filters.hideZeroScore,state.filters.hideSameSpec=nil,nil
- self.loading=true;self.fMinMembers.box:SetText("");self.fMembers.box:SetText("");self.roleChoice:SetValue(false,L.anyRole);state.filters.tankPresence,state.filters.healerPresence,state.filters.damagePresence=nil,nil,nil;state.social=nil;self.socialChoice:SetValue(false,Say("全部关系","All relations"));state.filters.sort=A:GetSetting("defaultSort");self.sortChoice:SetValue(state.filters.sort,L[state.filters.sort] or L.newest);self.loading=nil;self:UpdateFilters()
+ self.resultsHeader:SetSort(nil)
+ state.filters.hideZeroScore,state.filters.hideSameSpec,state.filters.hideSameClass=nil,nil,nil
+ self.loading=true;self.fMinMembers.box:SetText("");self.fMembers.box:SetText("");self.roleChoice:SetValue(false,L.anyRole);state.filters.tankPresence,state.filters.healerPresence,state.filters.damagePresence=nil,nil,nil;state.filters.roleMatchAny=nil;for _,key in ipairs(numericFilterKeys) do state.filters[key]=nil end;self:SyncFilterFields();state.social=nil;self.socialChoice:SetValue(false,Say("全部关系","All relations"));state.filters.sort=A:GetSetting("defaultSort");self.sortChoice:SetValue(state.filters.sort,L[state.filters.sort] or L.newest);self.loading=nil;self:UpdateFilters()
 end
 function P:OnSearchTextChanged(box,changed)
  local empty=box:GetText()==""
@@ -968,7 +1371,7 @@ function P:SetStatus(message)
 end
 function P:LayoutResults()
  if not self.results then return end
- local top=132+(self.appsHeight or 0)
+ local top=124+(self.appsHeight or 0)+(self.quickFilterHeight or 0)
  local quota=state.applicationLimit
  local available=quota and UI:GetGroup().Applications:GetActiveCount()<5
  local message=quota and (available and Say("已有空余名额，可以继续申请。","A slot is available. You can continue your application.") or Say("最多同时申请 5 支队伍，请先取消一项申请。","You can apply to five groups at once. Cancel an application to continue.")) or self.statusMessage or ""
@@ -980,11 +1383,13 @@ function P:LayoutResults()
  if message~="" then top=top+self.limitNotice:GetHeight()+12 end
  if self.resultsTop==top then return end
  self.resultsTop=top
- self.context:ClearAllPoints();self.context:SetPoint("TOPLEFT",12,-top)
+ self.context:ClearAllPoints();self.context:SetPoint("TOPLEFT",0,-top)
  self.resultCount:ClearAllPoints();self.resultCount:SetPoint("LEFT",self.context,"RIGHT",12,0)
- self.resultsHeader:ClearAllPoints();self.resultsHeader:SetPoint("TOPLEFT",0,-top-40)
- local resultsHeight=math.max(self.results.rowHeight,HEIGHT-top-80)
- self.results:ClearAllPoints();self.results:SetPoint("TOPLEFT",0,-top-80);self.results:SetViewport(resultsHeight)
+ local headerOffset=self.context:GetHeight()+8
+ local rowsOffset=headerOffset+self.resultsHeader:GetHeight()
+ self.resultsHeader:ClearAllPoints();self.resultsHeader:SetPoint("TOPLEFT",0,-top-headerOffset)
+ local resultsHeight=math.max(self.results.rowHeight,HEIGHT-top-rowsOffset)
+ self.results:ClearAllPoints();self.results:SetPoint("TOPLEFT",0,-top-rowsOffset);self.results:SetViewport(resultsHeight)
  self.emptyPanel:ClearAllPoints();self.emptyPanel:SetPoint("TOP",self.results,"TOP",0,-math.max(8,(resultsHeight-280)/2-40))
 end
 function P:ReadSearchState()
@@ -1004,15 +1409,31 @@ function P:RefreshApplications()
   if same and Active(app) then categoryCount=categoryCount+1 end
   if Active(app) and (state.showGlobal or same) then state.apps[app.id]=app;state.appIDs[#state.appIDs+1]=app.id end
  end
+ local prefs=self.applicationHeader.state
+ if prefs.sortKey then
+  local function Value(id)
+   local app=state.apps[id]
+   if prefs.sortKey=="members" then return app.result and app.result.numMembers end
+   return app.expiresAt
+  end
+  table.sort(state.appIDs,function(a,b)
+   local av,bv=Value(a),Value(b)
+   if av~=bv then
+    if av==nil then return false elseif bv==nil then return true end
+    if prefs.descending then return av>bv else return av<bv end
+   end
+   return a<b
+  end)
+ end
  self.appList:SetItems(state.appIDs,UpdateApplication)
  local count=#state.appIDs;local h=math.min(3,count)*self.appList.rowHeight
  local globalCount=UI:GetGroup().Applications:GetActiveCount()
+ self.applicationHeader:SetShown(count>0)
  self.appList:SetShown(count>0);self.appList:SetViewport(math.max(1,h));UI:SetText(self.appsCount,("%d / 5"):format(globalCount))
  UI:Color(self.appsCount,globalCount>=5 and T.warning or T.text)
- UI:SetText(self.appsEmpty,Say("本分类暂无申请","No applications in this category"));C.SetLineHeight(self.appsEmpty,20,true);self.appsEmpty:SetShown(categoryCount==0 and globalCount==0);self.scopeToggle:SetShown(globalCount>categoryCount)
- UI:SetText(self.scopeToggle.label,state.showGlobal and Say("仅看本分类","This category") or Say("查看全部申请","All applications"))
- self.scopeToggle:SetWidth(FitText(self.scopeToggle.label)+24)
- self.appsHeight=h;self.applicationPanel:SetHeight(44+h);self:LayoutResults()
+ self.hasOtherApplications=globalCount>categoryCount;self.noApplications=globalCount==0
+ UI:SetText(self.appsEmpty,Say("本分类暂无申请","No applications in this category"));C.SetLineHeight(self.appsEmpty,20,true)
+ self.appsHeight=h+(count>0 and self.applicationHeader:GetHeight()+4 or 0);self:LayoutQuickFilters();self:LayoutResults()
  self.autoJoin:SetValue(UI:GetGroupSetting("autoJoin"))
  local ticking=HasApplicationCountdown()
  if ticking and not self.countdown then
@@ -1022,7 +1443,7 @@ end
 function P:ShowApplicationLimit()
  state.applicationLimit=true;state.showGlobal=true
  self:ClosePicker();UI:CloseMenu();UI.Tooltip:Hide();self:RefreshApplications()
- M:Reveal(self.limitNotice,"TOPLEFT",self.main,"TOPLEFT",0,-140-(self.appsHeight or 0),0,7,.20)
+ M:Reveal(self.limitNotice,"TOPLEFT",self.main,"TOPLEFT",0,-140-(self.appsHeight or 0)-(self.quickFilterHeight or 0),0,7,.20)
 end
 function P:DismissApplicationNotice()
  state.applicationLimit=nil
@@ -1041,7 +1462,8 @@ function P:RefreshResults(refreshTooltip)
   self.raidResultColumns=raid
   self:LayoutResultColumns()
  end
- self:RefreshApplications();local ids=state.browseReady and UI:GetGroup():GetResults() or {};self.results:SetItems(ids,RenderResult);UI:SetText(self.resultCount,Say("%d 支队伍","%d groups"):format(#ids))
+ self:RefreshApplications();local ids=self:SortResultIDs(state.browseReady and UI:GetGroup():GetResults() or {});self.results:SetItems(ids,RenderResult);UI:SetText(self.resultCount,Say("%d 支队伍","%d groups"):format(#ids))
+ self.filteredResultCount=#ids;self:UpdateFilterResultSummary()
  self:RefreshDeclineState(ids)
  self:RefreshSearchState()
  if refreshTooltip or tooltipResultID and UI.Tooltip:IsResult(tooltipResultID) then UI.Tooltip:RefreshRelations() end
@@ -1082,6 +1504,7 @@ function P:UpdateApplicationSettings()
  UI:SetText(self.applicationSettings.label,L.applicationSettings)
  self.applicationSettings:SetWidth(FitText(self.applicationSettings.label))
  self.applicationSettings:SetAvailable(enabled)
+ self:LayoutQuickFilters()
 end
 function P:LayoutListRows()
  local first=self.results.rows[1]
@@ -1106,6 +1529,10 @@ function P:LayoutListRows()
 end
 function P:LayoutFont()
  if not self.frame then return end
+ self.resultsHeader:SetHeight(math.max(24,self.resultHeadings.title:GetHeight()))
+ self.applicationHeader:SetHeight(math.max(24,self.applicationHeader.labels.title:GetHeight()))
+ self.resultsTop=nil;self:LayoutQuickFilters()
+ self:LayoutResultColumns();self.applicationHeader:Layout(APP_BODY)
  self.autoJoin:SetWidth(54+FitText(self.autoJoin.label))
  self.scopeToggle:SetWidth(FitText(self.scopeToggle.label)+24)
  self:UpdateApplicationSettings()
@@ -1158,7 +1585,7 @@ function P:Enter(context)
   if UI.preview then self.previewSearchBox:SetText(filters.text or "") end
   local saved=state.categoryPrefs[state.category] or filters
   state.groupKey=saved.groupKey;state.difficultyID=saved.difficultyID;state.tier=saved.tier
-  self:RestoreCategory(state.categoryPrefs[state.category] or {groupKey=filters.groupKey,groupKeys=filters.groupKeys,difficultyID=filters.difficultyID,tier=filters.tier,selected=filters.selected,minMembers=filters.minMembers,maxMembers=filters.maxMembers,neededRole=filters.neededRole,tankPresence=filters.tankPresence,healerPresence=filters.healerPresence,damagePresence=filters.damagePresence,hideZeroScore=filters.hideZeroScore,hideSameSpec=filters.hideSameSpec,needsDamage=filters.needsDamage,sort=filters.sort,social=prefs.social})
+  self:RestoreCategory(state.categoryPrefs[state.category] or {groupKey=filters.groupKey,groupKeys=filters.groupKeys,difficultyID=filters.difficultyID,tier=filters.tier,selected=filters.selected,minMembers=filters.minMembers,maxMembers=filters.maxMembers,neededRole=filters.neededRole,tankPresence=filters.tankPresence,healerPresence=filters.healerPresence,damagePresence=filters.damagePresence,hideZeroScore=filters.hideZeroScore,hideSameSpec=filters.hideSameSpec,hideSameClass=filters.hideSameClass,roleMatchAny=filters.roleMatchAny,minRating=filters.minRating,maxRating=filters.maxRating,minItemLevel=filters.minItemLevel,maxItemLevel=filters.maxItemLevel,needsDamage=filters.needsDamage,sort=filters.sort,social=prefs.social})
   self.loading=nil
  end
  self:SetSidebarCollapsed(state.railCollapsed,false)
@@ -1201,6 +1628,7 @@ function P:Enter(context)
   if context and context.leaderKey or UI:GetGroup().Search.abandoned or searchState=="idle" or searchState~="searching" and UI:GetGroup().Search.categoryKey~=state.category then self:DoSearch() end
 end
 function P:Leave()
+ self.resultsHeader:StopDrag(false);self.applicationHeader:StopDrag(false)
  self:FinishSidebar()
  M:Stop(self);self.pendingTooltipResultID=nil
  UI.Native:ReleaseSearch();self.searchAvailable,self.searchError=nil,nil
@@ -1209,6 +1637,7 @@ function P:Leave()
  self.results:Clear();self.appList:Clear();self.seasonCategories:Clear();self.categories:Clear();if self.picker then self.activities:Clear();self:ClosePicker() end;M:FinishPlacement(self.filterPanel);self.filterPanel:Hide()
  StopCountdown();StopDeclineClock();M:Waiting(self.busyIcon,false);M:Spin(self.refreshIcon,false);self.busyState=nil
  wipe(state.apps);wipe(state.appIDs);state.selected=nil
+ if self.sortedResults then wipe(self.sortedResults);wipe(self.sortValues) end
  state.showGlobal=nil
  UI:GetGroup():Detach(self);UI:FitToScreen()
 end

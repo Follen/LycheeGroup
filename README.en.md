@@ -4,17 +4,19 @@
 
 A group-finding addon for retail World of Warcraft. Find groups, manage recruitment, and keep notes on players you meet, all in one window.
 
-The current version is **1.2.2**, targeting retail **12.1.5** (Interface `120105`) with Chinese and English support. See the [changelog](CHANGELOG.md) for release notes (in Chinese).
+The current version is **1.2.3**, targeting retail **12.1.5** (Interface `120105`) with Chinese and English support. See the [changelog](CHANGELOG.md) for release notes (in Chinese).
 
 ## Features
 
-- **Find groups:** browse dungeons, raids, delves, PvP, and other activities. Search and filter listings, exclude groups that already have your specialization in seasonal dungeons, read listing descriptions, inspect members, and track applications. Groups that declined you during this session sort last and show how long ago they declined.
+- **Find groups:** browse dungeons, raids, delves, PvP, and other activities. Search and filter listings, exclude groups that already have your class or specialization in seasonal dungeons, read listing descriptions, inspect members, and track applications. Groups that declined you during this session sort last and show how long ago they declined.
 - **Manage recruitment:** create and edit listings, inspect applicants' Mythic+ records, listing-specific dungeon scores, and known factions. Click a faction icon to switch to the race name, and invite players from the list. Click the star beside the activity to save the current settings. Applying a favorite preserves your current title and description for you to review and publish; publishing does not save a creation history. Small-group activities show current members directly; raid activities show subgroup rosters on hover. Current-season raids also show class-buff coverage.
-- **Character preferences:** keep application roles, category filters, and sorting separately for each character across reloads. Enable automatic application separately for each session.
+- **Character preferences:** save automatic application, application roles, category filters, and sorting per character across reloads. The application dialog and main window share the same automatic-application setting.
+- **Table controls:** hover over a header and drag its dividers to resize columns. Right-click a divider to restore that table's default widths. Click numeric or time headers to toggle ascending and descending order; widths and directions are saved per character.
+- **Filters and member icons:** an internal filter panel offers rating, item-level, and group-size ranges. Seasonal dungeon role combinations and matching-class/spec filters are selected directly in the panel by default. Enable “Show key filters on the main page” in Appearance to display them in My applications. Search-result member icons offer circle/original rounded-square shapes, class-colored borders, scaling, and a crown on the actual leader.
 - **Group blocking:** block matching titles from a listing's context menu and remember their leaders across refreshes and reloads. Remove individual entries or clear the list under Settings → Blocks, independently of player notes.
 - **Player notes:** share positive, neutral, or blocked-player records across characters on the account, with reminders when you group again. Import and export your notes.
 - **Mythic+ history:** keep a per-character history of runs, key levels, dates, and teammates, then add notes from past runs.
-- **Interface settings:** change the main-window key binding, overall scale, and font size; the floating window has its own scale setting. RurutiaSuite top bar integration is detected automatically and can be toggled in the floating window settings.
+- **Interface settings:** change the main-window key binding, overall scale, and font size; the floating window has its own scale setting. Clicking Settings again returns to the page you came from. RurutiaSuite top bar integration is detected automatically and can be toggled in the floating window settings.
 
 The interface uses native Lua with bundled LycheeUI. Feature modules load on demand; no separate UI library installation is needed.
 
@@ -70,6 +72,6 @@ For the local widget-tree preview, run `lua tests/ui_preview.lua`, then open [`t
 
 Project documents (in Chinese): [Product](Product.md) · [Design](Desgin.md) · [Architecture](Architecture.md) · [Performance](perfermance.md) · [Documentation and changelog rules](Agents.md). The product document describes the current implementation and in-game validation coverage.
 
-The current version is 1.2.2. It includes font-size, entry routing, and filtering changes and bundles LycheeUI 1.2.0 (revision 26), with shared font scaling, selection and menu transitions. The source library and embedded copy match. The user has lifted the freeze recorded in [.lock](../LycheeUI/.lock). See the [integration guide](../LycheeUI/README.md), [API](../LycheeUI/API.md), and [component design specification](../LycheeUI/DESIGN.md).
+The current version is 1.2.3; development changes are listed in the [unreleased changelog](CHANGELOG.md#未发布). The working tree bundles LycheeUI 1.2.0 (revision 31), with shared font scaling, selection and menu transitions, and resizable, sortable table headers. The source library and embedded copy match. The user has lifted the freeze recorded in [.lock](../LycheeUI/.lock). See the [integration guide](../LycheeUI/README.md), [API](../LycheeUI/API.md), and [component design specification](../LycheeUI/DESIGN.md).
 
 See the [library notes](addon/LycheeGroup_Group/Libs/README.md) for bundled third-party sources and licenses.

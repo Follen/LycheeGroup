@@ -67,4 +67,87 @@ Near(applied.roster:GetScale(),1,"application members retain their original scal
 Near(applied.roster:GetWidth(),110,"application members retain their original spacing")
 Near(applied.roster.slots[1].icon:GetWidth(),18,"application avatars retain their original size")
 Near(applied.roster.slots[1].role:GetWidth(),10,"application badges retain their original size")
+Check(not row.leaderIcon:IsShown() and not applied.leaderIcon:IsShown(),"search and application names no longer repeat the leader crown")
+
+local oldColors,oldCustom=RAID_CLASS_COLORS,CUSTOM_CLASS_COLORS
+RAID_CLASS_COLORS={WARRIOR={r=.8,g=.6,b=.4},PALADIN={r=.9,g=.4,b=.7}};CUSTOM_CLASS_COLORS=nil
+members[2].isLeader=true;members[3].class="PALADIN";members[3].specID=66;Render()
+local function Setting(key,value) A:SetSetting(key,value);page:RefreshMemberStyle() end
+local function CrownCount()
+ local count=0
+ for _,slot in ipairs(row.roster.slots) do if slot.icon.memberLeaderMark and slot.icon.memberLeaderMark:IsShown() then count=count+1 end end
+ return count
+end
+Check(CrownCount()==1 and row.roster.slots[2].icon.memberLeaderMark:IsShown(),"the native leader is marked in its actual member slot, not the first slot")
+for _,slot in ipairs(row.roster.slots) do
+ Check(slot.icon._lycheeMask:GetTexture():find("member%-circle%-mask%.tga$")~=nil,"occupied result icons use the selected circular mask")
+ Check(slot.icon.memberBorder and slot.icon.memberBorder:IsShown(),"occupied members receive a class-color border")
+end
+Near(row.roster.slots[3].icon.memberBorder.vertex[1],.9,"border colors follow each actual member class")
+Setting("memberIconShape","square")
+for _,slot in ipairs(row.roster.slots) do
+ Check(slot.icon._lycheeMask:GetTexture()==U.Theme.media.."icon-mask.tga","square members reuse the original rounded icon silhouette")
+ local border=slot.icon.memberBorder
+ Check(border:GetTexture()==slot.icon._lycheeMask:GetTexture() and border.layer=="ARTWORK" and border.sublevel==-1,"the class-colored outline follows the same silhouette behind the avatar")
+end
+local border=row.roster.slots[1].icon.memberBorder
+Setting("memberIconShape","circle")
+Check(border.layer=="OVERLAY" and border.allPoints==row.roster.slots[1].icon,"switching back to circles restores their original overlay without leftover square anchors")
+Setting("memberIconShape","square")
+Check(row.roster.slots[1].icon.memberBorder==border and #border.points==2,"switching shapes reuses the border and restores the rounded-square outline")
+Setting("memberClassBorder",false)
+for _,slot in ipairs(row.roster.slots) do Check(not slot.icon.memberBorder:IsShown(),"border settings hide all existing result decorations") end
+Setting("memberLeaderMark",false);Check(CrownCount()==0,"the crown setting hides existing leader marks")
+Setting("memberClassBorder",true);Setting("memberLeaderMark",true)
+members[2].isLeader=nil;record.leaderKey=nil;Render();Check(CrownCount()==0,"unknown leadership never assigns a crown by display order")
+members[3].nameKey="Member3-Away";record.leaderKey="Member3-Away";Render()
+Check(CrownCount()==1 and row.roster.slots[3].icon.memberLeaderMark:IsShown(),"a complete verified leader identity can locate its actual slot")
+local header=page.resultsHeader;header:SetSort("rating",true)
+local widthState=header.state.widths
+for _,percent in ipairs({75,100,175,100}) do
+ Setting("memberIconScale",percent)
+ Near(row.roster:GetScale(),1.2*1.15*percent/100,"member percentages apply to the existing roster scale")
+ local cell=header.columns.members;local point={row.membersButton:GetPoint()};local start=point[#point-1]
+ Check(start>=cell.x and start+row.membersButton:GetWidth()<=cell.x+cell.width+.001,"scaled members stay within the current resizable member cell")
+ local scale=row.roster:GetScale();local left=(row.membersButton:GetWidth()-row.roster:GetWidth()*scale)/2
+ for i,slot in ipairs(row.roster.slots) do
+  local location={slot.icon:GetPoint()};local right=left+(location[#location-1]+slot.icon:GetWidth()+1)*scale
+  Check(right<=row.membersButton:GetWidth()+.001,"the final scaled role badge stays inside the member area")
+  if i<5 then local nextPoint={row.roster.slots[i+1].icon:GetPoint()};Check(right<=left+nextPoint[#nextPoint-1]*scale,"scaled badges stay clear of the next member") end
+ end
+ local crown=row.roster.slots[3].icon.memberLeaderMark
+ Check(crown:GetHeight()*scale<=19.001,"leader marks retain the visual size cap at larger scales")
+ local anchor={crown:GetPoint()};local gap=anchor[#anchor]*scale
+ Near(gap,1,"crowns retain a visible gap above the avatar across icon scales")
+ local rosterY=point[#point]
+ Check(rosterY+10*scale+gap+crown:GetHeight()*scale<=row:GetHeight()/2+.001,"enlarged leader crowns remain inside the result row")
+ Check(rosterY-10*scale>=-row:GetHeight()/2-.001,"moving a large crown into the row keeps the lower role badge inside")
+ Check(page.resultsHeader==header and header.state.widths==widthState and header.state.sortKey=="rating" and header.state.descending,"member changes preserve the existing table and sort preferences")
+end
+record.details.members={members[1]};record.numMembers=1;Render()
+for i=2,5 do
+ local icon=row.roster.slots[i].icon
+ Check(not icon.memberBorder:IsShown() and (not icon.memberLeaderMark or not icon.memberLeaderMark:IsShown()),"empty recycled slots release borders and leader marks")
+ Near(row.roster.slots[i].role:GetWidth(),18,"missing-role placeholders keep their full existing size")
+end
+record.maxNumPlayers=30;record.categoryID=3;Render()
+Check(CrownCount()==0,"raid role summaries never retain a member crown")
+for _,slot in ipairs(row.roster.slots) do Check(not slot.icon.memberBorder:IsShown(),"raid role summaries do not retain member borders") end
+record.maxNumPlayers=5;record.categoryID=2;record.numMembers=5;record.details.members=members;Render()
+local nodes=#f.S.nodes;for _=1,20 do Render() end
+Check(#f.S.nodes==nodes,"repeated native updates reuse masks, borders and crowns")
+Near(applied.roster:GetScale(),1,"new result styles do not resize the application roster")
+for _,slot in ipairs(applied.roster.slots) do Check(slot.icon.memberBorder==nil and slot.icon.memberLeaderMark==nil,"application members keep their original artwork") end
+local unrelated=U.C.GameIcon(UIParent,24);U:SetMemberIcon(unrelated,members[3])
+Check(unrelated.memberBorder==nil and not unrelated._lycheeMask:GetTexture():find("member%-"),"other member-icon consumers keep the shared library mask")
+A:Open("settings",{section="memberIcons"});local settings=U.pages.settings
+Check(settings.section=="memberIcons" and settings.controls.memberIconShape~=nil,"all member controls have a dedicated settings section")
+local slider=settings.controls.memberIconScale.widget.slider
+Check(slider:GetMinMaxValues()==75 and select(2,slider:GetMinMaxValues())==175,"member settings expose the adopted percentage range")
+for _,percent in ipairs({70,100,130}) do
+ A:SetSetting("fontScale",percent)
+ local panel=settings.panels.memberIcons;local last=panel.rows[#panel.rows];local point={last.frame:GetPoint()}
+ Check(-point[#point]+last.frame:GetHeight()<=panel:GetHeight()+.001,"member settings remain readable within the page at every supported font size")
+end
+RAID_CLASS_COLORS,CUSTOM_CLASS_COLORS=oldColors,oldCustom
 print(("[PASS] find member size: %d geometry checks"):format(checks))

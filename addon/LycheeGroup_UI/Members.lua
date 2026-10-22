@@ -5,6 +5,7 @@ local Members={};UI.Members=Members
 local NAME_SIZE,NAME_HEIGHT=14,18
 local META_SIZE,META_HEIGHT=12,16
 local ICON_SIZE,MARK_SIZE,TEXT_GAP=24,18,8
+local LEADER_SIZE,LEADER_GAP=14,1
 local zh=A:GetLocale()=="zhCN"
 local function Say(cn,en) return zh and cn or en end
 
@@ -106,7 +107,7 @@ end
 local function MemberMeta(member)
  return UI:SpecName(member) or member.localizedClass or L.unknown
 end
-local function LayoutIdentity(icon,title,subtitle,role,faction,marks,marksWidth,width,top,inset)
+local function LayoutIdentity(icon,title,subtitle,role,faction,marks,marksWidth,width,top,inset,inlineMarks)
  local textX=inset+ICON_SIZE+TEXT_GAP
  role:SetSize(MARK_SIZE,MARK_SIZE);role:SetShown(role:GetTexture()~=nil)
  faction:SetSize(MARK_SIZE,MARK_SIZE)
@@ -115,30 +116,35 @@ local function LayoutIdentity(icon,title,subtitle,role,faction,marks,marksWidth,
  if faction:IsShown() then markWidth=markWidth+MARK_SIZE;markGroups=markGroups+1 end
  markWidth=markWidth+math.max(0,markGroups-1)*4
  local textWidth=width-textX-inset-(markWidth>0 and markWidth+6 or 0)
- title:ClearAllPoints();title:SetPoint("TOPLEFT",textX,-top);title:SetWidth(textWidth);title:SetHeight(0);title:SetWordWrap(true)
+ title:SetWidth(textWidth);title:SetHeight(0);title:SetWordWrap(true)
  local titleHeight=math.max(title:GetLineHeight(),title:GetStringHeight())
- local subtitleTop=top+titleHeight+2
- role:ClearAllPoints();role:SetPoint("RIGHT",icon,"RIGHT",width-2*inset-ICON_SIZE,0)
- marks:ClearAllPoints()
- faction:ClearAllPoints()
- if role:IsShown() then faction:SetPoint("RIGHT",role,"LEFT",-4,0) else faction:SetPoint("RIGHT",icon,"RIGHT",width-2*inset-ICON_SIZE,0) end
- if faction:IsShown() then marks:SetPoint("RIGHT",faction,"LEFT",-4,0)
- elseif role:IsShown() then marks:SetPoint("RIGHT",role,"LEFT",-4,0)
- else marks:SetPoint("RIGHT",icon,"RIGHT",width-2*inset-ICON_SIZE,0) end
- subtitle:ClearAllPoints();subtitle:SetPoint("TOPLEFT",textX,-subtitleTop);subtitle:SetWidth(textWidth);subtitle:SetHeight(0);subtitle:SetWordWrap(true)
+ subtitle:SetWidth(textWidth);subtitle:SetHeight(0);subtitle:SetWordWrap(true)
  local height=math.max(ICON_SIZE,titleHeight+2+math.max(subtitle:GetLineHeight(),subtitle:GetStringHeight()))
+ local crownSpace=math.max(0,LEADER_SIZE+LEADER_GAP-top-(height-ICON_SIZE)/2)
+ top=top+crownSpace
+ title:ClearAllPoints();title:SetPoint("TOPLEFT",textX,-top)
+ subtitle:ClearAllPoints();subtitle:SetPoint("TOPLEFT",textX,-top-titleHeight-2)
  -- Portrait and right-side marks share the complete identity block's center,
  -- including wrapped names and specialization text.
  local portraitTop=top+(height-ICON_SIZE)/2
  icon:SetSize(ICON_SIZE,ICON_SIZE);icon:ClearAllPoints();icon:SetPoint("TOPLEFT",inset,-portraitTop)
- return height
+ local markRight=width-inset
+ if inlineMarks then markRight=textX+math.min(textWidth,math.max(title:GetStringWidth(),subtitle:GetStringWidth()))+6+markWidth end
+ local markOffset=markRight-inset-ICON_SIZE
+ role:ClearAllPoints();role:SetPoint("RIGHT",icon,"RIGHT",markOffset,0)
+ marks:ClearAllPoints();faction:ClearAllPoints()
+ if role:IsShown() then faction:SetPoint("RIGHT",role,"LEFT",-4,0) else faction:SetPoint("RIGHT",icon,"RIGHT",markOffset,0) end
+ if faction:IsShown() then marks:SetPoint("RIGHT",faction,"LEFT",-4,0)
+ elseif role:IsShown() then marks:SetPoint("RIGHT",role,"LEFT",-4,0)
+ else marks:SetPoint("RIGHT",icon,"RIGHT",markOffset,0) end
+ return height+crownSpace
 end
 function Members:Create(parent,onClick)
  local button=C.Button(parent,"",250,onClick,{height=56,radius=8})
  button:RegisterForClicks("LeftButtonUp","RightButtonUp");button.label:Hide()
  button.icon=C.GameIcon(button,ICON_SIZE)
  button.name=C.Text(button,"",NAME_SIZE,T.text);button.name:SetWordWrap(true);C.SetLineHeight(button.name,NAME_HEIGHT)
- button.leaderIcon=C.Icon(button,10);button.leaderIcon:SetTexture(T.media.."leader.tga");button.leaderIcon:SetPoint("TOPRIGHT",button.icon,"TOPRIGHT",3,3);button.leaderIcon:Hide()
+ button.leaderIcon=C.Icon(button,LEADER_SIZE);button.leaderIcon:SetDrawLayer("OVERLAY",1);button.leaderIcon:SetTexture(T.media.."leader.tga");button.leaderIcon:SetPoint("BOTTOM",button.icon,"TOP",0,LEADER_GAP);button.leaderIcon:Hide()
  button.realm=C.Text(button,"",META_SIZE,T.dim);button.realm:SetWordWrap(true);C.SetLineHeight(button.realm,META_HEIGHT)
  button.role=C.Icon(button,MARK_SIZE)
  button.faction=C.Icon(button,MARK_SIZE)
@@ -161,7 +167,7 @@ local function Bind(self,button,member,key,width,isLeader,interactive,inset,padd
  else CollectMarks(button.marks,member,key) end
  local marksWidth=PaintMarks(button.marks)
  inset,padding=inset or 6,padding or 4
- local height=math.max(56,LayoutIdentity(button.icon,button.name,button.realm,button.role,button.faction,button.marks,marksWidth,width,padding,inset)+padding*2)
+ local height=math.max(56,LayoutIdentity(button.icon,button.name,button.realm,button.role,button.faction,button.marks,marksWidth,width,padding,inset,search)+padding*2)
  button:SetHeight(height);button:Show()
  return height
 end

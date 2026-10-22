@@ -5,7 +5,7 @@ local Members=UI.Members
 -- A separate tooltip owned by this UI; the global GameTooltip stays untouched.
 local Tip={orderedMembers={},rosterGroupCounts={}}
 local GUTTER=T.scrollWidth
-local PADDING,BOSS_WIDTH,BOSS_GAP=20,240,24
+local PADDING,BOSS_WIDTH,BOSS_GAP=20,224,24
 local function ScrollMaximum(scroll,canvas)
  local overflow=canvas:GetHeight()-scroll:GetHeight()
  -- Match List: native scaled dimensions may differ by a tiny rounding residue.
@@ -103,6 +103,7 @@ function Tip:HideRosterOwner(owner,memberID)
 end
 function Tip:Hide()
  if self.outsideClicks then self.outsideClicks:Hide() end
+ if self.text then self.text:Hide() end
  UI.Motion:Stop(self)
  wipe(self.orderedMembers)
  wipe(self.rosterGroupCounts)
@@ -117,6 +118,18 @@ end
 
 local zh=A:GetLocale()=="zhCN"
 local function Say(cn,en) return zh and cn or en end
+function Tip:BindText(owner,text)
+ owner:HookScript("OnEnter",function(button)
+  if UI.hiding or self.pinned then return end
+  self:Hide();self.owner=button
+  if not self.text then self.text=C.Tooltip(UI.frame,300) end
+  self.text:SetOwner(button,"ANCHOR_TOP");self.text:AddLine(text)
+  local line=self.text.lines[1];local width=math.min(268,math.ceil(line:GetUnboundedStringWidth())+1)
+  line:SetWidth(width);self.text:SetWidth(width+32);self.text:Show()
+ end)
+ owner:HookScript("OnLeave",function(button) self:LeaveOwner(button) end)
+ owner:HookScript("OnHide",function(button) if self:IsOwned(button) then self:Hide() end end)
+end
 local bosses={}
 local function Bosses(activity)
  local id=activity and activity.journalID
@@ -239,8 +252,8 @@ function Tip:BuildInteractive()
  f.metrics={}
  for i=1,4 do local title=C.Text(canvas,"",14,T.dim);C.SetLineHeight(title,20,true);local value=C.Text(canvas,"",14,T.text);C.SetLineHeight(value,20,true);f.metrics[i]={title=title,value=value} end
  f.composition=C.Roster(canvas,22,5);f.composition:SetPoint("TOPLEFT",0,-86)
- f.leader=C.Text(canvas,"",14,T.muted);f.leader:SetPoint("TOPLEFT",0,-122);C.SetLineHeight(f.leader,20)
- f.leaderIcon=C.Icon(canvas,14);f.leaderIcon:SetTexture(T.media.."leader.tga");f.leaderIcon:Hide()
+ f.raidLeader=C.Text(canvas,"",14,T.muted);C.SetLineHeight(f.raidLeader,20);f.raidLeader:SetWordWrap(true);f.raidLeader:Hide()
+ f.raidLeaderIcon=C.Icon(canvas,14);f.raidLeaderIcon:SetTexture(T.media.."leader.tga");f.raidLeaderIcon:Hide()
  f.comment=C.Text(canvas,"",14,T.text);f.comment:SetPoint("TOPLEFT",0,-146);f.comment:SetWordWrap(true);C.SetLineHeight(f.comment,22)
  f.footer=C.Text(canvas,"",14,T.dim);f.footer:SetWordWrap(true);C.SetLineHeight(f.footer,20)
  f.bossTitle=C.Text(canvas,Say("首领进度","Boss progress"),14,T.text,120);C.SetLineHeight(f.bossTitle,20,true)
@@ -295,6 +308,7 @@ function Tip:EnsureMemberButtons(count)
  end
 end
 function Tip:ResetInteractive(owner,width,metricAlignment)
+ if self.text then self.text:Hide() end
  metricAlignment=metricAlignment or "LEFT"
  local metricVertical=metricAlignment=="CENTER" and "TOP" or "MIDDLE"
  UI.Motion:Stop(self)
@@ -308,7 +322,6 @@ function Tip:ResetInteractive(owner,width,metricAlignment)
  C.SetFont(f.title,18);C.SetLineHeight(f.title,24);f.title:SetHeight(0)
  f.subtitle:ClearAllPoints();f.subtitle:SetPoint("TOPLEFT",52,-28);f.subtitle:SetHeight(0)
  f.summary:ClearAllPoints();f.summary:SetPoint("TOPLEFT",0,-56)
- f.leader:ClearAllPoints();f.leader:SetPoint("TOPLEFT",0,-122);f.leader:SetJustifyH("LEFT");f.leader:SetWordWrap(false);f.leaderIcon:Hide()
  f.comment:ClearAllPoints();f.comment:SetPoint("TOPLEFT",0,-146)
  for _,b in ipairs(f.memberButtons) do b:Hide();b.member=nil;b.memberContext=nil;b.targetKey=nil end
  for _,title in pairs(f.rosterGroupTitles) do title:Hide() end
@@ -324,11 +337,12 @@ function Tip:ResetInteractive(owner,width,metricAlignment)
   metric.title:SetHeight(height);metric.value:SetHeight(height)
  end
  f.back:Hide();f.note:Hide();f.wcl:Hide();f.playerRole:Hide();f.noteHeading:Hide();f.noteGlyph:Hide();f.noteDate:Hide();f.noteDivider:Hide();f.bossTitle:Hide();f.bossCount:Hide();f.bossText:Hide();f.composition:Hide();f.pvpRatings:Hide()
+ f.raidLeader:Hide();f.raidLeaderIcon:Hide()
  for _,row in ipairs(f.bossRows) do row:Hide() end
  f.dungeonTitle:Hide();f.dungeonEmpty:Hide();f.playerFaction:Hide()
  for _,row in ipairs(f.dungeonRows) do row:Hide() end
- f.icon:Show();f.title:Show();f.subtitle:Show();f.summary:Show();f.leader:Show();f.comment:Show()
- f:SetWidth(width);f.canvas:SetWidth(width-2*PADDING-GUTTER);f.title:SetWidth(width-2*PADDING-52-GUTTER);f.subtitle:SetWidth(width-2*PADDING-52-GUTTER);f.summary:SetWidth(width-2*PADDING-GUTTER);f.leader:SetWidth(width-2*PADDING-GUTTER);f.comment:SetWidth(width-2*PADDING-GUTTER);f.footer:SetWidth(width-2*PADDING-GUTTER)
+ f.icon:Show();f.title:Show();f.subtitle:Show();f.summary:Show();f.comment:Show()
+ f:SetWidth(width);f.canvas:SetWidth(width-2*PADDING-GUTTER);f.title:SetWidth(width-2*PADDING-52-GUTTER);f.subtitle:SetWidth(width-2*PADDING-52-GUTTER);f.summary:SetWidth(width-2*PADDING-GUTTER);f.comment:SetWidth(width-2*PADDING-GUTTER);f.footer:SetWidth(width-2*PADDING-GUTTER)
  UI.Motion:Stop(f.scroll);f.scroll.scrollTarget=nil
  f.scroll:SetVerticalScroll(0)
  return f
@@ -339,7 +353,7 @@ function Tip:ShowApplicants(owner,app,keepPinned)
  self.pinned=keepPinned==true
  self.sourceApp,self.applicantID=app,app.id
  local f=self:ResetInteractive(owner,512)
- UI:SetText(f.title,L.applicants);f.title:ClearAllPoints();f.title:SetPoint("TOPLEFT");f.title:SetWidth(f.canvas:GetWidth());f.icon:Hide();f.subtitle:Hide();f.summary:Hide();f.leader:Hide()
+ UI:SetText(f.title,L.applicants);f.title:ClearAllPoints();f.title:SetPoint("TOPLEFT");f.title:SetWidth(f.canvas:GetWidth());f.icon:Hide();f.subtitle:Hide();f.summary:Hide()
  f.comment:ClearAllPoints();f.comment:SetPoint("TOPLEFT",0,-40);UI:SetText(f.comment,app.comment or "");f.comment:SetHeight(0)
  local top=40+f.comment:GetStringHeight()+14
  self:EnsureMemberButtons(#app.members)
@@ -431,7 +445,7 @@ function Tip:ShowRoster(owner,members,keepPinned,activityContext)
  end end
  local columns=raid and math.min(3,groups) or 1
  local f=self:ResetInteractive(owner,columns==3 and 960 or columns==2 and 660 or 440)
- f.icon:Hide();f.summary:Hide();f.leader:Hide();f.comment:Hide()
+ f.icon:Hide();f.summary:Hide();f.comment:Hide()
  UI:SetText(f.title,L.yourGroup);f.title:ClearAllPoints();f.title:SetPoint("TOPLEFT")
  UI:SetText(f.subtitle,L.rosterCount:format(#members));f.subtitle:ClearAllPoints();f.subtitle:SetPoint("TOPRIGHT",0,-2);f.subtitle:SetWidth(0)
  local countWidth=f.subtitle:GetStringWidth();f.subtitle:SetWidth(countWidth);f.title:SetWidth(f.canvas:GetWidth()-countWidth-16)
@@ -520,26 +534,17 @@ function Tip:RenderGroup()
  local raid=A.GroupPresentation.Result(record).kind=="raid"
  local expanded=not raid or self.expanded==true or A.db.raidMembers=="always"
  self.expanded=expanded
- local width=raid and (expanded and 1080 or 720) or 512
+ local width=raid and (expanded and 880 or 624) or 320
  local f=self:ResetInteractive(nil,width);f:RegisterEvent("MODIFIER_STATE_CHANGED")
  local mainWidth=raid and width-2*PADDING-GUTTER-BOSS_WIDTH-BOSS_GAP or width-2*PADDING-GUTTER
- f.title:SetWidth(mainWidth-52-(raid and 152 or 0));f.subtitle:SetWidth(mainWidth-52-(raid and 152 or 0));f.summary:SetWidth(mainWidth);f.comment:SetWidth(mainWidth)
+ f.title:SetWidth(mainWidth-52);f.subtitle:SetWidth(mainWidth-52);f.summary:SetWidth(mainWidth);f.comment:SetWidth(mainWidth)
  f.icon:SetSize(40,40);C.SetFont(f.title,18)
  UI:SetActivityIcon(f.icon,record.activity or record);UI:SetText(f.title,record.name or L.unknown)
  UI:SetText(f.subtitle,record.activityName or L.unknown)
- local headerHeight
- UI:SetText(f.leader,record.leaderName or L.unknown)
  local leader
  for _,member in ipairs(details and details.members or {}) do if member.isLeader or record.leaderKey and member.nameKey==record.leaderKey then leader=member;break end end
- if leader then f.leader:SetTextColor(UI:ClassColor(leader.class)) else f.leader:SetTextColor(unpack(T.muted)) end
- do
-  f.leader:SetWidth(0);local leaderWidth=math.min(mainWidth*.42,f.leader:GetStringWidth()+18)
-  f.leader:SetWidth(leaderWidth-18);f.leader:SetWordWrap(true);f.leader:SetJustifyH("LEFT");f.leader:ClearAllPoints();f.leader:SetPoint("TOPRIGHT",f.canvas,"TOPLEFT",mainWidth,-4)
-  f.leaderIcon:ClearAllPoints();f.leaderIcon:SetPoint("CENTER",f.leader,"TOPLEFT",-11,-f.leader:GetLineHeight()/2);f.leaderIcon:Show()
-  f.title:SetWidth(mainWidth-leaderWidth-16-52);f.subtitle:SetWidth(mainWidth-leaderWidth-16-52)
-  local titleHeight=math.max(24,f.title:GetStringHeight());f.subtitle:ClearAllPoints();f.subtitle:SetPoint("TOPLEFT",52,-titleHeight-4)
-  headerHeight=math.max(40,titleHeight+4+math.max(18,f.subtitle:GetStringHeight()),f.leader:GetStringHeight()+4)
- end
+ local titleHeight=math.max(24,f.title:GetStringHeight());f.subtitle:ClearAllPoints();f.subtitle:SetPoint("TOPLEFT",52,-titleHeight-4)
+ local headerHeight=math.max(40,titleHeight+4+math.max(18,f.subtitle:GetStringHeight()))
  f.summary:Hide()
  local itemLevel=(record.requiredItemLevel or 0)>0 and math.floor(record.requiredItemLevel) or Say("不限","Any")
  local metricTop=headerHeight+16
@@ -561,11 +566,11 @@ function Tip:RenderGroup()
   local metric=f.metrics[i];UI:SetText(metric.title,label);UI:SetText(metric.value,value);UI:Color(metric.value,raid and i==1 and (value=="—" and T.dim or T.good) or T.text)
   metric.title:ClearAllPoints();metric.value:ClearAllPoints();metric.title:SetWidth(0);metric.value:SetWidth(0)
   local titleWidth=metric.title:GetStringWidth();local valueWidth=metric.value:GetStringWidth()
-  local cellWidth=raid and titleWidth+8+valueWidth or math.max(56,titleWidth,valueWidth)
+  local cellWidth=raid and titleWidth+8+valueWidth or math.max(titleWidth,valueWidth)
   if metricX>0 and metricX+cellWidth>mainWidth then metricX=0;metricY=metricY+(raid and metricLine+8 or metricLine*2+12) end
   metric.title:SetPoint("TOPLEFT",metricX,-metricTop-metricY)
   metric.value:SetPoint("TOPLEFT",metricX+(raid and titleWidth+8 or 0),-metricTop-metricY-(raid and 0 or metricLine+4))
-  metricX=metricX+cellWidth+(raid and 24 or 20);metricHeight=metricY+(raid and metricLine or metricLine*2+4)
+  metricX=metricX+cellWidth+(raid and 24 or 8);metricHeight=metricY+(raid and metricLine or metricLine*2+4)
   metric.title:Show();metric.value:Show()
  end
  local top=metricTop+metricHeight+16
@@ -593,9 +598,10 @@ function Tip:RenderGroup()
   end
   top=self:LayoutMemberGrid(ordered,raid and 3 or 1,mainWidth,top,leader)
  end
- if raid and A.db.raidMembers~="always" then
+ local hasHint=raid and A.db.raidMembers~="always"
+ if hasHint then
   local hint=expanded and Say("按 %s 收起名单","Press %s to collapse") or Say("按 %s 展开成员名单","Press %s to expand the member list")
-  top=top+12;UI:SetText(f.footer,hint:format(raidModifierLabels[A.db.raidMembers]));f.footer:ClearAllPoints();f.footer:SetPoint("TOPLEFT",0,-top);top=top+f.footer:GetStringHeight()
+  f.footer:SetWidth(mainWidth);UI:SetText(f.footer,hint:format(raidModifierLabels[A.db.raidMembers]))
  else UI:SetText(f.footer,"") end
  if raid then
   local list=Bosses(record.activity);local bossTop=32
@@ -625,7 +631,14 @@ function Tip:RenderGroup()
    f.bossText:ClearAllPoints();f.bossText:SetPoint("TOPLEFT",mainWidth+BOSS_GAP,-32);f.bossText:SetWidth(BOSS_WIDTH);UI:SetText(f.bossText,missing);f.bossText:Show()
    bossTop=30+f.bossText:GetStringHeight()
   end
-  top=math.max(top,bossTop+4)
+  UI:SetText(f.raidLeader,record.leaderName or L.unknown);f.raidLeader:SetWidth(mainWidth-20);f.raidLeader:SetHeight(0)
+  if leader then f.raidLeader:SetTextColor(UI:ClassColor(leader.class)) else UI:Color(f.raidLeader,T.muted) end
+  local leaderHeight=math.max(f.raidLeader:GetLineHeight(),f.raidLeader:GetStringHeight())
+  local hintHeight=hasHint and f.footer:GetStringHeight() or 0;local hintGap=hasHint and 10 or 0
+  top=math.max(top+12+leaderHeight+hintGap+hintHeight,bossTop+4)
+  f.raidLeader:ClearAllPoints();f.raidLeader:SetPoint("BOTTOMLEFT",f.canvas,"BOTTOMLEFT",20,hintHeight+hintGap);f.raidLeader:Show()
+  f.raidLeaderIcon:ClearAllPoints();f.raidLeaderIcon:SetPoint("CENTER",f.raidLeader,"TOPLEFT",-12,-f.raidLeader:GetLineHeight()/2);f.raidLeaderIcon:Show()
+  if hasHint then f.footer:ClearAllPoints();f.footer:SetPoint("BOTTOMLEFT",f.canvas,"BOTTOMLEFT",0,0) end
  end
  self:Place(top)
 end
@@ -655,7 +668,7 @@ function Tip:ShowNote(owner,key)
  local note=A.Notes:Find(key);if not note then return end
  self:ClearSource()
  local f=self:ResetInteractive(owner,512)
- f.icon:Hide();f.subtitle:Hide();f.summary:Hide();f.leader:Hide()
+ f.icon:Hide();f.subtitle:Hide();f.summary:Hide()
  f.title:ClearAllPoints();f.title:SetPoint("TOPLEFT");f.title:SetWidth(f.canvas:GetWidth());UI:SetText(f.title,note.name.."-"..note.server)
  C.SetFont(f.title,PLAYER_NAME_SIZE);C.SetLineHeight(f.title,PLAYER_NAME_HEIGHT)
  local top=NoteHeader(f,note,math.max(24,f.title:GetStringHeight())+16)+12
@@ -773,7 +786,6 @@ function Tip:RenderPlayer(member,fromGroup,adjustPoint)
   metric.value:SetPoint("TOPLEFT",(i-1)*(columnWidth+16),-metricTop-metricHeight-4)
   metric.title:SetHeight(metricHeight);metric.value:SetHeight(valueHeight)
  end
- f.leader:Hide()
  top=metricTop+metricHeight+4+valueHeight+20
  if scores then top=self:RenderDungeons(scores,top)+20 end
  local note=key and A.Notes and A.Notes:Find(key)

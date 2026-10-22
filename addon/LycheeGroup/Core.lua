@@ -31,6 +31,7 @@ local DEFAULTS = {
 	minimapAngle = 225,
 	font = "default",
 	fontScale = 100,
+	showImportantFilters = false,
 	language = "auto",
 	autoJoin = false,
 	relations = true,
@@ -44,6 +45,10 @@ local DEFAULTS = {
 	floatingLocked = false,
 	floatingScale = 130,
 	uiScale = 100,
+	memberIconShape = "circle",
+	memberClassBorder = true,
+	memberLeaderMark = true,
+	memberIconScale = 100,
 }
 
 local CHARACTER_DEFAULTS = { rememberFilters = true, defaultSort = "newest" }

@@ -46,6 +46,14 @@ function UI:OnNotesReady()
 end
 
 function UI:OnSettingChanged(key)
+	if key=="showImportantFilters" then
+		if self.pages.find.frame then self.pages.find:RefreshFilterPlacement() end
+		return
+	end
+	if key=="memberIconShape" or key=="memberClassBorder" or key=="memberLeaderMark" or key=="memberIconScale" then
+		if self.pages.find.frame then self.pages.find:RefreshMemberStyle() end
+		return
+	end
 	if key == "language" then
 		if self.pages.settings.frame then self.pages.settings:Sync() end
 		return
@@ -92,6 +100,7 @@ end
 
 function UI:ApplyFont(path,scale)
  self:StopWindowResize()
+ self:StopTableDrags()
  self.context:SetFont(path,scale)
  if not self.frame then return end
  self:CloseMenu();self.Tooltip:Hide()
@@ -103,18 +112,15 @@ function UI:ApplyFont(path,scale)
  if notes.frame then notes:LayoutFont() end
  local settings=self.pages.settings
  if settings.frame then settings:LayoutRows();settings:Sync() end
+ if self.Application.applicationModal and self.Application.applicationModal.frame:IsShown() then self.Application:LayoutApplication() end
  self:FitToScreen()
 end
 
 function UI:FitToScreen()
 	self:StopWindowResize()
-	local find = self.pages.find
-	local filterWidth = find.filterPanel and find.filterPanel:IsShown() and find.filterPanel:GetWidth()+12 or 0
-	local width = T.width + filterWidth
-	self.frame:SetClampRectInsets(0,filterWidth,0,0)
-	local scale = math.min(1, (UIParent:GetWidth() - 40) / width, (UIParent:GetHeight() - 40) / T.height) * A.db.uiScale / 100
+	local scale = math.min(1, (UIParent:GetWidth() - 40) / T.width, (UIParent:GetHeight() - 40) / T.height) * A.db.uiScale / 100
 	local minWidth,minHeight=self:GetWindowMinimum()
-	scale=math.min(scale,(UIParent:GetWidth()-40)/(minWidth+filterWidth),(UIParent:GetHeight()-40)/minHeight)
+	scale=math.min(scale,(UIParent:GetWidth()-40)/minWidth,(UIParent:GetHeight()-40)/minHeight)
 	local changed=self.frame:GetScale()~=scale
 	if changed then self.frame:SetScale(scale) end
 	self:SetWindowSize(self.preferredWindowWidth,self.preferredWindowHeight)
@@ -171,6 +177,7 @@ function UI:CloseModal(reason)
  if self.activeModal then self.activeModal:Close(reason) end
 end
 function UI:OpenModal(key,title,width,height)
+ self:StopTableDrags()
  self.modals=self.modals or {}
  local modal=self.modals[key]
  if self.activeModal and self.activeModal~=modal then self:CloseModal("replace") end
@@ -237,7 +244,7 @@ function UI:Build()
 		UI:CloseMenu();UI.Tooltip:Hide()
 		local page=UI.pages[UI.page];if page and page.ClosePicker then page:ClosePicker() end
 	end})
-	frame:SetClampedToScreen(true)
+	frame:SetClampedToScreen(false)
 	self:FitToScreen()
 
 	-- 72-unit header, with navigation aligned to the main content at x264.
@@ -260,7 +267,9 @@ function UI:Build()
 
 	local close = C.IconButton(frame,"close",40,function() UI:Hide() end,{hoverColor=T.primaryContainer,pressedColor=T.primaryContainer})
 	close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -PAD, -(NAV_H-40)/2)
-	local settings = C.Button(frame, L.settings, nil, function() A:Open("settings") end)
+	local settings = C.Button(frame, L.settings, nil, function()
+		A:Open(UI.page=="settings" and (UI.settingsReturnPage or A:GetDefaultPage()) or "settings")
+	end)
 	settings:SetSize(settings.label:GetStringWidth()+52,40)
 	settings.label:ClearAllPoints();settings.label:SetPoint("LEFT",40,0)
 	settings.icon=C.Glyph(settings,"settings",20);settings.icon:SetPoint("LEFT",12,0)
@@ -360,10 +369,14 @@ end
 
 function UI:Navigate(page, context)
  self:StopWindowResize()
+ self:StopTableDrags()
  if self.preview and page~="find" and page~="create" then self:StopPreview(false);self:Show(page,context);return end
 	if A.Floating then A.Floating:Dismiss() end
 	if not self.pages[page] then page = "find" end
 	local previous=self.page
+	if page=="settings" and (previous=="find" or previous=="create" or previous=="notes") then
+		self.settingsReturnPage=previous
+	end
 	if self.page == page then
 		local p = self.pages[page]
 		if p.Enter then p:Enter(context) end
@@ -399,6 +412,7 @@ function UI:Hide(immediate)
 	if not frame or not frame:IsShown() or (self.hiding and not immediate) then return end
 	self.drag:Stop()
 	self:StopWindowResize()
+	self:StopTableDrags()
 	self.hiding = true
 	self.blocker:Show()
 	local token = (self.exitToken or 0) + 1
