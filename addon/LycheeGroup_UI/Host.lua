@@ -292,7 +292,9 @@ function UI:Build()
 
 	local close = C.IconButton(frame,"close",40,function() UI:Hide() end,{hoverColor=T.primaryContainer,pressedColor=T.primaryContainer})
 	close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -PAD, -(NAV_H-40)/2)
-	local settings = C.Button(frame, L.settings, nil, function() A:Open("settings") end)
+	local settings = C.Button(frame, L.settings, nil, function()
+		A:Open(UI.page=="settings" and (UI.settingsReturnPage or A:GetDefaultPage()) or "settings")
+	end)
 	settings:SetSize(settings.label:GetStringWidth()+52,40)
 	settings.label:ClearAllPoints();settings.label:SetPoint("LEFT",40,0)
 	settings.icon=C.Glyph(settings,"settings",20);settings.icon:SetPoint("LEFT",12,0)
@@ -396,6 +398,9 @@ function UI:Navigate(page, context)
 	if A.Floating then A.Floating:Dismiss() end
 	if not self.pages[page] then page = "find" end
 	local previous=self.page
+	if page=="settings" and previous~="settings" then
+		self.settingsReturnPage=previous
+	end
 	if self.page == page then
 		local p = self.pages[page]
 		if p.Enter then p:Enter(context) end

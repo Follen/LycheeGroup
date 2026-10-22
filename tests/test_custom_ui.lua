@@ -58,3 +58,16 @@ for _,key in ipairs({"uiScale","fontScale","rurutiaRailIconScale","rurutiaMember
 end
 U:Hide(true)
 print("PASS: upstream fixture builds merged UI, keyword input/apply/reopen/clear, missing-role controls, column sizing and stable filter scale; compact labels, three-state identity filter and legacy migration, class matching and popup-only zero-score filter")
+
+for _,origin in ipairs({"find","create","notes"}) do
+ assert(A:Open(origin))
+ U.settingsButton:Fire("OnClick")
+ assert(U.page=="settings" and U.settingsReturnPage==origin)
+ assert(A:Open("settings")) -- repeated routing must retain the real source
+ U.settingsButton:Fire("OnClick")
+ assert(U.page==origin)
+end
+assert(A:Open("notes"));assert(A:Open("settings"));assert(A:Open("create"))
+U.settingsButton:Fire("OnClick");U.settingsButton:Fire("OnClick");assert(U.page=="create")
+U:Hide(true)
+print("PASS: settings returns to find/create/notes and retains source across repeated entry and navigation")
