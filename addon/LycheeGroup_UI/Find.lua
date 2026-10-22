@@ -309,7 +309,7 @@ function P:Build(parent)
  self.search.box:ClearAllPoints();self.search.box:SetPoint("TOPLEFT",52,-4);self.search.box:SetPoint("BOTTOMRIGHT",self.searchModeToggle,"LEFT",-40,4)
  self.applicationPanel=CreateFrame("Frame",nil,main);self.applicationPanel:SetPoint("TOPLEFT",0,-68);self.applicationPanel:SetWidth(MAIN);self.applicationPanel.fill=C.Panel(self.applicationPanel,T.panel,20)
  self.appsTitle=C.Text(self.applicationPanel,L.applications,14,T.text);C.SetLineHeight(self.appsTitle,20,true);self.appsTitle:SetPoint("LEFT",self.applicationPanel,"TOPLEFT",16,-22)
- self.appsBadge=CreateFrame("Frame",nil,self.applicationPanel);self.appsBadge:SetSize(48,24);self.appsBadge:SetPoint("LEFT",self.appsTitle,"RIGHT",10,0);C.Panel(self.appsBadge,T.selected,12)
+ self.appsBadge=CreateFrame("Frame",nil,self.applicationPanel);self.appsBadge:SetSize(48,24);self.appsBadge:SetPoint("LEFT",self.appsTitle,"RIGHT",10,0)
  self.appsCount=C.Text(self.appsBadge,"0",14,T.text);C.SetLineHeight(self.appsCount,20,true);self.appsCount:SetPoint("CENTER")
  self.appsEmpty=C.Text(self.applicationPanel,Say("本分类暂无申请","No applications in this category"),14,T.dim);self.appsEmpty:SetPoint("LEFT",self.appsBadge,"RIGHT",12,0)
  self.scopeToggle=C.Button(self.applicationPanel,Say("全部申请","All applications"),112,function()
@@ -733,8 +733,8 @@ function P:BuildQuickFilters()
   P:UpdateFilters()
  end,{height=32,radius=8})
  Tip(self.quickLogic,Say("筛选切换：全部/任意条件符合","Filter matching: all/any conditions."))
- self.quickLogic:SetPoint("LEFT",386,0);C.SetFont(self.quickLogic.label,13)
- self.quickIdentity=C.Button(self.quickFilters,"",90,function(_,mouseButton)
+ self.quickLogic:SetPoint("LEFT",436,0);C.SetFont(self.quickLogic.label,13)
+ self.quickIdentity=C.Button(self.quickFilters,"",140,function(_,mouseButton)
   local mode=state.filters.hideSameClass and "class" or state.filters.hideSameSpec and "spec" or "any"
   if mouseButton=="RightButton" then mode="any"
   else mode=mode=="any" and "spec" or mode=="spec" and "class" or "any" end
@@ -744,7 +744,15 @@ function P:BuildQuickFilters()
  end,{height=32,radius=8})
  self.quickIdentity:RegisterForClicks("LeftButtonUp","RightButtonUp")
  self.quickIdentity:SetPoint("LEFT",288,0);C.SetFont(self.quickIdentity.label,13)
- Tip(self.quickIdentity,Say("隐藏含同专精/同职业成员的队伍","Hide groups containing the same spec/class"))
+ self.quickIdentity.label:ClearAllPoints();self.quickIdentity.label:SetPoint("LEFT",32,0)
+ self.quickIdentityIcon=C.GameIcon(self.quickIdentity,18);self.quickIdentityIcon:SetPoint("LEFT",8,0)
+ self.quickIdentityFunnel=CreateFrame("Frame",nil,self.quickIdentity);self.quickIdentityFunnel:SetSize(18,18);self.quickIdentityFunnel:SetPoint("LEFT",8,0)
+ local function Line(x,y,width,angle)
+  local line=self.quickIdentityFunnel:CreateTexture(nil,"ARTWORK");line:SetColorTexture(unpack(T.dim));line:SetSize(width,1.5);line:SetPoint("CENTER",x,y);line:SetRotation(angle or 0)
+ end
+ Line(0,6,14);Line(-4,2,10,-math.pi/4);Line(4,2,10,math.pi/4)
+ Line(-.5,-4,6,math.pi/2);Line(2,-3,4,math.pi/2);Line(.75,-6.5,3,math.pi/6)
+ Tip(self.quickIdentity,Say("同职过滤/同专精过滤","Same class/spec filter"))
 end
 
 function P:SyncQuickFilters(seasonDungeon)
@@ -756,8 +764,15 @@ function P:SyncQuickFilters(seasonDungeon)
  end
  UI:SetText(self.quickLogic.label,state.filters.roleMatchAny and Say("或","OR") or Say("全部","All"))
  self.quickLogic:SetActive(state.filters.roleMatchAny==true)
- UI:SetText(self.quickIdentity.label,state.filters.hideSameClass and Say("同职业","Same class") or state.filters.hideSameSpec and Say("同专精","Same spec") or Say("不限","Any"))
+ UI:SetText(self.quickIdentity.label,state.filters.hideSameClass and Say("同职过滤","Same class") or state.filters.hideSameSpec and Say("同专精过滤","Same spec") or Say("不限","Any"))
  self.quickIdentity:SetActive(state.filters.hideSameClass==true or state.filters.hideSameSpec==true)
+ local enabled=state.filters.hideSameClass==true or state.filters.hideSameSpec==true
+ self.quickIdentityIcon:SetShown(enabled);self.quickIdentityFunnel:SetShown(not enabled)
+ if enabled then
+  local class=select(2,UnitClass("player"))
+  local spec=state.filters.hideSameSpec and A.Specializations:Player() or nil
+  UI:SetMemberIcon(self.quickIdentityIcon,{class=class,specID=spec})
+ end
  self:LayoutQuickFilters()
  self:LayoutResults()
 end
@@ -768,7 +783,7 @@ function P:LayoutQuickFilters()
  if self.appsEmpty:IsShown() then left=left+self.appsEmpty:GetStringWidth()+20
  elseif self.scopeToggle:IsShown() then left=left+self.scopeToggle:GetWidth()+20 end
  local right=16+self.autoJoin:GetWidth()+20+44+10+self.applicationSettings:GetWidth()+20
- local needed=456
+ local needed=506
  self.quickFilters:SetWidth(needed)
  local extra=self.quickFilters:IsShown() and (MAIN-left-right<needed) and 40 or 0
  self.quickFilters:ClearAllPoints();self.quickFilters:SetPoint("TOPLEFT",extra>0 and 16 or left,extra>0 and -46 or -6)
