@@ -92,6 +92,7 @@ local function Normalize(id,record,invalidateDetails,expectedScan,metadataDirty)
  -- covers member/spec/progress changes that do not change the member count.
  if invalidateDetails or previousActivity~=record.activityID or previousMembers~=record.numMembers or previousLeader~=record.leaderKey or previousFaction~=record.leaderFactionGroup or previousRating~=record.leaderRating or previousRatingActivity~=record.pvpRatingActivity or previousBnet~=record.bnetFriends or previousChar~=record.charFriends or previousGuild~=record.guildMates then
   record.detailsDirty=record.details and true or nil;record.memberCounts=nil
+  record.checkedSpecID,record.hasMemberSpec=nil,nil
  end
  return record
 end
@@ -104,6 +105,23 @@ function Results:GetMemberCounts(record)
  local counts={TANK=Public(native.TANK),HEALER=Public(native.HEALER),DAMAGER=Public(native.DAMAGER)}
  record.memberCounts=counts
  return counts
+end
+function Results:HasMemberSpec(record,playerSpecID)
+ if record.checkedSpecID==playerSpecID then return record.hasMemberSpec end
+ local found=false
+ local details=record.details
+ if details and not record.detailsDirty then
+  for _,member in ipairs(details.members) do
+   if G:ResolveMemberSpec(member)==playerSpecID then found=true;break end
+  end
+ else
+  for index=1,record.numMembers do
+   local member=Public(C_LFGList.GetSearchResultPlayerInfo(record.id,index))
+   if type(member)=="table" and G:ResolveMemberSpec(member)==playerSpecID then found=true;break end
+  end
+ end
+ record.checkedSpecID,record.hasMemberSpec=playerSpecID,found
+ return found
 end
 local function RelationNames(values,excludeKey)
  values=Public(values)
@@ -178,7 +196,7 @@ function Results:GetDetails(idOrRecord)
     local name=Public(value)
     if type(name)=="string" then details.encounters[#details.encounters+1]=name end
    end
-  elseif details.encounters then wipe(details.encounters) end
+  else details.encounters=nil end
  else details.encounters=nil end
  record.details=details;record.detailsDirty=nil
  -- 队列仅存 ID，旧结果不会被缓存队列继续强引用。
@@ -193,7 +211,7 @@ local function MatchesLeaderText(record,text)
  local leader=record.leaderName
  return type(leader)=="string" and leader:lower():find(text,1,true)~=nil
 end
-local function Pass(record,filters,leaderText)
+local function Pass(record,filters,leaderText,playerSpecID)
  if blockedTitles[record.name] then return false end
  if G.Applications:IsActive(record.id) then return false end
  if leaderText and not MatchesLeaderText(record,leaderText) then return false end
@@ -221,11 +239,13 @@ local function Pass(record,filters,leaderText)
  if filters.friends and record.bnetFriends+record.charFriends==0 or filters.guild and record.guildMates==0 then return false end
  if filters.notes then
   local exclude=filters.notes=="noCaution"
-  if not A.Notes then return exclude end
-  local kind=exclude and "caution" or filters.notes
-  local found=MatchesNote(record.leaderKey,kind)
-  if exclude and found or not exclude and not found then return false end
+  if A.Notes then
+   local kind=exclude and "caution" or filters.notes
+   local found=MatchesNote(record.leaderKey,kind)
+   if exclude and found or not exclude and not found then return false end
+  elseif not exclude then return false end
  end
+ if playerSpecID and Results:HasMemberSpec(record,playerSpecID) then return false end
  return true
 end
 local sorting
@@ -368,9 +388,10 @@ function Results:GetResults()
  if dirty then
   wipe(ids)
   local filters=G.Search:GetFilters()
+  local playerSpecID=filters.hideSameSpec and A.Specializations:Player() or nil
   local leaderText=type(filters.leaderText)=="string" and filters.leaderText:lower():match("^%s*(.-)%s*$") or nil
   if leaderText=="" then leaderText=nil end
-  for id,record in pairs(records) do if not record.isDelisted and Pass(record,filters,leaderText) then ids[#ids+1]=id end end
+  for id,record in pairs(records) do if not record.isDelisted and Pass(record,filters,leaderText,playerSpecID) then ids[#ids+1]=id end end
   sorting=filters.sort or A:GetSetting("defaultSort");table.sort(ids,Sort);dirty=false
  end
  return ids

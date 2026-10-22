@@ -5,7 +5,7 @@
 ## Notes: Group finding and player notes for retail World of Warcraft.
 ## Notes-zhCN: 正式服组队与玩家记录。
 ## IconTexture: Interface\AddOns\LycheeGroup\Media\addon-logo.tga
-## Version: 1.2.1
+## Version: 1.2.2
 ## SavedVariables: LycheeGroupDB
 ## SavedVariablesPerCharacter: LycheeGroupPrefsDB
 Libs\LycheeUI\embeds.xml

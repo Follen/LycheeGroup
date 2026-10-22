@@ -43,29 +43,18 @@ function F:Choices()
  return choices
 end
 
--- Walk only the addon's retained widget trees, once per explicit font change.
-function F:ApplyTree(frame, path)
- if not frame then return end
- if frame:GetObjectType() == "EditBox" then
-  local _, size, flags = frame:GetFont()
-  frame:SetFont(path, size, flags)
+function F:GetScale() return A.db.fontScale/100 end
+
+function F:IsOwned(region,window,menu,tooltip)
+ while region do
+  if region==window or region==menu or region==tooltip then return true end
+  region=region:GetParent()
  end
- for _, region in ipairs({frame:GetRegions()}) do
-  if region:GetObjectType() == "FontString" then
-   local _, size, flags = region:GetFont()
-   -- Native widget templates can retain regions with no font yet (height -1).
-   if size and size > 0 then
-    local height = region:GetLineHeight() + region:GetSpacing()
-    region:SetFont(path, size, flags)
-    region:SetSpacing(height-region:GetLineHeight())
-   end
-  end
- end
- for _, child in ipairs({frame:GetChildren()}) do self:ApplyTree(child,path) end
+ return false
 end
 
 function F:Apply()
- local path = self:GetPath()
- if A.UI then A.UI:ApplyFont(path) end
- if A.Floating then A.Floating:ApplyFont(path) end
+ local path,scale = self:GetPath(),self:GetScale()
+ if A.UI then A.UI:ApplyFont(path,scale) end
+ if A.Floating then A.Floating:ApplyFont(path,scale) end
 end

@@ -320,7 +320,8 @@ function Tip:ResetInteractive(owner,width,metricAlignment)
   metric.title:SetJustifyH(alignment);metric.value:SetJustifyH(alignment)
   metric.title:SetJustifyV(metricVertical);metric.value:SetJustifyV(metricVertical)
   C.SetLineHeight(metric.title,20);C.SetLineHeight(metric.value,20)
-  metric.title:SetHeight(20+T.lineHeightDelta);metric.value:SetHeight(20+T.lineHeightDelta)
+  local height=(20+T.lineHeightDelta)*UI.context.fontScale
+  metric.title:SetHeight(height);metric.value:SetHeight(height)
  end
  f.back:Hide();f.note:Hide();f.wcl:Hide();f.playerRole:Hide();f.noteHeading:Hide();f.noteGlyph:Hide();f.noteDate:Hide();f.noteDivider:Hide();f.bossTitle:Hide();f.bossCount:Hide();f.bossText:Hide();f.composition:Hide();f.pvpRatings:Hide()
  for _,row in ipairs(f.bossRows) do row:Hide() end
@@ -685,7 +686,7 @@ function Tip:RenderDungeons(scores,top)
   row.label:SetWidth(0);row.keyLevel:SetWidth(0);row.status:SetWidth(0)
   labelWidth=math.max(labelWidth,row.label:GetStringWidth());levelWidth=math.max(levelWidth,row.keyLevel:GetStringWidth());statusWidth=math.max(statusWidth,row.status:GetStringWidth())
  end
- top=top+28
+ top=top+math.max(28,f.dungeonTitle:GetHeight()+4)
  local width=f.canvas:GetWidth()
  for i,row in ipairs(f.dungeonRows) do
   local run;if i==1 then run=scores.current else run=scores.best end
@@ -790,7 +791,7 @@ function Tip:LeaveOwner(owner)
  if not self.interactive or not self.interactive:IsShown() then self:Hide();return end
  local elapsed=0
  UI.Motion:Start(self,function(dt)
-  elapsed=elapsed+dt;if elapsed<.22 then return end
+  elapsed=elapsed+dt;if elapsed<.11 then return end
   local area=self.owner and (self.owner.tooltipArea or self.owner)
   if not self.interactive:IsMouseOver() and not (area and area:IsMouseOver()) then self:Hide() end
   return true

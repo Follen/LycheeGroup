@@ -4,16 +4,16 @@
 
 A group-finding addon for retail World of Warcraft. Find groups, manage recruitment, and keep notes on players you meet, all in one window.
 
-The current version is **1.2.1**, targeting retail **12.1.5** (Interface `120105`) with Chinese and English support. See the [changelog](CHANGELOG.md) for release notes (in Chinese).
+The current version is **1.2.2**, targeting retail **12.1.5** (Interface `120105`) with Chinese and English support. See the [changelog](CHANGELOG.md) for release notes (in Chinese).
 
 ## Features
 
-- **Find groups:** browse dungeons, raids, delves, PvP, and other activities. Search and filter listings, read listing descriptions, inspect members, and track applications.
+- **Find groups:** browse dungeons, raids, delves, PvP, and other activities. Search and filter listings, exclude groups that already have your specialization in seasonal dungeons, read listing descriptions, inspect members, and track applications.
 - **Manage recruitment:** create and edit listings, inspect applicants' Mythic+ records, listing-specific dungeon scores, and known factions. Click a faction icon to switch to the race name, and invite players from the list. Click the star beside the activity to save the current settings. Applying a favorite preserves your current title and description for you to review and publish; publishing does not save a creation history. Small-group activities show current members directly; raid activities show subgroup rosters on hover. Current-season raids also show class-buff coverage.
 - **Character preferences:** keep application roles, category filters, and sorting separately for each character across reloads. Enable automatic application separately for each session.
 - **Player notes:** share positive, neutral, or blocked-player records across characters on the account, with reminders when you group again. Import and export your notes.
 - **Mythic+ history:** keep a per-character history of runs, key levels, dates, and teammates, then add notes from past runs.
-- **Interface settings:** change the main-window key binding and overall scale; the floating window has its own scale setting. RurutiaSuite top bar integration is detected automatically and can be toggled in the floating window settings.
+- **Interface settings:** change the main-window key binding, overall scale, and font size; the floating window has its own scale setting. RurutiaSuite top bar integration is detected automatically and can be toggled in the floating window settings.
 
 The interface uses native Lua with bundled LycheeUI. Feature modules load on demand; no separate UI library installation is needed.
 
@@ -47,7 +47,7 @@ See the [product document](Product.md) for implementation and verification cover
 
 `/lycheegroup` is an alias for `/lg`.
 
-The default main-window key is the English semicolon `;`. It is assigned only when the addon has no binding and the key is free. Change it under Access & shortcuts. Under Appearance, adjust the main window from 75% to 125%, choose the game language, Simplified Chinese or English (applied after reloading), and select a font. The bundled LycheeFont uses the complete YaHei font for the Chinese UI and Inter for the English UI; game and shared fonts remain available.
+The default main-window key is the English semicolon `;`. It is assigned only when the addon has no binding and the key is free. Change it under Access & shortcuts. Under Appearance, adjust the main window from 75% to 125% and the font size from 70% to 130% (100% is the existing baseline; changes apply immediately), choose the game language, Simplified Chinese or English (applied after reloading), and select a font. The bundled LycheeFont uses the complete YaHei font for the Chinese UI and Inter for the English UI; game and shared fonts remain available.
 
 ## Development
 
@@ -67,6 +67,6 @@ For the local widget-tree preview, run `lua tests/ui_preview.lua`, then open [`t
 
 Project documents (in Chinese): [Product](Product.md) · [Design](Desgin.md) · [Architecture](Architecture.md) · [Performance](perfermance.md) · [Documentation and changelog rules](Agents.md). The product document describes the current implementation and in-game validation coverage.
 
-Version 1.2.1 bundles LycheeUI 1.2.0 (revision 22), with shared selection and menu transitions. The source library and embedded copy match. The user has lifted the freeze recorded in [.lock](../LycheeUI/.lock). See the [integration guide](../LycheeUI/README.md), [API](../LycheeUI/API.md), and [component design specification](../LycheeUI/DESIGN.md).
+The current version is 1.2.2. It includes font-size, entry routing, and filtering changes and bundles LycheeUI 1.2.0 (revision 24), with shared font scaling, selection and menu transitions. The source library and embedded copy match. The user has lifted the freeze recorded in [.lock](../LycheeUI/.lock). See the [integration guide](../LycheeUI/README.md), [API](../LycheeUI/API.md), and [component design specification](../LycheeUI/DESIGN.md).
 
 See the [library notes](addon/LycheeGroup_Group/Libs/README.md) for bundled third-party sources and licenses.

@@ -137,7 +137,10 @@ local DISPATCH = {
 	end,
 	CHALLENGE_MODE_COMPLETED = function(g) g.History:OnCompleted() end,
 	CHALLENGE_MODE_RESET = function(g) g.History:Discard() end,
-	ACTIVE_PLAYER_SPECIALIZATION_CHANGED = function(g) g:InvalidateRoster() end,
+	ACTIVE_PLAYER_SPECIALIZATION_CHANGED = function(g)
+		g:InvalidateRoster()
+		if g:HasViews("search") and g.Search:GetFilters().hideSameSpec then g.Results:InvalidateView();g:Notify("results") end
+	end,
 	PLAYER_SPECIALIZATION_CHANGED = function(g,unit) g:InvalidateRoster("spec",unit) end,
 	PLAYER_EQUIPMENT_CHANGED = function(g) g:InvalidateRoster() end,
 	INSPECT_READY = function(g,guid) g.Roster:OnInspectReady(guid) end,
@@ -281,12 +284,14 @@ end
 -- infers a specialization from a role or matches a name across other classes.
 function G:ResolveMemberSpec(member)
  local classID,className
- if member.class then classID,className=A.Specializations:Class(member.class) end
- local specID=member.specID
+ local class=G.Public(member.class) or G.Public(member.classFilename)
+ if class then classID,className=A.Specializations:Class(class) end
+ local specID=G.Public(member.specID)
+ local nativeName=G.Public(member.specName)
  local specName,icon
  if specID and specID>0 then specName,icon=A.Specializations:Get(specID)
- elseif classID and member.specName then
-  local id,name,image=A.Specializations:Find(member.class,member.specName)
+ elseif classID and nativeName then
+  local id,name,image=A.Specializations:Find(class,nativeName)
   if name then specID,specName,icon=id,name,image end
  end
  return specID,specName,icon,member.localizedClass or className

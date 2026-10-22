@@ -20,6 +20,8 @@ local members={};for i=1,30 do members[i]={name="Player"..i.."-Away",nameKey="Pl
 dofile("addon/LycheeGroup_Group/Group.lua");local resolveSpec=A.Group.ResolveMemberSpec
 dofile("addon/LycheeGroup/Presentation.lua")
 local listing,callback
+local nativeListing
+C_LFGList.HasActiveEntryInfo=function() if nativeListing~=nil then return nativeListing end;return listing~=nil end
 local manageApplicants,manageListing=true,true
 local applicant={status="applied",members=members,comment="A shared application note"}
 local G={ResolveMemberSpec=resolveSpec,Applications={GetActiveCount=function() return #apps end,IsActive=function() return true end},GetListing=function() return listing end,GetApplications=function() return apps end,
@@ -74,6 +76,20 @@ do
  T.eq(starts,1,"locking the entry prevents movement from its complete hit area")
  A:SetSetting("floatingLocked",false);F.frame.StartMoving,F.frame.StopMovingOrSizing=start,stop
  F:ShowPanel()
+end
+do
+ -- A current party listing may exist before the floating snapshot has caught up.
+ local oldManageApplicants,oldManageListing=manageApplicants,manageListing
+ nativeListing=true;manageApplicants,manageListing=false,false
+ T.eq(F.recruiting,false)
+ F.button:Fire("OnClick","LeftButton")
+ T.eq(A.openedPage,"create","a member's active party listing opens recruitment from the standalone entry")
+ API:Open();T.eq(A.openedPage,"create","the public entry routes without applicant or listing permission")
+ nativeListing=false;F.recruiting=true
+ F.button:Fire("OnClick","LeftButton")
+ T.eq(A.openedPage,"find","a stale recruitment summary cannot reopen an ended listing")
+ API:Open();T.eq(A.openedPage,"find")
+ nativeListing=nil;F.recruiting=false;manageApplicants,manageListing=oldManageApplicants,oldManageListing
 end
 apps[1].activityLabel="A longer dungeon activity name";apps[1].activityDetail="A very long difficulty label";callback("applications")
 local applicationRow=F.rows[1];local detailX,detailY=Position(applicationRow.score);local _,titleY=Position(applicationRow.meta)
@@ -344,6 +360,14 @@ T.eq(F.panel:IsShown(),false,"an explicitly hovered empty listing can also be cl
 applicant.acting=nil;callback("applicants");T.eq(F.panel:IsShown(),false,"a closed empty listing stays closed when applicants return")
 F:ShowPanel();T.eq(#F.entries,2,"an operable native record can return after explicit hover")
 F:Tick(.23);T.eq(F.panel:GetAlpha(),1,"expanded panel finishes its finite fade")
+do
+ F.panel.mouseOver=false;F.frame.mouseOver=false;F:ScheduleHide();base.AdvanceClock(.06);F:Tick(.02)
+ T.ok(F.fade and F.fade.to==0,"leaving starts the configured finite fade after its delay")
+ F.panel.mouseOver=true;F.panel:Fire("OnEnter");F:Tick(.055)
+ T.eq(F.panel:IsShown(),true,"returning to the popup during fade-out keeps its existing cards visible")
+ F:Tick(.2);T.eq(F.panel:GetAlpha(),1,"returning reverses the existing fade without replaying card entrance")
+ F.panel.mouseOver=false
+end
 do
  F:SetOffset(0,false)
  local render=F.Render;local renders=0
@@ -730,6 +754,12 @@ do
  T.eq(F.panel:IsShown(),true,"moving from the host into its list does not close it")
  F.panel.mouseOver=false;F.panel:Fire("OnEvent","GLOBAL_MOUSE_DOWN")
  T.eq(F.panel:IsShown(),false);T.eq(F.countdown,nil)
+ local oldManageApplicants,oldManageListing=manageApplicants,manageListing
+ nativeListing=true;manageApplicants,manageListing=false,false
+ T.eq(F.recruiting,false)
+ host:Fire("OnClick","LeftButton")
+ T.eq(A.openedPage,"create","an ordinary member opens their active party listing from the integrated entry before its status refresh")
+ nativeListing=nil;manageApplicants,manageListing=oldManageApplicants,oldManageListing
  A:SetSetting("reduceMotion",false);listing={activityID=1};applicant.status="applied";callback("listing")
  T.eq(F.count:GetText(),"1人申请","switching mode changes wording even when the count is unchanged")
  host:Fire("OnClick","LeftButton");T.eq(A.openedPage,"create","an active listing opens recruitment from the integrated entry")

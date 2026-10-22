@@ -73,6 +73,7 @@ function Game:RefreshSubscriptions()
 	self:RefreshRelations()
 	SetEvents(frame, APPLICANT_EVENTS, listing)
 	SetEvents(frame, ROSTER_EVENTS, G:HasViews("create"))
+	if G:HasViews("search") then frame:RegisterEvent("ACTIVE_PLAYER_SPECIALIZATION_CHANGED") end
 	G.Roster:SetActive(G:HasViews("create"))
 end
 

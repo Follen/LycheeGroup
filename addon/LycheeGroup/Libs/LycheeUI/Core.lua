@@ -1,5 +1,5 @@
 local addonName, private = ...
-local REVISION=22
+local REVISION=24
 local Library=_G.LycheeUI
 private.LycheeUILoad,private.LycheeUILoadVersion=nil,nil
 if Library and Library.version and Library.version>=REVISION then private.LycheeUI=Library;return end
@@ -22,12 +22,22 @@ function Library:CreateContext(options)
  if options.media then theme.media=options.media elseif options.addon then theme.media=DefaultMedia(options.addon) end
  local context=setmetatable({Theme=theme,options=options,parent=options.parent or UIParent,
   inputs=options.inputs or {},L=options.text or {},frame=options.frame,
-  logo=options.logo,logoButton=options.logoButton},Context)
+  logo=options.logo,logoButton=options.logoButton,fontScale=options.fontScale or 1,
+  fontStyles=setmetatable({},{__mode="k"})},Context)
  context.Motion=self.CreateMotion(context)
  context.C=self.CreateComponents(context)
  self.AttachNative(context)
  self.AttachMenus(context)
  return context
+end
+-- Only registered component text and currently owned native leases are restyled.
+function Context:SetFont(path,scale)
+ self.Theme.font=path
+ if scale then self.fontScale=scale end
+ self.C.RefreshFonts()
+ for lease in pairs(self.nativeControls) do
+  if lease:IsOwned() and lease.RefreshStyle then lease:RefreshStyle() end
+ end
 end
 function Context:IsReducedMotion()
  local setting=self.options.reducedMotion

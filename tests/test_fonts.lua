@@ -53,6 +53,71 @@ LibStub=nil
 T.eq(#A.Fonts:Choices(),4,"built-in font selection does not require SharedMedia")
 LibStub,DAMAGE_TEXT_FONT,UNIT_NAME_FONT,ChatFontNormal=originalLibStub,originalDamage,originalUnit,originalChat
 
+-- Font percentages apply to retained base styles, independently of window scale.
+do
+ local savedSettings={fontScale=100,uiScale=110,reduceMotion=true}
+ local scaled=dofile("tests/ui_fixture.lua")("zhCN",nil,savedSettings)
+ local a,u=scaled.A,scaled.U
+ dofile("addon/LycheeGroup/Floating.lua");dofile("addon/LycheeGroup/API.lua");a.Floating:UpdateSettings()
+ a:Open("settings",{section="interface"})
+ local page=u.pages.settings
+ local slider=page.controls.fontScale.widget
+ T.eq(page.panels.interface.rows[3].frame,page.controls.fontScale.frame,"font size follows main window scale")
+ T.eq(slider.slider:GetMinMaxValues(),70);T.eq(select(2,slider.slider:GetMinMaxValues()),130)
+ T.eq(slider.valueLabel:GetText(),"100%")
+ T.near(slider.progress:GetWidth(),slider:GetWidth()/2,.001,"the font slider fills the left half at 100 percent")
+ local titleBase=select(2,page.heading:GetFont())
+ local floatBase=select(2,a.Floating.count:GetFont())
+ local windowScale=u.frame:GetScale()
+ local foreign=u.C.Text(UIParent,"Foreign font",14);foreign:SetFont(STANDARD_TEXT_FONT,14,"")
+ u.Tooltip:BuildInteractive()
+ local detail=u.Tooltip.interactive.title;local detailBase=select(2,detail:GetFont())
+ slider.slider:SetValue(130)
+ T.eq(a.db.fontScale,130);T.eq(slider.valueLabel:GetText(),"130%")
+ T.near(slider.progress:GetWidth(),slider:GetWidth(),.001,"the font slider fills its track at the maximum")
+ T.near(select(2,page.heading:GetFont()),titleBase*1.3,.0001)
+ T.near(select(2,a.Floating.count:GetFont()),floatBase*1.3,.0001)
+ T.near(select(2,detail:GetFont()),detailBase*1.3,.0001,"retained details inherit font scaling")
+ T.eq(u.frame:GetScale(),windowScale,"font size does not change the main window scale")
+ T.eq(select(2,foreign:GetFont()),14,"foreign text outside the product's roots is untouched")
+ local fresh=u.C.Text(u.frame,"New text",14,nil,nil,20)
+ T.near(select(2,fresh:GetFont()),17*1.3,.0001,"later text scales after the existing context font delta")
+ T.near(fresh:GetLineHeight()+fresh:GetSpacing(),24*1.3,.0001)
+ u.context:OpenMenu(page.controls.font.widget,{{value=1,label="字体菜单"}},function() end)
+ local menu=u.context:GetMenu()
+ T.near(select(2,menu.list.rows[1].title:GetFont()),19*1.3,.0001,"future or reused menu rows use the percentage")
+ a:SetSetting("fontScale",70)
+ T.eq(slider.progress:GetAlpha(),0,"the font slider clears its fill at the minimum")
+ T.near(select(2,page.heading:GetFont()),titleBase*.7,.0001,"changing 130% to 70% starts from the original base")
+ T.near(select(2,menu.list.rows[1].title:GetFont()),19*.7,.0001)
+ u.C.SetFont(fresh,16);u.C.SetLineHeight(fresh,22)
+ T.near(select(2,fresh:GetFont()),19*.7,.0001,"restyling reused labels scales their new base once")
+ a:SetSetting("font","game")
+ T.near(select(2,fresh:GetFont()),19*.7,.0001,"changing typeface retains the chosen percentage")
+ a:SetSetting("fontScale",100);a:SetSetting("fontScale",130);a:SetSetting("fontScale",100)
+ T.eq(select(2,page.heading:GetFont()),titleBase,"round trips return exactly to the base font")
+ local native=LFGListFrame.SearchPanel.SearchBox
+ local original={native:GetFont()}
+ a:Open("find");a:SetSetting("fontScale",130)
+ T.near(select(2,native:GetFont()),17*1.3,.0001,"an active native lease updates immediately")
+ a:Open("settings",{section="interface"})
+ T.same({native:GetFont()},original,"release restores the complete native font after scaling")
+ a:Open("find")
+ local host=CreateFrame("Frame",nil,UIParent);native:SetParent(host);native:SetFont("foreign-font",19,"")
+ a:SetSetting("fontScale",70)
+ T.eq(native:GetFont(),"foreign-font","font updates skip leases transferred to another host")
+ a:Open("settings",{section="interface"})
+ T.eq(native:GetFont(),"foreign-font","lost lease release preserves the new host's font")
+ u:Hide(true)
+ local reloaded=dofile("tests/ui_fixture.lua")("zhCN",nil,savedSettings)
+ reloaded.A:Open("settings",{section="interface"})
+ T.eq(reloaded.A.db.fontScale,70,"font percentage survives database loading")
+ T.near(select(2,reloaded.U.pages.settings.heading:GetFont()),titleBase*.7,.0001,"a later UI context starts with the saved percentage")
+ reloaded.A:SetSetting("fontScale",150);T.eq(reloaded.A.db.fontScale,130)
+ reloaded.A:SetSetting("fontScale",40);T.eq(reloaded.A.db.fontScale,70)
+ reloaded.U:Hide(true)
+end
+
 -- The selected UI language is fixed for the login, including later LoD modules.
 for _,case in ipairs({{"zhCN","enUS","Settings","LycheeFont"},{"enUS","zhCN","设置","荔枝字体"}}) do
  local savedSettings={language=case[2]}

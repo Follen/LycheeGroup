@@ -413,6 +413,17 @@ do
 		T.eq(Notes.PlayerInfo.ResolveRecord(record).specID,66,"specialization metadata can recover on a later read")
 		C_SpecializationInfo.GetNumSpecializationsForClassID=getSpecializationCount
 		Load.addon("LycheeGroup", "Specializations.lua")
+		local getSpecializationInfo=GetSpecializationInfoForClassID
+		local infoReady=false
+		GetSpecializationInfoForClassID=function(classID,index)
+			if classID==2 and not infoReady then return end
+			return getSpecializationInfo(classID,index)
+		end
+		T.eq(Notes.PlayerInfo.ResolveRecord(record).specID,nil,"a partial specialization directory remains unresolved without breaking record display")
+		infoReady=true
+		T.eq(Notes.PlayerInfo.ResolveRecord(record).specID,66,"a partial specialization directory recovers on the next read")
+		GetSpecializationInfoForClassID=getSpecializationInfo
+		Load.addon("LycheeGroup", "Specializations.lua")
 		T.eq(A.Specializations:Get(66),"Specialization","the generic ID lookup may cache its own label")
 		local afterIDLookup=Notes.PlayerInfo.ResolveRecord({class="PALADIN",specID=66,classSpec=""})
 		T.eq(afterIDLookup.classSpec,"圣骑士-神圣","structured resolution keeps the per-class catalog label after an ID lookup")

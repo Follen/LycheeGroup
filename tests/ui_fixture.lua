@@ -2,6 +2,7 @@
 return function(locale,preferences,settings)
 local base=dofile("tests/stubs.lua");base.Install({locale=locale,realm="Home"})
 local S=dofile("tests/ui_stubs.lua");S.Install()
+C_SpecializationInfo.GetSpecialization=function() return nil end
 _G.LycheeGroup=nil;_G.LycheeGroupDB=nil;_G.LycheeGroupPrefsDB=nil;_G.LycheeGroupNotesDB=nil;_G.LibStub=nil
 dofile("addon/LycheeGroup/Core.lua");dofile("addon/LycheeGroup/Specializations.lua");dofile("addon/LycheeGroup/Locale.lua");dofile("addon/LycheeGroup/Fonts.lua")
 -- WoW restores SavedVariables after executing the addon's files.
@@ -115,6 +116,7 @@ EJ_GetInstanceByIndex=function(index,isRaid) if index==1 and isRaid then return 
 EJ_GetInstanceInfo=function() return "Raid",nil,nil,67890,nil,12345 end
 C_EncounterJournal.GetInstanceForGameMap=function(map) if map==110 then return 10 end end
 C_LFGList={
+ HasActiveEntryInfo=function() return G.listing~=nil end,
  GetActivityInfoTable=function(id) return activities[id] end,
  GetAvailableCategories=function() return {2,3} end,
  GetLfgCategoryInfo=function(id) return {name=id==2 and "Dungeons" or "Raids",showPlaystyleDropdown=true,allowCrossFaction=true} end,

@@ -30,6 +30,7 @@ local DEFAULTS = {
 	minimap = true,
 	minimapAngle = 225,
 	font = "default",
+	fontScale = 100,
 	language = "auto",
 	autoJoin = false,
 	relations = true,
@@ -46,6 +47,12 @@ local DEFAULTS = {
 }
 
 local CHARACTER_DEFAULTS = { rememberFilters = true, defaultSort = "newest" }
+
+local function FontScale(value)
+ value=tonumber(value)
+ if not value or value~=value then return 100 end
+ return math.max(70,math.min(130,math.floor(value+.5)))
+end
 
 local initialized = {}
 local loading = {}
@@ -65,6 +72,7 @@ function A:LoadDB()
 	raw.applicantSound, raw.applicantTone, raw.soundVolume = nil, nil, nil
 	raw.schema = DEFAULTS.schema
 	raw.keywordFilters = nil
+	raw.fontScale = FontScale(raw.fontScale)
 	self.db = raw
 	self:InitializeLocale()
 	local prefs = _G.LycheeGroupPrefsDB
@@ -130,9 +138,14 @@ function A:Ensure(module)
 	return m
 end
 
--- A:Open('find'|'create'|'notes'|'settings', context)
+-- Resolve ordinary entry clicks from native state, including a member's listing.
+function A:GetDefaultPage()
+	return C_LFGList.HasActiveEntryInfo() and "create" or "find"
+end
+
+-- A:Open('find'|'create'|'notes'|'settings'|nil, context)
 function A:Open(page, context)
-	page = page or "find"
+	page = page or self:GetDefaultPage()
 	self:LoadDB()
 	local function Failed(message)
 		if page == "notes" then self:NoteMessage(message) else self:Print(message) end
@@ -154,7 +167,7 @@ function A:Open(page, context)
 end
 
 function A:ToggleWindow()
-	if self.UI and self.UI:IsShown() and not self.UI.hiding then self.UI:Hide() else return self:Open("find") end
+	if self.UI and self.UI:IsShown() and not self.UI.hiding then self.UI:Hide() else return self:Open(self:GetDefaultPage()) end
 end
 
 -- Explicit, session-only UI previews. No preview provider replaces the real Group.
@@ -232,12 +245,13 @@ end
 
 -- A:SetSetting(key, value) 同步配置与生命周期。
 function A:SetSetting(key, value)
+	if key == "fontScale" then value = FontScale(value) end
 	local db = CHARACTER_DEFAULTS[key] ~= nil and self.charPrefs or self.db
 	if db[key] == value then return end
 	db[key] = value
 	if key == "nativeLFGEntry" then self:SyncNativeLFGEntry() end
 	if key == "minimap" then self.Minimap:UpdateSettings() end
-	if key == "font" then self.Fonts:Apply() end
+	if key == "font" or key == "fontScale" then self.Fonts:Apply() end
 	if self.Group and (key == "history" or key == "autoJoin") then
 		self.Group:OnSettingChanged(key, value)
 	elseif key == "history" then self:SyncHistoryWake(value) end

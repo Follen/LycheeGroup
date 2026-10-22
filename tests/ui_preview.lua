@@ -52,7 +52,7 @@ end
 ChooseSearchActivity("seasonDungeon",20);snapshot("寻求组队")
 U.pages.find:SelectCategory("seasonDungeon")
 for _,button in ipairs(U.pages.find.difficultyButtons) do if button.value==8 then button:Fire("OnClick") end end
-U.pages.find:SetMultiSelectMode(true);snapshot("活动多选返回");U.pages.find:ClosePicker()
+snapshot("钥石默认多选");U.pages.find:ClosePicker()
 U.Tooltip:ShowGroup(U.pages.find.results.rows[1],G.records[1]);snapshot("队伍悬停")
 U.Tooltip:Hide()
 local dungeonRecords=G.records;G.records={}
@@ -131,7 +131,15 @@ U.pages.create.favoritesToggle:Fire("OnClick");snapshot("收藏与增益");U.pag
 local mage={name="约翰凯瑟琳-白银之手",nameKey="约翰凯瑟琳-白银之手",class="MAGE",localizedClass="法师",specName="奥术",assignedRole="DAMAGER",factionGroup=0,itemLevel=330,dungeonScore=3834,dungeonScores={current={name="夺目谷",level=19,timed=true},best={name="纳洛拉克的洞穴",level=20,timed=true}}}
 U.Tooltip:ShowPlayer(U.pages.create.groupSummary,mage);snapshot("玩家详情优化");U.Tooltip:Hide()
 A:Open("find");U.pages.find:SelectCategory("seasonDungeon");U.pages.find:SetFiltersOpen(true)
-U.pages.find.rolePresenceChoices.TANK.buttons[1]:Fire("OnClick");U.pages.find.rolePresenceChoices.DAMAGER.buttons[1]:Fire("OnClick");snapshot("职责筛选")
+C_SpecializationInfo.GetSpecialization=function() return 3 end
+C_SpecializationInfo.GetSpecializationInfo=function() return 252,"邪恶",nil,135775 end
+U.pages.find.rolePresenceChoices.TANK.buttons[2]:Fire("OnClick");U.pages.find.rolePresenceChoices.DAMAGER.buttons[3]:Fire("OnClick");U.pages.find.hideSameSpec:Fire("OnClick");snapshot("职责筛选")
+A:SetSetting("fontScale",130);snapshot("筛选字体130%")
+A:SetSetting("fontScale",70);snapshot("筛选字体70%")
+A:SetSetting("fontScale",100)
+A:Open("settings",{section="interface"});snapshot("字体大小设置")
+A:SetSetting("fontScale",130);snapshot("设置字体130%")
+A:SetSetting("fontScale",100)
 A:Open("settings");A:SetSetting("uiScale",75);U.pages.settings:Sync();snapshot("主窗口75%")
 A:SetSetting("uiScale",125);U.pages.settings:Sync();snapshot("主窗口125%")
 A:SetSetting("uiScale",100);U.pages.settings:Sync()

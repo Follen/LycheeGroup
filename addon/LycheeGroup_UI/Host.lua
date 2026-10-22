@@ -90,13 +90,10 @@ function UI:RefreshHeaderLayout()
  if self.frame:IsShown() then self.frame:SetScript("OnUpdate",FinishHeaderLayout) end
 end
 
-function UI:ApplyFont(path)
- T.font=path
+function UI:ApplyFont(path,scale)
+ self.context:SetFont(path,scale)
  if not self.frame then return end
  self:CloseMenu();self.Tooltip:Hide()
- A.Fonts:ApplyTree(self.frame,path)
- A.Fonts:ApplyTree(self.context:GetMenu(),path)
- A.Fonts:ApplyTree(self.Tooltip.interactive,path)
  self:RefreshHeaderLayout()
  self.pages.find:LayoutFont()
  local create=self.pages.create
@@ -105,6 +102,7 @@ function UI:ApplyFont(path)
  if notes.frame then notes:LayoutFont() end
  local settings=self.pages.settings
  if settings.frame then settings:LayoutRows();settings:Sync() end
+ self:FitToScreen()
 end
 
 function UI:FitToScreen()

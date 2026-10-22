@@ -442,14 +442,49 @@ do
  A.db=oldDB
 end
 
+-- Normal opens follow the current native listing without depending on a loaded
+-- Group snapshot or on permission to edit that listing.
+do
+ local oldUI,oldGroup,oldEnsure=A.UI,A.Group,A.Ensure
+ local oldActiveEntry,oldLeader=C_LFGList.HasActiveEntryInfo,UnitIsGroupLeader
+ local active,leader=false,false
+ local shownPage,shownContext,loads
+ local ui={Show=function(_,page,context) shownPage,shownContext=page,context end}
+ C_LFGList.HasActiveEntryInfo=function() return active end
+ UnitIsGroupLeader=function() return leader end
+ A.Group=nil
+ A.Ensure=function(_,module) loads[#loads+1]=module;return module=="UI" and ui or {} end
+ for _,role in ipairs({"leader","transferred leader","member"}) do
+  active=true;leader=role~="member";loads={}
+  T.eq(A:GetDefaultPage(),"create",role.." uses the active party listing before Group loads")
+  T.eq(A:Open(),true);T.eq(shownPage,"create",role.." opens the current recruitment")
+  T.eq(loads[1],"Group");T.eq(loads[2],"UI")
+ end
+ active=false;loads={};A:Open();T.eq(shownPage,"find","an unlisted party opens normal search")
+ active=true
+ local context={applicationID=17}
+ loads={};A:Open("find",context)
+ T.eq(shownPage,"find","explicit application navigation keeps its target page")
+ T.eq(shownContext,context)
+ loads={};A:Open("notes");T.eq(shownPage,"notes","unrelated explicit navigation remains targeted")
+ A.UI,A.Group,A.Ensure=oldUI,oldGroup,oldEnsure
+ C_LFGList.HasActiveEntryInfo,UnitIsGroupLeader=oldActiveEntry,oldLeader
+end
+
 do
  local oldUI,oldOpen=A.UI,A.Open
+ local oldActiveEntry=C_LFGList.HasActiveEntryInfo
+ local active=false
+ C_LFGList.HasActiveEntryInfo=function() return active end
  local shown,hidden,opened=false,0,0
  A.UI={IsShown=function() return shown end,Hide=function() hidden=hidden+1;shown=false end}
- A.Open=function(_,page) T.eq(page,"find");opened=opened+1;shown=true;return true end
+ A.Open=function(_,page) T.eq(page,active and "create" or "find");opened=opened+1;shown=true;return true end
  A:ToggleWindow();T.eq(opened,1)
  A:ToggleWindow();T.eq(hidden,1,"binding closes the current main window")
+ active=true;A:ToggleWindow();T.eq(opened,2,"binding opens the party's active recruitment")
+ A.UI.hiding=true;A:ToggleWindow();T.eq(opened,3,"reopening during exit also resolves the current listing")
  A.UI,A.Open=oldUI,oldOpen
+ C_LFGList.HasActiveEntryInfo=oldActiveEntry
 end
 
 _G.LycheeGroupDB = nil

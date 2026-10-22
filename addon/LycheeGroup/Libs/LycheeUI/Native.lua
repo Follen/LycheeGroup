@@ -24,9 +24,10 @@ local function Same(a,b)
  for i,value in ipairs(a) do if value~=b[i] then return false end end
  return true
 end
-local function ApplyText(saved,theme,color)
+local function ApplyText(saved,context,color)
  local region=saved.region
- region:SetFont(theme.font,14+theme.fontSizeDelta,"");region:SetTextColor(unpack(color));region:SetShadowOffset(0,0)
+ local theme=context.Theme
+ region:SetFont(theme.font,(14+theme.fontSizeDelta)*context.fontScale,"");region:SetTextColor(unpack(color));region:SetShadowOffset(0,0)
  -- Native setters may normalize font sizes and store colors as floats. The
  -- actual applied values identify our presentation during a foreign handoff.
  saved.applied={font={region:GetFont()},color={region:GetTextColor()},shadow={region:GetShadowOffset()}}
@@ -195,10 +196,10 @@ function Library.AttachNative(context)
   end
   function lease:RefreshStyle()
    if not self:IsOwned() then return end
-   ApplyText(font,T,T.text)
+   ApplyText(font,context,T.text)
    if options.textInsets then box:SetTextInsets(unpack(options.textInsets)) end
    for _,saved in ipairs(textStyles) do
-    ApplyText(saved,T,saved.region==box.Instructions and T.muted or T.text)
+    ApplyText(saved,context,saved.region==box.Instructions and T.muted or T.text)
    end
    if instructions then
     instructions:SetWidth(box:GetWidth())
@@ -279,7 +280,10 @@ function Library.AttachNative(context)
    if owned or button:GetAlpha()==(button:IsEnabled() and 1 or .38) then button:SetAlpha(buttonAlpha) end
    if owned or options.text and button:GetText()==options.text then button:SetText(text) end
   end
-  ApplyText(font,T,T.onPrimary)
+  function lease:RefreshStyle()
+   if self:IsOwned() then ApplyText(font,context,T.onPrimary) end
+  end
+  lease:RefreshStyle()
   if options.text then button:SetText(options.text) end
   button:SetSize(math.max(options.minWidth or 96,label:GetStringWidth()+40),40)
   if not lease:IsOwned() then lease:Release();return lease end

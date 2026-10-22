@@ -9,11 +9,12 @@ local sections={{"general",S("入口与快捷键","Access & shortcuts")},{"inter
 local types={{value="positive",label=S("推荐","Positive")},{value="neutral",label=S("中性","Neutral")},{value="caution",label=S("拉黑","Blocked")}}
 local definitions={
  general={{"toggleBinding",A.L.bindingToggle,"","binding"},
- {"minimap",S("显示小地图按钮","Show minimap button"),S("左键开关主窗口，右键打开设置；拖动调整位置。","Left-click toggles the window; right-click opens settings. Drag to reposition.")},
- {"nativeLFGEntry",S("隐藏原生组队眼睛","Hide the native LFG eye"),S("预组队时隐藏眼睛并保留申请提示音；随机／指定副本、节日副本和随机团队排队时仍显示。","Hide the eye for premade groups and keep applicant sounds. Dungeon and Raid Finder queues still show the native eye.")}},
+ {"minimap",S("显示小地图按钮","Show minimap button"),S("是否显示小地图按钮","Show or hide the minimap button.")},
+ {"nativeLFGEntry",S("隐藏原生组队眼睛","Hide the native LFG eye"),S("预组队隐藏原生眼睛按钮","Hide the native eye button for premade groups.")}},
  interface={{"language",S("界面语言","Interface language"),S("仅改变插件文字，重载界面后生效。","Change addon text. Reload the UI to apply."),{{value="auto",label=S("跟随游戏","Game language")},{value="zhCN",label="简体中文"},{value="enUS",label="English"}}},
  {"uiScale",S("主窗口缩放","Main window scale"),S("等比调整整个主窗口。","Scale the entire main window proportionally."),"range",75,125},
- {"font",S("界面字体","Interface font"),S("默认使用荔枝字体，也可选择游戏或共享字体，立即生效。","Use LycheeFont, a game font or an installed shared font. Changes apply immediately."),function() return A.Fonts:Choices() end},
+ {"fontScale",S("字体大小","Font size"),S("调节插件全局文字","Adjust text size throughout the addon."),"range",70,130},
+ {"font",S("界面字体","Interface font"),S("界面字体选择","Choose the interface font."),function() return A.Fonts:Choices() end},
  {"reduceMotion",L.reduceMotion,S("关闭开窗位移、Logo 动作和局部过渡。","Disable window movement, logo animation and local transitions.")}},
  browse={
  {"defaultSort",S("默认排序","Default sorting"),S("本角色进入其他活动分类时采用的排序。","Default sorting for this character's activity categories."),{{value="newest",label=L.newest},{value="rating",label=L.leaderRating},{value="itemLevel",label=L.requiredItemLevel},{value="members",label=L.members}}},
@@ -65,6 +66,12 @@ function P:BuildAbout(parent)
  local version=C.Text(header,"",14,T.text,160);C.SetLineHeight(version,20,true);version:SetWordWrap(false);version:SetPoint("TOPLEFT",versionLabel,"TOPRIGHT",8,0);self.aboutValues.version=version
  local authorLabel=C.Text(header,L.addonAuthor,14,T.muted);C.SetLineHeight(authorLabel,20,true);authorLabel:SetPoint("TOPLEFT",version,"TOPRIGHT",24,0)
  local author=C.Text(header,"",14,T.text);C.SetLineHeight(author,20,true);author:SetWordWrap(false);author:SetPoint("TOPLEFT",authorLabel,"TOPRIGHT",8,0);author:SetPoint("TOPRIGHT",header,"TOPRIGHT",-12,-44);self.aboutValues.author=author
+ local brand=CreateFrame("Button",nil,header);brand:SetSize(220,80);brand:SetPoint("TOPLEFT");brand:RegisterForClicks("LeftButtonUp");self.aboutBrand=brand
+ brand:SetScript("OnClick",function()
+  P.aboutClicks=(P.aboutClicks or 0)+1
+  if P.aboutClicks==10 then P.aboutClicks=0;P:ShowDedicationToast() end
+ end)
+ parent:HookScript("OnHide",function() P.aboutClicks=0;P:HideDedicationToast() end)
  self.otherAddonsHeading=C.Text(parent,L.otherAddons,14,T.muted,BODY_WIDTH-24);C.SetLineHeight(self.otherAddonsHeading,20,true);self.otherAddonsHeading:SetPoint("TOPLEFT",12,-100)
  local media="Interface\\AddOns\\LycheeGroup_UI\\Media\\"
  local entries={
@@ -87,11 +94,26 @@ function P:BuildAbout(parent)
   self.otherAddons[index]=row
  end
 end
+function P:HideDedicationToast()
+ if self.dedicationTimer then self.dedicationTimer:Cancel();self.dedicationTimer=nil end
+ if self.dedicationToast then self.dedicationToast:Hide() end
+end
+function P:ShowDedicationToast()
+ self:HideDedicationToast()
+ if not self.dedicationToast then
+  local toast=C.Notice(self.main,400);toast:SetPoint("BOTTOM",0,24);toast:SetFrameLevel(self.main:GetFrameLevel()+10)
+  toast.close:Hide();toast.text:SetJustifyH("CENTER");self.dedicationToast=toast
+ end
+ local toast,message=self.dedicationToast,"谨献给挚爱：荔枝小月亮"
+ UI:SetText(toast.text,message);toast:SetWidth(math.ceil(toast.text:GetStringWidth())+48);toast:SetMessage(message,-28)
+ self.dedicationTimer=C_Timer.NewTimer(5,function() P:HideDedicationToast() end)
+end
 function P:RefreshAbout()
  for key,field in pairs({name="Title",version="Version",author="Author"}) do
   local text=C_AddOns.GetAddOnMetadata("LycheeGroup",field)
   UI:SetText(self.aboutValues[key],text and text~="" and text or key=="name" and L.reminder or L.metadataMissing)
  end
+ self.aboutBrand:SetWidth(math.max(220,math.ceil(self.aboutValues.name:GetStringWidth())+84))
  local top=140
  for _,row in ipairs(self.otherAddons) do
   local height=math.max(148,row.summary:GetStringHeight()+104)
@@ -123,7 +145,8 @@ function P:BuildRow(parent,row,index)
  local label=C.Text(holder,row[2],14,T.text,labelWidth);label:SetPoint("LEFT",12,0);label:SetWordWrap(true);C.SetLineHeight(label,20)
  local help=C.Text(holder,row[3],14,T.muted,helpWidth);help:SetPoint("LEFT",36+labelWidth,0);help:SetWordWrap(true);C.SetLineHeight(help,20)
  local rowHeight=math.max(88,label:GetStringHeight()+32,help:GetStringHeight()+32);holder:SetHeight(rowHeight);parent.nextRowY=(parent.nextRowY or 0)+rowHeight
- parent.rows=parent.rows or {};parent.rows[#parent.rows+1]={frame=holder,label=label,help=help}
+ local layoutRow={frame=holder,label=label,help=help}
+ parent.rows=parent.rows or {};parent.rows[#parent.rows+1]=layoutRow
  local control
  if row[4]=="range" then
   if row[1]=="uiScale" then control=WindowScaleControl(holder)
@@ -149,6 +172,7 @@ function P:BuildRow(parent,row,index)
   control:HookScript("OnLeave",function(button) UI:Color(button.label,T.muted) end)
   control:HookScript("OnHide",function(button) UI:Color(button.label,T.muted) end)
  end
+ if row[4]=="binding" or row[4]=="action" then layoutRow.action=control end
  if row[4]~="action" then self.controls[row[1]]={widget=control,definition=row,help=help,frame=holder} end
 end
 
@@ -209,6 +233,7 @@ function P:LayoutRows()
   panel:ClearAllPoints();panel:SetPoint("TOPLEFT",self.main,"TOPLEFT",PAD,-80-offset);panel:SetHeight(T.contentHeight-120-offset)
   local top=0
   for _,row in ipairs(panel.rows or {}) do
+   if row.action then row.action:SetWidth(math.ceil(row.action.label:GetStringWidth())+32) end
    local height=math.max(88,row.label:GetStringHeight()+32,row.help:GetStringHeight()+32)
    row.frame:ClearAllPoints();row.frame:SetPoint("TOPLEFT",0,-top);row.frame:SetHeight(height);top=top+height
   end
@@ -252,6 +277,7 @@ end
 function P:Enter(context) self.frame:RegisterEvent("UPDATE_BINDINGS");self:SelectSection(context and context.section or self.section) end
 function P:Leave()
  self.frame:UnregisterEvent("UPDATE_BINDINGS")
+ self.aboutClicks=0;self:HideDedicationToast()
  self.controls.uiScale.widget:FinishDrag(false)
  self:CancelBindingCapture(true)
  for _,panel in pairs(self.panels) do UI.Motion:FinishPlacement(panel) end

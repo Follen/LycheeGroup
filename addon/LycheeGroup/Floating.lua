@@ -53,13 +53,15 @@ end
 function F:Build()
  if self.frame then return end
  zh=A:GetLocale()=="zhCN"
- self.context=_G.LycheeUI:CreateContext({font=A.Fonts:GetPath(),reducedMotion=function() return A.db.reduceMotion end})
+ self.context=_G.LycheeUI:CreateContext({font=A.Fonts:GetPath(),fontScale=A.Fonts:GetScale(),
+  ownsText=function(region) return A.Fonts:IsOwned(region,F.frame,F.context and F.context:GetMenu()) end,
+  reducedMotion=function() return A.db.reduceMotion end})
  C,T=self.context.C,self.context.Theme
  local f=CreateFrame("Frame","LycheeGroupFloating",UIParent);f:SetSize(80,44);f:SetFrameStrata("MEDIUM");f:SetClampedToScreen(true);f:SetMovable(true);f:EnableMouse(false);self.frame=f
  local button=CreateFrame("Button",nil,f);button:SetSize(80,44)
  button:SetScript("OnClick",function()
   if F.dragging or F.dragClick then F.dragClick=nil;return end
-  A:Open(F.recruiting and "create" or "find")
+  A:Open(A:GetDefaultPage())
  end)
  button:SetPoint("TOPLEFT");button:RegisterForDrag("LeftButton");self.button=button
  local logoAnchor=CreateFrame("Frame",nil,button);logoAnchor:SetSize(38,38);logoAnchor:SetPoint("LEFT",8,0);logoAnchor:EnableMouse(false);self.logoAnchor=logoAnchor
@@ -267,8 +269,8 @@ function F:Tick(elapsed,now)
  end
  local fade=self.fade
  if fade then
-  fade.elapsed=fade.elapsed+elapsed;local p=A.db.reduceMotion and 1 or math.min(1,fade.elapsed/(fade.to==1 and .17 or .11));self.panel:SetAlpha(fade.from+(fade.to-fade.from)*(1-(1-p)^3))
-  if A.db.reduceMotion or fade.elapsed>=(fade.to==1 and .17 or .11) then self.fade=nil;if fade.to==0 then self.panel:Hide() end end
+  fade.elapsed=fade.elapsed+elapsed;local p=A.db.reduceMotion and 1 or math.min(1,fade.elapsed/(fade.to==1 and .17 or .055));self.panel:SetAlpha(fade.from+(fade.to-fade.from)*(1-(1-p)^3))
+  if A.db.reduceMotion or fade.elapsed>=(fade.to==1 and .17 or .055) then self.fade=nil;if fade.to==0 then self.panel:Hide() end end
  end
  local hadCardMotion=self.cardElapsed~=nil
  if hadCardMotion then
@@ -281,11 +283,14 @@ function F:Tick(elapsed,now)
  end
  self:UpdateDriver()
 end
-function F:CancelHide() if self.hideTask then self.hideTask:Cancel();self.hideTask=nil end end
+function F:CancelHide()
+ if self.hideTask then self.hideTask:Cancel();self.hideTask=nil end
+ if self.fade and self.fade.to==0 and self.panel:IsShown() and (self.panel:IsMouseOver() or self:GetAnchor():IsMouseOver()) then self:Fade(true) end
+end
 function F:Dismiss() self:CancelHide();if self.panel then self.panel:Hide() end end
 function F:ScheduleHide()
  if not self.panel:IsShown() then return end
- self:CancelHide();self.hideTask=C_Timer.NewTimer(.12,function() F.hideTask=nil;if not F:GetAnchor():IsMouseOver() and not F.panel:IsMouseOver() then F:Fade(false) end end)
+ self:CancelHide();self.hideTask=C_Timer.NewTimer(.06,function() F.hideTask=nil;if not F:GetAnchor():IsMouseOver() and not F.panel:IsMouseOver() then F:Fade(false) end end)
 end
 function F:GetAnchor() return self.host or self.frame end
 function F:LayoutEntry()
@@ -350,9 +355,9 @@ function F:ToggleStandaloneTest()
  if self.standaloneTest then self:ShowPanel() end
  return self.standaloneTest
 end
-function F:ApplyFont(path)
+function F:ApplyFont(path,scale)
  if not self.frame then return end
- T.font=path;A.Fonts:ApplyTree(self.frame,path)
+ self.context:SetFont(path,scale)
  self.lastCount=nil;self:Update()
 end
 function F:Update()
@@ -395,12 +400,12 @@ function F:ShowPanel()
       local faction=member.factionGroup and PLAYER_FACTION_GROUP[member.factionGroup]
       local factionTexture=factionTextures[faction]
       local nameWidth=MEMBER_TEXT_WIDTH
-      self.measure:SetFont(T.font,MEMBER_NAME_SIZE,"");C.SetLineHeight(self.measure,MEMBER_NAME_LINE);self.measure:SetWidth(nameWidth);self.measure:SetText(member.nameKey or member.name or A.L.invalidName)
+      C.SetFont(self.measure,MEMBER_NAME_SIZE);C.SetLineHeight(self.measure,MEMBER_NAME_LINE);self.measure:SetWidth(nameWidth);self.measure:SetText(member.nameKey or member.name or A.L.invalidName)
       local nameHeight=math.max(MEMBER_NAME_LINE,self.measure:GetStringHeight())
       local _,spec,icon,class=group:ResolveMemberSpec(member)
       local meta=(member.raceName or "—").." · "..(class or (zh and "未知职业" or "Unknown class")).." · "..(spec or member.specName or (zh and "未知专精" or "Unknown specialization"))
       local metaWidth=MEMBER_TEXT_WIDTH-(factionTexture and MEMBER_FACTION_SIZE+MEMBER_FACTION_GAP or 0)
-      self.measure:SetFont(T.font,MEMBER_META_SIZE,"");C.SetLineHeight(self.measure,MEMBER_META_LINE);self.measure:SetWidth(metaWidth);self.measure:SetText(meta)
+      C.SetFont(self.measure,MEMBER_META_SIZE);C.SetLineHeight(self.measure,MEMBER_META_LINE);self.measure:SetWidth(metaWidth);self.measure:SetText(meta)
       local metaHeight=math.max(MEMBER_META_LINE,self.measure:GetStringHeight());local pad=index==1 and 12 or 4
       local contentHeight=nameHeight+2+metaHeight
       local height=pad+contentHeight;local entry=AddEntry(total,height);total=total+height
@@ -409,7 +414,7 @@ function F:ShowPanel()
      end
      if canManage or comment then
       local textWidth=canManage and 180 or 324-MEMBER_TEXT_X-12;local textHeight=0
-      if comment then self.measure:SetFont(T.font,MEMBER_META_SIZE,"");C.SetLineHeight(self.measure,MEMBER_META_LINE);self.measure:SetWidth(textWidth);self.measure:SetText(comment);textHeight=math.max(MEMBER_META_LINE,self.measure:GetStringHeight()) end
+      if comment then C.SetFont(self.measure,MEMBER_META_SIZE);C.SetLineHeight(self.measure,MEMBER_META_LINE);self.measure:SetWidth(textWidth);self.measure:SetText(comment);textHeight=math.max(MEMBER_META_LINE,self.measure:GetStringHeight()) end
       local height=math.max(canManage and 40 or 0,textHeight+24)
       local footer=AddEntry(total,height);total=total+height
       footer.footer,footer.actions,footer.comment,footer.applicantID,footer.batch,footer.textHeight,footer.textWidth=true,canManage,comment,id,batch,textHeight,textWidth
@@ -422,15 +427,15 @@ function F:ShowPanel()
   else
    for _,app in ipairs(group:GetApplications()) do if Waiting(app) then
     local detailText=app.activityDetail and app.activityDetail~="" and ("· "..app.activityDetail) or ""
-    self.measure:SetFont(T.font,14,"");C.SetLineHeight(self.measure,20);self.measure:SetWidth(112);self.measure:SetText(detailText)
+    C.SetFont(self.measure,14);C.SetLineHeight(self.measure,20);self.measure:SetWidth(112);self.measure:SetText(detailText)
     local detailWidth=math.min(112,self.measure:GetStringWidth())
     local detailHeight=detailWidth>0 and self.measure:GetStringHeight() or 0
     local activityWidth=224-detailWidth-(detailWidth>0 and 6 or 0)
-    self.measure:SetFont(T.font,16,"");C.SetLineHeight(self.measure,22);self.measure:SetWidth(activityWidth);self.measure:SetText(app.activityLabel or app.activityName or app.result and app.result.activityName or "")
+    C.SetFont(self.measure,16);C.SetLineHeight(self.measure,22);self.measure:SetWidth(activityWidth);self.measure:SetText(app.activityLabel or app.activityName or app.result and app.result.activityName or "")
     local activityHeight=math.max(22,self.measure:GetStringHeight(),detailHeight)
-    self.measure:SetFont(T.font,T.listTitleSize,"");C.SetLineHeight(self.measure,T.listTitleLineHeight);self.measure:SetWidth(224);self.measure:SetText(app.name or "")
+    C.SetFont(self.measure,T.listTitleSize);C.SetLineHeight(self.measure,T.listTitleLineHeight);self.measure:SetWidth(224);self.measure:SetText(app.name or "")
     local titleHeight=math.max(T.listTitleLineHeight,self.measure:GetStringHeight())
-    self.measure:SetFont(T.font,14,"");C.SetLineHeight(self.measure,20);self.measure:SetWidth(196);self.measure:SetText(app.leaderName or (zh and "队长身份未知" or "Leader unknown"))
+    C.SetFont(self.measure,14);C.SetLineHeight(self.measure,20);self.measure:SetWidth(196);self.measure:SetText(app.leaderName or (zh and "队长身份未知" or "Leader unknown"))
     local leaderHeight=math.max(20,self.measure:GetStringHeight())
     local height=24+activityHeight+4+titleHeight+4+leaderHeight+8;local entry=AddEntry(total,height);total=total+height
     entry.application,entry.gap,entry.activityWidth,entry.detailWidth,entry.detailText,entry.activityHeight,entry.titleHeight=app,8,activityWidth,detailWidth,detailText,activityHeight,titleHeight
@@ -535,8 +540,8 @@ function F:Render()
    row.faction:Hide();row.faction:SetTexture(nil)
    row.name:ClearAllPoints();row.meta:ClearAllPoints();row.name:SetHeight(0);row.name:SetWordWrap(true);row.meta:SetWordWrap(true);row.leader:SetWordWrap(true)
    row.invite:Hide();row.decline:Hide();row.cancel:Hide();row.invite.applicantID=nil;row.decline.applicantID=nil;row.cancel.applicationID=nil
-   row.name:SetTextColor(unpack(T.text));row.name:SetFont(T.font,entry.comment and MEMBER_META_SIZE or entry.member and MEMBER_NAME_SIZE or 16,"")
-   C.SetLineHeight(row.name,entry.member and MEMBER_NAME_LINE or entry.comment and MEMBER_META_LINE or 22);row.meta:SetFont(T.font,entry.application and T.listTitleSize or MEMBER_META_SIZE,"");C.SetLineHeight(row.meta,entry.application and T.listTitleLineHeight or MEMBER_META_LINE)
+   row.name:SetTextColor(unpack(T.text));C.SetFont(row.name,entry.comment and MEMBER_META_SIZE or entry.member and MEMBER_NAME_SIZE or 16)
+   C.SetLineHeight(row.name,entry.member and MEMBER_NAME_LINE or entry.comment and MEMBER_META_LINE or 22);C.SetFont(row.meta,entry.application and T.listTitleSize or MEMBER_META_SIZE);C.SetLineHeight(row.meta,entry.application and T.listTitleLineHeight or MEMBER_META_LINE)
    if entry.footer then
      local commentTop=entry.actions and entry.comment and entry.textHeight<=MEMBER_META_LINE and 6 or 12
      row.name:SetWidth(entry.textWidth);row.name:SetPoint("TOPLEFT",MEMBER_TEXT_X,-commentTop);row.name:SetHeight(entry.textHeight);row.name:SetTextColor(unpack(T.muted));row.name:SetText(entry.comment or "")
@@ -557,14 +562,14 @@ function F:Render()
     local color=m.class and RAID_CLASS_COLORS[m.class];if color then row.name:SetTextColor(color.r,color.g,color.b) end
     MemberIcon(row.icon,m,entry.memberIcon)
     if entry.hideRating then row.score:SetText("") elseif m.ratingKind=="pvp" then ColorScore(row.score,m.rating,"pvp") else ColorScore(row.score,m.dungeonScore) end
-    row.itemLevel:SetFont(T.font,entry.hideRating and 14 or MEMBER_META_SIZE,"");C.SetLineHeight(row.itemLevel,entry.hideRating and MEMBER_NAME_LINE or MEMBER_META_LINE,true)
+    C.SetFont(row.itemLevel,entry.hideRating and 14 or MEMBER_META_SIZE);C.SetLineHeight(row.itemLevel,entry.hideRating and MEMBER_NAME_LINE or MEMBER_META_LINE,true)
     row.itemLevel:ClearAllPoints();row.itemLevel:SetWidth(MEMBER_METRIC_WIDTH);row.itemLevel:SetPoint("TOPRIGHT",-12,entry.hideRating and -pad or -pad-entry.nameHeight-2);row.itemLevel:SetText((zh and "装等 " or "ilvl ")..(m.itemLevel and math.floor(m.itemLevel) or "—"))
 
    else
     local app=entry.application;row.applicationID=app.id;row.application=app;row.background:SetHovered(row:IsMouseOver());row.background:Show()
     row.icon:SetSize(24,24);row.icon:ClearAllPoints();row.icon:SetPoint("TOPLEFT",12,-11);F.context:SetGameTexture(row.icon,app.activityArt or "Interface\\Icons\\INV_Misc_GroupLooking")
     row.name:SetPoint("TOPLEFT",48,-12);row.name:SetText(app.activityLabel or app.activityName or app.result and app.result.activityName or "")
-    row.score:Show();row.score:SetFont(T.font,14,"");row.score:SetHeight(0);row.score:SetWordWrap(true);C.SetLineHeight(row.score,20);row.score:ClearAllPoints();row.score:SetWidth(entry.detailWidth);row.score:SetTextColor(unpack(T.muted));row.score:SetText(entry.detailText);row.score:SetJustifyH("LEFT")
+    row.score:Show();C.SetFont(row.score,14);row.score:SetHeight(0);row.score:SetWordWrap(true);C.SetLineHeight(row.score,20);row.score:ClearAllPoints();row.score:SetWidth(entry.detailWidth);row.score:SetTextColor(unpack(T.muted));row.score:SetText(entry.detailText);row.score:SetJustifyH("LEFT")
     row.name:SetWidth(entry.activityWidth);local nameWidth=math.min(entry.activityWidth,row.name:GetStringWidth());row.name:SetWidth(nameWidth);row.score:SetPoint("TOPLEFT",48+nameWidth+6,-12)
     row.meta:SetWidth(224);row.meta:SetPoint("TOPLEFT",48,-16-entry.activityHeight);row.meta:SetText(app.name or "")
     row.cancel:ClearAllPoints();row.cancel:SetPoint("TOPRIGHT",-12,-12);row.cancel.applicationID=app.id;row.cancel:Show();row.cancel:SetEnabled(not app.pendingStatus)
@@ -572,7 +577,7 @@ function F:Render()
     local color=app.leaderClass and RAID_CLASS_COLORS[app.leaderClass];if color then row.leader:SetTextColor(color.r,color.g,color.b) else row.leader:SetTextColor(unpack(T.muted)) end
    end
    if row:IsMouseOver() then self:HoverRow(row,true) end
-   if entry.member then row.score:SetFont(T.font,14,"");row.score:SetWordWrap(false);C.SetLineHeight(row.score,MEMBER_NAME_LINE,true);row.score:ClearAllPoints();row.score:SetPoint("TOPRIGHT",-12,-entry.padTop);row.score:SetWidth(MEMBER_METRIC_WIDTH);row.score:SetJustifyH("RIGHT") end
+   if entry.member then C.SetFont(row.score,14);row.score:SetWordWrap(false);C.SetLineHeight(row.score,MEMBER_NAME_LINE,true);row.score:ClearAllPoints();row.score:SetPoint("TOPRIGHT",-12,-entry.padTop);row.score:SetWidth(MEMBER_METRIC_WIDTH);row.score:SetJustifyH("RIGHT") end
  end
  for i=bound+1,#self.rows do local row=self.rows[i];row:Hide();row.faction:Hide();row.faction:SetTexture(nil);row.applicationID=nil;row.applicantID=nil;row.application=nil;row.batch=nil;row.invite:Hide();row.decline:Hide();row.cancel:Hide();row.invite.applicantID=nil;row.decline.applicantID=nil;row.cancel.applicationID=nil end
  self:ApplyCardMotion(self.cardElapsed)

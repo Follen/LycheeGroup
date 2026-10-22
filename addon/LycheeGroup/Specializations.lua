@@ -17,6 +17,13 @@ function S:Get(id)
  Remember(id,name,icon)
  return name,icon
 end
+function S:Player()
+ local selected=C_SpecializationInfo.GetSpecialization()
+ if not selected then return end
+ local id,name,_,icon=C_SpecializationInfo.GetSpecializationInfo(selected)
+ Remember(id,name,icon)
+ return id,name,icon
+end
 function S:Class(token)
  local entry=classes[token]
  if not entry and not classesComplete then

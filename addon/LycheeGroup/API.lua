@@ -62,7 +62,7 @@ function API:Detach(currentOwner)
  return true
 end
 function API:Open()
- return A:Open(F.recruiting and "create" or "find")
+ return A:Open(A:GetDefaultPage())
 end
 function API:ShowPopup(currentOwner)
  if owner~=currentOwner or not owner then return false end

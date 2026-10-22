@@ -6,11 +6,18 @@ local T,M=UI.Theme,UI.Motion
 local C={listRightInset=T.scrollWidth+T.scrollGap}
 local function Hook(frame,script,callback) frame:HookScript(script,callback) end
 local editLineMeasure
-function C.SetFont(label,size,flags)
- return label:SetFont(T.font,(size or T.bodySize)+T.fontSizeDelta,flags or "")
+local function FontStyle(label)
+ local style=UI.fontStyles[label]
+ if not style then style={};UI.fontStyles[label]=style end
+ return style
 end
-function C.SetLineHeight(label,height,singleLine)
- height=height+T.lineHeightDelta
+function C.SetFont(label,size,flags)
+ local style=FontStyle(label)
+ style.size,style.flags=size or T.bodySize,flags or ""
+ return label:SetFont(T.font,(style.size+T.fontSizeDelta)*UI.fontScale,style.flags)
+end
+local function ApplyLineHeight(label,height,singleLine)
+ height=(height+T.lineHeightDelta)*UI.fontScale
  local kind=label:GetObjectType()
  if kind~="FontString" and kind~="EditBox" then error("LycheeUI.SetLineHeight expects a FontString or EditBox, got "..kind,2) end
  label:SetSpacing(0)
@@ -26,6 +33,25 @@ function C.SetLineHeight(label,height,singleLine)
  end
  label:SetSpacing(height-nativeHeight)
  if singleLine then label:SetHeight(height);label:SetJustifyV("MIDDLE") end
+end
+function C.SetLineHeight(label,height,singleLine)
+ local style=FontStyle(label)
+ style.lineHeight,style.singleLine=height,singleLine
+ ApplyLineHeight(label,height,singleLine)
+ style.appliedHeight=singleLine and label:GetHeight() or nil
+end
+function C.RefreshFonts()
+ for label,style in pairs(UI.fontStyles) do
+  if not UI.options.ownsText or UI.options.ownsText(label) then
+   if style.size then label:SetFont(T.font,(style.size+T.fontSizeDelta)*UI.fontScale,style.flags) end
+   if style.lineHeight then
+    -- A caller may have changed a former single-line label to automatic height.
+    local fixed=style.singleLine and label:GetHeight()==style.appliedHeight
+    ApplyLineHeight(label,style.lineHeight,fixed)
+    style.appliedHeight=fixed and label:GetHeight() or nil
+   end
+  end
+ end
 end
 function C.Text(parent,text,size,color,width,lineHeight)
  local label=parent:CreateFontString(nil,"OVERLAY")
@@ -257,7 +283,10 @@ function C.Button(parent,text,width,action,options)
   if style.variant then self:SetVariant(style.variant) end
   if style.height then self:SetHeight(style.height) end
   if style.radius then self:SetRadius(style.radius) end
-  if style.fontSize or style.lineHeight then self:SetLabelStyle(style.fontSize or select(2,self.label:GetFont())-T.fontSizeDelta,style.lineHeight or self.label:GetHeight()-T.lineHeightDelta) end
+  if style.fontSize or style.lineHeight then
+   local font=UI.fontStyles[self.label]
+   self:SetLabelStyle(style.fontSize or font.size,style.lineHeight or font.lineHeight)
+  end
   if style.surfaceColors then self:SetSurfaceColors(unpack(style.surfaceColors)) end
   if style.hoverColor or style.pressedColor then self:SetFeedbackColors(style.hoverColor or self.hoverColor,style.pressedColor or self.pressedColor) end
   if style.textColor or style.hoverTextColor or style.selectedTextColor then self:SetTextColors(style.textColor or self.textColor,style.hoverTextColor or self.hoverTextColor,style.selectedTextColor or self.selectedTextColor) end
@@ -870,18 +899,24 @@ function C.Slider(parent,width,min,max,step,onChange,options)
  end
  local slider=CreateFrame("Slider",nil,shell);slider:SetPoint("LEFT",0,0);slider:SetPoint("RIGHT",0,0);slider:SetHeight(24)
  slider:SetOrientation("HORIZONTAL");slider:SetMinMaxValues(min or 0,max or 100);slider:SetValueStep(step or 1);slider:SetObeyStepOnDrag(true)
- local track=CreateFrame("Frame",nil,slider);track:SetFrameLevel(slider:GetFrameLevel()-1);track:SetPoint("LEFT");track:SetPoint("RIGHT");track:SetHeight(4);C.Panel(track,T.surfaceHigh,2)
+ local track=CreateFrame("Frame",nil,slider);track:SetFrameLevel(slider:GetFrameLevel()-2);track:SetPoint("LEFT");track:SetPoint("RIGHT");track:SetHeight(4);C.Panel(track,T.surfaceHigh,2)
  local progress=CreateFrame("Frame",nil,slider);progress:SetFrameLevel(slider:GetFrameLevel()-1);progress:SetPoint("LEFT");progress:SetHeight(4);C.Panel(progress,T.accent,2)
  local thumb=slider:CreateTexture(nil,"OVERLAY");thumb:SetTexture(130871);thumb:SetVertexColor(unpack(T.accent));thumb:SetSize(8,12);slider:SetThumbTexture(thumb)
- progress:SetPoint("RIGHT",thumb,"CENTER",0,0)
+ local function UpdateProgress(value)
+  local low,high=slider:GetMinMaxValues()
+  progress:SetWidth(slider:GetWidth()*(value-low)/(high-low))
+  progress:SetAlpha(value>low and 1 or 0)
+ end
  function shell:SetValue(value) self.updating=true;slider:SetValue(value);self.updating=false end
  function shell:GetValue() return slider:GetValue() end
  function shell:IsDragging() return false end
  function shell:FinishDrag() end
  slider:SetScript("OnValueChanged",function(_,value)
-  shell.value=value;if not shell.updating and onChange then onChange(value) end
+  UpdateProgress(value);shell.value=value;if not shell.updating and onChange then onChange(value) end
  end)
+ slider:SetScript("OnSizeChanged",function() UpdateProgress(slider:GetValue()) end)
  shell.slider,shell.track,shell.thumb,shell.progress=slider,track,thumb,progress;shell:SetValue(min or 0)
+ UpdateProgress(slider:GetValue())
  return shell
 end
 function C.Segmented(parent,width,entries,onChange)

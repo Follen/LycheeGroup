@@ -38,6 +38,10 @@ local function NewProvider(scenario)
  function p:SetFilters(filters) self.filters=Copy(filters);self:Notify("results") end
  function p.Results:GetDetails(record) if type(record)=="number" then record=p.records[record] end;return record.details end
  function p.Results:GetMemberCounts(record) return self:GetDetails(record).counts end
+ function p.Results:HasMemberSpec(record,playerSpecID)
+  for _,member in ipairs(record.details.members) do if member.specID==playerSpecID then return true end end
+  return false
+ end
  function p.Results:InvalidateView() end
  local blockedTitles,blockedTitleCount={},0
  function p.Results:BlockTitle(title)
@@ -73,6 +77,7 @@ local function NewProvider(scenario)
  function p:GetApplicantMapScore(member) return member.dungeonScores and member.dungeonScores.mapScore end
  function p:GetResults()
   local ids={};local f=self.filters
+  local playerSpecID=f.hideSameSpec and A.Specializations:Player() or nil
   local text=(f.searchMode=="leader" and f.leaderText or f.searchMode=="group" and f.text or ""):lower()
   local minLevel,maxLevel
   if f.searchMode=="group" then minLevel,maxLevel=text:match("^%s*(%d+)%s*%-%s*(%d+)%s*$") end
@@ -102,6 +107,7 @@ local function NewProvider(scenario)
     if f.friends and not friends or f.guild and not guild then pass=false end
    end
    if pass and (f.notes and f.notes~="noCaution" or f.personKey and f.personKey~=r.leaderKey) then pass=false end
+   if pass and playerSpecID then pass=not self.Results:HasMemberSpec(r,playerSpecID) end
    if pass then ids[#ids+1]=id end
   end
   table.sort(ids,function(a,b)

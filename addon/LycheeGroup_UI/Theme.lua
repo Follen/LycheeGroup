@@ -3,6 +3,10 @@ local UI = A.UI
 UI.inputs = {}
 UI.context = _G.LycheeUI:CreateContext({
  font=A.Fonts:GetPath(),
+ fontScale=A.Fonts:GetScale(),
+ ownsText=function(region)
+  return A.Fonts:IsOwned(region,UI.frame,UI.context and UI.context:GetMenu(),UI.Tooltip and UI.Tooltip.interactive)
+ end,
  theme={width=1299.2,contentWidth=1267.2,fontSizeDelta=3,lineHeightDelta=4},
  parent=UIParent, inputs=UI.inputs, text=UI.L,
  reducedMotion=function() return A.db.reduceMotion end,

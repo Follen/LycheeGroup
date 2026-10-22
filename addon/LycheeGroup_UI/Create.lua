@@ -45,6 +45,9 @@ local function FitText(label)
  label:SetWordWrap(false);label:SetWidth(0)
  local width=math.ceil(label:GetStringWidth())+2;label:SetWidth(width);return width
 end
+local function ApplicantName(member)
+ return member.nameKey or member.name and (member.name..(member.realm and "-"..member.realm or "")) or L.unknown
+end
 local function PlaystyleLabel(value)
  local e=Enum.LFGEntryGeneralPlaystyle
  if value==e.Learning then return GROUP_FINDER_GENERAL_PLAYSTYLE1 elseif value==e.FunRelaxed then return GROUP_FINDER_GENERAL_PLAYSTYLE2 elseif value==e.FunSerious then return GROUP_FINDER_GENERAL_PLAYSTYLE3 elseif value==e.Expert then return GROUP_FINDER_GENERAL_PLAYSTYLE4 end
@@ -88,17 +91,48 @@ local function Minimum(app,key)
  end
  return value or -1
 end
-function P:LayoutFont()
+function P:LayoutRequirements()
+ local large=UI.context.fontScale>1
+ local inputTop=large and math.max(56,32+self.ilvlLabel:GetHeight(),32+self.scoreLabel:GetHeight(),32+self.styleLabel:GetHeight()) or 56
+ local scoreX=self.ilvl:GetWidth()+16
+ local styleX=self.scoreKind and 2*scoreX or scoreX
+ self.ilvl:SetPoint("TOPLEFT",0,-inputTop)
+ self.score:ClearAllPoints();self.score:SetPoint("TOPLEFT",scoreX,-inputTop)
+ self.scoreLabel:ClearAllPoints();self.scoreLabel:SetPoint("TOPLEFT",scoreX,-32)
+ self.playstyle:ClearAllPoints();self.playstyle:SetPoint("TOPLEFT",styleX,-inputTop)
+ self.styleLabel:ClearAllPoints();self.styleLabel:SetPoint("TOPLEFT",styleX,-32)
+ local optionTop=math.max(112,inputTop+self.ilvl:GetHeight()+12)
  local optionX=0
  for _,option in ipairs({self.private,self.crossFaction,self.autoAccept}) do
   option:SetHeight(40);option.label:ClearAllPoints();option.label:SetPoint("LEFT",option.track,"RIGHT",8,0);option:SetWidth(52+FitText(option.label))
-  option:ClearAllPoints();option:SetPoint("TOPLEFT",optionX,-112);optionX=optionX+option:GetWidth()+28
+  option:ClearAllPoints();option:SetPoint("TOPLEFT",optionX,-optionTop);optionX=optionX+option:GetWidth()+28
  end
+ self.autoInviteHint:SetPoint("TOPLEFT",0,-optionTop-46)
+end
+function P:LayoutFont()
+ local large=UI.context.fontScale>1
+ local pickerTop=large and math.max(28,self.activityLabel:GetHeight()+4) or 28
+ local contextTop=large and math.max(26,4+self.pickerName:GetHeight()) or 26
+ self.pickerContext:SetPoint("TOPLEFT",52,-contextTop)
+ local pickerHeight=large and math.max(52,contextTop+self.pickerContext:GetHeight()+4) or 52
+ self.pickerTrigger:SetHeight(pickerHeight);self.pickerTrigger:SetPoint("TOPLEFT",0,-pickerTop)
+ local titleTop=large and math.max(92,pickerTop+pickerHeight+12) or 92
+ local titleInputTop=large and math.max(116,titleTop+self.titleLabel:GetHeight()) or 116
+ local descriptionTop=large and math.max(172,titleInputTop+self.titleShell:GetHeight()+12) or 172
+ local descriptionInputTop=large and math.max(196,descriptionTop+self.descriptionLabel:GetHeight()) or 196
+ self.titleLabel:SetPoint("TOPLEFT",0,-titleTop);self.titleShell:SetPoint("TOPLEFT",0,-titleInputTop)
+ self.descriptionLabel:SetPoint("TOPLEFT",0,-descriptionTop);self.descriptionShell:SetPoint("TOPLEFT",0,-descriptionInputTop)
+ self.requirementsTop=math.max(356,56+descriptionInputTop+self.descriptionShell:GetHeight()+24)
+ self:LayoutRequirements()
+ self:LayoutFormNotices()
  self.cancelListing:SetWidth(FitText(self.cancelListing.label)+34);self.editListing:SetWidth(FitText(self.editListing.label)+34)
  local summaryWidth=CONTENT-116-self.cancelListing:GetWidth()-8-self.editListing:GetWidth();self.sMeta:SetWidth(summaryWidth);self.sName:SetWidth(summaryWidth)
+ self.sName:SetPoint("TOPLEFT",56,-math.max(28,self.sMeta:GetHeight()))
  local filterX=3
- for _,key in ipairs({"ALL","TANK","HEALER","DAMAGER"}) do local button=self.roleFilters[key];C.SetLineHeight(button.label,20,true);button:SetWidth(FitText(button.label)+24+(key~="ALL" and 22 or 0));button:ClearAllPoints();button:SetPoint("TOPLEFT",filterX,-3);filterX=filterX+button:GetWidth()+4 end
+ for _,key in ipairs({"ALL","TANK","HEALER","DAMAGER"}) do local button=self.roleFilters[key];C.SetLineHeight(button.label,20,true);button:SetHeight(math.max(30,button.label:GetHeight()));button:SetWidth(FitText(button.label)+24+(key~="ALL" and 22 or 0));button:ClearAllPoints();button:SetPoint("TOPLEFT",filterX,-3);filterX=filterX+button:GetWidth()+4 end
  self.roleFilterSurface:SetWidth(filterX-1)
+ if self.pickerVariants then self:LayoutActivityChoice(self.pickerVariants) end
+ if self.appIDs then self:LayoutBatches() end
 end
 function P:Build(parent)
  local root=CreateFrame("Frame",nil,parent);root:SetAllPoints();self.frame=root
@@ -171,7 +205,14 @@ function P:Build(parent)
  self.roleFilters={}
  local filterSurface=CreateFrame("Frame",nil,manage);filterSurface:SetSize(356,36);filterSurface:SetPoint("TOPLEFT",0,-114);C.Panel(filterSurface,T.panel,8);self.roleFilterSurface=filterSurface
  for i,key in ipairs({"ALL","TANK","HEALER","DAMAGER"}) do
-  local b=C.Button(filterSurface,key=="ALL" and L.all or roles[key],84,function() state.role=key~="ALL" and key or nil;P:RefreshApplicants() end,{variant="compact"});b:SetPoint("TOPLEFT",3+(i-1)*88,-3);if key~="ALL" then local roleIcon=C.Icon(b,16);roleIcon:SetPoint("LEFT",12,0);UI:SetRoleIcon(roleIcon,key);b.label:ClearAllPoints();b.label:SetPoint("LEFT",roleIcon,"RIGHT",6,0) end;self.roleFilters[key]=b
+  local b=C.Button(filterSurface,key=="ALL" and L.all or roles[key],84,function()
+   if key=="ALL" then state.roles=nil
+   else
+    state.roles=state.roles or {};state.roles[key]=not state.roles[key] or nil
+    if not next(state.roles) or state.roles.TANK and state.roles.HEALER and state.roles.DAMAGER then state.roles=nil end
+   end
+   P:RefreshApplicants()
+  end,{variant="compact"});b:SetPoint("TOPLEFT",3+(i-1)*88,-3);if key~="ALL" then local roleIcon=C.Icon(b,16);roleIcon:SetPoint("LEFT",12,0);UI:SetRoleIcon(roleIcon,key);b.label:ClearAllPoints();b.label:SetPoint("LEFT",roleIcon,"RIGHT",6,0) end;self.roleFilters[key]=b
  end
  self.sortChoice=C.Choice(manage,144,function() return P.hideApplicantRating and noRatingApplicantSorts or applicantSorts end,function(value) state.sort=value;P:RefreshApplicants() end);self.sortChoice:SetHeight(44);self.sortChoice:SetPoint("TOPRIGHT",0,-110);self.sortChoice:SetValue("newest",L.newest)
  self:LayoutFont()
@@ -209,7 +250,7 @@ function P:LayoutFormNotices()
  self.correctionNotice:ClearAllPoints();self.correctionNotice:SetPoint("TOPLEFT",0,-44-offset)
  if self.correctionNotice:IsShown() then offset=offset+self.correctionNotice:GetHeight()+12 end
  self.desc:ClearAllPoints();self.desc:SetPoint("TOPLEFT",0,-56-offset)
- self.req:ClearAllPoints();self.req:SetPoint("TOPLEFT",0,-356-offset)
+ self.req:ClearAllPoints();self.req:SetPoint("TOPLEFT",0,-(self.requirementsTop or 356)-offset)
 end
 function P:SetFormError(message)
  local wasShown=self.formNotice:IsShown()
@@ -447,13 +488,16 @@ end
 function P:LayoutApplicantViewport()
  local offset=self.manageNotice:IsShown() and self.manageNotice:GetHeight()+12 or 0
  local layout=self.applicantColumns or columns
+ local headerHeight=0
  for key,label in pairs(self.applicantHeaders) do
   label:ClearAllPoints();label:SetPoint("TOPLEFT",layout[key].x,-167-offset);label:SetWidth(layout[key].width)
   label:SetShown((key~="rating" or not self.hideApplicantRating) and (key~="mapScore" or self.showApplicantMapScore))
+  if label:IsShown() then headerHeight=math.max(headerHeight,label:GetHeight()) end
  end
- self.batchScroll:ClearAllPoints();self.batchScroll:SetPoint("TOPLEFT",0,-BATCH_TOP-offset)
- self.batchSlider:ClearAllPoints();self.batchSlider:SetPoint("TOPRIGHT",0,-BATCH_TOP-offset)
- local height=math.max(1,BATCH_MAX_HEIGHT-offset)
+ local batchTop=math.max(BATCH_TOP,167+headerHeight+3)
+ self.batchScroll:ClearAllPoints();self.batchScroll:SetPoint("TOPLEFT",0,-batchTop-offset)
+ self.batchSlider:ClearAllPoints();self.batchSlider:SetPoint("TOPRIGHT",0,-batchTop-offset)
+ local height=math.max(1,BATCH_MAX_HEIGHT-offset-(batchTop-BATCH_TOP))
  self.batchScroll:SetHeight(height);self.batchSlider:SetHeight(height)
  self.syncBatchScroll=true;self.batchSlider:SetMinMaxValues(0,math.max(0,self.batchBody:GetHeight()-height));self.syncBatchScroll=nil
  self.batchSlider:SetShown(self.batchBody:GetHeight()>height)
@@ -614,23 +658,7 @@ function P:DifficultyItems()
   if label then items[#items+1]={value=act.id,label=label} end
  end end;return items
 end
-function P:RefreshPicker()
- local cat=UI:GetGroup().Catalog:GetCategory(state.category)
- local groups=self:ActivityItems();if not state.group and groups[1] then state.group=groups[1].value end
- local group=UI:GetGroup().Catalog:GetGroup(state.category,state.group)
- UI:SetText(self.pickerName,group and group.name or L.chooseActivity)
- local tierName;for _,tier in ipairs(UI:GetGroup().Catalog:GetTiers()) do if group and group.tier==tier.id then tierName=tier.name end end
- UI:SetText(self.pickerContext,cat and cat.season and S("本赛季","Current season") or tierName or cat and cat.name or "");UI:SetActivityIcon(self.pickerIcon,group and group.activity)
- -- Native activity selection remains independent of the optional difficulty UI.
- local activities=group and group.variants or {};local valid=false
- for _,activity in ipairs(activities) do if activity.id==form.activityID then valid=true;break end end
- if not valid then
-  form.activityID=activities[1] and activities[1].id
-  for _,activity in ipairs(activities) do
-   if activity.isMythicPlusActivity then form.activityID=activity.id;break end
-  end
- end
- local variants=self:DifficultyItems()
+function P:LayoutActivityChoice(variants)
  local label=L.chooseActivity;for _,entry in ipairs(variants) do if entry.value==form.activityID then label=entry.label end end;self.difficultyChoice:SetValue(form.activityID,label)
  UI:SetText(self.difficultyFixed,label)
  local segmentWidth=6+math.max(0,#variants-1)*4
@@ -654,6 +682,24 @@ function P:RefreshPicker()
   end
  end
  if not segments then self.difficultySelection:Clear() end
+end
+function P:RefreshPicker()
+ local cat=UI:GetGroup().Catalog:GetCategory(state.category)
+ local groups=self:ActivityItems();if not state.group and groups[1] then state.group=groups[1].value end
+ local group=UI:GetGroup().Catalog:GetGroup(state.category,state.group)
+ UI:SetText(self.pickerName,group and group.name or L.chooseActivity)
+ local tierName;for _,tier in ipairs(UI:GetGroup().Catalog:GetTiers()) do if group and group.tier==tier.id then tierName=tier.name end end
+ UI:SetText(self.pickerContext,cat and cat.season and S("本赛季","Current season") or tierName or cat and cat.name or "");UI:SetActivityIcon(self.pickerIcon,group and group.activity)
+ -- Native activity selection remains independent of the optional difficulty UI.
+ local activities=group and group.variants or {};local valid=false
+ for _,activity in ipairs(activities) do if activity.id==form.activityID then valid=true;break end end
+ if not valid then
+  form.activityID=activities[1] and activities[1].id
+  for _,activity in ipairs(activities) do
+   if activity.isMythicPlusActivity then form.activityID=activity.id;break end
+  end
+ end
+ self.pickerVariants=self:DifficultyItems();self:LayoutActivityChoice(self.pickerVariants)
  local act=form.activityID and UI:GetGroup().Catalog:GetActivity(form.activityID)
  local categoryInfo=cat and C_LFGList.GetLfgCategoryInfo(cat.id)
  self.hasPlaystyle=categoryInfo and categoryInfo.showPlaystyleDropdown==true
@@ -664,9 +710,10 @@ function P:RefreshPicker()
  self.score:SetShown(self.scoreKind~=nil);self.scoreLabel:SetShown(self.scoreKind~=nil)
  UI:SetText(self.ilvlLabel,A.GroupPresentation.Activity(act).kind=="pvp" and S("最低 PvP 装等","Minimum PvP item level") or L.minItemLevel)
  UI:SetText(self.scoreLabel,self.scoreKind=="pvp" and S("最低 PvP 评分","Minimum PvP rating") or L.minRating)
- self.playstyle:ClearAllPoints();self.styleLabel:ClearAllPoints();local ilvlWidth=self.hasPlaystyle and (self.scoreKind and (FORM-32)/3.25 or (FORM-16)/2.25) or (self.scoreKind and (FORM-16)/2 or FORM)
- self.ilvl:SetWidth(ilvlWidth);self.score:SetWidth(ilvlWidth);self.score:ClearAllPoints();self.score:SetPoint("TOPLEFT",ilvlWidth+16,-56);self.scoreLabel:ClearAllPoints();self.scoreLabel:SetPoint("TOPLEFT",ilvlWidth+16,-32)
- local x=self.scoreKind and 2*(ilvlWidth+16) or ilvlWidth+16;self.playstyle:SetWidth(math.max(1,FORM-x));self.playstyle:SetPoint("TOPLEFT",x,-56);self.styleLabel:SetPoint("TOPLEFT",x,-32)
+ local ilvlWidth=self.hasPlaystyle and (self.scoreKind and (FORM-32)/3.25 or (FORM-16)/2.25) or (self.scoreKind and (FORM-16)/2 or FORM)
+ self.ilvl:SetWidth(ilvlWidth);self.score:SetWidth(ilvlWidth)
+ local x=self.scoreKind and 2*(ilvlWidth+16) or ilvlWidth+16;self.playstyle:SetWidth(math.max(1,FORM-x))
+ self:LayoutRequirements()
  if not form.generalPlaystyle then local options=self:PlaystyleItems();form.generalPlaystyle=options[1] and options[1].value end
  self.playstyle:SetValue(form.generalPlaystyle,form.generalPlaystyle and PlaystyleLabel(form.generalPlaystyle) or L.choosePlaystyle)
  UI.Native:SelectActivity(form.activityID);self:ValidateForm();self:RefreshRosterPresentation()
@@ -769,6 +816,36 @@ function P:Submit()
  if ok then self.validationSubmitted=nil;state.editing=false;self:RefreshMode()
  else self:ValidateForm();state.submissionError=reason or L.failed;self:SetFormError(state.submissionError) end
 end
+function P:LayoutBatches()
+ if not self.appIDs then return end
+ self.batchTops={};self.batchLayouts={}
+ local top=0
+ for index,id in ipairs(self.appIDs) do
+  local app=UI:GetGroup():GetApplicant(id)
+  if not app then self:RefreshApplicants();return end
+  if not self.applicantMeasure then
+   local holder=CreateFrame("Frame",nil,self.batchBody);holder:Hide()
+   holder.text=C.Text(holder,"",14,T.text);C.SetLineHeight(holder.text,19);holder.text:SetWordWrap(true)
+   holder.marks=UI.Members:CreateMarks(holder)
+   self.applicantMeasure=holder
+  end
+  local measure=self.applicantMeasure
+  local layout={tops={},heights={}};local memberTop=0
+  for i,member in ipairs(app.members) do
+   local marks=UI.Members:BindMarks(measure.marks,member)
+   measure.text:SetWidth(columns.name.x+columns.name.width-56-(marks>0 and marks+6 or 0))
+   UI:SetText(measure.text,ApplicantName(member))
+   local height=math.max(MEMBER_HEIGHT,math.ceil(measure.text:GetStringHeight()))
+   layout.tops[i],layout.heights[i]=memberTop,height
+   memberTop=memberTop+height+MEMBER_STRIDE-MEMBER_HEIGHT
+  end
+  self.batchTops[index]=top;self.batchLayouts[id]=layout
+  top=top+math.max(MEMBER_STRIDE,memberTop)+BATCH_PADDING
+ end
+ if self.applicantMeasure then UI.Members:ClearMarks(self.applicantMeasure.marks);UI:SetText(self.applicantMeasure.text,"") end
+ self.batchTops[#self.appIDs+1]=top
+ self.batchBody:SetHeight(math.max(1,top));self:LayoutApplicantViewport()
+end
 function P:RefreshApplicants()
  if UI.hiding then return end
  UI.Motion:Stop(self.batchScroll);self.batchScrollTarget=nil
@@ -781,7 +858,13 @@ function P:RefreshApplicants()
  local sortKey=state.sort~="newest" and (state.sort=="score" and "rating" or "itemLevel")
  local values=sortKey and {}
  local ids={};for _,id in ipairs(group:GetApplicants()) do
-  local app=group:GetApplicant(id);local match=not state.role;for _,m in ipairs(app.members) do if state.role and UI:MemberHasRole(m,state.role) then match=true end end
+  local app=group:GetApplicant(id);local match=not state.roles
+  if not match then
+   for _,member in ipairs(app.members) do
+    for _,role in ipairs(roleOrder) do if state.roles[role] and UI:MemberHasRole(member,role) then match=true;break end end
+    if match then break end
+   end
+  end
   if match then ids[#ids+1]=id;if sortKey then values[id]=Minimum(app,sortKey) end end
  end
  table.sort(ids,function(a,b)
@@ -789,11 +872,9 @@ function P:RefreshApplicants()
   local x,y=group:GetApplicant(a),group:GetApplicant(b)
   return x.displayOrderID==y.displayOrderID and a>b or x.displayOrderID<y.displayOrderID
  end)
- self.appIDs=ids;self.batchTops={};local top=0;for i,id in ipairs(ids) do self.batchTops[i]=top;top=top+math.max(1,#UI:GetGroup():GetApplicant(id).members)*MEMBER_STRIDE+BATCH_PADDING end
- self.batchTops[#ids+1]=top
- self.batchBody:SetHeight(math.max(1,top));self:LayoutApplicantViewport()
+ self.appIDs=ids;self:LayoutBatches()
  self.empty:SetShown(#ids==0);UI:SetText(self.appCount,L.applicantCount:format(#ids))
- for key,b in pairs(self.roleFilters) do b:SetActive((state.role or "ALL")==key) end;self:RenderBatches()
+ for key,b in pairs(self.roleFilters) do b:SetActive(key=="ALL" and not state.roles or state.roles and state.roles[key]==true or false) end;self:RenderBatches()
  UI.Tooltip:RefreshApplicant()
 end
 function P:SetBatchOffset(value,animate)
@@ -836,6 +917,7 @@ function P:RenderBatches()
    if f.appID~=id then for _,row in ipairs(f.people) do HideMemberTooltip(row) end end
    f:ClearAllPoints();f:SetPoint("TOPLEFT",0,-top);f:SetHeight(height);f:Show();f.appID=id;f.alternate=index%2==0;f.bg:SetColor(T.rowAlternate);f.bg:SetShown(f.alternate)
    local sharedY=-MEMBER_TOP
+   local memberLayout=self.batchLayouts[id]
    f.comment:ClearAllPoints();f.comment:SetPoint("TOPLEFT",layout.comment.x,sharedY);f.comment:SetWidth(layout.comment.width);f.comment:SetHeight(height-MEMBER_TOP*2);UI:SetText(f.comment,app.comment or "")
    f.invite.targetKey=id;f.decline.targetKey=id
     local actionable=canManage and app.status=="applied" and not app.pendingStatus and not app.acting
@@ -845,7 +927,7 @@ function P:RenderBatches()
    for i,row in ipairs(f.people) do
     UI:CloseMenuFor(row)
     local m=app.members[i];if row.member~=m then HideMemberTooltip(row) end;row:SetShown(m~=nil);row.member=m
-    if m then row.memberContext=self.applicantContext;row:ClearAllPoints();row:SetPoint("TOPLEFT",0,sharedY-(i-1)*MEMBER_STRIDE);UI:SetMemberIcon(row.icon,m);UI:SetText(row.title,m.nameKey or m.name and (m.name..(m.realm and "-"..m.realm or "")) or L.unknown);row.title:SetTextColor(UI:ClassColor(m.class))
+    if m then row.memberContext=self.applicantContext;row:SetHeight(memberLayout.heights[i]);row:ClearAllPoints();row:SetPoint("TOPLEFT",0,sharedY-memberLayout.tops[i]);UI:SetMemberIcon(row.icon,m);UI:SetText(row.title,ApplicantName(m));row.title:SetTextColor(UI:ClassColor(m.class))
      UpdateApplicantFaction(row,m,id)
      local marksWidth=UI.Members:BindMarks(row.marks,m)
      local available=columns.name.x+columns.name.width-56-(marksWidth>0 and marksWidth+6 or 0)
@@ -875,7 +957,7 @@ function P:RefreshRoster()
 end
 function P:OnNotesChanged()
  if not self.frame or not self.frame:IsVisible() or UI.hiding then return end
- self:RefreshRoster();self.boundAppIDs=nil;self:RenderBatches()
+ self:RefreshRoster();self:LayoutBatches()
  if not UI.Tooltip.sourceRoster then UI.Tooltip:RefreshRelations() end
 end
 function P:WatchNotes()
@@ -901,7 +983,7 @@ function P:Leave()
  self.favoritesExpanded=false;self:RefreshFavorites()
  UI.Motion:Stop(self.batchScroll);self.batchScrollTarget=nil;self.batchSlider:Hide()
  if self.unsub then self.unsub();self.unsub=nil end;if self.notesUnsub then self.notesUnsub();self.notesUnsub=nil end
- self:ClosePicker();UI.Native:ReleaseCreation();UI:GetGroup():Detach(self);self:ClearRosterList();self.roster=nil;self.rosterContext=nil;self.buffReport=nil;if self.buffList then self.buffList:Clear();self.buffArea:Hide() end;self.appIDs=nil;self.batchTops=nil;self:RenderBatches();UI.Tooltip:Hide()
+ self:ClosePicker();UI.Native:ReleaseCreation();UI:GetGroup():Detach(self);self:ClearRosterList();self.roster=nil;self.rosterContext=nil;self.buffReport=nil;if self.buffList then self.buffList:Clear();self.buffArea:Hide() end;self.appIDs=nil;self.batchTops=nil;self.batchLayouts=nil;self:RenderBatches();UI.Tooltip:Hide()
 end
 
 function P:BeginPreview(provider)

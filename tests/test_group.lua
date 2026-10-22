@@ -1420,6 +1420,12 @@ do
 	T.eq(changed.members[1].specName,"戒律","a specific update refreshes members even when their count is unchanged")
 	T.eq(#changed.encounters,2,"a specific update refreshes native encounter progress")
 	T.eq(notifications.result,resultEvents+1);T.eq(notifications.results or 0,resultsEvents,"one result update publishes only one refresh notification")
+	S.encounters[165]=nil;G.Results:OnResultUpdated(165)
+	T.eq(G:GetResultDetails(165).encounters,nil,"unavailable native progress stays unknown after a previously known snapshot")
+	S.encounters[165]={};G.Results:OnResultUpdated(165)
+	T.same(G:GetResultDetails(165).encounters,{},"an explicit empty progress array remains a known zero-boss result")
+	S.encounters[165]={"Boss A","Boss B"};G.Results:OnResultUpdated(165)
+	T.same(G:GetResultDetails(165).encounters,{"Boss A","Boss B"},"progress recovers through the same cached detail container")
 	S.results[164].numMembers=2;S.now=S.now+.02;G.Results:CommitResults(900)
 	T.eq(G:GetResult(164).detailsDirty,true,"bulk membership changes mark the existing detail container for refill")
 	T.eq(G:GetResultDetails(165),changed,"other results retain their cached details")
@@ -2926,6 +2932,82 @@ do
  T.eq(accepts,3,"leaving the home party also resumes the pending automatic response")
  A:SetSetting("autoJoin",false);S.applications={};G.Applications:SyncAll();G.Applications:ReleaseFinished()
  IsInGroup,UnitIsGroupLeader,C_LFGList.AcceptInvite=inGroup,isLeader,acceptInvite
+end
+
+-- Same-specialization exclusion reads only eligible native rosters and retains
+-- a lightweight answer independently of the bounded display-detail cache.
+do
+ local shared=A.Specializations
+ local getNum,getClass,getClassSpec=GetNumClasses,GetClassInfo,GetSpecializationInfoForClassID
+ local getSelected,getInfo=C_SpecializationInfo.GetSpecialization,C_SpecializationInfo.GetSpecializationInfo
+ local getClassCount=C_SpecializationInfo.GetNumSpecializationsForClassID
+ local selected,playerReads=1,0
+ GetNumClasses=function() return 2 end
+ GetClassInfo=function(index) if index==1 then return "死亡骑士","DEATHKNIGHT",6 end;return "法师","MAGE",8 end
+ GetSpecializationInfoForClassID=function(classID,index)
+  if classID==6 then if index==1 then return 252,"邪恶",nil,135775 end;return 251,"冰霜",nil,135846 end
+  if index==1 then return 64,"冰霜",nil,135846 end
+ end
+ C_SpecializationInfo.GetNumSpecializationsForClassID=function(classID) return classID==6 and 2 or 1 end
+ C_SpecializationInfo.GetSpecialization=function() playerReads=playerReads+1;return selected end
+ C_SpecializationInfo.GetSpecializationInfo=function(index)
+  if index==1 then return 252,"邪恶",nil,135775 end
+  if index==2 then return 251,"冰霜",nil,135846 end
+ end
+ Load.addon("LycheeGroup","Specializations.lua")
+ local specID,specName,icon=A.Specializations:Player()
+ T.eq(specID,252);T.eq(specName,"邪恶");T.eq(icon,135775)
+ S.resultIDs={94001,94002,94003,94004}
+ for index,id in ipairs(S.resultIDs) do
+  S.results[id]={activityIDs={502},name="Spec group "..index,numMembers=1,age=index}
+ end
+ S.players[94001]={{classFilename="DEATHKNIGHT",specName="邪恶"}}
+ S.players[94002]={{classFilename="DEATHKNIGHT",specName="冰霜"}}
+ S.players[94003]={{classFilename="MAGE",specName="冰霜"}}
+ S.players[94004]={{classFilename="DEATHKNIGHT"}}
+ G.Results:BeginSearch(940);G.Results:CommitResults(940)
+ G.Search:SetFilters({hideSameSpec=true,minMembers=2})
+ local nativeReads=S.playerReads
+ T.same(G:GetResults(),{});T.eq(S.playerReads,nativeReads,"cheap member filters run before specialization roster reads")
+ G:GetResultDetails(94003)
+ nativeReads=S.playerReads
+ local before=playerReads
+ G.Search:SetFilters({hideSameSpec=true})
+ T.same(G:GetResults(),{94002,94003,94004},"Unholy excludes Unholy DK while other specializations and unknown members remain")
+ T.eq(playerReads,before+1,"a dirty result rebuild reads the selected player specialization once")
+ T.eq(S.playerReads,nativeReads+3,"clean display details supply the member specialization without another native roster read")
+ T.eq(G:GetResult(94001).details,nil,"whole-result specialization filtering does not populate the display-detail cache")
+ nativeReads=S.playerReads
+ G.Search:SetFilters({hideSameSpec=true,sort="members"});G:GetResults()
+ T.eq(S.playerReads,nativeReads,"a warm filter and sort rebuild reuses both positive and negative specialization answers")
+ local notes=A.Notes;A.Notes=nil
+ G.Search:SetFilters({hideSameSpec=true,notes="noCaution"})
+ T.same(G:GetResults(),{94002,94003,94004},"missing player notes do not bypass the same-specialization exclusion")
+ A.Notes=notes
+ S.players[94001][1].specName="冰霜"
+ G.Results:OnResultUpdated(94001)
+ T.same(G:GetResults(),{94001,94002,94003,94004},"a member update invalidates the specialization answer even at the same member count")
+ T.eq(S.playerReads,nativeReads+1,"only the changed result's specialization answer is read again")
+ T.eq(G.Game.frame.events.ACTIVE_PLAYER_SPECIALIZATION_CHANGED,nil,"closed search and create views own no player specialization listener")
+ local view={};G:Attach(view,"search")
+ T.eq(G.Game.frame.events.ACTIVE_PLAYER_SPECIALIZATION_CHANGED,true,"visible search observes local specialization changes")
+ local events=0
+ local stop=G:Subscribe(function(kind) if kind=="results" then events=events+1 end end)
+ selected=2;Stubs.FireEvent("ACTIVE_PLAYER_SPECIALIZATION_CHANGED")
+ T.eq(events,1,"changing player specialization refreshes the active search filter")
+ T.same(G:GetResults(),{94003,94004},"Frost DK exclusion preserves Frost Mage and members with unknown specialization")
+ selected=nil;Stubs.FireEvent("ACTIVE_PLAYER_SPECIALIZATION_CHANGED")
+ T.same(G:GetResults(),{94001,94002,94003,94004},"unknown local specialization leaves every group available")
+ G.Search:SetFilters({});events=0;Stubs.FireEvent("ACTIVE_PLAYER_SPECIALIZATION_CHANGED")
+ T.eq(events,0,"an inactive same-specialization filter does not refresh search results")
+ stop();G:Detach(view)
+ T.eq(G.Game.frame.events.ACTIVE_PLAYER_SPECIALIZATION_CHANGED,nil,"leaving search releases local specialization tracking")
+ G:Attach(view,"create");T.eq(G.Game.frame.events.ACTIVE_PLAYER_SPECIALIZATION_CHANGED,true)
+ G:Detach(view);T.eq(G.Game.frame.events.ACTIVE_PLAYER_SPECIALIZATION_CHANGED,nil,"create retains its existing specialization listener lifecycle")
+ A.Specializations=shared
+ GetNumClasses,GetClassInfo,GetSpecializationInfoForClassID=getNum,getClass,getClassSpec
+ C_SpecializationInfo.GetSpecialization,C_SpecializationInfo.GetSpecializationInfo=getSelected,getInfo
+ C_SpecializationInfo.GetNumSpecializationsForClassID=getClassCount
 end
 
 _G.LycheeGroupDB = nil

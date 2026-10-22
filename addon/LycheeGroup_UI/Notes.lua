@@ -26,6 +26,18 @@ local function S(cn,en) return zh and cn or en end
 local NOTE_TYPES={{key="positive",label=S("推荐","Positive")},{key="neutral",label=S("中性","Neutral")},{key="caution",label=S("拉黑","Blocked")}}
 local ROW_HEIGHT = 100
 local LIST_HEIGHT = HEIGHT - WORK_TOP - 32 - PAD
+local function SizeRows(list,height)
+ list.rowHeight=height;list.capacity=math.min(list.poolCapacity-1,math.ceil(list:GetHeight()/height))
+ list.canvas:SetHeight(list:GetHeight()+height*2)
+ for i,row in ipairs(list.rows) do row:SetHeight(height);row:SetPoint("TOPLEFT",0,-(i-1)*height) end
+ list:Refresh(true)
+end
+local function LayoutHistoryRows(list,x)
+ local row=list.rows[1]
+ local metaTop=math.max(44,12+row.title:GetHeight()+4)
+ for _,item in ipairs(list.rows) do item.meta:SetPoint("TOPLEFT",x,-metaTop) end
+ SizeRows(list,math.max(80,math.ceil(metaTop+row.meta:GetHeight()+12)))
+end
 local EDITOR_HEIGHT = math.min(620, HEIGHT - WORK_TOP - PAD)
 
 local state = {
@@ -176,6 +188,7 @@ function P:Build(parent)
   C.Glyph(row,"chevron",16):SetPoint("RIGHT",-16,0)
  end
  self.historyEmpty=C.Text(self.historyFrame,L.historyEmpty,16,T.dim,BODY_WIDTH);self.historyEmpty:SetPoint("TOP",0,-140);self.historyEmpty:SetJustifyH("CENTER")
+ self:LayoutRows()
 end
 function P:ClassItems()
  local items={{value=false,label=L.unknown}};for id=1,GetNumClasses() do local name,token=GetClassInfo(id);if name then items[#items+1]={value=token,label=name} end end;return items
@@ -258,6 +271,7 @@ function P:OpenRun(index)
   modal.onClose=function() modal.list:Clear();P.historyRun=nil end;modal.built=true
  end
  self.historyRun=run
+ LayoutHistoryRows(modal.list,56)
  UI:SetText(modal.caption,(run.mapName or L.unknown).." · +"..(run.level or "?").." · "..UI:DateText(run.completedAt or run.startedAt))
  local ids={};for i in ipairs(run.members) do ids[#ids+1]=i end
  modal.list:SetItems(ids,function(row,i)
@@ -298,12 +312,24 @@ function P:OnSearchChanged()
 	self:RefreshList()
 end
 
+function P:LayoutRows()
+ local row=self.list.rows[1]
+ local metaTop=math.max(40,8+row.title:GetHeight()+4)
+ local reasonTop=math.max(68,metaTop+row.meta:GetHeight()+4)
+ for _,item in ipairs(self.list.rows) do
+  item.meta:SetPoint("TOPLEFT",50,-metaTop);item.date:SetPoint("TOPRIGHT",-12,-metaTop)
+  item.reason:SetPoint("TOPLEFT",50,-reasonTop)
+ end
+ SizeRows(self.list,math.max(ROW_HEIGHT,math.ceil(reasonTop+row.reason:GetHeight()+8)))
+ LayoutHistoryRows(self.historyList,60)
+ if self.historyModal then LayoutHistoryRows(self.historyModal.list,56) end
+end
 function P:LayoutFont()
  self.addButton:SetWidth(math.ceil(self.addButton.label:GetStringWidth())+56)
  self.importButton:SetWidth(math.ceil(self.importButton.label:GetStringWidth())+34)
  self.exportButton:SetWidth(math.ceil(self.exportButton.label:GetStringWidth())+34)
  self.eDelete:SetWidth(math.max(96,math.ceil(self.eDelete.label:GetStringWidth())+32))
- self.list:Refresh(true)
+ self:LayoutRows();self.list:Refresh()
  if self.tSelect then
   self.tSelect:SetWidth(math.max(128,math.ceil(self.tSelect.label:GetStringWidth())+32))
   self.tImport:SetWidth(math.max(104,math.ceil(self.tImport.label:GetStringWidth())+32))

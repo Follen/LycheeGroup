@@ -22,10 +22,12 @@ local function ResolveClass(classID, className, class, specID, text, selected)
 	local textMatch
 	for index = 1, C_SpecializationInfo.GetNumSpecializationsForClassID(classID) do
 		local id, specName = GetSpecializationInfoForClassID(classID, index)
-		local classSpec = className .. "-" .. specName
-		if id == specID then return {class=class, specID=id, classSpec=classSpec} end
-		if text == classSpec or text == className .. " · " .. specName then
-			textMatch = {class=class, specID=id, classSpec=classSpec}
+		if id and specName then
+			local classSpec = className .. "-" .. specName
+			if id == specID then return {class=class, specID=id, classSpec=classSpec} end
+			if text == classSpec or text == className .. " · " .. specName then
+				textMatch = {class=class, specID=id, classSpec=classSpec}
+			end
 		end
 	end
 	if textMatch then return textMatch end

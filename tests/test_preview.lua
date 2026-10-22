@@ -72,6 +72,25 @@ do
  zero.leaderOverallDungeonScore=zeroScore;unknown.leaderOverallDungeonScore=unknownScore
 end
 local beforeNoteFilter=preview:GetResults()
+do
+ local player=A.Specializations.Player
+ local first,second,third=preview.records[preview.recordIDs[4]],preview.records[preview.recordIDs[5]],preview.records[preview.recordIDs[6]]
+ local saved={first.details.members,second.details.members,third.details.members}
+ first.details.members={{class="DEATHKNIGHT",specID=252}}
+ second.details.members={{class="DEATHKNIGHT",specID=251}}
+ third.details.members={{class="DEATHKNIGHT"}}
+ local spec=252
+ A.Specializations.Player=function() return spec,"Test specialization",135775 end
+ preview:SetFilters({hideSameSpec=true})
+ T.same(preview:GetResults(),{second.id,third.id},"preview excludes the current specialization while preserving other and unknown specializations")
+ spec=251
+ T.same(preview:GetResults(),{first.id,third.id},"preview follows the player's newly selected specialization")
+ spec=nil
+ T.same(preview:GetResults(),beforeNoteFilter,"preview keeps unknown local specialization unfiltered")
+ first.details.members,second.details.members,third.details.members=unpack(saved)
+ A.Specializations.Player=player
+ preview:SetFilters({})
+end
 preview:SetFilters({notes="noCaution"})
 T.same(preview:GetResults(),beforeNoteFilter,"preview groups without player notes pass the blocked-player exclusion")
 find:ClearFilters()
@@ -131,9 +150,9 @@ end
 local previewCounts=captainRecord.details.counts
 local savedTank,savedHealer,savedDamage=previewCounts.TANK,previewCounts.HEALER,previewCounts.DAMAGER
 previewCounts.TANK,previewCounts.HEALER,previewCounts.DAMAGER=0,1,2
-Click(find.rolePresenceChoices.TANK.buttons[2])
-Click(find.rolePresenceChoices.HEALER.buttons[1])
-Click(find.rolePresenceChoices.DAMAGER.buttons[2])
+Click(find.rolePresenceChoices.TANK.buttons[3])
+Click(find.rolePresenceChoices.HEALER.buttons[2])
+Click(find.rolePresenceChoices.DAMAGER.buttons[3])
 T.same(preview:GetResults(),{captainRecord.id},"preview combines missing tank, present healer and missing damage")
 previewCounts.TANK,previewCounts.HEALER,previewCounts.DAMAGER=savedTank,savedHealer,savedDamage
 find:ClearFilters()

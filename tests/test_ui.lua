@@ -408,8 +408,19 @@ do
  T.eq(row.roles[1]:IsShown(),true);T.eq(row.roles[2]:IsShown(),true);T.eq(row.roles[3]:IsShown(),false,"a DK applicant can request tank and damage independently of specialization")
  create.roleFilters.TANK:Fire("OnClick");T.eq(#create.appIDs,1)
  create.roleFilters.DAMAGER:Fire("OnClick");T.eq(#create.appIDs,1)
- create.roleFilters.HEALER:Fire("OnClick");T.eq(#create.appIDs,0)
+ T.eq(create.roleFilters.TANK.active,true);T.eq(create.roleFilters.DAMAGER.active,true,"applicant roles can be selected together")
+ create.roleFilters.HEALER:Fire("OnClick");T.eq(#create.appIDs,1,"any selected requested role retains the complete applicant batch")
+ T.eq(create.roleFilters.ALL.active,true,"selecting all three roles collapses to All")
+ for _,role in ipairs({"TANK","HEALER","DAMAGER"}) do T.eq(create.roleFilters[role].active,false,"All clears individual role highlights") end
+ create.roleFilters.HEALER:Fire("OnClick");T.eq(#create.appIDs,0,"selecting one role from All applies only that role")
+ create.roleFilters.HEALER:Fire("OnClick");T.eq(#create.appIDs,1);T.eq(create.roleFilters.ALL.active,true,"clearing the final role restores all applicants")
  create.roleFilters.ALL:Fire("OnClick")
+ G.applicants[72]={id=72,status="applied",displayOrderID=1,members={{name="Healer-Away",class="PRIEST",assignedRole="HEALER"}}}
+ G:Notify("applicants")
+ create.roleFilters.TANK:Fire("OnClick");T.eq(#create.appIDs,1)
+ create.roleFilters.HEALER:Fire("OnClick");T.eq(#create.appIDs,2,"different selected roles include the union of matching applicant batches")
+ create.roleFilters.ALL:Fire("OnClick");T.eq(#create.appIDs,2);T.eq(create.roleFilters.TANK.active,false);T.eq(create.roleFilters.HEALER.active,false)
+ G.applicants[72]=nil;G:Notify("applicants")
  dk.requestedRoles.TANK=false;G:Notify("applicants")
  T.eq(solo.people[1],row,"changing requested roles reuses the existing applicant row")
  T.eq(row.roles[1]:GetTexture(),U.Theme.media.."role-dps.tga");T.eq(row.roles[2]:IsShown(),false);T.eq(row.roles[3]:IsShown(),false,"row reuse removes the old second requested role")
@@ -880,7 +891,7 @@ do
  T.eq(box:GetText(),"");T.ok(G.searchClears>0,"leader search and first native lease discard stale native activity tokens")
  T.eq(page.searchHint:GetText(),"队伍标题或钥石范围，如 12-15")
  T.eq(page.fMinLevel,nil);T.eq(page.fMaxLevel,nil,"unsupported local level range inputs are not created")
- T.eq(page.filterPanel:GetHeight(),582,"seasonal controls fit in the compact filter panel")
+ T.ok(page.filterPanel:GetHeight()<=U.frame:GetHeight(),"seasonal controls fit within the main window height");T.eq(page.filterPanel:GetWidth(),384)
  local revision=U.Native.searchLease.revision
  box:UserType("12-15");T.eq(U.Native.searchLease.revision,revision+1,"each native edit distinguishes a newer query without parsing it")
  T.eq(G.filters.text,nil);T.eq(G.filters.leaderText,nil);T.eq(G.filters.minLevel,nil);T.eq(G.filters.maxLevel,nil,"native range text is never copied into local result filters")
@@ -894,7 +905,7 @@ do
  page.fMinMembers.box:SetText("");T.eq(page.filterToggle.label:GetText(),"筛选 2")
  page:SelectCategory("seasonRaid");T.eq(box:GetText(),"","switching category clears incompatible native text and activity tokens")
  T.eq(page.hideZeroScore:IsShown(),false);T.eq(G.filters.hideZeroScore,nil,"the seasonal score filter does not affect other categories")
- T.eq(page.filterCount,0);T.eq(page.filterPanel:GetHeight(),376,"categories without role conditions use the shorter layout")
+ T.eq(page.filterCount,0);T.ok(page.filterPanel:GetHeight()<500,"categories without role conditions use the shorter layout")
  T.eq(page.searchHint:GetText(),"队伍标题","raid search returns to title mode without a key-range hint")
  T.eq(page.searchModeToggle:IsShown(),true);T.eq(page.search.box,box)
  T.eq(G.filters.maxMembers,nil,"a category without saved conditions does not inherit the dungeon member limit")
@@ -987,7 +998,7 @@ do
  G.GetResults=getResults;G.state=previousState;G.error=previousError;find.searchError=inputError;find:RefreshResults()
 end
 T.eq(find.rail:GetWidth(),208);T.near(find.main:GetWidth(),995.2,.001)
-T.eq(find.filterPanel:GetWidth(),300);T.eq(find.results.rowHeight,76)
+T.eq(find.filterPanel:GetWidth(),384);T.eq(find.results.rowHeight,76)
 T.eq(find.seasonCategories.rows[1]:GetHeight(),48,"the activity sidebar keeps its original compact row height")
 do
  local countPoint={find.resultCount:GetPoint()}
@@ -1050,7 +1061,7 @@ local difficultyWidth,count=0,0
 for _,button in ipairs(find.difficultyButtons) do if button:IsShown() then difficultyWidth=difficultyWidth+button:GetWidth();count=count+1;T.ok(button:GetWidth()>=button.textWidth+20,"difficulty labels retain their full natural width") end end
 T.near(difficultyWidth+math.max(0,count-1)*4+6,find.difficultySurface:GetWidth(),.001,"difficulty buttons fill the available row without a trailing empty strip")
 local membersAnchor={find.fMembers:GetPoint()}
-T.eq(membersAnchor[#membersAnchor],-128,"member bounds stay near the filter header in every category")
+T.eq(membersAnchor[#membersAnchor],-144,"member bounds stay near the filter header in every category")
 T.ok(find.fMembers.placeholder and find.fMembers.placeholder:IsShown(),"an empty numeric filter visibly says unrestricted")
 T.eq(find.fMembers.increase,nil,"numeric filters have no stepper arrows")
 find.activities.rows[1]:Fire("OnClick","LeftButton")
@@ -1084,15 +1095,15 @@ do
  local choices=find.rolePresenceChoices
  local function Choose(role,value)
   for _,button in ipairs(choices[role].buttons) do if button.value==value then button:Fire("OnClick");return end end
-  error("missing role-presence option "..role..":"..value)
+  error("missing role-presence option "..role..":"..tostring(value))
  end
  T.eq(find.rolePresencePanel:IsShown(),true);T.eq(find.roleChoice:IsShown(),false,"seasonal dungeons replace the old one-role menu")
- T.eq(#choices.TANK.buttons,2);T.eq(#choices.HEALER.buttons,2);T.eq(#choices.DAMAGER.buttons,2,"each role exposes two mutually exclusive conditions")
- T.eq(choices.DAMAGER.buttons[1].label:GetText(),"已齐");T.eq(choices.DAMAGER.buttons[2].label:GetText(),"缺少")
+ T.eq(#choices.TANK.buttons,3);T.eq(#choices.HEALER.buttons,3);T.eq(#choices.DAMAGER.buttons,3,"each role exposes an explicit unrestricted option and two conditions")
+ T.eq(choices.DAMAGER.buttons[2].label:GetText(),"已齐");T.eq(choices.DAMAGER.buttons[3].label:GetText(),"缺少")
  Choose("TANK","present");T.eq(G.filters.tankPresence,"present")
- Choose("TANK","missing");T.eq(G.filters.tankPresence,"missing");T.eq(choices.TANK.buttons[1].active,false);T.eq(choices.TANK.buttons[2].active,true,"tank presence options are mutually exclusive")
- Choose("TANK","missing");T.eq(G.filters.tankPresence,nil);T.eq(choices.TANK.value,nil,"clicking the selected condition clears that role")
- T.eq(choices.TANK.buttons[1].active,false);T.eq(choices.TANK.buttons[2].active,false)
+ Choose("TANK","missing");T.eq(G.filters.tankPresence,"missing");T.eq(choices.TANK.buttons[2].active,false);T.eq(choices.TANK.buttons[3].active,true,"tank presence options are mutually exclusive")
+ Choose("TANK","missing");T.eq(G.filters.tankPresence,nil);T.eq(choices.TANK.value,false,"clicking the selected condition clears that role")
+ T.eq(choices.TANK.buttons[1].active,true);T.eq(choices.TANK.buttons[2].active,false);T.eq(choices.TANK.buttons[3].active,false)
  Choose("TANK","missing")
  Choose("DAMAGER","present");T.eq(G.filters.damagePresence,"present");Choose("DAMAGER","present");T.eq(G.filters.damagePresence,nil)
  Choose("HEALER","present");Choose("DAMAGER","missing")
@@ -1108,31 +1119,31 @@ do
  find:SelectCategory("seasonDungeon");T.eq(G.filters.neededRole,nil);T.eq(G.filters.tankPresence,"missing")
  find:SelectCategory("2");T.eq(find.roleChoice.value,"TANK");T.eq(G.filters.neededRole,"TANK","the original category restores its own role choice")
  find:SelectCategory("seasonDungeon");catalog.GetActivities=getActivities;find.clearFilters:Fire("OnClick")
- for _,role in ipairs({"TANK","HEALER","DAMAGER"}) do T.eq(choices[role].value,nil) end
+ for _,role in ipairs({"TANK","HEALER","DAMAGER"}) do T.eq(choices[role].value,false) end
  T.eq(G.filters.tankPresence,nil);T.eq(G.filters.healerPresence,nil);T.eq(G.filters.damagePresence,nil)
  find:SelectCategory("seasonRaid");find:SelectCategory("seasonDungeon")
- T.eq(choices.TANK.value,nil);T.eq(choices.HEALER.value,nil);T.eq(choices.DAMAGER.value,nil,"cleared conditions do not return after a category switch")
+ T.eq(choices.TANK.value,false);T.eq(choices.HEALER.value,false);T.eq(choices.DAMAGER.value,false,"cleared conditions do not return after a category switch")
  for _,roles in ipairs({{"TANK","HEALER","DAMAGER"},{"TANK","DAMAGER","HEALER"},{"HEALER","DAMAGER","TANK"}}) do
   Choose(roles[1],"present");Choose(roles[2],"present")
   local blocked=choices[roles[3]]
-  T.eq(blocked.buttons[1]:IsEnabled(),false,"two positive role conditions disable the remaining positive choice")
-  T.ok(blocked.buttons[1]:GetAlpha()<1,"the unavailable condition is visibly dimmed")
-  T.eq(blocked.buttons[2]:IsEnabled(),true,"the remaining role can still be missing")
-  Choose(roles[3],"present");T.eq(blocked.value,nil,"clicking the disabled third condition does not change filters")
+  T.eq(blocked.buttons[2]:IsEnabled(),false,"two positive role conditions disable the remaining positive choice")
+  T.ok(blocked.buttons[2]:GetAlpha()<1,"the unavailable condition is visibly dimmed")
+  T.eq(blocked.buttons[3]:IsEnabled(),true,"the remaining role can still be missing")
+  Choose(roles[3],"present");T.eq(blocked.value,false,"clicking the disabled third condition does not change filters")
   Choose(roles[3],"missing");T.eq(blocked.value,"missing")
   T.eq(choices[roles[1]].value,"present");T.eq(choices[roles[2]].value,"present","negative choices preserve both positive conditions")
-  Choose(roles[1],"present");T.eq(choices[roles[1]].value,nil)
-  T.eq(blocked.buttons[1]:IsEnabled(),true,"clearing a selected positive condition immediately enables the other role")
-  Choose(roles[3],"present");T.eq(blocked.value,"present");T.eq(blocked.buttons[1]:IsEnabled(),true,"a selected positive condition remains available to clear")
+  Choose(roles[1],"present");T.eq(choices[roles[1]].value,false)
+  T.eq(blocked.buttons[2]:IsEnabled(),true,"clearing a selected positive condition immediately enables the other role")
+  Choose(roles[3],"present");T.eq(blocked.value,"present");T.eq(blocked.buttons[2]:IsEnabled(),true,"a selected positive condition remains available to clear")
   find:ClearFilters()
  end
  local allPresent={tankPresence="present",healerPresence="present",damagePresence="present"}
  find:RestoreCategory(allPresent);find:UpdateFilters()
- T.eq(choices.TANK.value,"present");T.eq(choices.HEALER.value,"present");T.eq(choices.DAMAGER.value,nil,"legacy all-present preferences retain tank and healer without selecting missing damage")
+ T.eq(choices.TANK.value,"present");T.eq(choices.HEALER.value,"present");T.eq(choices.DAMAGER.value,false,"legacy all-present preferences retain tank and healer without selecting missing damage")
  T.eq(allPresent.damagePresence,nil);T.eq(G.prefs.find.categoryPrefs.seasonDungeon.damagePresence,nil,"normalized preferences no longer save all three positive conditions")
- T.eq(choices.DAMAGER.buttons[1]:IsEnabled(),false)
+ T.eq(choices.DAMAGER.buttons[2]:IsEnabled(),false)
  find:SelectCategory("seasonRaid");find:SelectCategory("seasonDungeon")
- T.eq(choices.TANK.value,"present");T.eq(choices.HEALER.value,"present");T.eq(choices.DAMAGER.value,nil,"category changes preserve the normalized role conditions")
+ T.eq(choices.TANK.value,"present");T.eq(choices.HEALER.value,"present");T.eq(choices.DAMAGER.value,false,"category changes preserve the normalized role conditions")
  find:ClearFilters()
  for _,role in ipairs({"TANK","HEALER","DAMAGER"}) do
   find:RestoreCategory({neededRole=role});find:UpdateFilters()
@@ -1157,8 +1168,8 @@ activityRow:Fire("OnMouseDown");activityRow:Fire("OnClick","LeftButton")
 for _,button in ipairs(find.difficultyButtons) do if button.value==1 and button:IsShown() then button:Fire("OnClick") end end
 T.eq(find.searchHint:GetText(),"队伍标题","normal dungeon search uses the native title query")
 T.eq(find.rolePresencePanel:IsShown(),true,"seasonal role-presence choices also work at normal difficulty")
-find.rolePresenceChoices.TANK.buttons[1]:Fire("OnClick");T.eq(G.filters.tankPresence,"present");T.eq(G.filters.neededRole,nil)
-find.rolePresenceChoices.TANK.buttons[1]:Fire("OnClick")
+find.rolePresenceChoices.TANK.buttons[2]:Fire("OnClick");T.eq(G.filters.tankPresence,"present");T.eq(G.filters.neededRole,nil)
+find.rolePresenceChoices.TANK.buttons[2]:Fire("OnClick")
 T.eq(G.filters.tankPresence,nil,"clicking the selected seasonal condition clears it at normal difficulty")
 local searchMethod=G.Search.Search;local requestedActivity
 G.Search.Search=function(_,category,id) requestedActivity=id;return true end
@@ -1189,22 +1200,17 @@ do
  local remember=A.charPrefs.rememberFilters;A.charPrefs.rememberFilters=true
  local function Row(key) for _,row in ipairs(find.activities.rows) do if row.key==key then return row end end;error("missing activity row "..key) end
  local function Difficulty(id) for _,button in ipairs(find.difficultyButtons) do if button.value==id and button:IsShown() then button:Fire("OnClick");return end end;error("missing difficulty "..tostring(id)) end
- local function Check(key) if not find.multiSelectMode then find.multiSelectToggle:Fire("OnClick") end;Row(key).multiSelect:Fire("OnClick") end
+ local function Check(key) Row(key).multiSelect:Fire("OnClick") end
  find:SelectCategory("seasonRaid")
  T.eq(Row(0).title:GetText(),"全部副本","the seasonal raid menu restores an explicit all-instances entry")
  find:SelectCategory("seasonDungeon")
  local before=calls
  T.eq(find.emptyText:GetText(),"请选择副本");T.eq(#find.results.ids,0,"a pending category cannot relabel the old result rows")
  Difficulty(8);T.eq(calls,before,"category and difficulty selection prepare a choice without searching")
- T.eq(Row(201).multiSelect:IsShown(),false);T.eq(Row(202).multiSelect:IsShown(),false,"checkboxes are hidden in the default single-selection view")
- T.eq(find.multiSelectToggle:GetParent(),Row(0));T.eq(find.multiSelectToggle.label:GetText(),"多选")
- do
-  local togglePoint={find.multiSelectToggle:GetPoint()};local labelPoint={find.multiSelectToggle.label:GetPoint()}
-  T.ok(togglePoint[#togglePoint-1]+labelPoint[#labelPoint-1]<=-12,"multi-selection text keeps twelve pixels inside the activity row")
- end
- find.multiSelectToggle:Fire("OnClick")
- T.eq(Row(201).multiSelect:IsShown(),true);T.eq(Row(202).multiSelect:IsShown(),true);T.eq(Row(203).multiSelect:IsShown(),false,"entering multi-selection only enables actual keystone rows")
- T.eq(calls,before,"entering multi-selection does not search")
+ T.eq(Row(201).multiSelect:IsShown(),true);T.eq(Row(202).multiSelect:IsShown(),true,"keystone rows show checkboxes immediately")
+ T.eq(Row(203).multiSelect:IsShown(),false,"non-keystone rows have no checkbox")
+ T.eq(find.multiSelectToggle,nil,"there is no multi-select mode button")
+ T.eq(Row(0).title:GetWidth(),Row(0):GetWidth()-60,"all-instances text no longer reserves a mode button")
  T.eq(find.pickerConfirm:IsShown(),false)
  local savedDifficulty=G.prefs.find.categoryPrefs.seasonDungeon.difficultyID
  find:ClosePicker();find:SelectCategory("seasonDungeon")
@@ -1222,27 +1228,29 @@ do
  T.eq(find.draftGroupKeys,nil);T.eq(find.picker:IsShown(),false)
  find:SelectCategory("seasonDungeon");T.eq(calls,before+1,"reopening the active category never resubmits")
  T.eq(Row(201).multiSelect:IsShown(),true);T.eq(find.pickerConfirm:IsShown(),true,"reopening visibly restores the confirmed multi-selection")
- T.eq(find.multiSelectToggle.label:GetText(),"返回")
  T.eq(find.activities.selectedKey,nil);T.eq(Row(0).selected:IsShown(),false,"a confirmed collection never highlights the all-instances single-selection row")
  T.eq(Row(201).multiSelect:GetChecked(),true);T.eq(Row(202).multiSelect:GetChecked(),true)
  T.eq(Row(201).multiSelect.mark:IsShown(),true)
  for _,stroke in ipairs(Row(201).multiSelect.mark.strokes) do T.same(stroke.fill,U.Theme.onPrimary,"the checkbox strokes use the untinted white foreground") end
  Row(202):Fire("OnClick","LeftButton")
  T.eq(Row(202).multiSelect:GetChecked(),false);T.eq(calls,before+1,"clicking an activity in multi-selection only toggles the draft")
- find.multiSelectToggle:Fire("OnClick")
- T.eq(Row(202).multiSelect:IsShown(),false);T.eq(find.pickerConfirm:IsShown(),false,"cancelling multi-selection hides the draft controls")
  find:ClosePicker();T.same(G.filters.groupKeys,{[201]=true,[202]=true},"cancelling discards checkbox edits")
+ T.eq(find.draftGroupKeys,nil);T.eq(find.pickerConfirm:IsShown(),false,"closing the picker releases the draft controls")
  find:SelectCategory("seasonDungeon");T.eq(Row(202).multiSelect:GetChecked(),true,"reopening restores the active checks")
  Check(202);find.pickerConfirm:Fire("OnClick")
  T.same(G.filters.groupKeys,{[201]=true});T.eq(lastActivity,nil,"even one checked dungeon uses the complete-search multi-selection path")
  T.eq(find.context:GetText(),"毒牙洞窟  ·  "..GetDifficultyInfo(8),"a one-item collection retains the complete dungeon name")
- find:SelectCategory("seasonDungeon");find.multiSelectToggle:Fire("OnClick");Row(202):Fire("OnClick","LeftButton")
- T.eq(G.filters.groupKeys,nil);T.eq(G.filters.groupKey,202);T.eq(lastActivity,2002,"the row keeps its original single-selection request")
+ find:SelectCategory("seasonDungeon");local draftCalls=calls
+ Row(201):Fire("OnClick","LeftButton");Row(202):Fire("OnClick","LeftButton")
+ T.eq(calls,draftCalls,"keystone row clicks edit the default checkbox draft without searching")
+ T.same(G.filters.groupKeys,{[201]=true},"the active result filter stays unchanged until confirmation")
+ find.pickerConfirm:Fire("OnClick")
+ T.same(G.filters.groupKeys,{[202]=true});T.eq(G.filters.groupKey,nil);T.eq(lastActivity,nil)
  local singleCalls=calls
- find:SelectCategory("seasonDungeon");T.eq(find.activities.selectedKey,202);T.eq(G.filters.difficultyID,8);T.eq(calls,singleCalls,"same-category reopening preserves the confirmed single selection and difficulty")
+ find:SelectCategory("seasonDungeon");T.eq(Row(202).multiSelect:GetChecked(),true);T.eq(G.filters.difficultyID,8);T.eq(calls,singleCalls,"same-category reopening preserves the confirmed one-item collection and difficulty")
  find:SelectCategory("seasonRaid");singleCalls=calls;find:SelectCategory("seasonDungeon")
- T.eq(G.filters.groupKey,202);T.eq(find.activities.selectedKey,202);T.eq(Row(202).selected:IsShown(),true,"returning from another category restores the seasonal single-selection highlight")
- T.eq(G.filters.difficultyID,8);T.eq(calls,singleCalls+1,"returning to a confirmed seasonal single selection resumes its search")
+ T.same(G.filters.groupKeys,{[202]=true});T.eq(find.activities.selectedKey,nil);T.eq(Row(202).multiSelect:GetChecked(),true,"returning from another category restores the checked dungeon")
+ T.eq(G.filters.difficultyID,8);T.eq(calls,singleCalls+1,"returning to a confirmed one-item collection resumes its search")
  Row(0):Fire("OnClick","LeftButton");T.eq(G.filters.groupKey,nil);T.eq(G.filters.groupKeys,nil);T.eq(find.context:GetText(),"全部副本  ·  "..GetDifficultyInfo(8))
  find:SelectCategory("seasonDungeon");Check(201);Check(202);find.pickerConfirm:Fire("OnClick")
  local selectedCalls=calls
@@ -2628,6 +2636,8 @@ do
  T.eq(page.refresh:IsEnabled(),true,"a restored confirmed single selection can be refreshed")
  page:SelectCategory("seasonDungeon")
  T.eq(page.activities.selectedKey,20);T.eq(page.activities.rows[1].title:GetText(),"All instances")
+ local row;for _,item in ipairs(page.activities.rows) do if item.key==20 then row=item;break end end
+ T.eq(row.multiSelect:IsShown(),true);T.eq(row.multiSelect:GetChecked(),true,"a legacy single selection opens as a checked keystone draft")
  fresh.U:Hide(true)
 end
 -- A collection and the explicit all-instances choice both survive a reload.
@@ -2645,7 +2655,7 @@ for _,choice in ipairs({{groupKeys={[20]=true},difficultyID=8},{selected=true,di
  page:SelectCategory("seasonDungeon")
  T.eq(calls,1,"reopening the restored selection does not send another search")
  local row;for _,item in ipairs(page.activities.rows) do if item.key==20 then row=item;break end end
- T.eq(row.multiSelect:IsShown(),choice.groupKeys~=nil,"after reload the selector visibly restores the confirmed multi-selection")
+ T.eq(row.multiSelect:IsShown(),true,"after reload all keystone selections show checkboxes by default")
  T.eq(row.multiSelect:GetChecked(),choice.groupKeys~=nil)
  T.eq(page.pickerConfirm:IsShown(),choice.groupKeys~=nil,"a restored collection can be edited and confirmed immediately")
  fresh.U:Hide(true)
@@ -3028,14 +3038,14 @@ do
  IsMouseButtonDown=mouseDown
  T.eq(a.db.floatingScale,floatingScale,"main-window scale leaves the floating window's setting unchanged")
  u:Navigate("find");local find=u.pages.find;find:SetFiltersOpen(true)
- T.same(u.frame.clampInsets,{0,312,0,0},"the native screen clamp includes the open filter panel")
- local expanded=math.min(1,(UIParent:GetWidth()-40)/(u.Theme.width+312),(UIParent:GetHeight()-40)/u.Theme.height)
+ T.same(u.frame.clampInsets,{0,396,0,0},"the native screen clamp includes the open filter panel")
+ local expanded=math.min(1,(UIParent:GetWidth()-40)/(u.Theme.width+396),(UIParent:GetHeight()-40)/u.Theme.height)
  T.near(u.frame:GetScale(),expanded*1.25,.00001,"opening filters keeps the user's chosen scale")
  find:SetFiltersOpen(false);T.near(u.frame:GetScale(),baseline*1.25,.00001)
  T.same(u.frame.clampInsets,{0,0,0,0},"closing filters restores the normal window boundary")
  find:SetFiltersOpen(true)
  UIParent:SetSize(1100,800);u.frame:Fire("OnEvent","DISPLAY_SIZE_CHANGED")
- T.near(u.frame:GetScale(),math.min(1,1060/(u.Theme.width+312),760/u.Theme.height)*1.25,.00001,"screen resizing includes the open filter panel")
+ T.near(u.frame:GetScale(),math.min(1,1060/(u.Theme.width+396),760/u.Theme.height)*1.25,.00001,"screen resizing includes the open filter panel")
  UIParent:SetSize(1280,860);u:Navigate("settings")
  baseline=math.min(1,1240/u.Theme.width,820/u.Theme.height)
  u:Hide(true);a:Open("settings");T.near(u.frame:GetScale(),baseline*1.25,.00001)
@@ -4070,5 +4080,43 @@ do
  T.eq(bindings,5,"re-entry binds each current member once")
  T.eq(page.rosterCount:GetText(),"5 members");T.eq(page.roster,members)
  T.eq(page.rosterList.body:GetHeight(),height);T.eq(page.formError:GetText(),error)
+ u:Hide(true)
+end
+
+-- Same-spec preferences follow their category; every font size keeps the entire
+-- seasonal filter panel inside the main window with separated controls.
+for _,locale in ipairs({"zhCN","enUS"}) do
+ local f=dofile("tests/ui_fixture.lua")(locale);local a,u,g=f.A,f.U,f.G
+ a.db.reduceMotion=true
+ local name=locale=="zhCN" and "邪恶" or "Unholy"
+ C_SpecializationInfo.GetSpecialization=function() return 3 end
+ C_SpecializationInfo.GetSpecializationInfo=function() return 252,name,nil,135775 end
+ g.prefs.find={category="seasonDungeon",filters={hideSameSpec=true}}
+ a:Open("find");local page=u.pages.find;page:SetFiltersOpen(true)
+ T.eq(page.hideSameSpec.value,true);T.eq(g.filters.hideSameSpec,true);T.eq(page.filterCount,1)
+ T.eq(page.sameSpecHint,nil,"the filter has no current-spec hint line")
+ page:SelectCategory("seasonRaid")
+ T.eq(page.hideSameSpec:IsShown(),false);T.eq(g.filters.hideSameSpec,nil)
+ page:SelectCategory("seasonDungeon")
+ T.eq(page.hideSameSpec.value,true);T.eq(g.filters.hideSameSpec,true,"returning restores the seasonal specialization preference")
+ page:ClearFilters();T.eq(page.hideSameSpec.value,false);T.eq(g.filters.hideSameSpec,nil);T.eq(page.filterCount,0)
+ page.hideSameSpec:Fire("OnClick");T.eq(g.prefs.find.categoryPrefs.seasonDungeon.hideSameSpec,true)
+ page.rolePresenceChoices.TANK.buttons[2]:Fire("OnClick")
+ page.rolePresenceChoices.TANK.buttons[1]:Fire("OnClick")
+ T.eq(g.filters.tankPresence,nil);T.eq(page.rolePresenceChoices.TANK.buttons[1].active,true,"Any explicitly clears one role")
+ local function Top(frame) local point={frame:GetPoint()};return -point[#point] end
+ for _,scale in ipairs({70,100,130}) do
+  a:SetSetting("fontScale",scale)
+  T.ok(page.filterPanel:GetHeight()<=u.frame:GetHeight(),locale.." filter panel fits at "..scale.." percent")
+  T.ok(Top(page.fMembers)>Top(page.maxMembersLabel)+page.maxMembersLabel:GetHeight(),"number labels remain above their inputs")
+  T.ok(Top(page.hideSameSpec)>Top(page.rolePresencePanel)+page.rolePresencePanel:GetHeight(),"matching switches remain below the role selector")
+  T.ok(Top(page.socialLabel)>Top(page.hideZeroScore)+page.hideZeroScore:GetHeight(),"relations do not overlap the final switch")
+  T.ok(Top(page.sortChoice)+page.sortChoice:GetHeight()<=page.filterPanel:GetHeight()-20,"the final choice retains bottom padding")
+  for _,choice in pairs(page.rolePresenceChoices) do
+   for _,button in ipairs(choice.buttons) do T.ok(button.label:GetStringWidth()+8<=button:GetWidth(),"role option text fits at the selected font size") end
+  end
+ end
+ page:ClearFilters();page:SelectCategory("seasonRaid");page:SelectCategory("seasonDungeon")
+ T.eq(g.filters.hideSameSpec,nil,"cleared specialization preferences do not return")
  u:Hide(true)
 end

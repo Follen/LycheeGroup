@@ -2,7 +2,7 @@
 
 更新日期：2026-10-22。
 
-状态：当前实现版本为 1.2.0，内置 LycheeUI 1.2.0（修订 22），源库与内置副本一致；共享库已按用户要求解除冻结。1.1.2 的循环审计、离线回归及有限实机验证已完成，当时发现的图标量化读回问题已修复并复测，详见 [perfermance.md 第 12 节](perfermance.md#12-当前内存测试与验证状态)。活动与来源显示规则由主包 Presentation 管理，成员名单共用 UI.Members，主窗和浮窗分别持有共享库 Context。1.0.6 发布前产品与组件库串行审计的范围、修复与验证见[审计记录](tests/results/serial-audit-1.0.5-2026-10-19.json)；该轮源码安装重载后，完成有限的页面、控件归还、菜单和关闭清理检查。此前以 `2b74449` 为基线的重构及实机检查保留为历史证据，该轮独立完成的 36 个布局场景对照与运行时范围见 [perfermance.md 第 12 节](perfermance.md#12-当前内存测试与验证状态)。历史真实列表自然内存峰值仍超过 20 MB，完整性能验收尚未通过。
+状态：当前实现版本为 1.2.2，包含字号、入口和筛选调整，内置 LycheeUI 1.2.0（修订 24），源库与内置副本一致；共享库已按用户要求解除冻结。1.1.2 的循环审计、离线回归及有限实机验证已完成，当时发现的图标量化读回问题已修复并复测，详见 [perfermance.md 第 12 节](perfermance.md#12-当前内存测试与验证状态)。活动与来源显示规则由主包 Presentation 管理，成员名单共用 UI.Members，主窗和浮窗分别持有共享库 Context。1.0.6 发布前产品与组件库串行审计的范围、修复与验证见[审计记录](tests/results/serial-audit-1.0.5-2026-10-19.json)；该轮源码安装重载后，完成有限的页面、控件归还、菜单和关闭清理检查。此前以 `2b74449` 为基线的重构及实机检查保留为历史证据，该轮独立完成的 36 个布局场景对照与运行时范围见 [perfermance.md 第 12 节](perfermance.md#12-当前内存测试与验证状态)。历史真实列表自然内存峰值仍超过 20 MB，完整性能验收尚未通过。
 
 产品范围见 [Product.md](Product.md)，视觉与动画轨迹见 [Desgin.md](Desgin.md)，资源额度与测量方法见 [perfermance.md](perfermance.md)。
 
@@ -28,7 +28,7 @@ Notes 首次按需加载完成后，核心通过现有模块就绪入口通知�
 
 暴雪 API 的调用条件、频率和事件通过荔枝 Dev 的固定版本源码核实。本地读取与服务器请求分开处理，请求在明确入口合并并尊重原生限流状态，不通过常驻轮询或重试风暴维持同步。
 
-共享组件的外观通过 `Button` 的 options／`SetStyle`、`List:SetStyle` 与导航 options 设置；紧凑选项、图标动作、复选框、自定义选择弹层入口和浮窗底面分别复用库内组件。页面继续持有活动选择、申请目标、收藏状态和成员身份。Context 创建时解析主题覆盖、别名与派生状态；菜单通过 `GetMenu`／`GetMenuAnchor`／`IsMenuOpen`／`IsMenuHovered` 查询，保留原生对象扩展入口。Waiting 和 Busy 捕获调用方当前视觉状态，停止时归还。完整契约见 [LycheeUI API](../LycheeUI/API.md)。主窗通过 UI.Theme 的 Context 覆盖配置宽度及 `fontSizeDelta`／`lineHeightDelta`，共享 Text、SetFont、SetLineHeight、菜单与原生输入按基准值应用增量一次；浮窗的独立 Context 使用默认零增量。切换字体路径保留已应用的实际字号，Find、Create、Notes 与 Settings 重新测量自身文字布局；多行原生输入的占位文字宽度随输入区同步，归还时恢复借用前的字体与占位宽度，保留新宿主已设置的布局。
+共享组件的外观通过 `Button` 的 options／`SetStyle`、`List:SetStyle` 与导航 options 设置；紧凑选项、图标动作、复选框、自定义选择弹层入口和浮窗底面分别复用库内组件。页面继续持有活动选择、申请目标、收藏状态和成员身份。Context 创建时解析主题覆盖、别名与派生状态；菜单通过 `GetMenu`／`GetMenuAnchor`／`IsMenuOpen`／`IsMenuHovered` 查询，保留原生对象扩展入口。Waiting 和 Busy 捕获调用方当前视觉状态，停止时归还。完整契约见 [LycheeUI API](../LycheeUI/API.md)。主窗通过 UI.Theme 的 Context 覆盖配置宽度及 `fontSizeDelta`／`lineHeightDelta`，共享 Text、SetFont、SetLineHeight、菜单与原生输入按基准值应用增量一次；浮窗的独立 Context 使用默认零增量。Context 记录控件的基准字号和行高，`SetFont(path, scale)` 先应用既有增量、再乘文字比例，后续切换始终从基准重算，不累计缩放；Find、Create、Notes 与 Settings 重新测量自身文字布局；多行原生输入的占位文字宽度随输入区同步，归还时恢复借用前的字体与占位宽度，保留新宿主已设置的布局。
 
 ## 2. 四个业务包与共享库
 
@@ -74,7 +74,7 @@ addon/
 
 原生组队眼睛的显示接入由 Entrypoints 持有。账号设置 `nativeLFGEntry` 控制隐藏入口：隐藏时以透明且不响应鼠标的方式接管按钮，关闭已有队列 tooltip；不 Hide 按钮、不改原点击回调，保留 EyeHighlightAnim 的原生声音循环。一次 OnShow、SetAlpha 与 QueueStatusFrame.Update hook 同步显示状态；按原生规则遍历 GetLFGMode，在任一分类存在 mode 且 submode 不是 noteleport 时释放接管，保留副本匹配、职责确认、就绪邀请和副本内传送入口，即使仍有预组队招募或申请也显示。所有此类状态结束后恢复隐藏；关闭设置同样恢复接管前的透明度和鼠标响应。按钮未加载时仅等对应 ADDON_LOADED，绑定后退订，不预加载业务界面。
 
-独立 `Minimap` 持有本插件小地图按钮及拖动状态，与原生组队眼睛路由分开。主配置 `minimap` 默认 true，`minimapAngle` 保存位置；左键开关主窗、右键打开设置。左键、快捷键与 `/lg` 共用 `A:ToggleWindow`，按 Host 的可见及退场状态决定关闭或调用 `Open("find")` 反转开窗；`UI:IsShown()` 仍表示实际可见。拖动期间才安装位置更新的 OnUpdate，停止拖动即移除并保存角度；按钮被收集器重新托管时不强行改回小地图锚点。
+独立 `Minimap` 持有本插件小地图按钮及拖动状态，与原生组队眼睛路由分开。主配置 `minimap` 默认 true，`minimapAngle` 保存位置；左键开关主窗、右键打开设置。左键、快捷键与 `/lg` 共用 `A:ToggleWindow`，按 Host 的可见及退场状态决定关闭或调用 `Open(GetDefaultPage())` 反转开窗；`UI:IsShown()` 仍表示实际可见。`GetDefaultPage` 在每次普通打开时读取 `C_LFGList.HasActiveEntryInfo()`，当前队伍有招募即进入 create，不检查自身管理权限；独立浮窗和公开 API 的无页名 Open 也走同一入口，第三方适配沿用该 API。显式页名及定位上下文不改写。拖动期间才安装位置更新的 OnUpdate，停止拖动即移除并保存角度；按钮被收集器重新托管时不强行改回小地图锚点。
 
 [Bindings.xml](addon/LycheeGroup/Bindings.xml) 注册 `LYCHEEGROUP_TOGGLE` 动作，由 `A:ToggleWindow` 路由；[Bindings.lua](addon/LycheeGroup/Bindings.lua) 持有主键、冲突和默认初始化入口。PLAYER_LOGIN 在当前账号／角色绑定范围内尝试一次默认键，`bindingDefaultScopes` 记录已尝试范围；战斗时只延迟到一次脱战事件。改键使用该动作的原生 context，保留第二键并按 GetCurrentBindingSet 保存。Settings 仅在可见时订阅 UPDATE_BINDINGS，由设置行临时接收键盘输入，冲突复用 Notice 并在玩家确认后写入；Esc、切分类、离页、隐藏和战斗开始都释放键盘捕获及临时冲突状态。
 
@@ -82,7 +82,7 @@ addon/
 
 核心在 `ADDON_LOADED` 收到自身存档后，由 `LoadDB` 初始化 `Locale`，将账号语言设置中的“跟随游戏”解析为 `zhCN` 或 `enUS` 并固定本次运行语言；各包通过 `A:GetLocale()` 构建当前语言文本。核心字体选项在枚举时、浮窗在构建时读取该值，不能在源码加载时提前决定语言。修改设置只保存下次启动选择，重载前已加载与后加载的包继续使用同一种语言。Locale 随各自业务包加载，不新增独立语言 LoD 包。
 
-核心 `Fonts` 解析 `A.db.font`：`default` 经 `GetDefaultPath` 按本次运行的 `A:GetLocale()` 选择主包 `Media/Fonts/LycheeFont-zhCN.ttf` 或 `LycheeFont-enUS.ttf`；中文文件完整保留原字体，英文文件以 Inter 为主并补全中文玩家名所需字形。`game` 指向游戏默认字体，其他值保留原有游戏字体或 LibSharedMedia 路径。语言改动随重载一起更新默认字体，已有自选路径不变。内置字体的来源、授权和构建见 [Fonts/README.md](addon/LycheeGroup/Media/Fonts/README.md)。新建主窗与浮窗 Context 使用所选路径；设置改变时只遍历本插件持有的 UI 树与浮窗，保留字号、标记和行高，不修改全局 FontObject 或其他插件控件。Host 在主窗显示后及字体切换后统一重测顶部导航、设置按钮与下划线，并在下一帧校正尚未就绪的文字度量，避免一直沿用隐藏建窗时的零宽度。Find、Create、Notes 与 Settings 重新测量相关文字布局；申请弹窗在打开时按当前字体重测职责与操作按钮。此服务不为枚举字体加载 Group、Notes 或业务页面。
+核心 `Fonts` 解析 `A.db.font`：`default` 经 `GetDefaultPath` 按本次运行的 `A:GetLocale()` 选择主包 `Media/Fonts/LycheeFont-zhCN.ttf` 或 `LycheeFont-enUS.ttf`；中文文件完整保留原字体，英文文件以 Inter 为主并补全中文玩家名所需字形。`game` 指向游戏默认字体，其他值保留原有游戏字体或 LibSharedMedia 路径。语言改动随重载一起更新默认字体，已有自选路径不变。内置字体的来源、授权和构建见 [Fonts/README.md](addon/LycheeGroup/Media/Fonts/README.md)。账号配置 `fontScale` 保存 70–130 的百分比，`Fonts:GetScale()` 返回 0.7–1.3。新建主窗与浮窗 Context 使用所选路径和比例；设置改变时只更新 Context 已登记且仍属于本插件的文字及当前持有的原生 lease，重算基准字号和行高，保留字体标记，不修改全局 FontObject 或其他插件控件。原生 lease 刷新自己的已应用快照，归还时恢复借用前字体；转交其他宿主的输入不被重设。Host 在主窗显示后及字体切换后统一重测顶部导航、设置按钮与下划线，并在下一帧校正尚未就绪的文字度量，避免一直沿用隐藏建窗时的零宽度。Find、Create、Notes 与 Settings 重新测量相关文字布局；申请弹窗在打开时按当前字体重测职责与操作按钮。此服务不为枚举字体加载 Group、Notes 或业务页面。
 
 主包 TOC 随自身加载内置库函数定义；WoW 的 `LoadAddOn` 以 AddOn 为单位，不提供本项目可用的任意包内 Lua 文件加载接口。浮窗启用时才创建其 Context 和控件，此路径不加载 LycheeGroup_UI。关闭浮窗不能卸载已经加载的库定义；库成本归主包计入当前四包总量。此前独立库五包测量保留为历史口径，不直接与新布局的主包数字比较。
 
@@ -150,6 +150,8 @@ Listing 在当前角色偏好 `listingAutoInvite` 保存本插件的自动邀请
 
 Results 的排序器先比较记录已有的 `bnetFriends + charFriends > 0`，再比较当前排序键、发布时间和结果 ID；关系计数仍由原生结果更新链失效，不依赖本地 Relations 或成员详情。Preview 使用相同的好友优先规则，Applications 的独立排序保持原有职责。
 
+Find 将 `hideSameSpec` 与赛季地下城的角色偏好一同保存，其他分类清除活动条件。Results 每次脏视图重建只读取一次 `Specializations:Player()`，在廉价条件通过后检查队伍成员；原生专精名通过 Group 的职业内解析取得专精 ID，不拿职责推断。已有干净详情时复用成员，否则直接读取必要原生成员；轻量结果缓存与生命周期见 [perfermance.md 第 5 节](perfermance.md#5-搜索筛选与结果数据)。搜索页可见时监听自身专精变化，启用该过滤时使结果视图失效并通知刷新。Preview 用样例成员的专精 ID 执行相同排除。Create 的申请者职责条件属于页面会话，选满三项时归并为无条件的“全部”；其余多选按任一职责命中保留整批成员，不改动 Applicants 的原始报名数据。
+
 `PlayerKey` 统一名字和服务器的规范化与键构造，`UnitIdentity` 在原生单位读取边界过滤未知、非玩家和受限身份；两者不持有全服玩家缓存。远程 LFG 的 `RemotePlayerKey` 只接受原生明确的完整身份，不把裸名猜成本服玩家。记录写入确认单位仍对应该身份，异步专精完成确认 GUID。Group 的专精解析优先已知 specID，否则只在已知职业内精确匹配原生专精名；未知保留未知，不为图标编造字段。当前队伍以 `UnitIsUnit(unit,"player")` 识别自身的 `raidN` 等别名，自身使用当前专精接口与平均装等。
 
 队友专精由 Roster 优先读取 LibSpecialization 回调缓存，其次读取原生检视结果。库回调的名字可能省略本服，先与当前真实成员身份匹配，再按 GUID 保存；不保存天赋字符串，不匹配队外玩家。库没有历史回放，公开 `RequestGroupSpecialization()` 已为空函数，因此不通过它重复发消息。Group 加载后接收库事件，创建页隐藏时仍可保存新广播；不会停掉其他插件共用的库监听。
@@ -194,7 +196,7 @@ Find 的可见申请倒计时由页面持有一个按秒 ticker，只刷新状�
 
 `Group.Catalog` 已接入 `GetAvailableCategories`、`GetLfgCategoryInfo`、`GetAvailableActivities(categoryID, groupID, filters)` 与 `GetActivityInfoTable`；活动组按完整活动的 `groupFinderActivityGroupID` 派生，名称由 `GetActivityGroupInfo` 提供。活动组对应活动，具体原生 ID 携带难度、钥石／评级 PvP 等属性；目录和表单不统一伪造难度。选择保留 categoryKey、groupKey、activityID，同名副本的季赛与原资料片上下文不合并。资料片优先从冒险指南映射；地下堡只使用目标 build 的 Map DB2 ExpansionID 派生小映射，名称取客户端，未知映射仍列在全部活动，不凭当前资料片反猜。
 
-Find 一级分类打开选择器；切回已有有效确认选择的分类时，经现有 Search 调度器重新搜索并保留选择器；待选状态的资料片／难度变更只更新目录，选择具体活动、key 0 的分类全部项或确认多选后才调用搜索。已确认活动的难度变更可更新搜索，资料片变更则清除活动并回到待选状态。页面用 confirmedChoice 保存已确认的单选／多选、难度与资料片，草稿不改写该快照；分类切换取消待请求，未确认关闭时恢复该快照。快照及分类偏好保存 selected 标记以区分明确选择全部活动与尚未选择；旧单选／多选可由有效 groupKey／groupKeys 恢复确认状态。恢复目录后同步 browseReady，失效的具体选择不扩成全部活动；首次进入继续使用现有搜索入口；未确认选择或只展开当前分类时不提交新搜索。全部项使用分类对应“全部副本／任务／竞技场／竞技场练习赛／战场／地下堡／自定义活动”及英文名称；评级战场 categoryID 9 只有一个真实项，单独不提供全部项，仍由点击该项启动搜索，不把此例外推广到其他单项分类。史诗钥石多选草稿由页面持有；打开选择器时从已确认的 groupKeys 复制草稿并恢复多选模式，关闭丢弃草稿，单选与全部项清除多选模式。确认时一次搜索当前分类与难度的候选，再以 `filters.groupKeys` 集合本地过滤所选活动组；普通行单选与其他难度沿用单一 groupKey。`Catalog:GetGroupShortName` 维护中英文活动组简称，页面按目录顺序生成多选标题，不以翻译后的显示文字作为身份。
+Find 一级分类打开选择器；切回已有有效确认选择的分类时，经现有 Search 调度器重新搜索并保留选择器；待选状态的资料片／难度变更只更新目录，选择具体活动、key 0 的分类全部项或确认多选后才调用搜索。已确认活动的难度变更可更新搜索，资料片变更则清除活动并回到待选状态。页面用 confirmedChoice 保存已确认的单选／多选、难度与资料片，草稿不改写该快照；分类切换取消待请求，未确认关闭时恢复该快照。快照及分类偏好保存 selected 标记以区分明确选择全部活动与尚未选择；旧单选／多选可由有效 groupKey／groupKeys 恢复确认状态。恢复目录后同步 browseReady，失效的具体选择不扩成全部活动；首次进入继续使用现有搜索入口；未确认选择或只展开当前分类时不提交新搜索。全部项使用分类对应“全部副本／任务／竞技场／竞技场练习赛／战场／地下堡／自定义活动”及英文名称；评级战场 categoryID 9 只有一个真实项，单独不提供全部项，仍由点击该项启动搜索，不把此例外推广到其他单项分类。史诗钥石多选草稿由页面持有，复选框是否显示直接取决于当前难度的钥石活动集合，无独立的多选模式开关。打开选择器时从已确认的 groupKeys 复制草稿，旧单选 groupKey 作为一个已勾选项；关闭丢弃草稿，其他难度及全部项沿用原确认流程。确认时一次搜索当前分类与难度的候选，再以 `filters.groupKeys` 集合本地过滤所选活动组；其他难度沿用单一 groupKey。`Catalog:GetGroupShortName` 维护中英文活动组简称，页面按目录顺序生成多选标题，不以翻译后的显示文字作为身份。
 
 赛季地下城的职责组合条件由 Find 持有，`tankPresence`、`healerPresence`、`damagePresence` 各取 `present`／`missing`，无筛选时为 nil。Results 读取实际职责人数并以 AND 合并；具体人数规则见 [Product.md](Product.md#5-主要流程)。Find 在恢复分类偏好时迁移旧 `needsDamage` 并清除该字段，清空筛选同步清除三项；普通分类的 `neededRole` 保持原路径。Preview 消费相同条件并模拟同一组合关系，不以角色当前专精决定结果。
 
@@ -296,7 +298,7 @@ Create 与 Floating 根据当前招募活动的 `categoryID==3` 隐藏团队申�
 
 ## 9. 统一界面与本地化
 
-LycheeUI 提供通用主题、控件、动效、菜单、阴影和弹窗；产品 `UI.Theme`、`UI.Motion`、`UI.Components` 是薄适配，评分、活动封面和业务视图适配仍在 LycheeGroup_UI，静态职业／专精资料由主包 Specializations 供 Group、Notes 与 UI 共用。Context 持有使用者的控件、动效任务和菜单，库自身没有登录事件或 SavedVariables。产品 Host 持有路由与业务弹窗生命周期。共享 C.Notice 只负责提示的外观与内容尺寸，页面持有关闭时机和状态；寻队、创建表单、招募和设置改键各复用一条，显示时由页面调整后续锚点和视口，隐藏后恢复。设置的关于页读取主 TOC 元数据，荔枝启动器与荔枝天赋两款插件的静态介绍与链接由 UI 持有，复制动作复用 CopyText 弹窗，不访问网络或加载其他插件。页面函数按包加载，各页控件首次进入创建并复用。Find／Create 活动选择器首次展开才创建，数据与默认选择的校正不依赖弹层存在；Create 只构建当前视口实际需要的批次与成员行，滚动使用批次累计高度定位可见范围。Tooltip 的成员按钮按实际展示数量增长，笔记详情不预建整个团队名单；Notes 进入时由当前 tab 统一刷新。保留控件不等于保留业务数据，隐藏后清除记录绑定与无用临时对象。
+LycheeUI 提供通用主题、控件、动效、菜单、阴影和弹窗；产品 `UI.Theme`、`UI.Motion`、`UI.Components` 是薄适配，评分、活动封面和业务视图适配仍在 LycheeGroup_UI，静态职业／专精资料由主包 Specializations 供 Group、Notes 与 UI 共用。Context 持有使用者的控件、动效任务和菜单，库自身没有登录事件或 SavedVariables。产品 Host 持有路由与业务弹窗生命周期。共享 C.Notice 只负责提示的外观与内容尺寸，页面持有关闭时机和状态；寻队、创建表单、招募和设置改键各复用一条，显示时由页面调整后续锚点和视口，隐藏后恢复。设置的关于页读取主 TOC 元数据，荔枝启动器与荔枝天赋两款插件的静态介绍与链接由 UI 持有，复制动作复用 CopyText 弹窗，不访问网络或加载其他插件。页面函数按包加载，各页控件首次进入创建并复用。Find／Create 活动选择器首次展开才创建，数据与默认选择的校正不依赖弹层存在；Create 用一个复用的隐藏控件测量当前申请者姓名及标记占宽，生成成员行高和批次累计高度；测量后清空内容，离页释放布局表。实际批次与成员行仍只按当前视口需要构建，滚动使用累计高度定位可见范围。Tooltip 的成员按钮按实际展示数量增长，笔记详情不预建整个团队名单；Notes 进入时由当前 tab 统一刷新。保留控件不等于保留业务数据，隐藏后清除记录绑定与无用临时对象。
 
 2026-10-17 核实登记机制后，已确认采用借用引擎已登记输入框的方案。LycheeUI 负责统一外观和借用周期；结束时归还父级、锚点、尺寸、层级、样式与回调。集合石等界面提前接管对象时，布局／显示事件立即撤销仍属于本库的样式和回调，不覆盖对方刚设置的父级、布局或处理器。普通文本输入仍由 LycheeUI 自建。
 
