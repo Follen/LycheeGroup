@@ -1,5 +1,5 @@
 -- Shared offline UI fixtures; no game client is contacted.
-return function(locale,preferences,settings)
+return function(locale,preferences,settings,themeDefinition)
 local base=dofile("tests/stubs.lua");base.Install({locale=locale,realm="Home"})
 local S=dofile("tests/ui_stubs.lua");S.Install()
 C_SpecializationInfo.GetSpecialization=function() return nil end
@@ -9,9 +9,16 @@ end
 _G.LycheeGroup=nil;_G.LycheeGroupDB=nil;_G.LycheeGroupPrefsDB=nil;_G.LycheeGroupNotesDB=nil;_G.LibStub=nil
 _G.LycheeUI=nil
 local libraryPrivate={}
-for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Components.lua","Native.lua","Menu.lua"}) do assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/"..file))("LycheeGroup",libraryPrivate) end
-for _,file in ipairs({"Locale.lua","Core.lua","Configuration.lua","StyleDefaults.lua","Appearance.lua","Specializations.lua","Fonts.lua"}) do dofile("addon/LycheeGroup/"..file) end
--- WoW restores SavedVariables after executing the addon's files.
+for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Styles.lua","Components.lua","Layouts.lua","Elements.lua","Native.lua","Menu.lua"}) do assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/"..file))("LycheeGroup",libraryPrivate) end
+for _,file in ipairs({"Locale.lua","Theme/Defaults.lua","Theme/Elements.lua","Theme/FindElements.lua","Core.lua","Configuration.lua","Appearance.lua","Theme/Import.lua","Specializations.lua","Fonts.lua","BrandMotion.lua"}) do dofile("addon/LycheeGroup/"..file) end
+-- WoW restores SavedVariables after executing the addon's files. A fixture
+-- theme is prepared in persistent storage before the real startup boundary.
+if themeDefinition then
+ local package,err=LycheeGroup.ThemeService:Parse(themeDefinition);assert(package,err)
+ settings=settings or {};settings.uiConfig=settings.uiConfig or {schema=2,user={},presets={},imported={}}
+ local store=settings.uiConfig.theme or {presets={},overrides={}};settings.uiConfig.theme=store
+ store.presets[package.id],store.activePreset=package,package.id
+end
 _G.LycheeGroupDB=settings;_G.LycheeGroupPrefsDB=preferences
 local A=LycheeGroup;A:LoadDB();dofile("addon/LycheeGroup/Bindings.lua")
 for _,file in ipairs({"Locale.lua","Notes.lua","Records.lua","PlayerInfo.lua","RosterReminder.lua"}) do dofile("addon/LycheeGroup_Notes/"..file) end
@@ -45,6 +52,11 @@ function G:GetResult(id) return self.records[id] end
 function G:GetResultCount() local n=0;for _ in pairs(self.records) do n=n+1 end;return n end
 function G:GetResultDetails(id) return self.records[id] and {members={},counts={TANK=1,HEALER=1,DAMAGER=2},encounters={}} end
 function G:GetRoster() return {{name="Player",nameKey="Player-Home",class="WARRIOR",assignedRole="TANK",isLeader=true}} end
+function G:ResolveMemberSpec(member)
+ local name,icon;if member.specID then name,icon=A.Specializations:Get(member.specID) end
+ local _,class=A.Specializations:Class(member.class)
+ return member.specID,name or member.specName,icon,member.localizedClass or class
+end
 function G:GetRaidBuffs(activityID)
  local report=A.RaidBuffs.Get(self.Catalog,activityID,self:GetRoster(),self.buffReport)
  if report then self.buffReport=report end
@@ -81,7 +93,13 @@ function G.Search:BindInput(lease) self.inputLease=lease end
 function G.Search:ReleaseInput(lease) if self.inputLease==lease then self.inputLease=nil end end
 dofile("addon/LycheeGroup_Group/Results.lua")
 function G.Results:GetDetails(record) return record.details or {members={},counts={TANK=1,HEALER=1,DAMAGER=2},encounters={}} end
-function G.Results:GetProgressCount(record) return record.details and record.details.encounters and #record.details.encounters end
+function G.Results:GetMemberCounts(record) return self:GetDetails(record).counts end
+function G.Results:GetLeaderClass(record)
+ for _,member in ipairs(self:GetDetails(record).members) do
+  if member.isLeader or record.leaderKey and member.nameKey==record.leaderKey then return member.class end
+ end
+end
+function G.Results:GetProgressCount(record) local details=self:GetDetails(record);return details.encounters and #details.encounters end
 function G.Results:InvalidateView() end
 function G.Results:BlockTitle(title,leaderKey)
  if title==nil then return false end
@@ -163,7 +181,7 @@ C_LFGList={
 }
 dofile("tests/application_fixture.lua")(S)
 dofile("addon/LycheeGroup_Group/Locale.lua");G.L=A.GroupLocale;dofile("addon/LycheeGroup_Group/Catalog.lua")
-for _,file in ipairs({"Locale.lua","Theme.lua","Motion.lua","Components.lua","Members.lua","Preview.lua","Tooltip.lua","Native.lua","Application.lua","Transfer.lua","Resize.lua","Host.lua","Find.lua","Create.lua","Notes.lua","Settings.lua"}) do dofile("addon/LycheeGroup_UI/"..file) end
+for _,file in ipairs({"Locale.lua","Theme.lua","Motion.lua","Components.lua","Elements.lua","Members.lua","Preview.lua","Tooltip.lua","Native.lua","Application.lua","Transfer.lua","Resize.lua","Host.lua","Find.lua","Create.lua","Notes.lua","Settings.lua"}) do dofile("addon/LycheeGroup_UI/"..file) end
 local U=A.UI;local C=U.C
 local Open=A.Open
 function A:Open(page,ctx) self.lastOpen=page;return Open(self,page,ctx) end

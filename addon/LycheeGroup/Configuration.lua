@@ -5,7 +5,7 @@ local C={definitions={}}
 A.Configuration=C
 local order={"session","character","account"}
 local function Namespace()
- return {schema=1,user={},presets={},imported={}}
+ return {schema=2,user={},presets={},imported={}}
 end
 local function Copy(value,parents)
  local kind=type(value)
@@ -68,11 +68,11 @@ local function Validate(def,value)
  end
  return true
 end
-local function Storage(options,persistent)
+local function Storage(options)
  if options~=nil and type(options)~="table" then return nil,"options must be a table" end
  local storage=options and options.storage
  if storage==nil then storage="session" end
- if storage~="account" and storage~="character" and (persistent or storage~="session") then return nil,"unknown configuration storage" end
+ if storage~="account" and storage~="character" and storage~="session" then return nil,"unknown configuration storage" end
  return storage
 end
 local function Identity(id,revision)
@@ -87,12 +87,13 @@ end
 function C:EnsureReady()
  if not self.stores then A:LoadDB() end
 end
+local function ValueDefinition(self,key) return self.definitions[key] end
 function C:ValidateValues(values)
  if type(values)~="table" then return nil,"values must be a flat key/value table" end
  local ok,copy=pcall(Copy,values)
  if not ok then return nil,copy end
  for key,value in pairs(copy) do
-  local def=self.definitions[key]
+  local def=ValueDefinition(self,key)
   if not def then return nil,"unknown configuration key: "..tostring(key) end
   local valid,reason=Validate(def,value)
   if not valid then return nil,key..": "..reason end
@@ -118,51 +119,42 @@ function C:Resolve(key,withSource)
  end
  local preset,source=self:SelectedPreset(withSource)
  if preset and preset.values[key]~=nil then return preset.values[key],source end
- return self.definitions[key].default,withSource and {kind="default"} or nil
+ local runtime=A.RuntimeTheme
+ if runtime and runtime.preferences[key]~=nil then
+  return runtime.preferences[key],withSource and {kind="theme",id=runtime.selection.id,revision=runtime.selection.revision,storage=runtime.selection.storage} or nil
+ end
+ return ValueDefinition(self,key).default,withSource and {kind="default"} or nil
 end
-function C:Snapshot()
+function C:Snapshot(keys)
  local snapshot={}
- for key in pairs(self.definitions) do snapshot[key]=self:Resolve(key) end
- -- Appearance aliases can change when a default becomes an explicit override.
- -- Keep that resolution at its owner, and compare the values consumers receive.
- if A.ResolveConfigurationSnapshot then A:ResolveConfigurationSnapshot(snapshot) end
+ for key in pairs(keys or self.definitions) do snapshot[key]=self:Resolve(key) end
  return snapshot
 end
-function C:ChangesSince(previous)
- local current=self:Snapshot()
+local function Changes(previous,current)
  local changes={}
- for key in pairs(self.definitions) do
-  local value=current[key]
-  if not Equal(previous[key],value) then changes[key]={previous=Copy(previous[key]),value=Copy(value)} end
- end
+ for key,value in pairs(current) do if not Equal(previous[key],value) then changes[key]={previous=Copy(previous[key]),value=Copy(value)} end end
+ for key,value in pairs(previous) do if current[key]==nil then changes[key]={previous=Copy(value)} end end
  return changes
 end
-function C:Notify(previous,changes)
- changes=changes or self:ChangesSince(previous)
- if next(changes) then A:ApplyConfigurationChanges(changes) end
-end
-local function Shallow(value)
- local result={};for key,item in pairs(value) do result[key]=item end;return result
-end
-function C:Change(callback,storage,onCommit)
- local previous=self:Snapshot()
- -- Draft only the selected layer. Validated leaf values are replaced as units.
+local function Shallow(value) local result={};for key,item in pairs(value) do result[key]=item end;return result end
+function C:Change(callback,storage,onCommit,keys)
+ local previous=self:Snapshot(keys)
  local original=self.stores[storage]
  local draft=Shallow(original)
  draft.user,draft.presets,draft.imported=Shallow(original.user),Shallow(original.presets),Shallow(original.imported)
  self.stores[storage]=draft
  callback()
- local changes=self:ChangesSince(previous)
- if A.ValidateConfiguration then
-  local ok,valid,reason=pcall(A.ValidateConfiguration,A,previous,changes)
-  if not ok or not valid then self.stores[storage]=original;return false,ok and reason or valid end
- end
+ local changes=Changes(previous,self:Snapshot(keys))
  original.user,original.presets,original.imported,original.activePreset=draft.user,draft.presets,draft.imported,draft.activePreset
  self.stores[storage]=original
  if onCommit then onCommit() end
- self:Notify(previous,changes)
+ if next(changes) then A:ApplyConfigurationChanges(changes) end
  return true
 end
+-- Shared by the static Theme boundary, never a visual write route.
+function C:ValidateField(def,value) return Validate(def,value) end
+function C:CopyValue(value) return Copy(value) end
+function C:SameValue(a,b) return Equal(a,b) end
 local function LegacyPath(def)
  if not def.legacy then return end
  return def.legacy.storage or def.storage,def.legacy.path or {def.legacy.key}
@@ -176,7 +168,7 @@ local function ReadPath(root,path)
  return value
 end
 function C:MirrorLegacy(key,value,storage)
- local def=self.definitions[key]
+ local def=ValueDefinition(self,key)
  local owner,path=LegacyPath(def)
  if owner~=storage then return end
  local root=storage=="account" and A.db or A.charPrefs
@@ -214,7 +206,7 @@ function C:RegisterDefinitions(definitions)
  if type(definitions)~="table" then return false,"definitions must be a table" end
  local pending,keys={},{}
  for key,def in pairs(definitions) do
-  if type(key)~="string" or type(def)~="table" then return false,"definitions require string keys and table definitions" end
+  if type(key)~="string" or not key:match("^settings%.") and not key:match("^layout%.") or type(def)~="table" then return false,"preference definitions require settings/layout keys and tables" end
   if self.definitions[key] then return false,"configuration key is already registered: "..key end
   local storage=def.storage or "account"
   if storage~="account" and storage~="character" then return false,"definition storage must be account or character" end
@@ -224,8 +216,14 @@ function C:RegisterDefinitions(definitions)
   entry.default,entry.storage=default,storage;pending[key]=entry;keys[#keys+1]=key
  end
  local previous=self.stores and self:Snapshot()
- for key,def in pairs(pending) do self.definitions[key]=def end
- if self.stores then self:ImportDefinitions(keys);self:Notify(previous) end
+ for key,def in pairs(pending) do
+  self.definitions[key]=def
+ end
+ if self.stores then
+  self:ImportDefinitions(keys)
+  local changes=Changes(previous,self:Snapshot())
+  if next(changes) then A:ApplyConfigurationChanges(changes) end
+ end
  return true
 end
 local function LegacySnapshot(root)
@@ -247,18 +245,26 @@ function C:Bind(account,character)
 end
 function C:Get(key)
  self:EnsureReady()
- if not self.definitions[key] then return nil,"unknown configuration key: "..tostring(key) end
+ if not ValueDefinition(self,key) then return nil,"unknown configuration key: "..tostring(key) end
  local value=self:Resolve(key);return Copy(value)
 end
 function C:GetSource(key)
  self:EnsureReady()
- if not self.definitions[key] then return nil,"unknown configuration key: "..tostring(key) end
+ if not ValueDefinition(self,key) then return nil,"unknown configuration key: "..tostring(key) end
  local _,source=self:Resolve(key,true);return source
 end
-function C:GetSchema()
+function C:GetSchema(keys)
+ if type(keys)=="string" then keys={keys} end
+ if keys~=nil and type(keys)~="table" then return nil,"schema requires a key or key array" end
  local schema={}
- for key,def in pairs(self.definitions) do
+ local function Add(key,def)
+  if not def then return end
   schema[key]={default=Copy(def.default),storage=def.storage,type=Copy(def.type or type(def.default)),min=def.min,max=def.max,exclusiveMin=def.exclusiveMin,integer=def.integer,enum=Copy(def.enum)}
+  for _,field in ipairs({"key","role","unit","canonical","representative","aliases","aliasOf","independent","group","derivedFrom","overlay","property","types","ref","refType","inherited","slotKind"}) do schema[key][field]=Copy(def[field]) end
+ end
+ if keys then for _,key in ipairs(keys) do Add(key,ValueDefinition(self,key)) end
+ else
+  for key in pairs(self.definitions) do Add(key,ValueDefinition(self,key)) end
  end
  return schema
 end
@@ -269,44 +275,32 @@ function C:Set(values,options)
  return self:Change(function()
   for key,value in pairs(copy) do
    self.stores[storage].user[key]=value
-   if storage~="session" then self.stores[storage].imported[key]=true end
+   -- Dynamic appearance fields have no legacy source to mark as imported.
+   if storage~="session" and self.definitions[key] then self.stores[storage].imported[key]=true end
   end
  end,storage,function()
   if storage~="session" then for key,value in pairs(copy) do self:MirrorLegacy(key,value,storage) end end
- end)
+ end,copy)
 end
 function C:Reset(keys,options)
  self:EnsureReady()
  local storage,err=Storage(options);if not storage then return false,err end
  if type(keys)=="string" then keys={keys} end
  if type(keys)~="table" then return false,"reset requires a key or key array" end
- local copy={}
+ local copy,writeSet={},{}
  for index,key in pairs(keys) do
-  if type(index)~="number" or index%1~=0 or index<1 or not self.definitions[key] then return false,"reset requires registered keys" end
+  if type(index)~="number" or index%1~=0 or index<1 or not ValueDefinition(self,key) then return false,"reset requires registered keys" end
   copy[#copy+1]=key
+  writeSet[key]=true
  end
  return self:Change(function()
   for _,key in ipairs(copy) do
    self.stores[storage].user[key]=nil
-   if storage~="session" then self.stores[storage].imported[key]=true end
+   if storage~="session" and self.definitions[key] then self.stores[storage].imported[key]=true end
   end
  end,storage,function()
   if storage~="session" then for _,key in ipairs(copy) do self:MirrorLegacy(key,nil,storage) end end
- end)
-end
-function C:ImportLegacy(values,options)
- self:EnsureReady()
- local storage,err=Storage(options,true);if not storage then return false,err end
- local copy,reason=self:ValidateValues(values);if not copy then return false,reason end
- return self:Change(function()
-  local store=self.stores[storage]
-  for key,value in pairs(copy) do
-   if not store.imported[key] then
-    if store.user[key]==nil then store.user[key]=value end
-    store.imported[key]=true
-   end
-  end
- end,storage)
+ end,writeSet)
 end
 function C:RegisterPreset(id,revision,values,options)
  self:EnsureReady()

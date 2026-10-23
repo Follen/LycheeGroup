@@ -4,6 +4,15 @@ if not Library then return end
 function Library.AttachMenus(UI)
  local C,T,M=UI.C,UI.Theme,UI.Motion
  local menu
+ local anonymous=0
+ function UI:GetMenuOwnerKey(anchor)
+  local record=self.elements and self.elements[anchor]
+  if record then return record.id..(record.key~=nil and "/"..type(record.key)..":"..tostring(record.key) or "") end
+  if not anchor._lycheeMenuElementID then anonymous=anonymous+1;anchor._lycheeMenuElementID="anonymous:"..anonymous end
+  return anchor._lycheeMenuElementID
+ end
+ function UI:GetMenuElementKey(anchor,value) return self:GetMenuOwnerKey(anchor).."/"..type(value)..":"..tostring(value) end
+ local function EntryKey(entry,index) local key=entry.id;if key==nil then key=entry.value end;if key==nil then key=index end;return UI:GetMenuElementKey(menu.anchor,key) end
  local function Close()
   if menu then menu:Hide() end
  end
@@ -16,6 +25,10 @@ function Library.AttachMenus(UI)
   menu.measure=C.Text(menu,"","menuFontSize","text");menu.measure:Hide()
   local catcher=CreateFrame("Button",nil,UI.parent);catcher:SetAllPoints(UI.parent);catcher:SetFrameStrata("TOOLTIP");catcher:SetFrameLevel(19)
   catcher:RegisterForClicks("AnyDown");catcher:SetScript("OnClick",Close);catcher:Hide();menu.catcher=catcher
+  local function InitializeRow(row)
+   row.icon=C.Icon(row,T.menuIconSize);row.icon:SetPoint("LEFT",T.menuIconInset,0)
+   row.check=C.CheckMark(row);row.check:SetPoint("LEFT",T.menuCheckInset,0);row.check:Hide()
+  end
   local list=C.List(menu,240,T.menuMaxHeight,T.menuRowHeight,function(index)
    local entry=menu.items[index]
    if entry.disabled or entry.header then return end
@@ -23,34 +36,71 @@ function Library.AttachMenus(UI)
    if entry.onClick then entry.onClick(entry.value,entry.label) elseif pick then pick(entry.value,entry.label,entry) end
   end,function(row,index)
    local entry=menu.items[index];if UI.options.onMenuHover then UI.options.onMenuHover(row,entry) end
-  end)
+  end,{recipe="menuRow",initializeRow=InitializeRow})
   list:SetPoint("TOPLEFT",T.menuPadding,-T.menuPadding);list:SetStyle({selectionMark=false,alternateRows=false,singleLine=true,radius="selectionRadius",titleSize="menuFontSize",titleLineHeight="menuLineHeight"});menu.list=list
-  list:SetRowInitializer(function(row)
-   row.icon=C.Icon(row,T.menuIconSize);row.icon:SetPoint("LEFT",T.menuIconInset,0)
-   row.check=C.CheckMark(row);row.check:SetPoint("LEFT",T.menuCheckInset,0)
-   row.check:Hide()
-  end)
-  UI:BindStyle(menu,"menu",function(object)
-   object.list.rowHeight=T.menuRowHeight
-   object.list:SetStyle({rowHeight=T.menuRowHeight,titleSize="menuFontSize",titleLineHeight="menuLineHeight"})
-   for i,row in ipairs(object.list.rows) do row:SetPoint("TOPLEFT",0,-(i-1)*T.menuRowHeight);row.icon:SetSize(T.menuIconSize,T.menuIconSize);row.icon:SetPoint("LEFT",T.menuIconInset,0);row.check:SetPoint("LEFT",T.menuCheckInset,0) end
-   object.list:SetPoint("TOPLEFT",T.menuPadding,-T.menuPadding)
-  end)
+  list:SetRowInitializer(function(row) C.Element(row,"menu.row",{template="menu.row",scope="menu"}) end)
   menu:SetScript("OnHide",function(self)
    M:FinishPlacement(self);self:SetAlpha(1);self.catcher:Hide();self.list:Clear()
-   local owner=self.anchor;self.anchor,self.items,self.onPick=nil,nil,nil
+   C.RekeyElement(self,nil);C.RekeyElement(self.list,nil)
+   local owner=self.anchor;self.anchor,self.items,self.onPick,self.options=nil,nil,nil,nil
    for i=#self.keys,1,-1 do self.keys[i]=nil end
    if owner and owner.isChoice then owner:SetExpanded(false) end
    if UI.options.onMenuClosed then UI.options.onMenuClosed(owner) end
   end)
   menu.renderRow=function(row,index)
    local entry=menu.items[index];row.meta:Hide();row.mark:Hide();row.title:ClearAllPoints()
+   C.RekeyElement(row,EntryKey(entry,index),"menu.row")
    local textLeft=menu.selectMenu and T.menuSelectInset or entry.icon and T.menuIconTextInset or T.menuTextInset
    row.title:SetPoint("LEFT",textLeft,0);row.title:SetWidth(menu.contentWidth-menu.gutter-textLeft-T.menuTextInset);row.title:SetWordWrap(false)
-   UI:SetText(row.title,entry.label or tostring(entry.value or ""));UI:Color(row.title,entry.color or T.text);row:SetAlpha(entry.disabled and T.disabledAlpha or 1)
+   UI:SetText(row.title,entry.label or tostring(entry.value or ""));UI:Color(row.title,UI:ResolveValue(entry.color or "text"));row:SetAlpha(entry.disabled and T.disabledAlpha or 1)
    row.icon:SetShown(entry.icon~=nil);if entry.icon then row.icon:SetTexture(type(entry.icon)=="string" and T.media..entry.icon..".tga" or entry.icon) end
-   row.check:SetShown(entry.checked==true or menu.selectMenu and entry.value==menu.selectedValue);row:SetEnabled(not entry.disabled and not entry.header)
+   local checked=entry.checked==true or menu.selectMenu and entry.value==menu.selectedValue
+   row.check:SetShown(checked);row._checked=checked==true;row:SetEnabled(not entry.disabled and not entry.header)
   end
+  C.Element(menu,"menu",{scope="menu"})
+  C.Element(list,"menu.list",{scope="menu",slots={root=list,slider=list.slider,thumb=list.slider.thumb,clip=list.clip,canvas=list.canvas}})
+ end
+ local function ElementSize(target,axis,fallback)
+  local suffix=axis=="width" and "Width" or "Height"
+  return math.max(C.ElementValue(target,"root","min"..suffix,0),math.min(C.ElementValue(target,"root","max"..suffix,math.huge),C.ElementValue(target,"root",axis,fallback)))
+ end
+ local function SizeMenu(anchor,items,options)
+  local parentScale=UI.parent:GetEffectiveScale()
+  local anchorScale=anchor:GetEffectiveScale()
+  local scale=anchorScale/parentScale
+  menu:SetScale(scale)
+  -- Bounds are expressed in menu units; GetBottom/GetRight use each region's scale.
+  local selectMenu=options.kind=="select"
+  local rowHeight=UI:ResolveElementValue("menu.row","root","height",T.menuRowHeight)
+  if menu.list.rowHeight~=rowHeight then menu.list.rowHeight=rowHeight;menu.list:SetStyle({rowHeight=rowHeight}) end
+  for i,row in ipairs(menu.list.rows) do row:SetPoint("TOPLEFT",0,-(i-1)*rowHeight) end
+  local height=math.min(T.menuMaxHeight,math.max(rowHeight,math.floor((UI.parent:GetHeight()/scale-T.menuScreenReserve)/rowHeight)*rowHeight),#items*rowHeight)
+  height=ElementSize(menu,"height",height+T.menuPadding*2)-T.menuPadding*2
+  height=ElementSize(menu.list,"height",height)
+  local gutter=#items*rowHeight>height and C.listRightInset or 0
+  local natural=selectMenu and anchor:GetWidth() or T.menuMinWidth
+  if not options.width then
+   for index,entry in ipairs(items) do
+    local key=EntryKey(entry,index)
+    local fontSize=UI:ResolveElementValue("menu.row","label","fontSize",UI:GetFontSize("menuFontSize"),key)
+    local font=UI:ResolveElementValue("menu.row","label","font",UI.fontPath,key)
+    local flags=UI:ResolveElementValue("menu.row","label","flags","",key)
+    menu.measure:SetFont(font,fontSize,flags)
+    menu.measure:SetText(entry.label or tostring(entry.value or ""))
+    natural=math.max(natural,math.ceil(menu.measure:GetStringWidth())+(selectMenu and T.menuSelectInset or entry.icon and T.menuIconTextInset or T.menuTextInset)+T.menuTextInset+T.menuPadding*2+gutter)
+   end
+  end
+  local width=ElementSize(menu,"width",math.min(UI.parent:GetWidth()/scale-T.menuScreenInset,options.width or natural))-T.menuPadding*2
+  width=ElementSize(menu.list,"width",width)
+  menu.selectMenu,menu.contentWidth,menu.gutter,menu.selectedValue=selectMenu,width,gutter,options.selectedValue
+  menu:SetSize(width+T.menuPadding*2,height+T.menuPadding*2);menu.list:SetSize(width,height);menu.list:SetGutter(gutter)
+  menu.list:SetViewport(height)
+  return parentScale,anchorScale,scale,width,height
+ end
+ function UI:_LayoutOpenMenu()
+  if not menu or not menu:IsShown() then return end
+  SizeMenu(menu.anchor,menu.items,menu.options)
+  menu.list:Refresh();C.ApplyElement(menu.list);C.ApplyElement(menu)
  end
  function UI:OpenMenu(anchor,items,onPick,options)
   if #items==0 or not CanOpen(anchor) then return end
@@ -58,28 +108,11 @@ function Library.AttachMenus(UI)
   Close()
   if menu:IsShown() or not CanOpen(anchor) then return end
   options=options or {}
-  menu.anchor,menu.items,menu.onPick=anchor,items,onPick
+  menu.anchor,menu.items,menu.onPick,menu.options=anchor,items,onPick,options
+  local ownerKey=self:GetMenuOwnerKey(anchor);C.RekeyElement(menu,ownerKey);C.RekeyElement(menu.list,ownerKey)
   menu.fill:SetColor(T.raised)
   if anchor.isChoice then anchor:SetExpanded(true) end
-  local parentScale=UI.parent:GetEffectiveScale()
-  local anchorScale=anchor:GetEffectiveScale()
-  local scale=anchorScale/parentScale
-  menu:SetScale(scale)
-  -- Bounds are expressed in menu units; GetBottom/GetRight use each region's scale.
-  local selectMenu=options.kind=="select"
-  local height=math.min(T.menuMaxHeight,math.max(T.menuRowHeight,math.floor((UI.parent:GetHeight()/scale-T.menuScreenReserve)/T.menuRowHeight)*T.menuRowHeight),#items*T.menuRowHeight)
-  local gutter=#items*T.menuRowHeight>height and C.listRightInset or 0
-  local natural=selectMenu and anchor:GetWidth() or T.menuMinWidth
-  if not options.width then
-   for _,entry in ipairs(items) do
-    menu.measure:SetText(entry.label or tostring(entry.value or ""))
-    natural=math.max(natural,math.ceil(menu.measure:GetStringWidth())+(selectMenu and T.menuSelectInset or entry.icon and T.menuIconTextInset or T.menuTextInset)+T.menuTextInset+T.menuPadding*2+gutter)
-   end
-  end
-  local width=math.min(UI.parent:GetWidth()/scale-T.menuScreenInset,options.width or natural)-T.menuPadding*2
-  menu.selectMenu,menu.contentWidth,menu.gutter,menu.selectedValue=selectMenu,width,gutter,options.selectedValue
-  menu:SetSize(width+T.menuPadding*2,height+T.menuPadding*2);menu.list:SetSize(width,height);menu.list:SetGutter(gutter)
-  menu.list:SetViewport(height)
+  local parentScale,anchorScale,scale,width,height=SizeMenu(anchor,items,options)
   local keys=menu.keys;for i=1,#items do keys[i]=i end
   menu.list:SetItems(keys,menu.renderRow)
   menu.list.selectedKey=nil
@@ -105,6 +138,7 @@ function Library.AttachMenus(UI)
   menu.catcher:Show();menu:Show()
   local point,parent,relative,x,y=menu:GetPoint()
   M:Reveal(menu,point,parent,relative,x,y,0,point:find("BOTTOM") and -T.menuRevealOffset or T.menuRevealOffset,T.menuRevealDuration)
+  C.ApplyElement(menu.list);C.ApplyElement(menu)
   self.menu=menu
  end
  function UI:CloseMenu() Close() end
@@ -114,7 +148,7 @@ function Library.AttachMenus(UI)
  function UI:IsMenuOpen(anchor) return menu~=nil and menu:IsShown() and (anchor==nil or menu.anchor==anchor) end
  function UI:IsMenuHovered(anchor) return self:IsMenuOpen(anchor) and menu:IsMouseOver() end
 end
--- Commit only after all six definition files completed in manifest order.
+-- Commit only after all nine definition files completed in manifest order.
 Library.version=private.LycheeUILoadVersion
 Library.versionString="1.3.0"
 private.LycheeUILoad,private.LycheeUILoadVersion=nil,nil

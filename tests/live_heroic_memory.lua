@@ -30,7 +30,7 @@ for i=1,256 do
 end
 local used,ui,g,page,ticker,eventFrame,cleaned=0
 local oldPage=A.UI and A.UI.page
-local oldMain=A.UI and A.UI.mainPage
+local oldReturn=A.UI and A.UI.settingsReturnPage
 local config=A.API.Configuration
 local oldRemember=config:Get("settings.rememberFilters")
 local rememberSource=config:GetSource("settings.rememberFilters")
@@ -41,11 +41,16 @@ local function Cleanup()
  if cleaned then return end;cleaned=true
  if ticker then ticker:Cancel();ticker=nil end
  if eventFrame then eventFrame:UnregisterAllEvents();eventFrame:SetScript("OnEvent",nil);eventFrame:Hide() end
+ ui=ui or (A.UI and A.UI.frame and A.UI)
  if ui then
   ui:Hide(true);ui.Motion:StopAll()
-  if prefsSaved then g.Search:SetFilters(oldFilters);g.prefs.find=oldPrefs;page.loaded=nil;page.restoredInitial=nil end
+ end
+ if prefsSaved then g.Search:SetFilters(oldFilters);g.prefs.find=oldPrefs end
+ if ui then
+  if prefsSaved then ui.pages.find.loaded=nil;ui.pages.find.restoredInitial=nil end
   for key,p in pairs(ui.pages) do if p.frame then p.frame:SetShown(oldShown[key]==true) end end
-  ui.page,ui.mainPage=oldPage,oldMain
+  ui.page,ui.settingsReturnPage=oldPage,oldReturn
+  ui:UpdateNav();ui.Motion:FinishRect(ui.underline)
  end
  if rememberSource.kind=="user" and rememberSource.storage=="session" then
   assert(config:Set({["settings.rememberFilters"]=oldRemember}))
@@ -93,17 +98,17 @@ assert(config:Set({["settings.rememberFilters"]=true}))
 g.prefs.find={category="seasonRaid",categoryPrefs={seasonRaid={difficultyID=15}}}
 page.loaded=nil;page.restoredInitial=nil
 local opened,err=A:Open("find");if not opened then return probe:Fail("open_find_"..tostring(err)) end
-report.firstSearchGeneration=g.Search:GetGeneration()
 local lastSearchAt=GetTime()
 local round,completed,phaseAt,direction,nextWork,lastSample=0,0,GetTime(),-1,GetTime(),GetTime()
-local originalFrame,originalPool=page.frame,#page.results.rows
+local originalFrame,originalPool=page.frame
 local tipStep,filterStep=0,0
 local sortNames={"newest","rating","itemLevel","members"}
 local filters={category="seasonRaid",groupKey=target.groupKey,difficultyID=15,sort="newest"}
 local function StartHeroic(first)
+ local generationBefore=g.Search:GetGeneration()
  round=round+1
  if first then
-  page:RefreshPicker();page.picker:Show();page.activities:Select(target.groupKey,true)
+  page:SelectCategory("seasonRaid");page.activities:Select(target.groupKey,true)
   local selected=false
   for _,row in ipairs(page.activities.rows) do
    if row.key==target.groupKey then row:GetScript("OnClick")(row,"LeftButton");selected=true;break end
@@ -111,10 +116,15 @@ local function StartHeroic(first)
   if not selected then return probe:Fail("heroic_activity_row_missing") end
  else page:DoSearch() end
  lastSearchAt=GetTime()
+ local generation=g.Search:GetGeneration()
+ if generation<=generationBefore then return probe:Fail("native_search_not_started") end
  local request=g.Search.request
- if not request or request.activityID~=target.id then return probe:Fail("wrong_native_activity") end
- report.queries[round]={generation=g.Search:GetGeneration(),activityID=request.activityID,startedAt=lastSearchAt-started}
+ local activities=request and request.activityIDs
+ if not activities or activities[1]~=target.id or activities[2] then return probe:Fail("wrong_native_activity") end
+ if first then report.firstSearchGeneration=generation end
+ report.queries[round]={generationBefore=generationBefore,generation=generation,activityID=activities[1],startedAt=lastSearchAt-started}
  phase="scroll_refresh";Sample("heroic_search_started")
+ return true
 end
 local function Scroll()
  local list=page.results;local ids=g:GetResults()
@@ -168,11 +178,13 @@ local function Tick()
  if now-started>110 then return probe:Fail("heroic_memory_deadline") end
  if g:GetSearchState()=="failed" then return probe:Fail("native_search_failed") end
  if now-lastSample>=.5 then Sample("periodic");lastSample=GetTime() end
- if phase=="startup" then
-  if g:GetSearchState()=="done" and now-lastSearchAt>=8 then StartHeroic(true) end
- elseif phase=="scroll_refresh" then
+ if phase=="scroll_refresh" then
   if g:GetSearchState()=="done" and completed<round then
    local query=report.queries[round]
+   if g.Search:GetGeneration()~=query.generation or g.Results.gen~=query.generation then return probe:Fail("native_result_generation_mismatch") end
+   if g:GetResultCount()==0 then return probe:Fail("native_results_empty") end
+   -- The first populated result creates lazy rows; later requests must reuse them.
+   if not originalPool then originalPool=#page.results.rows;report.resultPoolAfterFirstSearch=originalPool end
    query.completedAt=now-started;query.results=g:GetResultCount();query.filtered=#g:GetResults();query.generationWhenDone=g.Search:GetGeneration()
    completed=round;Sample("heroic_search_complete")
   end
@@ -198,4 +210,7 @@ eventFrame:SetScript("OnEvent",assert(probe:Callback(function(_,event)
  elseif event=="LFG_LIST_SEARCH_RESULT_UPDATED" then report.nativeEvents.result=report.nativeEvents.result+1 end
 end)))
 for _,event in ipairs({"PLAYER_LEAVING_WORLD","LFG_LIST_UPDATE_SEARCH_RESULTS","LFG_LIST_SEARCH_RESULT_UPDATED"}) do eventFrame:RegisterEvent(event) end
+-- Opening an unconfirmed category deliberately does not search. Select the
+-- target through its normal activity row before waiting for its completion.
+if not StartHeroic(true) then return end
 ticker=C_Timer.NewTicker(.1,assert(probe:Callback(Tick)))

@@ -3,6 +3,7 @@ local Stubs = TestStubs
 Stubs.Install({ locale = "zhCN", realm = "晨风号角" })
 
 Load.addon("LycheeGroup", "Locale.lua")
+Load.addon("LycheeGroup", "Theme/Defaults.lua")
 Load.addon("LycheeGroup", "Core.lua")
 Load.addon("LycheeGroup", "Configuration.lua")
 
@@ -497,7 +498,7 @@ for _,entry in ipairs({"start","login","enable"}) do
  local loginInRun=entry=="login"
  Stubs.Install({locale="enUS",realm="Home"});Stubs.SetTime(10000)
  Stubs.SetUnit("player",{name="New",realm="Home",class="WARRIOR",guid="Player-new"})
- Load.addon("LycheeGroup","Locale.lua");Load.addon("LycheeGroup","Core.lua");Load.addon("LycheeGroup","Configuration.lua")
+ Load.addon("LycheeGroup","Locale.lua");Load.addon("LycheeGroup","Theme/Defaults.lua");Load.addon("LycheeGroup","Core.lua");Load.addon("LycheeGroup","Configuration.lua")
  local core=LycheeGroup;core:LoadDB();core:SetSetting("history",entry~="enable");core:SetSetting("nativeLFGEntry",false)
  core.Minimap={Initialize=function() end}
  local active,loads=loginInRun,0

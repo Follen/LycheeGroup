@@ -12,6 +12,7 @@ Locale.lua
 Theme.lua
 Motion.lua
 Components.lua
+Elements.lua
 Members.lua
 Preview.lua
 Tooltip.lua

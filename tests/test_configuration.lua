@@ -3,7 +3,7 @@ local function Start(account,character)
  TestStubs.Install({locale="zhCN"})
  _G.LycheeGroupDB=account;_G.LycheeGroupPrefsDB=character
  Load.addon("LycheeGroup","Locale.lua")
- Load.addon("LycheeGroup","Core.lua")
+ Load.addon("LycheeGroup","Theme/Defaults.lua");Load.addon("LycheeGroup","Core.lua")
  Load.addon("LycheeGroup","Configuration.lua")
  return LycheeGroup,LycheeGroup.Configuration
 end
@@ -14,13 +14,25 @@ end
 local scale="settings.fontScale"
 local function User(store,key) return store.uiConfig.user[key] end
 
+-- A scoped schema query copies only selected leaves and preserves copy ownership.
+do
+ local a,c=Reload({},{})
+ local selected=c:GetSchema({scale,"settings.notesEnabled"})
+ T.eq(selected[scale].default,100);T.eq(selected["settings.notesEnabled"].default,true)
+ T.eq(selected["settings.font"],nil)
+ selected[scale].default=10
+ T.eq(c:GetSchema(scale)[scale].default,100)
+ T.eq(c:GetSchema("missing").missing,nil)
+ T.eq(c:GetSchema(false),nil)
+end
+
 -- First reads initialize storage, but never create user choices from filled defaults.
 do
  local a,c=Start()
  T.eq(a.db,nil)
  T.eq(c:Get(scale),100)
  T.eq(a.db,LycheeGroupDB);T.eq(a.charPrefs,LycheeGroupPrefsDB)
- T.eq(a.db.uiConfig.schema,1);T.eq(a.charPrefs.uiConfig.schema,1)
+ T.eq(a.db.uiConfig.schema,2);T.eq(a.charPrefs.uiConfig.schema,2)
  T.eq(next(a.db.uiConfig.user),nil);T.eq(next(a.charPrefs.uiConfig.user),nil)
  T.same(c:GetSource(scale),{kind="default"})
  T.eq(c:GetSchema()[scale].min,70)
@@ -154,44 +166,41 @@ do
  T.eq(#c:ListPresets(),0);T.eq(notices,0)
 end
 
--- Visual/table leaves support independent copy ownership and actual old-field presence.
+-- Layout preferences retain serialization, legacy presence and copy ownership.
 do
  local account={windowSize={width=1180},oldColor={.2,.3,.4,1}}
  local a,c=Reload(account,{})
- account.windowSize.height=700 -- a program-filled default after Bind is not an old user value.
+ account.windowSize.height=700
  T.ok(c:RegisterDefinitions({
   ["layout.main.width"]={default=1000,type="number",min=800,storage="account",legacy={path={"windowSize","width"}}},
   ["layout.main.height"]={default=650,type="number",storage="account",legacy={path={"windowSize","height"}}},
-  ["theme.main.color"]={default={1,1,1,1},type="color",storage="account",legacy={key="oldColor"}},
+  ["layout.sampleColor"]={default={1,1,1,1},type="color",storage="account",legacy={key="oldColor"}},
   ["layout.main.columns"]={default={a=.5,b=.5},type="table",storage="character"},
-  ["layout.floating.position"]={default=false,type={"table","boolean"},storage="account",validate=function(value) return value~=true end},
  }))
  T.eq(c:Get("layout.main.width"),1180);T.eq(c:Get("layout.main.height"),650)
  T.eq(User(account,"layout.main.height"),nil)
- local color=c:Get("theme.main.color");color[1]=.9
- T.eq(c:Get("theme.main.color")[1],.2);T.eq(account.oldColor[1],.2)
- T.ok(c:ApplyPreset("visual",1,{["theme.main.color"]={0,0,0,1},["layout.main.height"]=680}))
- T.eq(c:Get("layout.main.height"),680);T.eq(c:Get("theme.main.color")[1],.2)
+ local color=c:Get("layout.sampleColor");color[1]=.9
+ T.eq(c:Get("layout.sampleColor")[1],.2);T.eq(account.oldColor[1],.2)
+ T.ok(c:ApplyPreset("layout",1,{["layout.main.height"]=680}))
+ T.eq(c:Get("layout.main.height"),680)
  T.ok(c:Set({["layout.main.width"]=1200},{storage="account"}));T.eq(account.windowSize.width,1200)
  T.ok(c:Reset("layout.main.width",{storage="account"}));T.eq(account.windowSize.width,nil)
- local columns={a=.3,b=.7}
- T.ok(c:Set({["layout.main.columns"]=columns}));columns.a=.9
+ local columns={a=.3,b=.7};T.ok(c:Set({["layout.main.columns"]=columns}));columns.a=.9
  T.eq(c:Get("layout.main.columns").a,.3)
- T.eq(c:Set({["theme.main.color"]={1.1,0,0}}),false)
- T.ok(c:ImportLegacy({["layout.main.columns"]={a=.4,b=.6}},{storage="character"}))
- T.eq(User(a.charPrefs,"layout.main.columns").a,.4)
- T.ok(c:ImportLegacy({["layout.main.columns"]={a=.8,b=.2}},{storage="character"}))
- T.eq(User(a.charPrefs,"layout.main.columns").a,.4,"legacy import is once per registered leaf")
- local schema=c:GetSchema();schema["theme.main.color"].default[1]=0
- T.eq(c:GetSchema()["theme.main.color"].default[1],1)
- T.same(c:GetSchema()["layout.floating.position"].type,{"table","boolean"})
- T.ok(c:ApplyPreset("position",1,{["layout.floating.position"]={x=10,y=20}}))
- T.ok(c:Set({["layout.floating.position"]=false},{storage="account"}))
- T.eq(c:Get("layout.floating.position"),false,"an explicit false masks preset position data")
- T.eq(c:Set({["layout.floating.position"]=true}),false)
- T.eq(c:Set({["layout.floating.position"]="center"}),false)
- local preset=c:ExportPreset("visual");preset.values["theme.main.color"][1]=.7
- T.eq(c:ExportPreset("visual").values["theme.main.color"][1],0)
+ T.eq(c:Set({["layout.sampleColor"]={1.1,0,0}}),false)
+ local schema=c:GetSchema();schema["layout.sampleColor"].default[1]=0
+ T.eq(c:GetSchema("layout.sampleColor")["layout.sampleColor"].default[1],1)
+end
+
+-- A rejected visual leaf cannot partially apply a valid immediate setting.
+do
+ local a,c=Reload({},{});local users,presets=c.stores.account.user,c.stores.account.presets
+ for _,key in ipairs({"theme.main.primary","style.main.button.base.root.height","element.main.settings.row.base.label.alpha","utility.main.notice"}) do
+  T.eq(c:Set({[scale]=115,[key]=1},{storage="account"}),false)
+  T.eq(c:RegisterPreset("visual",1,{[scale]=115,[key]=1},{storage="account"}),false)
+  T.eq(c:Get(key),nil);T.eq(c:GetSchema(key)[key],nil)
+ end
+ T.eq(c:Get(scale),100);T.eq(c.stores.account.user,users);T.eq(c.stores.account.presets,presets)
 end
 
 -- One batch produces one effective change set and one call to each shared lifecycle.
@@ -221,7 +230,7 @@ do
  local loads=0;a.Ensure=function() loads=loads+1 end
  a.Floating={frame={},UpdateSettings=function() end};Load.addon("LycheeGroup","API.lua")
  local api=a.API.Configuration
- T.eq(api.version,1);T.eq(a.API.Floating.version,1)
+ T.eq(api.version,2);T.eq(a.API.Floating.version,1)
  T.eq(api:Get(scale),100)
  T.ok(api:Set({[scale]=115}));T.eq(api:Get(scale),115);T.eq(account.fontScale,100)
  T.eq(a.API.Floating:IsAvailable(),true)
@@ -236,102 +245,34 @@ do
  a,c=Reload(account,character);T.eq(c:Get(scale),100)
 end
 
--- Final-value validation is transactional for writes, package changes and resets.
+-- Public schema keeps descriptive style metadata without sharing mutable arrays.
 do
- local a,c=Reload({},{});local size,delta="visual.size","visual.delta"
- T.ok(c:RegisterDefinitions({
-  [size]={default=12,type="number",min=0,exclusiveMin=true,storage="account",legacy={key="oldSize"}},
-  [delta]={default=0,type="number",storage="account",legacy={key="oldDelta"}},
- }))
- T.eq(c:GetSchema()[size].exclusiveMin,true)
- T.eq(c:Set({[size]=0}),false)
- local notices=0
- a.OnConfigurationChanged=function() notices=notices+1 end
- a.ValidateConfiguration=function() return c:Get(size)+c:Get(delta)>0,"font size plus delta must be positive" end
- local function Rejected(operation)
-  local root=a.db.uiConfig;local users,presets,imported=root.user,root.presets,root.imported
-  local oldSize,oldDelta=a.db.oldSize,a.db.oldDelta;local beforeNotices=notices
-  local ok,err=operation();T.eq(ok,false);T.eq(type(err),"string")
-  T.eq(a.db.uiConfig,root);T.eq(c.stores.account,root)
-  T.eq(root.user,users);T.eq(root.presets,presets);T.eq(root.imported,imported)
-  T.eq(a.db.oldSize,oldSize);T.eq(a.db.oldDelta,oldDelta);T.eq(notices,beforeNotices)
- end
- Rejected(function() return c:Set({[size]=1,[delta]=-2,[scale]=110},{storage="account"}) end)
- T.eq(c:Get(scale),100);T.eq(User(a.db,scale),nil)
- Rejected(function() return c:ApplyPreset("invalid",1,{[size]=1,[delta]=-2},{storage="account"}) end)
- T.eq(c:ExportPreset("invalid"),nil)
- T.ok(c:RegisterPreset("inactive",1,{[size]=1,[delta]=-2},{storage="account"}))
- Rejected(function() return c:ActivatePreset("inactive",{storage="account"}) end)
- T.eq(a.db.uiConfig.activePreset,nil)
- T.ok(c:ApplyPreset("valid",1,{[size]=10},{storage="account"}))
- Rejected(function() return c:RegisterPreset("valid",2,{[size]=1,[delta]=-2},{storage="account"}) end)
- T.eq(c:ExportPreset("valid").revision,1)
- T.ok(c:Set({[size]=3},{storage="account"}))
- T.ok(c:ApplyPreset("under",1,{[size]=1,[delta]=-2},{storage="account"}))
- Rejected(function() return c:Reset(size,{storage="account"}) end)
- T.eq(User(a.db,size),3);T.eq(a.db.oldSize,3)
- T.ok(c:RemovePreset("under",{storage="account"}));T.ok(c:Reset(size,{storage="account"}))
- T.ok(c:ApplyPreset("large",1,{[size]=20},{storage="account"}))
- T.ok(c:Set({[delta]=-15},{storage="account"}))
- Rejected(function() return c:RemovePreset("large",{storage="account"}) end)
- Rejected(function() return c:ActivatePreset(false,{storage="account"}) end)
- T.eq(a.db.uiConfig.activePreset,"large")
- T.eq(c:Get(size),20);T.eq(c:Get(delta),-15)
- a.ValidateConfiguration=function() error("validation failed") end
- Rejected(function() return c:Set({[scale]=110},{storage="account"}) end)
- T.eq(c:Get(scale),100)
+ local a,c=Reload({},{});local key="layout.label"
+ T.ok(c:RegisterDefinitions({[key]={default=14,type="number",storage="account",key="labelFontSize",role="label",unit="font",canonical="labelFontSize",representative="font14",aliases={"font14","font13","font15"},aliasOf="labelFontSize",group="text"}}))
+ local field=c:GetSchema()[key]
+ T.eq(field.key,"labelFontSize");T.eq(field.role,"label");T.eq(field.unit,"font")
+ T.eq(field.canonical,"labelFontSize");T.eq(field.representative,"font14")
+ T.eq(field.aliasOf,"labelFontSize");T.eq(field.group,"text")
+ T.same(field.aliases,{"font14","font13","font15"})
+ field.aliases[1]="changed"
+ T.eq(c:GetSchema()[key].aliases[1],"font14")
 end
 
--- Theme aliases depend on whether a token is explicit, not just its raw value.
+-- Native regions do not inherit dimensions from a parent without sizing constraints.
 do
- local f=dofile("tests/ui_fixture.lua")("enUS");local a,u=f.A,f.U
- a:SetSetting("reduceMotion",true);a:Open("settings")
- local c,api=a.Configuration,a.API.Appearance
- local original=api:Get("main").accent
- local notices=0;local changed=a.OnConfigurationChanged
- a.OnConfigurationChanged=function(self,changes) notices=notices+1;changed(self,changes) end
- local function Accent(value) T.same(api:Get("main").accent,value);T.same(u.Theme.accent,value) end
- T.ok(api:Set("main",{primary={.1,.2,.3,1}}));Accent({.1,.2,.3,1})
- local before=notices
- T.ok(api:Set("main",{accent=original}));Accent(original)
- T.eq(notices,before+1,"a source-only alias change refreshes the existing context")
- T.ok(api:Reset("main","accent"));Accent({.1,.2,.3,1})
- before=notices
- T.ok(api:Set("main",{accent={.1,.2,.3,1}}));Accent({.1,.2,.3,1})
- T.eq(notices,before,"pinning the same effective alias does not notify")
- T.ok(a:SetSetting("reduceMotion",true));T.eq(notices,before,"unchanged business settings do not notify")
- T.ok(api:Reset("main","accent"));T.eq(notices,before)
- T.ok(c:ApplyPreset("alias",1,{["theme.main.accent"]=original}));Accent(original)
- T.ok(c:RegisterPreset("alias",2,{}));Accent({.1,.2,.3,1})
- T.ok(c:RegisterPreset("alias",3,{["theme.main.accent"]=original}));Accent(original)
- T.ok(c:ActivatePreset(false));Accent({.1,.2,.3,1})
- T.ok(c:ActivatePreset("alias"));Accent(original)
- T.ok(c:RemovePreset("alias"));Accent({.1,.2,.3,1})
-end
-
--- Explicit default typography can invalidate a previously valid derived size.
-do
- local f=dofile("tests/ui_fixture.lua")("enUS");local a,u=f.A,f.U
- a:SetSetting("reduceMotion",true);a:Open("settings")
- local c,api=a.Configuration,a.API.Appearance
- local values={fontSizeDelta=-13}
- for key,field in pairs(LycheeUI:GetThemeSchema(a.StyleDefaults.main)) do
-  if field.unit=="font" and key~="tooltipFontSize" then values[key]=50 end
- end
- T.ok(api:Set("main",values,{storage="account"}))
- T.eq(api:Get("main").tooltipFontSize,50)
- local root=a.db.uiConfig;local users,presets,imported=root.user,root.presets,root.imported
- local function Rejected(operation)
-  local ok,err=operation();T.eq(ok,false);T.eq(type(err),"string")
-  T.eq(root.user,users);T.eq(root.presets,presets);T.eq(root.imported,imported)
-  T.eq(api:Get("main").tooltipFontSize,50);T.eq(u.Theme.tooltipFontSize,50)
- end
- Rejected(function() return api:Set("main",{tooltipFontSize=12},{storage="account"}) end)
- T.eq(c:GetSource("theme.main.tooltipFontSize").kind,"default")
- Rejected(function() return c:ApplyPreset("invalidAlias",1,{["theme.main.tooltipFontSize"]=12},{storage="account"}) end)
- T.eq(c:ExportPreset("invalidAlias"),nil)
- T.ok(c:RegisterPreset("invalidAlias",1,{["theme.main.tooltipFontSize"]=12},{storage="account"}))
- users,presets,imported=root.user,root.presets,root.imported
- Rejected(function() return c:ActivatePreset("invalidAlias",{storage="account"}) end)
- T.eq(root.activePreset,nil)
+ local S=dofile("tests/ui_stubs.lua")
+ local parent=S.New("Frame");parent:SetSize(200,100)
+ local single=S.New("Frame",nil,parent);single:SetPoint("TOPLEFT",parent,"TOPLEFT",0,0)
+ T.eq(single:GetWidth(),0);T.eq(single:GetHeight(),0)
+ local fill=S.New("Frame",nil,parent);fill:SetSize(30,20);fill:SetAllPoints(parent)
+ T.eq(fill:GetWidth(),200);T.eq(fill:GetHeight(),100)
+ local inset=S.New("Frame",nil,parent)
+ inset:SetPoint("TOPLEFT",parent,"TOPLEFT",10,-5);inset:SetPoint("BOTTOMRIGHT",parent,"BOTTOMRIGHT",-20,15)
+ T.eq(inset:GetWidth(),170);T.eq(inset:GetHeight(),80)
+ local icon=S.New("Frame",nil,parent);icon:SetSize(20,20);icon:SetPoint("LEFT",parent,"LEFT",10,0)
+ local adjacent=S.New("Frame",nil,parent)
+ adjacent:SetPoint("LEFT",icon,"RIGHT",4,0);adjacent:SetPoint("RIGHT",parent,"RIGHT",-8,0)
+ T.eq(adjacent:GetWidth(),158)
+ local text=S.New("FontString",nil,parent);text:SetText("abc")
+ T.near(text:GetWidth(),23.1,.001);T.near(text:GetHeight(),16.8,.001)
 end

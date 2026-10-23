@@ -43,6 +43,7 @@ local DETAIL_CAPACITY=64
 local count,scan=0,0
 local dirty=true
 local Public=G.Public
+local RESULT_INPUTS={activityIDs=true,name=true,comment=true,partyGUID=true,leaderName=true,leaderFactionGroup=true,numMembers=true,age=true,requiredItemLevel=true,requiredDungeonScore=true,leaderOverallDungeonScore=true,requiredPvpRating=true,leaderPvpRatingInfo=true,isDelisted=true,numBNetFriends=true,numCharFriends=true,numGuildMates=true}
 local function RememberBlockedLeader(record)
  if blockedTitles[record.name] and record.leaderKey and not unblockedLeaders[record.leaderKey] and not G.db.blockedLeaders[record.leaderKey] then
   G.db.blockedLeaders[record.leaderKey]=true
@@ -67,7 +68,17 @@ local function Normalize(id,record,invalidateDetails,expectedScan,metadataDirty)
  local activityID=type(activityIDs)=="table" and Public(activityIDs[1]) or nil
  local activity=G.Catalog:GetActivity(activityID)
  if expectedScan and scan~=expectedScan then return nil end
- record=record or {id=id}
+ -- The native result table belongs to this call. Reuse it for a first capture,
+ -- but keep later captures on the already published record's identity.
+ local nativeRatings=info.leaderPvpRatingInfo
+ local nativeBnet,nativeChar,nativeGuild=info.numBNetFriends,info.numCharFriends,info.numGuildMates
+ if not record then
+  for key in pairs(info) do if not RESULT_INPUTS[key] then info[key]=nil end end
+  -- Remove source-only keys before adding normalized fields: retaining them
+  -- during assembly would grow the table beyond its final field capacity.
+  info.activityIDs,info.leaderPvpRatingInfo,info.numBNetFriends,info.numCharFriends,info.numGuildMates=nil,nil,nil,nil,nil
+  record=info;record.id=id
+ end
  record.sampledAt=now
  record.activityID,record.activity=activityID,activity
  record.activityName=activity and activity.name
@@ -94,7 +105,7 @@ local function Normalize(id,record,invalidateDetails,expectedScan,metadataDirty)
  local summaries=record.pvpRatings
  if summaries then wipe(summaries) end
  if activity and activity.isRatedPvpActivity then
-  local ratings=Public(info.leaderPvpRatingInfo)
+  local ratings=Public(nativeRatings)
   if type(ratings)=="table" then
    summaries=summaries or {};record.pvpRatings=summaries
    for _,value in ipairs(ratings) do
@@ -111,7 +122,7 @@ local function Normalize(id,record,invalidateDetails,expectedScan,metadataDirty)
  if record.ratingKind=="pvp" then record.leaderRating,record.requiredRating=record.leaderPvpRating,record.requiredPvpRating
  else record.leaderRating,record.requiredRating=record.leaderOverallDungeonScore,record.requiredDungeonScore end
  record.isDelisted=Public(info.isDelisted)==true
- record.bnetFriends,record.charFriends,record.guildMates=Public(info.numBNetFriends) or 0,Public(info.numCharFriends) or 0,Public(info.numGuildMates) or 0
+ record.bnetFriends,record.charFriends,record.guildMates=Public(nativeBnet) or 0,Public(nativeChar) or 0,Public(nativeGuild) or 0
  -- Native guild summaries can include the observer. Correct the shared count
  -- before list marks and filters consume it, without reading the member roster.
  if record.guildMates>0 then
@@ -131,6 +142,7 @@ local function Normalize(id,record,invalidateDetails,expectedScan,metadataDirty)
   record.progressKnown,record.progressCount=nil,nil
   record.checkedSpecID,record.hasMemberSpec=nil,nil
   record.checkedClass,record.hasMemberClass=nil,nil
+  record.leaderClassKnown,record.leaderClass=nil,nil
  end
  return record
 end
@@ -143,6 +155,36 @@ function Results:GetMemberCounts(record)
  local counts={TANK=Public(native.TANK),HEALER=Public(native.HEALER),DAMAGER=Public(native.DAMAGER)}
  record.memberCounts=counts
  return counts
+end
+-- Large-group rows need the leader's color, not a full member snapshot.
+function Results:GetLeaderClass(record)
+ if record.leaderClassKnown then return record.leaderClass end
+ local details=record.details
+ if details and not record.detailsDirty then
+  for _,member in ipairs(details.members) do
+   if member.isLeader or record.leaderKey and member.nameKey==record.leaderKey then
+    record.leaderClass=member.class;break
+   end
+  end
+ else
+  local getter=C_LFGList.GetSearchResultLeaderInfo
+  local leader=record.numMembers>0 and getter and Public(getter(record.id))
+  if type(leader)=="table" and Public(leader.isLeader)==true then
+   local class=Public(leader.classFilename)
+   if type(class)=="string" and class~="" then
+    record.leaderClassKnown,record.leaderClass=true,class
+    return class
+   end
+  end
+  for index=1,record.numMembers do
+   local member=Public(C_LFGList.GetSearchResultPlayerInfo(record.id,index))
+   if type(member)=="table" and (Public(member.isLeader)==true or record.leaderKey and G:RemotePlayerKey(Public(member.name))==record.leaderKey) then
+    record.leaderClass=Public(member.classFilename);break
+   end
+  end
+ end
+ record.leaderClassKnown=true
+ return record.leaderClass
 end
 function Results:HasMemberSpec(record,playerSpecID)
  if record.checkedSpecID==playerSpecID then return record.hasMemberSpec end
@@ -214,6 +256,7 @@ function Results:GetDetails(idOrRecord)
  -- Five-player rows show individual members. Their role-count API result also
  -- contains nested class counts, so read it only for an actual role filter.
  local memberCount=0
+ local leaderClass,leaderFound
  details.counts=record.memberCounts or record.maxNumPlayers~=5 and self:GetMemberCounts(record) or nil
  for index=1,record.numMembers do
   local info=Public(C_LFGList.GetSearchResultPlayerInfo(record.id,index))
@@ -231,6 +274,7 @@ function Results:GetDetails(idOrRecord)
    end
    info.name=name;info.nameKey=key
    info.class=Public(info.classFilename);info.localizedClass=Public(info.className)
+   if not leaderFound and (isLeader or record.leaderKey and key==record.leaderKey) then leaderClass,leaderFound=info.class,true end
    info.specName=Public(info.specName);info.assignedRole=Public(info.assignedRole)
    info.isLeader=isLeader
    -- Search data identifies the leader's faction, not every remote member's.
@@ -266,6 +310,7 @@ function Results:GetDetails(idOrRecord)
   record.progressKnown,record.progressCount=true,details.encounters and #details.encounters
  else details.encounters=nil end
  record.details=details;record.detailsDirty=nil
+ record.leaderClassKnown,record.leaderClass=true,leaderClass
  -- 队列仅存 ID，旧结果不会被缓存队列继续强引用。
  TouchDetails(record)
  return details

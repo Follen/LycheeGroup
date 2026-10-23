@@ -19,18 +19,21 @@ function UI:LoadWindowSize()
  self.preferredWindowWidth,self.preferredWindowHeight=self.windowWidth,self.windowHeight
 end
 
-function UI:LayoutWindow()
+function UI:LayoutWindow(deferPage)
  if not self.content then return end
  local width,height=self.windowWidth-T.pageInset*2,self.windowHeight-T.headerHeight-T.pageInset
  self.content:SetSize(width,height)
  local page=self.page and self.pages[self.page]
  if page and page.frame then
   page.frame:SetSize(width,height)
-  page:LayoutSize(width,height)
+  if not deferPage then
+   page:LayoutSize(width,height)
+   page.enteredWidth,page.enteredHeight=width,height
+  end
  end
 end
 
-function UI:SetWindowSize(width,height)
+function UI:SetWindowSize(width,height,deferPage)
  local minWidth,minHeight=self:GetWindowMinimum()
  local scale=self.frame:GetScale()
  local maxWidth=math.max(minWidth,(UIParent:GetWidth()-T.windowScreenInset*2)/scale)
@@ -40,10 +43,11 @@ function UI:SetWindowSize(width,height)
  if width==self.windowWidth and height==self.windowHeight and self.frame:GetWidth()==width and self.frame:GetHeight()==height then return end
  self.windowWidth,self.windowHeight=width,height
  self.frame:SetSize(width,height)
- self:LayoutWindow()
+ self:LayoutWindow(deferPage)
 end
 
 function UI:RefreshWindowSize()
+ if self.navigating then return end
  -- Page feedback may arrive from native inputs while the user is resizing.
  -- Only the cursor owns the current dimensions until the drag ends.
  if self.resizing then self:SetWindowSize(self.windowWidth,self.windowHeight)
@@ -81,7 +85,7 @@ function UI:BeginWindowResize()
  local page=self.page and self.pages[self.page]
  if page and page.ClosePicker then page:ClosePicker() end
  if page and page.FinishSidebar then page:FinishSidebar() end
- M:Stop("presence");M:CapturePosition();M:SetPresence(1)
+ M:StopPresence();M:CapturePosition();M:SetPresence(1)
  local frame=self.frame
  local scale=frame:GetEffectiveScale()
  local left,top=frame:GetLeft()*scale,frame:GetTop()*scale
@@ -102,9 +106,9 @@ end
 
 function UI:BuildResizeHandle()
  local handle=CreateFrame("Button",nil,self.frame)
- UI.C.ApplyStyle(handle,{width="windowResizeHandleSize",height="windowResizeHandleSize"});C.SetPoint(handle,"BOTTOMRIGHT",handle:GetParent(),"BOTTOMRIGHT","resizeHandleBottomrightX","resizeHandleBottomrightY")
+ handle:SetWidth(T.windowResizeHandleSize);handle:SetHeight(T.windowResizeHandleSize);C.SetPoint(handle,"BOTTOMRIGHT",handle:GetParent(),"BOTTOMRIGHT","resizeHandleBottomrightX","resizeHandleBottomrightY")
  handle:SetFrameLevel(self.frame:GetFrameLevel()+30)
- local icon=handle:CreateTexture(nil,"ARTWORK");UI.C.ApplyStyle(icon,{width="windowResizeIconSize",height="windowResizeIconSize"});C.SetPoint(icon,"BOTTOMRIGHT",icon:GetParent(),"BOTTOMRIGHT","resizeIconBottomrightX","resizeIconBottomrightY")
+ local icon=handle:CreateTexture(nil,"ARTWORK");icon:SetWidth(T.windowResizeIconSize);icon:SetHeight(T.windowResizeIconSize);C.SetPoint(icon,"BOTTOMRIGHT",icon:GetParent(),"BOTTOMRIGHT","resizeIconBottomrightX","resizeIconBottomrightY")
  handle.icon=icon;self.resizeHandle=handle
  handle:SetScript("OnEnter",function() handle.inside=true;UI:RefreshResizeState() end)
  handle:SetScript("OnLeave",function() handle.inside=nil;UI:RefreshResizeState() end)
@@ -113,5 +117,6 @@ function UI:BuildResizeHandle()
   if button=="LeftButton" and UI.resizing then UI:ResizeToCursor();UI:StopWindowResize() end
  end)
  handle:SetScript("OnHide",function() handle.inside=nil;UI:StopWindowResize();UI:RefreshResizeState() end)
+ UI:Element(handle,"host.resize","host")
  self:RefreshResizeState()
 end

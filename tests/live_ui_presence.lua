@@ -6,10 +6,12 @@ if not A or InCombatLockdown() or A:GetSetting("reduceMotion") or U and (U:IsSho
  return probe:Fail("requires_closed_ui_with_animation")
 end
 local warmedHere=not U or not U.frame
-if warmedHere then A:Open("settings");U=A.UI;U:Hide(true) end
-local originalPage=U.page
+local originalPage=U and U.page
+local originalReturn=U and U.settingsReturnPage
+local originalShown={}
+if U then for key,page in pairs(U.pages) do originalShown[key]=page.frame and page.frame:IsShown() or false end end
 local oldFPS,oldBackground=GetCVar("maxFPS"),GetCVar("maxFPSBk")
-local observer=CreateFrame("Frame")
+local observer
 local report={build=select(2,GetBuildInfo()),library=LycheeUI.versionString,requestedFPSLimit=60,warmedHere=warmedHere,gc="natural",opening={},closing={},quickClosing={}}
 local stage,elapsed="baseline",0
 local function Sample(dt)
@@ -20,13 +22,18 @@ local function Logo()
 end
 assert(probe:Async(10))
 assert(probe:OnCleanup(function()
- observer:SetScript("OnUpdate",nil);observer:Hide()
- if U:IsShown() then U:Hide(true) end
+ if observer then observer:SetScript("OnUpdate",nil);observer:Hide() end
+ U=U or A.UI
+ if U and U.frame then
+  U:Hide(true)
+  for key,page in pairs(U.pages) do if page.frame then page.frame:SetShown(originalShown[key]==true) end end
+  U.page=originalPage;U.settingsReturnPage=originalReturn;U:UpdateNav();U.Motion:FinishRect(U.underline)
+ end
  SetCVar("maxFPS",oldFPS);SetCVar("maxFPSBk",oldBackground)
- if U.page~=originalPage then U.pages[U.page].frame:Hide() end
- U.page=originalPage;U.pages[originalPage].frame:Show();U:UpdateNav()
 end))
 assert(probe:Guard(function() return not InCombatLockdown() end,{"PLAYER_REGEN_DISABLED"},"combat_started"))
+if warmedHere then assert(A:Open("settings"));U=A.UI;U:Hide(true) end
+observer=CreateFrame("Frame")
 SetCVar("maxFPS",60);SetCVar("maxFPSBk",60)
 observer:SetScript("OnUpdate",assert(probe:Callback(function(_,dt)
  elapsed=elapsed+dt

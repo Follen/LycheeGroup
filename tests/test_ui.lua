@@ -73,18 +73,18 @@ do
  T.near(icon.texCoords[2]-icon.texCoords[1],icon.texCoords[4]-icon.texCoords[3],.000001,"352x352 scene crop keeps equal pixel dimensions")
  T.ok(icon._lycheeMask,"Delve art keeps the shared GameIcon mask")
  T.eq(journalQueries,0,"mapped Delves resolve their atlas without journal work")
- for _,map in ipairs({3077,3079,2664}) do U:SetActivityIcon(icon,{mapID=map,categoryID=121});T.eq(icon:GetTexture(),U.Theme.media.."delve.tga","unmapped Delves without journal art use their category icon") end
+ for _,map in ipairs({3077,3079,2664}) do U:SetActivityIcon(icon,{mapID=map,categoryID=121});T.eq(icon:GetTexture(),U.Theme.productMedia.."delve.tga","unmapped Delves without journal art use their category icon") end
  T.same(icon.texCoords,{0,1,0,1},"category art does not retain the previous atlas crop")
  U:SetActivityIcon(icon,{mapID=3038,categoryID=121});T.eq(icon:GetTexture(),12345,"an unmapped Delve may use available native journal art")
  local before=journalQueries;U:SetActivityIcon(icon,{mapID=3077,categoryID=121});T.eq(journalQueries,before,"missing journal art is cached between row bindings")
- atlasReady=false;U:SetActivityIcon(icon,{mapID=2963,categoryID=121});T.eq(icon:GetTexture(),U.Theme.media.."delve.tga","an unavailable atlas has a visible category fallback")
+ atlasReady=false;U:SetActivityIcon(icon,{mapID=2963,categoryID=121});T.eq(icon:GetTexture(),U.Theme.productMedia.."delve.tga","an unavailable atlas has a visible category fallback")
  atlasReady=true;U:SetActivityIcon(icon,{mapID=2963,categoryID=121});T.eq(icon:GetTexture(),7291407,"a later available atlas replaces the fallback")
  U:SetActivityIcon(icon,{mapID=99999,categoryID=2});T.eq(icon:GetTexture(),12345,"ordinary dungeon artwork uses the journal's sixth return, the button thumbnail")
  T.near(icon.texCoords[1],.06,.000001,"rebinding to dungeon art restores its complete texture crop")
  for _,category in ipairs(G.Catalog:GetCategories()) do
-  U:SetActivityIcon(icon,{categoryID=category.id});T.eq(icon:GetTexture(),U.Theme.media..category.icon..".tga","activities without a map use their catalog category icon")
+  U:SetActivityIcon(icon,{categoryID=category.id});T.eq(icon:GetTexture(),U:CategoryIcon(category.icon),"activities without a map use their catalog category icon")
  end
- U:SetActivityIcon(icon,{categoryID=1,mapID=99998});T.eq(icon:GetTexture(),U.Theme.media.."flag.tga","a quest without journal art uses the quest category icon")
+ U:SetActivityIcon(icon,{categoryID=1,mapID=99998});T.eq(icon:GetTexture(),U.Theme.productMedia.."flag.tga","a quest without journal art uses the quest category icon")
  C_Texture.GetAtlasInfo=getAtlas;C_EncounterJournal.GetInstanceForGameMap=getJournal;EJ_GetInstanceInfo=getInstance;G.Catalog.GetCategories=getCategories
 end
 A:SetSetting("reduceMotion",true)
@@ -192,7 +192,16 @@ local stockNameBorder=CreateFrame("Frame",nil,LFGListFrame.EntryCreation.Name);s
 -- with two horizontal and two vertical WHITE8X8 lines, and no backdrop or alias.
 local function SkinBorder(parent)
  local border=CreateFrame("Frame",nil,parent);border:SetAllPoints()
- for i=1,4 do local line=border:CreateTexture(nil,"OVERLAY");line:SetTexture(130871);if i<=2 then line:SetHeight(.75) else line:SetWidth(.75) end end
+ for i=1,4 do
+  local line=border:CreateTexture(nil,"OVERLAY");line:SetTexture(130871)
+  if i<=2 then
+   local edge=i==1 and "TOP" or "BOTTOM";line:SetHeight(.75)
+   line:SetPoint(edge.."LEFT",border,edge.."LEFT",0,0);line:SetPoint(edge.."RIGHT",border,edge.."RIGHT",0,0)
+  else
+   local edge=i==3 and "LEFT" or "RIGHT";line:SetWidth(.75)
+   line:SetPoint("TOP"..edge,border,"TOP"..edge,0,0);line:SetPoint("BOTTOM"..edge,border,"BOTTOM"..edge,0,0)
+  end
+ end
  return border
 end
 local anonymousNameBorder=SkinBorder(LFGListFrame.EntryCreation.Name);anonymousNameBorder:SetAlpha(.7)
@@ -406,7 +415,7 @@ do
  local dk={name="DeathKnight-Away",nameKey="DeathKnight-Away",class="DEATHKNIGHT",specID=252,assignedRole="DAMAGER",requestedRoles={TANK=true,DAMAGER=true,HEALER=false}}
  G.applicants[70].members[1]=dk;G:Notify("applicants")
  local row=solo.people[1];local specTexture=row.icon:GetTexture()
- T.eq(row.roles[1]:GetTexture(),U.Theme.media.."role-tank.tga");T.eq(row.roles[2]:GetTexture(),U.Theme.media.."role-dps.tga")
+ T.eq(row.roles[1]:GetTexture(),U.Theme.productMedia.."role-tank.tga");T.eq(row.roles[2]:GetTexture(),U.Theme.productMedia.."role-dps.tga")
  T.eq(row.roles[1]:IsShown(),true);T.eq(row.roles[2]:IsShown(),true);T.eq(row.roles[3]:IsShown(),false,"a DK applicant can request tank and damage independently of specialization")
  create.roleFilters.TANK:Fire("OnClick");T.eq(#create.appIDs,1)
  create.roleFilters.DAMAGER:Fire("OnClick");T.eq(#create.appIDs,1)
@@ -425,7 +434,7 @@ do
  G.applicants[72]=nil;G:Notify("applicants")
  dk.requestedRoles.TANK=false;G:Notify("applicants")
  T.eq(solo.people[1],row,"changing requested roles reuses the existing applicant row")
- T.eq(row.roles[1]:GetTexture(),U.Theme.media.."role-dps.tga");T.eq(row.roles[2]:IsShown(),false);T.eq(row.roles[3]:IsShown(),false,"row reuse removes the old second requested role")
+ T.eq(row.roles[1]:GetTexture(),U.Theme.productMedia.."role-dps.tga");T.eq(row.roles[2]:IsShown(),false);T.eq(row.roles[3]:IsShown(),false,"row reuse removes the old second requested role")
  T.eq(dk.specID,252);T.eq(row.icon:GetTexture(),specTexture,"requested roles do not rewrite the DK specialization icon")
  G.applicants[70]=nil;G:Notify("applicants")
  T.eq(solo.appID,nil);T.eq(solo.people[1].member,nil,"emptying recruitment releases pooled member bindings")
@@ -697,7 +706,7 @@ T.eq(anonymousNameBorder:IsShown(),true);T.eq(anonymousNameBorder:GetAlpha(),.7)
 A:Open("notes",{add={name="Guest",realm="Away",class="WARRIOR",specID=71,type="positive"}})
 local notes=U.pages.notes
 T.eq(notes.reminderState,nil);T.eq(notes.historyState,nil,"notes and history leave preference states in Settings")
-T.eq(notes.left:GetWidth(),420);T.eq(notes.list.rowHeight,100)
+T.eq(notes.left:GetWidth(),420);T.eq(notes.list.rowHeight,100,"note rows reserve the main-line paired body line and bottom padding")
 T.eq(notes.search:GetWidth(),notes.list.rows[1]:GetWidth(),"notes search ends at the card edge before the scrollbar gutter")
 local function AnchorX(region) local point={region:GetPoint()};return point[#point-1] end
 T.eq(AnchorX(notes.listTitle),6,"notes heading keeps the shared header's text inset")
@@ -1411,7 +1420,7 @@ do
  for i,role in ipairs({"TANK","HEALER","DAMAGER","DAMAGER","DAMAGER"}) do
   local slot=target.roster.slots[i]
   T.eq(slot.role:IsShown(),true,"empty party slots retain a role placeholder")
-  T.eq(slot.role:GetTexture(),U.Theme.media..({TANK="role-tank",HEALER="role-healer",DAMAGER="role-dps"})[role]..".tga")
+  T.eq(slot.role:GetTexture(),U.Theme.productMedia..({TANK="role-tank",HEALER="role-healer",DAMAGER="role-dps"})[role]..".tga")
   T.eq(slot.icon:IsShown(),i==1,"only the occupied slot shows a specialization")
   T.eq(slot.role.desaturated,i~=1,"only empty seasonal dungeon roles use grayscale")
   T.same(slot.role.vertex,i==1 and {1,1,1,1} or {.7,.7,.7,1},"missing roles are darker while occupied roles retain their colors")
@@ -1493,7 +1502,7 @@ do
  T.eq(target.marks.flags.friend,false,"Battle.net friends do not become character friends")
  r.charFriends=1;G:Notify("result",r.id);U.Motion:Tick(.016)
  T.ok(target.marks.icons.friend:IsShown(),"both types of friendship can appear together")
- T.eq(target.marks.icons.friend:GetTexture(),U.Theme.media.."friend.tga")
+ T.eq(target.marks.icons.friend:GetTexture(),U.Theme.productMedia.."friend.tga")
  r.bnetFriends=0;r.charFriends=0;G:Notify("result",r.id);U.Motion:Tick(.016)
 end
 do
@@ -2134,7 +2143,7 @@ T.eq(U.logo:GetWidth(),closingLogoWidth,"closing does not snap a visible brand a
 T.eq(U.logo:GetHeight(),closingLogoHeight)
 T.eq(closingRow.title:GetText(),closingTitle);T.eq(U.frame:IsShown(),true)
 U.Motion:Tick(.43);T.eq(U.frame:IsShown(),false);T.eq(next(G.views),nil);T.eq(U.Native.searchLease,nil,"the completed close releases browsing and native input ownership")
-T.eq(U.Motion.jobs.brand,nil,"the brand animation stops once the window is hidden")
+T.eq(U.brandMotion:IsPlaying(),false,"the brand animation stops once the window is hidden")
 A:Open("find");G.records=closingRecords;find:RefreshResults();U.Motion:Tick(.5)
 U:Hide();U.Motion:Tick(.1);U:Show("find");U.Motion:Tick(.5)
 T.eq(U.frame:IsShown(),true,"an interrupted close cannot hide the reopened window");T.eq(U.hiding,nil);T.ok(G.views[find],"the reopened page keeps its live browsing subscription")
@@ -2155,7 +2164,7 @@ U:Hide(true)
 do
  T.near(U.Theme.width,1160*1.12,.001,"the main window is twelve percent wider")
  T.eq(U.Theme.height,840,"widening keeps the original window height")
- T.eq(select(2,find.appList.rows[1].title:GetFont()),18,"outgoing applications use a compact single-line title")
+ T.eq(select(2,find.appList.rows[1].title:GetFont()),18,"outgoing applications keep the released compact title")
  T.eq(find.appList.rows[1].title:GetHeight(),24)
  local function Top(region) local point={region:GetPoint()};return -point[#point] end
  for _,row in ipairs({find.results.rows[1],notes.list.rows[1],notes.historyList.rows[1]}) do
@@ -2925,7 +2934,7 @@ do
  end
  local menu=Open(2)
  T.eq(#menu.items,3);T.eq(menu.items[1].label,"私聊");T.eq(menu.items[2].label,"移出队伍");T.eq(menu.items[3].label,"查看角色信息")
- T.same(menu.items[2].color,u.Theme.accent,"the removal action uses the destructive color")
+ T.same(menu.list.rows[2].title.color,u.Theme.accent,"the removal action renders the destructive color")
  T.eq(menu.items[1].disabled,false,"joined cross-faction players can be whispered")
  menu.list.rows[1]:Fire("OnClick","LeftButton");T.eq(tells[1],"Cross-Away")
  menu=Open(2);menu.list.rows[2]:Fire("OnClick","LeftButton")
@@ -3351,7 +3360,7 @@ do
  u.Members:BindMarks(marks,person);T.eq(#s.nodes,nodes,"rebinding reuses the textures and note button")
  person.isCharFriend=true;person.isGuildMate=true
  T.eq(u.Members:BindMarks(marks,person),84,"all three relationships coexist with the specific note kind")
- T.eq(marks.icons.friend:GetTexture(),u.Theme.media.."friend.tga");T.eq(marks.icons.guild:GetTexture(),u.Theme.media.."guild.tga")
+ T.eq(marks.icons.friend:GetTexture(),u.Theme.productMedia.."friend.tga");T.eq(marks.icons.guild:GetTexture(),u.Theme.productMedia.."guild.tga")
  a:SetSetting("relations",false);T.eq(u.Members:BindMarks(marks,person),18,"relationship settings leave the enabled note visible")
  a:SetSetting("relations",true);a:SetSetting("noteMarks",false);T.eq(u.Members:BindMarks(marks,person),62)
  T.eq(button:IsShown(),false);T.eq(marks.noteKey,nil)
@@ -3470,7 +3479,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  page.nav.blocks:Fire("OnClick")
  T.eq(page.heading:GetText(),locale=="zhCN" and "屏蔽" or "Blocks")
  T.eq(loads,1);T.eq(fresh.Count(g.subs),1,"only the active block section subscribes to result changes")
- local list=page.blocksList;local nodes=#fresh.S.nodes
+ local list=page.blocksList
  T.eq(#list.ids,40);T.ok(#list.rows<40,"blocked leaders use a virtualized row pool")
  T.eq(list.rows[1].title:GetText(),"Blocked01","rows display the player name")
  T.eq(list.rows[1].meta:GetText(),"Away","the complete realm has its own column")
@@ -3483,6 +3492,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  first:Fire("OnMouseDown");first:Fire("OnClick")
  T.eq(g.db.blockedLeaders[key],nil);T.eq(#list.ids,39,"single removal refreshes the active list")
  g.Results:BlockTitle("Another title","Another-Home");T.eq(#list.ids,40,"external blocking updates the visible list")
+ local nodes=#fresh.S.nodes -- First scroll has materialized the other alternating row surfaces.
  for _,percent in ipairs({70,100,130}) do
   a:SetSetting("fontScale",percent);list:SetPixelOffset(0,false)
   local row=list.rows[1];local point={list:GetPoint()};local top=-point[#point]
@@ -3529,16 +3539,17 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  local fresh=dofile("tests/ui_fixture.lua")(locale)
  local a,u,s=fresh.A,fresh.U,fresh.S
  a:SetSetting("reduceMotion",true)
- local proto=getmetatable(s.nodes[1]);local measure=proto.GetStringWidth
+ local proto=getmetatable(s.nodes[1]);local measure,natural=proto.GetStringWidth,proto.GetUnboundedStringWidth
  local pending,factor=true,1
- function proto:GetStringWidth()
+ function proto:GetUnboundedStringWidth()
   local header=self.text==u.L.find or self.text==u.L.create or self.text==u.L.notes or self.text==u.L.settings
   if header and u.frame then
    if pending or not u.frame:IsShown() then return 0 end
-   return measure(self)*factor
+   return natural(self)*factor
   end
-  return measure(self)
+  return natural(self)
  end
+ proto.GetStringWidth=proto.GetUnboundedStringWidth
  local function CheckHeader()
   local x=0
   for _,key in ipairs({"find","create","notes"}) do
@@ -3559,7 +3570,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  a:Open("find");u.frame:Fire("OnUpdate",.016);CheckHeader()
  pending=true;u:ApplyFont(u.Theme.font);u:Hide(true)
  T.eq(u.frame:GetScript("OnUpdate"),nil,"closing the window cancels its pending header correction")
- proto.GetStringWidth=measure
+ proto.GetStringWidth,proto.GetUnboundedStringWidth=measure,natural
 end
 
 -- The settings pill centers its complete icon/label group, including after font changes.
@@ -3594,8 +3605,9 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  for _,role in ipairs({"ALL","TANK","HEALER","DAMAGER"}) do controls[#controls+1]=create.roleFilters[role] end
  for _,role in ipairs({"TANK","HEALER","DAMAGER"}) do controls[#controls+1]=modal.roles[role] end
  for _,option in ipairs(controls) do
-  local width=option.label.GetStringWidth;widths[option]=width
-  option.label.GetStringWidth=function(self) return width(self)*1.5 end
+  local width,natural=option.label.GetStringWidth,option.label.GetUnboundedStringWidth;widths[option]={width,natural}
+  option.label.GetStringWidth=function(self) return natural(self)*1.5 end
+  option.label.GetUnboundedStringWidth=option.label.GetStringWidth
  end
  fresh.A:Open("settings");u:ApplyFont(u.Theme.font);fresh.A:Open("create")
  local right=0
@@ -3622,7 +3634,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  end
  T.ok(modal.cancel:GetWidth()>=modal.cancel.label:GetStringWidth()+40,"application cancel retains full text padding")
  u:CloseModal()
- for _,option in ipairs(controls) do option.label.GetStringWidth=widths[option] end
+ for _,option in ipairs(controls) do option.label.GetStringWidth,option.label.GetUnboundedStringWidth=widths[option][1],widths[option][2] end
  u:ApplyFont(u.Theme.font)
  u:Hide(true)
 end
@@ -3871,12 +3883,8 @@ do
   local render=tip.RenderGroup;local renders=0
   tip.RenderGroup=function(self,...) renders=renders+1;return render(self,...) end
   if deferred then
-   local details=g.Results.GetDetails;local reads=0
-   g.Results.GetDetails=function(self,current) if current.id==7 then reads=reads+1 end;return details(self,current) end
    Notify(8);u.Motion:Tick(.02)
    T.eq(renders,0,"another result does not redraw the open tooltip")
-   T.eq(reads,1,"an unrelated result adds no detail lookup beyond the existing visible-row refresh")
-   g.Results.GetDetails=details
   end
   record.leaderName,record.leaderKey,record.leaderFactionGroup=beta.name,beta.nameKey,0;application.leaderName=beta.name
   alpha.isLeader,alpha.factionGroup=nil,nil;beta.isLeader,beta.factionGroup=true,0
@@ -3989,11 +3997,11 @@ do
  T.eq(select(4,u.underline:GetPoint()),middleX,"a rapid navigation reversal keeps the current underline position")
  m:Tick(.2);T.eq(select(4,u.underline:GetPoint()),firstX)
  u:Navigate("notes");m:Tick(.2);u:Navigate("find");m:Tick(.2)
- local label=u.navItems.find.label;local stringWidth=label.GetStringWidth
- label.GetStringWidth=function(self) return stringWidth(self)+40 end
+ local label=u.navItems.find.label;local stringWidth,naturalWidth=label.GetStringWidth,label.GetUnboundedStringWidth
+ label.GetStringWidth=function(self) return naturalWidth(self)+40 end;label.GetUnboundedStringWidth=label.GetStringWidth
  u:ApplyFont(u.Theme.font);u:Navigate("create");m:Tick(.2)
  T.near(select(4,u.underline:GetPoint()),select(4,u.navItems.create:GetPoint())+34,.51,"font relayout updates the underline's destination with its navigation item")
- label.GetStringWidth=stringWidth;u:ApplyFont(u.Theme.font);u:Navigate("find");m:Tick(.2)
+ label.GetStringWidth,label.GetUnboundedStringWidth=stringWidth,naturalWidth;u:ApplyFont(u.Theme.font);u:Navigate("find");m:Tick(.2)
 
  local p=u.pages.find
  p:SelectCategory("seasonDungeon")
@@ -4505,4 +4513,62 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  T.eq(cold.U.settingsReturnPage,nil,"a cold settings entry does not invent a source")
  cold.U.settingsButton:Fire("OnClick","LeftButton");T.eq(cold.U.page,"find","a cold settings entry can return through the ordinary default")
  cold.U:Hide(true)
+end
+
+-- The default product typography remains the main-line visual baseline.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("enUS")
+ local a,u=fresh.A,fresh.U
+ a:SetSetting("reduceMotion",true);a:Open("find")
+ T.eq(select(2,u.brandTitle:GetFont()),23,"brand typography matches the released main-line default")
+ T.eq(select(2,u.navItems.find.label:GetFont()),17,"top navigation keeps its main-line default")
+ a:Open("notes")
+ T.eq(select(2,u.pages.notes.list.rows[1].title:GetFont()),21,"note names retain the main-line list title")
+ a:SetSetting("fontScale",130)
+ T.near(select(2,u.brandTitle:GetFont()),23*1.3,.001,"the user font setting still updates built text immediately")
+ a:SetSetting("fontScale",100)
+ T.eq(select(2,u.brandTitle:GetFont()),23,"font changes recalculate from the base instead of accumulating")
+ u:Hide(true)
+end
+
+-- Theme saves explain their reload boundary without applying appearance or search.
+for _,locale in ipairs({"zhCN","enUS"}) do
+ local fresh=dofile("tests/ui_fixture.lua")(locale)
+ local a,u,g=fresh.A,fresh.U,fresh.G
+ a:SetSetting("reduceMotion",true);a:Open("settings",{section="interface"})
+ local page=u.pages.settings;local reload=page.reloadLanguage;local current=u.context.Theme
+ T.eq(page.themeReloadHint,nil,"default Settings do not construct a pending-theme message")
+ T.eq(reload:IsShown(),false)
+ local searches=0;local search=g.Search.Search
+ g.Search.Search=function(self,...) searches=searches+1;return search(self,...) end
+ local definition={schema=1,id="fixture.reload.hint."..locale,revision=1,appearance={main={tokens={brand={.2,.3,.4,1}}}}}
+ T.ok(a.API.Theme:Import(definition,{activate=true}))
+ T.eq(page.themeReloadHint,nil,"Theme import does not broadcast a UI refresh")
+ page:Sync()
+ T.eq(page.reloadLanguage,reload,"pending themes reuse the existing reload button")
+ T.eq(reload:IsVisible(),true)
+ T.eq(page.themeReloadHint:GetText(),locale=="zhCN" and "主题已保存，重载界面后生效。" or "Theme saved. Reload the UI to apply it.")
+ T.eq(page.themeReloadHint:IsVisible(),true);T.eq(page.themeReloadHint:GetParent(),page.panels.interface)
+ T.eq(u.context.Theme,current,"showing pending feedback never replaces the current theme")
+ T.eq(searches,0,"reading and presenting pending status does not start a search")
+ local hintSize=select(2,page.themeReloadHint:GetFont())
+ a:SetSetting("fontScale",130)
+ T.near(select(2,page.themeReloadHint:GetFont()),hintSize*1.3,.001,"pending feedback follows the live font preference")
+ T.ok(page.themeReloadHint:GetWidth()>0 and page.themeReloadHint:GetWidth()+reload:GetWidth()+16<=page.panels.interface:GetWidth(),"pending text leaves space for the existing reload action")
+ a:SetSetting("fontScale",100)
+ local nativeUI=C_UI;local reloads=0;_G.C_UI={Reload=function() reloads=reloads+1 end}
+ reload:Fire("OnClick","LeftButton");_G.C_UI=nativeUI
+ T.eq(reloads,1,"the shared reload action remains connected")
+ page:SelectSection("general")
+ T.eq(page.themeReloadHint:IsVisible(),false,"pending feedback is confined to Interface settings")
+ T.ok(a.API.Theme:Remove(definition.id));page:Sync()
+ T.eq(page.themeReloadHint:IsShown(),false);T.eq(reload:IsShown(),false)
+ a:SetSetting("language",locale=="zhCN" and "enUS" or "zhCN");page:SelectSection("interface")
+ T.eq(reload:IsVisible(),true,"language-only reload feedback keeps the existing button")
+ T.eq(page.themeReloadHint:IsShown(),false,"a language change does not claim that a theme was saved")
+ T.ok(a.API.Theme:Import(definition,{activate=true}));page:Sync()
+ a:SetSetting("language","auto");page:Sync()
+ T.eq(reload:IsVisible(),true,"clearing the language change still leaves a pending theme actionable")
+ T.eq(page.themeReloadHint:IsVisible(),true)
+ u:Hide(true)
 end

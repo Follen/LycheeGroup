@@ -7,12 +7,25 @@ if not U or not U.frame or U:IsShown() or U.hiding or U.preview or U.activeModal
  return probe:Fail("requires_warmed_closed_ui_with_animation")
 end
 local originalPage=U.page
+local originalReturn=U.settingsReturnPage
 local oldFPS,oldBackground=GetCVar("maxFPS"),GetCVar("maxFPSBk")
 local observer=CreateFrame("Frame")
 local report={build=select(2,GetBuildInfo()),profile=GetCVar("scriptProfile"),originalFPS=oldFPS,originalBackgroundFPS=oldBackground,limit=120,cycles={},baseline={frames={}},gc="natural",scope="Real Find and Settings controllers; frame intervals include the rest of the client"}
 local pages={"find","settings","find","settings","find","settings"}
 local stage,elapsed,index="baseline",0,0
 local current
+local group,oldFindPrefs,oldFindFilters
+local function Copy(value)
+ if type(value)~="table" then return value end
+ local result={};for key,item in pairs(value) do result[key]=Copy(item) end;return result
+end
+local function SaveFind()
+ if group then return end
+ assert(A:Ensure("Group"));group=A.Group
+ oldFindPrefs=group.prefs.find;oldFindFilters=Copy(group.Search:GetFilters())
+ group.prefs.find=Copy(oldFindPrefs)
+ U.pages.find.loaded=nil;U.pages.find.restoredInitial=nil
+end
 local function Summarize(bucket)
  local frames=bucket.frames
  table.sort(frames)
@@ -37,6 +50,7 @@ local function OpenNext()
  current={page=pages[index],opening={frames={}},hold={frames={}},closing={frames={}},rest={frames={}}}
  report.cycles[index]=current
  local start=debugprofilestop()
+ if current.page=="find" then SaveFind() end
  U:Show(current.page)
  current.openSyncMs=debugprofilestop()-start
  current.resultsAtOpen=A.Group and A.Group:GetResultCount()
@@ -46,9 +60,14 @@ assert(probe:Async(18))
 assert(probe:OnCleanup(function()
  observer:SetScript("OnUpdate",nil);observer:Hide()
  if U:IsShown() then U:Hide(true) end
+ if group then
+  group.Search:SetFilters(oldFindFilters);group.prefs.find=oldFindPrefs
+  U.pages.find.loaded=nil;U.pages.find.restoredInitial=nil
+ end
  SetCVar("maxFPS",oldFPS);SetCVar("maxFPSBk",oldBackground)
  if U.page~=originalPage then U.pages[U.page].frame:Hide() end
  U.page=originalPage
+ U.settingsReturnPage=originalReturn
  U.pages[originalPage].frame:Show();U:UpdateNav()
 end))
 assert(probe:Guard(function() return not InCombatLockdown() end,{"PLAYER_REGEN_DISABLED"},"combat_started"))

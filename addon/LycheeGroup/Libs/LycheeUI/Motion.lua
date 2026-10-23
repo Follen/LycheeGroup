@@ -2,47 +2,11 @@ local _,private=...
 local Library=private.LycheeUILoad
 if not Library then return end
 local function curve(p) return p*(2-p) end
-local function coefficients(x1,y1,x2,y2)
- local cx,cy=3*x1,3*y1
- local bx,by=3*(x2-x1)-cx,3*(y2-y1)-cy
- return {1-cx-bx,bx,cx,1-cy-by,by,cy}
-end
-local function bezier(u,c)
- if u<=0 then return 0 elseif u>=1 then return 1 end
- local ax,bx,cx,ay,by,cy=c[1],c[2],c[3],c[4],c[5],c[6]
- local t=u
- -- These fixed brand curves have positive x slopes. Five Newton steps cover
- -- their full domain; no per-frame powers, search tables or fallback solver.
- for _=1,5 do
-  t=t-(((ax*t+bx)*t+cx)*t-u)/((3*ax*t+2*bx)*t+cx)
- end
- return ((ay*t+by)*t+cy)*t
-end
--- 品牌五段(与 Desgin §7、主 Lychee brandPoses 一致):段末时间、X/Y 缩放、上移(原图单位)、缩放与位移 bezier。
-local poses={
- {.168,1.075,.925,0,.42,0,.70,1,.42,0,.75,1},
- {.504,.960,1.045,7,.16,.6,.25,1,.16,.6,.25,1},
- {.840,1.035,.965,0,.30,0,.60,1,.42,0,.60,1},
- {1.092,.990,1.012,1,.16,.7,.30,1,.16,.7,.30,1},
- {1.386,1,1,0,.20,.7,.30,1,.20,.7,.30,1},
-}
--- Immutable curve data is compiled once and shared by all window contexts.
-for index,pose in ipairs(poses) do
- local previous=poses[index-1]
- pose.start=previous and previous[1] or 0
- pose.inverseDuration=1/(pose[1]-pose.start)
- pose.x,pose.y,pose.offset=previous and previous[2] or 1,previous and previous[3] or 1,previous and previous[4] or 0
- pose.dx,pose.dy,pose.dOffset=pose[2]-pose.x,pose[3]-pose.y,pose[4]-pose.offset
- pose.scaleCurve=coefficients(pose[5],pose[6],pose[7],pose[8])
- if pose.dOffset~=0 then
-  local same=pose[5]==pose[9] and pose[6]==pose[10] and pose[7]==pose[11] and pose[8]==pose[12]
-  pose.moveCurve=same and pose.scaleCurve or coefficients(pose[9],pose[10],pose[11],pose[12])
- end
-end
 function Library.CreateMotion(UI)
 -- 单一驱动;switches/alphas 记录进行中动画的终值,StopAll 据此落终态不留残影。
 local T=UI.Theme
-local M = {jobs={}, jobIds={}, nextJobId=0, startTimes={}, switches={}, alphas={}, alphaFinishes={}, colors={}, placements={},reveals={},rects={},selections={},waiting={},busy={},spins={},spinOwners={},tickBuffer={}}
+local presenceKey={}
+local M = {jobs={}, jobIds={}, nextJobId=0, startTimes={}, stops={}, switches={}, alphas={}, alphaFinishes={}, colors={}, placements={},reveals={},rects={},selections={},waiting={},busy={},spins={},spinOwners={},tickBuffer={}}
 local function Pixel(value,scale) return math.floor(value*scale+.5)/scale end
 local function PlaceReveal(state,x,y,alpha)
  local region=state.region
@@ -76,22 +40,27 @@ end
 local function Drive(_, elapsed)
  M:Tick(elapsed,next(M.startTimes) and GetTimePreciseSec() or nil)
 end
-function M:Start(key, job)
+function M:Start(key, job, onStop)
  if not self.driver then self.driver=CreateFrame("Frame") end
+ local previousStop=self.stops[key]
  self.jobs[key]=job
+ self.stops[key]=onStop
  self.nextJobId=self.nextJobId+1;self.jobIds[key]=self.nextJobId
  self.startTimes[key]=GetTimePreciseSec()
  if not self.running then
   self.running=true;self.driver:SetScript("OnUpdate",Drive);self.driver:Show()
  end
+ if previousStop then previousStop() end
 end
+function M:IsRunning(key) return self.jobs[key]~=nil end
 function M:Stop(key,keepRect)
  local rect=not keepRect and self.rects[key]
  if rect then self:Stop(rect) end
- self.jobs[key]=nil
+ local onStop=self.stops[key]
+ self.jobs[key]=nil;self.stops[key]=nil
  self.jobIds[key]=nil
  self.startTimes[key]=nil
- if key=="presence" then self.presenceFinished=nil end
+ if key==presenceKey then self.presenceFinished=nil end
  if self.waiting[key] then RestoreWaiting(key,self.waiting[key]);self.waiting[key]=nil end
  if self.busy[key] then key:SetAlpha(self.busy[key]);self.busy[key]=nil end
  if self.spins[key] then key:SetRotation(0);self.spins[key]=nil end
@@ -99,6 +68,7 @@ function M:Stop(key,keepRect)
  if self.running and not next(self.jobs) then
   self.running=false;self.driver:SetScript("OnUpdate",nil);self.driver:Hide()
  end
+ if onStop then onStop() end
 end
 
 -- refresh-spin: 900ms linear clockwise, only while the caller is busy.
@@ -222,7 +192,7 @@ function M:Busy(region,enabled)
   region:SetAlpha(T.busyAlpha+(1-T.busyAlpha)*(.5+.5*math.sin(elapsed/T.busyPeriod*math.pi*2)))
  end)
 end
--- Waiting is local to the lychee texture and lives only for an active search.
+-- Waiting changes only the supplied region while the caller enables it.
 function M:Waiting(region,enabled)
  self:Stop(region);region:SetShown(enabled)
  if not enabled then return end
@@ -238,22 +208,32 @@ function M:Waiting(region,enabled)
  end)
 end
 function M:Count() local count=0;for _ in pairs(self.jobs) do count=count+1 end;return count end
-function M:Tick(elapsed,now)
- local snapshot,count=self.tickBuffer,0
- for key,job in pairs(self.jobs) do
-  count=count+3;snapshot[count-2],snapshot[count-1],snapshot[count]=key,job,self.jobIds[key]
- end
+local function RunTasks(snapshot,count,elapsed,now)
  for i=1,count,3 do
   local key,job,jobId=snapshot[i],snapshot[i+1],snapshot[i+2]
   snapshot[i],snapshot[i+1],snapshot[i+2]=nil,nil,nil
-  if self.jobIds[key]==jobId then
-   local started=self.startTimes[key];self.startTimes[key]=nil
+  if M.jobIds[key]==jobId then
+   local started=M.startTimes[key];M.startTimes[key]=nil
    -- OnUpdate elapsed covers the entire frame, including work before a new
    -- task existed. Only its first driver tick needs this lifetime clamp.
    local dt=now and started and math.max(0,math.min(elapsed,now-started)) or elapsed
    local finished=job(dt)
-   if finished and self.jobIds[key]==jobId then self:Stop(key,true) end
+   if finished and M.jobIds[key]==jobId then M:Stop(key,true) end
   end
+ end
+end
+function M:Tick(elapsed,now)
+ local nested=self.ticking
+ local snapshot,count=nested and {} or self.tickBuffer,0
+ for key,job in pairs(self.jobs) do
+  count=count+3;snapshot[count-2],snapshot[count-1],snapshot[count]=key,job,self.jobIds[key]
+ end
+ self.ticking=true
+ local ok,message=pcall(RunTasks,snapshot,count,elapsed,now)
+ self.ticking=nested
+ if not ok then
+  for index=1,count do snapshot[index]=nil end
+  error(message,0)
  end
 end
 function M:Alpha(region,target,duration,initial,finished)
@@ -342,43 +322,18 @@ function M:SetPresence(p)
   end
   if self.lastAlpha~=alpha then frame:SetAlpha(alpha);self.lastAlpha=alpha end
 end
+function M:StopPresence() self:Stop(presenceKey) end
 function M:Presence(shown,finished)
  local target=shown and 1 or 0
  local phase=self.phase or 0
- self:Stop("presence")
+ self:StopPresence()
  self.presenceTarget,self.presenceFinished=shown,finished
  self:SetPresence(phase)
  if UI:IsReducedMotion() or T.presenceDuration==0 or phase==target then self:SetPresence(target);self.presenceFinished=nil;if finished then finished() end;return end
  local direction=shown and 1 or -1
- self:Start("presence",function(dt)
+ self:Start(presenceKey,function(dt)
   phase=math.max(0,math.min(1,phase+direction*dt/T.presenceDuration));self:SetPresence(phase)
   if phase==target then self.presenceFinished=nil;if finished then finished() end;return true end
- end)
-end
-function M:StopBrand()
- self:Stop("brand")
- if UI.logo then local size=UI.Theme.logoSize;UI.logo:SetSize(size,size);UI.logo:ClearAllPoints();UI.logo:SetPoint("CENTER",UI.logoButton,"CENTER",0,0) end
-end
--- 变换只作用于图标自身(枢轴 64,103,原图 128),不移动父容器、命中区或标题。
-function M:Brand()
- if self.jobs.brand or UI:IsReducedMotion() then return end
- if T.brandDuration==0 then self:StopBrand();return end
- local elapsed,segment=0,1
- local logo=UI.logo
- logo:ClearAllPoints();logo:SetPoint("CENTER",UI.logoButton,"CENTER",0,0)
- self:Start("brand",function(dt)
-  elapsed=elapsed+dt*1.386/T.brandDuration
-  if elapsed>=1.386 then self:StopBrand();return true end
-  while elapsed>poses[segment][1] do segment=segment+1 end
-  local pose=poses[segment]
-  local u=(elapsed-pose.start)*pose.inverseDuration
-  local s=bezier(u,pose.scaleCurve)
-  local m=pose.moveCurve and pose.moveCurve~=pose.scaleCurve and bezier(u,pose.moveCurve) or s
-  local x,y=pose.x+pose.dx*s,pose.y+pose.dy*s
-  local size=UI.Theme.logoSize
-  logo:SetSize(size*x,size*y)
-  logo:SetPoint("CENTER",UI.logoButton,"CENTER",0,size/128*(39*(y-1)+pose.offset+pose.dOffset*m))
-  return false
  end)
 end
 -- 开关滑块:180ms 位置反馈;终值入册供 StopAll 落位。
@@ -402,6 +357,7 @@ function M:Switch(region,from,to)
 end
 -- 停止全部活动动画,并把进行中的滑块与透明度直接置于终态。
 function M:StopAll(keepPersistent)
+ local callbacks
  for texture in pairs(self.spins) do if not keepPersistent then texture:SetRotation(0);self.spins[texture]=nil end end
  for region,saved in pairs(self.waiting) do RestoreWaiting(region,saved);if not keepPersistent then self.waiting[region]=nil end end
  for region,alpha in pairs(self.busy) do region:SetAlpha(alpha);if not keepPersistent then self.busy[region]=nil end end
@@ -409,7 +365,11 @@ function M:StopAll(keepPersistent)
  for _,state in pairs(self.rects) do if self.jobs[state] then PlaceRect(state,state.toX,state.toY,state.toWidth,state.toHeight) end end
  for region,state in pairs(self.selections) do if self.jobs[region]==state.step then PlaceSelection(state,state.target) end end
  for key in pairs(self.jobs) do
-  if not keepPersistent or not (key=="presence" or self.spins[key] or self.waiting[key] or self.busy[key] or self.alphaFinishes[key]) then self.jobs[key]=nil;self.jobIds[key]=nil;self.startTimes[key]=nil end
+  if not keepPersistent or not (key==presenceKey or self.spins[key] or self.waiting[key] or self.busy[key] or self.alphaFinishes[key]) then
+   local onStop=self.stops[key]
+   if onStop then callbacks=callbacks or {};callbacks[#callbacks+1]=onStop end
+   self.jobs[key]=nil;self.jobIds[key]=nil;self.startTimes[key]=nil;self.stops[key]=nil
+  end
  end
  if not keepPersistent then self.presenceFinished=nil end
  if self.running and not next(self.jobs) then self.running=false;self.driver:SetScript("OnUpdate",nil);self.driver:Hide() end
@@ -422,21 +382,16 @@ function M:StopAll(keepPersistent)
  for region in pairs(self.alphas) do if not keepPersistent or not self.alphaFinishes[region] then self.alphas[region]=nil end end
  if not keepPersistent then for region in pairs(self.alphaFinishes) do self.alphaFinishes[region]=nil end end
  for panel in pairs(self.colors) do self.colors[panel]=nil end
- self:StopBrand()
-end
-
--- Theme layout runs with waiting regions at their base geometry. Continue
--- persistent visual work from those new endpoints, retaining lifecycle callbacks.
-function M:RefreshTheme()
- for region,saved in pairs(self.waiting) do
-  saved.width,saved.height,saved.alpha=region:GetWidth(),region:GetHeight(),region:GetAlpha()
-  saved.point={region:GetPoint()}
- end
- for region in pairs(self.busy) do self.busy[region]=region:GetAlpha() end
- for key,job in pairs(self.jobs) do if self.spins[key] or self.busy[key] or self.waiting[key] or self.alphaFinishes[key] then job(0) end end
- if self.jobs.presence then
-  self.lastX,self.lastY,self.lastAlpha=nil,nil,nil
-  self:Presence(self.presenceTarget,self.presenceFinished)
+ -- Detach and settle this batch before callbacks. A callback may start new
+ -- work or re-enter StopAll without losing or repeating an old cleanup.
+ if callbacks then
+  local failed,message=false,nil
+  for index=1,#callbacks do
+   local callback=callbacks[index];callbacks[index]=nil
+   local ok,err=pcall(callback)
+   if not ok and not failed then failed,message=true,err end
+  end
+  if failed then error(message,0) end
  end
 end
 

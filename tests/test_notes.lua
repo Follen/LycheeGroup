@@ -10,6 +10,7 @@ GetInspectSpecialization = nil
 Stubs.SetUnit("player", { name = "本人", realm = "晨风号角", class = "WARRIOR", classID = 1, guid = "P-0" })
 
 Load.addon("LycheeGroup", "Locale.lua")
+Load.addon("LycheeGroup", "Theme/Defaults.lua")
 Load.addon("LycheeGroup", "Core.lua")
 Load.addon("LycheeGroup", "Configuration.lua")
 Load.addon("LycheeGroup", "Specializations.lua")

@@ -51,17 +51,30 @@ function M:StopDragging()
     end
 end
 
-function M:ApplyAppearance()
+function M:ApplyElements()
+ if self.context then self.context:ApplyElements("minimap") end
+end
+
+function M:ApplyStartupTheme()
     if not self.button then return end
-    local theme=LycheeUI.ResolveTheme(A.Appearance:GetTheme("main"),A.StyleDefaults.main)
+    local elements=A.Appearance:GetElements("main")
+    local configured=elements["minimap.entry"] or elements["minimap.background"] or elements["minimap.icon"]
+    if configured and not self.context then
+        self.context=LycheeUI:CreateContext({themeDefaults=A.StyleDefaults.main,theme=A.Appearance:GetTheme("main"),elementDefaults=A.ElementDefaults.main,elements=elements,utilities=A.Appearance:GetUtilities("main")})
+        local C=self.context.C
+        C.Element(self.button,"minimap.entry",{scope="minimap",slots={root=self.button,background=self.background,icon=self.button.icon},stateOwner=self.button})
+        C.Element(self.background,"minimap.background",{scope="minimap",stateOwner=self.button})
+        C.Element(self.button.icon,"minimap.icon",{scope="minimap",stateOwner=self.button})
+    end
+    local theme=self.context and self.context.Theme or LycheeUI.ResolveTheme(A.Appearance:GetTheme("main"),A.StyleDefaults.main)
     self.theme=theme
     self.button:SetSize(theme.minimapButtonSize,theme.minimapButtonSize)
     self.button:SetFrameLevel(Minimap:GetFrameLevel()+theme.minimapFrameLevelOffset)
     self.button.icon:SetSize(theme.minimapIconSize,theme.minimapIconSize)
     self.background:SetTexture(theme.media.."circle.tga")
     self.background:SetVertexColor(unpack(self.inside and theme.surfaceLowHover or theme.surfaceLow))
-    self.button.icon:SetTexture(theme.media.."lychee-logo.tga")
-    self:UpdatePosition()
+    self.button.icon:SetTexture(theme.productMedia.."lychee-logo.tga")
+    self:UpdatePosition();self:ApplyElements()
 end
 
 function M:Initialize()
@@ -78,7 +91,7 @@ function M:Initialize()
     icon:SetPoint("CENTER")
     button:SetScript("OnEnter", function()
         M.inside=true
-        background:SetVertexColor(unpack(M.theme.surfaceLowHover))
+        background:SetVertexColor(unpack(M.theme.surfaceLowHover));M:ApplyElements()
         if M.dragging then return end
         local zh = A:GetLocale() == "zhCN"
         GameTooltip:SetOwner(button, "ANCHOR_LEFT")
@@ -89,14 +102,14 @@ function M:Initialize()
     end)
     button:SetScript("OnLeave", function()
         M.inside=nil
-        background:SetVertexColor(unpack(M.theme.surfaceLow))
+        background:SetVertexColor(unpack(M.theme.surfaceLow));M:ApplyElements()
         GameTooltip:Hide()
     end)
     button:SetScript("OnMouseDown", function(_, mouseButton)
         M.suppressClick = nil
-        if mouseButton == "LeftButton" then icon:SetAlpha(M.theme.minimapPressedAlpha) end
+        if mouseButton == "LeftButton" then icon:SetAlpha(M.theme.minimapPressedAlpha);M:ApplyElements() end
     end)
-    button:SetScript("OnMouseUp", function() icon:SetAlpha(1) end)
+    button:SetScript("OnMouseUp", function() icon:SetAlpha(1);M:ApplyElements() end)
     button:SetScript("OnClick", function(_, mouseButton)
         if M.suppressClick then return end
         if mouseButton == "RightButton" then
@@ -120,15 +133,16 @@ function M:Initialize()
         M:StopDragging()
         icon:SetAlpha(1)
         M.inside=nil
-        background:SetVertexColor(unpack(M.theme.surfaceLow))
+        background:SetVertexColor(unpack(M.theme.surfaceLow));M:ApplyElements()
         if GameTooltip:IsOwned(button) then GameTooltip:Hide() end
     end)
-    self:ApplyAppearance()
+    self:ApplyStartupTheme()
     self:UpdateSettings()
 end
 
 function M:UpdateSettings()
     if not self.button then return end
     self:UpdatePosition()
-    self.button:SetShown(A:GetSetting("minimap") == true)
+    -- Collectors track the addon's intended visibility through Show/Hide hooks.
+    if A:GetSetting("minimap") == true then self.button:Show() else self.button:Hide() end
 end

@@ -39,6 +39,11 @@ local function NewProvider(scenario)
  function p.Results:GetDetails(record) if type(record)=="number" then record=p.records[record] end;return record.details end
  function p.Results:GetProgressCount(record) return record.details.encounters and #record.details.encounters end
  function p.Results:GetMemberCounts(record) return self:GetDetails(record).counts end
+ function p.Results:GetLeaderClass(record)
+  for _,member in ipairs(record.details.members) do
+   if member.isLeader or record.leaderKey and member.nameKey==record.leaderKey then return member.class end
+  end
+ end
  function p.Results:HasMemberSpec(record,playerSpecID)
   for _,member in ipairs(record.details.members) do if member.specID==playerSpecID then return true end end
   return false
@@ -230,7 +235,7 @@ function UI:UpdatePreviewIndicator()
  if not self.frame then return end
  if self.preview and not self.previewExit then
   self.previewExit=self.C.Button(self.frame,S("预览 · 退出","Preview · Exit"),112,function() UI:StopPreview(true) end)
-  self.previewExit:SetHeight(32);self.previewExit:SetPoint("RIGHT",self.settingsButton,"LEFT",-12,0);self:Color(self.previewExit.label,self.Theme.accent)
+  self:Element(self.previewExit,"host.previewExit","host");self.previewExit:SetHeight(32);self.previewExit:SetPoint("RIGHT",self.settingsButton,"LEFT",-12,0);self:Color(self.previewExit.label,self.Theme.accent)
  end
  if self.previewExit then self.previewExit:SetShown(self.preview~=nil) end
 end

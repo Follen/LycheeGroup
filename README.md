@@ -64,14 +64,14 @@
 lua tests/runner.lua
 ```
 
-可在命令后指定模块，例如 `lua tests/runner.lua core notes`；未知模块名会明确报错并返回非零退出码。
+可在命令后指定模块，例如 `lua tests/runner.lua core notes`；未知模块名会明确报错并返回非零退出码。主题重载、布局、main 对照与内存测试入口见 [验证说明](tests/theme_reload.md)。
 
 本地控件树预览：运行 `lua tests/ui_preview.lua`，再打开 [`tests/ui-preview.html`](tests/ui-preview.html)。生成的 `tests/preview-data.js` 仅保留在本地，不提交到版本库；预览使用样例数据，不代表游戏内验证。
 
 [`tools/Build-Addon.ps1`](tools/Build-Addon.ps1) 用于打包，默认从相邻的 `LycheeUI` 源码目录同步内置库，也可用 `-LibraryPath` 指定位置。
 
-项目说明：[产品](Product.md) · [设计](Desgin.md) · [架构](Architecture.md) · [性能](perfermance.md) · [第三方配置 API](API.md) · [文档与变更记录规则](Agents.md)。当前实现与游戏内验证范围见产品文档。
+项目说明：[产品](Product.md) · [设计](Desgin.md) · [架构](Architecture.md) · [性能](perfermance.md) · [第三方配置 API](API.md) · [开发规范](Development.md) · [文档与变更记录规则](Agents.md)。当前实现与游戏内验证范围见产品文档。
 
-当前版本为 1.2.3，开发中的变化见 [未发布记录](CHANGELOG.md#未发布)。当前工作分支内置 LycheeUI 1.3.0（修订 32），统一主题 token、控件样式绑定与即时更新；插件新增 [配置 API v1](API.md)，支持会话、账号和角色存储，配置包升级保留用户修改。源库与内置副本通过同步工具维护，[.lock](../LycheeUI/.lock) 记录共享库状态。开发接入见 [README](../LycheeUI/README.md)、[API](../LycheeUI/API.md) 和 [组件设计规范](../LycheeUI/DESIGN.md)。
+当前版本为 1.2.3，开发变化见 [未发布记录](CHANGELOG.md#未发布)。未发布实现采用 [主题 API v2](API.md)：导入和选择按账号或角色保存，登录或重载后统一生效；字号、缩放、窗口和表格偏好继续实时更新。默认业务和 UI 以指定 main 提交为准，开发规则见 [Development.md](Development.md)，验证方法见 [主题重载验证](tests/theme_reload.md)。共享库在源目录修改后由同步工具维护内置副本，冻结状态以 [.lock](../LycheeUI/.lock) 为准；通用接入见 [LycheeUI README](../LycheeUI/README.md)、[API](../LycheeUI/API.md) 和 [设计规范](../LycheeUI/DESIGN.md)。
 
 内置第三方库的来源与许可见[库说明](addon/LycheeGroup_Group/Libs/README.md)。

@@ -2,7 +2,10 @@
     <Script file="Core.lua"/>
     <Script file="Theme.lua"/>
     <Script file="Motion.lua"/>
+    <Script file="Styles.lua"/>
     <Script file="Components.lua"/>
+    <Script file="Layouts.lua"/>
+    <Script file="Elements.lua"/>
     <Script file="Native.lua"/>
     <Script file="Menu.lua"/>
 </Ui>

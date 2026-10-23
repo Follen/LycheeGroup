@@ -101,13 +101,17 @@ local function Minimum(app,key)
  end
  return value
 end
+local function RequirementGeometry(self)
+ local large=UI.context.fontScale>1
+ local inputTop=large and math.max(56,32+self.ilvlLabel:GetHeight(),32+self.scoreLabel:GetHeight(),32+self.styleLabel:GetHeight()) or 56
+ return inputTop,math.max(112,inputTop+self.ilvl:GetHeight()+12)
+end
 function P:LayoutRequirements()
  local ilvlWidth=self.hasPlaystyle and (self.scoreKind and (FORM-32)/3.25 or (FORM-16)/2.25) or (self.scoreKind and (FORM-16)/2 or FORM)
  self.ilvl:SetWidth(ilvlWidth);self.score:SetWidth(ilvlWidth)
  local styleLeft=self.scoreKind and 2*(ilvlWidth+16) or ilvlWidth+16
  self.playstyle:SetWidth(math.max(1,FORM-styleLeft))
- local large=UI.context.fontScale>1
- local inputTop=large and math.max(56,32+self.ilvlLabel:GetHeight(),32+self.scoreLabel:GetHeight(),32+self.styleLabel:GetHeight()) or 56
+ local inputTop,optionTop=RequirementGeometry(self)
  local scoreX=self.ilvl:GetWidth()+16
  local styleX=self.scoreKind and 2*scoreX or scoreX
  self.ilvl:SetPoint("TOPLEFT",0,-inputTop)
@@ -115,65 +119,74 @@ function P:LayoutRequirements()
  self.scoreLabel:ClearAllPoints();C.SetPoint(self.scoreLabel,"TOPLEFT",self.scoreLabel:GetParent(),"TOPLEFT",scoreX,"createScoreLabelTopleftY")
  self.playstyle:ClearAllPoints();self.playstyle:SetPoint("TOPLEFT",styleX,-inputTop)
  self.styleLabel:ClearAllPoints();C.SetPoint(self.styleLabel,"TOPLEFT",self.styleLabel:GetParent(),"TOPLEFT",styleX,"createStyleLabelTopleftY")
- local optionTop=math.max(112,inputTop+self.ilvl:GetHeight()+12)
- local optionX=0
  for _,option in ipairs({self.private,self.crossFaction,self.autoAccept}) do
   option:SetHeight(T.createOptionHeight);option.label:ClearAllPoints();C.SetPoint(option.label,"LEFT",option.track,"RIGHT","createOptionLabelLeftX",0);option:SetWidth(52+FitText(option.label))
-  option:ClearAllPoints();option:SetPoint("TOPLEFT",optionX,-optionTop);optionX=optionX+option:GetWidth()+28
+
  end
+ self.optionLayout.options.y=-optionTop;self.optionLayout.options.height=T.createOptionHeight;self.optionLayout:Layout()
  self.autoInviteHint:SetPoint("TOPLEFT",0,-optionTop-46)
  self.requirementsBottom=optionTop+46+self.autoInviteHint:GetStringHeight()
 end
-function P:LayoutFont()
+local function FontGeometry(self)
  local large=UI.context.fontScale>1
  local pickerTop=large and math.max(28,self.activityLabel:GetHeight()+4) or 28
  local contextTop=large and math.max(26,4+self.pickerName:GetHeight()) or 26
- C.SetPoint(self.pickerContext,"TOPLEFT",self.pickerContext:GetParent(),"TOPLEFT","createPickerContextTopleftX",-contextTop)
  local pickerHeight=large and math.max(52,contextTop+self.pickerContext:GetHeight()+4) or 52
- self.pickerTrigger:SetHeight(pickerHeight);self.pickerTrigger:SetPoint("TOPLEFT",0,-pickerTop)
  local titleTop=large and math.max(92,pickerTop+pickerHeight+12) or 92
  local titleInputTop=large and math.max(116,titleTop+self.titleLabel:GetHeight()) or 116
  local descriptionTop=large and math.max(172,titleInputTop+self.titleShell:GetHeight()+12) or 172
  local descriptionInputTop=large and math.max(196,descriptionTop+self.descriptionLabel:GetHeight()) or 196
+ return pickerTop,contextTop,pickerHeight,titleTop,titleInputTop,descriptionTop,descriptionInputTop,math.max(356,56+descriptionInputTop+T.createDescriptionMinHeight+24)
+end
+local function LayoutFont(self,definitions)
+ local pickerTop,contextTop,pickerHeight,titleTop,titleInputTop,descriptionTop,descriptionInputTop,minimumTop=FontGeometry(self)
+ C.SetPoint(self.pickerContext,"TOPLEFT",self.pickerContext:GetParent(),"TOPLEFT","createPickerContextTopleftX",-contextTop)
+ self.pickerTrigger:SetHeight(pickerHeight);self.pickerTrigger:SetPoint("TOPLEFT",0,-pickerTop)
  self.titleLabel:SetPoint("TOPLEFT",0,-titleTop);self.titleShell:SetPoint("TOPLEFT",0,-titleInputTop)
  self.descriptionLabel:SetPoint("TOPLEFT",0,-descriptionTop);self.descriptionShell:SetPoint("TOPLEFT",0,-descriptionInputTop)
  self.descriptionInputTop=descriptionInputTop
- self.minimumRequirementsTop=math.max(356,56+descriptionInputTop+T.createDescriptionMinHeight+24)
+ self.minimumRequirementsTop=minimumTop
  self:LayoutRequirements()
  self:LayoutFormNotices()
  self.cancelListing:SetWidth(FitText(self.cancelListing.label)+34);self.editListing:SetWidth(FitText(self.editListing.label)+34)
  local summaryWidth=CONTENT-116-self.cancelListing:GetWidth()-8-self.editListing:GetWidth();self.sMeta:SetWidth(summaryWidth);self.sName:SetWidth(summaryWidth)
  C.SetPoint(self.sName,"TOPLEFT",self.sName:GetParent(),"TOPLEFT","createSNameTopleftX",-math.max(28,self.sMeta:GetHeight()))
- local filterX=3
- for _,key in ipairs({"ALL","TANK","HEALER","DAMAGER"}) do local button=self.roleFilters[key];C.SetLineHeight(button.label,"line20",true);button:SetHeight(math.max(30,button.label:GetHeight()));button:SetWidth(FitText(button.label)+24+(key~="ALL" and 22 or 0));button:ClearAllPoints();C.SetPoint(button,"TOPLEFT",button:GetParent(),"TOPLEFT",filterX,"createButtonTopleftY");filterX=filterX+button:GetWidth()+4 end
- self.roleFilterSurface:SetWidth(filterX-1)
+ for _,item in ipairs(self.roleFilterItems) do local button=item.frame;C.SetLineHeight(button.label,20,true);item.height=math.max(30,button.label:GetHeight());item.width=FitText(button.label)+24+(button==self.roleFilters.ALL and 0 or 22) end
+ self.roleFilterOptions.y=T.createButtonTopleftY
+ local filterWidth=self.roleFilterLayout:Layout();self.roleFilterSurface:SetWidth(filterWidth+6)
  if self.pickerVariants then self:LayoutActivityChoice(self.pickerVariants) end
- if self.applicantTable then self.applicantTable:Layout(BATCH_WIDTH) end
+ if self.applicantTable then
+  if definitions then self.applicantTable:SetColumns(definitions,BATCH_WIDTH) else self.applicantTable:Layout(BATCH_WIDTH) end
+ end
  if self.appIDs then self:LayoutBatches() end
 end
+function P:LayoutFont()
+ LayoutFont(self)
+UI:ApplyElementScope("create")
+ end
 function P:Build(parent)
  local root=CreateFrame("Frame",nil,parent);root:SetAllPoints();self.frame=root
  local surface=CreateFrame("Frame",nil,root);surface:SetSize(MAIN,T.contentHeight);surface:SetPoint("TOPLEFT");C.Panel(surface,"surfaceLow","createPanelRadius");self.surface=surface
  local f=CreateFrame("Frame",nil,surface);f:SetSize(FORM,T.contentHeight-48);C.SetPoint(f,"TOP",f:GetParent(),"TOP",0,"createFTopY");self.formFrame=f
- self.heading=C.Text(f,L.create,"font24");C.SetLineHeight(self.heading,"line32",true);self.heading:SetPoint("TOPLEFT")
+ self.heading=C.Text(f,L.create,24);C.SetLineHeight(self.heading,32,true);self.heading:SetPoint("TOPLEFT")
  local desc=CreateFrame("Frame",nil,f);desc:SetSize(FORM,T.createDescHeight);C.SetPoint(desc,"TOPLEFT",desc:GetParent(),"TOPLEFT",0,"createDescTopleftY");self.desc=desc
- self.activityLabel=C.Text(desc,S("活动与难度","Activity and difficulty"),"font14");C.SetLineHeight(self.activityLabel,"line20",true);self.activityLabel:SetPoint("TOPLEFT")
- self.pickerTrigger=C.ChoiceTrigger(desc,T.createPickerTriggerWidth,function() P:TogglePicker() end,{height=52});C.ApplyStyle(self.pickerTrigger,{width="createPickerTriggerWidth"});self.pickerTrigger.label:Hide();C.SetPoint(self.pickerTrigger,"TOPLEFT",self.pickerTrigger:GetParent(),"TOPLEFT",0,"createPickerTriggerTopleftY")
- self.pickerIcon=C.Icon(self.pickerTrigger,T.createPickerIconWidth);C.ApplyStyle(self.pickerIcon,{width="createPickerIconWidth",height="createPickerIconHeight"});C.SetPoint(self.pickerIcon,"LEFT",self.pickerIcon:GetParent(),"LEFT","createPickerIconLeftX",0)
- self.pickerName=C.Text(self.pickerTrigger,"","font14","text",T.createPickerNameWidth);C.ApplyStyle(self.pickerName,{width="createPickerNameWidth"});C.SetLineHeight(self.pickerName,"line20",true);C.SetPoint(self.pickerName,"TOPLEFT",self.pickerName:GetParent(),"TOPLEFT","createPickerNameTopleftX","createPickerNameTopleftY")
- self.pickerContext=C.Text(self.pickerTrigger,"","font14","muted",T.createPickerContextWidth);C.ApplyStyle(self.pickerContext,{width="createPickerContextWidth"});C.SetLineHeight(self.pickerContext,"line20",true);C.SetPoint(self.pickerContext,"TOPLEFT",self.pickerContext:GetParent(),"TOPLEFT","createPickerContextTopleftX","createPickerContextTopleftY")
- self.difficultyChoice=C.Choice(desc,FORM-352,function() return P:DifficultyItems() end,function(value) form.activityID=value;P:RefreshPicker() end);C.ApplyStyle(self.difficultyChoice,{height="createDifficultyChoiceHeight"});C.SetPoint(self.difficultyChoice,"TOPLEFT",self.difficultyChoice:GetParent(),"TOPLEFT","createDifficultyChoiceTopleftX","createDifficultyChoiceTopleftY")
+ self.activityLabel=C.Text(desc,S("活动与难度","Activity and difficulty"),14);C.SetLineHeight(self.activityLabel,20,true);self.activityLabel:SetPoint("TOPLEFT")
+ self.pickerTrigger=C.ChoiceTrigger(desc,T.createPickerTriggerWidth,function() P:TogglePicker() end,{height=52});self.pickerTrigger:SetWidth(T.createPickerTriggerWidth);self.pickerTrigger.label:Hide();C.SetPoint(self.pickerTrigger,"TOPLEFT",self.pickerTrigger:GetParent(),"TOPLEFT",0,"createPickerTriggerTopleftY")
+ self.pickerIcon=C.Icon(self.pickerTrigger,T.createPickerIconWidth);C.Box(self.pickerIcon,{width="createPickerIconWidth",height="createPickerIconHeight"});C.SetPoint(self.pickerIcon,"LEFT",self.pickerIcon:GetParent(),"LEFT","createPickerIconLeftX",0)
+ self.pickerName=C.Text(self.pickerTrigger,"",14,"text",T.createPickerNameWidth);self.pickerName:SetWidth(T.createPickerNameWidth);C.SetLineHeight(self.pickerName,20,true);C.SetPoint(self.pickerName,"TOPLEFT",self.pickerName:GetParent(),"TOPLEFT","createPickerNameTopleftX","createPickerNameTopleftY")
+ self.pickerContext=C.Text(self.pickerTrigger,"",14,"muted",T.createPickerContextWidth);self.pickerContext:SetWidth(T.createPickerContextWidth);C.SetLineHeight(self.pickerContext,20,true);C.SetPoint(self.pickerContext,"TOPLEFT",self.pickerContext:GetParent(),"TOPLEFT","createPickerContextTopleftX","createPickerContextTopleftY")
+ self.difficultyChoice=C.Choice(desc,FORM-352,function() return P:DifficultyItems() end,function(value) form.activityID=value;P:RefreshPicker() end);self.difficultyChoice:SetHeight(T.createDifficultyChoiceHeight);C.SetPoint(self.difficultyChoice,"TOPLEFT",self.difficultyChoice:GetParent(),"TOPLEFT","createDifficultyChoiceTopleftX","createDifficultyChoiceTopleftY")
  self.difficultyGroup=CreateFrame("Frame",nil,desc);self.difficultyGroup:SetSize(FORM-352,T.createDifficultyGroupHeight);C.SetPoint(self.difficultyGroup,"TOPLEFT",self.difficultyGroup:GetParent(),"TOPLEFT","createDifficultyGroupTopleftX","createDifficultyGroupTopleftY");C.Panel(self.difficultyGroup,"panel","createPanelRadius2")
  self.difficultySelection=C.Selection(self.difficultyGroup)
  self.difficultyButtons={}
  for i=1,4 do self.difficultyButtons[i]=C.Button(self.difficultyGroup,"",T.createButtonWidth,function(button) form.activityID=button.value;P:RefreshPicker() end,{variant="compact",selectionFill=false}) end
- self.difficultyFixedSurface=CreateFrame("Frame",nil,desc);C.ApplyStyle(self.difficultyFixedSurface,{width="createDifficultyFixedSurfaceWidth",height="createDifficultyFixedSurfaceHeight"});C.Panel(self.difficultyFixedSurface,"field","createPanelRadius2")
- self.difficultyFixed=C.Text(self.difficultyFixedSurface,"","font14","muted");C.SetLineHeight(self.difficultyFixed,"line20",true);self.difficultyFixed:SetPoint("CENTER")
- self.favorite=C.IconButton(desc,nil,T.createFavoriteWidth,function() UI:GetGroup().Presets:ToggleFavorite(P:FormData()) end,{iconSize=24});C.ApplyStyle(self.favorite,{width="createFavoriteWidth",height="createFavoriteHeight2"});C.SetPoint(self.favorite,"TOPRIGHT",self.favorite:GetParent(),"TOPRIGHT",0,"createFavoriteToprightY")
+ self.difficultyFixedSurface=CreateFrame("Frame",nil,desc);C.Box(self.difficultyFixedSurface,{width="createDifficultyFixedSurfaceWidth",height="createDifficultyFixedSurfaceHeight"});C.Panel(self.difficultyFixedSurface,"field","createPanelRadius2")
+ self.difficultyFixed=C.Text(self.difficultyFixedSurface,"",14,"muted");C.SetLineHeight(self.difficultyFixed,20,true);self.difficultyFixed:SetPoint("CENTER")
+ self.favorite=C.IconButton(desc,nil,T.createFavoriteWidth,function() UI:GetGroup().Presets:ToggleFavorite(P:FormData()) end,{iconSize=24});C.Box(self.favorite,{width="createFavoriteWidth",height="createFavoriteHeight2"});C.SetPoint(self.favorite,"TOPRIGHT",self.favorite:GetParent(),"TOPRIGHT",0,"createFavoriteToprightY")
  self.favoriteIcon=self.favorite.icon
- self.titleLabel=C.Text(desc,L.title,"font14","muted");C.SetLineHeight(self.titleLabel,"line20",true);C.SetPoint(self.titleLabel,"TOPLEFT",self.titleLabel:GetParent(),"TOPLEFT",0,"createTitleLabelTopleftY")
+ self.titleLabel=C.Text(desc,L.title,14,"muted");C.SetLineHeight(self.titleLabel,20,true);C.SetPoint(self.titleLabel,"TOPLEFT",self.titleLabel:GetParent(),"TOPLEFT",0,"createTitleLabelTopleftY")
  self.titleShell=Shell(desc,FORM,44,0,-116)
- self.descriptionLabel=C.Text(desc,L.comment,"font14","muted");C.SetLineHeight(self.descriptionLabel,"line20",true);C.SetPoint(self.descriptionLabel,"TOPLEFT",self.descriptionLabel:GetParent(),"TOPLEFT",0,"createDescriptionLabelTopleftY")
+ self.descriptionLabel=C.Text(desc,L.comment,14,"muted");C.SetLineHeight(self.descriptionLabel,20,true);C.SetPoint(self.descriptionLabel,"TOPLEFT",self.descriptionLabel:GetParent(),"TOPLEFT",0,"createDescriptionLabelTopleftY")
  self.descriptionShell=Shell(desc,FORM,T.createDescriptionMinHeight,0,-196)
  for _,shell in ipairs({self.titleShell,self.descriptionShell}) do
   shell:EnableMouse(true)
@@ -181,46 +194,47 @@ function P:Build(parent)
   shell:SetScript("OnMouseDown",function(field,button) if button=="LeftButton" and P:EnsureCreationInput() then field.box:SetFocus() end end)
  end
  local req=CreateFrame("Frame",nil,f);req:SetSize(FORM,T.createReqHeight);C.SetPoint(req,"TOPLEFT",req:GetParent(),"TOPLEFT",0,"createReqTopleftY");self.req=req
- self.requirementsLabel=C.Text(req,L.requirements,"font14");C.SetLineHeight(self.requirementsLabel,"line20",true);self.requirementsLabel:SetPoint("TOPLEFT")
- self.ilvlLabel=C.Text(req,L.minItemLevel,"font14","muted");C.SetPoint(self.ilvlLabel,"TOPLEFT",self.ilvlLabel:GetParent(),"TOPLEFT",0,"createIlvlLabelTopleftY")
- self.ilvl=C.Number(req,T.createIlvlWidth,T.createIlvlHeight);C.ApplyStyle(self.ilvl,{width="createIlvlWidth",height="createIlvlHeight"});C.SetPoint(self.ilvl,"TOPLEFT",self.ilvl:GetParent(),"TOPLEFT",0,"createIlvlTopleftY")
- self.scoreLabel=C.Text(req,L.minRating,"font14","muted");C.SetPoint(self.scoreLabel,"TOPLEFT",self.scoreLabel:GetParent(),"TOPLEFT","createScoreLabelTopleftX","createScoreLabelTopleftY")
- self.score=C.Number(req,T.createScoreWidth,T.createScoreHeight);C.ApplyStyle(self.score,{width="createScoreWidth",height="createScoreHeight"});C.SetPoint(self.score,"TOPLEFT",self.score:GetParent(),"TOPLEFT","createScoreTopleftX","createScoreTopleftY")
- self.styleLabel=C.Text(req,L.playstyle,"font14","muted");C.SetPoint(self.styleLabel,"TOPLEFT",self.styleLabel:GetParent(),"TOPLEFT","createStyleLabelTopleftX","createStyleLabelTopleftY")
- self.playstyle=C.Choice(req,FORM-424,function() return P:PlaystyleItems() end,function(value) form.generalPlaystyle=value;P:ValidateForm() end);C.ApplyStyle(self.playstyle,{height="createPlaystyleHeight"});C.SetPoint(self.playstyle,"TOPLEFT",self.playstyle:GetParent(),"TOPLEFT","createPlaystyleTopleftX","createPlaystyleTopleftY")
+ self.requirementsLabel=C.Text(req,L.requirements,14);C.SetLineHeight(self.requirementsLabel,20,true);self.requirementsLabel:SetPoint("TOPLEFT")
+ self.ilvlLabel=C.Text(req,L.minItemLevel,14,"muted");C.SetPoint(self.ilvlLabel,"TOPLEFT",self.ilvlLabel:GetParent(),"TOPLEFT",0,"createIlvlLabelTopleftY")
+ self.ilvl=C.Number(req,T.createIlvlWidth,T.createIlvlHeight);self.ilvl:SetPlaceholder(L.any);C.Box(self.ilvl,{width="createIlvlWidth",height="createIlvlHeight"});C.SetPoint(self.ilvl,"TOPLEFT",self.ilvl:GetParent(),"TOPLEFT",0,"createIlvlTopleftY")
+ self.scoreLabel=C.Text(req,L.minRating,14,"muted");C.SetPoint(self.scoreLabel,"TOPLEFT",self.scoreLabel:GetParent(),"TOPLEFT","createScoreLabelTopleftX","createScoreLabelTopleftY")
+ self.score=C.Number(req,T.createScoreWidth,T.createScoreHeight);self.score:SetPlaceholder(L.any);C.Box(self.score,{width="createScoreWidth",height="createScoreHeight"});C.SetPoint(self.score,"TOPLEFT",self.score:GetParent(),"TOPLEFT","createScoreTopleftX","createScoreTopleftY")
+ self.styleLabel=C.Text(req,L.playstyle,14,"muted");C.SetPoint(self.styleLabel,"TOPLEFT",self.styleLabel:GetParent(),"TOPLEFT","createStyleLabelTopleftX","createStyleLabelTopleftY")
+ self.playstyle=C.Choice(req,FORM-424,function() return P:PlaystyleItems() end,function(value) form.generalPlaystyle=value;P:ValidateForm() end);self.playstyle:SetHeight(T.createPlaystyleHeight);C.SetPoint(self.playstyle,"TOPLEFT",self.playstyle:GetParent(),"TOPLEFT","createPlaystyleTopleftX","createPlaystyleTopleftY")
  self.private=C.Check(req,L.private,function() P:ValidateForm() end);C.SetPoint(self.private,"TOPLEFT",self.private:GetParent(),"TOPLEFT",0,"createPrivateTopleftY")
  self.crossFaction=C.Check(req,L.crossFaction,function(value) form.crossFaction=value;P:ValidateForm() end);C.SetPoint(self.crossFaction,"TOPLEFT",self.crossFaction:GetParent(),"TOPLEFT","createCrossFactionTopleftX","createCrossFactionTopleftY")
  self.autoAccept=C.Check(req,L.autoAccept,function() P:ValidateForm() end);C.SetPoint(self.autoAccept,"TOPLEFT",self.autoAccept:GetParent(),"TOPLEFT","createAutoAcceptTopleftX","createAutoAcceptTopleftY")
- self.autoInviteHint=C.Text(req,S("自动邀请会开启游戏语言过滤。","Auto invite enables the game's language filter."),"font12","muted",FORM);C.SetPoint(self.autoInviteHint,"TOPLEFT",self.autoInviteHint:GetParent(),"TOPLEFT",0,"createAutoInviteHintTopleftY")
- self.publish=C.Button(f,L.publish,T.createPublishWidth,function() P:Submit() end);C.ApplyStyle(self.publish,{width="createPublishWidth"});self.publish:SetPoint("BOTTOMRIGHT");C.ApplyStyle(self.publish,{height="createPublishHeight"});self.publish:SetPrimary(true)
- self.formCancel=C.Button(f,L.cancel,T.createFormCancelWidth,function() state.editing=false;UI.Native:ReleaseCreation();P:RefreshMode() end);C.ApplyStyle(self.formCancel,{width="createFormCancelWidth"});C.ApplyStyle(self.formCancel,{height="createFormCancelHeight"});C.SetPoint(self.formCancel,"RIGHT",self.publish,"LEFT","createFormCancelRightX",0)
+ self.optionLayout=C.Row(req,{{frame=self.private},{frame=self.crossFaction},{frame=self.autoAccept}},{width="content",height="createOptionHeight",gap=28,includeHidden=true})
+ self.autoInviteHint=C.Text(req,S("自动邀请会开启游戏语言过滤。","Auto invite enables the game's language filter."),12,"muted",FORM);C.SetPoint(self.autoInviteHint,"TOPLEFT",self.autoInviteHint:GetParent(),"TOPLEFT",0,"createAutoInviteHintTopleftY")
+ self.publish=C.Button(f,L.publish,T.createPublishWidth,function() P:Submit() end);self.publish:SetWidth(T.createPublishWidth);self.publish:SetPoint("BOTTOMRIGHT");self.publish:SetHeight(T.createPublishHeight);self.publish:SetPrimary(true)
+ self.formCancel=C.Button(f,L.cancel,T.createFormCancelWidth,function() state.editing=false;UI.Native:ReleaseCreation();P:RefreshMode() end);self.formCancel:SetWidth(T.createFormCancelWidth);self.formCancel:SetHeight(T.createFormCancelHeight);C.SetPoint(self.formCancel,"RIGHT",self.publish,"LEFT","createFormCancelRightX",0)
  self.formNotice=C.Notice(f,FORM,function() P:SetFormError("") end);C.SetPoint(self.formNotice,"TOPLEFT",self.formNotice:GetParent(),"TOPLEFT",0,"createFormNoticeTopleftY");self.formError=self.formNotice.text
  self.correctionNotice=C.Notice(f,FORM,function() P:HideCorrectionNotice() end);C.SetPoint(self.correctionNotice,"TOPLEFT",self.correctionNotice:GetParent(),"TOPLEFT",0,"createCorrectionNoticeTopleftY")
  f:HookScript("OnHide",function() P:HideCorrectionNotice() end)
- for _,label in ipairs({self.ilvlLabel,self.scoreLabel,self.styleLabel}) do C.SetLineHeight(label,"line20",true) end
+ for _,label in ipairs({self.ilvlLabel,self.scoreLabel,self.styleLabel}) do C.SetLineHeight(label,20,true) end
  self.ilvl.box:HookScript("OnTextChanged",function(_,userInput)
   if userInput then P:CorrectItemLevel() end
   P:ValidateForm()
  end);self.score.box:HookScript("OnTextChanged",function() P:ValidateForm() end)
  local manage=CreateFrame("Frame",nil,surface);manage:SetSize(CONTENT,T.contentHeight-48);C.SetPoint(manage,"TOPLEFT",manage:GetParent(),"TOPLEFT","createManageTopleftX","createManageTopleftY");self.manage=manage
- self.sIcon=C.Icon(manage,T.createSIconWidth);C.ApplyStyle(self.sIcon,{width="createSIconWidth",height="createSIconHeight"});C.SetPoint(self.sIcon,"TOPLEFT",self.sIcon:GetParent(),"TOPLEFT",0,"createSIconTopleftY")
- self.sMeta=C.Text(manage,"","font14","muted",CONTENT-280);C.SetFont(self.sMeta,"font14");C.SetLineHeight(self.sMeta,"line20",true);C.SetPoint(self.sMeta,"TOPLEFT",self.sMeta:GetParent(),"TOPLEFT","createSMetaTopleftX",0);self.sMeta:SetMaxLines(1);self.sMeta:SetWordWrap(false)
- self.sName=C.Text(manage,"","font18","text",CONTENT-280);C.SetLineHeight(self.sName,"line24",true);C.SetPoint(self.sName,"TOPLEFT",self.sName:GetParent(),"TOPLEFT","createSNameTopleftX","createSNameTopleftY");self.sName:SetWordWrap(false)
+ self.sIcon=C.Icon(manage,T.createSIconWidth);C.Box(self.sIcon,{width="createSIconWidth",height="createSIconHeight"});C.SetPoint(self.sIcon,"TOPLEFT",self.sIcon:GetParent(),"TOPLEFT",0,"createSIconTopleftY")
+ self.sMeta=C.Text(manage,"",14,"muted",CONTENT-280);C.SetFont(self.sMeta,14);C.SetLineHeight(self.sMeta,20,true);C.SetPoint(self.sMeta,"TOPLEFT",self.sMeta:GetParent(),"TOPLEFT","createSMetaTopleftX",0);self.sMeta:SetMaxLines(1);self.sMeta:SetWordWrap(false)
+ self.sName=C.Text(manage,"",18,"text",CONTENT-280);C.SetLineHeight(self.sName,24,true);C.SetPoint(self.sName,"TOPLEFT",self.sName:GetParent(),"TOPLEFT","createSNameTopleftX","createSNameTopleftY");self.sName:SetWordWrap(false)
  self.editListing=C.Button(manage,L.edit,nil,function()
   local allowed,err=UI:GetGroup():CanManageListing();if not allowed then P:SetManageError(err);return end
   state.editing=true;P:RefreshMode()
- end);C.SetPoint(self.editListing,"TOPRIGHT",self.editListing:GetParent(),"TOPRIGHT","createEditListingToprightX","createEditListingToprightY");C.ApplyStyle(self.editListing,{height="createEditListingHeight"})
- self.cancelListing=C.Button(manage,S("取消招募","End listing"),nil,function() local ok,err=UI:GetGroup():RemoveListing();P:SetManageError(not ok and (err or L.failed) or "") end);C.SetPoint(self.cancelListing,"TOPRIGHT",self.cancelListing:GetParent(),"TOPRIGHT",0,"createCancelListingToprightY");C.ApplyStyle(self.cancelListing,{height="createCancelListingHeight"})
+ end);C.SetPoint(self.editListing,"TOPRIGHT",self.editListing:GetParent(),"TOPRIGHT","createEditListingToprightX","createEditListingToprightY");self.editListing:SetHeight(T.createEditListingHeight)
+ self.cancelListing=C.Button(manage,S("取消招募","End listing"),nil,function() local ok,err=UI:GetGroup():RemoveListing();P:SetManageError(not ok and (err or L.failed) or "") end);C.SetPoint(self.cancelListing,"TOPRIGHT",self.cancelListing:GetParent(),"TOPRIGHT",0,"createCancelListingToprightY");self.cancelListing:SetHeight(T.createCancelListingHeight)
  self.listingFavorite=C.IconButton(manage,nil,T.createListingFavoriteWidth,function()
   local group=UI:GetGroup();local listing=group:GetListing()
   if listing then group.Presets:ToggleFavorite(listing) end
- end,{iconSize=24});C.ApplyStyle(self.listingFavorite,{width="createListingFavoriteWidth",height="createListingFavoriteHeight"});C.SetPoint(self.listingFavorite,"TOPRIGHT",self.listingFavorite:GetParent(),"TOPRIGHT",0,"createListingFavoriteToprightY")
+ end,{iconSize=24});C.Box(self.listingFavorite,{width="createListingFavoriteWidth",height="createListingFavoriteHeight"});C.SetPoint(self.listingFavorite,"TOPRIGHT",self.listingFavorite:GetParent(),"TOPRIGHT",0,"createListingFavoriteToprightY")
  self.cancelListing:ClearAllPoints();C.SetPoint(self.cancelListing,"RIGHT",self.listingFavorite,"LEFT","createCancelListingRightX",0)
  self.editListing:ClearAllPoints();C.SetPoint(self.editListing,"RIGHT",self.cancelListing,"LEFT","createEditListingRightX",0)
- self.applicantsHeading=C.Text(manage,L.manageApplicants,"font18");C.SetLineHeight(self.applicantsHeading,"line24",true);C.SetPoint(self.applicantsHeading,"TOPLEFT",self.applicantsHeading:GetParent(),"TOPLEFT",0,"createApplicantsHeadingTopleftY")
- self.appCount=C.Text(manage,"","font14","muted");C.SetLineHeight(self.appCount,"line20",true);C.SetPoint(self.appCount,"TOPRIGHT",self.appCount:GetParent(),"TOPRIGHT",0,"createAppCountToprightY")
+ self.applicantsHeading=C.Text(manage,L.manageApplicants,18);C.SetLineHeight(self.applicantsHeading,24,true);C.SetPoint(self.applicantsHeading,"TOPLEFT",self.applicantsHeading:GetParent(),"TOPLEFT",0,"createApplicantsHeadingTopleftY")
+ self.appCount=C.Text(manage,"",14,"muted");C.SetLineHeight(self.appCount,20,true);C.SetPoint(self.appCount,"TOPRIGHT",self.appCount:GetParent(),"TOPRIGHT",0,"createAppCountToprightY")
  self.roleFilters={}
- local filterSurface=CreateFrame("Frame",nil,manage);C.ApplyStyle(filterSurface,{width="createFilterSurfaceWidth",height="createFilterSurfaceHeight"});C.SetPoint(filterSurface,"TOPLEFT",filterSurface:GetParent(),"TOPLEFT",0,"createFilterSurfaceTopleftY");C.Panel(filterSurface,"panel","createPanelRadius2");self.roleFilterSurface=filterSurface
+ local filterSurface=CreateFrame("Frame",nil,manage);C.Box(filterSurface,{width="createFilterSurfaceWidth",height="createFilterSurfaceHeight"});C.SetPoint(filterSurface,"TOPLEFT",filterSurface:GetParent(),"TOPLEFT",0,"createFilterSurfaceTopleftY");C.Panel(filterSurface,"panel","createPanelRadius2");self.roleFilterSurface=filterSurface
  for i,key in ipairs({"ALL","TANK","HEALER","DAMAGER"}) do
   local b=C.Button(filterSurface,key=="ALL" and L.all or roles[key],nil,function()
    if key=="ALL" then state.roles=nil
@@ -229,11 +243,13 @@ function P:Build(parent)
     if not next(state.roles) or state.roles.TANK and state.roles.HEALER and state.roles.DAMAGER then state.roles=nil end
    end
    P:RefreshApplicants()
-  end,{variant="compact"});C.SetPoint(b,"TOPLEFT",b:GetParent(),"TOPLEFT",3+(i-1)*88,"createBTopleftY");if key~="ALL" then local roleIcon=C.Icon(b,T.createRoleIconWidth);C.ApplyStyle(roleIcon,{width="createRoleIconWidth",height="createRoleIconHeight"});C.SetPoint(roleIcon,"LEFT",roleIcon:GetParent(),"LEFT","createRoleIconLeftX",0);UI:SetRoleIcon(roleIcon,key);b.label:ClearAllPoints();C.SetPoint(b.label,"LEFT",roleIcon,"RIGHT","createBLabelLeftX",0) end;self.roleFilters[key]=b
+  end,{variant="compact"});C.SetPoint(b,"TOPLEFT",b:GetParent(),"TOPLEFT",3+(i-1)*88,"createBTopleftY");if key~="ALL" then local roleIcon=C.Icon(b,T.createRoleIconWidth);b.roleIcon=roleIcon;C.Box(roleIcon,{width="createRoleIconWidth",height="createRoleIconHeight"});C.SetPoint(roleIcon,"LEFT",roleIcon:GetParent(),"LEFT","createRoleIconLeftX",0);UI:SetRoleIcon(roleIcon,key);b.label:ClearAllPoints();C.SetPoint(b.label,"LEFT",roleIcon,"RIGHT","createBLabelLeftX",0) end;self.roleFilters[key]=b
  end
+ self.roleFilterItems={};for _,key in ipairs({"ALL","TANK","HEALER","DAMAGER"}) do self.roleFilterItems[#self.roleFilterItems+1]={frame=self.roleFilters[key]} end
+ self.roleFilterOptions={width="content",height="content",gap=4,x=3};self.roleFilterLayout=C.Row(filterSurface,self.roleFilterItems,self.roleFilterOptions)
  self.sortChoice=C.Choice(manage,T.createSortChoiceWidth,function() return P.hideApplicantRating and noRatingApplicantSorts or P.showApplicantMapScore and dungeonApplicantSorts or applicantSorts end,function(value)
   state.sort=value;state.descending=value~="newest";P.applicantTable:SetSort(sortColumns[value],state.descending,true);P:RefreshApplicants()
- end);C.ApplyStyle(self.sortChoice,{width="createSortChoiceWidth"});C.ApplyStyle(self.sortChoice,{height="createSortChoiceHeight"});C.SetPoint(self.sortChoice,"TOPRIGHT",self.sortChoice:GetParent(),"TOPRIGHT",0,"createSortChoiceToprightY");self.sortChoice:SetValue("newest",L.newest)
+ end);self.sortChoice:SetWidth(T.createSortChoiceWidth);self.sortChoice:SetHeight(T.createSortChoiceHeight);C.SetPoint(self.sortChoice,"TOPRIGHT",self.sortChoice:GetParent(),"TOPRIGHT",0,"createSortChoiceToprightY");self.sortChoice:SetValue("newest",L.newest)
  self:LayoutFont()
  self.applicantTableKind="dungeon"
  self.applicantTable=C.TableHeader(manage,ApplicantDefinitions("dungeon"),{
@@ -247,27 +263,29 @@ function P:Build(parent)
  self.batchSlider:SetScript("OnValueChanged",function(_,value) if not P.syncBatchScroll then P:SetBatchOffset(value,false) end end)
  self.batchScroll:EnableMouseWheel(true);self.batchScroll:SetScript("OnMouseWheel",function(s,d) P:SetBatchOffset((P.batchScrollTarget or s:GetVerticalScroll())-d*56,true) end)
  self.batchPool={}
- self.empty=C.Text(manage,L.noApplicants,"font17","muted",CONTENT-48);self.empty:SetPoint("CENTER",self.batchScroll,"CENTER",0,0);self.empty:SetJustifyH("CENTER")
+ self.empty=C.Text(manage,L.noApplicants,17,"muted",CONTENT-48);self.empty:SetPoint("CENTER",self.batchScroll,"CENTER",0,0);self.empty:SetJustifyH("CENTER")
  self.manageNotice=C.Notice(manage,CONTENT,function() P:SetManageError("") end);C.SetPoint(self.manageNotice,"TOPLEFT",self.manageNotice:GetParent(),"TOPLEFT",0,"createManageNoticeTopleftY");self.dError=self.manageNotice.text
  local rail=CreateFrame("Frame",nil,root);rail:SetSize(T.createRailWidth,T.contentHeight);rail:SetPoint("TOPRIGHT");self.rail=rail
- local favoritesCard=CreateFrame("Frame",nil,rail);C.ApplyStyle(favoritesCard,{width="createFavoritesCardWidth",height="createFavoritesCardHeight"});favoritesCard:SetPoint("TOPLEFT");C.Panel(favoritesCard,"surfaceLow","createPanelRadius");self.favoritesCard=favoritesCard
- self.favoritesToggle=C.Button(favoritesCard,S("收藏","Favorites"),T.createFavoritesToggleWidth,function() P.favoritesExpanded=not P.favoritesExpanded;P:RefreshFavorites() end);C.ApplyStyle(self.favoritesToggle,{width="createFavoritesToggleWidth"});C.ApplyStyle(self.favoritesToggle,{height="createFavoritesToggleHeight"});C.SetPoint(self.favoritesToggle,"TOPLEFT",self.favoritesToggle:GetParent(),"TOPLEFT","createFavoritesToggleTopleftX","createFavoritesToggleTopleftY");C.SetFont(self.favoritesToggle.label,"font16");C.SetLineHeight(self.favoritesToggle.label,"line22",true);self.favoritesToggle.label:ClearAllPoints();C.SetPoint(self.favoritesToggle.label,"LEFT",self.favoritesToggle.label:GetParent(),"LEFT","createFavoritesToggleLabelLeftX",0)
- self.favoritesChevron=C.Icon(self.favoritesToggle,T.createFavoritesChevronWidth);C.ApplyStyle(self.favoritesChevron,{width="createFavoritesChevronWidth",height="createFavoritesChevronHeight",color="muted"});UI:SetMediaTexture(self.favoritesChevron,"chevron.tga");C.SetPoint(self.favoritesChevron,"RIGHT",self.favoritesChevron:GetParent(),"RIGHT","createFavoritesChevronRightX",0)
+ local favoritesCard=CreateFrame("Frame",nil,rail);C.Box(favoritesCard,{width="createFavoritesCardWidth",height="createFavoritesCardHeight"});favoritesCard:SetPoint("TOPLEFT");C.Panel(favoritesCard,"surfaceLow","createPanelRadius");self.favoritesCard=favoritesCard
+ self.favoritesToggle=C.Button(favoritesCard,S("收藏","Favorites"),T.createFavoritesToggleWidth,function() P.favoritesExpanded=not P.favoritesExpanded;P:RefreshFavorites() end);self.favoritesToggle:SetWidth(T.createFavoritesToggleWidth);self.favoritesToggle:SetHeight(T.createFavoritesToggleHeight);C.SetPoint(self.favoritesToggle,"TOPLEFT",self.favoritesToggle:GetParent(),"TOPLEFT","createFavoritesToggleTopleftX","createFavoritesToggleTopleftY");C.SetFont(self.favoritesToggle.label,16);C.SetLineHeight(self.favoritesToggle.label,22,true);self.favoritesToggle.label:ClearAllPoints();C.SetPoint(self.favoritesToggle.label,"LEFT",self.favoritesToggle.label:GetParent(),"LEFT","createFavoritesToggleLabelLeftX",0)
+ self.favoritesChevron=C.Icon(self.favoritesToggle,T.createFavoritesChevronWidth);self.favoritesChevron:SetWidth(T.createFavoritesChevronWidth);self.favoritesChevron:SetHeight(T.createFavoritesChevronHeight);self.favoritesChevron:SetVertexColor(unpack(T.muted));UI:SetMediaTexture(self.favoritesChevron,"chevron.tga");C.SetPoint(self.favoritesChevron,"RIGHT",self.favoritesChevron:GetParent(),"RIGHT","createFavoritesChevronRightX",0)
  local rosterCard=CreateFrame("Frame",nil,rail);rosterCard:SetSize(T.createRosterCardWidth,T.contentHeight-84);C.SetPoint(rosterCard,"TOPLEFT",rosterCard:GetParent(),"TOPLEFT",0,"createRosterCardTopleftY");C.Panel(rosterCard,"surfaceLow","createPanelRadius");self.rosterCard=rosterCard
- self.rosterTitle=C.Text(rosterCard,L.yourGroup,"font18",nil,nil,"line24");C.SetLineHeight(self.rosterTitle,"line24",true);C.SetPoint(self.rosterTitle,"TOPLEFT",self.rosterTitle:GetParent(),"TOPLEFT","createRosterTitleTopleftX","createRosterTitleTopleftY")
- self.rosterCount=C.Text(rosterCard,"","font14","muted");C.SetLineHeight(self.rosterCount,"line20",true);C.SetPoint(self.rosterCount,"LEFT",self.rosterTitle,"RIGHT","createRosterCountLeftX",0)
- local summary=CreateFrame("Frame",nil,rosterCard);C.ApplyStyle(summary,{width="createSummaryWidth",height="createSummaryHeight"});C.SetPoint(summary,"TOPLEFT",summary:GetParent(),"TOPLEFT","createSummaryTopleftX","createSummaryTopleftY");self.groupSummary=summary
+ self.rosterTitle=C.Text(rosterCard,L.yourGroup,18,nil,nil,24);C.SetLineHeight(self.rosterTitle,24,true);C.SetPoint(self.rosterTitle,"TOPLEFT",self.rosterTitle:GetParent(),"TOPLEFT","createRosterTitleTopleftX","createRosterTitleTopleftY")
+ self.rosterCount=C.Text(rosterCard,"",14,"muted");C.SetLineHeight(self.rosterCount,20,true);C.SetPoint(self.rosterCount,"LEFT",self.rosterTitle,"RIGHT","createRosterCountLeftX",0)
+ local summary=CreateFrame("Frame",nil,rosterCard);C.Box(summary,{width="createSummaryWidth",height="createSummaryHeight"});C.SetPoint(summary,"TOPLEFT",summary:GetParent(),"TOPLEFT","createSummaryTopleftX","createSummaryTopleftY");self.groupSummary=summary
  summary.hover=C.Panel(summary,"createRosterHoverColor","createSummaryHoverRadius");summary.hover:Hide();summary.hover:SetAlpha(0)
- self.groupStrip=C.Roster(summary,18,5);C.ApplyStyle(self.groupStrip,{height="createGroupStripHeight"});C.SetPoint(self.groupStrip,"LEFT",self.groupStrip:GetParent(),"LEFT","createGroupStripLeftX",0)
- local function ClearSummaryHover() UI.Motion:Stop(summary.hover);summary.hover:Hide();summary.hover:SetAlpha(0) end
- summary:SetScript("OnEnter",function() summary.hover:Show();UI.Motion:Alpha(summary.hover,1,T.createRosterHoverDuration);UI.Tooltip:ShowRoster(summary,P.roster,nil,P.rosterContext) end)
+ self.groupStrip=UI:CreateRoster(summary,18,5);self.groupStrip:SetHeight(T.createGroupStripHeight);C.SetPoint(self.groupStrip,"LEFT",self.groupStrip:GetParent(),"LEFT","createGroupStripLeftX",0)
+ summary.hoverStyle=C.Style(summary,{recipe="hoverSurface",variant="roster",immediate=true,slots={root=summary,surface=summary.hover}})
+ local function ClearSummaryHover() summary.hoverStyle:SetState("hover",false);UI.Motion:Stop(summary.hover);summary.hover:Hide();summary.hover:SetAlpha(0) end
+ summary:SetScript("OnEnter",function() summary.hoverStyle:SetState("hover",true);summary.hover:Show();UI.Motion:Alpha(summary.hover,1,T.createRosterHoverDuration);UI.Tooltip:ShowRoster(summary,P.roster,nil,P.rosterContext) end)
  summary:SetScript("OnLeave",function() ClearSummaryHover();UI.Tooltip:LeaveOwner(summary) end)
  summary:SetScript("OnHide",function() ClearSummaryHover();HideMemberTooltip(summary) end)
  summary:EnableMouse(false);summary:EnableMouseMotion(true)
  self.applicantTable:Layout(BATCH_WIDTH)
  self:RefreshFavorites()
-end
-function P:LayoutSize(width,height)
+self:RegisterBuildElements()
+ end
+local function LayoutSize(self,width,height)
  self.layoutHeight=height
  MAIN=width-T.createRailWidth-T.createRailGap;CONTENT=MAIN-T.createContentInset*2;FORM=CONTENT;BATCH_WIDTH=CONTENT-C.listRightInset
  BATCH_MAX_HEIGHT=height-T.createBatchBottomReserve
@@ -278,30 +296,38 @@ function P:LayoutSize(width,height)
   if notice:IsShown() then notice:SetMessage(notice.text:GetText()) end
  end
  self.autoInviteHint:SetWidth(FORM)
- self:LayoutRequirements();self:LayoutFormNotices()
- if self.pickerVariants then self:LayoutActivityChoice(self.pickerVariants) end
  local summaryWidth=CONTENT-116-self.cancelListing:GetWidth()-8-self.editListing:GetWidth()
  self.sMeta:SetWidth(summaryWidth);self.sName:SetWidth(summaryWidth)
  self.manageNotice:SetWidth(CONTENT);self.empty:SetWidth(CONTENT-48)
  self.batchScroll:SetWidth(BATCH_WIDTH);self.batchBody:SetWidth(BATCH_WIDTH)
- self.applicantTable:SetColumns(ApplicantDefinitions(self.applicantTableKind));self.applicantTable:Layout(BATCH_WIDTH)
- self.rail:SetHeight(height);self:LayoutRosterCard()
+ self.rail:SetHeight(height)
 end
-function P:LayoutAppearance(width,height)
- self:LayoutSize(width,height)
+function P:LayoutSize(width,height)
+ LayoutSize(self,width,height)
+ self:LayoutRequirements();self:LayoutFormNotices()
+ if self.pickerVariants then self:LayoutActivityChoice(self.pickerVariants) end
+ self.applicantTable:SetColumns(ApplicantDefinitions(self.applicantTableKind),BATCH_WIDTH)
+ self:LayoutRosterCard()
+UI:ApplyElementScope("create")
+ end
+function P:ReflowMetrics(width,height)
+ LayoutSize(self,width,height)
  self.formFrame:SetPoint("TOPLEFT",T.createContentInset,-T.createContentInset)
  self.manage:SetPoint("TOPLEFT",T.createContentInset,-T.createContentInset)
  self.rail:SetWidth(T.createRailWidth)
- self:LayoutFont()
+ LayoutFont(self,ApplicantDefinitions(self.applicantTableKind))
  if self.favoritesList then self.favoritesList.hoverColor="createFavoriteHoverColor" end
  self:RefreshFavorites()
- if self.roster then self:LayoutRosterCard() end
-end
+UI:ApplyElementScope("create")
+ end
 function P:GetMinimumHeight()
  if not self.formFrame:IsShown() then return 0 end
  local offset=self.formNotice:IsShown() and self.formNotice:GetHeight()+12 or 0
  if self.correctionNotice:IsShown() then offset=offset+self.correctionNotice:GetHeight()+12 end
- return (self.minimumRequirementsTop or 356)+offset+self.requirementsBottom+24+40+48+T.headerHeight+T.pageInset
+ local _,_,_,_,_,_,_,minimumTop=FontGeometry(self)
+ local _,optionTop=RequirementGeometry(self)
+ local requirementsBottom=optionTop+46+self.autoInviteHint:GetStringHeight()
+ return minimumTop+offset+requirementsBottom+24+40+48+T.headerHeight+T.pageInset
 end
 function P:LayoutFormNotices()
  local offset=self.formNotice:IsShown() and self.formNotice:GetHeight()+12 or 0
@@ -343,21 +369,22 @@ function P:RefreshFavoriteState()
  Update(self.favorite,self:FormData());Update(self.listingFavorite,group:GetListing())
 end
 function P:BuildFavorites()
- local body=CreateFrame("Frame",nil,self.favoritesCard);C.SetPoint(body,"TOPLEFT",body:GetParent(),"TOPLEFT","createBodyTopleftX","createBodyTopleftY");C.ApplyStyle(body,{width="createBodyWidth"});self.favoritesBody=body
- self.favoritesEmpty=C.Text(body,S("暂无收藏","No favorites yet"),"font13","dim",T.createFavoritesEmptyWidth);C.ApplyStyle(self.favoritesEmpty,{width="createFavoritesEmptyWidth"});C.SetLineHeight(self.favoritesEmpty,"line20");self.favoritesEmpty:SetWordWrap(true);self.favoritesEmpty:SetPoint("TOPLEFT")
- local list=C.List(body,T.createListWidth,T.createFavoriteHeight*3,T.createFavoriteHeight);C.ApplyStyle(list,{width="createListWidth"});list:SetPoint("TOPLEFT");list.selectionFill=false;list.selectionMark=false;list.hoverColor="createFavoriteHoverColor";list.alternateRows=false;self.favoritesList=list
+ local body=CreateFrame("Frame",nil,self.favoritesCard);C.SetPoint(body,"TOPLEFT",body:GetParent(),"TOPLEFT","createBodyTopleftX","createBodyTopleftY");body:SetWidth(T.createBodyWidth);self.favoritesBody=body
+ self.favoritesEmpty=C.Text(body,S("暂无收藏","No favorites yet"),13,"dim",T.createFavoritesEmptyWidth);self.favoritesEmpty:SetWidth(T.createFavoritesEmptyWidth);C.SetLineHeight(self.favoritesEmpty,20);self.favoritesEmpty:SetWordWrap(true);self.favoritesEmpty:SetPoint("TOPLEFT")
+ local list=C.List(body,T.createListWidth,T.createFavoriteHeight*3,T.createFavoriteHeight);list:SetWidth(T.createListWidth);list:SetPoint("TOPLEFT");list.selectionFill=false;list.selectionMark=false;list.hoverColor="createFavoriteHoverColor";list.alternateRows=false;self.favoritesList=list
  for _,row in ipairs(list.rows) do
   row:SetScript("OnClick",nil);row:SetScript("OnMouseDown",nil);row:SetScript("OnMouseUp",nil);row.hover:SetRadius(8)
-  row.icon=C.GameIcon(row,T.createRowIconWidth);C.ApplyStyle(row.icon,{width="createRowIconWidth",height="createRowIconHeight"});C.SetPoint(row.icon,"TOPLEFT",row.icon:GetParent(),"TOPLEFT","createRowIconTopleftX","createRowIconTopleftY")
-  C.SetFont(row.title,"font14");C.SetLineHeight(row.title,"line20",true);row.title:ClearAllPoints();C.SetPoint(row.title,"TOPLEFT",row.title:GetParent(),"TOPLEFT","createRowTitleTopleftX","createRowTitleTopleftY")
-  C.SetFont(row.meta,"font12");C.SetLineHeight(row.meta,"line18");C.ApplyStyle(row.meta,{height="createRowMetaHeight"});row.meta:SetWordWrap(true);row.meta:ClearAllPoints();C.SetPoint(row.meta,"TOPLEFT",row.meta:GetParent(),"TOPLEFT","createRowMetaTopleftX","createRowMetaTopleftY")
-  row.unavailable=C.Text(row,"","font12","muted");C.SetLineHeight(row.unavailable,"line18",true);row.unavailable:SetWordWrap(false);C.SetPoint(row.unavailable,"BOTTOMLEFT",row.unavailable:GetParent(),"BOTTOMLEFT","createRowUnavailableBottomleftX","createRowUnavailableBottomleftY")
+  row.icon=C.GameIcon(row,T.createRowIconWidth);C.Box(row.icon,{width="createRowIconWidth",height="createRowIconHeight"});C.SetPoint(row.icon,"TOPLEFT",row.icon:GetParent(),"TOPLEFT","createRowIconTopleftX","createRowIconTopleftY")
+  C.SetFont(row.title,14);C.SetLineHeight(row.title,20,true);row.title:ClearAllPoints();C.SetPoint(row.title,"TOPLEFT",row.title:GetParent(),"TOPLEFT","createRowTitleTopleftX","createRowTitleTopleftY")
+  C.SetFont(row.meta,12);C.SetLineHeight(row.meta,18);row.meta:SetHeight(T.createRowMetaHeight);row.meta:SetWordWrap(true);row.meta:ClearAllPoints();C.SetPoint(row.meta,"TOPLEFT",row.meta:GetParent(),"TOPLEFT","createRowMetaTopleftX","createRowMetaTopleftY")
+  row.unavailable=C.Text(row,"",12,"muted");C.SetLineHeight(row.unavailable,18,true);row.unavailable:SetWordWrap(false);C.SetPoint(row.unavailable,"BOTTOMLEFT",row.unavailable:GetParent(),"BOTTOMLEFT","createRowUnavailableBottomleftX","createRowUnavailableBottomleftY")
   local function Active() return row.key and row._hitVisible and list.clip:IsMouseOver() end
-  row.create=C.Button(row,S("应用","Apply"),T.createRowCreateWidth,function() if Active() then P:UsePreset(row.key) end end);C.ApplyStyle(row.create,{width="createRowCreateWidth"});C.ApplyStyle(row.create,{height="createRowCreateHeight"});C.SetPoint(row.create,"BOTTOMRIGHT",row.create:GetParent(),"BOTTOMRIGHT","createRowCreateBottomrightX","createRowCreateBottomrightY");C.SetFont(row.create.label,"font12");C.SetLineHeight(row.create.label,"line18",true);row.create:SetSurfaceColors("secondaryContainer","refreshHover","surfaceHighest")
-  row.remove=C.Button(row,"",T.createRowRemoveWidth,function() if Active() then UI:GetGroup().Presets:Remove(row.key) end end);C.ApplyStyle(row.remove,{width="createRowRemoveWidth"});C.ApplyStyle(row.remove,{height="createRowRemoveHeight"});C.SetPoint(row.remove,"TOPRIGHT",row.remove:GetParent(),"TOPRIGHT","createRowRemoveToprightX","createRowRemoveToprightY");C.Glyph(row.remove,"close",T.createGlyphWidth,T.dim):SetPoint("CENTER")
+  row.create=C.Button(row,S("应用","Apply"),T.createRowCreateWidth,function() if Active() then P:UsePreset(row.key) end end);row.create:SetWidth(T.createRowCreateWidth);row.create:SetHeight(T.createRowCreateHeight);C.SetPoint(row.create,"BOTTOMRIGHT",row.create:GetParent(),"BOTTOMRIGHT","createRowCreateBottomrightX","createRowCreateBottomrightY");C.SetFont(row.create.label,12);C.SetLineHeight(row.create.label,18,true);row.create:SetSurfaceColors("secondaryContainer","refreshHover","surfaceHighest")
+  row.remove=C.Button(row,"",T.createRowRemoveWidth,function() if Active() then UI:GetGroup().Presets:Remove(row.key) end end);row.remove:SetWidth(T.createRowRemoveWidth);row.remove:SetHeight(T.createRowRemoveHeight);C.SetPoint(row.remove,"TOPRIGHT",row.remove:GetParent(),"TOPRIGHT","createRowRemoveToprightX","createRowRemoveToprightY");row.remove.elementIcon=C.Glyph(row.remove,"close",T.createGlyphWidth,T.dim);row.remove.elementIcon:SetPoint("CENTER")
  end
-end
-function P:RefreshFavorites()
+self:RegisterBuildElements()
+ end
+local function RefreshFavorites(self)
  local bodyHeight=0
  self.favoritesChevron:SetRotation(self.favoritesExpanded and -math.pi/2 or 0)
  if self.favoritesExpanded then
@@ -391,33 +418,39 @@ function P:RefreshFavorites()
   self.favoritesBody:Hide();self.favoritesList:Clear()
  end
  self.favoritesCard:SetHeight(self.favoritesExpanded and 80+bodyHeight or 68)
- self:LayoutRosterCard();self:RefreshFavoriteState()
+ self:RefreshFavoriteState()
+end
+function P:RefreshFavorites()
+ RefreshFavorites(self)
+ self:LayoutRosterCard()
 end
 function P:BuildRaidBuffs()
- local area=CreateFrame("Frame",nil,self.rosterCard);C.SetPoint(area,"TOPLEFT",area:GetParent(),"TOPLEFT","createAreaTopleftX","createAreaTopleftY");C.ApplyStyle(area,{width="createAreaWidth"});self.buffArea=area
- self.buffTitle=C.Text(area,S("缺少增益","Missing buffs"),"font14","text",T.createBuffTitleWidth);C.ApplyStyle(self.buffTitle,{width="createBuffTitleWidth"});C.SetLineHeight(self.buffTitle,"line20",true);self.buffTitle:SetPoint("TOPLEFT")
- self.buffComplete=C.Text(area,S("主要增益齐全","All main buffs covered"),"font13","good",T.createBuffCompleteWidth);C.ApplyStyle(self.buffComplete,{width="createBuffCompleteWidth"});C.SetLineHeight(self.buffComplete,"line20",true);C.SetPoint(self.buffComplete,"TOPLEFT",self.buffComplete:GetParent(),"TOPLEFT",0,"createBuffCompleteTopleftY")
- self.buffList=C.List(area,T.createBuffListWidth,T.createBuffListHeight,32);C.ApplyStyle(self.buffList,{width="createBuffListWidth",height="createBuffListHeight"});C.SetPoint(self.buffList,"TOPLEFT",self.buffList:GetParent(),"TOPLEFT",0,"createBuffListTopleftY");self.buffList.selectionFill=false;self.buffList.selectionMark=false;self.buffList.hoverFill=false;self.buffList.alternateRows=false
+ local area=CreateFrame("Frame",nil,self.rosterCard);C.SetPoint(area,"TOPLEFT",area:GetParent(),"TOPLEFT","createAreaTopleftX","createAreaTopleftY");area:SetWidth(T.createAreaWidth);self.buffArea=area
+ self.buffTitle=C.Text(area,S("缺少增益","Missing buffs"),14,"text",T.createBuffTitleWidth);self.buffTitle:SetWidth(T.createBuffTitleWidth);C.SetLineHeight(self.buffTitle,20,true);self.buffTitle:SetPoint("TOPLEFT")
+ self.buffComplete=C.Text(area,S("主要增益齐全","All main buffs covered"),13,"good",T.createBuffCompleteWidth);self.buffComplete:SetWidth(T.createBuffCompleteWidth);C.SetLineHeight(self.buffComplete,20,true);C.SetPoint(self.buffComplete,"TOPLEFT",self.buffComplete:GetParent(),"TOPLEFT",0,"createBuffCompleteTopleftY")
+ self.buffList=C.List(area,T.createBuffListWidth,T.createBuffListHeight,32);C.Box(self.buffList,{width="createBuffListWidth",height="createBuffListHeight"});C.SetPoint(self.buffList,"TOPLEFT",self.buffList:GetParent(),"TOPLEFT",0,"createBuffListTopleftY");self.buffList.selectionFill=false;self.buffList.selectionMark=false;self.buffList.hoverFill=false;self.buffList.alternateRows=false
  self.buffRows={}
  for _,row in ipairs(self.buffList.rows) do
   row.title:Hide();row.meta:Hide();row:SetScript("OnClick",nil);row:EnableMouse(false);row:EnableMouseMotion(false);row.cells={}
   for i=1,2 do
-   local cell=CreateFrame("Frame",nil,row);C.ApplyStyle(cell,{height="createCellHeight"})
-   cell.icon=C.Icon(cell,T.createCellIconWidth);C.ApplyStyle(cell.icon,{width="createCellIconWidth",height="createCellIconHeight"});cell.icon:SetPoint("LEFT",0,0)
-   cell.label=C.Text(cell,"","font13","muted");C.SetLineHeight(cell.label,"line20",true);C.SetPoint(cell.label,"LEFT",cell.label:GetParent(),"LEFT","createCellLabelLeftX",0);cell.label:SetWordWrap(false)
+   local cell=CreateFrame("Frame",nil,row);cell:SetHeight(T.createCellHeight)
+   cell.icon=C.Icon(cell,T.createCellIconWidth);C.Box(cell.icon,{width="createCellIconWidth",height="createCellIconHeight"});cell.icon:SetPoint("LEFT",0,0)
+   cell.label=C.Text(cell,"",13,"muted");C.SetLineHeight(cell.label,20,true);C.SetPoint(cell.label,"LEFT",cell.label:GetParent(),"LEFT","createCellLabelLeftX",0);cell.label:SetWordWrap(false)
    row.cells[i]=cell
   end
  end
-end
+self:RegisterBuildElements()
+ end
 function P:BuildRosterList()
- local list=CreateFrame("Frame",nil,self.rosterCard);C.SetPoint(list,"TOPLEFT",list:GetParent(),"TOPLEFT","createListTopleftX","createListTopleftY");C.ApplyStyle(list,{width="createListWidth"});self.rosterList=list
+ local list=CreateFrame("Frame",nil,self.rosterCard);C.SetPoint(list,"TOPLEFT",list:GetParent(),"TOPLEFT","createListTopleftX","createListTopleftY");list:SetWidth(T.createListWidth);self.rosterList=list
  local clip=CreateFrame("ScrollFrame",nil,list);clip:SetPoint("TOPLEFT");clip:SetPoint("BOTTOMRIGHT");list.clip=clip;list.gutter=0
  local body=CreateFrame("Frame",nil,clip);body:SetWidth(list:GetWidth());body:SetHeight(1);clip:SetScrollChild(body);list.body=body;list.rows={}
  local slider=C.ScrollBar(list);slider:SetPoint("TOPRIGHT");slider:SetPoint("BOTTOMRIGHT");list.slider=slider
  slider:SetScript("OnValueChanged",function(_,value) if not list.syncing then P:SetRosterOffset(value) end end)
  list:EnableMouseWheel(true);list:SetScript("OnMouseWheel",function(_,delta) P:SetRosterOffset(clip:GetVerticalScroll()-delta*48) end)
- list.empty=C.Text(body,L.rosterEmpty,"font13","muted",body:GetWidth());C.SetLineHeight(list.empty,"line20");C.SetPoint(list.empty,"TOPLEFT",list.empty:GetParent(),"TOPLEFT","createListEmptyTopleftX","createListEmptyTopleftY")
-end
+ list.empty=C.Text(body,L.rosterEmpty,13,"muted",body:GetWidth());C.SetLineHeight(list.empty,20);C.SetPoint(list.empty,"TOPLEFT",list.empty:GetParent(),"TOPLEFT","createListEmptyTopleftX","createListEmptyTopleftY")
+self:RegisterBuildElements()
+ end
 function P:SetRosterOffset(offset)
  local list=self.rosterList;local height=list:GetHeight()
  offset=math.max(0,math.min(offset,math.max(0,list.body:GetHeight()-height)))
@@ -446,8 +479,8 @@ function P:RefreshRosterList(gutter)
     if key=="RightButton" then UI.Members:OpenMenu(button,button.member,function() UI.Tooltip:Hide() end)
     else UI.Tooltip:ShowPlayer(button,button.member,button.memberContext) end
    end)
-   row:SetFeedbackColors({1,1,1,.028},{1,1,1,.045})
-   MemberTooltipArea(row,list.clip);list.rows[i]=row
+   row:SetFeedbackColors("createRosterMemberHover","createRosterMemberPressed")
+   UI:Element(row,"create.rosterMember","create",row,"create.rosterMember");MemberTooltipArea(row,list.clip);list.rows[i]=row
   end
  end
  -- A slot can be reused while the same person moves elsewhere in the roster.
@@ -466,14 +499,14 @@ function P:RefreshRosterList(gutter)
   UI.Members:BindRoster(row,member,list.body:GetWidth(),member.isLeader,true,12,8)
   row.contentTop=top;row:ClearAllPoints();row:SetPoint("TOPLEFT",0,-top);top=top+row:GetHeight()+4
  end
- for i=#self.roster+1,#list.rows do local row=list.rows[i];HideMemberTooltip(row);UI:CloseMenuFor(row);row:Hide();row.member=nil;row.memberContext=nil end
+ for i=#self.roster+1,#list.rows do local row=list.rows[i];HideMemberTooltip(row);UI:CloseMenuFor(row);row:Hide();row.member=nil;row.memberContext=nil;C.RekeyElement(row,nil) end
  list.body:SetHeight(#self.roster>0 and top-4 or 36)
  if gutter==0 then list.fullHeight=list.body:GetHeight() end
 end
 function P:ClearRosterList()
  if not self.rosterList then return end
  self.rosterList:Hide()
- for _,row in ipairs(self.rosterList.rows) do HideMemberTooltip(row);UI:CloseMenuFor(row);row:Hide();row.member=nil;row.memberContext=nil end
+ for _,row in ipairs(self.rosterList.rows) do HideMemberTooltip(row);UI:CloseMenuFor(row);row:Hide();row.member=nil;row.memberContext=nil;C.RekeyElement(row,nil) end
 end
 function P:LayoutRosterCard()
  local top=self.favoritesCard:GetHeight()+16
@@ -497,7 +530,11 @@ function P:LayoutRosterCard()
  end
  self.rosterCard:SetHeight(height)
 end
-function P:RefreshRosterPresentation()
+local function FinishRosterPresentation(self)
+ self:LayoutRosterCard()
+ if self.roster then UI.Tooltip:RefreshRoster(self.groupSummary,self.roster,self.rosterContext) end
+end
+local function RefreshRosterPresentation(self)
  if not self.roster then return end
  local group=UI:GetGroup();local listing=group:GetListing()
  local activityID=listing and listing.activityID or form.activityID
@@ -529,8 +566,11 @@ function P:RefreshRosterPresentation()
  elseif self.buffArea then
   self.buffArea:Hide();self.buffList:Clear()
  end
- self:LayoutRosterCard()
- UI.Tooltip:RefreshRoster(self.groupSummary,self.roster,self.rosterContext)
+end
+function P:RefreshRosterPresentation()
+ if not self.roster then return end
+ RefreshRosterPresentation(self)
+ FinishRosterPresentation(self)
 end
 function P:UsePreset(entry)
  local group=UI:GetGroup();local allowed,reason=group:CanManageListing()
@@ -605,46 +645,48 @@ end
 function P:BuildBatch(parent)
  local f=CreateFrame("Frame",nil,parent);f:SetWidth(BATCH_WIDTH);f.bg=C.Panel(f,"rowAlternate","createFBgRadius")
  UI.drag:AddHandle(f)
- f.comment=C.Text(f,"","font12","muted",columns.comment.width);f.comment:SetPoint("TOPLEFT",columns.comment.x,-T.createMemberTop);f.comment:SetJustifyV("MIDDLE");f.comment:SetWordWrap(true);C.SetLineHeight(f.comment,"line18")
- f.status=C.Text(f,"","font14","muted",columns.actions.width);f.status:SetPoint("LEFT",columns.actions.x,0);f.status:SetJustifyH("CENTER");C.SetLineHeight(f.status,"line20")
- f.invite=C.IconButton(f,nil,T.createFInviteWidth,function(btn) P:ApplicantAction(btn,"Invite") end,{iconSize=24});C.ApplyStyle(f.invite,{width="createFInviteWidth",height="createFInviteHeight"});f.invite:SetPoint("LEFT",columns.actions.x,0)
- f.decline=C.IconButton(f,nil,T.createFDeclineWidth,function(btn) P:ApplicantAction(btn,"Decline") end,{iconSize=24});C.ApplyStyle(f.decline,{width="createFDeclineWidth",height="createFDeclineHeight"});f.decline:SetPoint("LEFT",columns.actions.x+44,0)
+ f.comment=C.Text(f,"",12,"muted",columns.comment.width);f.comment:SetPoint("TOPLEFT",columns.comment.x,-T.createMemberTop);f.comment:SetJustifyV("MIDDLE");f.comment:SetWordWrap(true);C.SetLineHeight(f.comment,18)
+ f.status=C.Text(f,"",14,"muted",columns.actions.width);f.status:SetPoint("LEFT",columns.actions.x,0);f.status:SetJustifyH("CENTER");C.SetLineHeight(f.status,20)
+ f.invite=C.IconButton(f,nil,T.createFInviteWidth,function(btn) P:ApplicantAction(btn,"Invite") end,{iconSize=24,variant="applicantInvite"});C.Box(f.invite,{width="createFInviteWidth",height="createFInviteHeight"});f.invite:SetPoint("LEFT",columns.actions.x,0)
+ f.decline=C.IconButton(f,nil,T.createFDeclineWidth,function(btn) P:ApplicantAction(btn,"Decline") end,{iconSize=24,variant="applicantDecline"});C.Box(f.decline,{width="createFDeclineWidth",height="createFDeclineHeight"});f.decline:SetPoint("LEFT",columns.actions.x+44,0)
  f.invite.glyph=f.invite.icon;UI:SetMediaTexture(f.invite.glyph,"invite.tga")
  f.decline.glyph=f.decline.icon;UI:SetMediaTexture(f.decline.glyph,"decline.tga")
- f:EnableMouse(true);f:SetScript("OnEnter",function(b) b.bg:SetColor(T.rowHover);b.bg:Show() end);f:SetScript("OnLeave",function(b) b.bg:SetColor(T.rowAlternate);b.bg:SetShown(b.alternate==true) end)
+ f:EnableMouse(true);f.cardStyle=C.Style(f,{recipe="selectableSurface",immediate=true,slots={root=f,surface=f.bg}});f.cardStyle:Bind(f,{hover=true})
  for _,action in ipairs({f.invite,f.decline}) do
-  local color=action==f.invite and T.good or T.accent;action:SetFeedbackColors({color[1],color[2],color[3],T.createActionHoverAlpha},{color[1],color[2],color[3],T.createActionPressedAlpha})
+  action.feedbackStyle=action.styleController
+  action.feedbackStyle:Bind(action,{hover=true,pressed=true})
  end
- f.people={}
+ f.people={};UI:Element(f,"create.applicantBatch","create",f,"create.applicantBatch")
  return f
 end
 function P:EnsureBatchMembers(f,count)
  for i=#f.people+1,count do
   local row=CreateFrame("Button",nil,f);row:SetSize(columns.actions.x,T.createMemberHeight);row:RegisterForClicks("LeftButtonUp","RightButtonUp")
-  row.icon=C.Icon(row,T.createApplicantIconSize);C.ApplyStyle(row.icon,{width="createApplicantIconSize",height="createApplicantIconSize"});row.icon:SetPoint("LEFT",columns.name.x,0)
-  row.title=C.Text(row,"","font14","text",nil);row.title:SetPoint("LEFT",T.createApplicantTitleX,0);C.SetLineHeight(row.title,"line19");row.title:SetWordWrap(true)
+  row.icon=C.Icon(row,T.createApplicantIconSize);C.Box(row.icon,{width="createApplicantIconSize",height="createApplicantIconSize"});row.icon:SetPoint("LEFT",columns.name.x,0)
+  row.title=C.Text(row,"",14,"text",nil);row.title:SetPoint("LEFT",T.createApplicantTitleX,0);C.SetLineHeight(row.title,19);row.title:SetWordWrap(true)
   row.factionButton=C.Button(row,"",T.createRowFactionButtonWidth,function(_,button)
    if not row.member or not P.batchScroll:IsMouseOver() then return end
    if button=="RightButton" then P:OpenApplicantMenu(row);return end
    row.factionExpanded=not row.factionExpanded;LayoutApplicantFaction(row)
-  end,{height=24,radius=6,textColor="muted"});C.ApplyStyle(row.factionButton,{width="createRowFactionButtonWidth"})
+  end,{height=24,radius=6,textColor="muted"});row.factionButton:SetWidth(T.createRowFactionButtonWidth)
   row.factionButton:RegisterForClicks("LeftButtonUp","RightButtonUp")
-  row.faction=C.Icon(row.factionButton,T.createRowFactionWidth);C.ApplyStyle(row.faction,{width="createRowFactionWidth",height="createRowFactionHeight"});row.faction:SetPoint("CENTER")
-  row.race=C.Text(row.factionButton,"","font14","muted",columns.faction.width);row.race:SetPoint("CENTER");row.race:SetJustifyH("CENTER");C.SetLineHeight(row.race,"line20",true);row.race:SetWordWrap(false)
+  row.faction=C.Icon(row.factionButton,T.createRowFactionWidth);C.Box(row.faction,{width="createRowFactionWidth",height="createRowFactionHeight"});row.faction:SetPoint("CENTER")
+  row.race=C.Text(row.factionButton,"",14,"muted",columns.faction.width);row.race:SetPoint("CENTER");row.race:SetJustifyH("CENTER");C.SetLineHeight(row.race,20,true);row.race:SetWordWrap(false)
   LayoutApplicantFaction(row)
   row.marks=UI.Members:CreateMarks(row,true)
   row.role=C.Icon(row,T.createRoleIconSize)
   row.roles={row.role}
   for slot=2,3 do row.roles[slot]=C.Icon(row,T.createIconWidth) end
-  row.ilvl=C.Text(row,"","font14","muted",columns.ilvl.width);row.ilvl:SetPoint("LEFT",columns.ilvl.x,0);row.ilvl:SetJustifyH(columns.ilvl.align);C.SetLineHeight(row.ilvl,"line20",true)
-  row.score=C.Text(row,"","font14","muted",columns.rating.width);row.score:SetPoint("LEFT",columns.rating.x,0);row.score:SetJustifyH(columns.rating.align);C.SetLineHeight(row.score,"line20",true)
-  row.mapScore=C.Text(row,"","font14","muted",columns.mapScore.width);row.mapScore:SetPoint("LEFT",columns.mapScore.x,0);row.mapScore:SetJustifyH(columns.mapScore.align);C.SetLineHeight(row.mapScore,"line20",true)
-  row:SetScript("OnEnter",function(r) if r.member then r:GetParent().bg:SetColor(T.rowHover);r:GetParent().bg:Show() end end)
-  row:SetScript("OnLeave",function(r) local batch=r:GetParent();batch.bg:SetColor(T.rowAlternate);batch.bg:SetShown(batch.alternate==true);UI.Tooltip:LeaveOwner(r) end)
+  row.ilvl=C.Text(row,"",14,"muted",columns.ilvl.width);row.ilvl:SetPoint("LEFT",columns.ilvl.x,0);row.ilvl:SetJustifyH(columns.ilvl.align);C.SetLineHeight(row.ilvl,20,true)
+  row.score=C.Text(row,"",14,"muted",columns.rating.width);row.score:SetPoint("LEFT",columns.rating.x,0);row.score:SetJustifyH(columns.rating.align);C.SetLineHeight(row.score,20,true)
+  row.mapScore=C.Text(row,"",14,"muted",columns.mapScore.width);row.mapScore:SetPoint("LEFT",columns.mapScore.x,0);row.mapScore:SetJustifyH(columns.mapScore.align);C.SetLineHeight(row.mapScore,20,true)
+  row:SetScript("OnLeave",function(r) UI.Tooltip:LeaveOwner(r) end)
   row:SetScript("OnClick",function(r,button) if button=="RightButton" and r.member and P.batchScroll:IsMouseOver() then P:OpenApplicantMenu(r) end end)
   row:SetScript("OnHide",function(r) UI:CloseMenuFor(r);UI.Members:ClearMarks(r.marks);r.factionExpanded=nil;LayoutApplicantFaction(r) end)
+  -- Bind after the product scripts: SetScript replaces earlier style hooks.
+  f.cardStyle:Bind(row,{hover=true})
   MemberTooltipArea(row,self.batchScroll)
-  f.people[i]=row
+  UI:Element(row,"create.applicantMember","create",row,"create.applicantMember");f.people[i]=row
  end
 end
 function P:OpenApplicantMenu(row)
@@ -662,25 +704,26 @@ function P:OpenApplicantMenu(row)
  end,{cursor=true})
 end
 function P:BuildPicker(parent)
- local popup=CreateFrame("Frame",nil,parent);C.ApplyStyle(popup,{width="createPopupWidth",height="createPopupHeight"});C.SetPoint(popup,"TOPLEFT",self.pickerTrigger,"BOTTOMLEFT",0,"createPopupTopleftY");popup:SetFrameLevel(parent:GetFrameLevel()+30);C.Panel(popup,"surface","createPanelRadius3");popup:EnableMouse(true);popup:Hide();self.picker=popup
- self.pickerSearch=C.Edit(popup,T.createPickerSearchWidth,T.createPickerSearchHeight);C.ApplyStyle(self.pickerSearch,{width="createPickerSearchWidth",height="createPickerSearchHeight"});C.SetPoint(self.pickerSearch,"TOPLEFT",self.pickerSearch:GetParent(),"TOPLEFT","createPickerSearchTopleftX","createPickerSearchTopleftY")
+ local popup=CreateFrame("Frame",nil,parent);C.Box(popup,{width="createPopupWidth",height="createPopupHeight"});C.SetPoint(popup,"TOPLEFT",self.pickerTrigger,"BOTTOMLEFT",0,"createPopupTopleftY");popup:SetFrameLevel(parent:GetFrameLevel()+30);C.Panel(popup,"surface","createPanelRadius3");popup:EnableMouse(true);popup:Hide();self.picker=popup
+ self.pickerSearch=C.Edit(popup,T.createPickerSearchWidth,T.createPickerSearchHeight);C.Box(self.pickerSearch,{width="createPickerSearchWidth",height="createPickerSearchHeight"});C.SetPoint(self.pickerSearch,"TOPLEFT",self.pickerSearch:GetParent(),"TOPLEFT","createPickerSearchTopleftX","createPickerSearchTopleftY")
  self.pickerSearch.box:ClearAllPoints();C.SetPoint(self.pickerSearch.box,"TOPLEFT",self.pickerSearch.box:GetParent(),"TOPLEFT","createPickerSearchBoxTopleftX","createPickerSearchBoxTopleftY");C.SetPoint(self.pickerSearch.box,"BOTTOMRIGHT",self.pickerSearch.box:GetParent(),"BOTTOMRIGHT","createPickerSearchBoxBottomrightX","createPickerSearchBoxBottomrightY")
- C.Glyph(self.pickerSearch,"search",T.createGlyphWidth2):SetPoint("LEFT",12,0)
- self.pickerSearchHint=C.Text(self.pickerSearch,S("搜索全部活动","Search every activity"),"font14","dim");C.SetLineHeight(self.pickerSearchHint,"line20",true);C.SetPoint(self.pickerSearchHint,"LEFT",self.pickerSearchHint:GetParent(),"LEFT","createPickerSearchHintLeftX",0)
- self.pickerClear=C.Button(self.pickerSearch,"",T.createPickerClearWidth,function() P.pickerSearch.box:SetText("");P.pickerSearch.box:SetFocus() end);C.ApplyStyle(self.pickerClear,{width="createPickerClearWidth"});C.ApplyStyle(self.pickerClear,{height="createPickerClearHeight"});C.SetPoint(self.pickerClear,"RIGHT",self.pickerClear:GetParent(),"RIGHT","createPickerClearRightX",0);C.Glyph(self.pickerClear,"close",T.createGlyphWidth3):SetPoint("CENTER");self.pickerClear:Hide()
+ self.pickerSearch.elementIcon=C.Glyph(self.pickerSearch,"search",T.createGlyphWidth2);self.pickerSearch.elementIcon:SetPoint("LEFT",12,0)
+ self.pickerSearchHint=C.Text(self.pickerSearch,S("搜索全部活动","Search every activity"),14,"dim");C.SetLineHeight(self.pickerSearchHint,20,true);C.SetPoint(self.pickerSearchHint,"LEFT",self.pickerSearchHint:GetParent(),"LEFT","createPickerSearchHintLeftX",0)
+ self.pickerClear=C.Button(self.pickerSearch,"",T.createPickerClearWidth,function() P.pickerSearch.box:SetText("");P.pickerSearch.box:SetFocus() end);self.pickerClear:SetWidth(T.createPickerClearWidth);self.pickerClear:SetHeight(T.createPickerClearHeight);C.SetPoint(self.pickerClear,"RIGHT",self.pickerClear:GetParent(),"RIGHT","createPickerClearRightX",0);self.pickerClear.elementIcon=C.Glyph(self.pickerClear,"close",T.createGlyphWidth3);self.pickerClear.elementIcon:SetPoint("CENTER");self.pickerClear:Hide()
  self.pickerSearch.box:HookScript("OnTextChanged",function(box) local filled=box:GetText()~="";P.pickerSearchHint:SetShown(not filled);P.pickerClear:SetShown(filled);box:ClearAllPoints();C.SetPoint(box,"TOPLEFT",box:GetParent(),"TOPLEFT","createBoxTopleftX","createBoxTopleftY");C.SetPoint(box,"BOTTOMRIGHT",box:GetParent(),"BOTTOMRIGHT",filled and -60 or -12,"createBoxBottomrightY");P:RefreshPickerRows() end)
- self.pickerCategories=C.List(popup,T.createPickerCategoriesWidth,T.createPickerCategoriesHeight,64,function(key) P.pickerCategory=key;P.pickerTier=nil;P:RefreshPickerRows() end);C.ApplyStyle(self.pickerCategories,{width="createPickerCategoriesWidth",height="createPickerCategoriesHeight"});C.SetPoint(self.pickerCategories,"TOPLEFT",self.pickerCategories:GetParent(),"TOPLEFT","createPickerCategoriesTopleftX","createPickerCategoriesTopleftY")
+ self.pickerCategories=C.List(popup,T.createPickerCategoriesWidth,T.createPickerCategoriesHeight,64,function(key) P.pickerCategory=key;P.pickerTier=nil;P:RefreshPickerRows() end);C.Box(self.pickerCategories,{width="createPickerCategoriesWidth",height="createPickerCategoriesHeight"});C.SetPoint(self.pickerCategories,"TOPLEFT",self.pickerCategories:GetParent(),"TOPLEFT","createPickerCategoriesTopleftX","createPickerCategoriesTopleftY")
  self.pickerCategories:SetGutter(0);self.pickerCategories.alternateRows=false
- for _,row in ipairs(self.pickerCategories.rows) do C.ApplyStyle(row,{height="createRowHeight"});row.selected:SetRadius(8);row.hover:SetRadius(8);row.alternate:SetRadius(8);row.symbol=C.Icon(row,T.createRowSymbolWidth);C.ApplyStyle(row.symbol,{width="createRowSymbolWidth",height="createRowSymbolHeight"});C.SetPoint(row.symbol,"LEFT",row.symbol:GetParent(),"LEFT","createRowSymbolLeftX",0);C.SetFont(row.title,"font16");row.title:ClearAllPoints();C.SetPoint(row.title,"LEFT",row.title:GetParent(),"LEFT","createRowTitleLeftX",0);C.ApplyStyle(row.title,{width="createRowTitleWidth"});row.title:SetWordWrap(true);row.title:SetHeight(0);C.SetLineHeight(row.title,"line22");row.meta:Hide() end
+ for _,row in ipairs(self.pickerCategories.rows) do row:SetHeight(T.createRowHeight);row.selected:SetRadius(8);row.hover:SetRadius(8);row.alternate:SetRadius(8);row.symbol=C.Icon(row,T.createRowSymbolWidth);C.Box(row.symbol,{width="createRowSymbolWidth",height="createRowSymbolHeight"});C.SetPoint(row.symbol,"LEFT",row.symbol:GetParent(),"LEFT","createRowSymbolLeftX",0);C.SetFont(row.title,16);row.title:ClearAllPoints();C.SetPoint(row.title,"LEFT",row.title:GetParent(),"LEFT","createRowTitleLeftX",0);row.title:SetWidth(T.createRowTitleWidth);row.title:SetWordWrap(true);row.title:SetHeight(0);C.SetLineHeight(row.title,22);row.meta:Hide() end
  self.pickerCategories:SetStyle({selectionMotion=true,radius=8})
- self.pickerSurface=CreateFrame("Frame",nil,popup);C.ApplyStyle(self.pickerSurface,{width="createPickerSurfaceWidth",height="createPickerSurfaceHeight"});C.SetPoint(self.pickerSurface,"TOPLEFT",self.pickerSurface:GetParent(),"TOPLEFT","createPickerSurfaceTopleftX","createPickerSurfaceTopleftY");C.Panel(self.pickerSurface,"surfaceLow","createPanelRadius4")
- self.tierChoice=C.Choice(self.pickerSurface,T.createTierChoiceWidth,function() return P:TierItems(P.pickerCategory) end,function(value) P.pickerTier=value or nil;P:RefreshPickerRows() end);C.ApplyStyle(self.tierChoice,{width="createTierChoiceWidth"});C.ApplyStyle(self.tierChoice,{height="createTierChoiceHeight"});C.SetPoint(self.tierChoice,"TOPLEFT",self.tierChoice:GetParent(),"TOPLEFT","createTierChoiceTopleftX","createTierChoiceTopleftY")
- self.pickerResults=C.List(self.pickerSurface,T.createPickerResultsWidth,T.createPickerResultsHeight,44,function(index) P:SelectPickerRow(index) end);C.ApplyStyle(self.pickerResults,{width="createPickerResultsWidth",height="createPickerResultsHeight"});C.SetPoint(self.pickerResults,"TOPLEFT",self.pickerResults:GetParent(),"TOPLEFT","createPickerResultsTopleftX","createPickerResultsTopleftY")
+ self.pickerSurface=CreateFrame("Frame",nil,popup);C.Box(self.pickerSurface,{width="createPickerSurfaceWidth",height="createPickerSurfaceHeight"});C.SetPoint(self.pickerSurface,"TOPLEFT",self.pickerSurface:GetParent(),"TOPLEFT","createPickerSurfaceTopleftX","createPickerSurfaceTopleftY");C.Panel(self.pickerSurface,"surfaceLow","createPanelRadius4")
+ self.tierChoice=C.Choice(self.pickerSurface,T.createTierChoiceWidth,function() return P:TierItems(P.pickerCategory) end,function(value) P.pickerTier=value or nil;P:RefreshPickerRows() end);self.tierChoice:SetWidth(T.createTierChoiceWidth);self.tierChoice:SetHeight(T.createTierChoiceHeight);C.SetPoint(self.tierChoice,"TOPLEFT",self.tierChoice:GetParent(),"TOPLEFT","createTierChoiceTopleftX","createTierChoiceTopleftY")
+ self.pickerResults=C.List(self.pickerSurface,T.createPickerResultsWidth,T.createPickerResultsHeight,44,function(index) P:SelectPickerRow(index) end);C.Box(self.pickerResults,{width="createPickerResultsWidth",height="createPickerResultsHeight"});C.SetPoint(self.pickerResults,"TOPLEFT",self.pickerResults:GetParent(),"TOPLEFT","createPickerResultsTopleftX","createPickerResultsTopleftY")
  self.pickerResults.alternateRows=false
- for _,row in ipairs(self.pickerResults.rows) do row.selected:SetRadius(8);row.hover:SetRadius(8);row.alternate:SetRadius(8);row.icon=C.Icon(row,T.createRowIconWidth2);C.ApplyStyle(row.icon,{width="createRowIconWidth2",height="createRowIconHeight2"});C.SetPoint(row.icon,"LEFT",row.icon:GetParent(),"LEFT","createRowIconLeftX",0);row.title:ClearAllPoints();C.SetPoint(row.title,"TOPLEFT",row.title:GetParent(),"TOPLEFT","createRowTitleTopleftX2","createRowTitleTopleftY2");C.ApplyStyle(row.title,{width="createRowTitleWidth2"});C.SetFont(row.title,"font16");C.SetLineHeight(row.title,"line22",true);row.meta:ClearAllPoints();C.SetPoint(row.meta,"TOPLEFT",row.meta:GetParent(),"TOPLEFT","createRowMetaTopleftX2","createRowMetaTopleftY2");C.ApplyStyle(row.meta,{width="createRowMetaWidth"}) end
- self.pickerEmpty=C.Text(popup,S("没有匹配的活动","No matching activities"),"font14","dim",T.createPickerEmptyWidth);C.ApplyStyle(self.pickerEmpty,{width="createPickerEmptyWidth"});C.SetPoint(self.pickerEmpty,"TOPLEFT",self.pickerEmpty:GetParent(),"TOPLEFT","createPickerEmptyTopleftX","createPickerEmptyTopleftY")
+ for _,row in ipairs(self.pickerResults.rows) do row.selected:SetRadius(8);row.hover:SetRadius(8);row.alternate:SetRadius(8);row.icon=C.Icon(row,T.createRowIconWidth2);C.Box(row.icon,{width="createRowIconWidth2",height="createRowIconHeight2"});C.SetPoint(row.icon,"LEFT",row.icon:GetParent(),"LEFT","createRowIconLeftX",0);row.title:ClearAllPoints();C.SetPoint(row.title,"TOPLEFT",row.title:GetParent(),"TOPLEFT","createRowTitleTopleftX2","createRowTitleTopleftY2");row.title:SetWidth(T.createRowTitleWidth2);C.SetFont(row.title,16);C.SetLineHeight(row.title,22,true);row.meta:ClearAllPoints();C.SetPoint(row.meta,"TOPLEFT",row.meta:GetParent(),"TOPLEFT","createRowMetaTopleftX2","createRowMetaTopleftY2");row.meta:SetWidth(T.createRowMetaWidth) end
+ self.pickerEmpty=C.Text(popup,S("没有匹配的活动","No matching activities"),14,"dim",T.createPickerEmptyWidth);self.pickerEmpty:SetWidth(T.createPickerEmptyWidth);C.SetPoint(self.pickerEmpty,"TOPLEFT",self.pickerEmpty:GetParent(),"TOPLEFT","createPickerEmptyTopleftX","createPickerEmptyTopleftY")
  popup:SetScript("OnEvent",function() if not popup:IsMouseOver() and not P.pickerTrigger:IsMouseOver() and not UI.context:IsMenuHovered(P.tierChoice) then P:ClosePicker() end end)
-end
+self:RegisterBuildElements()
+ end
 function P:TogglePicker()
  if not self.picker then self:BuildPicker(self.frame) end
  if self.picker:IsShown() then self:ClosePicker();return end
@@ -701,7 +744,7 @@ function P:RefreshPickerRows()
  local selectedCategory=catMap[self.pickerCategory]
  local showTier=not searching and selectedCategory and not selectedCategory.season and tierScopes>1 and #tierItems>1
  if not showTier and not searching then self.pickerTier=nil end
- self.pickerCategories.selectedKey=self.pickerCategory;self.pickerCategories:SetShown(not searching);self.pickerCategories:SetItems(cats,function(row,key) UI:SetText(row.title,catMap[key].name);row.symbol:SetTexture(T.media..catMap[key].icon..".tga");row.symbol:SetTexCoord(0,1,0,1);UI:SetText(row.meta,"") end)
+ self.pickerCategories.selectedKey=self.pickerCategory;self.pickerCategories:SetShown(not searching);self.pickerCategories:SetItems(cats,function(row,key) UI:SetText(row.title,catMap[key].name);row.symbol:SetTexture(UI:CategoryIcon(catMap[key].icon));row.symbol:SetTexCoord(0,1,0,1);UI:SetText(row.meta,"") end)
  local tierNames={};for _,tier in ipairs(catalog:GetTiers()) do tierNames[tier.id]=tier.name end
  local entries,indices={},{}
  for _,cat in ipairs(catalog:GetCategories()) do
@@ -721,8 +764,8 @@ function P:RefreshPickerRows()
  for index,entry in ipairs(entries) do if entry.category==state.category and entry.group.key==state.group then self.pickerResults.selectedKey=index;break end end
  self.pickerResults:SetItems(indices,function(row,index)
   local entry=entries[index];UI:SetActivityIcon(row.icon,entry.group.activity);UI:SetText(row.title,entry.group.name);UI:SetText(row.meta,entry.context)
-  row.title:ClearAllPoints();C.SetPoint(row.title,"LEFT",row.title:GetParent(),"LEFT","createRowTitleLeftX2",0);row.title:SetWidth(searching and 382 or 334);C.SetLineHeight(row.title,"line22",true)
-  row.meta:ClearAllPoints();C.SetPoint(row.meta,"RIGHT",row.meta:GetParent(),"RIGHT","createRowMetaRightX",0);row.meta:SetWidth(T.createRowMetaWidth2);C.SetLineHeight(row.meta,"line20",true);row.meta:SetJustifyH("RIGHT");row.meta:SetShown(searching)
+  row.title:ClearAllPoints();C.SetPoint(row.title,"LEFT",row.title:GetParent(),"LEFT","createRowTitleLeftX2",0);row.title:SetWidth(searching and 382 or 334);C.SetLineHeight(row.title,22,true)
+  row.meta:ClearAllPoints();C.SetPoint(row.meta,"RIGHT",row.meta:GetParent(),"RIGHT","createRowMetaRightX",0);row.meta:SetWidth(T.createRowMetaWidth2);C.SetLineHeight(row.meta,20,true);row.meta:SetJustifyH("RIGHT");row.meta:SetShown(searching)
  end)
  if not showTier then self.pickerResults:ClearAllPoints();C.SetPoint(self.pickerResults,"TOPLEFT",self.pickerResults:GetParent(),"TOPLEFT","createPickerResultsTopleftX","createPickerResultsTopleftY2");self.pickerResults:SetViewport(368) end
  self.pickerEmpty:SetShown(#entries==0);self.tierChoice:SetShown(showTier)
@@ -866,7 +909,7 @@ function P:PrepareForm(editing)
  elseif not self.started then if UI.preview then UI.Native:SetPreviewCreationText("","") else C_LFGList.ClearCreationTextFields() end;self.started=true end
  self:RefreshPicker();self.preparing=nil;self:ValidateForm();return true
 end
-function P:RefreshMode()
+local function RefreshMode(self)
  local group=UI:GetGroup();local listing=group:GetListing();local canManage=group:CanManageListing()
  if state.hadListing and not listing and not self.submitting then form.crossFaction=true;self:RefreshPicker() end
  state.hadListing=listing~=nil
@@ -887,9 +930,15 @@ function P:RefreshMode()
   local difficulty=act.difficultyID and act.difficultyID>0 and GetDifficultyInfo(act.difficultyID)
   UI:SetText(self.sMeta,(group and group.name or listing.activityName or "")..(difficulty and " · "..difficulty or "").." · "..L.requiredItemLevel.." "..(listing.requiredItemLevel or 0))
  end
- self:RefreshRosterPresentation();self:RefreshFavorites()
- UI:RefreshWindowSize()
 end
+function P:RefreshMode()
+ RefreshMode(self)
+ RefreshRosterPresentation(self)
+ RefreshFavorites(self)
+ FinishRosterPresentation(self)
+ UI:RefreshWindowSize()
+UI:ApplyElementScope("create")
+ end
 function P:Submit()
  if self.submitting then return end
  local allowed,reason=UI:GetGroup():CanManageListing()
@@ -900,8 +949,14 @@ function P:Submit()
  local data=self:FormData();local valid,err=UI.Native:ValidateCreation(data);if not valid then self:SetFormError(err);return end
  self.submitting=true;self.publish:SetAvailable(false)
  local ok,reason;if state.editing then ok,reason=UI:GetGroup():Update(data) else ok,reason=UI:GetGroup():Publish(data) end
+ local listingChanged=self.submissionListingChanged;self.submissionListingChanged=nil
+ -- A failed cross-faction recreation may remove the listing. Consume that
+ -- notification while the submission still owns the draft's current values.
+ if not ok and listingChanged then self:RefreshMode();self:RefreshApplicants() end
  self.submitting=nil
- if ok then self.validationSubmitted=nil;state.editing=false;self:RefreshMode()
+ if ok then
+  self.validationSubmitted=nil;state.editing=false;self:RefreshMode()
+  if listingChanged then self:RefreshApplicants() end
  else self:ValidateForm();state.submissionError=reason or L.failed;self:SetFormError(state.submissionError) end
 end
 function P:LayoutBatches()
@@ -913,7 +968,7 @@ function P:LayoutBatches()
   if not app then self:RefreshApplicants();return end
   if not self.applicantMeasure then
    local holder=CreateFrame("Frame",nil,self.batchBody);holder:Hide()
-   holder.text=C.Text(holder,"","font14","text");C.SetLineHeight(holder.text,"line19");holder.text:SetWordWrap(true)
+   holder.text=C.Text(holder,"",14,"text");C.SetLineHeight(holder.text,19);holder.text:SetWordWrap(true)
    holder.marks=UI.Members:CreateMarks(holder)
    self.applicantMeasure=holder
   end
@@ -970,7 +1025,7 @@ function P:RefreshApplicants()
  end)
  self.appIDs=ids;self:LayoutBatches()
  self.empty:SetShown(#ids==0);UI:SetText(self.appCount,L.applicantCount:format(#ids))
- for key,b in pairs(self.roleFilters) do b:SetActive(key=="ALL" and not state.roles or state.roles and state.roles[key]==true or false) end;self:RenderBatches()
+ for key,b in pairs(self.roleFilters) do b:SetActive(key=="ALL" and not state.roles or state.roles and state.roles[key]==true or false) end
  UI.Tooltip:RefreshApplicant()
 end
 function P:SetBatchOffset(value,animate)
@@ -1011,7 +1066,7 @@ function P:RenderBatches()
    if not app then self:RefreshApplicants();return end
    bound=bound+1;local f=self.batchPool[bound];if not f then f=self:BuildBatch(self.batchBody);self.batchPool[bound]=f end
    if f.appID~=id then for _,row in ipairs(f.people) do HideMemberTooltip(row) end end
-   f:ClearAllPoints();f:SetPoint("TOPLEFT",0,-top);f:SetHeight(height);f:Show();f.appID=id;f.alternate=index%2==0;f.bg:SetColor(T.rowAlternate);f.bg:SetShown(f.alternate)
+   f:ClearAllPoints();f:SetPoint("TOPLEFT",0,-top);f:SetHeight(height);f:Show();C.RekeyElement(f,id);f.appID=id;f.alternate=index%2==0;f.cardStyle:SetState("selected",f.alternate)
    local sharedY=-T.createMemberTop
    local memberLayout=self.batchLayouts[id]
    f.invite:SetPoint("LEFT",layout.actions.x,0);f.decline:SetPoint("LEFT",layout.actions.x+44,0);f.status:SetPoint("LEFT",layout.actions.x,0);f.status:SetWidth(layout.actions.width)
@@ -1024,7 +1079,7 @@ function P:RenderBatches()
    for i,row in ipairs(f.people) do
     UI:CloseMenuFor(row)
     local m=app.members[i];if row.member~=m then HideMemberTooltip(row) end;row:SetShown(m~=nil);row.member=m
-    if m then row.memberContext=self.applicantContext;row:SetWidth(self.applicantTable.columns.actions.x);row:SetHeight(memberLayout.heights[i]);row:ClearAllPoints();row:SetPoint("TOPLEFT",0,sharedY-memberLayout.tops[i]);row.icon:SetPoint("LEFT",layout.name.x,0);row.title:SetPoint("LEFT",layout.name.x+44,0);UI:SetMemberIcon(row.icon,m);UI:SetText(row.title,ApplicantName(m));row.title:SetTextColor(UI:ClassColor(m.class))
+    if m then C.RekeyElement(row,tostring(id)..":"..tostring(UI.Members:ID(m) or i));row.memberContext=self.applicantContext;row:SetWidth(self.applicantTable.columns.actions.x);row:SetHeight(memberLayout.heights[i]);row:ClearAllPoints();row:SetPoint("TOPLEFT",0,sharedY-memberLayout.tops[i]);row.icon:SetPoint("LEFT",layout.name.x,0);row.title:SetPoint("LEFT",layout.name.x+44,0);UI:SetMemberIcon(row.icon,m);UI:SetText(row.title,ApplicantName(m));row.title:SetTextColor(UI:ClassColor(m.class))
      UpdateApplicantFaction(row,m,id)
      local marksWidth=UI.Members:BindMarks(row.marks,m)
      local available=columns.name.x+columns.name.width-T.createApplicantTitleX-(marksWidth>0 and marksWidth+6 or 0)
@@ -1043,19 +1098,25 @@ function P:RenderBatches()
     end
    end
  end
- for i=bound+1,#self.batchPool do local f=self.batchPool[i];f:Hide();f.appID=nil;for _,row in ipairs(f.people) do HideMemberTooltip(row);UI.Members:ClearMarks(row.marks);row.member=nil end end
-end
+ for i=bound+1,#self.batchPool do local f=self.batchPool[i];f:Hide();f.appID=nil;for _,row in ipairs(f.people) do HideMemberTooltip(row);UI.Members:ClearMarks(row.marks);row.member=nil;C.RekeyElement(row,nil) end;C.RekeyElement(f,nil) end
+UI:ApplyElementScope("create")
+ end
 function P:ApplicantAction(btn,method)
  if not btn.targetKey then return end;local ok,err=UI:GetGroup()[method](UI:GetGroup(),btn.targetKey);self:SetManageError(ok==false and (err or L.failed) or "")
 end
-function P:RefreshRoster()
+local function RefreshRoster(self)
  self.roster=UI:GetGroup():GetRoster()
  UI:SetText(self.rosterCount,S("%d 人","%d members"):format(#self.roster));self.groupStrip:Update(self.roster,UI:MemberCounts(self.roster),30)
  local compositionX=0
  for _,item in ipairs(self.groupStrip.counts) do local width=FitText(item.text);item.icon:ClearAllPoints();item.icon:SetPoint("LEFT",compositionX,0);item.text:ClearAllPoints();C.SetPoint(item.text,"LEFT",item.icon,"RIGHT","createItemTextLeftX",0);compositionX=compositionX+18+4+width+20 end
  self.groupStrip:SetWidth(compositionX-20);self.groupSummary:SetWidth(self.groupStrip:GetWidth()+24)
- self:RefreshRosterPresentation()
+ RefreshRosterPresentation(self)
 end
+function P:RefreshRoster()
+ RefreshRoster(self)
+ FinishRosterPresentation(self)
+UI:ApplyElementScope("create")
+ end
 function P:OnNotesChanged()
  if not self.frame or not self.frame:IsVisible() or UI.hiding then return end
  self:RefreshRoster();self:LayoutBatches()
@@ -1079,17 +1140,20 @@ function P:Enter(context)
  state.sort=columnSorts[tablePrefs.sortKey] or "newest";state.descending=tablePrefs.descending==true
  local group=UI:GetGroup();group:Attach(self,"create");group:RefreshApplicants()
  if not self.unsub then self.unsub=group:Subscribe(function(kind)
+  if kind=="listing" and P.submitting then P.submissionListingChanged=true;return end
   if kind=="listing" or kind=="permissions" then P:RefreshMode();P:RefreshApplicants() elseif kind=="applicants" or kind=="applicant" then P:RefreshApplicants() elseif kind=="roster" then P:RefreshRoster() elseif kind=="relations" then P:OnNotesChanged() elseif kind=="creationPresets" then P:RefreshFavorites() elseif kind=="activities" then if P.formFrame:IsShown() then P:RefreshPicker() else P:RefreshRosterPresentation() end end
  end) end
  self:WatchNotes()
- self:RefreshMode();self:RefreshRoster();self:RefreshApplicants()
+ RefreshMode(self);RefreshRoster(self);RefreshFavorites(self);FinishRosterPresentation(self)
+ UI:RefreshWindowSize()
+ self:RefreshApplicants()
  if context and context.applicantID then for i,id in ipairs(self.appIDs) do if id==context.applicantID then self:SetBatchOffset(self.batchTops[i],false);break end end end
 end
 function P:Leave()
  self.applicantTable:StopDrag(true)
  self:HideCorrectionNotice()
  UI:GetGroup():SetApplicantView(self,false)
- self.favoritesExpanded=false;self:RefreshFavorites()
+ self.favoritesExpanded=false;RefreshFavorites(self)
  UI.Motion:Stop(self.batchScroll);self.batchScrollTarget=nil;self.batchSlider:Hide()
  if self.unsub then self.unsub();self.unsub=nil end;if self.notesUnsub then self.notesUnsub();self.notesUnsub=nil end
  self:ClosePicker();UI.Native:ReleaseCreation();UI:GetGroup():Detach(self);self:ClearRosterList();self.roster=nil;self.rosterContext=nil;self.buffReport=nil;if self.buffList then self.buffList:Clear();self.buffArea:Hide() end;self.appIDs=nil;self.batchTops=nil;self.batchLayouts=nil;self:RenderBatches();UI.Tooltip:Hide()
@@ -1113,4 +1177,19 @@ function P:EndPreview()
   self.private:SetValue(fields and fields.private or false);self.crossFaction:SetValue(fields and fields.cross or false);self.autoAccept:SetValue(fields and fields.auto or false)
   self.preparing=nil
  end
+end
+
+
+
+
+function P:RegisterBuildElements()
+UI:ElementFields(self,"create","frame surface formFrame heading desc activityLabel pickerTrigger pickerIcon pickerName pickerContext difficultyChoice difficultyGroup difficultySelection difficultyFixedSurface difficultyFixed favorite titleLabel titleShell descriptionLabel descriptionShell req requirementsLabel ilvlLabel ilvl scoreLabel score styleLabel playstyle private crossFaction autoAccept autoInviteHint publish formCancel formNotice correctionNotice manage sIcon sMeta sName editListing cancelListing listingFavorite applicantsHeading appCount roleFilterSurface sortChoice applicantTable batchScroll batchBody batchSlider empty manageNotice rail favoritesCard favoritesToggle favoritesChevron favoritesBody favoritesEmpty rosterCard rosterTitle rosterCount groupSummary groupStrip buffArea buffTitle buffComplete picker pickerSearch pickerSearchHint pickerClear pickerSurface tierChoice pickerEmpty","create")
+ UI:ElementList(self.favoritesList,"create.favoritesList","create","create.favoriteRow")
+ UI:ElementList(self.buffList,"create.buffList","create","create.buff")
+ UI:ElementList(self.pickerCategories,"create.pickerCategories","create","create.pickerCategory")
+ UI:ElementList(self.pickerResults,"create.pickerResults","create","create.pickerActivity")
+ for key,button in pairs(self.roleFilters or {}) do UI:Element(button,"create.roleFilter","create",button,"create.roleFilter",key) end
+ for index,button in ipairs(self.difficultyButtons or {}) do UI:Element(button,"create.difficulty","create",button,"create.difficulty",button.value or index) end
+ local roster=self.rosterList
+ if roster then UI:Element(roster,"create.rosterList","create");UI:ElementFields(roster,"create.rosterList","clip body slider empty","create") end
 end

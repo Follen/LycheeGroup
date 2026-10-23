@@ -3,20 +3,28 @@
   "library": "LycheeUI",
   "status": "frozen",
   "version": "1.3.0",
-  "revision": 32,
-  "note": "配置与样式 API 重构、全仓审计和离线验证已完成。清单内运行文件及 Media 冻结，外部源库与插件内置副本保持逐字节一致；产品通过公开 API 配置。后续修改须先由用户明确解除冻结，内置副本只通过同步脚本维护。文本使用 LF，以保证 Git 检出后清单哈希稳定。",
+  "revision": 35,
+  "note": "2026-10-23：主题启动固定、组件规则及产品业务隔离改造已完成并冻结为 r35；运行文件与通用素材按实际 SHA-256 记录，内置副本只通过同步脚本维护。文本使用 LF。",
   "runtimeFiles": [
     {
       "path": "Components.lua",
-      "sha256": "bf221b464d4ff057ea1a19b5367bb1779ba22bb7b11902a40af311651d2d4e72"
+      "sha256": "1a4ae7b3bca602998702cbc3dc15d2a55746378fb5f69214b38168463385b76c"
     },
     {
       "path": "Core.lua",
-      "sha256": "ec33178002d3674da1a9714ce1526c75cfa5368cfb2583a418760e5e3a5a2ecc"
+      "sha256": "0238b39a11d61ba1b752c78641287fbc34bfce9703ab43196f12f44df3cd0c36"
+    },
+    {
+      "path": "Elements.lua",
+      "sha256": "28dd325effe22bb20e2e92c1c101dea0064aae9f33cca674eaf8be0b28c5ce0a"
     },
     {
       "path": "embeds.xml",
-      "sha256": "7f7853d2cb7021a71654816ac17a2b79b18927ae9b490b2dd492005cdb84b589"
+      "sha256": "074fd1bf12907f3d4dc64b15216d5ce9caa7171f4ab474223ba8c21e4157c603"
+    },
+    {
+      "path": "Layouts.lua",
+      "sha256": "4eaaff262a96d3ef8357983989a9f9a7b0e0bf1779ffbd729a3f1e0680515f1c"
     },
     {
       "path": "Media/arrow.tga",
@@ -47,32 +55,8 @@
       "sha256": "756dd35d3c7c393d6acc4c6109439f02ff0ba342dd82b1451d93ae3bc7a1424e"
     },
     {
-      "path": "Media/damage.tga",
-      "sha256": "96c8027f0e3d3c5ff1c23f97908cbfde953689718ba7c7b89560fbdabc73148c"
-    },
-    {
       "path": "Media/decline.tga",
       "sha256": "a2b846a146af2ad86c904dad55446c7da3a01c38bf2f7217faaa18af3d00c06d"
-    },
-    {
-      "path": "Media/delve.tga",
-      "sha256": "1c23269c110de259dde4ac0ee3664381a26f6e54f259698251867e15ea081c0a"
-    },
-    {
-      "path": "Media/flag.tga",
-      "sha256": "8b76497c797ae469666cae8ce2f55cdbb312fde25ecb0fa12cbf86c4dcf4afc7"
-    },
-    {
-      "path": "Media/friend.tga",
-      "sha256": "aa7511f387531c53c08577ea59be63f04bae800dd733d311f068de1c56d9d445"
-    },
-    {
-      "path": "Media/guild.tga",
-      "sha256": "f516322a4522b38e3e878991d0f23b548c4abd1f5343c3ddd632999daf281f46"
-    },
-    {
-      "path": "Media/healer.tga",
-      "sha256": "07e45ec90d9720ed0891d85a69f0f315d04e05f559b8186d418bb271cef28a26"
     },
     {
       "path": "Media/heart.tga",
@@ -87,44 +71,12 @@
       "sha256": "3842cf0e05c57441da86894559b30b17bf97055b301cd076003b119da5f8a5b5"
     },
     {
-      "path": "Media/invite.tga",
-      "sha256": "9bf21e948867e84c592c6111b6471015acfaeb1bab725cbfa53b386a290c8d1e"
-    },
-    {
-      "path": "Media/leader.tga",
-      "sha256": "a02d4d7353e6261571d048496121bf23e3e4b82c234b52a34b082bbc0d7f8fbf"
-    },
-    {
-      "path": "Media/lychee-logo.tga",
-      "sha256": "9cd1f306fe5c8092dd425401d8c2eec192a61c0e3eba1645ee37601295326f94"
-    },
-    {
-      "path": "Media/mountain.tga",
-      "sha256": "d981fe8f731cdd0558316c924fc760e23bdbd5eed249dc55988120abc8c3741e"
-    },
-    {
       "path": "Media/plus.tga",
       "sha256": "07311c36e089b733d8e4dbb5ae5a2b68cc3e746e9a047be4a434e8dafa5e9fb6"
     },
     {
-      "path": "Media/pvp.tga",
-      "sha256": "134405c33a27e31baa64bb05c0d88a242455c8df8c6e98a6fccbd11d20cd1b18"
-    },
-    {
       "path": "Media/refresh.tga",
       "sha256": "1d4ea9510b9ee540a485dbf37b379ec6b7467707a409809ed5d012c922fec71e"
-    },
-    {
-      "path": "Media/role-dps.tga",
-      "sha256": "dac50b2f0351372df0358c74922262c959a296eafb23238a622f0e1d54de493e"
-    },
-    {
-      "path": "Media/role-healer.tga",
-      "sha256": "599ff94cb2b3776b2a4c9abd06821583e707178bab20b34aa1d0369619633a50"
-    },
-    {
-      "path": "Media/role-tank.tga",
-      "sha256": "b18db002db43b57d5546b97217f6c71180ed0f1dd0079c37616e9b175f79c5b2"
     },
     {
       "path": "Media/rounded-corner.tga",
@@ -155,28 +107,24 @@
       "sha256": "356c7b119618c92d25d747992cc1aa7cb1c9187ff18166393db36a967b296e34"
     },
     {
-      "path": "Media/tank.tga",
-      "sha256": "2170055981bab271ce345b40283fbd4c6e3ec36b039545793811add99c5ccaaf"
-    },
-    {
-      "path": "Media/tower.tga",
-      "sha256": "56872153a16c9276dbaaf6a40eba24ee522d67bdd4bf628b0236c1b9ef26b99b"
-    },
-    {
       "path": "Menu.lua",
-      "sha256": "de8b11c44435cceb559e560f35d1834cbbed6ea5765b7a61cbc7883f9060c4a6"
+      "sha256": "624108da673f406d90a27977677e4848d4f18f1ceadb0f595af6187215124b6b"
     },
     {
       "path": "Motion.lua",
-      "sha256": "691e1d7fa62301203299537a817c9dfa260aefa9826a2e39f072b6a2feba9913"
+      "sha256": "af4360c01eca76351eb7c5f9ca031321be8cf63143829ef5364eac1cc4c56e21"
     },
     {
       "path": "Native.lua",
-      "sha256": "1f0eaca0a539ab875db051eaa6449f97cd11259225092b1bda34d1fb0e8aa647"
+      "sha256": "1e684f5cb17201ca09ea2a747b61aede450258c0bcebe88ca5dcb97f68d0d417"
+    },
+    {
+      "path": "Styles.lua",
+      "sha256": "a8e0a30744cca55de5d3bd940b829bef18747449396a38bc97cd868c92b2246b"
     },
     {
       "path": "Theme.lua",
-      "sha256": "72170bf2b388dc0910d1062efe0e1547946fd02befdcc1e88727d6a44c649d86"
+      "sha256": "ef3da514cd40133823f37e2d9d9d2fef84603ee7f2e0122bc22c3e0969e9d0ab"
     }
   ],
   "frozenOn": "2026-10-23"

@@ -167,7 +167,10 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  -- Geometry responds to the existing minimum window and large fonts.
  a:SetSetting("fontScale",130);u:SetWindowSize(1,1);p:SetFiltersOpen(true)
  a:SetSetting("showImportantFilters",false)
- T.eq(p.filterPanel:GetWidth(),592);T.ok(p.importantFilters:IsShown())
+ T.ok(p.filterPanel:GetWidth()>=592,"the popup expands when the paired text styles need more width")
+ T.eq(p.importantFilters:GetWidth(),p.filterPanel:GetWidth()-40)
+ T.ok(p.filterPanel:GetWidth()<=u.frame:GetWidth()-40,"the expanded popup keeps both window margins")
+ T.ok(p.importantFilters:IsShown())
  T.ok(Top(p.filterPanel)+p.filterPanel:GetHeight()<=u.frame:GetHeight()-20,locale.." default compact popup fits the minimum window at 130 percent")
  for _,choice in pairs(p.presenceChoices) do for _,button in ipairs(choice.buttons) do
   T.ok(button.label:GetStringWidth()<=button.label:GetWidth(),locale.." role segment fits its full text at the minimum window")

@@ -3,6 +3,7 @@ local UI = _G.LycheeGroup.UI
 local context = UI.context
 local T = context.Theme
 UI.C = context.C
+local C = UI.C
 function UI:GetTablePrefs(id)
  if not self.preview then return _G.LycheeGroup.Appearance:GetTableState(id) end
  local prefs=self.preview.provider.prefs
@@ -44,10 +45,15 @@ local categoryTextures={
  ["pvp-rated-battleground"]="Interface\\AddOns\\LycheeGroup_UI\\Media\\pvp-rated-battleground.tga",
 }
 function UI:CategoryIcon(kind)
- return categoryTextures[kind] or T.media..kind..".tga"
+ return categoryTextures[kind] or self:MediaPath(kind..".tga")
 end
+local roleFiles={TANK="role-tank",HEALER="role-healer",DAMAGER="role-dps"}
 function UI:SetRoleIcon(icon,role)
- return _G.LycheeUI.Context.SetRoleIcon(context,icon,role)
+ local file=roleFiles[role]
+ icon:SetTexture(file and UI:MediaPath(file..".tga") or nil);icon:SetTexCoord(0,1,0,1)
+end
+function UI:SetGameTexture(icon,...)
+ return context:SetGameTexture(icon,...)
 end
 function UI:MemberHasRole(member,role)
  if member.requestedRoles then return member.requestedRoles[role]==true end
@@ -85,37 +91,40 @@ function UI:SpecName(member)
  if member.specName then return member.specName end
  if member.specID and member.specID>0 then local name=Specializations:Get(member.specID);return name end
 end
--- These decorations belong only to opted-in search-result member slots.
-function UI:UpdateMemberIconStyle(icon,visible)
+-- Search-result member decoration is product composition of ordinary images.
+local function ApplyMemberDecoration(icon)
  local addon=_G.LycheeGroup
  local shape=addon:GetSetting("memberIconShape")
  local media="Interface\\AddOns\\LycheeGroup_UI\\Media\\member-"..shape
  local colors=CUSTOM_CLASS_COLORS or RAID_CLASS_COLORS
  local color=icon.memberClass and colors and colors[icon.memberClass]
+ local visible=icon.memberDecorationVisible
  local bordered=visible and addon:GetSetting("memberClassBorder") and color~=nil
  local leader=visible and icon.memberIsLeader and addon:GetSetting("memberLeaderMark")
+ context:RoundIcon(icon,shape=="square" and T.media.."icon-mask.tga" or media.."-mask.tga")
+ local border=icon.memberBorder
+ if bordered and not border then border=C.Icon(icon:GetParent(),1);icon.memberBorder=border end
+ if border then
+  border:SetTexture(shape=="square" and T.media.."icon-mask.tga" or media.."-border.tga")
+  local inset=shape=="square" and T.memberSquareBorderWidth or 0
+  border:SetDrawLayer(shape=="square" and "ARTWORK" or "OVERLAY",shape=="square" and -1 or 0)
+  border:ClearAllPoints()
+  if inset==0 then border:SetAllPoints(icon) else border:SetPoint("TOPLEFT",icon,"TOPLEFT",-inset,inset);border:SetPoint("BOTTOMRIGHT",icon,"BOTTOMRIGHT",inset,-inset) end
+  if bordered then border:SetVertexColor(color.r,color.g,color.b,1) end
+  border:SetShown(bordered==true)
+ end
  local mark=icon.memberLeaderMark
  if leader and not mark then
-  mark=icon:GetParent():CreateTexture(nil,"OVERLAY",nil,1)
-  UI:SetMediaTexture(mark,"leader.tga");icon.memberLeaderMark=mark
+  mark=C.Icon(icon:GetParent(),1);mark:SetDrawLayer("OVERLAY",1);UI:SetMediaTexture(mark,"leader.tga");icon.memberLeaderMark=mark
  end
- local scale=icon:GetParent():GetScale()
- local appearance=icon.memberAppearance
- if not appearance then appearance={classColor={0,0,0,1}};icon.memberAppearance=appearance end
- appearance.mask=shape=="square" and T.media.."icon-mask.tga" or media.."-mask.tga"
- appearance.border=icon.memberBorder
- appearance.borderTexture=(bordered or icon.memberBorder) and (shape=="square" and T.media.."icon-mask.tga" or media.."-border.tga") or nil
- if bordered then
-  appearance.classColor[1],appearance.classColor[2],appearance.classColor[3]=color.r,color.g,color.b
-  appearance.borderColor=appearance.classColor
- else appearance.borderColor=nil end
- appearance.borderVisible=bordered==true
- appearance.borderWidth=shape=="square" and T.memberSquareBorderWidth or 0
- appearance.borderLayer,appearance.borderSublevel=shape=="square" and "ARTWORK" or "OVERLAY",shape=="square" and -1 or 0
- appearance.crown,appearance.crownSize,appearance.crownGap=mark,math.min(T.memberCrownSize,T.memberCrownScreenSize/scale),T.memberCrownGap/scale
- appearance.crownVisible=leader==true
- context:StyleMemberIcon(icon,appearance)
- icon.memberShape=shape
+ if mark then
+  local scale=icon:GetParent():GetScale();local size=math.min(T.memberCrownSize,T.memberCrownScreenSize/scale)
+  mark:SetSize(size,size);mark:ClearAllPoints();mark:SetPoint("BOTTOM",icon,"TOP",0,T.memberCrownGap/scale);mark:SetShown(leader==true)
+ end
+end
+function UI:UpdateMemberIconStyle(icon,visible)
+ icon.memberDecorationVisible=visible
+ ApplyMemberDecoration(icon)
 end
 
 function UI:SetMemberIcon(icon,member)
@@ -128,10 +137,10 @@ function UI:SetMemberIcon(icon,member)
  if not texture and member and member.specName and member.class then
   texture=select(3,Specializations:Find(member.class,member.specName))
  end
- if texture then context:SetGameTexture(icon,texture)
+ if texture then self:SetGameTexture(icon,texture)
  else
   local coords=member and CLASS_ICON_TCOORDS and CLASS_ICON_TCOORDS[member.class]
-  if coords then context:SetGameTexture(icon,"Interface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES",unpack(coords))
+  if coords then self:SetGameTexture(icon,"Interface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES",unpack(coords))
   else self:SetRoleIcon(icon,member and member.assignedRole) end
  end
 end
@@ -172,7 +181,7 @@ local function SetDelveIcon(icon,atlas)
  local pixelU,pixelV=(right-left)/info.width,(bottom-top)/info.height
  right=left+352*pixelU
  top=top+(info.height-352)*.5*pixelV;bottom=top+352*pixelV
- context:SetGameTexture(icon,info.file or info.filename,left,right,top,bottom)
+ UI:SetGameTexture(icon,info.file or info.filename,left,right,top,bottom)
 end
 local activityArt={}
 function UI:ActivityArt(activity)
@@ -189,7 +198,7 @@ function UI:SetActivityIcon(icon,activity)
  local atlas=activity and delveAtlases[activity.mapID]
  if atlas then SetDelveIcon(icon,atlas);return end
  local art=self:ActivityArt(activity)
- if art then context:SetGameTexture(icon,art) else self:SetCategoryIcon(icon,activity and activity.categoryID) end
+ if art then self:SetGameTexture(icon,art) else self:SetCategoryIcon(icon,activity and activity.categoryID) end
 end
 function UI:MemberCounts(members)
  local counts={TANK=0,HEALER=0,DAMAGER=0}
@@ -204,5 +213,78 @@ function UI:StatusColor(status)
 end
 
 
-function context:SetMemberIcon(icon,member) return UI:SetMemberIcon(icon,member) end
-function context:SetActivityIcon(icon,activity) return UI:SetActivityIcon(icon,activity) end
+function UI:CreateRoleButton(parent,role,width,text,action)
+ local button=C.Button(parent,text,width or 0,action)
+ local icon=C.Icon(button,T.roleButtonIconSize);icon:SetPoint("LEFT",T.roleButtonInset,0);UI:SetRoleIcon(icon,role)
+ button.roleIcon=icon
+ button.label:ClearAllPoints();button.label:SetPoint("LEFT",icon,"RIGHT",T.roleButtonGap,0)
+ button:SetWidth(width or button.label:GetStringWidth()+T.roleButtonReserve)
+ button:SetSurfaceColors("surfaceLow","surfaceLowHover","surfaceLowPressed")
+
+ return button
+end
+local rosterRoleOrder={TANK=1,HEALER=2,DAMAGER=3}
+function UI:CreateRoster(parent,size,gap)
+ local sizeRef,gapRef=size or "rosterSize",gap or "rosterGap"
+ size,gap=context:ResolveValue(sizeRef),context:ResolveValue(gapRef)
+ local frame=CreateFrame("Frame",nil,parent);frame:SetSize(size*5+gap*4,size+1)
+ frame.slots={};frame.counts={};frame.elementSlots={root=frame}
+ for i=1,5 do
+  local icon=C.GameIcon(frame,size);icon:SetPoint("TOPLEFT",(i-1)*(size+gap),0)
+  local role=C.Icon(frame,T.rosterRoleSize);role:SetDrawLayer("OVERLAY",2);role:SetPoint("BOTTOMRIGHT",icon,"BOTTOMRIGHT",1,-1)
+  frame.slots[i]={icon=icon,role=role};frame.elementSlots["member:"..i]=icon;frame.elementSlots["memberRole:"..i]=role
+ end
+ for i,role in ipairs({"TANK","HEALER","DAMAGER"}) do
+  local icon=C.Icon(frame,T.rosterCountIconSize);icon:SetPoint("LEFT",(i-1)*T.rosterCountStride,0);UI:SetRoleIcon(icon,role)
+  local text=C.Text(frame,"","font14","text",T.rosterCountTextWidth);C.DefaultLineHeight(text,"line20",true);text:SetPoint("LEFT",icon,"RIGHT",T.rosterCountGap,0)
+  frame.counts[i]={icon=icon,text=text,role=role};frame.elementSlots["countIcon:"..role]=icon;frame.elementSlots["countText:"..role]=text
+ end
+ local function PlaceRole(slot,large)
+  local role=slot.role
+  local extent=large and size or T.rosterRoleSize
+  if role:GetWidth()~=extent or role:GetHeight()~=extent then role:SetSize(extent,extent) end
+  local anchor=large and "CENTER" or "BOTTOMRIGHT"
+  local offsetX,offsetY=large and 0 or 1,large and 0 or -1
+  local point,parent,relative,x,y=role:GetPoint()
+  if role:GetNumPoints()~=1 or point~=anchor or parent~=slot.icon or relative~=anchor or x~=offsetX or y~=offsetY then
+   role:ClearAllPoints();role:SetPoint(anchor,slot.icon,anchor,offsetX,offsetY)
+  end
+ end
+ function frame:Update(members,counts,maximum,fixedRoles)
+  local party=maximum==5
+  for _,item in ipairs(self.counts) do item.icon:SetShown(not party);item.text:SetShown(not party);if not party then UI:SetText(item.text,counts and counts[item.role] or "—") end end
+  local used=0
+  if party and (members or fixedRoles) then
+   local tanks,healers,damage=0,0,0
+   for rank=1,4 do
+    local present=0
+    for i=1,5 do
+     local member=members and members[i]
+     if member and (rosterRoleOrder[member.assignedRole] or 4)==rank then
+      present=present+1
+      used=used+1;local slot=self.slots[used]
+      slot.icon:Show();slot.role:Hide();UI:SetMemberIcon(slot.icon,member);slot.icon:SetAlpha(1)
+      PlaceRole(slot,false)
+      if member.assignedRole and member.assignedRole~="NONE" then UI:SetRoleIcon(slot.role,member.assignedRole);slot.role:Show() end
+     end
+    end
+    if rank==1 then tanks=present elseif rank==2 then healers=present elseif rank==3 then damage=present end
+   end
+   if fixedRoles then
+    for rank=1,3 do
+     local present=rank==1 and tanks or rank==2 and healers or damage
+     local missing=math.min(5-used,math.max(0,(rank==3 and 3 or 1)-present))
+     local role=rank==1 and "TANK" or rank==2 and "HEALER" or "DAMAGER"
+     for i=1,missing do
+      used=used+1;local slot=self.slots[used]
+      slot.icon:Hide();PlaceRole(slot,true)
+      UI:SetRoleIcon(slot.role,role);slot.role:Show()
+     end
+    end
+   end
+  end
+  for i=used+1,5 do self.slots[i].icon:Hide();self.slots[i].role:Hide() end
+ end
+
+ return frame
+end

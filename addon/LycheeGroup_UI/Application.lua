@@ -75,19 +75,19 @@ function Application:BuildApplication()
  if self.applicationModal then return self.applicationModal end
  local modal=UI:OpenModal("application",Say("申请加入","Apply to group"),512,452)
  local content=modal.content
- modal.group=C.Text(content,"","font14","muted",T.applicationModalGroupWidth,"line22");C.ApplyStyle(modal.group,{width="applicationModalGroupWidth"});modal.group:SetPoint("TOPLEFT");modal.group:SetWordWrap(true);modal.group:SetMaxLines(2)
- modal.roleLabel=C.Text(content,Say("选择申请职责（可多选）","Choose your roles (multiple allowed)"),"font14","muted");C.SetLineHeight(modal.roleLabel,"line20",true)
+ modal.group=C.Text(content,"",14,"muted",T.applicationModalGroupWidth,22);modal.group:SetWidth(T.applicationModalGroupWidth);modal.group:SetPoint("TOPLEFT");modal.group:SetWordWrap(true);modal.group:SetMaxLines(2)
+ modal.roleLabel=C.Text(content,Say("选择申请职责（可多选）","Choose your roles (multiple allowed)"),14,"muted");C.SetLineHeight(modal.roleLabel,20,true)
  modal.roles={}
  for _,role in ipairs(roleKeys) do
-  modal.roles[role]=C.RoleButton(content,role,nil,roleLabels[role],function() Application:SetApplicationRole(role) end)
+  modal.roles[role]=UI:CreateRoleButton(content,role,nil,roleLabels[role],function() Application:SetApplicationRole(role) end)
   modal.roles[role]:SetSurfaceColors(nil)
   modal.roles[role]:SetStyle({radius="compactRadius",textColor="muted",hoverTextColor="text",selectedTextColor="onSecondaryContainer"})
  end
- modal.noteLabel=C.Text(content,Say("给队长的备注","Note to the leader"),"font14","muted");C.SetLineHeight(modal.noteLabel,"line20",true)
- modal.note=C.Field(content,T.applicationModalNoteWidth,T.applicationModalNoteHeight,false,"modal");C.ApplyStyle(modal.note,{width="applicationModalNoteWidth",height="applicationModalNoteHeight"})
- modal.error=C.Text(content,"","font14","warning",T.applicationModalErrorWidth,"line20");C.ApplyStyle(modal.error,{width="applicationModalErrorWidth"});modal.error:SetMaxLines(1)
- modal.cancel=C.Button(modal.frame,L.cancel,nil,function() UI:CloseModal() end);C.ApplyStyle(modal.cancel,{height="applicationModalCancelHeight"})
- modal.submit=C.Button(modal.frame,L.apply,nil,function() Application:ConfirmApplication() end);modal.submit:SetPrimary(true);C.ApplyStyle(modal.submit,{height="applicationModalSubmitHeight"})
+ modal.noteLabel=C.Text(content,Say("给队长的备注","Note to the leader"),14,"muted");C.SetLineHeight(modal.noteLabel,20,true)
+ modal.note=C.Field(content,T.applicationModalNoteWidth,T.applicationModalNoteHeight,false,"modal");C.Box(modal.note,{width="applicationModalNoteWidth",height="applicationModalNoteHeight"})
+ modal.error=C.Text(content,"",14,"warning",T.applicationModalErrorWidth,20);modal.error:SetWidth(T.applicationModalErrorWidth);modal.error:SetMaxLines(1)
+ modal.cancel=C.Button(modal.frame,L.cancel,nil,function() UI:CloseModal() end);modal.cancel:SetHeight(T.applicationModalCancelHeight)
+ modal.submit=C.Button(modal.frame,L.apply,nil,function() Application:ConfirmApplication() end);modal.submit:SetPrimary(true);modal.submit:SetHeight(T.applicationModalSubmitHeight)
  modal.autoApply=C.Button(modal.frame,Say("自动申请","Auto apply"),nil,function()
   local lease=Application.previewApplication or Application.applicationLease
   local requested=Application:IsAutoApplyEnabled() or lease and lease.enableOnSave==true
@@ -99,7 +99,13 @@ function Application:BuildApplication()
  C.SetPoint(modal.autoApply.box,"LEFT",modal.autoApply.box:GetParent(),"LEFT","applicationModalAutoApplyBoxLeftX",0);modal.autoApply.box:EnableMouse(false);modal.autoApply.box:EnableMouseMotion(false)
  function modal.autoApply:SetValue(value) self.value=value==true;self.box:SetValue(self.value) end
  modal.autoApply:SetValue(self:IsAutoApplyEnabled())
+ modal.roleItems={};for _,role in ipairs(roleKeys) do modal.roleItems[#modal.roleItems+1]={frame=modal.roles[role]} end
+ modal.roleOptions={width="content",height=40,gap=8};modal.roleLayout=C.Row(content,modal.roleItems,modal.roleOptions)
+ modal.actionItems={{frame=modal.cancel},{frame=modal.submit}}
+ modal.actionOptions={anchor="BOTTOMRIGHT",width="content",height=40,align="center"}
+ modal.actionLayout=C.Row(modal.frame,modal.actionItems,modal.actionOptions)
  self.applicationModal=modal
+ self:RegisterBuildApplicationElements()
  return modal
 end
 function Application:LayoutApplication()
@@ -110,19 +116,20 @@ function Application:LayoutApplication()
  modal.group:SetShown(hasGroup)
  modal.group:SetHeight(groupHeight)
  modal.roleLabel:SetPoint("TOPLEFT",0,-groupOffset)
- local x=0
- for _,role in ipairs(roleKeys) do
-  local button=modal.roles[role];button:SetWidth(button.label:GetStringWidth()+60);button:SetPoint("TOPLEFT",x,-groupOffset-32);x=x+button:GetWidth()+8
- end
+ for _,item in ipairs(modal.roleItems) do item.width=C.MeasureTextWidth(item.frame.label)+60 end
+ modal.roleOptions.y=-groupOffset-32;modal.roleLayout:Layout()
  modal.noteLabel:SetPoint("TOPLEFT",0,-groupOffset-96)
  modal.note:SetPoint("TOPLEFT",0,-groupOffset-128)
  local hasError=modal.error:GetText()~=""
  modal.error:SetShown(hasError);modal.error:SetPoint("TOPLEFT",0,-groupOffset-252);modal.error:SetHeight(hasError and 24 or 0)
  modal.frame:SetHeight(408+groupOffset+(hasError and 28 or 0))
  modal.submit:SetWidth(math.max(96,modal.submit.label:GetStringWidth()+40));C.SetPoint(modal.submit,"BOTTOMRIGHT",modal.submit:GetParent(),"BOTTOMRIGHT","applicationModalSubmitBottomrightX","applicationModalSubmitBottomrightY")
- modal.cancel:SetWidth(math.max(72,modal.cancel.label:GetStringWidth()+40));C.SetPoint(modal.cancel,"RIGHT",modal.submit,"LEFT","applicationModalCancelRightX",0)
+ modal.cancel:SetWidth(math.max(72,C.MeasureTextWidth(modal.cancel.label)+40))
+ modal.actionOptions.x=T.applicationModalSubmitBottomrightX;modal.actionOptions.y=T.applicationModalSubmitBottomrightY;modal.actionOptions.gap=-T.applicationModalCancelRightX
+ modal.actionOptions.height=math.max(modal.cancel:GetHeight(),modal.submit:GetHeight());modal.actionLayout:Layout()
  modal.autoApply:SetWidth(modal.autoApply.label:GetStringWidth()+40);C.SetPoint(modal.autoApply,"BOTTOMLEFT",modal.autoApply:GetParent(),"BOTTOMLEFT","applicationModalAutoApplyBottomleftX","applicationModalAutoApplyBottomleftY")
-end
+UI:ApplyElementScope("application")
+ end
 function Application:SetApplicationRole(role)
  local lease=self.previewApplication or self.applicationLease;if not lease or not lease.available[role] then return end
  lease.roles[role]=not lease.roles[role] or nil
@@ -160,7 +167,8 @@ function Application:RefreshApplicationRoles()
  self.applicationModal.submit:SetAvailable(selected)
  UI:SetText(self.applicationModal.error,selected and "" or L.applicationRoleUnavailable)
  self:LayoutApplication()
-end
+UI:ApplyElementScope("application")
+ end
 function Application:ReleaseApplication()
  local lease=self.previewApplication or self.applicationLease;if not lease then return end
  local preview=self.previewApplication~=nil
@@ -169,7 +177,7 @@ function Application:ReleaseApplication()
  RefreshApplicationEntry()
  modal.onClose=nil
  if preview then modal.previewNote.box:ClearFocus();modal.previewNote.box:SetText("");modal.previewNote:Hide()
- elseif lease.description then lease.description:Release() end
+ elseif lease.description then C.ReleaseElement(lease.description.box);lease.description:Release() end
  if modal.frame:IsShown() then modal:Close() end
 end
 function Application:OpenApplicationSettings(resultID,enableOnSave)
@@ -181,15 +189,15 @@ function Application:OpenApplicationSettings(resultID,enableOnSave)
  for _,role in ipairs(roleKeys) do if prefs.roles and prefs.roles[role] then lease.roles[role]=true end end
  if UI.preview then
   self.previewApplication=lease
-  if not modal.previewNote then modal.previewNote=C.Edit(modal.note,T.applicationModalPreviewNoteWidth,T.applicationModalPreviewNoteHeight,true,false,"modal");C.ApplyStyle(modal.previewNote,{width="applicationModalPreviewNoteWidth",height="applicationModalPreviewNoteHeight"});modal.previewNote:SetAllPoints(modal.note) end
+  if not modal.previewNote then modal.previewNote=C.Edit(modal.note,T.applicationModalPreviewNoteWidth,T.applicationModalPreviewNoteHeight,true,false,"modal");C.Box(modal.previewNote,{width="applicationModalPreviewNoteWidth",height="applicationModalPreviewNoteHeight"});modal.previewNote:SetAllPoints(modal.note) end
   modal.previewNote.box:SetText(prefs.note or "");modal.previewNote:Show();modal.previewNote.box:SetFocus()
  else
   self.applicationLease=lease
   local dialog=LFGListApplicationDialog;local description=dialog.Description
   lease.dialog=dialog
-  local input=C.NativeInput(modal.note,description.EditBox,{container=description,onLost=function() Application:ReleaseApplication() end})
+  local input=C.NativeInput(modal.note,description.EditBox,{container=description,onLost=function(control) C.ReleaseElement(control.box);Application:ReleaseApplication() end})
   if self.applicationLease~=lease or not input:IsOwned() then input:Release();self:ReleaseApplication();return false,L.unavailable end
-  lease.description=input
+  C.Element(description.EditBox,"native.application.note",{scope="native",owner=input});lease.description=input
   lease.description:Bind(dialog,"OnShow",function(frame,previous,...) if previous then previous(frame,...) end;Application:ReleaseApplication() end)
   lease.description:Bind(dialog,"OnEvent",function(frame,previous,event,...) if previous then previous(frame,event,...) end;if event=="LFG_ROLE_UPDATE" then Application:RefreshApplicationRoles() end end)
   if modal.previewNote then modal.previewNote:Hide() end
@@ -202,6 +210,7 @@ function Application:OpenApplicationSettings(resultID,enableOnSave)
  UI:SetText(modal.submit.label,resultID and L.apply or L.save)
  self:RefreshApplicationRoles()
  RefreshApplicationEntry()
+ self:RegisterBuildApplicationElements()
  return true
 end
 function Application:ConfirmApplication()
@@ -247,4 +256,13 @@ function Application:Apply(resultID,manual,confirmedRoles)
   self:ReleaseApplication()
  end
  return ok,err
+end
+
+
+
+
+function Application:RegisterBuildApplicationElements()
+local modal=self.applicationModal;if not modal then return end
+ UI:ElementFields(modal,"application","group roleLabel noteLabel note error cancel submit autoApply previewNote","application")
+ for role,button in pairs(modal.roles) do UI:Element(button,"application.role","application",button,"application.role",role) end
 end

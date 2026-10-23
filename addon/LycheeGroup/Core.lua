@@ -25,31 +25,14 @@ local DEFAULTS = {
 	notesEnabled = true,
 	notesHasRecords = false,
 	askReason = true,
-	reduceMotion = false,
-	nativeLFGEntry = false,
-	minimap = true,
-	minimapAngle = 225,
-	font = "default",
-	fontScale = 100,
-	showImportantFilters = false,
-	language = "auto",
 	autoJoin = false,
 	relations = true,
 	noteMarks = true,
 	defaultNote = "neutral",
 	reminders = "all",
 	history = true,
-	raidMembers = "shift",
-	floating = true,
-	floatingCompatibility = true,
-	floatingLocked = false,
-	floatingScale = 130,
-	uiScale = 100,
-	memberIconShape = "circle",
-	memberClassBorder = true,
-	memberLeaderMark = true,
-	memberIconScale = 100,
 }
+for key,value in pairs(A.ThemeDefaults.settings) do DEFAULTS[key]=value end
 
 local CHARACTER_DEFAULTS = { rememberFilters = true, defaultSort = "newest" }
 
@@ -59,7 +42,7 @@ local function FontScale(value)
  return math.max(70,math.min(130,math.floor(value+.5)))
 end
 
--- Core owns setting defaults and lifecycle effects; Configuration owns provenance.
+-- UI defaults come from Theme; business defaults and lifecycle effects stay here.
 function A:RegisterConfigurationSettings()
  local definitions={}
  local choices={language={"auto","zhCN","enUS"},defaultNote={"positive","neutral","caution"},reminders={"all","positive","caution","off"},raidMembers={"shift","alt","ctrl","always"},memberIconShape={"circle","square"},defaultSort={"newest","rating","itemLevel","members"}}
@@ -103,6 +86,7 @@ function A:LoadDB()
 	self.charPrefs = prefs
 	-- Bind captures real legacy presence before the compatibility fields are filled.
 	self.Configuration:Bind(raw,prefs)
+ if self.InitializeRuntimeTheme then self:InitializeRuntimeTheme() end
 	for key, value in pairs(DEFAULTS) do
 		if raw[key] == nil then raw[key] = value end
 	end
@@ -111,6 +95,7 @@ function A:LoadDB()
 	raw.keywordFilters = nil
 	raw.fontScale = FontScale(raw.fontScale)
 	self:InitializeLocale()
+ if self.RuntimeTheme and self.RuntimeTheme.error then self:Print("Theme: "..self.RuntimeTheme.error) end
 	for key, default in pairs(CHARACTER_DEFAULTS) do
 		if prefs[key] == nil then
 			local value = raw[key]

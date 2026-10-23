@@ -37,8 +37,9 @@ report.initialActiveListing=C_LFGList.HasActiveEntryInfo()
 for i=1,4 do report.operations[i]={calls=0,inclusiveMs=0,maxInclusiveMs=0,heapNetKB=0,recordsUpdated=0} end
 local sampleCount=0
 local ui,page,g,ticker,eventFrame,expectedGeneration,originalFilters
+local filtersSaved=false
 local oldPage=A.UI and A.UI.page
-local oldMain=A.UI and A.UI.mainPage
+local oldReturn=A.UI and A.UI.settingsReturnPage
 local savedPrefs
 local oldPageShown={}
 if A.UI then for key,p in pairs(A.UI.pages) do oldPageShown[key]=p.frame and p.frame:IsShown() or false end end
@@ -48,12 +49,17 @@ local function Cleanup()
  closed=true
  if ticker then ticker:Cancel();ticker=nil end
  if eventFrame then eventFrame:UnregisterAllEvents();eventFrame:SetScript("OnEvent",nil);eventFrame:Hide() end
+ ui=ui or (A.UI and A.UI.frame and A.UI)
  if ui then
   ui:Hide(true);ui.Motion:StopAll()
-  if originalFilters then g.Search:SetFilters(originalFilters) end
-  if savedPrefs then g.prefs.find=savedPrefs.value;page.loaded=nil;page.restoredInitial=nil end
+ end
+ if filtersSaved then g.Search:SetFilters(originalFilters) end
+ if savedPrefs then g.prefs.find=savedPrefs.value end
+ if ui then
+  if savedPrefs then ui.pages.find.loaded=nil;ui.pages.find.restoredInitial=nil end
   for key,p in pairs(ui.pages) do if p.frame then p.frame:SetShown(oldPageShown[key]==true) end end
-  ui.page,ui.mainPage=oldPage,oldMain
+  ui.page,ui.settingsReturnPage=oldPage,oldReturn
+  ui:UpdateNav();ui.Motion:FinishRect(ui.underline)
  end
 end
 assert(probe:Async(LIMIT))
@@ -143,6 +149,11 @@ if LFGListFrame and LFGListFrame.EntryCreation then
   if issecretvalue and issecretvalue(value) or value~="" then return probe:Fail("native_creation_draft_present") end
  end
 end
+local loaded,loadError=A:Ensure("Group")
+if not loaded then return probe:Fail("load_group_"..tostring(loadError)) end
+g=A.Group;originalFilters={}
+for key,value in pairs(g.Search:GetFilters()) do originalFilters[key]=value end
+filtersSaved=true
 for _,key in ipairs({"settings","notes","create"}) do
  local opened,why=A:Open(key);if not opened then return probe:Fail("warm_"..key.."_"..tostring(why)) end
  ui,g=A.UI,A.Group
@@ -164,7 +175,6 @@ report.category=g.Search.categoryKey
 report.generationAtOpen,report.generationBeforeOpen=expectedGeneration,generationBefore
 if g.Search:GetState()=="failed" then return probe:Fail("native_search_failed") end
 local function BeginWorkload()
- for key,value in pairs(g.Search:GetFilters()) do originalFilters[key]=value end
  filters.category=g.Search.categoryKey;filters.sort="newest"
  g.Search:SetFilters(filters)
  local current=g:GetResults();for i,id in ipairs(current) do ids[i]=id end
@@ -184,7 +194,6 @@ local function BeginWorkload()
  Sample("stable_real_list","natural",0,false)
  phase,step="natural",0
 end
-originalFilters={}
 local function Work()
  step=step+1
  local operation=(step-1)%4+1

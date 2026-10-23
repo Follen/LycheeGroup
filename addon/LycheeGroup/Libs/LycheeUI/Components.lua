@@ -7,68 +7,27 @@ local C={listRightInset=T.scrollWidth+T.scrollGap}
 local function Hook(frame,script,callback) frame:HookScript(script,callback) end
 local editLineMeasure
 local function Value(value) return UI:ResolveValue(value) end
-local function DefaultPoint(target,previous,point,x,y)
- local current={target:GetPoint()}
- local same=target:GetNumPoints()==1 and #current==#previous
- for i,value in ipairs(current) do if value~=previous[i] then same=false;break end end
- if same then target:SetPoint(point,x,y);return {target:GetPoint()} end
- return previous
-end
-function C.SetPoint(target,point,relative,relativePoint,x,y)
- local function Apply(object)
-  object:SetPoint(point,relative,relativePoint,Value(x or 0),Value(y or 0))
- end
- Apply(target)
- UI:BindStyle(target,"point:"..point,function(object)
-  for i=1,object:GetNumPoints() do if object:GetPoint(i)==point then Apply(object);break end end
- end)
- return target
-end
-function C.ApplyStyle(target,style)
- for _,key in ipairs({"width","height","radius","alpha"}) do if style[key]~=nil then
-  local value=Value(style[key])
-  if type(value)~="number" or value~=value or value==math.huge or value<0 or key=="alpha" and value>1 then error("invalid style "..key,2) end
- end end
- if style.fontSize then UI:GetFontSize(style.fontSize) end
- if style.lineHeight then UI:GetLineHeight(style.lineHeight) end
- if style.color then
-  local color=Value(style.color)
-  if type(color)~="table" or #color<3 or #color>4 then error("invalid style color",2) end
-  for i=1,#color do if type(color[i])~="number" or color[i]~=color[i] or color[i]<0 or color[i]>1 then error("invalid style color channel",2) end end
- end
- local saved=target._lycheeUtilityStyle or {};target._lycheeUtilityStyle=saved
- for key,value in pairs(style) do saved[key]=value end
- local function Apply(object)
-  if saved.width then object:SetWidth(Value(saved.width)) end
-  if saved.height then object:SetHeight(Value(saved.height)) end
-  if saved.alpha then object:SetAlpha(Value(saved.alpha)) end
-  if saved.radius then object:SetRadius(Value(saved.radius)) end
-  if saved.color then
-   local color=Value(saved.color)
-   if object.SetColor then object:SetColor(color) elseif object.label then UI:Color(object.label,color) elseif object.SetTextColor then UI:Color(object,color) else object:SetVertexColor(unpack(color)) end
-  end
-  if saved.points then
-   object:ClearAllPoints()
-   for _,point in ipairs(saved.points) do object:SetPoint(point[1],point[2],point[3],Value(point[4] or 0),Value(point[5] or 0)) end
-  end
- end
- if style.fontSize then C.SetFont(target.label or target,style.fontSize,style.flags) end
- if style.lineHeight then C.SetLineHeight(target.label or target,style.lineHeight,style.singleLine) end
- UI:BindStyle(target,"utility",Apply);Apply(target)
- return target
-end
 local function FontStyle(label)
  local style=UI.fontStyles[label]
  if not style then style={};UI.fontStyles[label]=style end
  return style
 end
-function C.SetFont(label,size,flags)
- local effective=UI:GetFontSize(size or "bodySize")
+local ApplyLineHeight
+function C.DefaultFont(label,size,flags)
+ size=size or "bodySize"
+ local role=Library.TextStyles[size]
+ local effective=UI:GetFontSize(size)
  local style=FontStyle(label)
- style.size,style.flags=size or "bodySize",flags or ""
- return label:SetFont(T.font,effective,style.flags)
+ style.size,style.flags=role and role.fontSize or size,flags or ""
+ local result=label:SetFont(UI.fontPath,effective,style.flags)
+ if role then
+  style.lineHeight=role.lineHeight
+  ApplyLineHeight(label,style.lineHeight,style.singleLine)
+  style.appliedHeight=style.singleLine and label:GetHeight() or nil
+ end
+ return result
 end
-local function ApplyLineHeight(label,height,singleLine)
+ApplyLineHeight=function(label,height,singleLine)
  height=UI:GetLineHeight(height)
  local kind=label:GetObjectType()
  if kind~="FontString" and kind~="EditBox" then error("LycheeUI.SetLineHeight expects a FontString or EditBox, got "..kind,2) end
@@ -86,18 +45,28 @@ local function ApplyLineHeight(label,height,singleLine)
  label:SetSpacing(height-nativeHeight)
  if singleLine then label:SetHeight(height);label:SetJustifyV("MIDDLE") end
 end
-function C.SetLineHeight(label,height,singleLine)
+function C.DefaultLineHeight(label,height,singleLine)
  UI:GetLineHeight(height)
  local style=FontStyle(label)
  style.lineHeight,style.singleLine=height,singleLine
  ApplyLineHeight(label,height,singleLine)
  style.appliedHeight=singleLine and label:GetHeight() or nil
 end
+function C.SetFont(label,size,flags) return C.DefaultFont(label,size,flags) end
+function C.SetLineHeight(label,height,singleLine) return C.DefaultLineHeight(label,height,singleLine) end
+function C.SetTextStyle(label,role,singleLine)
+ local definition=Library.TextStyles[role]
+ if not definition then error("unknown text style: "..tostring(role),2) end
+ C.SetFont(label,role)
+ if singleLine~=nil then C.SetLineHeight(label,definition.lineHeight,singleLine) end
+ return label
+end
 function C.RefreshFonts()
- C.listRightInset=T.scrollWidth+T.scrollGap
  for label,style in pairs(UI.fontStyles) do
+  local owner=label._lycheeElementOwner
+  if not owner or owner:IsOwned() then
   if not UI.options.ownsText or UI.options.ownsText(label) then
-   if style.size then label:SetFont(T.font,UI:GetFontSize(style.size),style.flags) end
+   if style.size then label:SetFont(UI.fontPath,UI:GetFontSize(style.size),style.flags) end
    if style.lineHeight then
     -- A caller may have changed a former single-line label to automatic height.
     local fixed=style.singleLine and label:GetHeight()==style.appliedHeight
@@ -105,19 +74,20 @@ function C.RefreshFonts()
     style.appliedHeight=fixed and label:GetHeight() or nil
    end
   end
+  end
  end
 end
 function C.Text(parent,text,size,color,width,lineHeight)
  local label=parent:CreateFontString(nil,"OVERLAY")
- C.SetFont(label,size);label:SetShadowOffset(0,0);label:SetJustifyH("LEFT")
+ C.DefaultFont(label,size);label:SetShadowOffset(0,0);label:SetJustifyH("LEFT")
  if width then label:SetWidth(Value(width)) end
- C.ApplyStyle(label,{width=type(width)=="string" and width or nil,color=color or "text"});UI:SetText(label,text)
- if lineHeight then C.SetLineHeight(label,lineHeight) end
+ UI:Color(label,Value(color or "text"));UI:SetText(label,text)
+ if lineHeight then C.DefaultLineHeight(label,lineHeight) end
  return label
 end
 function C.Fill(parent,color,layer)
  local texture=parent:CreateTexture(nil,layer or "BACKGROUND")
- texture:SetAllPoints();texture:SetColorTexture(unpack(Value(color)));UI:BindStyle(texture,"fill",function(object) object:SetColorTexture(unpack(Value(color))) end);return texture
+ texture:SetAllPoints();texture:SetColorTexture(unpack(Value(color)));return texture
 end
 -- Bind only passive surfaces; child buttons, edits and sliders keep their input.
 function C.Draggable(frame,options)
@@ -135,7 +105,7 @@ function C.Draggable(frame,options)
   Hook(handle,"OnMouseDown",function(_,button)
    if button~="LeftButton" then return end
    if UI:IsHiding() or (options.onStart and options.onStart(frame)==false) then return end
-   if frame==UI.frame then M:Stop("presence");M:CapturePosition();M:SetPresence(1) end
+   if frame==UI.frame then M:StopPresence();M:CapturePosition();M:SetPresence(1) end
    self.handle=handle;frame:StartMoving()
   end)
   Hook(handle,"OnMouseUp",function(_,button) if button=="LeftButton" then self:Stop() end end)
@@ -148,79 +118,79 @@ end
 -- Seven native regions compose a rounded fill. Radius is clamped on resize.
 local panelSides={"LEFT","RIGHT"}
 local panelCorners={{"TOPLEFT",0,1,0,1},{"TOPRIGHT",1,0,0,1},{"BOTTOMLEFT",0,1,1,0},{"BOTTOMRIGHT",1,0,1,0}}
-function C.Panel(parent,color,radius,inset,layer)
- local radiusRef,insetRef=radius or "panelRadius",inset or 0
- radius,inset=Value(radiusRef),Value(insetRef)
- local regions={};local panel={regions=regions,alpha=1}
- parent._lycheeVisuals=parent._lycheeVisuals or {};parent._lycheeVisuals[#parent._lycheeVisuals+1]=panel
+local Panel={_lycheePanel=true}
+local MaterializePanel
+Panel.__index=function(panel,key)
+ if key=="regions" then return MaterializePanel(panel) end
+ return Panel[key]
+end
+function Panel:Place()
+ local parent,regions,inset=self.parent,rawget(self,"regions"),self.inset
+ if not regions then return end
+ local width,height=parent:GetWidth(),parent:GetHeight()
+ local r=math.max(0,math.min(self.radius,(width-inset*2)/2,(height-inset*2)/2))
+ if r==self.placedRadius then return end
+ self.placedRadius=r
+ for _,region in ipairs(regions) do region:ClearAllPoints() end
+ regions[1]:SetPoint("TOPLEFT",inset+r,-inset);regions[1]:SetPoint("BOTTOMRIGHT",-inset-r,inset)
+ for i,side in ipairs(panelSides) do
+  local edge=regions[i+1];edge:SetWidth(r);edge:SetPoint("TOP"..side,side=="LEFT" and inset or -inset,-inset-r);edge:SetPoint("BOTTOM"..side,side=="LEFT" and inset or -inset,inset+r)
+ end
+ for i,v in ipairs(panelCorners) do
+  local corner=regions[i+3];corner:SetSize(r,r);corner:SetTexCoord(v[2],v[3],v[4],v[5]);corner:SetPoint(v[1],v[1]:find("LEFT") and inset or -inset,v[1]:find("TOP") and -inset or inset)
+ end
+end
+function Panel:SetColor(value)
+ self.color=value
+ local r,g,b=value[1],value[2],value[3];local composed=self.alpha*(value[4] or 1)
+ local regions=rawget(self,"regions");if not regions then return end
+ if r~=self.paintedR or g~=self.paintedG or b~=self.paintedB then
+  for _,region in ipairs(regions) do region:SetVertexColor(r,g,b,composed) end
+  self.paintedR,self.paintedG,self.paintedB,self.paintedAlpha=r,g,b,composed
+ else self:SetAlpha(self.alpha) end
+end
+function Panel:SetColorTexture(...) self:SetColor({...}) end
+function Panel:SetAlpha(value)
+ self.alpha=value;local composed=value*(self.color[4] or 1)
+ local regions=rawget(self,"regions");if not regions then return end
+ if composed~=self.paintedAlpha then
+  for _,region in ipairs(regions) do region:SetAlpha(composed) end
+  self.paintedAlpha=composed
+ end
+end
+function Panel:GetAlpha() return self.alpha end
+function Panel:SetShown(value)
+ value=not not value;self.shown=value
+ local regions=value and self.regions or rawget(self,"regions")
+ if regions then for _,region in ipairs(regions) do if region:IsShown()~=value then region:SetShown(value) end end end
+end
+function Panel:IsShown() local regions=rawget(self,"regions");return regions and regions[1]:IsShown() or not regions and self.shown end
+function Panel:Show() self:SetShown(true) end
+function Panel:Hide() self:SetShown(false) end
+function Panel:SetRadius(value) self.radius=Value(value);self:Place() end
+function Panel:SetInset(value) self.inset=Value(value);self.placedRadius=nil;self:Place() end
+MaterializePanel=function(panel)
+ local regions={};rawset(panel,"regions",regions)
  for i=1,7 do
-  local region=parent:CreateTexture(nil,layer or "BACKGROUND",nil,-7)
-  regions[i]=region
-  if i>=4 then region.corner=true;region:SetTexture(T.media.."rounded-corner.tga")
-  else region:SetTexture(130871) end
+  local region=panel.parent:CreateTexture(nil,panel.layer or "BACKGROUND",nil,-7);regions[i]=region
+  if i>=4 then region.corner=true;region:SetTexture(T.media.."rounded-corner.tga") else region:SetTexture(130871) end
  end
- local placedRadius
- local paintedR,paintedG,paintedB,paintedAlpha
- local function Place()
-  local width,height=parent:GetWidth(),parent:GetHeight()
-  local r=math.max(0,math.min(radius,(width-inset*2)/2,(height-inset*2)/2))
-  -- The slices already stretch with their parent; only a changed corner
-  -- radius needs new geometry while a selection indicator changes width.
-  if r==placedRadius then return end
-  placedRadius=r
-  for _,region in ipairs(regions) do region:ClearAllPoints() end
-  regions[1]:SetPoint("TOPLEFT",inset+r,-inset);regions[1]:SetPoint("BOTTOMRIGHT",-inset-r,inset)
-  for i,side in ipairs(panelSides) do
-   local edge=regions[i+1];edge:SetWidth(r);edge:SetPoint("TOP"..side,side=="LEFT" and inset or -inset,-inset-r);edge:SetPoint("BOTTOM"..side,side=="LEFT" and inset or -inset,inset+r)
-  end
-  for i,v in ipairs(panelCorners) do
-   local corner=regions[i+3];corner:SetSize(r,r);corner:SetTexCoord(v[2],v[3],v[4],v[5]);corner:SetPoint(v[1],v[1]:find("LEFT") and inset or -inset,v[1]:find("TOP") and -inset or inset)
-  end
- end
- function panel:SetColor(value)
-  self.color=value
-  -- All slices use white image textures and the same vertex tint pipeline.
-  -- Mixing SetColorTexture centers with tinted image corners changes RGB
-  -- compositing in the client, even when their final alpha is identical.
-  local r,g,b=value[1],value[2],value[3]
-  local composed=self.alpha*(value[4] or 1)
-  if r~=paintedR or g~=paintedG or b~=paintedB then
-   -- Vertex alpha and Texture:SetAlpha share the same native value. Submit
-   -- the final RGBA together instead of resetting alpha and writing it again.
-   for _,region in ipairs(regions) do region:SetVertexColor(r,g,b,composed) end
-   paintedR,paintedG,paintedB,paintedAlpha=r,g,b,composed
-  else self:SetAlpha(self.alpha) end
- end
- function panel:SetColorTexture(...) self:SetColor({...}) end
- function panel:SetAlpha(value)
-  self.alpha=value
-  local composed=value*(self.color[4] or 1)
-  if composed~=paintedAlpha then
-   for _,region in ipairs(regions) do region:SetAlpha(composed) end
-   paintedAlpha=composed
-  end
- end
- function panel:GetAlpha() return self.alpha end
- function panel:SetShown(value)
-  value=not not value
-  for _,region in ipairs(regions) do if region:IsShown()~=value then region:SetShown(value) end end
- end
- function panel:IsShown() return regions[1]:IsShown() end
- function panel:Show() self:SetShown(true) end
- function panel:Hide() self:SetShown(false) end
- function panel:SetRadius(value) radiusRef=value;radius=Value(value);Place() end
- function panel:SetInset(value) insetRef=value;inset=Value(value);placedRadius=nil;Place() end
- local boundColor=Value(color or "panel")
- Hook(parent,"OnSizeChanged",Place);Place();panel:SetColor(boundColor)
- UI:BindStyle(panel,"panel",function(object)
-  radius,inset=Value(radiusRef),Value(insetRef);placedRadius=nil;Place()
-  local nextColor=Value(color or "panel")
-  if object.color==boundColor then object:SetColor(nextColor) end
-  boundColor=nextColor
-  for i=4,7 do regions[i]:SetTexture(T.media.."rounded-corner.tga") end
- end)
+ panel:Place();panel:SetColor(panel.color)
+ if not panel.shown then for _,region in ipairs(regions) do region:Hide() end end
+ return regions
+end
+local function ResizePanels(parent)
+ for _,visual in ipairs(parent._lycheeVisuals) do if visual._lycheePanel then visual:Place() end end
+end
+local function CreatePanel(parent,color,radius,inset,layer,hidden)
+ local panel=setmetatable({parent=parent,alpha=1,radius=Value(radius or "panelRadius"),inset=Value(inset or 0),color=Value(color or "panel"),layer=layer,shown=not hidden},Panel)
+ parent._lycheeVisuals=parent._lycheeVisuals or {};parent._lycheeVisuals[#parent._lycheeVisuals+1]=panel
+ if not parent._lycheePanelSizeBound then parent._lycheePanelSizeBound=true;Hook(parent,"OnSizeChanged",ResizePanels) end
+ if not hidden then MaterializePanel(panel) end
+
  return panel
 end
+function C.Panel(parent,color,radius,inset,layer) return CreatePanel(parent,color,radius,inset,layer,false) end
 -- Nine fixed slices supply soft shadows without an update driver.
 function C.Shadow(parent,radius)
  local radiusRef=radius or "windowRadius"
@@ -252,14 +222,12 @@ function C.Shadow(parent,radius)
  function shadow:SetShown(value) for _,texture in ipairs(regions) do texture:SetShown(value) end end
  function shadow:Show() self:SetShown(true) end
  function shadow:Hide() self:SetShown(false) end
- UI:BindStyle(shadow,"shadow",Draw);Draw()
+ ;Draw()
  return shadow
 end
 local function ButtonBase(parent,text,width,action)
  local b=CreateFrame("Button",nil,parent);b:SetSize(Value(width or "buttonWidth"),T.buttonHeight)
- C.ApplyStyle(b,{height="buttonHeight"})
- if width==nil or type(width)=="string" then C.ApplyStyle(b,{width=width or "buttonWidth"}) end
- b.label=C.Text(b,text,"font14");C.SetLineHeight(b.label,"line20",true);b.label:SetPoint("CENTER")
+ b.label=C.Text(b,text,"font14");C.DefaultLineHeight(b.label,"line20",true);b.label:SetPoint("CENTER")
  local function Reset(self)
   self._inside=nil;self._pressed=nil;self:RefreshStyle(true)
  end
@@ -279,19 +247,14 @@ local function ButtonBase(parent,text,width,action)
  b:SetScript("OnHide",function(self) if self.pressedKey then self.pressCancelled=true end;self.expanded=nil;Reset(self);if UI.CloseMenuFor then UI:CloseMenuFor(self) end end)
  function b:SetAvailable(available)
   if self:IsEnabled()==available then return end
-  self:SetEnabled(available);self:SetAlpha(available and 1 or T.disabledAlpha)
+  self:SetEnabled(available);if not C.OwnsStyle(self,"root","alpha",available and 1 or T.disabledAlpha) then self:SetAlpha(available and 1 or T.disabledAlpha) end
   if not available then self._inside=nil;self._pressed=nil;UI:CloseMenuFor(self) end
   self:RefreshStyle(true)
  end
  return b
 end
-function C.Button(parent,text,width,action,options)
- local b=ButtonBase(parent,text,width,action)
- C.SetFont(b.label,"buttonFontSize");C.SetLineHeight(b.label,"buttonLineHeight",true)
- b.fill=C.Panel(b,"primary","buttonRadius");b.fill:Hide()
- b.hover=C.Panel(b,"rowHover","buttonRadius");b.hover:Hide()
- b.hoverColor="rowHover"
- function b:RefreshStyle(immediate)
+local ButtonMethods={}
+ function ButtonMethods:RefreshStyle(immediate)
   local enabled=self:IsEnabled()
   local inside,pressed=enabled and self._inside,enabled and self._pressed
   local duration=not immediate and T.feedbackDuration or nil
@@ -305,70 +268,86 @@ function C.Button(parent,text,width,action,options)
    or colors and Value(pressed and colors[3] or inside and colors[2] or colors[1]) or T.secondaryContainer
   local permanent=self.primary or self.isChoice or colors~=nil
   local selected=self.active and self.selectionFill~=false
+  local ownFillColor=C.OwnsStyle(self,"surface","color",fill)
+  local ownFillShown=C.OwnsStyle(self,"surface","shown",permanent or selected==true)
+  local ownFillAlpha=C.OwnsStyle(self,"surface","alpha",(permanent or selected) and 1 or 0)
   if permanent then
-   self.fill._selMotion=nil;self.fill:Show();self.fill:SetAlpha(1)
-   M:Color(self.fill,fill,duration)
+   self.fill._selMotion=nil
+   if not ownFillShown then self.fill:Show() end
+   if not ownFillAlpha then self.fill:SetAlpha(1) end
+   if not ownFillColor then M:Color(self.fill,fill,duration) end
   else
-   self.fill:SetColor(fill)
-   if immediate then
+   if not ownFillColor then self.fill:SetColor(fill) end
+   if ownFillShown or ownFillAlpha then
+    if not ownFillShown then self.fill:SetShown(selected) end
+    if not ownFillAlpha then self.fill:SetAlpha(selected and 1 or 0) end
+   elseif immediate then
     M:Stop(self.fill);self.fill._selMotion=selected==true;self.fill:SetShown(selected);self.fill:SetAlpha(selected and 1 or 0)
    else M:Selection(self.fill,selected==true,T.buttonSelectionDuration) end
   end
   local hovered=(not (self.primary or self.isChoice or self.active or colors) or self.isChoice and not self.expanded) and (pressed or inside)
+  local hoverColor=self.isChoice and not darkChoice and (pressed and T.selectPressed or T.selectHover)
+   or pressed and Value(self.pressedColor or "pressed") or Value(self.hoverColor)
+  local ownHoverShown=C.OwnsStyle(self,"hover","shown",hovered==true)
+  local ownHoverAlpha=C.OwnsStyle(self,"hover","alpha",hovered and 1 or 0)
+  local ownHoverColor=C.OwnsStyle(self,"hover","color",hoverColor)
   if hovered then
-   local state=self.isChoice and not darkChoice and (pressed and T.selectPressed or T.selectHover)
-    or pressed and Value(self.pressedColor or "pressed") or Value(self.hoverColor)
-   M:Stop(self.hover);self.hover:SetColor(state)
-   self.hover:Show();if immediate then self.hover:SetAlpha(1) else M:Alpha(self.hover,1,T.feedbackDuration) end
-  else M:Stop(self.hover);self.hover:SetAlpha(0);self.hover:Hide() end
+   if not ownHoverColor then M:Stop(self.hover);self.hover:SetColor(hoverColor) end
+   if not ownHoverShown then self.hover:Show() end
+   if not ownHoverAlpha then if immediate then self.hover:SetAlpha(1) else M:Alpha(self.hover,1,T.feedbackDuration) end end
+  else
+   if not ownHoverAlpha then M:Stop(self.hover);self.hover:SetAlpha(0) end
+   if not ownHoverShown then self.hover:Hide() end
+  end
   local textColor=self.primary and T.onPrimary or self.active and Value(self.selectedTextColor or "onSecondaryContainer")
    or inside and Value(self.hoverTextColor or "text") or Value(self.textColor or "text")
-  UI:Color(self.label,textColor)
+  if not C.OwnsStyle(self,"label","color",textColor) then UI:Color(self.label,textColor) end
   if self.icon and self.icon.SetSelected and self._iconSelection~=false then self.icon:SetSelected(self.active,inside) end
   if self.focus then self.focusInner:SetColor(darkChoice and T.surfaceLow or T.selectBackground);self.focus:SetShown(self.expanded==true);self.focusInner:SetShown(self.expanded==true) end
  end
- function b:SetPrimary(value) self.primary=value==true;self:RefreshStyle(true) end
- function b:SetActive(value)
+ function ButtonMethods:SetPrimary(value) self.primary=value==true;self:RefreshStyle(true) end
+ function ButtonMethods:SetActive(value)
   value=value==true;if self.active==value then return end
   self.active=value;self:RefreshStyle(not self:IsVisible())
  end
- function b:SetSurfaceColors(rest,hover,pressed) self._variantPalette,self._textVariantPalette=nil,nil;self.surfaceColors=rest and {rest,hover or rest,pressed or hover or rest} or nil;self:RefreshStyle(true) end
- function b:SetTextColors(rest,hover,selected) self.textColor,self.hoverTextColor,self.selectedTextColor=rest,hover,selected;self:RefreshStyle(true) end
- function b:SetFeedbackColors(hover,pressed) self.hoverColor,self.pressedColor=hover or "rowHover",pressed;self:RefreshStyle(true) end
- function b:SetRadius(radius)
+ function ButtonMethods:SetSurfaceColors(rest,hover,pressed) self._variantPalette,self._textVariantPalette=nil,nil;self.surfaceColors=rest and {rest,hover or rest,pressed or hover or rest} or nil;self:RefreshStyle(true) end
+ function ButtonMethods:SetTextColors(rest,hover,selected) self.textColor,self.hoverTextColor,self.selectedTextColor=rest,hover,selected;self:RefreshStyle(true) end
+ function ButtonMethods:SetFeedbackColors(hover,pressed) self.hoverColor,self.pressedColor=hover or "rowHover",pressed;self:RefreshStyle(true) end
+ function ButtonMethods:SetRadius(radius)
   radius=Value(radius);self.radius=radius;self.fill:SetRadius(radius);self.hover:SetRadius(radius)
   if self.focus then self.focus:SetRadius(radius);self.focusInner:SetRadius(math.max(0,radius-1)) end
  end
- function b:SetLabelStyle(size,lineHeight)
+ function ButtonMethods:SetLabelStyle(size,lineHeight)
   C.SetFont(self.label,size);C.SetLineHeight(self.label,lineHeight,true)
  end
- function b:SetVariant(variant)
+ function ButtonMethods:SetVariant(variant)
   self.variant=variant;self.primary=variant=="primary";self.surfaceColors=nil;self._variantPalette,self._textVariantPalette=nil,nil
   self.hoverColor,self.pressedColor="rowHover",nil
   self.textColor,self.hoverTextColor,self.selectedTextColor="text","text","onSecondaryContainer"
-  C.ApplyStyle(self,{height="buttonHeight",radius="buttonRadius",fontSize="buttonFontSize",lineHeight="buttonLineHeight",singleLine=true})
+  self:SetHeight(T.buttonHeight);self:SetRadius(T.buttonRadius);self:SetLabelStyle("buttonFontSize","buttonLineHeight")
   if variant=="compact" then
-   C.ApplyStyle(self,{height="compactHeight",radius="compactRadius",fontSize="compactSize",lineHeight="compactLineHeight",singleLine=true});self.textColor="muted"
+   self:SetHeight(T.compactHeight);self:SetRadius(T.compactRadius);self:SetLabelStyle("compactSize","compactLineHeight");self.textColor="muted"
   elseif variant=="tonal" then self.surfaceColors={T.secondaryContainer,T.refreshHover,T.secondaryPressed};self._variantPalette=true
   elseif variant=="text" then
    self.surfaceColors={T.transparent,T.transparent,T.transparent};self._textVariantPalette=true;self.textColor,self.hoverTextColor,self.selectedTextColor="muted","brand","brand"
   end
+  if self._lycheeStyleController then self._lycheeStyleController:SetVariant(variant) end
   self:RefreshStyle(true)
  end
- function b:SetStyle(style)
+ function ButtonMethods:SetStyle(style)
   if style.selectionFill~=nil then self.selectionFill=style.selectionFill end
   if style.variant then self:SetVariant(style.variant) end
-  if style.height or style.radius then C.ApplyStyle(self,{height=style.height,radius=style.radius}) end
+  if style.height then self:SetHeight(Value(style.height)) end;if style.radius then self:SetRadius(style.radius) end
   if style.fontSize or style.lineHeight then
    local font=UI.fontStyles[self.label]
-   C.ApplyStyle(self,{fontSize=style.fontSize or font.size,lineHeight=style.lineHeight or font.lineHeight,singleLine=true})
+   self:SetLabelStyle(style.fontSize or font.size,style.lineHeight or font.lineHeight)
   end
   if style.surfaceColors then self:SetSurfaceColors(unpack(style.surfaceColors)) end
   if style.hoverColor or style.pressedColor then self:SetFeedbackColors(style.hoverColor or self.hoverColor,style.pressedColor or self.pressedColor) end
   if style.textColor or style.hoverTextColor or style.selectedTextColor then self:SetTextColors(style.textColor or self.textColor,style.hoverTextColor or self.hoverTextColor,style.selectedTextColor or self.selectedTextColor) end
   if style.selectionFill~=nil then self:RefreshStyle(true) end
  end
- function b:SetExpanded(value)
+ function ButtonMethods:SetExpanded(value)
   value=value==true;if self.expanded==value then return end
   self.expanded=value
   if self.expanded and not self.focus then
@@ -386,23 +365,32 @@ function C.Button(parent,text,width,action,options)
   end
   self:RefreshStyle(true)
  end
+local function Button(parent,text,width,action,options,deferStyle)
+ local b=ButtonBase(parent,text,width,action)
+ C.DefaultFont(b.label,"buttonFontSize");C.DefaultLineHeight(b.label,"buttonLineHeight",true)
+ b.fill=CreatePanel(b,"primary","buttonRadius",nil,nil,true)
+ b.hover=CreatePanel(b,"rowHover","buttonRadius",nil,nil,true)
+ b.hoverColor="rowHover"
+ for name,method in pairs(ButtonMethods) do b[name]=method end
  b.hover:SetAlpha(0)
- C.ApplyStyle(b,{height="buttonHeight",radius="buttonRadius"})
- UI:BindStyle(b,"state",function(object) object:RefreshStyle(true);if not object:IsEnabled() then object:SetAlpha(T.disabledAlpha) end end)
+ b:SetRadius(T.buttonRadius)
+
  if options then b:SetStyle(options) end
+ if not deferStyle then C.Style(b,{recipe=options and options.recipe or "button",variant=b.variant,legacy=true,trackNative=true,slots={root=b,label=b.label,surface=b.fill,hover=b.hover}}) end
  return b
 end
+function C.Button(parent,text,width,action,options) return Button(parent,text,width,action,options,false) end
 -- Native buttons stay available to callers; the library owns their appearance.
 function C.IconButton(parent,icon,size,action,options)
  options=options or {}
- local button=C.Button(parent,"",size or "buttonHeight",action,options)
+ local button=Button(parent,"",size or "buttonHeight",action,options,true)
  button._iconSelection=false
- C.ApplyStyle(button,{height=options.height or size or "buttonHeight"});button.label:Hide()
+ button:SetHeight(Value(options.height or size or "buttonHeight"));button.label:Hide()
  local iconSize=Value(options.iconSize or "iconButtonSize")
  if icon then button.icon=C.Glyph(button,icon,iconSize)
  else button.icon=C.Icon(button,iconSize) end
- C.ApplyStyle(button.icon,{width=options.iconSize or "iconButtonSize",height=options.iconSize or "iconButtonSize"})
  button.icon:SetPoint("CENTER")
+ C.Style(button,{recipe=options.recipe or "iconButton",variant=button.variant,legacy=true,trackNative=true,slots={root=button,label=button.label,surface=button.fill,hover=button.hover,icon=button.icon}})
  return button
 end
 function C.Surface(parent,options)
@@ -413,9 +401,14 @@ function C.Surface(parent,options)
  surface.restColor=Value(options.color or (floating and "floatingSurface" or "panel"))
  surface.hoverColor=Value(options.hoverColor or (floating and "floatingHover" or surface.restColor))
  surface.fill=C.Panel(surface,surface.restColor,options.radius or (floating and "floatingRadius" or "panelRadius"))
- function surface:SetHovered(value) self.hovered=value==true;self.fill:SetColor(self.hovered and self.hoverColor or self.restColor) end
+ function surface:SetHovered(value)
+  self.hovered=value==true;local color=self.hovered and self.hoverColor or self.restColor
+  if not C.OwnsStyle(self,"surface","color",color) then self.fill:SetColor(color) end
+  if self._lycheeStyleController then self._lycheeStyleController:Apply(true) end
+ end
  function surface:SetColors(rest,hover) options.color,options.hoverColor=rest,hover or rest;self.restColor,self.hoverColor=Value(rest),Value(hover or rest);self:SetHovered(self.hovered) end
- UI:BindStyle(surface,"state",function(object) object.restColor=Value(options.color or (floating and "floatingSurface" or "panel"));object.hoverColor=Value(options.hoverColor or (floating and "floatingHover" or options.color or "panel"));object:SetHovered(object.hovered) end)
+
+ C.Style(surface,{recipe="surface",variant=options.variant,legacy=true,trackNative=true,slots={root=surface,surface=surface.fill}})
  return surface
 end
 function C.CheckMark(parent,color)
@@ -426,7 +419,7 @@ function C.CheckMark(parent,color)
  end
  function mark:SetColor(value) for _,line in ipairs(self.strokes) do line:SetColorTexture(unpack(value)) end end
  mark:SetColor(Value(color or "onSecondaryContainer"))
- UI:BindStyle(mark,"checkMark",function(object) object:SetSize(T.checkMarkWidth,T.checkMarkHeight);object:SetColor(Value(color or "onSecondaryContainer")) end)
+
  return mark
 end
 function C.Checkbox(parent,onChange,options)
@@ -437,8 +430,9 @@ function C.Checkbox(parent,onChange,options)
  check.mark=C.CheckMark(check,"onPrimary");check.mark:SetPoint("CENTER")
  function check:RefreshStyle()
   local inside=self:IsEnabled() and self.hovered
-  self.fill:SetColor(self:GetChecked() and (inside and T.primaryHover or T.primary) or (inside and T.secondaryContainer or T.surfaceHigh))
-  self.mark:SetShown(self:GetChecked()==true)
+  local color=self:GetChecked() and (inside and T.primaryHover or T.primary) or (inside and T.secondaryContainer or T.surfaceHigh)
+  if not C.OwnsStyle(self,"surface","color",color) then self.fill:SetColor(color) end
+  if not C.OwnsStyle(self,"mark","shown",self:GetChecked()==true) then self.mark:SetShown(self:GetChecked()==true) end
  end
  function check:SetValue(value) self:SetChecked(value==true);self:RefreshStyle() end
  function check:GetValue() return self:GetChecked()==true end
@@ -448,17 +442,14 @@ function C.Checkbox(parent,onChange,options)
  check:SetScript("OnHide",function(self) self.hovered=nil;self:RefreshStyle() end)
  check:SetScript("OnClick",function(self) if self:IsEnabled() and not UI:IsHiding() then self:RefreshStyle();if onChange then onChange(self:GetValue(),self) end end end)
  check:SetValue(false)
- UI:BindStyle(check,"state",function(object)
-  size,boxSize=Value(options.size or "checkboxSize"),Value(options.boxSize or "checkboxBoxSize")
-  local style=object._lycheeUtilityStyle
-  object:SetSize(style and style.width and Value(style.width) or size,style and style.height and Value(style.height) or size);object.fill:SetInset((size-boxSize)/2);object.fill:SetRadius(options.radius or "checkboxRadius");object:RefreshStyle();if not object:IsEnabled() then object:SetAlpha(T.disabledAlpha) end
- end)
+
+ C.Style(check,{recipe="checkbox",legacy=true,trackNative=true,slots={root=check,surface=check.fill,mark=check.mark}})
  return check
 end
 -- Visual field only: native/registered EditBoxes can be leased into this shell.
 function C.Notice(parent,width,onClose)
  local frame=CreateFrame("Frame",nil,parent);frame:SetSize(Value(width),T.noticeHeight);frame.fill=C.Panel(frame,"notice","noticeRadius")
- if type(width)=="string" then C.ApplyStyle(frame,{width=width}) end
+
  frame.text=C.Text(frame,"","font14","noticeText",Value(width)-T.noticeTextReserve,"line20");frame.text:SetPoint("LEFT",T.noticeInset,0);frame.text:SetJustifyH("LEFT");frame.text:SetWordWrap(true)
  frame.close=C.IconButton(frame,"close",T.noticeCloseSize,function() if onClose then onClose(frame) else frame:Hide() end end,{iconSize=12})
  frame.close:SetPoint("RIGHT",-T.noticeCloseInset,0)
@@ -466,57 +457,52 @@ function C.Notice(parent,width,onClose)
   self.actionWidth=actionWidth or 0;message=message or "";self.text:SetWidth(self:GetWidth()-T.noticeTextReserve-(actionWidth or 0));UI:SetText(self.text,message)
   self:SetHeight(math.max(T.noticeHeight,math.ceil(self.text:GetStringHeight())+T.noticeVerticalPadding));self:SetShown(message~="")
  end
- UI:BindStyle(frame,"notice",function(object)
-  object.text:SetWidth(object:GetWidth()-T.noticeTextReserve-(object.actionWidth or 0));object.text:SetPoint("LEFT",T.noticeInset,0)
-  object:SetHeight(math.max(T.noticeHeight,math.ceil(object.text:GetStringHeight())+T.noticeVerticalPadding));object.close:SetSize(T.noticeCloseSize,T.noticeCloseSize);object.close:SetPoint("RIGHT",-T.noticeCloseInset,0)
- end)
+
  frame:Hide();return frame
 end
-function C.Field(parent,width,height,search,variant)
+local function Field(parent,width,height,search,variant,deferStyle)
  local shell=CreateFrame("Frame",nil,parent);shell:SetSize(Value(width),Value(height or "fieldHeight"))
  local radiusRef=search and "searchRadius" or "fieldRadius"
  local radius=Value(radiusRef)
  local baseColor=variant=="modal" and T.surfaceLow or T.field
  local hoverColor=variant=="modal" and T.surfaceContainer or T.surfaceHighest
  local focusColor=variant=="modal" and T.field or T.fieldFocus
- shell.focus=C.Panel(shell,"focusBorder",radius);shell.focus:Hide()
+ shell.focus=CreatePanel(shell,"focusBorder",radius,nil,nil,true)
  shell.fill=C.Panel(shell,baseColor,radius)
  function shell:SetFocused(focused,hovered)
   self.focused=focused==true;self.hovered=hovered==true
-  self.focus:SetShown(self.focused)
-  self.fill:SetColor(self.focused and focusColor or self.hovered and hoverColor or baseColor)
+  if not C.OwnsStyle(self,"outline","shown",self.focused) then self.focus:SetShown(self.focused) end
+  local fillColor=self.focused and focusColor or self.hovered and hoverColor or baseColor
+  if not C.OwnsStyle(self,"surface","color",fillColor) then self.fill:SetColor(fillColor) end
   -- 1px inner ring, without a constant bright border or outer glow.
-  self.fill:Hide()
+  local ownFillShown=C.OwnsStyle(self,"surface","shown",not self.focused)
+  if not ownFillShown then self.fill:Hide() end
   if self.inner then self.inner:Hide() end
   if self.focused then
-   self.focus:SetColor(T.focusBorder)
+   if not C.OwnsStyle(self,"outline","color",T.focusBorder) then self.focus:SetColor(T.focusBorder) end
    if not self.inner then
     self.inner=C.Panel(self,focusColor,math.max(0,radius-T.fieldRing),T.fieldRing)
     -- Texture batching does not preserve creation order within a shared sublayer.
     for _,region in ipairs(self.inner.regions) do region:SetDrawLayer("BACKGROUND",-6) end
    end
    self.inner:Show()
-  else self.fill:Show() end
+  elseif not ownFillShown then self.fill:Show() end
+  if self._lycheeStyleController then self._lycheeStyleController:Apply(true) end
  end
  function shell:SetBackdropColor(...) self.fill:SetColorTexture(...) end
  function shell:SetBackdropBorderColor(r,g,b,a) self.focus:SetColorTexture(r,g,b,a);self.focus:SetShown((a or 1)>0) end
  shell:SetScript("OnHide",function(self) self:SetFocused(false) end)
- C.ApplyStyle(shell,{width=width,height=height or "fieldHeight"})
- UI:BindStyle(shell,"state",function(object)
-  radius=Value(radiusRef);baseColor=variant=="modal" and T.surfaceLow or T.field
-  hoverColor=variant=="modal" and T.surfaceContainer or T.surfaceHighest;focusColor=variant=="modal" and T.field or T.fieldFocus
-  object.focus:SetRadius(radius);object.fill:SetRadius(radius)
-  if object.inner then object.inner:SetRadius(math.max(0,radius-T.fieldRing));object.inner:SetInset(T.fieldRing);object.inner:SetColor(focusColor) end
-  object:SetFocused(object.focused,object.hovered)
- end)
+
+ if not deferStyle then C.Style(shell,{recipe="field",legacy=true,trackNative=true,slots={root=shell,surface=shell.fill,outline=shell.focus}}) end
  return shell
 end
+function C.Field(parent,width,height,search,variant) return Field(parent,width,height,search,variant,false) end
 function C.Edit(parent,width,height,multiline,search,variant)
- local shell=C.Field(parent,width,height,search,variant)
+ local shell=Field(parent,width,height,search,variant,true)
  local function Surface(focused,hovered) shell:SetFocused(focused,hovered) end
  local scroll=multiline and CreateFrame("ScrollFrame",nil,shell) or nil
  local box=CreateFrame("EditBox",nil,scroll or shell)
- C.SetFont(box,"font14");box:SetShadowOffset(0,0);box:SetTextColor(unpack(T.text));box:SetAutoFocus(false)
+ C.DefaultFont(box,"font14");box:SetShadowOffset(0,0);box:SetTextColor(unpack(T.text));box:SetAutoFocus(false)
  box:SetJustifyV(multiline and "TOP" or "MIDDLE");box:SetMultiLine(multiline==true);box:SetMaxLetters(0)
  if scroll then
   scroll:SetPoint("TOPLEFT",T.editInset,-T.editMultilineInset);scroll:SetPoint("BOTTOMRIGHT",-T.editInset,T.editMultilineInset)
@@ -537,42 +523,36 @@ function C.Edit(parent,width,height,multiline,search,variant)
  shell.box=box;shell.scroll=scroll
  function shell:SetPlaceholder(text)
   if not self.placeholder then
-   self.placeholder=C.Text(box,"","font14","muted",width-T.editInset*2);C.SetLineHeight(self.placeholder,"line20",not multiline);self.placeholder:SetPoint(multiline and "TOPLEFT" or "LEFT",0,0);self.placeholder:SetWordWrap(multiline==true)
+   self.placeholder=C.Text(box,"","font14","muted",width-T.editInset*2);C.DefaultLineHeight(self.placeholder,"line20",not multiline);self.placeholder:SetPoint(multiline and "TOPLEFT" or "LEFT",0,0);self.placeholder:SetWordWrap(multiline==true)
    Hook(box,"OnTextChanged",function() self.placeholder:SetShown(box:GetText()=="") end)
   end
   UI:SetText(self.placeholder,text);self.placeholder:SetShown(box:GetText()=="")
  end
  UI.inputs[#UI.inputs+1]=box
- C.ApplyStyle(box,{color="text"})
- UI:BindStyle(box,"edit",function()
-  if scroll then
-   scroll:SetPoint("TOPLEFT",T.editInset,-T.editMultilineInset);scroll:SetPoint("BOTTOMRIGHT",-T.editInset,T.editMultilineInset);box:SetWidth(math.max(1,shell:GetWidth()-T.editInset*2))
-  else box:SetPoint("TOPLEFT",T.editInset,-T.editVerticalInset);box:SetPoint("BOTTOMRIGHT",-T.editInset,T.editVerticalInset) end
-  if shell.placeholder then shell.placeholder:SetWidth(shell:GetWidth()-T.editInset*2) end
- end)
+ UI:Color(box,T.text)
+
+ C.Style(shell,{recipe="edit",legacy=true,trackNative=true,slots={root=shell,surface=shell.fill,outline=shell.focus,input=box}})
  return shell
 end
 function C.Number(parent,width,height,onChange)
  local shell=C.Edit(parent,width,height or "fieldHeight")
  shell.box:SetNumeric(true)
  shell.box:SetScript("OnTextChanged",function() if onChange then onChange(shell.box:GetText()) end end)
- shell:SetPlaceholder(UI.L.any or (GetLocale()=="zhCN" and "不限" or "Any"))
+ shell:SetPlaceholder("")
  return shell
 end
 function C.ChoiceTrigger(parent,width,action,options)
  local b=C.Button(parent,"",width,action)
- C.ApplyStyle(b,{height="fieldHeight",radius="fieldRadius"});b.isChoice=true;b.fill:SetColor(T.selectBackground);b.fill:Show()
+ b:SetHeight(T.fieldHeight);b:SetRadius(T.fieldRadius);b.isChoice=true;b.fill:SetColor(T.selectBackground);b.fill:Show()
  b.label:ClearAllPoints();b.label:SetPoint("LEFT",T.choiceInset,0);b.label:SetWidth(width-T.choiceReserve);b.label:SetWordWrap(false)
  Hook(b,"OnSizeChanged",function(self,value) self.label:SetWidth(math.max(0,value-T.choiceReserve)) end)
  b.arrows={}
  for i=1,2 do local arm=b:CreateTexture(nil,"ARTWORK");b.arrows[i]=arm;arm:SetColorTexture(unpack(T.muted));arm:SetSize(T.choiceArrowWidth,T.choiceArrowThickness);arm:SetPoint("CENTER",b,"RIGHT",i==1 and -T.choiceArrowOuter or -T.choiceArrowInner,0);arm:SetRotation(i==1 and -math.pi/4 or math.pi/4) end
- UI:BindStyle(b,"choice",function(object)
-  object.label:SetPoint("LEFT",T.choiceInset,0);object.label:SetWidth(math.max(0,object:GetWidth()-T.choiceReserve))
-  for i,arm in ipairs(object.arrows) do arm:SetColorTexture(unpack(T.muted));arm:SetSize(T.choiceArrowWidth,T.choiceArrowThickness);arm:SetPoint("CENTER",object,"RIGHT",i==1 and -T.choiceArrowOuter or -T.choiceArrowInner,0) end
- end)
+
  function b:SetValue(value,label) self.value=value;UI:SetText(self.label,label or tostring(value or "")) end
  function b:SetSurfaceVariant(value) self.surfaceVariant=value;self:RefreshStyle(true) end
  if options then b:SetStyle(options) end
+ C.ProtectStyle(b)
  return b
 end
 function C.Choice(parent,width,entries,onChange)
@@ -591,7 +571,7 @@ function C.Check(parent,label,onChange)
   local inside,pressed=enabled and self._inside,enabled and self._pressed
   local color=self.value and (pressed and T.primaryPressed or inside and T.primaryHover or T.primary)
    or pressed and T.secondaryContainer or inside and T.surfaceHighest or T.surfaceHigh
-  M:Color(track.bg,color,not immediate and T.feedbackDuration or nil)
+  if not C.OwnsStyle(self,"surface","color",color) then M:Color(track.bg,color,not immediate and T.feedbackDuration or nil) end
  end
  function b:SetValue(value,animate)
   local old=self.value;self.value=value==true
@@ -608,13 +588,8 @@ function C.Check(parent,label,onChange)
   local x=self.value and T.switchActiveX or T.switchInset
   if knob._slideX~=x then knob:ClearAllPoints();knob:SetPoint("LEFT",track,"LEFT",x,0);knob._slideX=x end
  end)
- UI:BindStyle(b,"state",function(object)
-  object.label:SetPoint("LEFT",T.switchLabelX,0)
-  track:SetSize(T.switchWidth,T.switchHeight);track.bg:SetRadius(T.switchRadius)
-  local x,size=object.value and T.switchActiveX or T.switchInset,object.value and T.switchActiveKnobSize or T.switchKnobSize
-  knob:SetSize(size,size);knob:ClearAllPoints();knob:SetPoint("LEFT",track,"LEFT",x,0);knob._slideX=x
-  knob.bg:SetColor(object.value and T.onPrimary or T.dim);object:RefreshStyle(true);if not object:IsEnabled() then object:SetAlpha(T.disabledAlpha) end
- end)
+
+ C.Style(b,{recipe="check",legacy=true,trackNative=true,slots={root=b,label=b.label,track=track,knob=knob,surface=track.bg,knobSurface=knob.bg}})
  return b
 end
 
@@ -627,7 +602,7 @@ function C.ScrollBar(parent)
  slider:SetValueStep(1);slider:SetObeyStepOnDrag(true);slider:SetMinMaxValues(0,0)
  local thumb=slider:CreateTexture(nil,"ARTWORK");thumb:SetColorTexture(unpack(T.accent));thumb:SetSize(T.scrollWidth,T.scrollbarThumbHeight);slider:SetThumbTexture(thumb)
  slider.thumb=thumb
- UI:BindStyle(slider,"scrollbar",function(object) object:SetWidth(T.scrollWidth);thumb:SetSize(T.scrollWidth,T.scrollbarThumbHeight);thumb:SetColorTexture(unpack(T.accent)) end)
+
  return slider
 end
 
@@ -640,7 +615,7 @@ function C.Selection(parent,options)
  frame.fill=C.Panel(frame,options.color or "secondaryContainer",options.radius or "selectionRadius")
  if options.mark then
   frame.mark=frame:CreateTexture(nil,"ARTWORK");frame.mark:SetColorTexture(unpack(T.accent));frame.mark:SetSize(T.selectionMarkWidth,T.selectionMarkHeight);frame.mark:SetPoint("LEFT",T.selectionMarkInset,0)
-  UI:BindStyle(frame,"selection",function(object) object.mark:SetColorTexture(unpack(T.accent));object.mark:SetSize(T.selectionMarkWidth,T.selectionMarkHeight);object.mark:SetPoint("LEFT",T.selectionMarkInset,0) end)
+
  end
  frame:Hide()
  function frame:Select(x,y,width,height,animate)
@@ -659,11 +634,11 @@ function C.Selection(parent,options)
  Hook(parent,"OnHide",function() frame:Clear() end)
  return frame
 end
-function C.List(parent,width,height,rowHeight,onSelect,onHover)
+function C.List(parent,width,height,rowHeight,onSelect,onHover,options)
  local list=CreateFrame("Frame",nil,parent);list:SetSize(width,height)
  local CreateRow
- local defaultRowHeight=rowHeight==nil and T.listRowHeight or nil
  local gutterExplicit=false
+ list.bodyHeight=rowHeight or T.listRowHeight
  list.rows={};list.offset=0;list.pixelOffset=0;list.rowHeight=rowHeight or T.listRowHeight;list.viewportHeight=height;list.gutter=C.listRightInset
  list.capacity=math.ceil(height/list.rowHeight);list.poolCapacity=list.capacity+2
  local clip=CreateFrame("ScrollFrame",nil,list);clip:SetPoint("TOPLEFT");clip:SetPoint("BOTTOMRIGHT",-C.listRightInset,0)
@@ -671,15 +646,62 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover)
  list.clip,list.canvas=clip,canvas
  local slider=C.ScrollBar(list);slider:SetPoint("TOPRIGHT",0,-2);slider:SetPoint("BOTTOMRIGHT",0,2)
  list.slider=slider
+ local function Variable() return list.rowHeightResolver~=nil or list.elementHeights==true end
+ local function RowTop(index) return list.geometryOffsets and list.geometryOffsets[index] or (index-1)*list.rowHeight end
+ local function FindRow(pixel)
+  local offsets=list.geometryOffsets;if not offsets then return math.floor(pixel/list.rowHeight)+1 end
+  local indices=list.geometryIndices;local low,high=1,#indices
+  if high==0 then return 1,1 end
+  while low<high do local middle=math.floor((low+high+1)/2);if offsets[indices[middle]]<=pixel then low=middle else high=middle-1 end end
+  return indices[low],low
+ end
+ local function BuildGeometry()
+  local variable=Variable()
+  if not variable then
+   if list.geometryOffsets then
+    for index,row in ipairs(list.rows) do row:SetHeight(list.bodyHeight);row:SetPoint("TOPLEFT",0,-(index-1)*list.rowHeight) end
+    canvas:SetHeight(list:GetHeight()+list.rowHeight*2)
+   end
+   list.geometryOffsets=nil;list.geometryIndices=nil;list.geometryDirty=false;return
+  end
+  if not list.geometryDirty and list.geometryStride==list.rowHeight and list.geometryBody==list.bodyHeight then return end
+  local offsets=list._geometryOffsets or {};list._geometryOffsets=offsets;list.geometryOffsets=offsets
+  local rows=list.geometryRows or {};list.geometryRows=rows;for key in pairs(rows) do rows[key]=nil end
+  for _,row in ipairs(list.rows) do if row.key then rows[row.key]=row end end
+  local gap=math.max(0,list.rowHeight-list.bodyHeight);local top=0;local count=list.ids and #list.ids or 0
+  local indices=list._geometryIndices or {};list._geometryIndices=indices;list.geometryIndices=indices;local visible=0
+  for index=1,count do
+   local key=list.ids[index];local height=list.bodyHeight
+   if list.rowHeightResolver then height=list.rowHeightResolver(key,index,height) or height end
+   if list.elementHeights then height=UI:ResolveListElementHeight(list,key,height,rows[key]) end
+   if type(height)~="number" or height<0 or height~=height or height==math.huge then error("list row height must be finite and nonnegative",2) end
+   offsets[index]=top
+   if height>0 then visible=visible+1;indices[visible]=index;top=top+height+gap end
+  end
+  offsets[count+1]=top;for index=#offsets,count+2,-1 do offsets[index]=nil end
+  for index=#indices,visible+1,-1 do indices[index]=nil end
+  list.contentHeight=visible>0 and top-gap or 0;list.geometryGap=gap;list.geometryStride,list.geometryBody=list.rowHeight,list.bodyHeight;list.geometryDirty=false
+ end
  local function MaxOffset()
+  BuildGeometry()
   local count=list.ids and #list.ids or 0
-  -- Row spacing advances each slot; the final row has no trailing gap.
-  local contentHeight=count>0 and (count-1)*list.rowHeight+list.rows[1]:GetHeight() or 0
+  local contentHeight=list.geometryOffsets and list.contentHeight or (count>0 and (count-1)*list.rowHeight+list.rows[1]:GetHeight() or 0)
   local overflow=contentHeight-list:GetHeight()
-  -- Native scaled anchors can report 103.999984 for a 104px viewport.
   return overflow>.01 and overflow or 0
  end
+ function list:RefreshGeometry()
+  self.geometryDirty=true
+  if not self.refreshing then self:Refresh(true) end
+ end
+ function list:RowGeometryChanged()
+  if Variable() then self:RefreshGeometry() end
+ end
+ function list:SetRowHeightResolver(resolve)
+  if self.rowHeightResolver==resolve then return end
+  self.rowHeightResolver=resolve;self:RefreshGeometry()
+ end
  local function Release(row)
+  if C.RekeyElement then C.RekeyElement(row,nil) end
   if row.pressedKey then row.pressCancelled=true end
   row.key=nil;row.noteDot:Hide();row.alternate:Hide();row.hover:Hide();row.hover:SetAlpha(0)
   row._inside=nil;row._pressed=nil
@@ -694,48 +716,89 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover)
   if row.symbol then UI:SetIconState(row.symbol,row.key==list.selectedKey,false) end
   if row.pressedKey then row.pressCancelled=true end
   UI:LeaveRow(row)
+  if row._lycheeStyleController then row._lycheeStyleController:Apply(true) end
  end
  local function Highlight(row,immediate)
   local selected=row.key==list.selectedKey and list.selectionFill~=false
   local hovered=row:IsEnabled() and row._hitVisible and not selected and (row._inside or row._pressed)
-  if hovered and list.hoverFill~=false then
-   row.hover:SetColor(row._pressed and T.pressed or Value(list.hoverColor) or T.rowHover);row.hover:Show()
-   if immediate then M:Stop(row.hover);row.hover:SetAlpha(1) else M:Alpha(row.hover,1,T.selectionDuration) end
-  else M:Stop(row.hover);row.hover:SetAlpha(0);row.hover:Hide() end
-  if list.idleTextColor then UI:Color(row.title,selected and T.onSecondaryContainer or hovered and T.text or Value(list.idleTextColor)) end
+  local visible=hovered and list.hoverFill~=false
+  local hoverColor=row._pressed and T.pressed or Value(list.hoverColor) or T.rowHover
+  local ownColor=C.OwnsStyle(row,"hover","color",hoverColor)
+  local ownShown=C.OwnsStyle(row,"hover","shown",visible==true)
+  local ownAlpha=C.OwnsStyle(row,"hover","alpha",visible and 1 or 0)
+  if visible then
+   if not ownColor then row.hover:SetColor(hoverColor) end
+   if not ownShown then row.hover:Show() end
+   if not ownAlpha then if immediate then M:Stop(row.hover);row.hover:SetAlpha(1) else M:Alpha(row.hover,1,T.selectionDuration) end end
+  else
+   if not ownAlpha then M:Stop(row.hover);row.hover:SetAlpha(0) end
+   if not ownShown then row.hover:Hide() end
+  end
+  if list.idleTextColor then
+   local textColor=selected and T.onSecondaryContainer or hovered and T.text or Value(list.idleTextColor)
+   if not C.OwnsStyle(row,"label","color",textColor) then UI:Color(row.title,textColor) end
+  end
+  row._selected=selected==true;if row._lycheeStyleController then row._lycheeStyleController:Apply(immediate) end
  end
  function list:Refresh(positionOnly)
+  if self.refreshing then return end
+  self.refreshing=true
   local ids=self.ids;local maximum=MaxOffset()
   local selectionRow,selectionY
-  if self.offset~=math.floor((self.pixelOffset or 0)/self.rowHeight) then self.pixelOffset=self.offset*self.rowHeight end
-  self.pixelOffset=math.max(0,math.min(self.pixelOffset or 0,maximum));self.offset=math.floor(self.pixelOffset/self.rowHeight)
+  if self.offset~=FindRow(self.pixelOffset or 0)-1 then self.pixelOffset=RowTop(self.offset+1) or 0 end
+  self.pixelOffset=math.max(0,math.min(self.pixelOffset or 0,maximum));self.offset=FindRow(self.pixelOffset)-1
   if self.scrollTarget and self.pixelOffset==maximum and self.scrollTarget>maximum then M:Stop(self);self.scrollTarget=maximum end
   self.updating=true
   local minimum,currentMaximum=slider:GetMinMaxValues()
   if minimum~=0 or currentMaximum~=maximum then slider:SetMinMaxValues(0,maximum) end
   slider:SetValue(self.pixelOffset);self.updating=false
   if slider:IsShown()~=(maximum>0) then slider:SetShown(maximum>0) end
-  clip:SetVerticalScroll(self.pixelOffset-self.offset*self.rowHeight)
+  local firstTop=RowTop(self.offset+1) or 0
+  local visible=self.capacity+1;local firstVisible=1
+  if self.geometryOffsets then
+   local indices=self.geometryIndices
+   local _,position=FindRow(self.pixelOffset);firstVisible=position
+   local last=firstVisible
+   while last<=#indices and RowTop(indices[last])<self.pixelOffset+self:GetHeight() do last=last+1 end
+   visible=math.min(#indices-firstVisible+1,last-firstVisible+1)
+   while self.poolCapacity<visible+1 do self.poolCapacity=self.poolCapacity+1;CreateRow(self.poolCapacity);if self.initializeRow then self.initializeRow(self.rows[self.poolCapacity]) end end
+   visible=math.min(visible,self.poolCapacity)
+   local last=indices[firstVisible+visible-1]
+   local canvasHeight=math.max(self:GetHeight(),last and self.geometryOffsets[last+1]-firstTop-self.geometryGap or 0)
+   if canvas:GetHeight()~=canvasHeight then canvas:SetHeight(canvasHeight) end
+  end
+  clip:SetVerticalScroll(self.pixelOffset-firstTop)
   for i,row in ipairs(self.rows) do
-   local absolute=self.offset+i
-   local key=ids and i<=self.capacity+1 and ids[self.offset+i] or nil
+   local absolute=self.geometryIndices and self.geometryIndices[firstVisible+i-1] or self.offset+i
+   local key=ids and i<=visible and ids[absolute] or nil
    local rebound=row.key~=key
    if rebound then Release(row);row.key=key;if UI.CloseMenuFor then UI:CloseMenuFor(self) end end
    row.alternate:SetShown(key~=nil and self.alternateRows~=false and absolute%2==0)
    if row:IsShown()~=(key~=nil) then row:SetShown(key~=nil) end
+   if key and self.geometryOffsets then
+    local y=-(RowTop(absolute)-firstTop)
+    local p,a,b,x,oldY=row:GetPoint()
+    if type(a)=="number" then oldY=b end
+    if p~="TOPLEFT" or oldY~=y then row:SetPoint("TOPLEFT",0,y) end
+    local body=self.geometryOffsets[absolute+1]-self.geometryOffsets[absolute]-self.geometryGap
+    if row:GetHeight()~=body then row:SetHeight(body) end
+   end
    if key and self.render then
-    if rebound or not positionOnly then self.render(row,key) end
+    if rebound or not positionOnly then
+     if list.elementTemplate then if not row._lycheeElementRegistered then C.Element(row,list.elementTemplate,{template=list.elementTemplate,key=key,scope=list.elementScope,slots=list.elementRowSlots or row});row._lycheeElementRegistered=true else C.RekeyElement(row,key,list.elementTemplate) end end
+     self.render(row,key);if C.ApplyElement then C.ApplyElement(row) end
+    end
     local selected=key==self.selectedKey
     local duration=not self:IsVisible() and 0 or nil
     M:Selection(row.selected,selected and self.selectionFill~=false and not self.selectionMotion,duration);M:Selection(row.mark,selected and self.selectionMark~=false and not self.selectionMotion,duration)
-    if selected then selectionRow,selectionY=row,-(i-1)*self.rowHeight end
+    if selected then selectionRow,selectionY=row,-(RowTop(absolute)-firstTop) end
     Highlight(row,true)
     if row.symbol then UI:SetIconState(row.symbol,selected,row._inside==true) end
    end
    -- ScrollFrame clips pixels, while each button still owns its full hit rect.
    -- Keep partial rows visible and clickable only inside the clipped viewport.
    local rowHeight=row:GetHeight()
-   local top=(i-1)*self.rowHeight-(self.pixelOffset-self.offset*self.rowHeight)
+   local top=key and RowTop(absolute)-self.pixelOffset or 0
    local cropTop=math.min(rowHeight,math.max(0,-top))
    local cropBottom=math.min(rowHeight-cropTop,math.max(0,top+rowHeight-self:GetHeight()))
    local left,right,previousTop,previousBottom=row:GetHitRectInsets()
@@ -753,17 +816,19 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover)
    else self.indicator:Clear(self:IsVisible() and self.indicatorOffset==self.offset) end
    self.indicatorKey,self.indicatorOffset=self.selectedKey,self.offset
   end
+  self.refreshing=nil
+  if self.geometryDirty then self:Refresh(true) end
  end
  local scrollFrom,scrollElapsed=0,0
  local function ScrollStep(dt)
   scrollElapsed=math.min(T.scrollDuration,scrollElapsed+dt);local p=scrollElapsed/T.scrollDuration;p=1-(1-p)*(1-p)
-  list.pixelOffset=scrollFrom+(list.scrollTarget-scrollFrom)*p;list.offset=math.floor(list.pixelOffset/list.rowHeight);list:Refresh(true)
+  list.pixelOffset=scrollFrom+(list.scrollTarget-scrollFrom)*p;list.offset=FindRow(list.pixelOffset)-1;list:Refresh(true)
   return scrollElapsed==T.scrollDuration
  end
  function list:SetPixelOffset(value,animate)
   local target=math.max(0,math.min(value,MaxOffset()))
   M:Stop(self);self.scrollTarget=target
-  if target==self.pixelOffset or not animate or UI:IsReducedMotion() or T.scrollDuration==0 then self.pixelOffset=target;self.offset=math.floor(target/self.rowHeight);self:Refresh(true);return end
+  if target==self.pixelOffset or not animate or UI:IsReducedMotion() or T.scrollDuration==0 then self.pixelOffset=target;self.offset=FindRow(target)-1;self:Refresh(true);return end
   scrollFrom,scrollElapsed=self.pixelOffset,0
   M:Start(self,ScrollStep)
  end
@@ -776,7 +841,18 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover)
   end
   list.capacity=math.min(list.poolCapacity-1,visible)
  end
- function list:SetItems(ids,render) self.ids=ids;self.render=render;EnsureRows(self:GetHeight());self:Refresh() end
+ function list:SetItems(ids,render) self.ids=ids;self.render=render;self.geometryDirty=true;EnsureRows(self:GetHeight());self:Refresh() end
+ function list:SetRowHeight(stride,bodyHeight,viewportHeight)
+  if type(stride)~="number" or stride<=0 or stride~=stride or stride==math.huge then error("list row stride must be finite and positive",2) end
+  local body=bodyHeight or self.rowStyle and Value(self.rowStyle.rowHeight) or stride
+  if type(body)~="number" or body<0 or body~=body or body==math.huge then error("list row body height must be finite and nonnegative",2) end
+  self.rowHeight=stride;self.bodyHeight=body
+  if viewportHeight~=nil and self.viewportHeight~=viewportHeight then self.viewportHeight=viewportHeight;self:SetHeight(viewportHeight) end
+  self.geometryDirty=true
+  if not Variable() then for index,row in ipairs(self.rows) do row:SetHeight(self.bodyHeight);row:SetPoint("TOPLEFT",0,-(index-1)*stride) end end
+  EnsureRows(self:GetHeight());canvas:SetHeight(self:GetHeight()+stride*2)
+  self:Refresh(true)
+ end
  function list:SetRowInitializer(initialize)
   self.initializeRow=initialize
   for _,row in ipairs(self.rows) do initialize(row) end
@@ -799,14 +875,17 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover)
  end
  function list:Select(key,locate)
   self.selectedKey=key
-  if locate and self.ids then for i,id in ipairs(self.ids) do if id==key then self:SetPixelOffset((i-1)*self.rowHeight,false);return end end end
+  if self.elementHeights then self.geometryDirty=true;BuildGeometry() end
+  if locate and self.ids then for i,id in ipairs(self.ids) do if id==key then self:SetPixelOffset(RowTop(i),false);return end end end
   self:Refresh(true)
  end
  function list:Clear()
-  M:Stop(self);self.scrollTarget=nil;self.ids=nil;self.render=nil;self.selectedKey=nil
+  local refreshing=self.refreshing;self.refreshing=true
+  M:Stop(self);self.scrollTarget=nil;self.ids=nil;self.render=nil;self.selectedKey=nil;self.geometryDirty=true
   if self.indicator then self.indicator:Clear();self.indicatorKey=nil end
   for _,row in ipairs(self.rows) do Release(row);row:Hide();UI:SetText(row.title,"");UI:SetText(row.meta,"") end
   slider:Hide()
+  self.refreshing=refreshing
  end
  function list:RefreshKeys(keys,resolve)
   for _,row in ipairs(self.rows) do if row.key then
@@ -816,8 +895,8 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover)
  local function ApplyRowStyle(row,style)
   if style.rowHeight then row:SetHeight(Value(style.rowHeight)) end
   if style.radius then row.alternate:SetRadius(style.radius);row.selected:SetRadius(style.radius);row.hover:SetRadius(style.radius) end
-  if style.titleSize then C.SetFont(row.title,style.titleSize) end
-  if style.titleLineHeight then C.SetLineHeight(row.title,style.titleLineHeight,true) end
+  if style.titleSize then C.DefaultFont(row.title,style.titleSize) end
+  if style.titleLineHeight then C.DefaultLineHeight(row.title,style.titleLineHeight,true) end
   if style.singleLine~=nil then row.meta:SetShown(not style.singleLine) end
   if style.singleLine~=nil or style.titleX then
    row.title:ClearAllPoints()
@@ -833,31 +912,11 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover)
   end
   if self.indicator and style.radius then self.indicator.fill:SetRadius(style.radius) end
   for _,key in ipairs({"alternateRows","selectionFill","selectionMark","hoverFill","idleTextColor","hoverColor"}) do if style[key]~=nil then self[key]=style[key] end end
+  if style.rowHeight then self.bodyHeight=Value(style.rowHeight);self.geometryDirty=true end
   for _,row in ipairs(self.rows) do ApplyRowStyle(row,self.rowStyle) end
   self:Refresh(true)
  end
- UI:BindStyle(list,"state",function(object)
-  if defaultRowHeight and object.rowHeight==defaultRowHeight then
-   local previous=defaultRowHeight;defaultRowHeight=T.listRowHeight;object.rowHeight=defaultRowHeight
-   for i,row in ipairs(object.rows) do if row:GetHeight()==previous then row:SetHeight(defaultRowHeight) end;row:SetPoint("TOPLEFT",0,-(i-1)*object.rowHeight) end
-   EnsureRows(object:GetHeight());canvas:SetHeight(object:GetHeight()+object.rowHeight*2)
-  end
-  if not gutterExplicit then
-   object.gutter=C.listRightInset;clip:SetPoint("BOTTOMRIGHT",-object.gutter,0);ResizeContent()
-  end
-  for _,row in ipairs(object.rows) do
-   local defaults=row.listDefaults
-   defaults.titlePoint=DefaultPoint(row.title,defaults.titlePoint,"TOPLEFT",T.listTextInset,-T.listTextTop)
-   defaults.metaPoint=DefaultPoint(row.meta,defaults.metaPoint,"BOTTOMLEFT",T.listTextInset,T.listTextTop)
-   defaults.markPoint=DefaultPoint(row.mark,defaults.markPoint,"LEFT",T.selectionMarkInset,0)
-   if row.title:GetWidth()==defaults.titleWidth then defaults.titleWidth=object:GetWidth()-T.listTextReserve;row.title:SetWidth(defaults.titleWidth) end
-   if row.meta:GetWidth()==defaults.metaWidth then defaults.metaWidth=object:GetWidth()-T.listTextReserve;row.meta:SetWidth(defaults.metaWidth) end
-   if object.rowStyle then ApplyRowStyle(row,object.rowStyle) end
-   row.mark:SetSize(T.selectionMarkWidth,T.selectionMarkHeight);row.noteDot:SetSize(T.listDotSize,T.listDotSize)
-   row.mark:SetColorTexture(unpack(T.accent));row.noteDot:SetColorTexture(unpack(T.accent));Highlight(row,true)
-  end
-  object:Refresh(true)
- end)
+
  slider:SetScript("OnValueChanged",function(_,value) if not list.updating then list:SetPixelOffset(value,false) end end)
  list:EnableMouseWheel(true);list:SetScript("OnMouseWheel",function(self,delta) self:SetPixelOffset((self.scrollTarget or self.pixelOffset)-delta*self.rowHeight*2,true) end)
  list:SetScript("OnHide",function(self)
@@ -871,16 +930,15 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover)
  end)
  list:SetScript("OnShow",function(self) self:Refresh(true) end)
  CreateRow=function(i)
-  local row=CreateFrame("Button",nil,canvas);row:SetSize(list:GetWidth()-list.gutter,list.rowHeight);row:SetPoint("TOPLEFT",0,-(i-1)*list.rowHeight)
-  row.alternate=C.Panel(row,"rowAlternate","listRadius")
-  row.selected=C.Panel(row,"secondaryContainer","listRadius");row.selected:Hide()
-  row.hover=C.Panel(row,"rowHover","listRadius");row.hover:Hide()
+  local row=CreateFrame("Button",nil,canvas);row._lycheeList=list;row:SetSize(list:GetWidth()-list.gutter,list.rowHeight);row:SetPoint("TOPLEFT",0,-(i-1)*list.rowHeight)
+  row.alternate=CreatePanel(row,"rowAlternate","listRadius",nil,nil,true)
+  row.selected=CreatePanel(row,"secondaryContainer","listRadius",nil,nil,true)
+  row.hover=CreatePanel(row,"rowHover","listRadius",nil,nil,true)
   row.hover:SetAlpha(0)
   row.mark=row:CreateTexture(nil,"ARTWORK");row.mark:SetColorTexture(unpack(T.accent));row.mark:SetSize(T.selectionMarkWidth,T.selectionMarkHeight);row.mark:SetPoint("LEFT",T.selectionMarkInset,0);row.mark:Hide()
-  row.title=C.Text(row,"","listTitleSize","text",width-T.listTextReserve);C.SetLineHeight(row.title,"listTitleLineHeight",true);row.title:SetPoint("TOPLEFT",T.listTextInset,-T.listTextTop);row.title:SetWordWrap(false)
-  row.meta=C.Text(row,"","listMetaSize","muted",width-T.listTextReserve);C.SetLineHeight(row.meta,"listMetaLineHeight",true);row.meta:SetPoint("BOTTOMLEFT",T.listTextInset,T.listTextTop);row.meta:SetWordWrap(false)
+  row.title=C.Text(row,"","listTitleSize","text",width-T.listTextReserve);C.DefaultLineHeight(row.title,"listTitleLineHeight",true);row.title:SetPoint("TOPLEFT",T.listTextInset,-T.listTextTop);row.title:SetWordWrap(false)
+  row.meta=C.Text(row,"","listMetaSize","muted",width-T.listTextReserve);C.DefaultLineHeight(row.meta,"listMetaLineHeight",true);row.meta:SetPoint("BOTTOMLEFT",T.listTextInset,T.listTextTop);row.meta:SetWordWrap(false)
   row.noteDot=row:CreateTexture(nil,"ARTWORK");row.noteDot:SetColorTexture(unpack(T.accent));row.noteDot:SetSize(T.listDotSize,T.listDotSize);row.noteDot:Hide()
-  row.listDefaults={titlePoint={row.title:GetPoint()},metaPoint={row.meta:GetPoint()},markPoint={row.mark:GetPoint()},titleWidth=row.title:GetWidth(),metaWidth=row.meta:GetWidth()}
   row:RegisterForClicks("LeftButtonUp","RightButtonUp")
   row:SetScript("OnMouseDown",function(self) self.pressedKey=self.key;self.pressCancelled=nil;if self:IsEnabled() and self.key and self._hitVisible then self._pressed=true;Highlight(self) else self.pressCancelled=true end end)
   row:SetScript("OnMouseUp",function(self) self._pressed=nil;Highlight(self) end)
@@ -891,6 +949,9 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover)
   row:SetScript("OnEnter",function(self) if not self:IsEnabled() or not self.key or not self._hitVisible or not clip:IsMouseOver() then return end;self._inside=true;Highlight(self);if self.symbol then UI:SetIconState(self.symbol,self.key==list.selectedKey,true) end;if onHover then onHover(self,self.key) end end)
   row:SetScript("OnLeave",Leave)
   row:SetScript("OnHide",function(self) self._inside=nil;self._pressed=nil;M:Stop(self.hover);self.hover:Hide();if self.pressedKey then self.pressCancelled=true end end)
+  if options and options.initializeRow then options.initializeRow(row) end
+  C.Style(row,{recipe=options and options.recipe or "listRow",legacy=true,trackNative=true,slots={root=row,label=row.title,meta=row.meta,surface=row.alternate,hover=row.hover,selected=row.selected,mark=row.mark,icon=row.icon,check=row.check}})
+  if list.elementTemplate and C.Element then C.Element(row,list.elementTemplate,{template=list.elementTemplate,key=row.key,scope=list.elementScope,slots=list.elementRowSlots or row});row._lycheeElementRegistered=true end
   list.rows[i]=row
   if list.rowStyle then ApplyRowStyle(row,list.rowStyle) end
  end
@@ -907,10 +968,9 @@ function C.Columns(list,columns,titleWidth)
   for _,column in ipairs(columns) do
    local size=column.size or "listMetaSize"
    local text=C.Text(row,"",size,"muted",column.width)
-   C.SetLineHeight(text,column.lineHeight or (column.size and Value(size)+6 or "listMetaLineHeight"),true)
+   C.DefaultLineHeight(text,column.lineHeight or (column.size and Value(size)+6 or "listMetaLineHeight"),true)
    text:SetPoint("LEFT",row,"LEFT",column.x,0);text:SetJustifyH(column.align or "RIGHT");text:SetWordWrap(false)
    row.columns[column.key]=text
-   if column.size and not column.lineHeight then UI:BindStyle(text,"columnLine",function(object) C.SetLineHeight(object,Value(size)+6,true) end) end
   end
  end
 end
@@ -1031,18 +1091,19 @@ function C.TableHeader(parent,definitions,options)
   self.drag={index=index,startX=GetCursorPosition()/scale,scale=scale,width=left.width,total=left.width+right.width}
   self:SetScript("OnUpdate",self.UpdateDrag);Hover()
  end
- function h:SetColumns(defs)
+ function h:SetColumns(defs,width,state)
   self:StopDrag(true,false);self.definitions=defs;wipe(self.labels)
+  if state~=nil then self.state=state end
   for i,def in ipairs(defs) do
    local button=self.buttons[i]
    if not button then
     button=CreateFrame("Button",nil,self);self.buttons[i]=button
-    button.label=C.Text(button,"","font14","dim");C.SetLineHeight(button.label,"line20",true)
+    button.label=C.Text(button,"","font14","dim");C.DefaultLineHeight(button.label,"line20",true)
     button.label:SetPoint("LEFT",T.tablePadding,0);button.label:SetWordWrap(false)
     button:SetScript("OnEnter",Hover);button:SetScript("OnLeave",Hover)
     button:SetScript("OnClick",function(b)
      local col=b.definition
-     if not col.sortable or UI:IsHiding() then return end
+     if not col or not col.sortable or UI:IsHiding() then return end
      local descending=self.state.sortKey==col.key and not self.state.descending or false
      self:SetSort(col.key,descending,true)
      if options.onSort then options.onSort(col.key,descending) end
@@ -1062,24 +1123,23 @@ function C.TableHeader(parent,definitions,options)
    button.definition=def;button:Show();button.label:SetJustifyH(def.align or "LEFT");UI:SetText(button.label,def.label)
    self.labels[def.key]=button.label
   end
-  for i=#defs+1,#self.buttons do self.buttons[i]:Hide();self.handles[i]:Hide() end
-  if self.layoutWidth then self:Layout(self.layoutWidth) end
+  for key in pairs(self.columns) do if not self.labels[key] then self.columns[key]=nil end end
+  for i=#defs+1,#self.buttons do
+   local button=self.buttons[i];button.definition=nil;UI:SetText(button.label,"");button:Hide();self.handles[i]:Hide()
+  end
+  if width~=nil or self.layoutWidth then self:Layout(width or self.layoutWidth) end
  end
  h:SetScript("OnEnter",Hover);h:SetScript("OnLeave",Hover)
  h:SetScript("OnHide",function() h:StopDrag(false) end)
  h:SetColumns(definitions)
- C.ApplyStyle(h,{height="tableHeight"})
- UI:BindStyle(h,"state",function(object)
-  for _,button in ipairs(object.buttons) do button.label:SetPoint("LEFT",T.tablePadding,0) end
-  for _,handle in ipairs(object.handles) do handle.line:SetHeight(T.tableLineHeight) end
-  if object.layoutWidth then object:Layout(object.layoutWidth) end
- end)
+ h:SetHeight(T.tableHeight)
+
  return h
 end
 
 function C.Header(parent,label,x,y,width,align)
  local text=C.Text(parent,label,"font14","dim",width)
- C.SetLineHeight(text,"line20",true)
+ C.DefaultLineHeight(text,"line20",true)
  text:SetPoint("TOPLEFT",parent,"TOPLEFT",x,y);text:SetJustifyH(align or "LEFT");text:SetWordWrap(false)
  return text
 end
@@ -1095,95 +1155,14 @@ function C.Glyph(parent,kind,size,color)
  local image=C.Icon(frame,size);image:SetAllPoints();frame.texture=image;frame._lycheeTexture=image
  image:SetTexture(T.media..kind..".tga");image:SetTexCoord(0,1,0,1)
  function frame:SetSelected(selected,hovered) UI:SetIconState(image,selected,hovered) end
- function frame:SetTexture(file) kind=nil;image:SetTexture(file) end
+ function frame:SetTexture(file) image:SetTexture(file) end
  function frame:SetColor(value) image:SetVertexColor(unpack(value)) end
  if color then frame:SetColor(color) end
- UI:BindStyle(frame,"glyph",function() if kind then image:SetTexture(T.media..kind..".tga") end end)
- return frame
-end
-function C.RoleButton(parent,role,width,text,action)
- local button=C.Button(parent,text,width or 0,action)
- local icon=C.Icon(button,T.roleButtonIconSize);icon:SetPoint("LEFT",T.roleButtonInset,0);UI:SetRoleIcon(icon,role)
- button.roleIcon=icon
- button.label:ClearAllPoints();button.label:SetPoint("LEFT",icon,"RIGHT",T.roleButtonGap,0)
- button:SetWidth(width or button.label:GetStringWidth()+T.roleButtonReserve)
- button:SetSurfaceColors("surfaceLow","surfaceLowHover","surfaceLowPressed")
- UI:BindStyle(button,"role",function(object) icon:SetSize(T.roleButtonIconSize,T.roleButtonIconSize);icon:SetPoint("LEFT",T.roleButtonInset,0);object.label:SetPoint("LEFT",icon,"RIGHT",T.roleButtonGap,0);UI:SetRoleIcon(icon,role);if not width then object:SetWidth(object.label:GetStringWidth()+T.roleButtonReserve) end end)
- return button
-end
-local rosterRoleOrder={TANK=1,HEALER=2,DAMAGER=3}
-function C.Roster(parent,size,gap)
- local sizeRef,gapRef=size or "rosterSize",gap or "rosterGap"
- size,gap=Value(sizeRef),Value(gapRef)
- local frame=CreateFrame("Frame",nil,parent);frame:SetSize(size*5+gap*4,size+1)
- frame.slots={};frame.counts={}
- for i=1,5 do
-  local icon=C.GameIcon(frame,size);icon:SetPoint("TOPLEFT",(i-1)*(size+gap),0)
-  local role=C.Icon(frame,T.rosterRoleSize);role:SetDrawLayer("OVERLAY",2);role:SetPoint("BOTTOMRIGHT",icon,"BOTTOMRIGHT",1,-1)
-  frame.slots[i]={icon=icon,role=role}
- end
- for i,role in ipairs({"TANK","HEALER","DAMAGER"}) do
-  local icon=C.Icon(frame,T.rosterCountIconSize);icon:SetPoint("LEFT",(i-1)*T.rosterCountStride,0);UI:SetRoleIcon(icon,role)
-  local text=C.Text(frame,"","font14","text",T.rosterCountTextWidth);C.SetLineHeight(text,"line20",true);text:SetPoint("LEFT",icon,"RIGHT",T.rosterCountGap,0)
-  frame.counts[i]={icon=icon,text=text,role=role}
- end
- local function PlaceRole(slot,large)
-  slot.large=large;local role=slot.role
-  local extent=large and size or T.rosterRoleSize
-  if role:GetWidth()~=extent or role:GetHeight()~=extent then role:SetSize(extent,extent) end
-  local anchor=large and "CENTER" or "BOTTOMRIGHT"
-  local offsetX,offsetY=large and 0 or 1,large and 0 or -1
-  local point,parent,relative,x,y=role:GetPoint()
-  if role:GetNumPoints()~=1 or point~=anchor or parent~=slot.icon or relative~=anchor or x~=offsetX or y~=offsetY then
-   role:ClearAllPoints();role:SetPoint(anchor,slot.icon,anchor,offsetX,offsetY)
-  end
- end
- function frame:Update(members,counts,maximum,fixedRoles)
-  local party=maximum==5
-  for _,item in ipairs(self.counts) do item.icon:SetShown(not party);item.text:SetShown(not party);if not party then UI:SetText(item.text,counts and counts[item.role] or "—") end end
-  local used=0
-  if party and (members or fixedRoles) then
-   local tanks,healers,damage=0,0,0
-   for rank=1,4 do
-    local present=0
-    for i=1,5 do
-     local member=members and members[i]
-     if member and (rosterRoleOrder[member.assignedRole] or 4)==rank then
-      present=present+1
-      used=used+1;local slot=self.slots[used]
-      slot.icon:Show();slot.role:Hide();UI:SetMemberIcon(slot.icon,member);slot.icon:SetAlpha(1)
-      PlaceRole(slot,false)
-      if member.assignedRole and member.assignedRole~="NONE" then UI:SetRoleIcon(slot.role,member.assignedRole);slot.role:Show() end
-     end
-    end
-    if rank==1 then tanks=present elseif rank==2 then healers=present elseif rank==3 then damage=present end
-   end
-   if fixedRoles then
-    for rank=1,3 do
-     local present=rank==1 and tanks or rank==2 and healers or damage
-     local missing=math.min(5-used,math.max(0,(rank==3 and 3 or 1)-present))
-     local role=rank==1 and "TANK" or rank==2 and "HEALER" or "DAMAGER"
-     for i=1,missing do
-      used=used+1;local slot=self.slots[used]
-      slot.icon:Hide();PlaceRole(slot,true)
-      UI:SetRoleIcon(slot.role,role);slot.role:Show()
-     end
-    end
-   end
-  end
-  for i=used+1,5 do self.slots[i].icon:Hide();self.slots[i].role:Hide() end
- end
- UI:BindStyle(frame,"roster",function(object)
-  size,gap=Value(sizeRef),Value(gapRef);object:SetSize(size*5+gap*4,size+1)
-  for i,slot in ipairs(object.slots) do slot.icon:SetSize(size,size);slot.icon:SetPoint("TOPLEFT",(i-1)*(size+gap),0);PlaceRole(slot,slot.large) end
-  for i,item in ipairs(object.counts) do item.icon:SetSize(T.rosterCountIconSize,T.rosterCountIconSize);item.icon:SetPoint("LEFT",(i-1)*T.rosterCountStride,0);item.text:SetWidth(T.rosterCountTextWidth);item.text:SetPoint("LEFT",item.icon,"RIGHT",T.rosterCountGap,0);UI:SetRoleIcon(item.icon,item.role) end
- end)
+
  return frame
 end
 function C.Slider(parent,width,min,max,step,onChange,options)
  local shell=CreateFrame("Frame",nil,parent);shell:SetSize(Value(width),T.sliderHeight)
- C.ApplyStyle(shell,{height="sliderHeight"})
- if type(width)=="string" then C.ApplyStyle(shell,{width=width}) end
  if options and options.commitOnRelease then
   min,max,step=min or 0,max or 100,step or 1
   local input=CreateFrame("Frame",nil,shell);input:SetSize(Value(width),T.sliderHitHeight);input:SetPoint("CENTER");input:EnableMouse(true)
@@ -1195,7 +1174,7 @@ function C.Slider(parent,width,min,max,step,onChange,options)
   function shell:SetValue(value)
    value=min+math.floor((value-min)/step+.5)*step
    self.value=math.max(min,math.min(max,value))
-   local x=input:GetWidth()*(self.value-min)/(max-min)
+   local x=max>min and input:GetWidth()*(self.value-min)/(max-min) or 0
    progress:SetWidth(x);thumb:ClearAllPoints();thumb:SetPoint("CENTER",input,"LEFT",x,0)
    if options.onPreview then options.onPreview(self.value) end
   end
@@ -1233,11 +1212,7 @@ function C.Slider(parent,width,min,max,step,onChange,options)
   thumb:SetScript("OnMouseDown",Begin);thumb:SetScript("OnMouseUp",Release)
   shell:HookScript("OnHide",function() shell:FinishDrag(false) end)
   shell.slider,shell.track,shell.thumb,shell.progress=input,track,thumb,progress;shell:SetValue(min)
-  UI:BindStyle(shell,"slider",function(object)
-   input:SetSize(object:GetWidth(),T.sliderHitHeight);track:SetHeight(T.sliderTrackHeight);progress:SetHeight(T.sliderTrackHeight)
-   thumb:SetSize(T.sliderThumbWidth,T.sliderThumbHeight);texture:SetVertexColor(unpack(T.accent))
-   local x=input:GetWidth()*(object.value-min)/(max-min);progress:SetWidth(x);thumb:SetPoint("CENTER",input,"LEFT",x,0)
-  end)
+
   return shell
  end
  local slider=CreateFrame("Slider",nil,shell);slider:SetPoint("LEFT",0,0);slider:SetPoint("RIGHT",0,0);slider:SetHeight(T.sliderHitHeight)
@@ -1247,7 +1222,7 @@ function C.Slider(parent,width,min,max,step,onChange,options)
  local thumb=slider:CreateTexture(nil,"OVERLAY");thumb:SetTexture(130871);thumb:SetVertexColor(unpack(T.accent));thumb:SetSize(T.sliderThumbWidth,T.sliderThumbHeight);slider:SetThumbTexture(thumb)
  local function UpdateProgress(value)
   local low,high=slider:GetMinMaxValues()
-  progress:SetWidth(slider:GetWidth()*(value-low)/(high-low))
+  progress:SetWidth(high>low and slider:GetWidth()*(value-low)/(high-low) or 0)
   progress:SetAlpha(value>low and 1 or 0)
  end
  function shell:SetValue(value) self.updating=true;slider:SetValue(value);self.updating=false end
@@ -1260,10 +1235,7 @@ function C.Slider(parent,width,min,max,step,onChange,options)
  slider:SetScript("OnSizeChanged",function() UpdateProgress(slider:GetValue()) end)
  shell.slider,shell.track,shell.thumb,shell.progress=slider,track,thumb,progress;shell:SetValue(min or 0)
  UpdateProgress(slider:GetValue())
- UI:BindStyle(shell,"slider",function()
-  slider:SetHeight(T.sliderHitHeight);track:SetHeight(T.sliderTrackHeight);progress:SetHeight(T.sliderTrackHeight)
-  thumb:SetSize(T.sliderThumbWidth,T.sliderThumbHeight);thumb:SetVertexColor(unpack(T.accent));UpdateProgress(slider:GetValue())
- end)
+
  return shell
 end
 function C.Segmented(parent,width,entries,onChange,options)
@@ -1277,7 +1249,7 @@ function C.Segmented(parent,width,entries,onChange,options)
   local value=entry.value;if value==nil then value=entry[1] end
   local button=C.Button(frame,entry.label or entry[2],100,function() frame:SetValue(value);if onChange then onChange(frame.value) end end,{variant="compact",radius=options.radius or "segmentRadius",selectionFill=options.selectionMotion==false})
   button.value=value
-  C.ApplyStyle(button,{fontSize=options.fontSize or "compactSize",lineHeight=options.lineHeight or "compactLineHeight",singleLine=true})
+  button:SetLabelStyle(options.fontSize or "compactSize",options.lineHeight or "compactLineHeight")
   if options.wordWrap~=nil then button.label:SetWordWrap(options.wordWrap) end
   if entry.icon then button.icon=C.Glyph(button,entry.icon,14);button.icon:SetPoint("LEFT",10,0);button.label:ClearAllPoints();button.label:SetPoint("LEFT",button.icon,"RIGHT",6,0) end
   frame.buttons[#frame.buttons+1]=button
@@ -1306,14 +1278,15 @@ function C.Segmented(parent,width,entries,onChange,options)
  end
  function frame:SetWidth(value) self:Layout(value) end
  function frame:SetHeight(value) self:Layout(nil,value) end
- UI:BindStyle(frame,"state",function(object) object:Layout() end)
+
  frame:HookScript("OnShow",function(self) self:SetValue(self.value) end)
+ frame.LayoutFonts=frame.Layout;UI.fontLayouts[frame]=true
  frame:Layout()
  return frame
 end
 -- Rounded rail entry with a straight 3 x 18 selection mark.
 function C.Navigation(parent,text,width,action,iconName,options)
- local button=C.Button(parent,text,width,action,{height="navigationHeight",radius="navigationRadius",fontSize="navigationFontSize",lineHeight="navigationLineHeight"})
+ local button=Button(parent,text,width,action,{height="navigationHeight",radius="navigationRadius",fontSize="navigationFontSize",lineHeight="navigationLineHeight"},true)
  button.label:ClearAllPoints();button.label:SetPoint("LEFT",iconName and T.navigationIconTextInset or T.navigationInset,0)
  if iconName then button.icon=C.Glyph(button,iconName,T.railIconSize);button.icon:SetPoint("LEFT",T.navigationInset,0);button.icon:SetSelected(false) end
  button.mark=button:CreateTexture(nil,"ARTWORK");button.mark:SetColorTexture(unpack(T.accent));button.mark:SetSize(T.selectionMarkWidth,T.selectionMarkHeight);button.mark:SetPoint("LEFT",T.selectionMarkInset,0);button.mark:Hide()
@@ -1322,23 +1295,19 @@ function C.Navigation(parent,text,width,action,iconName,options)
  Hook(button,"OnHide",function(self) M:Selection(self.mark,self.active==true,0) end)
  button:SetTextColors("muted","text","onSecondaryContainer")
  if options then button:SetStyle(options) end
- UI:BindStyle(button,"navigation",function(object)
-  object.label:SetPoint("LEFT",iconName and T.navigationIconTextInset or T.navigationInset,0)
-  if object.icon then object.icon:SetSize(T.railIconSize,T.railIconSize);object.icon:SetPoint("LEFT",T.navigationInset,0) end
-  object.mark:SetColorTexture(unpack(T.accent));object.mark:SetSize(T.selectionMarkWidth,T.selectionMarkHeight);object.mark:SetPoint("LEFT",T.selectionMarkInset,0)
- end)
+
+ C.Style(button,{recipe=options and options.recipe or "navigation",legacy=true,trackNative=true,slots={root=button,label=button.label,surface=button.fill,hover=button.hover,icon=button.icon,mark=button.mark}})
  return button
 end
--- A generic text tooltip, separate from application-specific roster tooltips.
+-- A generic text tooltip; the caller supplies its content.
 function C.Tooltip(parent,width)
  local tip=CreateFrame("Frame",nil,parent or UIParent);tip:SetSize(Value(width or "tooltipWidth"),40);tip:SetFrameStrata("TOOLTIP");tip:SetClampedToScreen(true)
- if width==nil or type(width)=="string" then C.ApplyStyle(tip,{width=width or "tooltipWidth"}) end
  C.Shadow(tip,"tooltipRadius");C.Panel(tip,"raised","tooltipRadius");tip.lines={};tip.count=0;tip:Hide()
  function tip:SetOwner(owner,anchor) self.owner=owner;self.anchor=anchor;self.count=0;for _,line in ipairs(self.lines) do line:Hide() end end
  function tip:AddLine(text,r,g,b,wrap)
   self.count=self.count+1;local line=self.lines[self.count]
   if not line then line=C.Text(self,"","tooltipFontSize","text",self:GetWidth()-T.tooltipPadding*2,"tooltipLineHeight");self.lines[self.count]=line end
-  UI:SetText(line,text);C.ApplyStyle(line,{color=(r or g or b) and {r or T.text[1],g or T.text[2],b or T.text[3],1} or "text"});line:SetWordWrap(wrap~=false);line:Show()
+  UI:SetText(line,text);UI:Color(line,(r or g or b) and {r or T.text[1],g or T.text[2],b or T.text[3],1} or T.text);line:SetWordWrap(wrap~=false);line:Show()
  end
  local function Layout(self)
   local y=T.tooltipPadding;for i=1,self.count do local line=self.lines[i];line:ClearAllPoints();line:SetPoint("TOPLEFT",T.tooltipPadding,-y);y=y+line:GetStringHeight()+T.tooltipLineGap end
@@ -1346,7 +1315,8 @@ function C.Tooltip(parent,width)
  end
  local show=tip.Show
  function tip:Show() Layout(self);show(self);M:Alpha(self,1,T.feedbackDuration,.25) end
- UI:BindStyle(tip,"tooltip",function(object) for _,line in ipairs(object.lines) do line:SetWidth(object:GetWidth()-T.tooltipPadding*2) end;if object.owner then Layout(object) end end)
+
+ tip.LayoutFonts=function(self) if self.owner then Layout(self) end end;UI.fontLayouts[tip]=true
  function tip:IsOwned(owner) return self.owner==owner and self:IsShown() end
  function tip:LeaveOwner(owner) if self.owner==owner then self:Hide() end end
  tip:SetScript("OnHide",function(self) M:Stop(self);self:SetAlpha(1);self.owner=nil end)
@@ -1362,85 +1332,45 @@ function C.Modal(parent,width,height,title,onClose)
  scrim:SetFrameLevel(frame:GetFrameLevel());frame:SetFrameLevel(scrim:GetFrameLevel()+1)
  C.Fill(scrim,"modalScrim");scrim:SetScript("OnClick",Close);scrim:Hide();frame.scrim=scrim
  C.Shadow(frame,"windowRadius");C.Panel(frame,"surfaceHigh","windowRadius")
- frame.title=C.Text(frame,title,"font24","text",(Value(width or "modalWidth"))-T.modalTitleReserve);C.SetLineHeight(frame.title,"line32",true);frame.title:SetPoint("TOPLEFT",T.modalPadding,-T.modalPadding);frame.title:SetWordWrap(false)
+ frame.title=C.Text(frame,title,"font24","text",(Value(width or "modalWidth"))-T.modalTitleReserve);C.DefaultLineHeight(frame.title,"line32",true);frame.title:SetPoint("TOPLEFT",T.modalPadding,-T.modalPadding);frame.title:SetWordWrap(false)
  frame.close=C.IconButton(frame,"close",T.modalCloseSize,Close)
  frame.close:SetPoint("TOPRIGHT",-T.modalPadding,-T.modalPadding)
  frame.content=CreateFrame("Frame",nil,frame);frame.content:SetPoint("TOPLEFT",T.modalPadding,-T.modalContentTop);frame.content:SetPoint("BOTTOMRIGHT",-T.modalPadding,T.modalPadding)
  frame:SetScript("OnShow",function() scrim:Show() end)
  frame:SetScript("OnHide",function(self) scrim:Hide();M:FinishPlacement(self) end)
- C.ApplyStyle(frame,{width=width or "modalWidth",height=height or "modalHeight"})
- UI:BindStyle(frame,"modal",function(object)
-  object.title:SetWidth(object:GetWidth()-T.modalTitleReserve);object.title:SetPoint("TOPLEFT",T.modalPadding,-T.modalPadding)
-  object.close:SetSize(T.modalCloseSize,T.modalCloseSize);object.close:SetPoint("TOPRIGHT",-T.modalPadding,-T.modalPadding)
-  object.content:SetPoint("TOPLEFT",T.modalPadding,-T.modalContentTop);object.content:SetPoint("BOTTOMRIGHT",-T.modalPadding,T.modalPadding)
- end)
+
  frame:Hide()
  return frame
 end
+Library.AttachStyles(UI,C)
 return C
 end
 
-function Library.Context:RoundIcon(icon)
- if icon._lycheeMask then return end
+function Library.Context:RoundIcon(icon,texture)
+ if texture~=nil then icon._lycheeMaskTexture=texture end
+ if icon._lycheeMask then
+  if texture~=nil then icon._lycheeMask:SetTexture(texture,"CLAMPTOBLACKADDITIVE","CLAMPTOBLACKADDITIVE") end
+  return
+ end
  local mask=icon:GetParent():CreateMaskTexture(nil,"ARTWORK")
  -- Same mask sampler contract as Blizzard's portrait/action-button masks.
- local function Apply(target) target:SetTexture(icon._lycheeMemberMask or self.Theme.media.."icon-mask.tga","CLAMPTOBLACKADDITIVE","CLAMPTOBLACKADDITIVE") end
- Apply(mask);self:BindStyle(mask,"iconMask",Apply)
+ local function Apply(target) target:SetTexture(icon._lycheeMaskTexture or self.Theme.media.."icon-mask.tga","CLAMPTOBLACKADDITIVE","CLAMPTOBLACKADDITIVE") end
+ Apply(mask);
  mask:SetAllPoints(icon);icon:AddMaskTexture(mask);icon._lycheeMask=mask
 end
--- The caller supplies identity, selection and class/leader decisions explicitly.
-function Library.Context:StyleMemberIcon(icon,options)
- options=options or {}
- icon._lycheeMemberMask=options.mask
- local function Apply(target)
-  if options.mask then
-   self:RoundIcon(target);target._lycheeMask:SetTexture(options.mask,"CLAMPTOBLACKADDITIVE","CLAMPTOBLACKADDITIVE")
-  end
-  local border=options.border or target.memberBorder or target._lycheeMemberBorder
-  if options.borderTexture and not border then border=target:GetParent():CreateTexture(nil,options.borderLayer or "OVERLAY",nil,options.borderSublevel or 0);target._lycheeMemberBorder=border;target.memberBorder=border end
-  if border then
-   if options.borderTexture then border:SetTexture(options.borderTexture) end
-   local inset=self:ResolveValue(options.borderWidth or 0)
-   border:SetDrawLayer(options.borderLayer or "OVERLAY",options.borderSublevel or 0)
-   border:ClearAllPoints()
-   if inset==0 then border:SetAllPoints(target) else border:SetPoint("TOPLEFT",target,"TOPLEFT",-inset,inset);border:SetPoint("BOTTOMRIGHT",target,"BOTTOMRIGHT",inset,-inset) end
-   if options.borderColor then border:SetVertexColor(unpack(self:ResolveValue(options.borderColor))) end
-   if options.borderVisible~=nil then border:SetShown(options.borderVisible) end
-  end
-  if options.crown then
-   local size=self:ResolveValue(options.crownSize or 14)
-   options.crown:SetSize(size,size);options.crown:ClearAllPoints();options.crown:SetPoint("BOTTOM",target,"TOP",0,self:ResolveValue(options.crownGap or 1))
-   if options.crownVisible~=nil then options.crown:SetShown(options.crownVisible) end
-  end
- end
- self:BindStyle(icon,"memberAppearance",Apply);Apply(icon)
- return icon
-end
-local function BindGameCrop(context,icon,left,right,top,bottom)
- local bounds=icon._lycheeGameBounds or {};icon._lycheeGameBounds=bounds
- bounds[1],bounds[2],bounds[3],bounds[4]=left,right,top,bottom
- if not icon._lycheeGameCropApply then
-  icon._lycheeGameCropApply=function(target)
-   local cropBounds=target._lycheeGameBounds;if not cropBounds then return end
-   local crop=context.Theme.iconCrop;local width,height=cropBounds[2]-cropBounds[1],cropBounds[4]-cropBounds[3]
-   target:SetTexCoord(cropBounds[1]+width*crop,cropBounds[2]-width*crop,cropBounds[3]+height*crop,cropBounds[4]-height*crop)
-  end
-  context:BindStyle(icon,"gameCrop",icon._lycheeGameCropApply)
- end
- icon._lycheeGameCropApply(icon)
+local function ApplyGameCrop(context,icon,left,right,top,bottom)
+ local crop=context.Theme.iconCrop;local width,height=right-left,bottom-top
+ icon:SetTexCoord(left+width*crop,right-width*crop,top+height*crop,bottom-height*crop)
 end
 function Library.Context:SetGameTexture(icon,file,left,right,top,bottom)
- icon._lycheeRole=nil
  self:RoundIcon(icon);icon:SetTexture(file)
- BindGameCrop(self,icon,left or 0,right or 1,top or 0,bottom or 1)
+ ApplyGameCrop(self,icon,left or 0,right or 1,top or 0,bottom or 1)
 end
 function Library.Context:SetGameAtlas(icon,name)
- icon._lycheeRole=nil
  self:RoundIcon(icon);icon:SetAtlas(name)
  local info=C_Texture.GetAtlasInfo(name)
  if info then
-  BindGameCrop(self,icon,info.leftTexCoord,info.rightTexCoord,info.topTexCoord,info.bottomTexCoord)
- else icon._lycheeGameBounds=nil
+  ApplyGameCrop(self,icon,info.leftTexCoord,info.rightTexCoord,info.topTexCoord,info.bottomTexCoord)
  end
 end
 local function SameIconChannel(value,target,byte)
@@ -1457,9 +1387,5 @@ function Library.Context:SetIconState(icon,selected,hovered)
  if not SameIconChannel(r,value,byte) or not SameIconChannel(g,value,byte) or not SameIconChannel(b,value,byte) then icon:SetVertexColor(value,value,value) end
  local alpha=selected and 1 or hovered and self.Theme.iconHoverAlpha or self.Theme.iconIdleAlpha
  if not SameIconChannel(icon:GetAlpha(),alpha,math.floor(alpha*255+.5)) then icon:SetAlpha(alpha) end
- icon._lycheeIconSelected,icon._lycheeIconHovered=selected,hovered
- if not icon._lycheeIconStateBound then
-  icon._lycheeIconStateBound=true;self:BindStyle(icon,"iconState",function(object) self:SetIconState(object,object._lycheeIconSelected,object._lycheeIconHovered) end)
- end
 end
 

@@ -4,11 +4,11 @@ local stub = dofile("tests/ui_stubs.lua")
 stub.Install()
 _G.LycheeUI = nil
 local private = {}
-for _, file in ipairs({"Core.lua", "Theme.lua"}) do
+for _, file in ipairs({"Core.lua", "Theme.lua", "Motion.lua", "Styles.lua", "Components.lua", "Layouts.lua", "Elements.lua", "Native.lua", "Menu.lua"}) do
     assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/" .. file))("LycheeGroup", private)
 end
 _G.LycheeGroup, _G.LycheeGroupDB = nil, nil
-for _, file in ipairs({"Locale.lua", "Core.lua", "Configuration.lua", "StyleDefaults.lua", "Appearance.lua", "Minimap.lua"}) do
+for _, file in ipairs({"Locale.lua", "Theme/Defaults.lua", "Theme/Elements.lua", "Theme/FindElements.lua", "Core.lua", "Configuration.lua", "Appearance.lua", "Theme/Import.lua", "Minimap.lua"}) do
     dofile("addon/LycheeGroup/" .. file)
 end
 local A = LycheeGroup
@@ -97,9 +97,37 @@ A:SetSetting("minimap", true)
 T.eq(button:IsShown(), true)
 T.eq(A.db.minimapAngle, savedAngle, "showing again preserves the saved position")
 T.eq(button:GetScript("OnUpdate"), nil)
+do
+ -- Native SetShown changes visibility without dispatching Lua Show/Hide hooks.
+ -- Collectors use those public method hooks to track an addon's wanted state.
+ local setShown,show,hide=button.SetShown,button.Show,button.Hide
+ local wanted
+ button.SetShown=function(self,value) if value then show(self) else hide(self) end end
+ button.Show=function(self) wanted=true;return show(self) end
+ button.Hide=function(self) wanted=false;return hide(self) end
+ A:SetSetting("minimap",false)
+ T.eq(wanted,false,"disabling the minimap entry notifies a collector's Hide hook")
+ A:SetSetting("minimap",true)
+ T.eq(wanted,true,"enabling the minimap entry notifies a collector's Show hook")
+ button.SetShown,button.Show,button.Hide=setShown,show,hide
+end
 local collector=stub.New("Frame",nil,UIParent)
 button:SetParent(collector);button:ClearAllPoints();button:SetPoint("CENTER",collector,"CENTER",12,18)
 M:UpdatePosition()
 local _,parent,_,collectedX,collectedY=button:GetPoint()
 T.eq(parent,collector);T.eq(collectedX,12);T.eq(collectedY,18,"a minimap collector owns the collected button layout")
 _G.GetMinimapShape = nil
+
+-- A fixed startup minimap declaration is applied at its creation boundary.
+T.eq(M.context,nil,"the default minimap entry retains no full UI Context")
+T.eq(A.API.Appearance.SetElements,nil,"live minimap appearance mutation is not exposed")
+local themed=dofile("tests/ui_fixture.lua")("enUS",nil,nil,{schema=1,id="fixture.minimap",revision=1,appearance={main={elements={
+ ["minimap.entry"]={base={root={width=46,height=46},icon={alpha=.5}}},
+}}}})
+dofile("addon/LycheeGroup/Minimap.lua")
+local entry=themed.A.Minimap;entry:Initialize()
+T.ok(entry.context,"a startup minimap override creates its single fixed Context")
+T.eq(entry.button:GetWidth(),46);T.eq(entry.button.icon:GetAlpha(),.5)
+entry.button:Fire("OnEnter")
+T.eq(entry.button:GetWidth(),46,"hover preserves startup entry geometry")
+T.eq(entry.button.icon:GetAlpha(),.5,"hover preserves the startup icon override")

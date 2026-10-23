@@ -5,6 +5,7 @@ _G.GetInspectSpecialization = nil -- 目标客户端只依赖当前 C_Specializa
 Stubs.SetUnit("player", { name = "本人", realm = "晨风号角", class = "WARRIOR", classID = 1, guid = "P-0" })
 
 Load.addon("LycheeGroup", "Locale.lua")
+Load.addon("LycheeGroup", "Theme/Defaults.lua")
 Load.addon("LycheeGroup", "Core.lua")
 Load.addon("LycheeGroup", "Configuration.lua")
 LycheeGroup:LoadDB() -- Core ADDON_LOADED precedes every LoD package.
@@ -119,6 +120,12 @@ local ACTIVITY = {
 	[504] = { mapID=111,groupFinderActivityGroupID=20, fullName = "其他地城", shortName = "其他", categoryID = 2, isMythicPlusActivity = false, maxNumPlayers = 5 },
 }
 
+-- Native result getters return an owned snapshot, including their nested data.
+-- Fixture source packets remain editable to model the next native event.
+local function NativeResultCopy(value)
+ if type(value)~="table" or getmetatable(value) or issecretvalue and issecretvalue(value) then return value end
+ local result={};for key,item in pairs(value) do result[key]=NativeResultCopy(item) end;return result
+end
 _G.C_LFGList = {
  ClearSearchTextFields=function() S.nativeSearchText="" end,
 	Search = function(categoryID, filter, preferred, language, crossFaction, advanced, activityFilter)
@@ -130,7 +137,7 @@ _G.C_LFGList = {
 	GetFilteredSearchResults = function()
 		return #S.resultIDs, S.resultIDs
 	end,
-	GetSearchResultInfo = function(id) S.resultReads = S.resultReads + 1; return S.results[id] end,
+	GetSearchResultInfo = function(id) S.resultReads = S.resultReads + 1; return NativeResultCopy(S.results[id]) end,
 	GetSearchResultPlayerInfo = function(id,index) S.playerReads=S.playerReads+1;return S.players[id] and S.players[id][index] end,
 	GetSearchResultFriends = function(id) local f=S.friends[id] or {};return f.bnet or {},f.character or {},f.guild or {} end,
 	GetSearchResultMemberCounts = function(id) S.memberCountReads=S.memberCountReads+1;return S.counts[id] end,
@@ -3226,6 +3233,206 @@ do
  T.same(G:GetResults(),{96002,96003},"a visible browser must replace old tickets when another native search completes")
  T.eq(G:GetResult(96001),nil,"the obsolete native ticket must not remain available to row tooltips")
  G:Detach(view);S.results,S.resultIDs,S.applications=savedResults,savedIDs,savedApps
+end
+
+-- Opening Create while solo must not materialize the observer's entire social
+-- index. Native getters allocate new records, unlike the ordinary fixture data.
+do
+ local friends,members,memberInfo=C_FriendList.GetFriendInfoByIndex,C_Club.GetClubMembers,C_Club.GetMemberInfo
+ local social=S.social;local n=os.getenv("LYCHEE_MEASURE_SOLO_RELATIONS") and 500 or 3
+ S.social={friends={},bnet={},guild={},guildID=77}
+ for index=1,n do S.social.friends[index]={};S.social.guild[index]={} end
+ local friendReads,guildReads=0,0
+ C_FriendList.GetFriendInfoByIndex=function(index)
+  friendReads=friendReads+1
+  return {name="SocialFriend"..index.."-Away",guid="Social-Friend-"..index,connected=true,className="Mage",level=90,area="City",notes="",mobile=false,rafLinkType=0,dnd=false}
+ end
+ C_Club.GetClubMembers=function() local ids={};for index=1,n do ids[index]=index end;return ids end
+ C_Club.GetMemberInfo=function(_,index)
+  guildReads=guildReads+1
+  return {name="SocialGuild"..index.."-Away",guid="Social-Guild-"..index,role=1,level=90,zone="City",classID=8,isOnline=true,memberNote="",officerNote="",presence=1}
+ end
+ Stubs.ClearUnits();Stubs.SetUnit("player",{name="Solo",realm="Home",class="WARRIOR",guid="Solo-Self"})
+ local view={}
+ collectgarbage("collect");collectgarbage("stop")
+ local before=collectgarbage("count")
+ for index=1,8 do
+  G:Attach(view,"create");G:GetRoster();G:GetRoster()
+  G:OnEvent("GUILD_ROSTER_UPDATE");G:GetRoster()
+  G:Detach(view)
+ end
+ local allocated=collectgarbage("count")-before
+ collectgarbage("restart")
+ if os.getenv("LYCHEE_MEASURE_SOLO_RELATIONS") then
+  print(string.format("solo-create-social rounds=8 nativeRecords=%d allocatedKiB=%.3f friendReads=%d guildReads=%d",n,allocated,friendReads,guildReads))
+ end
+ T.eq(friendReads,0,"solo Create and relationship events need no fresh friend records")
+ T.eq(guildReads,0,"solo Create and relationship events need no fresh guild records")
+ G:Attach(view,"create")
+ T.ok(G.Game.frame.events.FRIENDLIST_UPDATE,"social event ownership remains active for future applicants or teammates")
+ Stubs.SetUnit("party1",{name="SocialFriend1",realm="Away",class="MAGE",guid="Social-Friend-1"})
+ G:InvalidateRoster("group")
+ local roster=G:GetRoster()
+ T.eq(#roster,2);T.eq(roster[2].isCharFriend,true,"joining a teammate builds the required relationship index")
+ T.eq(roster[1].isCharFriend,false,"the observer retains no self relationship badge")
+ T.eq(friendReads,n);T.eq(guildReads,n)
+ S.social.friends={};G:OnEvent("FRIENDLIST_UPDATE")
+ T.eq(G:GetRoster()[2].isCharFriend,false,"relationship changes still refresh a cached non-solo roster")
+ Stubs.SetUnit("party1",nil);G:InvalidateRoster("group")
+ local reads=guildReads;G:OnEvent("GUILD_ROSTER_UPDATE");G:GetRoster()
+ T.eq(guildReads,reads,"returning to solo stops unused index reads")
+ Stubs.SetUnit("player",nil);G:InvalidateRoster("group")
+ T.eq(#G:GetRoster(),0)
+ G:OnEvent("GUILD_ROSTER_UPDATE");G:GetRoster()
+ T.eq(guildReads,reads,"an empty roster also has no relationship consumer")
+ G:Detach(view)
+ T.eq(G.Game.frame.events.FRIENDLIST_UPDATE,nil,"the final consumer still releases social events")
+ C_FriendList.GetFriendInfoByIndex,C_Club.GetClubMembers,C_Club.GetMemberInfo=friends,members,memberInfo
+ S.social=social
+end
+
+-- The dedicated native leader endpoint avoids roster scans when it proves a
+-- public leader class; unavailable or incomplete answers retain the old scan.
+do
+ local id=98019;local ids=S.resultIDs;local getter=C_LFGList.GetSearchResultLeaderInfo
+ local secret,wasSecret={},issecretvalue;_G.issecretvalue=function(value)return value==secret end
+ S.results[id]={activityIDs={501},name="Direct leader summary",leaderName="Captain-Away",numMembers=2}
+ S.players[id]={{name="Other-Away",classFilename="WARRIOR"},{name="Captain-Away",classFilename="MAGE",isLeader=true}}
+ local direct,directReads={name="Captain",isLeader=true,classFilename="MAGE"},0
+ C_LFGList.GetSearchResultLeaderInfo=function(resultID)T.eq(resultID,id);directReads=directReads+1;return direct end
+ S.resultIDs={id};G.Results:BeginSearch(98019);G.Results:CommitResults(98019)
+ local record=G:GetResult(id);local reads=S.playerReads
+ T.eq(G.Results:GetLeaderClass(record),"MAGE");T.eq(directReads,1);T.eq(S.playerReads,reads,"a proven direct leader class reads no roster members")
+ T.eq(record.details,nil);T.eq(G.Results:GetLeaderClass(record),"MAGE");T.eq(directReads,1)
+ direct={isLeader=true,classFilename="PRIEST"};S.players[id][2].classFilename="PRIEST"
+ G.Results:OnResultUpdated(id)
+ T.eq(G.Results:GetLeaderClass(record),"PRIEST");T.eq(directReads,2);T.eq(S.playerReads,reads,"native result events invalidate the direct summary too")
+
+ local function Fallback(value,message)
+  direct=value;G.Results:Capture(id,record,true);local before=S.playerReads;local calls=directReads
+  T.eq(G.Results:GetLeaderClass(record),"PRIEST",message)
+  T.eq(S.playerReads-before,2);T.eq(directReads,calls+1)
+ end
+ Fallback(nil,"nil direct answers retain the existing ordered member scan")
+ Fallback(secret,"a secret direct table is not inspected")
+ Fallback({isLeader=secret,classFilename="MAGE"},"a secret leader flag cannot prove identity")
+ Fallback({isLeader=false,classFilename="MAGE"},"a nonleader result cannot provide the leader's color")
+ Fallback({classFilename="MAGE"},"a missing leader flag cannot prove identity")
+ Fallback({isLeader=true,classFilename=secret},"secret classes fall back")
+ Fallback({isLeader=true},"missing classes fall back")
+ Fallback({isLeader=true,classFilename=""},"empty classes fall back")
+ Fallback({isLeader=true,classFilename=42},"nonstring classes fall back")
+ C_LFGList.GetSearchResultLeaderInfo=nil;G.Results:Capture(id,record,true);reads=S.playerReads
+ T.eq(G.Results:GetLeaderClass(record),"PRIEST");T.eq(S.playerReads-reads,2,"clients without the endpoint keep the old path")
+
+ C_LFGList.GetSearchResultLeaderInfo=function()error("clean full details must take priority over the direct endpoint")end
+ local details=G.Results:GetDetails(record);record.leaderClassKnown,record.leaderClass=nil,nil;reads=S.playerReads
+ T.eq(G.Results:GetLeaderClass(record),"PRIEST");T.eq(S.playerReads,reads);T.eq(#details.members,2)
+ C_LFGList.GetSearchResultLeaderInfo=function()error("an empty or unavailable member count must keep the old nil summary")end
+ S.results[id].numMembers=secret;G.Results:OnResultUpdated(id);reads=S.playerReads
+ T.eq(G.Results:GetLeaderClass(record),nil);T.eq(S.playerReads,reads)
+ C_LFGList.GetSearchResultLeaderInfo=getter;_G.issecretvalue=wasSecret
+ S.resultIDs=ids;S.results[id],S.players[id]=nil,nil
+end
+
+-- First captures own the native table; later events preserve published identity.
+do
+ local id=98020;local ids=S.resultIDs;local getter=C_LFGList.GetSearchResultInfo
+ S.results[id]={activityIDs={501},searchResultID=id,name="Owned snapshot",leaderName="Captain-Away",numMembers=1,
+  numBNetFriends=2,numCharFriends=3,numGuildMates=0,requiredItemLevel=600,
+  leaderDungeonScoreInfo={{mapName="Unused summary",bestRunLevel=15}},leaderPvpRatingInfo={},
+  unusedNativeTree={large={1,2,3}},voiceChat="Unused native field",autoAccept=true}
+ S.players[id]={{name="Captain-Away",classFilename="MAGE",isLeader=true}}
+ local returned,unused
+ C_LFGList.GetSearchResultInfo=function(resultID)
+  local info=getter(resultID)
+  if resultID==id then returned=info;unused=setmetatable({info.leaderDungeonScoreInfo,info.unusedNativeTree},{__mode="v"}) end
+  return info
+ end
+ local record=G.Results:Capture(id)
+ T.eq(record,returned,"the first normalization reuses the independently owned native return")
+ T.eq(record.id,id);T.eq(record.activityID,501);T.eq(record.requiredItemLevel,600)
+ T.eq(record.bnetFriends,2);T.eq(record.charFriends,3)
+ for _,key in ipairs({"activityIDs","searchResultID","leaderDungeonScoreInfo","leaderPvpRatingInfo","numBNetFriends","numCharFriends","numGuildMates","unusedNativeTree","voiceChat","autoAccept"}) do T.eq(record[key],nil,"only normalized fields survive: "..key) end
+ T.eq(S.results[id].activityIDs[1],501);T.eq(S.results[id].unusedNativeTree.large[1],1,"the reusable fixture source packet is independent of each native snapshot")
+ collectgarbage("collect");T.eq(unused[1],nil);T.eq(unused[2],nil,"unused native subtrees have no result owner")
+ local first=record;S.results[id].name="Changed snapshot";S.results[id].numCharFriends=4;S.now=S.now+1
+ T.eq(G.Results:Capture(id,record,true),first);T.ok(returned~=record)
+ T.eq(record.name,"Changed snapshot");T.eq(record.charFriends,4)
+ T.eq(returned.activityIDs[1],501,"updates only read the new native input while keeping the published record")
+
+ -- A stale scan exits before claiming or pruning its native input.
+ local abandoned;C_LFGList.GetSearchResultInfo=function(resultID)
+  local info=getter(resultID)
+  if resultID==id then abandoned=info;G.Results:BeginSearch(980201) end
+  return info
+ end
+ S.resultIDs={id};G.Results:BeginSearch(980200);G.Results:CommitResults(980200)
+ T.eq(G:GetResultCount(),0);T.eq(G:GetResult(id),nil)
+ T.eq(abandoned.activityIDs[1],501);T.eq(abandoned.unusedNativeTree.large[1],1,"a superseded read is not normalized after BeginSearch reentry")
+ C_LFGList.GetSearchResultInfo=getter;S.resultIDs=ids
+ S.results[id],S.players[id]=nil,nil
+end
+
+-- Raid-list summaries stop at the same first leader as the full member view.
+do
+ local id=98021;local ids=S.resultIDs
+ S.results[id]={activityIDs={501},name="Raid leader summary",leaderName="Captain-Away",numMembers=30}
+ S.players[id]={};S.counts[id]={TANK=2,HEALER=6,DAMAGER=22}
+ for index=1,30 do S.players[id][index]={name="Member"..index.."-Away",classFilename="MAGE"} end
+ S.players[id][26]={name="Captain-Away",classFilename="PALADIN"}
+ S.resultIDs={id};G.Results:BeginSearch(98021);G.Results:CommitResults(98021)
+ local record=G:GetResult(id);local reads=S.playerReads
+ T.eq(G.Results:GetLeaderClass(record),"PALADIN");T.eq(S.playerReads-reads,26,"a leader is not assumed to occupy the first native slot")
+ T.eq(record.details,nil,"the summary does not masquerade as complete member details")
+ T.eq(G.Results:GetLeaderClass(record),"PALADIN");T.eq(S.playerReads-reads,26,"repeated rows reuse the summary")
+ local details=G:GetResultDetails(id)
+ T.eq(#details.members,30);T.eq(S.playerReads-reads,56,"a full tooltip still reads the complete native roster")
+ T.eq(G.Results:GetLeaderClass(record),"PALADIN");T.eq(S.playerReads-reads,56)
+
+ -- The specific result event invalidates same-count member replacement too.
+ S.players[id][26]={name="Captain-Away",classFilename="PRIEST"}
+ G.Results:OnResultUpdated(id);reads=S.playerReads
+ T.eq(record.detailsDirty,true);T.eq(G.Results:GetLeaderClass(record),"PRIEST");T.eq(S.playerReads-reads,26)
+ T.eq(record.details,details,"a partial read leaves dirty full details for their real consumer")
+ T.eq(record.detailsDirty,true)
+
+ -- A full refresh fills the summary without a second leader scan.
+ G:GetResultDetails(id);reads=S.playerReads
+ T.eq(G.Results:GetLeaderClass(record),"PRIEST");T.eq(S.playerReads,reads)
+ S.results[id].leaderName="Member4-Away";S.now=S.now+1
+ G.Results:Capture(id,record);reads=S.playerReads
+ T.eq(G.Results:GetLeaderClass(record),"MAGE");T.eq(S.playerReads-reads,4,"changed leader metadata invalidates the summary")
+ S.results[id].numMembers=3;S.now=S.now+1;G.Results:Capture(id,record);reads=S.playerReads
+ T.eq(G.Results:GetLeaderClass(record),nil);T.eq(S.playerReads-reads,3)
+ T.eq(G.Results:GetLeaderClass(record),nil);T.eq(S.playerReads-reads,3,"missing leaders are cached too")
+
+ -- Empty and secret fields cannot provide identity or color. The first
+ -- matching leader still wins if its class is unavailable.
+ local secret,wasSecret={},issecretvalue
+ _G.issecretvalue=function(value)return value==secret end
+ S.results[id].leaderName="Captain-Away";S.results[id].numMembers=4
+ S.players[id]={secret,{name=secret,isLeader=secret,classFilename="WARRIOR"},
+  {name="Captain-Away",classFilename=secret},{isLeader=true,classFilename="DRUID"}}
+ G.Results:OnResultUpdated(id);reads=S.playerReads
+ T.eq(G.Results:GetLeaderClass(record),nil);T.eq(S.playerReads-reads,3)
+ T.eq(G.Results:GetLeaderClass(record),nil);T.eq(S.playerReads-reads,3)
+ S.players[id]={{name="",classFilename="MAGE"},{name=secret,isLeader=true,classFilename="MONK"}}
+ S.results[id].numMembers=2;G.Results:OnResultUpdated(id);reads=S.playerReads
+ T.eq(G.Results:GetLeaderClass(record),"MONK");T.eq(S.playerReads-reads,2,"an explicit public leader flag works without a public name")
+ _G.issecretvalue=wasSecret
+
+ S.players[id]={{name="Captain-Away",classFilename="WARRIOR",isLeader=true}}
+ S.results[id].numMembers=1;G.Results:BeginSearch(98022);G.Results:CommitResults(98022)
+ local fresh=G:GetResult(id);T.ok(fresh~=record);reads=S.playerReads
+ local complete=G:GetResultDetails(id);T.eq(#complete.members,1)
+ T.eq(G.Results:GetLeaderClass(fresh),"WARRIOR");T.eq(S.playerReads-reads,1,"complete details populate the summary on a fresh search")
+ -- A complete snapshot supplied before the first summary read is reused.
+ fresh.leaderClassKnown,fresh.leaderClass=nil,nil;reads=S.playerReads
+ T.eq(G.Results:GetLeaderClass(fresh),"WARRIOR");T.eq(S.playerReads,reads)
+ S.results[id].numMembers=0;G.Results:OnResultUpdated(id);reads=S.playerReads
+ T.eq(G.Results:GetLeaderClass(fresh),nil);T.eq(G.Results:GetLeaderClass(fresh),nil);T.eq(S.playerReads,reads)
+ S.results[id],S.players[id],S.counts[id]=nil,nil,nil;S.resultIDs=ids
 end
 
 _G.LycheeGroupDB = nil

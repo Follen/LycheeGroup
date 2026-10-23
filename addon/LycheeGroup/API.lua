@@ -87,7 +87,7 @@ function F:PublishStatus()
 end
 
 -- Whole-product configuration; this entry does not load a UI or business package.
-local configuration={version=1}
+local configuration={version=2}
 A.API.Configuration=configuration
 for _,name in ipairs({"Get","GetSource","GetSchema","Set","Reset","RegisterPreset","ActivatePreset","ApplyPreset","RemovePreset","ListPresets","ExportPreset"}) do
  local method=name

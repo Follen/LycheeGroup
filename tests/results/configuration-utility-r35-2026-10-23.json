@@ -1,0 +1,252 @@
+{
+  "date": "2026-10-23",
+  "environment": "Windows Lua 5.1, tests/ui_fixture.lua enUS; offline allocation diagnostic only",
+  "command": "lua tests/measure_configuration.lua",
+  "method": "Each operation group starts after a full GC, stops automatic GC for the bounded loop, reports collectgarbage(count) delta and os.clock elapsed, then resumes GC. Structural counts walk distinct reachable Lua tables; they are not WoW AddOn memory attribution.",
+  "limitations": [
+    "This fixture does not measure the game's 20,000,000-byte four-AddOn budget.",
+    "CPU times are one local sample, not a statistical benchmark.",
+    "The r35 all-pages sample includes concurrent shared-library and product changes; its improvement cannot be attributed to configuration changes alone."
+  ],
+  "r34Baseline": {
+    "definitions": 1826,
+    "snapshotDefinitions": 1581,
+    "configurationTables": 2455,
+    "appearanceTables": 2192,
+    "themeDefaultsTables": 109,
+    "savedUserFields": 0,
+    "sameSetting": {
+      "iterations": 25,
+      "allocatedKiB": 20221.943,
+      "cpuMs": 144,
+      "resolveThemeCalls": 200
+    },
+    "fullSchema": {
+      "iterations": 10,
+      "allocatedKiB": 12810.938,
+      "cpuMs": 58,
+      "resultFields": 1826
+    },
+    "mainThemeSchema": {
+      "iterations": 10,
+      "allocatedKiB": 13451.26,
+      "cpuMs": 65,
+      "resultFields": 1131
+    },
+    "mainStyleSchema": {
+      "iterations": 10,
+      "allocatedKiB": 12891.589,
+      "cpuMs": 64,
+      "resultFields": 139
+    },
+    "defaultTemplate": {
+      "iterations": 10,
+      "allocatedKiB": 2895.219,
+      "cpuMs": 8
+    },
+    "allPages": {
+      "allocatedKiB": 18296.091,
+      "cpuMs": 64,
+      "nodes": 5644,
+      "fontStyles": 631,
+      "styleTargets": 1607,
+      "styleControllers": 215
+    }
+  },
+  "r35Sample": {
+    "definitions": 1832,
+    "snapshotDefinitions": 1587,
+    "configurationTables": 2461,
+    "appearanceTables": 2198,
+    "themeDefaultsTables": 496,
+    "savedUserFields": 0,
+    "sameSetting": {
+      "iterations": 25,
+      "allocatedKiB": 24.473,
+      "cpuMs": 0,
+      "resolveThemeCalls": 0
+    },
+    "fullSchema": {
+      "iterations": 10,
+      "allocatedKiB": 12847.148,
+      "cpuMs": 63,
+      "resultFields": 1832
+    },
+    "mainThemeSchema": {
+      "iterations": 10,
+      "allocatedKiB": 8642.317,
+      "cpuMs": 39,
+      "resultFields": 1137
+    },
+    "mainStyleSchema": {
+      "iterations": 10,
+      "allocatedKiB": 1484.675,
+      "cpuMs": 7,
+      "resultFields": 139
+    },
+    "defaultTemplate": {
+      "iterations": 10,
+      "allocatedKiB": 2959.219,
+      "cpuMs": 9
+    },
+    "allPages": {
+      "allocatedKiB": 16006.69,
+      "cpuMs": 64,
+      "nodes": 5642,
+      "fontStyles": 629,
+      "styleTargets": 1018,
+      "styleControllers": 215
+    }
+  },
+  "explicitElementWriteOptimization": {
+    "command": "lua tests/measure_configuration.lua element",
+    "scene": "Existing fixture settings window plus the ordinary default Floating context; reduceMotion=true. Apply counters wrap Context:SetAppearance for each scope.",
+    "key": "element.main.host.settingsButton.base.label.fontSize",
+    "before": {
+      "first": {
+        "iterations": 1,
+        "allocatedKiB": 1939.863,
+        "cpuMs": 18,
+        "resolveThemeCalls": 13,
+        "mainApply": 1,
+        "floatingApply": 0
+      },
+      "same": {
+        "iterations": 25,
+        "allocatedKiB": 13474.728,
+        "cpuMs": 98,
+        "resolveThemeCalls": 200,
+        "mainApply": 0,
+        "floatingApply": 0
+      },
+      "alternating": {
+        "iterations": 25,
+        "allocatedKiB": 47872.566,
+        "cpuMs": 438,
+        "resolveThemeCalls": 325,
+        "mainApply": 25,
+        "floatingApply": 0
+      }
+    },
+    "after": {
+      "first": {
+        "iterations": 1,
+        "allocatedKiB": 1563.718,
+        "cpuMs": 15,
+        "resolveThemeCalls": 7,
+        "mainApply": 1,
+        "floatingApply": 0
+      },
+      "same": {
+        "iterations": 25,
+        "allocatedKiB": 63.577,
+        "cpuMs": 2,
+        "resolveThemeCalls": 0,
+        "mainApply": 0,
+        "floatingApply": 0
+      },
+      "alternating": {
+        "iterations": 25,
+        "allocatedKiB": 38149.021,
+        "cpuMs": 347,
+        "resolveThemeCalls": 175,
+        "mainApply": 25,
+        "floatingApply": 0
+      }
+    },
+    "afterLocalRefresh": {
+      "first": {
+        "iterations": 1,
+        "allocatedKiB": 427.298,
+        "cpuMs": 3,
+        "resolveThemeCalls": 4,
+        "mainApply": 1,
+        "floatingApply": 0
+      },
+      "same": {
+        "iterations": 25,
+        "allocatedKiB": 63.577,
+        "cpuMs": 2,
+        "resolveThemeCalls": 0,
+        "mainApply": 0,
+        "floatingApply": 0
+      },
+      "alternating": {
+        "iterations": 25,
+        "allocatedKiB": 9977.944,
+        "cpuMs": 92,
+        "resolveThemeCalls": 100,
+        "mainApply": 25,
+        "floatingApply": 0
+      }
+    },
+    "checks": "configuration, appearance, ui, fonts, floating and minimap: 6696 assertions passed; element refresh 92, element layout 34 and Find elements 21 checks passed. Includes same-value ownership pins, no floating theme resolution for a main-only element, rejected mixed-rule transaction rollback, preset changes across both scopes, and selected-button color restoration after utility removal."
+  },
+  "verifiedChanges": [
+    "Explicit settings/layout/style/element/utility Set, Reset and ImportLegacy compare their raw resolved write set first, and normalize only changed appearance leaves against one transaction-local theme per scope; direct theme edits include the affected scope's derived values. Package changes retain full effective snapshots and final validation.",
+    "Schema queries copy only selected keys or the requested appearance scope.",
+    "New element and utility leaves resolve schema lazily and do not register a permanent definition or legacy migration marker.",
+    "Default-template export copies editable rules rather than copying and discarding complete token and element metadata catalogs."
+  ],
+  "committedThemeReuse": {
+    "command": "lua tests/measure_configuration.lua alpha",
+    "scene": "Existing enUS UI fixture with four pages and interactive tooltip built, ordinary Floating context, reduceMotion=true; public Appearance:SetElement called 25 times with alternating .7/.6 alpha.",
+    "key": "element.main.settings.row.instances.s:fontScale.base.label.alpha",
+    "before": {
+      "iterations": 25,
+      "allocatedKiB": 7440.209,
+      "cpuMs": 34,
+      "resolveThemeCalls": 100,
+      "getThemeCalls": 50,
+      "getElementsCalls": 50,
+      "validateElementsCalls": 50,
+      "mainApply": 25,
+      "floatingApply": 0,
+      "retainedDeltaKiB": 11.839
+    },
+    "after": {
+      "iterations": 25,
+      "allocatedKiB": 936.838,
+      "cpuMs": 18,
+      "resolveThemeCalls": 1,
+      "getThemeCalls": 25,
+      "getElementsCalls": 50,
+      "validateElementsCalls": 50,
+      "mainApply": 25,
+      "floatingApply": 0,
+      "retainedDeltaKiB": 75.9
+    },
+    "interpretation": "87.4% less transient allocation for this exact loop. The first validation populates one resolved theme; one committed version per scope remains reachable. Final rule validation and normal context application are retained. These fixture bytes do not prove the real game memory budget.",
+    "checks": "configuration and appearance: 1360 assertions passed. Includes 25 changed public instance alpha writes with zero theme reparses after warming, draft theme versus existing instance font validation and rollback, same-effective ownership/provenance pins, per-scope invalidation, package changes, reset following selected preset, and bounded cache size."
+  },
+  "dynamicElementMetadata": {
+    "command": "lua tests/measure_configuration.lua alpha details",
+    "scene": "Same 25 alternating public settings.row label alpha writes for the fontScale business key, four pages and tooltip built; current r35 shared runtime after its separate local refresh optimizations.",
+    "before": {
+      "allocatedKiB": 802.971,
+      "cpuMs": 19,
+      "getElementDefinitionCalls": 126,
+      "getElementDefinitionInclusiveKiB": 167.344,
+      "getElementFieldCalls": 275,
+      "getElementFieldInclusiveKiB": 155.258
+    },
+    "after": {
+      "allocatedKiB": 691.487,
+      "cpuMs": 14,
+      "getElementDefinitionCalls": 126,
+      "getElementDefinitionInclusiveKiB": 100.406,
+      "getElementFieldCalls": 151,
+      "getElementFieldInclusiveKiB": 114.805
+    },
+    "unchangedCounts": {
+      "resolveThemeCalls": 1,
+      "getElementsCalls": 50,
+      "validateElementsCalls": 50,
+      "mainApply": 25,
+      "floatingApply": 0
+    },
+    "change": "Element schema lookup first requires a known property/classes suffix, so rule branches do not ask for metadata. Literal alpha snapshots do not resolve field metadata. Fresh dynamic element metadata receives configuration fields directly instead of immediately duplicating the whole table. No cache, permanent schema registration or validation bypass was introduced.",
+    "checks": "configuration and appearance: 2309 assertions passed, including the 151-operation mixed public API sequence, independent dynamic metadata, lazy declarations, scope/layer precedence, rejected package rollback and restoration.",
+    "limitations": "Inclusive metadata counters overlap and must not be summed. These paused-GC fixture allocations are not real AddOn memory or proof of the 20,000,000-byte game budget."
+  }
+}

@@ -33,11 +33,52 @@ function N:SetShown(v) if v then self:Show() else self:Hide() end end
 function N:SetSize(w,h) local changed=self.w~=w or self.h~=h;self.w=w;self.h=h;if changed then Fire(self,"OnSizeChanged",w,h) end end
 function N:SetWidth(w) self:SetSize(w,self.h) end
 function N:SetHeight(h) self:SetSize(self.w,h) end
+local function Factor(point,axis)
+ if axis=="width" then return point:find("LEFT") and 0 or point:find("RIGHT") and 1 or .5 end
+ return point:find("BOTTOM") and 0 or point:find("TOP") and 1 or .5
+end
+local function Anchor(node,p)
+ local relative,point,x,y=node.parent,p[1],0,0
+ if type(p[2])=="table" or type(p[2])=="string" then
+  relative=type(p[2])=="table" and p[2] or _G[p[2]]
+  if type(p[3])=="string" then point,x,y=p[3],p[4] or 0,p[5] or 0
+  else x,y=p[3] or 0,p[4] or 0 end
+ else x,y=p[2] or 0,p[3] or 0 end
+ return relative,point,x,y
+end
+local Coordinate
+local function AnchoredSize(node,axis)
+ if node.allPoints then return axis=="width" and node.allPoints:GetWidth() or node.allPoints:GetHeight() end
+ local firstFactor,firstPosition
+ for _,p in ipairs(node.points) do
+  local relative,point,x,y=Anchor(node,p)
+  local factor=Factor(p[1],axis)
+  local position=Coordinate(relative,point,axis)+(axis=="width" and x or y)
+  if firstFactor~=nil and firstFactor~=factor then return math.max(0,(position-firstPosition)/(factor-firstFactor)) end
+  firstFactor,firstPosition=factor,position
+ end
+end
+Coordinate=function(node,point,axis)
+ if not node then return 0 end
+ local size=axis=="width" and node:GetWidth() or node:GetHeight()
+ local p=node.points[1]
+ if p then
+  local relative,anchor,x,y=Anchor(node,p)
+  return Coordinate(relative,anchor,axis)+(axis=="width" and x or y)+(Factor(point,axis)-Factor(p[1],axis))*size
+ end
+ return Factor(point,axis)*size
+end
 function N:GetWidth()
  if self._objectType=="FontString" and self.w==0 and #self.points<2 and not self.allPoints then return self:GetStringWidth() end
- return self.w>0 and self.w or self.parent and self.parent:GetWidth() or 0
+ if self.allPoints then return self.allPoints:GetWidth() end
+ if self.w>0 then return self.w end
+ return AnchoredSize(self,"width") or 0
 end
-function N:GetHeight() return self.h>0 and self.h or self.parent and self.parent:GetHeight() or 0 end
+function N:GetHeight()
+ if self.allPoints then return self.allPoints:GetHeight() end
+ if self.h>0 then return self.h end
+ return AnchoredSize(self,"height") or (self._objectType=="FontString" and self:GetStringHeight() or 0)
+end
 function N:ClearAllPoints() self.points={};self.allPoints=nil end
 function N:SetPoint(...) local p={...};for i,v in ipairs(self.points) do if v[1]==p[1] then self.points[i]=p;return end end;self.points[#self.points+1]=p end
 function N:GetNumPoints() return #self.points end
@@ -97,6 +138,7 @@ function N:SetTexCoord(...) self.texCoords={...} end
 function N:SetJustifyH(v) self.justify=v end
 function N:SetJustifyV(v) self.justifyV=v end
 function N:SetWordWrap(v) self.wrap=v end
+function N:CanWordWrap() return self.wrap==true end
 function N:SetFrameLevel(v) self.level=v end
 function N:GetFrameLevel() return self.level or (self.parent and self.parent:GetFrameLevel()+1 or 0) end
 function N:SetEnabled(v) self.enabled=v end

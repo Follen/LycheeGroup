@@ -16,12 +16,14 @@ assert(Idle(), "requires_idle_business")
 local packages={"LycheeGroup","LycheeGroup_Group","LycheeGroup_Notes","LycheeGroup_UI","MeetingStone"}
 local config=A.API.Configuration
 local saved={fps=GetCVar("maxFPS"),fpsBk=GetCVar("maxFPSBk"),remember=config:Get("settings.rememberFilters"),rememberSource=config:GetSource("settings.rememberFilters"),
- page=A.UI and A.UI.page,mainPage=A.UI and A.UI.mainPage,
+ page=A.UI and A.UI.page,returnPage=A.UI and A.UI.settingsReturnPage,
  msItem=browse.ActivityDropdown:GetItem(),msLast=profile.cdb.profile.lastSearchCode,
  msHistory=profile.cdb.profile.searchHistoryList,msPanel=main:GetSelectedPanel(),
  msInSet=browse.inSet,msFilter=profile.gdb.global.filters[3]}
 local deal=M:GetModule("DealBrowsePanel",true)
 saved.dealItem=deal and deal.ActivityDropdown:GetItem()
+saved.pageShown={}
+if A.UI then for key,page in pairs(A.UI.pages) do saved.pageShown[key]=page.frame and page.frame:IsShown() or false end end
 local report={schema="lycheegroup.live-comparison.v1",target=targetName,packages=packages,
  client={version=select(1,GetBuildInfo()),build=select(2,GetBuildInfo()),interface=select(4,GetBuildInfo()),locale=GetLocale(),uiScale=UIParent:GetScale()},
  versions={},scenario={activityID=1956,name="烈毒之渊（英雄）",seconds=60,warmupMinimumSeconds=10,searches=6,searchIntervalSeconds=10,wheelCalls=120,wheelIntervalSeconds=.5,memorySampleSeconds=1,fpsLimit=60},
@@ -31,16 +33,29 @@ for _,name in ipairs(packages) do report.versions[name]=C_AddOns.GetAddOnMetadat
 local ui,g,page,list,timer,frame,cleaned
 local started,measuredAt,nextMemory,nextWheel,direction=GetTime(),nil,1,.25,-1
 local function Copy(t) local out={} for k,v in pairs(t or {}) do out[k]=v end return out end
+local function LycheeActivity()
+ local activities=g and g.Search.request and g.Search.request.activityIDs
+ return activities and #activities==1 and activities[1] or nil
+end
 local function Cleanup()
  if cleaned then return end;cleaned=true
  if timer then timer:Cancel();timer=nil end
  if frame then frame:UnregisterAllEvents();frame:SetScript("OnEvent",nil);frame:Hide() end
+ -- Opening Find can fail after its preferences have already been isolated.
+ -- Use the existing/partially constructed host and restore Group independently.
+ ui=ui or (g and A.UI and A.UI.frame and A.UI)
  if ui then
   ui:Hide(true);ui.Motion:StopAll()
+ end
+ if g then
   g.prefs.find=saved.findPrefs
   g.Search:SetFilters(saved.findFilters)
-  page.loaded=nil;page.restoredInitial=nil
-  ui.page,ui.mainPage=saved.page,saved.mainPage
+ end
+ if ui then
+  ui.pages.find.loaded=nil;ui.pages.find.restoredInitial=nil
+  for key,p in pairs(ui.pages) do if p.frame then p.frame:SetShown(saved.pageShown[key]==true) end end
+  ui.page,ui.settingsReturnPage=saved.page,saved.returnPage
+  ui:UpdateNav();ui.Motion:FinishRect(ui.underline)
  end
  if targetName=="meetingstone" then
   main:Hide()
@@ -70,7 +85,7 @@ if targetName=="lychee" then
  g.prefs.find={category="3",categoryPrefs={["3"]={groupKey=424,difficultyID=15}},filters={sort="newest"}}
  if A.UI and A.UI.pages.find then A.UI.pages.find.loaded=nil;A.UI.pages.find.restoredInitial=nil end
  assert(A:Open("find"));ui=A.UI;page=ui.pages.find;list=page.results
- assert(g.Search.request and g.Search.request.activityID==1956,"lychee_wrong_activity")
+ assert(LycheeActivity()==1956,"lychee_wrong_activity")
 else
  profile.cdb.profile.searchHistoryList=Copy(saved.msHistory)
  profile.gdb.global.filters[3]={}
@@ -109,7 +124,7 @@ local function Sample(at)
 end
 local function Search()
  local query={at=GetTime()-measuredAt}
- if targetName=="lychee" then page:DoSearch();query.activityID=g.Search.request and g.Search.request.activityID
+ if targetName=="lychee" then page:DoSearch();query.activityID=LycheeActivity()
  else browse:DoSearch();query.activityID=service.activityId end
  assert(query.activityID==1956,"search_activity_changed")
  report.searches=report.searches+1;report.queries[report.searches]=query

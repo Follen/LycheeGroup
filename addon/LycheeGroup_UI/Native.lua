@@ -30,7 +30,7 @@ function Native:AcquireSearch(owner,shell)
  lease=C.NativeInput(shell,box,{
   padding={52,4,owner.searchInputRight,4},textInsets={0,0,0,0},hide=hide,
   onLost=function(control)
-   search:ReleaseInput(control)
+   C.ReleaseElement(control.box);search:ReleaseInput(control)
    if Native.searchLease==control then
     Native.searchLease=nil;Native.searchDirty=true;owner:OnSearchInputLost()
    end
@@ -51,7 +51,7 @@ function Native:AcquireSearch(owner,shell)
   },
  })
  if not lease:IsOwned() then self.searchDirty=true;lease:Release();return false,L.unavailable end
- lease.owner=owner;lease.revision=0;lease.previousChanged=previousChanged;lease.searchService=search
+ C.Element(box,"native.search",{scope="native",owner=lease});lease.owner=owner;lease.revision=0;lease.previousChanged=previousChanged;lease.searchService=search
  self.searchLease=lease
  search:BindInput(lease)
  if not self.searchInitialized or self.searchDirty then self.searchInitialized=true;self.searchDirty=nil;C_LFGList.ClearSearchTextFields() end
@@ -66,7 +66,7 @@ function Native:ReleaseSearch()
  local lease=self.searchLease;if not lease then return end
  self.searchLease=nil
  lease.searchService:ReleaseInput(lease)
- local owned=lease:Release()
+ C.ReleaseElement(lease.box);local owned=lease:Release()
  if not owned then self.searchDirty=true;lease.owner:OnSearchInputLost()
  elseif lease.previousChanged then lease.previousChanged(lease.box,false) end
 end
@@ -86,8 +86,8 @@ function Native:AcquireCreation(owner,title,description)
  local descriptionChanged=desc.EditBox:GetScript("OnTextChanged")
  name.selectedCategory,name.selectedActivity=entry.selectedCategory,entry.selectedActivity
  desc.selectedCategory,desc.selectedActivity=entry.selectedCategory,entry.selectedActivity
- local function Lost()
-  Native:ReleaseCreation()
+ local function Lost(control)
+  C.ReleaseElement(control.box);Native:ReleaseCreation()
   owner:OnCreationInputLost()
  end
  local titleInput=C.NativeInput(title,name,{
@@ -99,7 +99,7 @@ function Native:AcquireCreation(owner,title,description)
   },
  })
  if self.owner~=owner or not titleInput:IsOwned() then titleInput:Release();self:ReleaseCreation();return false,L.unavailable end
- self.titleInput=titleInput
+ C.Element(name,"native.creation.title",{scope="native",owner=titleInput});self.titleInput=titleInput
  local descriptionInput=C.NativeInput(description,desc.EditBox,{
   container=desc,onLost=Lost,
   scripts={
@@ -108,7 +108,7 @@ function Native:AcquireCreation(owner,title,description)
   },
  })
  if self.owner~=owner or not titleInput:IsOwned() or not descriptionInput:IsOwned() then descriptionInput:Release();self:ReleaseCreation();return false,L.unavailable end
- self.descriptionInput=descriptionInput
+ C.Element(desc.EditBox,"native.creation.description",{scope="native",owner=descriptionInput});self.descriptionInput=descriptionInput
  return true
 end
 
@@ -193,8 +193,8 @@ function Native:ReleaseCreation()
  local entry=self.entry
  local title,description=self.titleInput,self.descriptionInput
  self.owner,self.entry,self.titleInput,self.descriptionInput=nil,nil,nil,nil
- if title then if title:IsOwned() then entry.Name.selectedActivity,entry.Name.selectedCategory=nil,nil end;title:Release() end
- if description then if description:IsOwned() then entry.Description.selectedActivity,entry.Description.selectedCategory=nil,nil end;description:Release() end
+ if title then C.ReleaseElement(title.box);if title:IsOwned() then entry.Name.selectedActivity,entry.Name.selectedCategory=nil,nil end;title:Release() end
+ if description then C.ReleaseElement(description.box);if description:IsOwned() then entry.Description.selectedActivity,entry.Description.selectedCategory=nil,nil end;description:Release() end
 end
 
 -- Ordinary edits exist only for explicit preview and never register native text.

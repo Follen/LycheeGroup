@@ -1,0 +1,240 @@
+{
+  "schema": 1,
+  "commit": "5ce215182c15b59e44c573db9a1a6488536bb8bd",
+  "rendererSha256": "46337112c328397b4c350097db6b8b1b48198b1cd6a85295e972c6bc80c6e2de",
+  "sourceFiles": [
+    {
+      "path": "tests/ui_preview.lua",
+      "sha256": "90ef5d4c9a461b39e7f2e46c0bdfc6ddd21ae5dc94f536c20d0655371647756c"
+    },
+    {
+      "path": "tests/ui_fixture.lua",
+      "sha256": "b9ea8f3898a84d880e5d73410b354fe012eeaea1007bca40b2c87f18b24f5efc"
+    },
+    {
+      "path": "tests/ui_stubs.lua",
+      "sha256": "ea2cd7ad6b15d51fd6e7788b96dafbc4d938da1e2a1abc4fe17cd221055ace42"
+    }
+  ],
+  "substitute": {
+    "path": "tests/ui_stubs.lua",
+    "sha256": "dcff7e290911632fc9073f1e94b78b8d8f411b520b96f7c864eca79705b11609"
+  },
+  "driverAdaptations": [
+    "same current UI substitute for main and candidate",
+    "three obsolete filter controller names mapped to the same current main actions",
+    "serialize numeric frame level only"
+  ],
+  "normalization": [
+    "round numeric and CSS output to 1e-6; preserve literal text",
+    "normalize moved material paths only after byte equality verification"
+  ],
+  "scope": "Visible geometry, text, font, color, material and layout flags in 41 offline fixture scenes; excludes native rendering and hardware input.",
+  "scenes": [
+    {
+      "name": "寻求组队",
+      "visible": 228,
+      "sha256": "fae520850b07c05d52122c1d51091713455dc019e29bb89fa05b89d460b500b4"
+    },
+    {
+      "name": "钥石默认多选",
+      "visible": 281,
+      "sha256": "df4a1a2b8ad409aba3de27f77ef40f0eb964a69f940ea685830089a9f57398ae"
+    },
+    {
+      "name": "队伍悬停",
+      "visible": 267,
+      "sha256": "5bca943a4f8e48cb4b2fb53e800a6eef0aaf21993ae1649071bdbf3666f4110b"
+    },
+    {
+      "name": "团本搜索描述列",
+      "visible": 176,
+      "sha256": "623357b66d2b5e80976f45031faf1621350e11d6c41cf722cadfbf2062c792d9"
+    },
+    {
+      "name": "发布招募",
+      "visible": 176,
+      "sha256": "9c5f75ff9847a8ffbe69283f3e435b618e68fcb878e7fe13d947dc87c0ebc194"
+    },
+    {
+      "name": "收藏条件",
+      "visible": 212,
+      "sha256": "fcca3373216dcb00d01997e36fd045f5e9a6c7b1c827eeed5299c85512b3deec"
+    },
+    {
+      "name": "收藏操作悬停",
+      "visible": 218,
+      "sha256": "b2d8e4c2eeb342ec3523d967d03387f6a4059d0678ee41a1ee1529966fa1098e"
+    },
+    {
+      "name": "活动分类留白",
+      "visible": 247,
+      "sha256": "07b1f3b9346cbe3bd11a9440176cd558b4568ff5cec002ce7b0fa2f2e24e519b"
+    },
+    {
+      "name": "活动搜索",
+      "visible": 224,
+      "sha256": "4c8dcc4c0dd3d130802425f51cf9d429c3ccc6c533d95cfb8708198a12669aee"
+    },
+    {
+      "name": "招募中收藏不可用",
+      "visible": 143,
+      "sha256": "6e3e70409706774d3d423a2bbcdceac4c9a123b46163872d48ec87108d65dcca"
+    },
+    {
+      "name": "管理申请",
+      "visible": 181,
+      "sha256": "7eb24c0aba04edbd5c8d56bdcc2c897fb0467c342363b302d746393710e84054"
+    },
+    {
+      "name": "申请者种族替换",
+      "visible": 174,
+      "sha256": "bdd85fd4faea49188c9c039da46795f120ae4ffb2e0f86208520f420c526cd59"
+    },
+    {
+      "name": "团队申请无评分",
+      "visible": 168,
+      "sha256": "85de8bc351d779e2afaa8a2af4a27dda318b3984a0a15562f57c871e51c8698a"
+    },
+    {
+      "name": "团队申请者个人详情",
+      "visible": 199,
+      "sha256": "da3d285dfd5a47354c3f34d176fbc7f8779bda619d1f9fdbebd71f79737f9c18"
+    },
+    {
+      "name": "申请者大秘境纪录",
+      "visible": 218,
+      "sha256": "d931f9b5236196302d6efd872907dca7571a21e4646ef18a4e092e5fc9f747de"
+    },
+    {
+      "name": "荔枝笔记",
+      "visible": 176,
+      "sha256": "0cb18796a8f2b1f700e1cee39170d61ae8840245bda304e0a77c24c7cfa4e194"
+    },
+    {
+      "name": "笔记列表悬停",
+      "visible": 183,
+      "sha256": "ad0dad1e46e5f27d8f84d55a949e507942e459187f8116367bedfa2d0be6295d"
+    },
+    {
+      "name": "历史记录悬停",
+      "visible": 102,
+      "sha256": "dec488ac72c42a21304842ca5a8c1c81ed470745d869ba71ff87b10d4e4a1046"
+    },
+    {
+      "name": "设置",
+      "visible": 81,
+      "sha256": "5cba7309bdd08dc1d20061d06992134af7fa001e11538d6c913579b5c5dfc9a9"
+    },
+    {
+      "name": "团本成员布局",
+      "visible": 381,
+      "sha256": "7ac24d87fb90be8d6b6b1d909b664d6469dc695bf310d1e34e0a4f4011e7f2a1"
+    },
+    {
+      "name": "赛季团本增益",
+      "visible": 173,
+      "sha256": "84e39c5e638feeb3424c8c56cfcd67b7f03ea7d73f6646fe9126c85bea927d10"
+    },
+    {
+      "name": "当前队伍悬浮名单",
+      "visible": 347,
+      "sha256": "ba4c2e3853c6470de6045f2f29618d2174a76dca6c3b968cc9fed5dd26789693"
+    },
+    {
+      "name": "四人团本名单",
+      "visible": 214,
+      "sha256": "9c6f6234227a8611133327f3baead5459395524fba9022254e572ae225beca1b"
+    },
+    {
+      "name": "团队成员悬停",
+      "visible": 221,
+      "sha256": "8ac27fa938be47bcf130e5a26419986ae8bbeedb4783c3de66bc93359201a540"
+    },
+    {
+      "name": "小队成员列表",
+      "visible": 190,
+      "sha256": "ce2864e579e6457ed3f3bf7610d54ffb49f661c80e7014432ca4dc835b4f8e2a"
+    },
+    {
+      "name": "小队成员悬停",
+      "visible": 197,
+      "sha256": "14a3460c1d1747c4ccdb9b3278450c4e46f0104408638e91797a1cd207cf15bd"
+    },
+    {
+      "name": "队友右键菜单",
+      "visible": 231,
+      "sha256": "fcc0f8932fd5a0032416cbf0ee3498530c793df07a57f89c75647739e2da941e"
+    },
+    {
+      "name": "收藏与增益",
+      "visible": 201,
+      "sha256": "d9a00ac305dcd5aa13ec9a3349620bc0fba12d090de762f61e7b1f2aa53deb65"
+    },
+    {
+      "name": "玩家详情优化",
+      "visible": 210,
+      "sha256": "0b34fc686f02c7e546fbf1d62bbe17de4ae7e47719f9f16285793465208865f7"
+    },
+    {
+      "name": "职责筛选",
+      "visible": 437,
+      "sha256": "dd96f6549d4e12506211010418d0efedaf324dbd4e350905f87c8b8dbb63caea"
+    },
+    {
+      "name": "筛选字体130%",
+      "visible": 439,
+      "sha256": "ba7ddeada2f094c5c281ca49cec15696f8c52bdeb361268fde34e3375068b083"
+    },
+    {
+      "name": "筛选字体70%",
+      "visible": 437,
+      "sha256": "22da387db95e6e60f032198820a8bee40696312d65f7fd6269be63e095d258ce"
+    },
+    {
+      "name": "字体大小设置",
+      "visible": 144,
+      "sha256": "7242f1e98afa114ac1153891dd0803d95ef4fbe906fc1c4920eaea4ad6404770"
+    },
+    {
+      "name": "设置字体130%",
+      "visible": 144,
+      "sha256": "a229d93fba24166c2c08db316ab2629b098f838b4746d20f3a47d36d950777c9"
+    },
+    {
+      "name": "主窗口75%",
+      "visible": 139,
+      "sha256": "e9d0a2e57673a7f61555ec48148ba6d07701d2db5f28865e5bebfc96755a5288"
+    },
+    {
+      "name": "主窗口125%",
+      "visible": 144,
+      "sha256": "3b41e7bbbf452005c288fea5a3d46ac15107663c14e39bbbbb5c1bb5c0968a46"
+    },
+    {
+      "name": "行内修改快捷键",
+      "visible": 144,
+      "sha256": "7242f1e98afa114ac1153891dd0803d95ef4fbe906fc1c4920eaea4ad6404770"
+    },
+    {
+      "name": "按键冲突",
+      "visible": 154,
+      "sha256": "f9386080d97a258445da8086b8d9cdc7892f8c939b5fac78fc8f6c83425ff863"
+    },
+    {
+      "name": "浮窗阵营标",
+      "visible": 54,
+      "sha256": "0cb9615335f23ade0608017d9a4983351b88e5cf841b16190d5d6e0c933a0b4d"
+    },
+    {
+      "name": "团队浮窗装等",
+      "visible": 49,
+      "sha256": "9ea3d9b33bdb8a2910c74906e410712870bef8b5a9851ebbabccda17c99a2e59"
+    },
+    {
+      "name": "申请浮窗留白",
+      "visible": 21,
+      "sha256": "d308222c6a054066c0e8021e903e5ccce1c59084c7c9b73d22cdd1aa42a5579d"
+    }
+  ]
+}

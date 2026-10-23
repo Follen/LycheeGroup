@@ -11,7 +11,7 @@ if InCombatLockdown() then return probe:Fail("combat_active") end
 local PACKAGES = { "LycheeGroup", "LycheeGroup_Group", "LycheeGroup_Notes", "LycheeGroup_UI" }
 local PAGES = { "settings", "notes", "find", "create" }
 local SETTLE, ROUNDS, LIMIT = 1.90, 5, 110
-local oldUI, oldPage, oldMain = A.UI, A.UI and A.UI.page, A.UI and A.UI.mainPage
+local oldUI, oldPage, oldReturn = A.UI, A.UI and A.UI.page, A.UI and A.UI.settingsReturnPage
 local oldPageShown = {}
 if oldUI and (oldUI:IsShown() or oldUI.hiding) then return probe:Fail("close_ui_before_test") end
 if oldUI and oldUI.Motion and next(oldUI.Motion.jobs) then return probe:Fail("wait_for_animations") end
@@ -74,6 +74,18 @@ for i = 1, 32 do
 end
 local used = 0
 local ticker, eventFrame, cleaned, touched
+local group, oldFindPrefs, oldFindFilters
+local function Copy(value)
+  if type(value) ~= "table" then return value end
+  local result = {}; for key, item in pairs(value) do result[key] = Copy(item) end; return result
+end
+local function SaveFind()
+  if group then return end
+  assert(A:Ensure("Group")); group = A.Group
+  oldFindPrefs, oldFindFilters = group.prefs.find, Copy(group.Search:GetFilters())
+  group.prefs.find = Copy(oldFindPrefs)
+  A.UI.pages.find.loaded, A.UI.pages.find.restoredInitial = nil, nil
+end
 local function Cleanup()
   if cleaned then return end
   cleaned = true
@@ -88,13 +100,18 @@ local function Cleanup()
   if touched and ui then
     ui:Hide(true) -- closes only this experiment's UI, preserving real business
     if ui.Motion then ui.Motion:StopAll() end
+    if group then
+      group.Search:SetFilters(oldFindFilters); group.prefs.find = oldFindPrefs
+      ui.pages.find.loaded, ui.pages.find.restoredInitial = nil, nil
+    end
     -- Restore hidden navigation without Enter(), which would subscribe a page
     -- while the parent window is closed. Loaded addons cannot be unloaded.
     for _, page in ipairs(PAGES) do
       local p = ui.pages[page]
       if p and p.frame then p.frame:SetShown(oldPageShown[page]) end
     end
-    ui.page, ui.mainPage = oldPage, oldMain
+    ui.page, ui.settingsReturnPage = oldPage, oldReturn
+    ui:UpdateNav(); ui.Motion:FinishRect(ui.underline)
   end
 end
 assert(probe:Async(LIMIT))
@@ -164,6 +181,7 @@ end
 local function Open(page)
   if HasBusiness() then return probe:Fail("group_business_started") end
   touched = true
+  if page == "find" then SaveFind() end
   local ok, err = A:Open(page)
   if not ok then error("open_" .. page .. ": " .. tostring(err)) end
 end
@@ -237,7 +255,7 @@ local function Tick()
     report.checks.knownOwnersIdleBeforeCleanup = report.closedOwnersBeforeCleanup.knownOwnersIdle
     report.checks.probeResourcesReleased = ticker == nil and eventFrame:GetScript("OnEvent") == nil
       and eventFrame:GetScript("OnUpdate") == nil
-    report.checks.originalHiddenPageRestored = not A.UI:IsShown() and A.UI.page == oldPage and A.UI.mainPage == oldMain
+    report.checks.originalHiddenPageRestored = not A.UI:IsShown() and A.UI.page == oldPage and A.UI.settingsReturnPage == oldReturn
     report.loadedAtEnd = {}
     for i, name in ipairs(PACKAGES) do local _, loaded = C_AddOns.IsAddOnLoaded(name); report.loadedAtEnd[i] = loaded == true end
     report.elapsedSeconds, report.sampleCount = GetTime() - started, used

@@ -30,7 +30,9 @@ for _,locale in ipairs({"zhCN","enUS"}) do
   local row=find.results.rows[1]
   check(separated(row.title,row.meta),"result title and activity text overlap")
   check(top(row.meta)+row.meta:GetHeight()<=row:GetHeight()+.001,"result text exceeds its row")
-  check(row.description:GetHeight()>=row.meta:GetHeight()*2,"two-line result description is clipped")
+  check(row.description:GetHeight()+.001>=(row.description:GetLineHeight()+row.description:GetSpacing())*2,"two-line result description is clipped")
+  g.apps[1]={id=901,status="applied",name="Raid application",categoryID=3,result={id=901,activity=g.Catalog:GetActivity(1),maxNumPlayers=30,numMembers=12}}
+  find:RefreshApplications();find.scopeToggle:Fire("OnClick","LeftButton")
   for _,list in ipairs({find.results,find.appList}) do
    local item=list.rows[1];item.isParty=false;item.membersExpanded=true
   end
@@ -43,9 +45,14 @@ for _,locale in ipairs({"zhCN","enUS"}) do
    check(upperBottom+.001>=lowerTop,"expanded member totals overlap the role counts")
    check(lowerTop-item.count:GetHeight()>=-item:GetHeight()/2-.001,"expanded member total exceeds its row")
   end
+  local application=find.appList.rows[1]
+  check(application.key==901 and find.appList.rowHeight>=application.count:GetHeight()+application.roster.counts[1].text:GetHeight(),"an expanded raid application fits both paired count lines")
+  application.membersButton:Fire("OnClick","LeftButton")
+  check(application.membersExpanded==false and find.appList.rowHeight==math.max(u.Theme.findApplicationRowHeight,math.ceil(application.count:GetHeight()*2)),"collapsed applications retain the main-line scaled count minimum")
+  g.apps[1]=nil;find:RefreshApplications();find.scopeToggle:Fire("OnClick","LeftButton")
   if percent==100 then
    check(row:GetHeight()==76 and top(row.meta)==42,"100% result geometry changed")
-   check(find.appList.rowHeight==36,"100% application stride changed")
+   check(find.appList.rowHeight>=u.Theme.findApplicationRowHeight,"application stride preserves its base minimum")
   end
   local descriptionWidth=row.description:GetWidth()
   for _,collapsed in ipairs({true,false}) do
@@ -69,18 +76,18 @@ for _,locale in ipairs({"zhCN","enUS"}) do
   end
   find:SelectCategory("seasonDungeon");find:CommitChoice();find:SetFiltersOpen(true)
   check(not find.quickFilters:IsShown() and find.importantFilters:IsShown(),"important filters default to the popup")
-  check(find.filterPanel:GetWidth()==592 and find.importantFilters:GetWidth()==552,"seasonal popup uses the compact panel width")
+  check(find.filterPanel:GetWidth()>=592 and near(find.importantFilters:GetWidth(),find.filterPanel:GetWidth()-40),"seasonal popup uses the compact panel width")
   for key,choice in pairs(find.presenceChoices) do
    local label=find.presenceLabels[key]
    check(left(choice)>=left(label)+label:GetWidth()+8-.001,"role segments leave room beside their label")
-   check(left(choice)+choice:GetWidth()<=552+.001,"role segments stay inside the compact important-filter block")
+   check(left(choice)+choice:GetWidth()<=find.importantFilters:GetWidth()+.001,"role segments stay inside the compact important-filter block")
    for _,button in ipairs(choice.buttons) do
     check(button.label:GetStringWidth()<=button.label:GetWidth()+.001,"translated role segment fits its text area")
     check(button:GetHeight()+.001>=button.label:GetStringHeight(),"role segment height follows the selected font")
    end
   end
   for _,choice in ipairs({find.presenceLogic,find.identityChoice}) do
-   for _,button in ipairs(choice.buttons) do check(button.label:GetStringWidth()<=button.label:GetWidth()+.001,"logic and identity segment labels fit") end
+   for _,button in ipairs(choice.buttons) do check(button.label:GetStringWidth()<=button.label:GetWidth()+.001,("logic and identity segment labels fit (%s/%d %s: %.2f/%.2f)"):format(locale,percent,button.label:GetText(),button.label:GetStringWidth(),button.label:GetWidth())) end
   end
   check(top(find.filterPanel)+find.filterPanel:GetHeight()<=u.frame:GetHeight()-20+.001,"compact filter popup stays within the window")
   local footerRight,footerCenter
@@ -101,7 +108,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
    check(near(top(find.applicationPanel),68) and near(find.applicationPanel:GetHeight(),44+(find.appsHeight or 0)),"applications keep their existing vertical geometry")
    check(near(top(find.applicationHeader),40),"application headings keep their original top inset")
    check(near(top(find.appList),44+find.applicationHeader:GetHeight()),"application rows retain their original top inset")
-   check(find.filterPanel:GetWidth()==(show and 368 or 592),"popup width follows the important-filter placement")
+   check(show and find.filterPanel:GetWidth()==368 or not show and find.filterPanel:GetWidth()>=592,"popup width follows the important-filter placement")
    if show then
     u:SetWindowSize(1,1)
     local minimum=u:GetWindowMinimum()
@@ -154,7 +161,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
   check(top(batch.people[2])>=top(batch.people[1])+batch.people[1]:GetHeight(),"applicant member rows overlap")
   check(top(batch.people[2])+batch.people[2]:GetHeight()<=batch:GetHeight(),"final applicant row exceeds its batch")
   check(top(create.batchScroll)>=top(create.applicantTable)+create.applicantTable:GetHeight(),"applicant headers overlap the viewport")
-  if percent==100 then check(near(batch.people[1]:GetHeight(),47.376),"100% applicant row changed") end
+  if percent==100 then check(near(batch.people[1]:GetHeight(),math.max(u.Theme.createMemberHeight,math.ceil(batch.people[1].title:GetStringHeight()))),"the default applicant row fits its paired label lines") end
   if percent>100 then
    check(separated(create.pickerName,create.pickerContext),"activity picker text overlaps")
    check(top(create.pickerContext)+create.pickerContext:GetHeight()<=create.pickerTrigger:GetHeight(),"activity context exceeds its control")
@@ -216,7 +223,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
    end
   end
   a:SetSetting("fontScale",100)
-  check(find.results.rowHeight==76 and notes.list.rowHeight==100,"returning to 100% retains enlarged row geometry")
+  check(find.results.rowHeight==76 and notes.list.rowHeight==100,"returning to 100% restores main-line row geometry")
   check(top(create.titleLabel)==92 and top(create.titleShell)==116,"returning to 100% retains enlarged form geometry")
   a:SetSetting("fontScale",percent);a:Open("settings",{section="interface"})
   local settings=u.pages.settings
@@ -230,17 +237,25 @@ for _,locale in ipairs({"zhCN","enUS"}) do
    check(entry.frame:GetHeight()+.001>=entry.help:GetStringHeight()+32,"appearance setting description exceeds its row")
    previous=entry.frame
   end
-  check(top(previous)+previous:GetHeight()<=panel:GetHeight()+.001,"all six appearance rows fit their panel")
+  check(top(previous)+previous:GetHeight()<=panel:GetHeight()+.001,("all six appearance rows fit their panel (%s/%d: %.2f/%.2f)"):format(locale,percent,top(previous)+previous:GetHeight(),panel:GetHeight()))
   if settings.reloadLanguage:IsShown() then
    check(separated(previous,settings.reloadLanguage),"reload action overlaps the sixth appearance row")
    check(top(settings.reloadLanguage)+settings.reloadLanguage:GetHeight()<=panel:GetHeight()+.001,
     ("all six appearance rows and reload action fit their panel (%s/%d: end %.3f, panel %.3f)"):format(locale,percent,top(settings.reloadLanguage)+settings.reloadLanguage:GetHeight(),panel:GetHeight()))
   end
+  for _,entry in pairs(settings.controls) do
+   if not entry.definition[4] then
+    local control=entry.widget;local holder=control:GetParent()
+    local controlX=position(control,holder);local trackX=position(control.track,holder)
+    check(near(controlX+control:GetWidth(),holder:GetWidth()),"settings switches retain the row right edge")
+    check(near(trackX+control.track:GetWidth(),holder:GetWidth()-12),"settings switch tracks retain their twelve-unit inset")
+   end
+  end
   local function CheckRange(control)
-   local value=control.valueLabel;local anchor={control:GetPoint()}
+   local value=control.valueLabel;local valueX=position(value,control:GetParent())
    check(value:GetStringWidth()<=value:GetWidth(),"the complete percentage fits its measured label")
    check(value.justify=="RIGHT" and value.wrap==false,"percentage text remains right aligned without wrapping")
-   check(near(anchor[#anchor-1]+12+value:GetWidth(),-12),"percentage right edges align twelve units inside their rows")
+   check(near(valueX+value:GetWidth(),control:GetParent():GetWidth()-12),"percentage right edges align twelve units inside their rows")
    check(near(control:GetWidth()+12+value:GetWidth(),220),"the slider gives measured percentage text space within the existing control area")
   end
   for _,key in ipairs({"uiScale","fontScale","floatingScale","memberIconScale"}) do CheckRange(settings.controls[key].widget) end

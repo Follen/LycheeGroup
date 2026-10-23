@@ -1,0 +1,23 @@
+{
+  "date": "2026-10-23",
+  "environment": "Windows Lua 5.1; existing real Group module fixture in tests/test_group.lua",
+  "command": "$env:LYCHEE_MEASURE_SOLO_RELATIONS='1'; lua tests/runner.lua group; Remove-Item Env:LYCHEE_MEASURE_SOLO_RELATIONS",
+  "scene": "Eight solo Group:Attach(create), GetRoster twice, GUILD_ROSTER_UPDATE, GetRoster, Detach loops. Native friend and guild getter substitutes each return fresh records for 500 friends and 500 guild members. No UI fixture/provider substitutes Group.",
+  "method": "One diagnostic fixture GC before the bounded eight-loop sample; automatic collection stopped only for measuring Lua allocations and restarted before assertions. This is not a game memory budget measurement or a product GC policy.",
+  "before": {"allocatedKiB": 8837.065, "friendRecordReads": 8000, "guildRecordReads": 8000},
+  "after": {"allocatedKiB": 5.182, "friendRecordReads": 0, "guildRecordReads": 0},
+  "nativeEvidence": {
+    "report": "LMO-9ccd91799bb93475214d53e2634a9f4b",
+    "environment": "Retail 12.1.5.70448, real solo character; parent-operated profiling",
+    "transition": "notes to create",
+    "synchronousKiB": 323.59,
+    "attachInclusiveKiB": 234.73,
+    "rosterGetInclusiveKiB": 234.73,
+    "relationsGetVersionInclusiveKiB": 229.67,
+    "relationsGetVersionCalls": 3,
+    "actualIndexBuilds": 1,
+    "limitations": "Measured before this fix. Fixed source still requires installation and native recheck by the parent. Inclusive measurements overlap."
+  },
+  "change": "Roster relation-version reads occur only while at least one actual non-self member consumes relationship badges. Dirty membership rebuilds recompute that need. Social subscriptions and applicant relationship consumers retain their existing ownership and behavior.",
+  "regressions": "Create retains friend events, a joining teammate immediately resolves a friend badge, FRIENDLIST_UPDATE updates that cached teammate, returning to solo or empty stops index reads, self badges stay false, final detach releases events."
+}

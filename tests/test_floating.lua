@@ -3,9 +3,9 @@ local base=dofile("tests/stubs.lua");base.Install({locale="zhCN",realm="Home"})
 local stub=dofile("tests/ui_stubs.lua");stub.Install()
 _G.LycheeUI=nil
 local libraryPrivate={}
-for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Components.lua","Native.lua","Menu.lua"}) do assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/"..file))("LycheeGroup",libraryPrivate) end
+for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Styles.lua","Components.lua","Layouts.lua","Elements.lua","Native.lua","Menu.lua"}) do assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/"..file))("LycheeGroup",libraryPrivate) end
 _G.LycheeGroup=nil;_G.LycheeGroupDB=nil
-for _,file in ipairs({"Locale.lua","Core.lua","Configuration.lua","StyleDefaults.lua","Appearance.lua","Specializations.lua","Fonts.lua","Floating.lua","API.lua"}) do dofile("addon/LycheeGroup/"..file) end
+for _,file in ipairs({"Locale.lua","Theme/Defaults.lua","Theme/Elements.lua","Core.lua","Configuration.lua","Appearance.lua","Theme/Import.lua","Specializations.lua","Fonts.lua","BrandMotion.lua","Floating.lua","API.lua"}) do dofile("addon/LycheeGroup/"..file) end
 local A=LycheeGroup;local API=A.API.Floating
 local startupNotifications=0
 local stopStartup=API:Subscribe(function(status)
@@ -39,7 +39,12 @@ A.Group=G;A.Open=function(_,page,context) A.openedPage=page;A.openedContext=cont
 RAID_CLASS_COLORS={WARRIOR={r=.8,g=.6,b=.4}}
 C_LFGList.GetActivityInfoTable=function() return {} end
 _G.GetTime=function() return 0 end
-local F=A.Floating;F:Bind(G);F:UpdateSettings();F:ShowPanel()
+local F=A.Floating;F:Bind(G);F:UpdateSettings()
+T.eq(#F.rows,0,"a collapsed entry does not construct unused application rows")
+T.eq(#F.batches,0,"a collapsed entry does not construct unused applicant batch cards")
+F:ShowPanel()
+T.eq(#F.rows,1,"the first hover constructs only the visible application row")
+T.eq(#F.batches,0,"outbound applications need no applicant batch cards")
 T.eq(startupNotifications,1,"disposing a subscription before startup prevents later delivery")
 local function Position(frame)
  local _,relative,point,x,y=frame:GetPoint();if type(relative)=="number" then return relative,point end;return x,y
@@ -53,8 +58,7 @@ T.eq(entryButtons,1,"the collapsed icon and number share one actual button")
 T.eq(F.frame:GetWidth(),115);T.eq(F.frame:GetHeight(),44);T.eq(F.panel:GetWidth(),348);T.eq(F.scroll:GetWidth(),324)
 T.eq(F.count:GetText(),"申请1个");T.eq(F.rows[1].name:GetText(),"A dungeon");T.eq(F.rows[1].meta:GetText(),"A group");T.eq(F.rows[1].leader:GetText(),"Leader-Away");T.eq(F.rows[1].timer:GetText(),"2:10")
 T.eq(F.rows[1].background:IsShown(),true,"each resting application keeps its own card")
-T.eq(F.rows[1].faction:IsShown(),false,"outbound application cards have no applicant faction marker")
-T.eq(F.rows[1].faction:GetTexture(),nil)
+T.eq(F.rows[1].faction,nil,"outbound application cards allocate no applicant faction marker")
 T.eq(F.panel.background,nil,"the space around application cards has no outer backdrop")
 T.eq(F.frame:IsMouseEnabled(),false,"the outer container adds no second mouse target")
 T.eq(F.count:GetParent(),F.button);T.eq(F.logoTexture:GetParent(),F.logoAnchor);T.eq(F.logoAnchor:GetParent(),F.button)
@@ -62,8 +66,12 @@ T.eq(F.button.fill,nil,"the entry has no backdrop at rest")
 F.button:Fire("OnEnter");F.context.Motion:Tick(.12)
 T.eq(F.button.hover,nil,"hover opens the list without an entry highlight")
 F.button:Fire("OnLeave")
-T.eq(select(2,F.count:GetPoint()),F.logoAnchor,"the count is positioned relative to the logo")
-T.eq(select(4,F.count:GetPoint()),4);T.eq(select(5,F.count:GetPoint()),0)
+do
+ local countX,countY=Position(F.count);local logoX,logoY=Position(F.logoAnchor)
+ T.eq(select(2,F.count:GetPoint()),F.button,"the entry row owns its icon and text slots")
+ T.near(countX-logoX-F.logoAnchor:GetWidth(),4,.001,"the count preserves the gap after the logo")
+ T.near(countY-F.count:GetHeight()/2,logoY-F.logoAnchor:GetHeight()/2,.001,"icon and text share the same centerline")
+end
 do
  local starts,stops=0,0;local start,stop=F.frame.StartMoving,F.frame.StopMovingOrSizing
  F.frame.StartMoving=function() starts=starts+1 end;F.frame.StopMovingOrSizing=function() stops=stops+1 end
@@ -98,6 +106,15 @@ T.ok(-detailY+applicationRow.score:GetStringHeight()<=-titleY,"the complete acti
 local cancelX=Position(applicationRow.cancel)
 T.ok(detailX+applicationRow.score:GetWidth()+8<=324+cancelX-applicationRow.cancel:GetWidth(),"the activity heading leaves a real gap before cancel")
 T.ok(Position(applicationRow.leader)+applicationRow.leader:GetWidth()+12<=324-12-applicationRow.timer:GetWidth(),"leader and countdown have independent columns")
+do
+ local previous=apps[1].leaderName
+ apps[1].leaderName=string.rep("LongLeader",8).."-Away";callback("applications")
+ local _,leaderTop=Position(applicationRow.leader)
+ T.eq(applicationRow.leader.wrap,true,"outbound application leaders retain wrapping after typed-row construction")
+ T.ok(applicationRow.leader:GetStringHeight()>applicationRow.leader:GetLineHeight()+applicationRow.leader:GetSpacing(),"long leader identities wrap onto additional lines")
+ T.ok(-leaderTop+applicationRow.leader:GetStringHeight()+12<=applicationRow:GetHeight()+.001,"the complete wrapped leader fits above the card's bottom padding")
+ apps[1].leaderName=previous;callback("applications")
+end
 apps[1].activityLabel=nil;apps[1].activityDetail=nil;callback("applications")
 GameTooltip:Hide();F.cancel:Fire("OnEnter");T.eq(F.cancel.hover:IsShown(),false,"the top cancellation action uses text feedback only")
 T.eq(GameTooltip:IsShown(),false,"cancel-all does not open a redundant tooltip");F.cancel:Fire("OnLeave");T.eq(F.cancel.hover:IsShown(),false)
@@ -119,7 +136,7 @@ T.eq(F.cancel:IsShown(),true);T.eq(F.emptyCard:IsShown(),false)
 T.eq(select(2,Position(F.scroll)),-32,"restored applications regain the action header")
 T.eq(F.rows[1]:GetHeight(),98,"restoring applications keeps the card's twelve-pixel vertical padding")
 local _,headingY=Position(F.rows[1].name);local _,leaderY=Position(F.rows[1].leader)
-T.eq(-headingY,12);T.near(F.rows[1]:GetHeight()+leaderY-F.rows[1].leader:GetStringHeight(),12,.001,"last line keeps the same bottom padding")
+T.eq(-headingY,12);T.ok(F.rows[1]:GetHeight()+leaderY-F.rows[1].leader:GetStringHeight()>=12,"the caption leader retains the full bottom padding inside its minimum-height line")
 local workingEntries,workingTops,firstEntry=F.entries,F.entryTops,F.entries[1]
 local fadeState=F.fade
 F:Tick(.23);F:Fade(false);F:Tick(.04)
@@ -138,7 +155,7 @@ apps[2].status="applied";F:ShowPanel();F:Tick(.01)
 T.ok(F.rows[1]:GetAlpha()>F.rows[2]:GetAlpha(),"separate application cards enter with a short stagger")
 local entrance=F.fade;callback("applications");T.eq(F.fade,entrance,"native application refresh does not replay card entrance")
 F.rows[1].cancel:Fire("OnEnter");T.eq(F.rows[1].background:IsShown(),true);T.eq(F.rows[2].background.fill.color[4],.60,"cancel hover leaves the other card unchanged")
-T.eq(F.rows[1].background.fill.color[4],.66,"row hover keeps the individual card translucent")
+T.eq(F.rows[1].background.fill.color[4],F.context.Theme.floatingHover[4],"row hover keeps the individual card translucent")
 T.ok(F.rows[1].cancel.hover:IsShown(),"the icon retains its local red feedback");T.eq(GameTooltip:IsShown(),false,"single cancellation also omits a tooltip")
 F.rows[1].cancel:Fire("OnLeave");T.eq(F.rows[1].background.fill.color[4],.60);T.eq(F.rows[1].cancel.hover:IsShown(),false)
 apps[2].status="applied";for i=3,5 do apps[i]={id=i,name="Another group",status="applied",activityID=1} end
@@ -166,7 +183,7 @@ do
  members[1].dungeonScore=score;callback("applicants")
  GetSpecializationInfoByID,GetSpecializationInfoForClassID=getID,getClass
 end
-T.eq(F.context.logo,F.logoTexture,"the applicant reminder animates the original logo through the shared Brand context")
+T.eq(F.brandMotion.texture,F.logoTexture,"the product reminder animates its original logo");T.eq(F.context.logo,nil,"the generic context holds no brand object")
 T.eq(F.entries,workingEntries);T.eq(F.entries[1],firstEntry);T.eq(firstEntry.application,nil,"recruitment reuse clears the previous application reference")
 local batchEntry=F.entries[1].batch
 local comments=0;for _,entry in ipairs(F.entries) do if entry.comment then comments=comments+1 end end;T.eq(comments,1,"one shared comment is displayed at the bottom of its application batch")
@@ -196,8 +213,8 @@ do
  T.eq(A.UI,nil,"faction textures do not load the UI addon")
 end
 T.eq(F.rows[1].batch,F.rows[2].batch,"member rows belong to one continuous batch hover area")
-F.rows[1]:Fire("OnEnter");T.eq(F.rows[1].batch.background:IsShown(),true);T.eq(F.rows[1].background:IsShown(),false,"members never draw separate hover bars")
-T.eq(F.rows[1].batch.line,nil,"a party card has no grouping line");T.eq(F.rows[1].batch.background.fill.color[4],.66,"hover highlights the complete application card")
+F.rows[1]:Fire("OnEnter");T.eq(F.rows[1].batch.background:IsShown(),true);T.eq(F.rows[1].background,nil,"members allocate no separate hover surface")
+T.eq(F.rows[1].batch.line,nil,"a party card has no grouping line");T.eq(F.rows[1].batch.background.fill.color[4],F.context.Theme.floatingHover[4],"hover highlights the complete application card")
 F.rows[1]:Fire("OnLeave");T.eq(F.rows[1].batch.background.fill.color[4],.60,"leaving the batch restores its resting card")
 F.scroll:SetVerticalScroll(F.entryTops[30]);F:Render()
 T.eq(F.rows[1].faction:IsShown(),false);T.eq(F.rows[1].faction:GetTexture(),nil,"a row rebound to an unknown member clears the previous faction")
@@ -205,15 +222,15 @@ local lastMember;for _,row in ipairs(F.rows) do if row:IsShown() and row.name:Ge
 T.ok(lastMember,"complete applicant roster stays scrollable after list text grows")
 lastMember:Fire("OnClick");T.eq(A.openedPage,"create");T.eq(A.openedContext.applicantID,77)
 F.scroll:SetVerticalScroll(F.body:GetHeight()-F.scroll:GetHeight());F:Render()
-local actionRow,commentRow;for _,row in ipairs(F.rows) do if row.invite:IsVisible() then actionRow=row end;if row.name:GetText()==applicant.comment then commentRow=row end end
+local actionRow,commentRow;for _,row in ipairs(F.rows) do if row.kind=="footer" and row.invite:IsVisible() then actionRow=row end;if row.name:GetText()==applicant.comment then commentRow=row end end
 T.ok(actionRow,"the shared footer keeps one action pair");T.eq(commentRow,actionRow,"the shared comment and the one action pair occupy a single footer")
-T.eq(commentRow.faction:IsShown(),false);T.eq(commentRow.faction:GetTexture(),nil,"a shared footer never inherits an applicant marker")
-T.ok(Position(commentRow.name)+commentRow.name:GetWidth()+12<=324+Position(actionRow.invite)-actionRow.invite:GetWidth(),"the comment leaves a real gap before the invite hit area")
-T.eq(F.rows[1].invite:IsShown(),false,"member rows do not duplicate footer actions")
+T.eq(commentRow.faction,nil,"a shared footer allocates no applicant marker")
+T.ok(Position(commentRow.name)+commentRow.name:GetWidth()+12<=Position(actionRow.invite),"the comment leaves a real gap before the invite hit area")
+T.eq(F.rows[1].invite,nil,"member rows allocate no duplicate footer actions")
 T.eq(Position(commentRow.name),Position(F.rows[1].name),"the shared note aligns with the member text column")
 T.ok(actionRow:GetHeight()>=40,"the footer keeps room for the note and twelve-pixel bottom inset")
-local actionPoint=select(1,actionRow.invite:GetPoint());local actionX,actionY=Position(actionRow.invite);T.eq(actionPoint,"BOTTOMRIGHT");T.eq(actionX,-48);T.eq(actionY,12,"the invite hit area clears the card bottom by twelve pixels")
-local declinePoint=select(1,actionRow.decline:GetPoint());local declineX,declineY=Position(actionRow.decline);T.eq(declinePoint,"BOTTOMRIGHT");T.eq(declineX,-12);T.eq(declineY,12,"the decline hit area shares the same outer inset")
+local actionX,actionY=Position(actionRow.invite);T.eq(select(2,actionRow.invite:GetPoint()),actionRow);T.eq(actionRow:GetWidth()-actionX-actionRow.invite:GetWidth(),48);T.eq(actionRow:GetHeight()+actionY-actionRow.invite:GetHeight(),12,"the invite hit area clears the card bottom by twelve pixels")
+local declineX,declineY=Position(actionRow.decline);T.eq(select(2,actionRow.decline:GetPoint()),actionRow);T.eq(actionRow:GetWidth()-declineX-actionRow.decline:GetWidth(),12);T.eq(actionRow:GetHeight()+declineY-actionRow.decline:GetHeight(),12,"the decline hit area shares the same outer inset")
 T.eq(actionRow.invite:GetHeight(),28);T.eq(actionRow.invite.glyph:GetWidth(),18);T.eq(actionRow.decline.glyph:GetWidth(),18)
 actionRow.invite:Fire("OnEnter");T.ok(actionRow.invite.hover:IsShown(),"invite hover preserves the shared button surface")
 T.eq(actionRow.invite.hover.color[4],.14);T.eq(GameTooltip:IsShown(),false,"invite keeps local feedback without a redundant tooltip")
@@ -297,7 +314,7 @@ C_ChallengeMode.GetDungeonScoreRarityColor=rarity
 T.eq(select(2,F.rows[1].name:GetFont()),16,"floating applicant names use the compact 16/22 typography")
 T.eq(select(2,F.rows[1].score:GetFont()),14)
 T.eq(select(2,F.rows[1].meta:GetFont()),12);T.eq(select(2,F.rows[1].itemLevel:GetFont()),12)
-T.eq(select(2,F.rows[1].leader:GetFont()),14);T.eq(select(2,F.rows[1].timer:GetFont()),14)
+T.eq(F.rows[1].leader,nil);T.eq(F.rows[1].timer,nil,"member rows allocate no application leader or countdown text")
 T.eq(select(2,commentRow.name:GetFont()),12,"shared comments use the compact footer typography")
 T.ok(56+F.rows[1].name:GetWidth()+12<=324-12-F.rows[1].itemLevel:GetWidth(),"the name and metric columns retain a twelve-pixel gap")
 T.eq(F.rows[1].icon:GetWidth(),32,"the applicant avatar spans the name and specialization block")
@@ -446,7 +463,7 @@ do
  applicant.members=originalMembers;callback("applicants");T.eq(F.frame:GetWidth(),115)
 end
 A:SetSetting("reduceMotion",false)
-T.ok(F.attention and F.context.Motion.jobs.brand,"restoring motion starts the actual shared Brand job")
+T.ok(F.attention and F.brandMotion:IsPlaying(),"restoring motion starts the actual product Brand job")
 T.eq(F.frame:GetScript("OnUpdate"),nil,"the collapsed reminder does not install the panel driver")
 local countPoint={F.count:GetPoint()};local framePoint={F.frame:GetPoint()};local beforeAttentionNodes=#stub.nodes
 F.context.Motion:Tick(.168)
@@ -455,8 +472,8 @@ T.near(F.logoTexture:GetHeight(),38*.925,.001,"the same segment squashes the log
 local currentCountPoint={F.count:GetPoint()};for i,value in ipairs(countPoint) do T.eq(currentCountPoint[i],value,"the count baseline remains stable during attention") end
 local currentFramePoint={F.frame:GetPoint()};for i,value in ipairs(framePoint) do T.eq(currentFramePoint[i],value,"the clickable container remains stable during attention") end
 T.same(F.logoTexture.texCoords,{0,1,0,1},"attention preserves the original full logo UV")
-local brandJob,timer=F.context.Motion.jobs.brand,F.attentionTimer;callback("applicants");A:SetSetting("floatingScale",110)
-T.eq(F.context.Motion.jobs.brand,brandJob);T.eq(F.attentionTimer,timer,"ordinary data and settings refreshes do not restart the current Brand cycle")
+local brandJob,timer=F.brandMotion.elapsed,F.attentionTimer;callback("applicants");A:SetSetting("floatingScale",110)
+T.eq(F.brandMotion.elapsed,brandJob);T.eq(F.attentionTimer,timer,"ordinary data and settings refreshes do not restart the current Brand cycle")
 local getApplicants=G.GetApplicants;local queries=0;G.GetApplicants=function(self) queries=queries+1;return getApplicants(self) end
 F.context.Motion:Tick(1.22)
 T.eq(F.logoTexture:GetWidth(),38);T.eq(F.logoTexture:GetHeight(),38)
@@ -474,7 +491,7 @@ end
 F:Dismiss()
 T.eq(F.attentionTimer,timer,"closing the panel during the quiet interval does not unnecessarily replay the logo")
 queries=0;base.AdvanceClock(2.4)
-T.ok(F.context.Motion.jobs.brand,"the single timer starts the next original Brand animation")
+T.ok(F.brandMotion:IsPlaying(),"the single timer starts the next original Brand animation")
 T.eq(base.PendingTimers(),1,"the timer replaces its own handle without accumulating reminders")
 F.context.Motion:Tick(.168);T.near(F.logoTexture:GetWidth(),38*1.075,.001)
 T.eq(queries,0,"animation and replay never query the applicant service")
@@ -490,7 +507,7 @@ T.eq(visibleAttention,true)
 F.frame:Hide()
 T.eq(visibleAttention,false,"hiding the entry publishes the stopped attention state to API subscribers")
 stopAttention()
-T.eq(F.attention,false);T.eq(F.attentionTimer,nil);T.eq(F.logoTexture:GetWidth(),38);T.eq(F.context.Motion.jobs.brand,nil,"hiding the entire entry cancels Brand and the replay timer")
+T.eq(F.attention,false);T.eq(F.attentionTimer,nil);T.eq(F.logoTexture:GetWidth(),38);T.eq(F.brandMotion:IsPlaying(),false,"hiding the entire entry cancels Brand and the replay timer")
 F.frame:Show();T.ok(F.attention,"showing the entry derives attention again from the pending snapshot")
 listing=nil;callback("listing");T.eq(F.attention,false);T.eq(F.attentionTimer,nil);T.eq(F.logoTexture:GetWidth(),38);T.eq(F.frame:GetScript("OnUpdate"),nil,"ending recruitment stops attention even if outbound applications remain")
 listing={name="My listing",activityID=1};callback("listing");T.ok(F.attention)
@@ -765,10 +782,10 @@ do
  host:Fire("OnClick","LeftButton");T.eq(A.openedPage,"create","an active listing opens recruitment from the integrated entry")
  host:Fire("OnEnter");T.eq(G.applicantViews[F],true,"integrated hover uses the existing viewed-applicants notification")
  F:Dismiss();T.eq(G.applicantViews[F],nil)
- T.ok(F.attentionTimer);local animation=F.context.Motion.jobs.brand
- F.context.Motion:Tick(.2);T.ok(F.logoTexture:GetWidth()~=34,"integrated logo uses the same brand animation")
+ T.ok(F.attentionTimer)
+ F.context.Motion:Tick(.2);local animation=F.brandMotion.elapsed;T.ok(F.logoTexture:GetWidth()~=34,"integrated logo uses the same brand animation")
  View.RefreshQuick(view,"meetingstone")
- T.eq(F.context.Motion.jobs.brand,animation,"a host refresh does not restart or reset the logo")
+ T.eq(F.brandMotion.elapsed,animation,"a host refresh does not restart or reset the logo")
  T.eq(icon:IsShown(),false);T.eq(text:IsShown(),true);T.eq(text:GetText(),"1人申请","a top bar refresh cannot replace the status with its original label")
  A:SetSetting("floatingCompatibility",false)
  T.eq(F.host,nil);T.eq(F.frame:GetParent(),UIParent);T.eq(F.button:IsShown(),true)
@@ -813,8 +830,8 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  local native=dofile("tests/ui_stubs.lua");native.Install()
  _G.LycheeUI=nil;_G.LycheeGroup=nil;_G.LycheeGroupDB=nil
  local private={}
- for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Components.lua","Native.lua","Menu.lua"}) do assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/"..file))("LycheeGroup",private) end
- for _,file in ipairs({"Locale.lua","Core.lua","Configuration.lua","StyleDefaults.lua","Appearance.lua","Specializations.lua","Fonts.lua","Floating.lua","API.lua","Presentation.lua"}) do dofile("addon/LycheeGroup/"..file) end
+ for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Styles.lua","Components.lua","Layouts.lua","Elements.lua","Native.lua","Menu.lua"}) do assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/"..file))("LycheeGroup",private) end
+ for _,file in ipairs({"Locale.lua","Theme/Defaults.lua","Theme/Elements.lua","Core.lua","Configuration.lua","Appearance.lua","Theme/Import.lua","Specializations.lua","Fonts.lua","BrandMotion.lua","Floating.lua","API.lua","Presentation.lua"}) do dofile("addon/LycheeGroup/"..file) end
  local addon=LycheeGroup;addon:LoadDB();addon:SetSetting("reduceMotion",true)
  local applications,activeListing,notify={},nil,nil
  local group={Applications={GetActiveCount=function() return #applications end,IsActive=function() return true end},

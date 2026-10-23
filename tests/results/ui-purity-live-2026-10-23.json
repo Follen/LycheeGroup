@@ -1,0 +1,2908 @@
+{
+  "schema": "lycheegroup.ui-purity-live.v1",
+  "date": "2026-10-23",
+  "candidate": "Uncommitted cold-theme and UI-purity final worktree; frozen LycheeUI 1.3.0 revision 35",
+  "baselineMain": "5ce215182c15b59e44c573db9a1a6488536bb8bd",
+  "client": "12.1.5.70448",
+  "deployment": {
+    "installedAt": "2026-10-23T23:17:00.0810922+08:00",
+    "client": "12.1.5.70448",
+    "pid": 12032,
+    "source": "D:\\Code\\wow\\addons\\LycheeGroup\\.worktree\\lycheeui-style-api\\addon",
+    "target": "D:\\Game\\World of Warcraft\\_retail_\\Interface\\AddOns",
+    "changed": [
+      "LycheeGroup/BrandMotion.lua",
+      "LycheeGroup/Floating.lua",
+      "LycheeGroup/LycheeGroup.toc",
+      "LycheeGroup/Libs/LycheeUI/.lock",
+      "LycheeGroup/Libs/LycheeUI/Components.lua",
+      "LycheeGroup/Libs/LycheeUI/Core.lua",
+      "LycheeGroup/Libs/LycheeUI/Elements.lua",
+      "LycheeGroup/Libs/LycheeUI/Layouts.lua",
+      "LycheeGroup/Libs/LycheeUI/Menu.lua",
+      "LycheeGroup/Libs/LycheeUI/Motion.lua",
+      "LycheeGroup/Libs/LycheeUI/Native.lua",
+      "LycheeGroup/Libs/LycheeUI/Styles.lua",
+      "LycheeGroup/Libs/LycheeUI/Theme.lua",
+      "LycheeGroup/Theme/Defaults.lua",
+      "LycheeGroup/Theme/Elements.lua",
+      "LycheeGroup_UI/Components.lua",
+      "LycheeGroup_UI/Create.lua",
+      "LycheeGroup_UI/Host.lua",
+      "LycheeGroup_UI/Members.lua",
+      "LycheeGroup_UI/Notes.lua",
+      "LycheeGroup_UI/Resize.lua",
+      "LycheeGroup_UI/Tooltip.lua"
+    ],
+    "files": [
+      {
+        "path": "LycheeGroup/API.lua",
+        "sha256": "f4d4cbd81b157938025540d2ff8de35df6b3e1b98dc4fb6dd72240eaaea94f44"
+      },
+      {
+        "path": "LycheeGroup/Appearance.lua",
+        "sha256": "b70ba9e3228d7343fcd6cb072639bd4020b1c6a5e5e74184c4abdc7ca432c02b"
+      },
+      {
+        "path": "LycheeGroup/Bindings.lua",
+        "sha256": "10f6f17472e4391e7066e45ef0020b06067c774c80b0289d7532d11689aeb9a3"
+      },
+      {
+        "path": "LycheeGroup/Bindings.xml",
+        "sha256": "1bbb93c40e38e81082e954cf9159d8874c274518f42f1f022b30ecf0c9b924a6"
+      },
+      {
+        "path": "LycheeGroup/BrandMotion.lua",
+        "sha256": "322ca9756fcc022b375d016f090fffd0cad0b23bb7a90880f6f2111fdaf4db92"
+      },
+      {
+        "path": "LycheeGroup/Configuration.lua",
+        "sha256": "9feec74805a187cf18be9cc4cdd6f1365bc4f1a4e9f7b713178f99e96043d6be"
+      },
+      {
+        "path": "LycheeGroup/Core.lua",
+        "sha256": "25fe3e804a42c13bdea87b7c93da7e4b525e5096d9adb66b83ff96aa44f38126"
+      },
+      {
+        "path": "LycheeGroup/Entrypoints.lua",
+        "sha256": "abf34e9d2293911205772e4fa94bae3b05c1ad58b893bce47a855961dd55d9ce"
+      },
+      {
+        "path": "LycheeGroup/Floating.lua",
+        "sha256": "76c4c385dc19c65bfec00b0f154a2035bbed1e9eebed6549522e19c9d202f744"
+      },
+      {
+        "path": "LycheeGroup/Fonts.lua",
+        "sha256": "83b189245ea939f2eddffa3f5da2463582134aeeddfe54006edd08ed6a3a1fb2"
+      },
+      {
+        "path": "LycheeGroup/Locale.lua",
+        "sha256": "7b5954d4f8e4178c28add2cf149d7d0d00daeb75916f6b9e4f445f50c2b37e3f"
+      },
+      {
+        "path": "LycheeGroup/LycheeGroup.toc",
+        "sha256": "07a73e31a8bf14c28fa11fc15a07ae11bbd618b781ebf7baa12d8286669196aa"
+      },
+      {
+        "path": "LycheeGroup/Minimap.lua",
+        "sha256": "2ab54ccb3269afeeb53db853b01e22c7ec481cdb98c9161bae6e0e9ce4b4b390"
+      },
+      {
+        "path": "LycheeGroup/Presentation.lua",
+        "sha256": "0e2e1567279fea492fb4556d80ad85d33fb757729d9a1384aee293f34e0f3d93"
+      },
+      {
+        "path": "LycheeGroup/Specializations.lua",
+        "sha256": "e18e7c642200f8f3801f1cabc0fe6adc62518f466b3017f180d0d27b90a91a7d"
+      },
+      {
+        "path": "LycheeGroup/Adapters/Rurutia.lua",
+        "sha256": "64a8d427ac7e2131c1ab6b69c0a8b5e9e1e5c8d8da802f75f44dc36f14fc401a"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/.lock",
+        "sha256": "e07efc0d1b6b473105269d2ef3b70753e56f28c10d0dd3699165151ad9cc8ceb"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Components.lua",
+        "sha256": "1a4ae7b3bca602998702cbc3dc15d2a55746378fb5f69214b38168463385b76c"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Core.lua",
+        "sha256": "0238b39a11d61ba1b752c78641287fbc34bfce9703ab43196f12f44df3cd0c36"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Elements.lua",
+        "sha256": "28dd325effe22bb20e2e92c1c101dea0064aae9f33cca674eaf8be0b28c5ce0a"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/embeds.xml",
+        "sha256": "074fd1bf12907f3d4dc64b15216d5ce9caa7171f4ab474223ba8c21e4157c603"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Layouts.lua",
+        "sha256": "4eaaff262a96d3ef8357983989a9f9a7b0e0bf1779ffbd729a3f1e0680515f1c"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Menu.lua",
+        "sha256": "624108da673f406d90a27977677e4848d4f18f1ceadb0f595af6187215124b6b"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Motion.lua",
+        "sha256": "af4360c01eca76351eb7c5f9ca031321be8cf63143829ef5364eac1cc4c56e21"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Native.lua",
+        "sha256": "1e684f5cb17201ca09ea2a747b61aede450258c0bcebe88ca5dcb97f68d0d417"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Styles.lua",
+        "sha256": "a8e0a30744cca55de5d3bd940b829bef18747449396a38bc97cd868c92b2246b"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Theme.lua",
+        "sha256": "ef3da514cd40133823f37e2d9d9d2fef84603ee7f2e0122bc22c3e0969e9d0ab"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/arrow.tga",
+        "sha256": "93786301129ed889270d2a02f5643d4416e82697785f143fa10bb7ae54998727"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/bell.tga",
+        "sha256": "d64179d1877cb926fff238a148f060f00184f2d40e140693391223211e62c8cc"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/book.tga",
+        "sha256": "ac017a1a6244bb94fb175efdb64d4c56b58c72e71a47fbc96305f618ec56c385"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/caution.tga",
+        "sha256": "6bdad242ba25891acd890ae9b4ce1e87002ec295d835bd76ec0972834820d953"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/chevron.tga",
+        "sha256": "d88346a13d505bc3aac4f58e292952f98490b5f0c03348a192e95c6fbda89780"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/circle.tga",
+        "sha256": "ee3d0ece0a31e76edc81cda3ea666c637bcf28724466222948e2ab235216b293"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/close.tga",
+        "sha256": "756dd35d3c7c393d6acc4c6109439f02ff0ba342dd82b1451d93ae3bc7a1424e"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/decline.tga",
+        "sha256": "a2b846a146af2ad86c904dad55446c7da3a01c38bf2f7217faaa18af3d00c06d"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/heart.tga",
+        "sha256": "d6be15a5e4bd895a85da6cea324d6ff8aa0a5134bbdfc645979cebe796302873"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/history.tga",
+        "sha256": "60ee8e76f8acede358987f77a5bb96d60879e21cb19b4a56ba90f8e4256900c8"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/icon-mask.tga",
+        "sha256": "3842cf0e05c57441da86894559b30b17bf97055b301cd076003b119da5f8a5b5"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/plus.tga",
+        "sha256": "07311c36e089b733d8e4dbb5ae5a2b68cc3e746e9a047be4a434e8dafa5e9fb6"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/refresh.tga",
+        "sha256": "1d4ea9510b9ee540a485dbf37b379ec6b7467707a409809ed5d012c922fec71e"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/rounded-corner.tga",
+        "sha256": "6c5203e7c6caede452ff5a34e6a356f2e7caef376cd3d1a4ac40353e340b9e5a"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/search.tga",
+        "sha256": "fc6308be9daccbc766db4942a9ddde797d57902a128c229e69f389f342d6fba7"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/settings.tga",
+        "sha256": "f326928897d118c63e16d2b3a0e15894b3064319063ae3e449125ce646b77c30"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/shadow-12.tga",
+        "sha256": "4b114a802ec77994eb266a970de8e7d1dece24883ae9cb0bfb926ae337615978"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/shadow-16.tga",
+        "sha256": "64d76fdbf085b2f28381cfdc4a2e6390b71c07c9bd6f1d911f3ab56180edc926"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/shadow-24.tga",
+        "sha256": "a7d36e795f94ce43e658898ecbcc6415fa72301104581590e318aa6e59107276"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/shadow-28.tga",
+        "sha256": "356c7b119618c92d25d747992cc1aa7cb1c9187ff18166393db36a967b296e34"
+      },
+      {
+        "path": "LycheeGroup/Media/addon-logo.tga",
+        "sha256": "cb46b1017f7d04b67fbc28345a5941babe3e6568c0ccaf238845291dc11d9145"
+      },
+      {
+        "path": "LycheeGroup/Media/damage.tga",
+        "sha256": "96c8027f0e3d3c5ff1c23f97908cbfde953689718ba7c7b89560fbdabc73148c"
+      },
+      {
+        "path": "LycheeGroup/Media/delve.tga",
+        "sha256": "1c23269c110de259dde4ac0ee3664381a26f6e54f259698251867e15ea081c0a"
+      },
+      {
+        "path": "LycheeGroup/Media/flag.tga",
+        "sha256": "8b76497c797ae469666cae8ce2f55cdbb312fde25ecb0fa12cbf86c4dcf4afc7"
+      },
+      {
+        "path": "LycheeGroup/Media/friend.tga",
+        "sha256": "aa7511f387531c53c08577ea59be63f04bae800dd733d311f068de1c56d9d445"
+      },
+      {
+        "path": "LycheeGroup/Media/guild.tga",
+        "sha256": "f516322a4522b38e3e878991d0f23b548c4abd1f5343c3ddd632999daf281f46"
+      },
+      {
+        "path": "LycheeGroup/Media/healer.tga",
+        "sha256": "07e45ec90d9720ed0891d85a69f0f315d04e05f559b8186d418bb271cef28a26"
+      },
+      {
+        "path": "LycheeGroup/Media/invite.tga",
+        "sha256": "9bf21e948867e84c592c6111b6471015acfaeb1bab725cbfa53b386a290c8d1e"
+      },
+      {
+        "path": "LycheeGroup/Media/leader.tga",
+        "sha256": "a02d4d7353e6261571d048496121bf23e3e4b82c234b52a34b082bbc0d7f8fbf"
+      },
+      {
+        "path": "LycheeGroup/Media/lychee-logo.tga",
+        "sha256": "9cd1f306fe5c8092dd425401d8c2eec192a61c0e3eba1645ee37601295326f94"
+      },
+      {
+        "path": "LycheeGroup/Media/mountain.tga",
+        "sha256": "d981fe8f731cdd0558316c924fc760e23bdbd5eed249dc55988120abc8c3741e"
+      },
+      {
+        "path": "LycheeGroup/Media/pvp.tga",
+        "sha256": "134405c33a27e31baa64bb05c0d88a242455c8df8c6e98a6fccbd11d20cd1b18"
+      },
+      {
+        "path": "LycheeGroup/Media/role-dps.tga",
+        "sha256": "dac50b2f0351372df0358c74922262c959a296eafb23238a622f0e1d54de493e"
+      },
+      {
+        "path": "LycheeGroup/Media/role-healer.tga",
+        "sha256": "599ff94cb2b3776b2a4c9abd06821583e707178bab20b34aa1d0369619633a50"
+      },
+      {
+        "path": "LycheeGroup/Media/role-tank.tga",
+        "sha256": "b18db002db43b57d5546b97217f6c71180ed0f1dd0079c37616e9b175f79c5b2"
+      },
+      {
+        "path": "LycheeGroup/Media/tank.tga",
+        "sha256": "2170055981bab271ce345b40283fbd4c6e3ec36b039545793811add99c5ccaaf"
+      },
+      {
+        "path": "LycheeGroup/Media/tower.tga",
+        "sha256": "56872153a16c9276dbaaf6a40eba24ee522d67bdd4bf628b0236c1b9ef26b99b"
+      },
+      {
+        "path": "LycheeGroup/Media/Fonts/LICENSE-Inter.txt",
+        "sha256": "b3195af0fb14368d1b3b10fb9d3fe503b7163ea083859d2ee553bc74da07c320"
+      },
+      {
+        "path": "LycheeGroup/Media/Fonts/LycheeFont-enUS.ttf",
+        "sha256": "9d327cbafd239af3e014d467a6e1daf3f6c04ae74e062ff8593f39480b6b9c27"
+      },
+      {
+        "path": "LycheeGroup/Media/Fonts/LycheeFont-zhCN.ttf",
+        "sha256": "b5abe5458e1f3d32a60a71ddd289b3a64eeab311d2f6a3c0afe3f025d4ad82c2"
+      },
+      {
+        "path": "LycheeGroup/Media/Fonts/NOTICE-ChineseFont.txt",
+        "sha256": "4c3b541dc721e7ad4a2fa00f231da41b79c060849a4af7e5093a92aee7ecd411"
+      },
+      {
+        "path": "LycheeGroup/Media/Fonts/README.md",
+        "sha256": "a007add498cc1f54ee3ba019beda127edf212c3c5adafd580fcffd1298ec2bdc"
+      },
+      {
+        "path": "LycheeGroup/Theme/Defaults.lua",
+        "sha256": "c71cbfa4672e82b2735905a550c98b5b9bcf524f76d2f382329db3299e0b21af"
+      },
+      {
+        "path": "LycheeGroup/Theme/Elements.lua",
+        "sha256": "e311ff533bb20504dccc7f434742810d760dd53a14e54077ba1a008cd796ab8b"
+      },
+      {
+        "path": "LycheeGroup/Theme/FindElements.lua",
+        "sha256": "40b38aa87da993f701d5c72484521840f94d1297b2e03a7c12e0b066e484aef0"
+      },
+      {
+        "path": "LycheeGroup/Theme/Import.lua",
+        "sha256": "b4840ab7e17bb79b4b8bbb7a574402a4337aac66843a94fd5a902a157d810533"
+      },
+      {
+        "path": "LycheeGroup_Group/Alerts.lua",
+        "sha256": "b117d307aa035e2c2f6facf6d6b0fba36a43ae029493c4f3dad1e720953172ac"
+      },
+      {
+        "path": "LycheeGroup_Group/Applicants.lua",
+        "sha256": "2e80ea70fb11c6ce658db4a193983aa4c117c10e22465bbd70bd7b1e4be6c441"
+      },
+      {
+        "path": "LycheeGroup_Group/Applications.lua",
+        "sha256": "68c2e31aa961c14beb56bdcb278d91970b37c1af7429bc279dc60a64710e5a1c"
+      },
+      {
+        "path": "LycheeGroup_Group/Catalog.lua",
+        "sha256": "bb40ceda928e9c7c7d49896fc0a228ef298274e9b5cec48534b51658e97c6d36"
+      },
+      {
+        "path": "LycheeGroup_Group/CreationPresets.lua",
+        "sha256": "beff07a81a4bb8e69b95704253515dcaf76ce9c8f7a2f875afdf84669021ded9"
+      },
+      {
+        "path": "LycheeGroup_Group/Game.lua",
+        "sha256": "c6b6fb3f5d4746720b3c9d4ab0a91be557963eeeee108f7c5f898ce33b83ad0a"
+      },
+      {
+        "path": "LycheeGroup_Group/Group.lua",
+        "sha256": "a12a7630cc5996ddf89cce80d0041386139f11b99dba407a1e6c43e3351a7101"
+      },
+      {
+        "path": "LycheeGroup_Group/History.lua",
+        "sha256": "1811fa958c1abcc5813634dc5eb1145ce55de03a5c78371e9d6a05a6a3c42cd0"
+      },
+      {
+        "path": "LycheeGroup_Group/Listing.lua",
+        "sha256": "b9e65ea606b33dda7c31fd8cb545f78a63d0a5395f7b483a00cffa6261887cb0"
+      },
+      {
+        "path": "LycheeGroup_Group/Locale.lua",
+        "sha256": "1df17e259c5fec95b460cddccb3424a1755d97bc3052888527fc16fd100768a3"
+      },
+      {
+        "path": "LycheeGroup_Group/LycheeGroup_Group.toc",
+        "sha256": "eeedc4c4888eb52a0a70cce1018a15ca54abce485e1b80758c8e95c3bbc0ee90"
+      },
+      {
+        "path": "LycheeGroup_Group/RaidBuffs.lua",
+        "sha256": "e1eea3f887e260e74c3179adf499f48a922bc95cee7573976788f64819b94dcc"
+      },
+      {
+        "path": "LycheeGroup_Group/Relations.lua",
+        "sha256": "97bb89df41f7eb0ca98467f211c114e6c5c036703816c5b1ed956fe017023ee1"
+      },
+      {
+        "path": "LycheeGroup_Group/Results.lua",
+        "sha256": "08fb959b85523057e7613dae11fa203951de5e54c8b0d0f123b3eb1b30fba1d6"
+      },
+      {
+        "path": "LycheeGroup_Group/Roster.lua",
+        "sha256": "9bcaf55ca60dbaf7b8ccbc1d43421138da5fb45f0a13fbd39cd478b24207a046"
+      },
+      {
+        "path": "LycheeGroup_Group/Search.lua",
+        "sha256": "f6a09caef1895a2f8454c6bb9829ef10aa43fa14f8cf1f21da888609f08753f8"
+      },
+      {
+        "path": "LycheeGroup_Group/Libs/README.md",
+        "sha256": "dec5ced4189f5cf8a844b18e9de6d05f53140cd6af9d07abefa9a8f7c69c7d4a"
+      },
+      {
+        "path": "LycheeGroup_Group/Libs/LibSpecialization/LibSpecialization.lua",
+        "sha256": "6396d738c9ef626a88bf0ef28c6f52e86e0dd6505dfc36ebbf19b0d35ffac115"
+      },
+      {
+        "path": "LycheeGroup_Group/Libs/LibSpecialization/LICENSE.txt",
+        "sha256": "80364982a43ca8d6685966a5a5e0af68e34e11ad7d348e82929d00d36544bd12"
+      },
+      {
+        "path": "LycheeGroup_Group/Libs/LibStub/LibStub.lua",
+        "sha256": "6000f58d740eaa2b4a006c1dabb0366f0321fc687bab9e85d97d040a1fd42dab"
+      },
+      {
+        "path": "LycheeGroup_Notes/Locale.lua",
+        "sha256": "e1a033cb201d236d53a6e4a3f272a79c81d5b8d629d444daac70fe038fddc55c"
+      },
+      {
+        "path": "LycheeGroup_Notes/LycheeGroup_Notes.toc",
+        "sha256": "5da5e6d54cccf8ac56bf51636664108c03143a51f0370b463d487820207cf2ae"
+      },
+      {
+        "path": "LycheeGroup_Notes/Notes.lua",
+        "sha256": "bd3e78db49b0ad094e5034731a632093ce785c28fb2128ecab2c9971286223e5"
+      },
+      {
+        "path": "LycheeGroup_Notes/PlayerInfo.lua",
+        "sha256": "0df9fe2217882e07c3ef27752a389f61399e194aaa44bf8be5426ef925b85887"
+      },
+      {
+        "path": "LycheeGroup_Notes/Records.lua",
+        "sha256": "6d9b693e657ee47d17980a3e24f4a7657e7f5a08356ad5d4de74bef2ffad5083"
+      },
+      {
+        "path": "LycheeGroup_Notes/RosterReminder.lua",
+        "sha256": "7e9d75c55ea222bd997ebeecc3acc47d395109e4a3d23e99a393c17345d97906"
+      },
+      {
+        "path": "LycheeGroup_UI/Application.lua",
+        "sha256": "180f127f72f627b4fe28c88fb452c30d07816f0455719ae8d634ab56728308e0"
+      },
+      {
+        "path": "LycheeGroup_UI/Components.lua",
+        "sha256": "18d70355f8a9b9640a05bed748a9efd5592615b68a67ac85735a0da029f550b2"
+      },
+      {
+        "path": "LycheeGroup_UI/Create.lua",
+        "sha256": "1c3b324423d8f4fcc811ee89c51c9e4095fec45e12e3684427e38e8521a1cedd"
+      },
+      {
+        "path": "LycheeGroup_UI/Elements.lua",
+        "sha256": "c35ff678670aab1f5b79033e1a8c53479bc4514582279851a036a91e9405c95b"
+      },
+      {
+        "path": "LycheeGroup_UI/Find.lua",
+        "sha256": "467234d69dda31859a309698b3db3a2bb90b0310a0f0cfcc3a466b33bb41898f"
+      },
+      {
+        "path": "LycheeGroup_UI/Host.lua",
+        "sha256": "40e919713e836f74806c6a76bdaa6ec38f8168de9c1540a3e41d900b46981744"
+      },
+      {
+        "path": "LycheeGroup_UI/Locale.lua",
+        "sha256": "f381743ad7767d98fc9e0c29d50ea834ea6e8da95441390bfd537f54a67336e7"
+      },
+      {
+        "path": "LycheeGroup_UI/LycheeGroup_UI.toc",
+        "sha256": "52a3b4618f993a719191405a71be73a7fcbfd756adb12f4f82a0e981893d79d7"
+      },
+      {
+        "path": "LycheeGroup_UI/Members.lua",
+        "sha256": "5ce993bc8aac8b855d11e8c12569b7fc8b9e5c254d39b5b65ab16e59348431fd"
+      },
+      {
+        "path": "LycheeGroup_UI/Motion.lua",
+        "sha256": "81371c21bfe3737b2b32c5abafd7250ff1e749c4ea9148d5c0ae235060dd692f"
+      },
+      {
+        "path": "LycheeGroup_UI/Native.lua",
+        "sha256": "59136f10593be15b58a3ea633f19e11032d67577d5388800da5ef62b8aaaa24a"
+      },
+      {
+        "path": "LycheeGroup_UI/Notes.lua",
+        "sha256": "551835029246c3bde11d264c54575d4bd4098e893eadad9da8d457205645c100"
+      },
+      {
+        "path": "LycheeGroup_UI/Preview.lua",
+        "sha256": "ab5f50fd81caa3d0e41f323bbd97db7d6e6ac0743f2d9b50813274cc5f85eaf7"
+      },
+      {
+        "path": "LycheeGroup_UI/Resize.lua",
+        "sha256": "70548118b7c0aa5d5dbef497029ca3e42ee29b1cba7c2f905c72095d42607d6e"
+      },
+      {
+        "path": "LycheeGroup_UI/Settings.lua",
+        "sha256": "947fa1b664cfc1e5c47e80db1187f3e32b23a440abbe9eb2b0b9b3992ada856d"
+      },
+      {
+        "path": "LycheeGroup_UI/Theme.lua",
+        "sha256": "9e0736508312f34ea1874d7853dada9b10dbdfe5f18aa64da095c02d2d3742e3"
+      },
+      {
+        "path": "LycheeGroup_UI/Tooltip.lua",
+        "sha256": "311296af8e6a1deb30f6380e090d09fb1109fd29e1d1e99cc757e670ad1a3885"
+      },
+      {
+        "path": "LycheeGroup_UI/Transfer.lua",
+        "sha256": "3d8bcd8a4d1005d3d23d897b97edf8e0c262f999757ce31ce59a98789fc153b8"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/about-launcher.tga",
+        "sha256": "0d9b3ad35f2e3140bf2164c92f18d463ba2b53d3af5693b5afb61191bc48bc8c"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/about-talent.tga",
+        "sha256": "f221e2804719435816a963db86a0745b99ed9c6e481b1775a1a5336ae0b89391"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/battlenet-friend.tga",
+        "sha256": "2b842df2ca3982b31a625cbbc6eea485d7969997060747bd031b3ca6b40daa42"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/faction-alliance.tga",
+        "sha256": "16cf900e98df8091b2809657d600d7868eaec10396842e71099a0c6a7078c021"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/faction-horde.tga",
+        "sha256": "00a031b7e61708b4d9328e24c8b50db8e4ee2eaa36ee231013eae7e07e31a652"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/favorite-off.tga",
+        "sha256": "458a460e35c2f89331b06262cbbd2476c3ffbc5add0a10eff695a8ccc6d557b0"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/favorite-on.tga",
+        "sha256": "75a4c06c0a957c6bf6da9dae657a1993f6cd9d33bf421fb564d619767732244f"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/filter-any.tga",
+        "sha256": "01942fd2f9f81de8bb776d9b4a013aada338c39c252e82105058b0389529748a"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/member-circle-border.tga",
+        "sha256": "739c3be90da951d42c5b6c82d3c602a2938f2148702fdec6f25c0b8e69534d6a"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/member-circle-mask.tga",
+        "sha256": "346a7a1d76a37fb0d724d4be5e04b9951bd60edfbd1157c63b1d62474618b870"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/pvp-arena.tga",
+        "sha256": "78f5e1aa5749044cc2cf463d46f5e771d25efe86295e6cb99a9092a9397a9202"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/pvp-battleground.tga",
+        "sha256": "82600ba02185d6e62270df560dfc85ce7c12d257a19fd0d86c82a5338de219f5"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/pvp-rated-battleground.tga",
+        "sha256": "e0e1a2d256254a9224e7500334e1846ad1b1528d85f025eb4a4d44d6358880c7"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/pvp-skirmish.tga",
+        "sha256": "9572cc435df9f0edff75e10cfe3920737c68706a7adfe170134d896cdc412eb8"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/resize-grip-lines-hover.tga",
+        "sha256": "b7f1647122177bf3490eb521f7c822382bb5ebf8f35384f049fa012fd6ecd849"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/resize-grip-lines-normal.tga",
+        "sha256": "c62047d7ed11b89955043b7ae09949b99b1f0b34e9419aeba66f6256ededbca3"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/resize-grip-lines-pressed.tga",
+        "sha256": "a9b708279e16a10c02b6d2ba6a1e63a84b1364c5edbcfbadcd457c5a56b51e03"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/sidebar-toggle.tga",
+        "sha256": "44f3e34a95bf91290b6377997ea8fc74ae1864f6ba25d02cd0bf469fe69f22a3"
+      }
+    ]
+  },
+  "sourceHashes": [
+    {
+      "path": "tests/live_theme_memory.lua",
+      "sha256": "0c0957e7b7c9631de4e89bda05830ad5543db10bf933c18a78089f3989bbba85"
+    },
+    {
+      "path": "tests/live_ui_presence.lua",
+      "sha256": "b7a6ae39cd67e873bbf294aa124a5f9126611cf6cdc32019bfc2fe828ca842c1"
+    },
+    {
+      "path": ".lycheedev/ui-purity-r35-brand.lua",
+      "sha256": "8f153e6f3c5c513a969dde67a3ce467cefcfa13af4b94f1dac6f0d97ad940d36"
+    },
+    {
+      "path": ".lycheedev/ui-purity-r35-final-state.lua",
+      "sha256": "99b934949395db015c7beb1a00236f769d9e99ded3e1aade9347074b9d8da418"
+    }
+  ],
+  "connection": {
+    "id": "CON-127843638ee7ff2135c669b0e5fb2ca6",
+    "runtime": "000000530002ffbe4f62d2e40f2dea7a",
+    "closed": true,
+    "complete": true,
+    "cleanup": "complete",
+    "journal": ".lycheedev/live/connections/CON-127843638ee7ff2135c669b0e5fb2ca6.jsonl"
+  },
+  "scope": {
+    "liveBusiness": "Existing activity 504 recruitment and real applicants; no application, invitation, decline or listing mutation performed",
+    "naturalMemory": "First main-window creation; 8 settings sections; 12 four-page cycles and 12 session font changes; normal animations; no forced GC or GC policy changes",
+    "interaction": "Button:Click and addon controllers with real OnUpdate dispatch; no hardware click, drag, focus or scroll validation",
+    "computerUse": "Stopped when the user requested; no later Computer Use calls",
+    "search": "Recruitment branch; this run does not establish completed search-result coverage on each Find entry"
+  },
+  "reports": {
+    "naturalMemory": {
+      "request": "ui-purity-r35-final-natural-memory",
+      "operation": "LMO-038da5aa6e9d2ff986482b0f58189164",
+      "runtime": "000000530002ffbe4f62d2e40f2dea7a",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "report": {
+        "logs": {},
+        "ok": true,
+        "resourcesReleased": true,
+        "result": {
+          "accountUnchanged": true,
+          "budget": 20000000,
+          "budgetPassed": true,
+          "build": "70448",
+          "characterUnchanged": true,
+          "cycles": {},
+          "elapsedSeconds": 44.889999999984866,
+          "finalListingActivity": 504,
+          "finalPools": {
+            "applications": 2,
+            "find": 2,
+            "floatingBatches": 5,
+            "floatingRows": 10
+          },
+          "fontChanges": 12,
+          "initialFloatingPool": 0,
+          "initialListingActivity": 504,
+          "listingUnchanged": true,
+          "liveListing": {
+            "activityID": 504,
+            "applicants": 5
+          },
+          "mainBuiltAtStart": false,
+          "nativeClicks": 57,
+          "peakBytes": 13821799,
+          "resourcesReleased": true,
+          "revision": 35,
+          "samples": [
+            {
+              "bytes": 3269898,
+              "elapsedSeconds": 0,
+              "label": "before_main_open",
+              "luaHeapKiB": 378420.9873046875,
+              "observerRefreshMs": 78.18520000576973,
+              "packages": {
+                "LycheeGroup": 2150902,
+                "LycheeGroup_Group": 1075638,
+                "LycheeGroup_Notes": 43358,
+                "LycheeGroup_UI": 0
+              }
+            },
+            {
+              "bytes": 7609964,
+              "elapsedSeconds": 0,
+              "label": "first_listing_manage",
+              "luaHeapKiB": 384341.47265625,
+              "observerRefreshMs": 76.00159999728203,
+              "packages": {
+                "LycheeGroup": 2151574,
+                "LycheeGroup_Group": 1091734,
+                "LycheeGroup_Notes": 43382,
+                "LycheeGroup_UI": 4323274
+              }
+            },
+            {
+              "bytes": 7852541,
+              "elapsedSeconds": 2,
+              "label": "actual_listing_and_floating_applicants",
+              "luaHeapKiB": 385351.33203125,
+              "observerRefreshMs": 69.22800001502037,
+              "packages": {
+                "LycheeGroup": 2392215,
+                "LycheeGroup_Group": 1091790,
+                "LycheeGroup_Notes": 43382,
+                "LycheeGroup_UI": 4325154
+              }
+            },
+            {
+              "bytes": 8801885,
+              "elapsedSeconds": 3.5059999999939464,
+              "label": "settings_general",
+              "luaHeapKiB": 386846.37890625,
+              "observerRefreshMs": 74.28850001096725,
+              "packages": {
+                "LycheeGroup": 2424703,
+                "LycheeGroup_Group": 1092966,
+                "LycheeGroup_Notes": 43382,
+                "LycheeGroup_UI": 5240834
+              }
+            },
+            {
+              "bytes": 8811717,
+              "elapsedSeconds": 4.25700000001234,
+              "label": "settings_interface",
+              "luaHeapKiB": 387078.8115234375,
+              "observerRefreshMs": 73.98299998044968,
+              "packages": {
+                "LycheeGroup": 2428775,
+                "LycheeGroup_Group": 1092966,
+                "LycheeGroup_Notes": 43382,
+                "LycheeGroup_UI": 5246594
+              }
+            },
+            {
+              "bytes": 8820733,
+              "elapsedSeconds": 5.00700000001234,
+              "label": "settings_browse",
+              "luaHeapKiB": 387295.6396484375,
+              "observerRefreshMs": 70.43189999461174,
+              "packages": {
+                "LycheeGroup": 2433039,
+                "LycheeGroup_Group": 1092966,
+                "LycheeGroup_Notes": 43382,
+                "LycheeGroup_UI": 5251346
+              }
+            },
+            {
+              "bytes": 8829781,
+              "elapsedSeconds": 5.75700000001234,
+              "label": "settings_memberIcons",
+              "luaHeapKiB": 387415.28515625,
+              "observerRefreshMs": 78.28610000014305,
+              "packages": {
+                "LycheeGroup": 2437111,
+                "LycheeGroup_Group": 1092966,
+                "LycheeGroup_Notes": 43382,
+                "LycheeGroup_UI": 5256322
+              }
+            },
+            {
+              "bytes": 8961950,
+              "elapsedSeconds": 6.50700000001234,
+              "label": "settings_blocks",
+              "luaHeapKiB": 387809.55078125,
+              "observerRefreshMs": 71.13400000333786,
+              "packages": {
+                "LycheeGroup": 2441866,
+                "LycheeGroup_Group": 1093190,
+                "LycheeGroup_Notes": 43382,
+                "LycheeGroup_UI": 5383512
+              }
+            },
+            {
+              "bytes": 9303630,
+              "elapsedSeconds": 7.25700000001234,
+              "label": "settings_notes",
+              "luaHeapKiB": 388385.4560546875,
+              "observerRefreshMs": 81.66659998893738,
+              "packages": {
+                "LycheeGroup": 2446650,
+                "LycheeGroup_Group": 1426374,
+                "LycheeGroup_Notes": 43382,
+                "LycheeGroup_UI": 5387224
+              }
+            },
+            {
+              "bytes": 9312454,
+              "elapsedSeconds": 8.00700000001234,
+              "label": "settings_floating",
+              "luaHeapKiB": 388613.7158203125,
+              "observerRefreshMs": 71.60230001807213,
+              "packages": {
+                "LycheeGroup": 2450722,
+                "LycheeGroup_Group": 1426374,
+                "LycheeGroup_Notes": 43382,
+                "LycheeGroup_UI": 5391976
+              }
+            },
+            {
+              "bytes": 9322975,
+              "elapsedSeconds": 8.76699999999255,
+              "label": "settings_about",
+              "luaHeapKiB": 388781.2138671875,
+              "observerRefreshMs": 90.68090000748634,
+              "packages": {
+                "LycheeGroup": 2454794,
+                "LycheeGroup_Group": 1426374,
+                "LycheeGroup_Notes": 43382,
+                "LycheeGroup_UI": 5398425
+              }
+            },
+            {
+              "bytes": 10363082,
+              "elapsedSeconds": 9.527999999991152,
+              "label": "cycle_1_find",
+              "luaHeapKiB": 390481.5869140625,
+              "observerRefreshMs": 72.56610000133514,
+              "packages": {
+                "LycheeGroup": 2490336,
+                "LycheeGroup_Group": 1427862,
+                "LycheeGroup_Notes": 43510,
+                "LycheeGroup_UI": 6401374
+              }
+            },
+            {
+              "bytes": 10410022,
+              "elapsedSeconds": 10.283999999985099,
+              "label": "cycle_1_create",
+              "luaHeapKiB": 390812.1845703125,
+              "observerRefreshMs": 76.95049998164177,
+              "packages": {
+                "LycheeGroup": 2490520,
+                "LycheeGroup_Group": 1446894,
+                "LycheeGroup_Notes": 43638,
+                "LycheeGroup_UI": 6428970
+              }
+            },
+            {
+              "bytes": 10819699,
+              "elapsedSeconds": 11.035000000003492,
+              "label": "cycle_1_notes",
+              "luaHeapKiB": 391592.341796875,
+              "observerRefreshMs": 72.2829999923706,
+              "packages": {
+                "LycheeGroup": 2499734,
+                "LycheeGroup_Group": 1447862,
+                "LycheeGroup_Notes": 46726,
+                "LycheeGroup_UI": 6825377
+              }
+            },
+            {
+              "bytes": 10876035,
+              "elapsedSeconds": 11.791999999986729,
+              "label": "cycle_1_settings",
+              "luaHeapKiB": 391768.486328125,
+              "observerRefreshMs": 78.43860000371933,
+              "packages": {
+                "LycheeGroup": 2510966,
+                "LycheeGroup_Group": 1449038,
+                "LycheeGroup_Notes": 46726,
+                "LycheeGroup_UI": 6869305
+              }
+            },
+            {
+              "bytes": 10910683,
+              "elapsedSeconds": 12.548000000009779,
+              "label": "cycle_2_find",
+              "luaHeapKiB": 392215.1748046875,
+              "observerRefreshMs": 79.27949997782707,
+              "packages": {
+                "LycheeGroup": 2525006,
+                "LycheeGroup_Group": 1450134,
+                "LycheeGroup_Notes": 46854,
+                "LycheeGroup_UI": 6888689
+              }
+            },
+            {
+              "bytes": 11294531,
+              "elapsedSeconds": 13.298000000009779,
+              "label": "cycle_2_create",
+              "luaHeapKiB": 392874.900390625,
+              "observerRefreshMs": 74.15479999780655,
+              "packages": {
+                "LycheeGroup": 2525190,
+                "LycheeGroup_Group": 1800958,
+                "LycheeGroup_Notes": 46982,
+                "LycheeGroup_UI": 6921401
+              }
+            },
+            {
+              "bytes": 11320667,
+              "elapsedSeconds": 14.048999999999069,
+              "label": "cycle_2_notes",
+              "luaHeapKiB": 393151.642578125,
+              "observerRefreshMs": 78.97529998421669,
+              "packages": {
+                "LycheeGroup": 2525566,
+                "LycheeGroup_Group": 1801926,
+                "LycheeGroup_Notes": 49774,
+                "LycheeGroup_UI": 6943401
+              }
+            },
+            {
+              "bytes": 11365571,
+              "elapsedSeconds": 14.804999999993015,
+              "label": "cycle_2_settings",
+              "luaHeapKiB": 393296.4169921875,
+              "observerRefreshMs": 73.74689999222755,
+              "packages": {
+                "LycheeGroup": 2536606,
+                "LycheeGroup_Group": 1802894,
+                "LycheeGroup_Notes": 49774,
+                "LycheeGroup_UI": 6976297
+              }
+            },
+            {
+              "bytes": 11400219,
+              "elapsedSeconds": 15.556000000011409,
+              "label": "cycle_3_find",
+              "luaHeapKiB": 393677.5078125,
+              "observerRefreshMs": 78.57469999790192,
+              "packages": {
+                "LycheeGroup": 2550646,
+                "LycheeGroup_Group": 1803990,
+                "LycheeGroup_Notes": 49902,
+                "LycheeGroup_UI": 6995681
+              }
+            },
+            {
+              "bytes": 11459803,
+              "elapsedSeconds": 16.312999999994645,
+              "label": "cycle_3_create",
+              "luaHeapKiB": 394025.5546875,
+              "observerRefreshMs": 80.92060002684593,
+              "packages": {
+                "LycheeGroup": 2551350,
+                "LycheeGroup_Group": 1825414,
+                "LycheeGroup_Notes": 50030,
+                "LycheeGroup_UI": 7033009
+              }
+            },
+            {
+              "bytes": 11483571,
+              "elapsedSeconds": 17.062999999994645,
+              "label": "cycle_3_notes",
+              "luaHeapKiB": 394253.427734375,
+              "observerRefreshMs": 80.3348000049591,
+              "packages": {
+                "LycheeGroup": 2551726,
+                "LycheeGroup_Group": 1826382,
+                "LycheeGroup_Notes": 52822,
+                "LycheeGroup_UI": 7052641
+              }
+            },
+            {
+              "bytes": 11528683,
+              "elapsedSeconds": 17.812999999994645,
+              "label": "cycle_3_settings",
+              "luaHeapKiB": 394428.9599609375,
+              "observerRefreshMs": 74.31480002403259,
+              "packages": {
+                "LycheeGroup": 2562766,
+                "LycheeGroup_Group": 1827558,
+                "LycheeGroup_Notes": 52822,
+                "LycheeGroup_UI": 7085537
+              }
+            },
+            {
+              "bytes": 11563331,
+              "elapsedSeconds": 18.56400000001304,
+              "label": "cycle_4_find",
+              "luaHeapKiB": 394817.4716796875,
+              "observerRefreshMs": 70.79499998688698,
+              "packages": {
+                "LycheeGroup": 2576806,
+                "LycheeGroup_Group": 1828654,
+                "LycheeGroup_Notes": 52950,
+                "LycheeGroup_UI": 7104921
+              }
+            },
+            {
+              "bytes": 11941071,
+              "elapsedSeconds": 19.320000000006985,
+              "label": "cycle_4_create",
+              "luaHeapKiB": 395446.630859375,
+              "observerRefreshMs": 78.23359999060631,
+              "packages": {
+                "LycheeGroup": 2577182,
+                "LycheeGroup_Group": 2176478,
+                "LycheeGroup_Notes": 53078,
+                "LycheeGroup_UI": 7134333
+              }
+            },
+            {
+              "bytes": 11963159,
+              "elapsedSeconds": 20.07699999999022,
+              "label": "cycle_4_notes",
+              "luaHeapKiB": 395674.30859375,
+              "observerRefreshMs": 73.38109999895096,
+              "packages": {
+                "LycheeGroup": 2577366,
+                "LycheeGroup_Group": 2177446,
+                "LycheeGroup_Notes": 55870,
+                "LycheeGroup_UI": 7152477
+              }
+            },
+            {
+              "bytes": 12008063,
+              "elapsedSeconds": 20.82699999999022,
+              "label": "cycle_4_settings",
+              "luaHeapKiB": 395820.9111328125,
+              "observerRefreshMs": 82.73679998517036,
+              "packages": {
+                "LycheeGroup": 2588406,
+                "LycheeGroup_Group": 2178414,
+                "LycheeGroup_Notes": 55870,
+                "LycheeGroup_UI": 7185373
+              }
+            },
+            {
+              "bytes": 12042903,
+              "elapsedSeconds": 21.57699999999022,
+              "label": "cycle_5_find",
+              "luaHeapKiB": 396149.8681640625,
+              "observerRefreshMs": 73.0992999970913,
+              "packages": {
+                "LycheeGroup": 2602638,
+                "LycheeGroup_Group": 2179510,
+                "LycheeGroup_Notes": 55998,
+                "LycheeGroup_UI": 7204757
+              }
+            },
+            {
+              "bytes": 12085575,
+              "elapsedSeconds": 22.32699999999022,
+              "label": "cycle_5_create",
+              "luaHeapKiB": 396498.259765625,
+              "observerRefreshMs": 77.41290000081062,
+              "packages": {
+                "LycheeGroup": 2602822,
+                "LycheeGroup_Group": 2195542,
+                "LycheeGroup_Notes": 56126,
+                "LycheeGroup_UI": 7231085
+              }
+            },
+            {
+              "bytes": 12107663,
+              "elapsedSeconds": 23.08400000000256,
+              "label": "cycle_5_notes",
+              "luaHeapKiB": 396740.890625,
+              "observerRefreshMs": 73.25859999656677,
+              "packages": {
+                "LycheeGroup": 2603006,
+                "LycheeGroup_Group": 2196510,
+                "LycheeGroup_Notes": 58918,
+                "LycheeGroup_UI": 7249229
+              }
+            },
+            {
+              "bytes": 12152759,
+              "elapsedSeconds": 23.83400000000256,
+              "label": "cycle_5_settings",
+              "luaHeapKiB": 396934.509765625,
+              "observerRefreshMs": 82.21299999952316,
+              "packages": {
+                "LycheeGroup": 2614238,
+                "LycheeGroup_Group": 2197478,
+                "LycheeGroup_Notes": 58918,
+                "LycheeGroup_UI": 7282125
+              }
+            },
+            {
+              "bytes": 12187407,
+              "elapsedSeconds": 24.589999999996508,
+              "label": "cycle_6_find",
+              "luaHeapKiB": 397270.587890625,
+              "observerRefreshMs": 73.79580000042915,
+              "packages": {
+                "LycheeGroup": 2628278,
+                "LycheeGroup_Group": 2198574,
+                "LycheeGroup_Notes": 59046,
+                "LycheeGroup_UI": 7301509
+              }
+            },
+            {
+              "bytes": 12233119,
+              "elapsedSeconds": 25.339999999996508,
+              "label": "cycle_6_create",
+              "luaHeapKiB": 397585.5322265625,
+              "observerRefreshMs": 80.22740000486374,
+              "packages": {
+                "LycheeGroup": 2628462,
+                "LycheeGroup_Group": 2214606,
+                "LycheeGroup_Notes": 59174,
+                "LycheeGroup_UI": 7330877
+              }
+            },
+            {
+              "bytes": 12255399,
+              "elapsedSeconds": 26.090999999985797,
+              "label": "cycle_6_notes",
+              "luaHeapKiB": 397814.1630859375,
+              "observerRefreshMs": 72.5494000017643,
+              "packages": {
+                "LycheeGroup": 2628838,
+                "LycheeGroup_Group": 2215574,
+                "LycheeGroup_Notes": 61966,
+                "LycheeGroup_UI": 7349021
+              }
+            },
+            {
+              "bytes": 12300303,
+              "elapsedSeconds": 26.847999999998137,
+              "label": "cycle_6_settings",
+              "luaHeapKiB": 397959.0625,
+              "observerRefreshMs": 74.90830001235008,
+              "packages": {
+                "LycheeGroup": 2639878,
+                "LycheeGroup_Group": 2216542,
+                "LycheeGroup_Notes": 61966,
+                "LycheeGroup_UI": 7381917
+              }
+            },
+            {
+              "bytes": 12334951,
+              "elapsedSeconds": 27.603999999992084,
+              "label": "cycle_7_find",
+              "luaHeapKiB": 398298.06640625,
+              "observerRefreshMs": 73.54859998822212,
+              "packages": {
+                "LycheeGroup": 2653918,
+                "LycheeGroup_Group": 2217638,
+                "LycheeGroup_Notes": 62094,
+                "LycheeGroup_UI": 7401301
+              }
+            },
+            {
+              "bytes": 12377623,
+              "elapsedSeconds": 28.35899999999674,
+              "label": "cycle_7_create",
+              "luaHeapKiB": 398606.0732421875,
+              "observerRefreshMs": 77.87149998545647,
+              "packages": {
+                "LycheeGroup": 2654102,
+                "LycheeGroup_Group": 2233670,
+                "LycheeGroup_Notes": 62222,
+                "LycheeGroup_UI": 7427629
+              }
+            },
+            {
+              "bytes": 12399903,
+              "elapsedSeconds": 29.111000000004424,
+              "label": "cycle_7_notes",
+              "luaHeapKiB": 398838.9384765625,
+              "observerRefreshMs": 74.98030000925064,
+              "packages": {
+                "LycheeGroup": 2654478,
+                "LycheeGroup_Group": 2234638,
+                "LycheeGroup_Notes": 65014,
+                "LycheeGroup_UI": 7445773
+              }
+            },
+            {
+              "bytes": 12444807,
+              "elapsedSeconds": 29.861000000004424,
+              "label": "cycle_7_settings",
+              "luaHeapKiB": 398991.173828125,
+              "observerRefreshMs": 75.51630002260208,
+              "packages": {
+                "LycheeGroup": 2665518,
+                "LycheeGroup_Group": 2235606,
+                "LycheeGroup_Notes": 65014,
+                "LycheeGroup_UI": 7478669
+              }
+            },
+            {
+              "bytes": 12479455,
+              "elapsedSeconds": 30.611000000004424,
+              "label": "cycle_8_find",
+              "luaHeapKiB": 399288.0068359375,
+              "observerRefreshMs": 75.87619999051094,
+              "packages": {
+                "LycheeGroup": 2679558,
+                "LycheeGroup_Group": 2236702,
+                "LycheeGroup_Notes": 65142,
+                "LycheeGroup_UI": 7498053
+              }
+            },
+            {
+              "bytes": 12525359,
+              "elapsedSeconds": 31.361000000004424,
+              "label": "cycle_8_create",
+              "luaHeapKiB": 399604.380859375,
+              "observerRefreshMs": 78.58390000462532,
+              "packages": {
+                "LycheeGroup": 2679934,
+                "LycheeGroup_Group": 2252734,
+                "LycheeGroup_Notes": 65270,
+                "LycheeGroup_UI": 7527421
+              }
+            },
+            {
+              "bytes": 12547447,
+              "elapsedSeconds": 32.111999999993714,
+              "label": "cycle_8_notes",
+              "luaHeapKiB": 399832.30859375,
+              "observerRefreshMs": 74.25730001926422,
+              "packages": {
+                "LycheeGroup": 2680118,
+                "LycheeGroup_Group": 2253702,
+                "LycheeGroup_Notes": 68062,
+                "LycheeGroup_UI": 7545565
+              }
+            },
+            {
+              "bytes": 12592351,
+              "elapsedSeconds": 32.86999999999534,
+              "label": "cycle_8_settings",
+              "luaHeapKiB": 400083.3095703125,
+              "observerRefreshMs": 83.6651999950409,
+              "packages": {
+                "LycheeGroup": 2691158,
+                "LycheeGroup_Group": 2254670,
+                "LycheeGroup_Notes": 68062,
+                "LycheeGroup_UI": 7578461
+              }
+            },
+            {
+              "bytes": 12627191,
+              "elapsedSeconds": 33.625,
+              "label": "cycle_9_find",
+              "luaHeapKiB": 400451.484375,
+              "observerRefreshMs": 82.77449998259544,
+              "packages": {
+                "LycheeGroup": 2705390,
+                "LycheeGroup_Group": 2255766,
+                "LycheeGroup_Notes": 68190,
+                "LycheeGroup_UI": 7597845
+              }
+            },
+            {
+              "bytes": 12669863,
+              "elapsedSeconds": 34.375,
+              "label": "cycle_9_create",
+              "luaHeapKiB": 400765.2275390625,
+              "observerRefreshMs": 81.05099999904633,
+              "packages": {
+                "LycheeGroup": 2705574,
+                "LycheeGroup_Group": 2271798,
+                "LycheeGroup_Notes": 68318,
+                "LycheeGroup_UI": 7624173
+              }
+            },
+            {
+              "bytes": 12691951,
+              "elapsedSeconds": 35.125,
+              "label": "cycle_9_notes",
+              "luaHeapKiB": 400994.5927734375,
+              "observerRefreshMs": 76.61989998817444,
+              "packages": {
+                "LycheeGroup": 2705758,
+                "LycheeGroup_Group": 2272766,
+                "LycheeGroup_Notes": 71110,
+                "LycheeGroup_UI": 7642317
+              }
+            },
+            {
+              "bytes": 12737047,
+              "elapsedSeconds": 35.875,
+              "label": "cycle_9_settings",
+              "luaHeapKiB": 401144.34375,
+              "observerRefreshMs": 79.59819999337196,
+              "packages": {
+                "LycheeGroup": 2716990,
+                "LycheeGroup_Group": 2273734,
+                "LycheeGroup_Notes": 71110,
+                "LycheeGroup_UI": 7675213
+              }
+            },
+            {
+              "bytes": 12773650,
+              "elapsedSeconds": 36.625,
+              "label": "cycle_10_find",
+              "luaHeapKiB": 401470.43359375,
+              "observerRefreshMs": 81.20620000362396,
+              "packages": {
+                "LycheeGroup": 2731593,
+                "LycheeGroup_Group": 2276222,
+                "LycheeGroup_Notes": 71238,
+                "LycheeGroup_UI": 7694597
+              }
+            },
+            {
+              "bytes": 12816502,
+              "elapsedSeconds": 37.375,
+              "label": "cycle_10_create",
+              "luaHeapKiB": 401765.9609375,
+              "observerRefreshMs": 81.95570001006126,
+              "packages": {
+                "LycheeGroup": 2731777,
+                "LycheeGroup_Group": 2289158,
+                "LycheeGroup_Notes": 71366,
+                "LycheeGroup_UI": 7724201
+              }
+            },
+            {
+              "bytes": 12834926,
+              "elapsedSeconds": 38.125,
+              "label": "cycle_10_notes",
+              "luaHeapKiB": 402000.1083984375,
+              "observerRefreshMs": 75.82150000333786,
+              "packages": {
+                "LycheeGroup": 2732153,
+                "LycheeGroup_Group": 2290126,
+                "LycheeGroup_Notes": 74158,
+                "LycheeGroup_UI": 7738489
+              }
+            },
+            {
+              "bytes": 12880038,
+              "elapsedSeconds": 38.87599999998929,
+              "label": "cycle_10_settings",
+              "luaHeapKiB": 402156.8759765625,
+              "observerRefreshMs": 77.19499999284744,
+              "packages": {
+                "LycheeGroup": 2743193,
+                "LycheeGroup_Group": 2291302,
+                "LycheeGroup_Notes": 74158,
+                "LycheeGroup_UI": 7771385
+              }
+            },
+            {
+              "bytes": 12914686,
+              "elapsedSeconds": 39.638999999995576,
+              "label": "cycle_11_find",
+              "luaHeapKiB": 402505.6630859375,
+              "observerRefreshMs": 72.83599999547005,
+              "packages": {
+                "LycheeGroup": 2757233,
+                "LycheeGroup_Group": 2292398,
+                "LycheeGroup_Notes": 74286,
+                "LycheeGroup_UI": 7790769
+              }
+            },
+            {
+              "bytes": 13283536,
+              "elapsedSeconds": 40.388999999995576,
+              "label": "cycle_11_create",
+              "luaHeapKiB": 403123.3681640625,
+              "observerRefreshMs": 82.8095999956131,
+              "packages": {
+                "LycheeGroup": 2757417,
+                "LycheeGroup_Group": 2637192,
+                "LycheeGroup_Notes": 74414,
+                "LycheeGroup_UI": 7814513
+              }
+            },
+            {
+              "bytes": 13301960,
+              "elapsedSeconds": 41.138999999995576,
+              "label": "cycle_11_notes",
+              "luaHeapKiB": 403402.478515625,
+              "observerRefreshMs": 72.66329997777939,
+              "packages": {
+                "LycheeGroup": 2757793,
+                "LycheeGroup_Group": 2638160,
+                "LycheeGroup_Notes": 77206,
+                "LycheeGroup_UI": 7828801
+              }
+            },
+            {
+              "bytes": 13347072,
+              "elapsedSeconds": 41.888999999995576,
+              "label": "cycle_11_settings",
+              "luaHeapKiB": 403549.28515625,
+              "observerRefreshMs": 82.22890001535416,
+              "packages": {
+                "LycheeGroup": 2768833,
+                "LycheeGroup_Group": 2639336,
+                "LycheeGroup_Notes": 77206,
+                "LycheeGroup_UI": 7861697
+              }
+            },
+            {
+              "bytes": 13381720,
+              "elapsedSeconds": 42.638999999995576,
+              "label": "cycle_12_find",
+              "luaHeapKiB": 403860.3837890625,
+              "observerRefreshMs": 80.80660000443459,
+              "packages": {
+                "LycheeGroup": 2782873,
+                "LycheeGroup_Group": 2640432,
+                "LycheeGroup_Notes": 77334,
+                "LycheeGroup_UI": 7881081
+              }
+            },
+            {
+              "bytes": 13752847,
+              "elapsedSeconds": 43.388999999995576,
+              "label": "cycle_12_create",
+              "luaHeapKiB": 404474.0703125,
+              "observerRefreshMs": 76.96190002560616,
+              "packages": {
+                "LycheeGroup": 2783249,
+                "LycheeGroup_Group": 2985223,
+                "LycheeGroup_Notes": 77462,
+                "LycheeGroup_UI": 7906913
+              }
+            },
+            {
+              "bytes": 13771079,
+              "elapsedSeconds": 44.138999999995576,
+              "label": "cycle_12_notes",
+              "luaHeapKiB": 404708.3505859375,
+              "observerRefreshMs": 75.4757000207901,
+              "packages": {
+                "LycheeGroup": 2783433,
+                "LycheeGroup_Group": 2986191,
+                "LycheeGroup_Notes": 80254,
+                "LycheeGroup_UI": 7921201
+              }
+            },
+            {
+              "bytes": 13816191,
+              "elapsedSeconds": 44.889999999984866,
+              "label": "cycle_12_settings",
+              "luaHeapKiB": 404901.1123046875,
+              "observerRefreshMs": 89.73240000009537,
+              "packages": {
+                "LycheeGroup": 2794473,
+                "LycheeGroup_Group": 2987367,
+                "LycheeGroup_Notes": 80254,
+                "LycheeGroup_UI": 7954097
+              }
+            },
+            {
+              "bytes": 13821799,
+              "elapsedSeconds": 44.889999999984866,
+              "label": "restored_natural",
+              "luaHeapKiB": 404911.0263671875,
+              "observerRefreshMs": 85.17669999599457,
+              "packages": {
+                "LycheeGroup": 2796393,
+                "LycheeGroup_Group": 2987367,
+                "LycheeGroup_Notes": 80254,
+                "LycheeGroup_UI": 7957785
+              }
+            }
+          ],
+          "scope": "native Button:Click navigation and public session font writes; no hardware dispatch, forced GC, GC-policy changes or protected business actions",
+          "search": {},
+          "sessionRestored": true,
+          "stages": 56,
+          "themeAPI": 2
+        }
+      }
+    },
+    "presence": {
+      "request": "ui-purity-r35-final-presence",
+      "operation": "LMO-aa398284b84606fb846d38a7a96687b1",
+      "runtime": "000000530002ffbe4f62d2e40f2dea7a",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "report": {
+        "logs": {},
+        "ok": true,
+        "resourcesReleased": true,
+        "result": {
+          "afterReverse": {
+            "alpha": 1,
+            "dtMs": 6.000000052154064,
+            "offsetY": -7.8125,
+            "phase": 0.6413945137949966,
+            "shown": true
+          },
+          "beforeReverse": {
+            "alpha": 1,
+            "dtMs": 6.000000052154064,
+            "offsetY": -7.8125,
+            "phase": 0.6413945137949966,
+            "shown": true
+          },
+          "build": "70448",
+          "closedAfter": true,
+          "closing": [
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": 0,
+              "phase": 0.9842035714426034,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": 0,
+              "phase": 0.9675369042614919,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 6.000000052154064,
+              "offsetY": 0,
+              "phase": 0.9532511898516012,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": 0,
+              "phase": 0.9342035698992688,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": 0,
+              "phase": 0.9175369027181572,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": 0,
+              "phase": 0.9008702355370457,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -1.5624998807907104,
+              "phase": 0.8842035683559342,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 6.000000052154064,
+              "offsetY": -1.5624998807907104,
+              "phase": 0.8699178539460435,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -1.5624998807907104,
+              "phase": 0.8508702339937111,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 6.000000052154064,
+              "offsetY": -1.5624998807907104,
+              "phase": 0.8365845195838204,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -1.5624998807907104,
+              "phase": 0.8199178524027089,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -3.124999761581421,
+              "phase": 0.8032511852215973,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -3.124999761581421,
+              "phase": 0.7865845180404858,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -3.124999761581421,
+              "phase": 0.7699178508593743,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -4.6875,
+              "phase": 0.7508702309070419,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 6.000000052154064,
+              "offsetY": -4.6875,
+              "phase": 0.7365845164971512,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -4.6875,
+              "phase": 0.7199178493160396,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -6.249999523162842,
+              "phase": 0.7032511821349281,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -6.249999523162842,
+              "phase": 0.6865845149538166,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -6.249999523162842,
+              "phase": 0.669917847772705,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -7.8125,
+              "phase": 0.6532511805915935,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -7.8125,
+              "phase": 0.636584513410482,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -9.375,
+              "phase": 0.6151559406869287,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 5.000000353902578,
+              "offsetY": -9.375,
+              "phase": 0.6032511779395416,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 6.000000052154064,
+              "offsetY": -10.9375,
+              "phase": 0.588965463529651,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -10.9375,
+              "phase": 0.5722987963485394,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -12.499999046325684,
+              "phase": 0.5556321291674279,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -14.062499046325684,
+              "phase": 0.5389654619863163,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -14.062499046325684,
+              "phase": 0.5222987948052048,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -15.625,
+              "phase": 0.5056321276240933,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -17.1875,
+              "phase": 0.4889654604429817,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -18.75,
+              "phase": 0.46991784049064933,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 6.000000052154064,
+              "offsetY": -18.75,
+              "phase": 0.4556321260807587,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -20.3125,
+              "phase": 0.43896545889964717,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -21.875,
+              "phase": 0.4222987917185356,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -21.875,
+              "phase": 0.4056321245374241,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -23.4375,
+              "phase": 0.3865845045850917,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 6.000000052154064,
+              "offsetY": -24.999998092651367,
+              "phase": 0.37229879017520107,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 14.000000432133675,
+              "offsetY": -28.124998092651367,
+              "phase": 0.33896545581297804,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -29.687501907348633,
+              "phase": 0.3151559303182039,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 5.000000353902578,
+              "offsetY": -31.25,
+              "phase": 0.30325116757081677,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 4.000000189989805,
+              "offsetY": -31.25,
+              "phase": 0.2937273575946506,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 4.000000189989805,
+              "offsetY": -32.8125,
+              "phase": 0.2842035476184844,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 5.000000353902578,
+              "offsetY": -34.375,
+              "phase": 0.27229878487109727,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 6.000000052154064,
+              "offsetY": -35.9375,
+              "phase": 0.25801307046120664,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -37.5,
+              "phase": 0.24134640328009513,
+              "shown": true
+            },
+            {
+              "alpha": 0.9843137860298157,
+              "dtMs": 9.000000543892384,
+              "offsetY": -39.062496185302734,
+              "phase": 0.21991783055654185,
+              "shown": true
+            },
+            {
+              "alpha": 0.9490196704864502,
+              "dtMs": 6.000000052154064,
+              "offsetY": -40.625,
+              "phase": 0.20563211614665122,
+              "shown": true
+            },
+            {
+              "alpha": 0.8980392813682556,
+              "dtMs": 6.000000052154064,
+              "offsetY": -42.1875,
+              "phase": 0.1913464017367606,
+              "shown": true
+            },
+            {
+              "alpha": 0.8235294818878174,
+              "dtMs": 7.000000216066837,
+              "offsetY": -43.75,
+              "phase": 0.17467973455564909,
+              "shown": true
+            },
+            {
+              "alpha": 0.7215686440467834,
+              "dtMs": 8.00000037997961,
+              "offsetY": -45.3125,
+              "phase": 0.1556321146033167,
+              "shown": true
+            },
+            {
+              "alpha": 0.5960784554481506,
+              "dtMs": 9.000000543892384,
+              "offsetY": -48.4375,
+              "phase": 0.1342035418797634,
+              "shown": true
+            },
+            {
+              "alpha": 0.4745098352432251,
+              "dtMs": 8.00000037997961,
+              "offsetY": -49.999996185302734,
+              "phase": 0.115155921927431,
+              "shown": true
+            },
+            {
+              "alpha": 0.35686275362968445,
+              "dtMs": 8.00000037997961,
+              "offsetY": -51.5625,
+              "phase": 0.09610830197509859,
+              "shown": true
+            },
+            {
+              "alpha": 0.2352941334247589,
+              "dtMs": 9.000000543892384,
+              "offsetY": -54.6875,
+              "phase": 0.0746797292515453,
+              "shown": true
+            },
+            {
+              "alpha": 0.16078431904315948,
+              "dtMs": 6.000000052154064,
+              "offsetY": -56.249996185302734,
+              "phase": 0.06039401484165467,
+              "shown": true
+            },
+            {
+              "alpha": 0.09803922474384308,
+              "dtMs": 6.000000052154064,
+              "offsetY": -57.81249237060547,
+              "phase": 0.046108300431764046,
+              "shown": true
+            },
+            {
+              "alpha": 0.062745101749897,
+              "dtMs": 4.000000189989805,
+              "offsetY": -59.375003814697266,
+              "phase": 0.03658449045559784,
+              "shown": true
+            },
+            {
+              "alpha": 0.0313725508749485,
+              "dtMs": 5.000000353902578,
+              "offsetY": -60.9375,
+              "phase": 0.02467972770821075,
+              "shown": true
+            },
+            {
+              "alpha": 0.003921568859368563,
+              "dtMs": 6.000000052154064,
+              "offsetY": -62.5,
+              "phase": 0.01039401329832012,
+              "shown": true
+            },
+            {
+              "alpha": 0,
+              "dtMs": 9.000000543892384,
+              "offsetY": -64.0625,
+              "phase": 0,
+              "shown": false
+            }
+          ],
+          "finalClosed": true,
+          "finalClosedJobs": 0,
+          "gc": "natural",
+          "jobsAfter": 0,
+          "library": "1.3.0",
+          "logoAfterClose": {
+            "height": 42.96955490112305,
+            "width": 45.12502670288086,
+            "y": 0.7203129529953003
+          },
+          "logoAfterHidden": {
+            "height": 44.000099182128906,
+            "width": 43.99995803833008,
+            "y": 0
+          },
+          "logoAfterReverse": {
+            "height": 44.41884231567383,
+            "width": 43.70353698730469,
+            "y": 1.6574057340621948
+          },
+          "logoBeforeClose": {
+            "height": 42.96955490112305,
+            "width": 45.12502670288086,
+            "y": 0.7203129529953003
+          },
+          "logoBeforeReverse": {
+            "height": 44.41884231567383,
+            "width": 43.70353698730469,
+            "y": 1.6574057340621948
+          },
+          "normalClosedJobs": 0,
+          "opening": [
+            {
+              "alpha": 0.019607843831181526,
+              "dtMs": 15.000000596046448,
+              "offsetY": -60.9375,
+              "phase": 0.019325238064907137,
+              "shown": true
+            },
+            {
+              "alpha": 0.07058823853731155,
+              "dtMs": 8.00000037997961,
+              "offsetY": -59.375003814697266,
+              "phase": 0.03837285801723954,
+              "shown": true
+            },
+            {
+              "alpha": 0.14509804546833038,
+              "dtMs": 8.00000037997961,
+              "offsetY": -56.249996185302734,
+              "phase": 0.05742047796957195,
+              "shown": true
+            },
+            {
+              "alpha": 0.24313727021217346,
+              "dtMs": 8.00000037997961,
+              "offsetY": -54.6875,
+              "phase": 0.07646809792190436,
+              "shown": true
+            },
+            {
+              "alpha": 0.32549020648002625,
+              "dtMs": 6.000000052154064,
+              "offsetY": -53.125,
+              "phase": 0.09075381233179498,
+              "shown": true
+            },
+            {
+              "alpha": 0.4117647409439087,
+              "dtMs": 6.000000052154064,
+              "offsetY": -51.5625,
+              "phase": 0.10503952674168561,
+              "shown": true
+            },
+            {
+              "alpha": 0.501960813999176,
+              "dtMs": 6.000000052154064,
+              "offsetY": -49.999996185302734,
+              "phase": 0.11932524115157624,
+              "shown": true
+            },
+            {
+              "alpha": 0.5921568870544434,
+              "dtMs": 6.000000052154064,
+              "offsetY": -48.4375,
+              "phase": 0.13361095556146688,
+              "shown": true
+            },
+            {
+              "alpha": 0.6509804129600525,
+              "dtMs": 4.000000189989805,
+              "offsetY": -46.875,
+              "phase": 0.14313476553763307,
+              "shown": true
+            },
+            {
+              "alpha": 0.7215686440467834,
+              "dtMs": 5.000000353902578,
+              "offsetY": -45.3125,
+              "phase": 0.15503952828502016,
+              "shown": true
+            },
+            {
+              "alpha": 0.7843137979507446,
+              "dtMs": 5.000000353902578,
+              "offsetY": -43.75,
+              "phase": 0.16694429103240724,
+              "shown": true
+            },
+            {
+              "alpha": 0.8431373238563538,
+              "dtMs": 5.000000353902578,
+              "offsetY": -43.75,
+              "phase": 0.17884905377979432,
+              "shown": true
+            },
+            {
+              "alpha": 0.8980392813682556,
+              "dtMs": 5.000000353902578,
+              "offsetY": -42.1875,
+              "phase": 0.1907538165271814,
+              "shown": true
+            },
+            {
+              "alpha": 0.9960784912109375,
+              "dtMs": 17.000000923871994,
+              "offsetY": -37.5,
+              "phase": 0.2312300092030671,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -35.9375,
+              "phase": 0.2526585819266204,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 6.000000052154064,
+              "offsetY": -34.375,
+              "phase": 0.266944296336511,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 5.000000353902578,
+              "offsetY": -32.8125,
+              "phase": 0.2788490590838981,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 5.000000353902578,
+              "offsetY": -32.8125,
+              "phase": 0.29075382183128523,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 5.000000353902578,
+              "offsetY": -31.25,
+              "phase": 0.30265858457867234,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 5.000000353902578,
+              "offsetY": -29.687501907348633,
+              "phase": 0.31456334732605945,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 5.000000353902578,
+              "offsetY": -29.687501907348633,
+              "phase": 0.32646811007344656,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 6.000000052154064,
+              "offsetY": -28.124998092651367,
+              "phase": 0.3407538244833372,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 4.000000189989805,
+              "offsetY": -26.5625,
+              "phase": 0.3502776344595034,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -24.999998092651367,
+              "phase": 0.3693252544118358,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 6.000000052154064,
+              "offsetY": -24.999998092651367,
+              "phase": 0.3836109688217264,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -23.4375,
+              "phase": 0.40027763600283794,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -21.875,
+              "phase": 0.4169443031839495,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -20.3125,
+              "phase": 0.4359919231362819,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 6.000000052154064,
+              "offsetY": -18.75,
+              "phase": 0.4502776375461725,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -18.75,
+              "phase": 0.46694430472728404,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -17.1875,
+              "phase": 0.4836109719083956,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -15.625,
+              "phase": 0.502658591860728,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 6.000000052154064,
+              "offsetY": -15.625,
+              "phase": 0.5169443062706187,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -14.062499046325684,
+              "phase": 0.5336109734517303,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -12.499999046325684,
+              "phase": 0.5502776406328418,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -12.499999046325684,
+              "phase": 0.5693252605851742,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 6.000000052154064,
+              "offsetY": -10.9375,
+              "phase": 0.5836109749950649,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -9.375,
+              "phase": 0.6026585949473973,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 6.000000052154064,
+              "offsetY": -9.375,
+              "phase": 0.616944309357288,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -7.8125,
+              "phase": 0.6359919293096203,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 6.000000052154064,
+              "offsetY": -7.8125,
+              "phase": 0.650277643719511,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -7.8125,
+              "phase": 0.6669443109006226,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -6.249999523162842,
+              "phase": 0.6836109780817341,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -6.249999523162842,
+              "phase": 0.7026585980340665,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 5.000000353902578,
+              "offsetY": -4.6875,
+              "phase": 0.7145633607814535,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -4.6875,
+              "phase": 0.7312300279625651,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -4.6875,
+              "phase": 0.7502776479148975,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 5.000000353902578,
+              "offsetY": -3.124999761581421,
+              "phase": 0.7621824106622845,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -3.124999761581421,
+              "phase": 0.7812300306146169,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -3.124999761581421,
+              "phase": 0.7978966977957285,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -1.5624998807907104,
+              "phase": 0.8193252705192817,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 5.000000353902578,
+              "offsetY": -1.5624998807907104,
+              "phase": 0.8312300332666688,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 9.000000543892384,
+              "offsetY": -1.5624998807907104,
+              "phase": 0.852658605990222,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 5.000000353902578,
+              "offsetY": -1.5624998807907104,
+              "phase": 0.8645633687376091,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -1.5624998807907104,
+              "phase": 0.8812300359187206,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": 0,
+              "phase": 0.900277655871053,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 6.000000052154064,
+              "offsetY": 0,
+              "phase": 0.9145633702809437,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": 0,
+              "phase": 0.9312300374620552,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 6.000000052154064,
+              "offsetY": 0,
+              "phase": 0.9455157518719459,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": 0,
+              "phase": 0.9645633718242783,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 6.000000052154064,
+              "offsetY": 0,
+              "phase": 0.978849086234169,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": 0,
+              "phase": 0.9978967061865014,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 6.000000052154064,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 6.000000052154064,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 6.000000052154064,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 6.000000052154064,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": 0,
+              "phase": 1,
+              "shown": true
+            }
+          ],
+          "quickClosing": [
+            {
+              "alpha": 1,
+              "dtMs": 6.000000052154064,
+              "offsetY": -17.1875,
+              "phase": 0.4861983492793072,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 8.00000037997961,
+              "offsetY": -18.75,
+              "phase": 0.4671507293269748,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -18.75,
+              "phase": 0.4504840621458633,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -20.3125,
+              "phase": 0.43381739496475175,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 6.000000052154064,
+              "offsetY": -21.875,
+              "phase": 0.4195316805548611,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -23.4375,
+              "phase": 0.4028650133737496,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 10.000000707805157,
+              "offsetY": -24.999998092651367,
+              "phase": 0.3790554878789754,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -26.5625,
+              "phase": 0.3623888206978639,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 5.000000353902578,
+              "offsetY": -26.5625,
+              "phase": 0.35048405795047677,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 6.000000052154064,
+              "offsetY": -28.124998092651367,
+              "phase": 0.33619834354058614,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -29.687501907348633,
+              "phase": 0.3195316763594746,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -31.25,
+              "phase": 0.30286500917836306,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -32.8125,
+              "phase": 0.2861983419972515,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -34.375,
+              "phase": 0.26953167481614,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 7.000000216066837,
+              "offsetY": -35.9375,
+              "phase": 0.25286500763502845,
+              "shown": true
+            },
+            {
+              "alpha": 1,
+              "dtMs": 6.000000052154064,
+              "offsetY": -37.5,
+              "phase": 0.23857929322513782,
+              "shown": true
+            },
+            {
+              "alpha": 0.988235354423523,
+              "dtMs": 7.000000216066837,
+              "offsetY": -39.062496185302734,
+              "phase": 0.2219126260440263,
+              "shown": true
+            },
+            {
+              "alpha": 0.9490196704864502,
+              "dtMs": 7.000000216066837,
+              "offsetY": -40.625,
+              "phase": 0.2052459588629148,
+              "shown": true
+            },
+            {
+              "alpha": 0.8901961445808411,
+              "dtMs": 7.000000216066837,
+              "offsetY": -42.1875,
+              "phase": 0.1885792916818033,
+              "shown": true
+            },
+            {
+              "alpha": 0.8000000715255737,
+              "dtMs": 8.00000037997961,
+              "offsetY": -43.75,
+              "phase": 0.1695316717294709,
+              "shown": true
+            },
+            {
+              "alpha": 0.7215686440467834,
+              "dtMs": 6.000000052154064,
+              "offsetY": -45.3125,
+              "phase": 0.15524595731958027,
+              "shown": true
+            },
+            {
+              "alpha": 0.6235294342041016,
+              "dtMs": 7.000000216066837,
+              "offsetY": -46.875,
+              "phase": 0.13857929013846876,
+              "shown": true
+            },
+            {
+              "alpha": 0.501960813999176,
+              "dtMs": 8.00000037997961,
+              "offsetY": -49.999996185302734,
+              "phase": 0.11953167018613635,
+              "shown": true
+            },
+            {
+              "alpha": 0.40000003576278687,
+              "dtMs": 7.000000216066837,
+              "offsetY": -51.5625,
+              "phase": 0.10286500300502482,
+              "shown": true
+            },
+            {
+              "alpha": 0.3137255012989044,
+              "dtMs": 6.000000052154064,
+              "offsetY": -53.125,
+              "phase": 0.0885792885951342,
+              "shown": true
+            },
+            {
+              "alpha": 0.2196078598499298,
+              "dtMs": 7.000000216066837,
+              "offsetY": -54.6875,
+              "phase": 0.07191262141402269,
+              "shown": true
+            },
+            {
+              "alpha": 0.13725490868091583,
+              "dtMs": 7.000000216066837,
+              "offsetY": -57.81249237060547,
+              "phase": 0.05524595423291117,
+              "shown": true
+            },
+            {
+              "alpha": 0.07058823853731155,
+              "dtMs": 7.000000216066837,
+              "offsetY": -59.375003814697266,
+              "phase": 0.03857928705179965,
+              "shown": true
+            },
+            {
+              "alpha": 0.02352941408753395,
+              "dtMs": 7.000000216066837,
+              "offsetY": -60.9375,
+              "phase": 0.021912619870688134,
+              "shown": true
+            },
+            {
+              "alpha": 0.003921568859368563,
+              "dtMs": 6.000000052154064,
+              "offsetY": -62.5,
+              "phase": 0.007626905460797504,
+              "shown": true
+            },
+            {
+              "alpha": 0,
+              "dtMs": 8.00000037997961,
+              "offsetY": -64.0625,
+              "phase": 0,
+              "shown": false
+            }
+          ],
+          "reopened": {
+            "alpha": 1,
+            "dtMs": 6.000000052154064,
+            "offsetY": 0,
+            "phase": 1,
+            "shown": true
+          },
+          "requestedFPSLimit": 60,
+          "warmedHere": false
+        }
+      }
+    },
+    "brand": {
+      "request": "ui-purity-r35-final-brand",
+      "operation": "LMO-41eba6a94e99de5f633b5a29722e0180",
+      "runtime": "000000530002ffbe4f62d2e40f2dea7a",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "report": {
+        "logs": {},
+        "ok": true,
+        "resourcesReleased": true,
+        "result": {
+          "attentionRestored": true,
+          "build": "70448",
+          "finalApplicants": 4,
+          "floatingAfterStopAll": {
+            "anchorCorrect": true,
+            "height": 33.99999237060547,
+            "playing": false,
+            "point": "CENTER",
+            "relativePoint": "CENTER",
+            "size": 33.999969482421875,
+            "width": 33.99995422363281,
+            "x": 0,
+            "y": 0
+          },
+          "floatingAttentionIntervened": false,
+          "floatingClosedJobs": 0,
+          "floatingCompleted": {
+            "anchorCorrect": true,
+            "height": 33.99999237060547,
+            "playing": false,
+            "point": "CENTER",
+            "relativePoint": "CENTER",
+            "size": 33.999969482421875,
+            "width": 33.99995422363281,
+            "x": 0,
+            "y": 0
+          },
+          "floatingDuring": {
+            "anchorCorrect": true,
+            "height": 31.632850646972656,
+            "playing": true,
+            "point": "CENTER",
+            "relativePoint": "CENTER",
+            "size": 33.999969482421875,
+            "width": 36.374813079833984,
+            "x": 0,
+            "y": -0.6379625201225281
+          },
+          "floatingPanelDriver": false,
+          "floatingPanelShown": true,
+          "floatingPool": {
+            "batches": 5,
+            "rows": 11
+          },
+          "floatingSamples": 57,
+          "floatingScaleMax": 1.0749614490836192,
+          "floatingScaleMin": 0.960004209634408,
+          "floatingStopped": {
+            "anchorCorrect": true,
+            "height": 33.99999237060547,
+            "playing": false,
+            "point": "CENTER",
+            "relativePoint": "CENTER",
+            "size": 33.999969482421875,
+            "width": 33.99995422363281,
+            "x": 0,
+            "y": 0
+          },
+          "floatingVisibleRows": 8,
+          "initialApplicants": 4,
+          "listingUnchanged": true,
+          "mainClosedJobs": 0,
+          "mainCompleted": {
+            "anchorCorrect": true,
+            "height": 44.00009536743164,
+            "playing": false,
+            "point": "CENTER",
+            "relativePoint": "CENTER",
+            "size": 44,
+            "width": 43.99995040893555,
+            "x": 0,
+            "y": 0
+          },
+          "mainDuring": {
+            "anchorCorrect": true,
+            "height": 40.938392639160156,
+            "playing": true,
+            "point": "CENTER",
+            "relativePoint": "CENTER",
+            "size": 44,
+            "width": 47.07143020629883,
+            "x": 0,
+            "y": -0.8241128921508789
+          },
+          "mainSamples": 57,
+          "mainScaleMax": 1.069805231961337,
+          "mainScaleMin": 0.9600093147971414,
+          "placeholders": {
+            "expected": "不限",
+            "itemLevel": "不限",
+            "score": "不限"
+          },
+          "resourcesReleased": true,
+          "revision": 35,
+          "sharedBrandRemoved": true,
+          "stage": "complete",
+          "stopChecked": true
+        }
+      }
+    },
+    "finalState": {
+      "request": "ui-purity-r35-final-state",
+      "operation": "LMO-b8977fa64069072d229c0a1ef1291c2d",
+      "runtime": "000000530002ffbe4f62d2e40f2dea7a",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "report": {
+        "logs": {},
+        "ok": true,
+        "resourcesReleased": true,
+        "result": {
+          "build": "70448",
+          "clock": 1792769196,
+          "floating": {
+            "attention": true,
+            "attentionTimer": true,
+            "brandPlaying": false,
+            "countdown": false,
+            "hideTimer": false,
+            "panelDriver": false,
+            "panelShown": false
+          },
+          "group": {
+            "applicants": 2,
+            "applications": 0,
+            "listingActivity": 504,
+            "search": "idle"
+          },
+          "hasProductBrandMotion": true,
+          "hasSharedBrand": false,
+          "inCombat": false,
+          "main": {
+            "hiding": false,
+            "jobs": 0,
+            "modal": false,
+            "nativeSearchLease": false,
+            "preview": false,
+            "shown": false
+          },
+          "revision": 35,
+          "settings": {
+            "fontScale": 100,
+            "maxFPS": "120",
+            "maxFPSBk": "30",
+            "reduceMotion": false
+          }
+        }
+      }
+    }
+  },
+  "bugs": {
+    "ok": true,
+    "complete": true,
+    "cleanup": "complete",
+    "reportState": "verified",
+    "reportOK": true,
+    "runtime": "000000530002ffbe4f62d2e40f2dea7a",
+    "providerSession": 413,
+    "capturedAt": 1792769217,
+    "availableCount": 42,
+    "returnedCount": 42,
+    "currentErrors": [],
+    "newSinceLiveStarted": [],
+    "historicalIncompleteReasons": [
+      "error[17].stack",
+      "error[17].locals"
+    ],
+    "continuation": {
+      "kind": "completed",
+      "session": "CON-127843638ee7ff2135c669b0e5fb2ca6",
+      "requestId": "ui-purity-r35-final-bugs",
+      "progressVersion": 370
+    },
+    "error": null
+  }
+}

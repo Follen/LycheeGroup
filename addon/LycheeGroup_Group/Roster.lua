@@ -165,14 +165,16 @@ end
 
 function R:Get()
  if not self.dirty then
-  local version=G.Relations:GetVersion()
-  if self.relationsVersion~=version then
-   for _,member in ipairs(self.members) do G.Relations:Apply(member) end
-   self.relationsVersion=version
+  if self.relationsVersion~=nil then
+   local version=G.Relations:GetVersion()
+   if self.relationsVersion~=version then
+    for _,member in ipairs(self.members) do G.Relations:Apply(member) end
+    self.relationsVersion=version
+   end
   end
   return self.members
  end
- local index,seen=0,{}
+ local index,seen,needsRelations=0,{},false
  EachUnit(function(unit,raidIndex)
   local key,name,realm=A:UnitIdentity(unit)
   if not key then return end
@@ -188,6 +190,7 @@ function R:Get()
   member.assignedRole=G.Public(UnitGroupRolesAssigned(unit))
   member.isLeader=G.Public(UnitIsGroupLeader(unit))==true
   member.isSelf=G.Public(UnitIsUnit(unit,"player"))==true
+  if not member.isSelf then needsRelations=true end
   if member.isSelf then
    member.itemLevel=G.Public(select(2,GetAverageItemLevel()))
   else
@@ -203,7 +206,9 @@ function R:Get()
  for i=#self.members,index+1,-1 do self.members[i]=nil end
  Prune(seen)
  self.dirty=false
- self.relationsVersion=G.Relations:GetVersion()
+ -- Self has no relationship badges. Avoid building a complete friend/guild
+ -- index for an empty or solo roster; membership changes rebuild this decision.
+ self.relationsVersion=needsRelations and G.Relations:GetVersion() or nil
  self:Pump()
  return self.members
 end

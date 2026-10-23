@@ -64,14 +64,14 @@ Run the offline tests from the repository root with Lua 5.1:
 lua tests/runner.lua
 ```
 
-Select specific modules by adding their names, for example `lua tests/runner.lua core notes`. Unknown module names produce an error and a nonzero exit code.
+Select specific modules by adding their names, for example `lua tests/runner.lua core notes`. Unknown module names produce an error and a nonzero exit code. See the [validation guide](tests/theme_reload.md) for theme reload, layout, pinned-main comparison, and memory checks.
 
 For the local widget-tree preview, run `lua tests/ui_preview.lua`, then open [`tests/ui-preview.html`](tests/ui-preview.html). The generated `tests/preview-data.js` stays local and is not committed. This preview uses sample data and does not verify in-game behavior.
 
 [`tools/Build-Addon.ps1`](tools/Build-Addon.ps1) builds the addon archive. It syncs the bundled library from a sibling `LycheeUI` source directory by default; use `-LibraryPath` to select another location.
 
-Project documents (in Chinese): [Product](Product.md) · [Design](Desgin.md) · [Architecture](Architecture.md) · [Performance](perfermance.md) · [Third-party configuration API](API.md) · [Documentation and changelog rules](Agents.md). The product document describes the current implementation and in-game validation coverage.
+Project documents (in Chinese): [Product](Product.md) · [Design](Desgin.md) · [Architecture](Architecture.md) · [Performance](perfermance.md) · [Third-party configuration API](API.md) · [Development rules](Development.md) · [Documentation and changelog rules](Agents.md). The product document describes the current implementation and in-game validation coverage.
 
-The current version is 1.2.3; development changes are listed in the [unreleased changelog](CHANGELOG.md#未发布). The working branch bundles LycheeUI 1.3.0 (revision 32), with shared theme tokens, component style bindings, and immediate updates. The new [configuration API v1](API.md) supports session, account, and character storage; preset upgrades preserve user overrides. The sync tool maintains the source and embedded copies, and [.lock](../LycheeUI/.lock) records the library state. See the [integration guide](../LycheeUI/README.md), [API](../LycheeUI/API.md), and [component design specification](../LycheeUI/DESIGN.md).
+The current release is 1.2.3; development changes are in the [unreleased changelog](CHANGELOG.md#未发布). The unreleased implementation uses [Theme API v2](API.md): account or character themes apply at login or reload, while font size, scale, window size, and table preferences remain live. Business behavior and the default UI are compared against the pinned main commit. See [Development.md](Development.md) for development rules and [theme reload validation](tests/theme_reload.md) for verification methods. Edit LycheeUI in its source directory and use the sync tool to update the embedded copy; [.lock](../LycheeUI/.lock) records its freeze status. Shared-library contracts are in its [README](../LycheeUI/README.md), [API](../LycheeUI/API.md), and [design specification](../LycheeUI/DESIGN.md).
 
 See the [library notes](addon/LycheeGroup_Group/Libs/README.md) for bundled third-party sources and licenses.

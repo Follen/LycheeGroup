@@ -23,11 +23,12 @@ local report={schema="lycheegroup.memory-scenarios.v1",packages=packages,units="
   input="page/list/tooltip controllers; synthetic codec records are never merged into saved notes"},peakBytes=0}
 for i=1,300 do report.samples[i]={addonKB={0,0,0,0},loaded={false,false,false,false}} end
 local used,ticker,eventFrame,cleaned=0
-local oldPage,oldMain=ui.page,ui.mainPage
+local oldPage,oldReturn=ui.page,ui.settingsReturnPage
 local oldShown,originalFrames={},{}
 for key,p in pairs(ui.pages) do oldShown[key]=p.frame and p.frame:IsShown() or false;originalFrames[key]=p.frame end
 local find,create,notes=ui.pages.find,ui.pages.create,ui.pages.notes
 local originalFindPool,originalBatchPool=#find.results.rows,#create.batchPool
+report.fixture.initialFindPool,report.fixture.initialBatchPool=originalFindPool,originalBatchPool
 local function NoteCount() local n=0;for _ in pairs(A.Notes.db.records) do n=n+1 end;return n end
 report.notesAtStart=NoteCount()
 local provider,records,encoded,decoded
@@ -38,7 +39,8 @@ local function Cleanup()
  ui:Hide(true);ui.Motion:StopAll()
  provider,records,encoded,decoded=nil,nil,nil,nil
  for key,p in pairs(ui.pages) do if p.frame then p.frame:SetShown(oldShown[key]==true) end end
- ui.page,ui.mainPage=oldPage,oldMain
+ ui.page,ui.settingsReturnPage=oldPage,oldReturn
+ ui:UpdateNav();ui.Motion:FinishRect(ui.underline)
 end
 assert(probe:Async(110));assert(probe:OnCleanup(Cleanup))
 assert(probe:Guard(Idle,{"PLAYER_REGEN_DISABLED","CHALLENGE_MODE_START","LFG_LIST_ACTIVE_ENTRY_UPDATE","LFG_LIST_APPLICATION_STATUS_UPDATED"},"scene_or_business_changed"))
@@ -85,12 +87,15 @@ local function BeginRaidPreview()
  report.fixture.raidGenerationHeapDeltaKB=collectgarbage("count")-heap
  provider.category="seasonRaid";provider.activity=raidActivity;provider.Search.categoryKey="seasonRaid"
  provider.prefs.find={category="seasonRaid"};find.loaded=nil;find.restoredInitial=nil
- find:Enter();find:CommitChoice();find:DoSearch()
+ find:Enter();find:SelectCategory("seasonRaid");find:CommitChoice();find:DoSearch()
  report.fixture.visiblePreviewResults=#provider:GetResults();assert(report.fixture.visiblePreviewResults==100,"preview_results_filtered")
  report.fixture.boundPreviewResults=#find.results.ids
  assert(report.fixture.boundPreviewResults==100,"preview_results_not_bound")
  report.checks.raidResultsVisible=not find.emptyPanel:IsShown() and find.results.rows[1].key~=nil
  assert(report.checks.raidResultsVisible,"preview_results_not_visible")
+ -- Empty-state warmup legitimately has a smaller pool. Establish reuse only
+ -- after the first full list has its final geometry; initial allocations remain sampled.
+ originalFindPool=#find.results.rows;report.fixture.findPoolAtFirstBind=originalFindPool
  report.fixture.raidFirstKey=find.results.rows[1].key
  report.fixture.raidMaximumObservedOffset=0;report.checks.raidFirstRowChanged=false
  phase="preview_100_groups_40_members";phaseAt=GetTime();step=0;Sample("preview_ready")
@@ -107,7 +112,8 @@ local function BeginApplicants()
   provider.applicants[i]=app;provider.applicantIDs[i]=i
  end
  report.fixture.applicantGenerationHeapDeltaKB=collectgarbage("count")-heap
- create:RefreshApplicants();phase="preview_50_applicant_batches";phaseAt=GetTime();step=0;Sample("applicants_ready")
+ create:RefreshApplicants();originalBatchPool=#create.batchPool;report.fixture.batchPoolAtFirstBind=originalBatchPool
+ phase="preview_50_applicant_batches";phaseAt=GetTime();step=0;Sample("applicants_ready")
 end
 local function BeginCodec()
  ui:StopPreview(false);provider=nil;phase="notes_codec_1000";phaseAt=GetTime();step=0

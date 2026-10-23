@@ -17,6 +17,12 @@ if (-not $LibraryPath) {
 }
 $libraryRoot = (Resolve-Path -LiteralPath $LibraryPath).Path
 $embeddedRoot = Join-Path $productRoot 'addon\LycheeGroup\Libs\LycheeUI'
+$previousEmbeds = Join-Path $embeddedRoot 'embeds.xml'
+$previousRuntimeFiles = @()
+if (Test-Path -LiteralPath $previousEmbeds -PathType Leaf) {
+    $previousManifest = [xml](Get-Content -LiteralPath $previousEmbeds -Raw)
+    $previousRuntimeFiles = @($previousManifest.SelectNodes('//*[local-name()="Script"]') | ForEach-Object { $_.file })
+}
 $embeds = [xml](Get-Content -LiteralPath (Join-Path $libraryRoot 'embeds.xml') -Raw)
 $runtimeFiles = @('embeds.xml') + @($embeds.SelectNodes('//*[local-name()="Script"]') | ForEach-Object { $_.file })
 
@@ -51,6 +57,24 @@ foreach ($file in $runtimeFiles) {
     Copy-Item -LiteralPath (Join-Path $libraryRoot $file) -Destination (Join-Path $embeddedRoot $file) -Force
 }
 Copy-Item -LiteralPath (Join-Path $libraryRoot 'Media') -Destination $embeddedRoot -Recurse -Force
+# Retired runtime files and moved product assets must not remain in the embedded library.
+$retiredFiles = @($previousRuntimeFiles | Where-Object { $_ -notin $runtimeFiles })
+$embeddedMedia = Join-Path $embeddedRoot 'Media'
+foreach ($file in Get-ChildItem -LiteralPath $embeddedMedia -File -Recurse) {
+    $relativePath = $file.FullName.Substring($embeddedRoot.Length + 1)
+    if (-not (Test-Path -LiteralPath (Join-Path $libraryRoot $relativePath) -PathType Leaf)) {
+        $retiredFiles += $relativePath
+    }
+}
+foreach ($relativePath in $retiredFiles) {
+    $retiredPath = [IO.Path]::GetFullPath((Join-Path $embeddedRoot $relativePath))
+    if (-not $retiredPath.StartsWith($embeddedRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Retired runtime path is outside the embedded library: $relativePath"
+    }
+    if (Test-Path -LiteralPath $retiredPath -PathType Leaf) {
+        Remove-Item -LiteralPath $retiredPath
+    }
+}
 if (Test-Path -LiteralPath $lockPath -PathType Leaf) {
     Copy-Item -LiteralPath $lockPath -Destination (Join-Path $embeddedRoot '.lock') -Force
 }

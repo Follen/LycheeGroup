@@ -1,0 +1,259 @@
+{
+  "date": "2026-10-23",
+  "productVersion": "1.2.3-unreleased",
+  "libraryRevision": 34,
+  "build": "12.1.5.70448",
+  "locale": "zhCN",
+  "functionalChecks": "passed within recorded scope",
+  "memoryBudgetBytes": 20000000,
+  "memoryBudgetStatus": "failed",
+  "sampledNaturalMaximumBytes": 44589442,
+  "afterDiagnosticGcBytes": 25125809,
+  "scope": "Real Find results, four page controllers, native input leases, font 100/130, callback hover and repeated layout. No apply, invite, publish or hardware mouse dispatch.",
+  "timingScope": "Synchronous callback/layout time; excludes asynchronous animation and GPU work. Default animations, scriptProfile=0 and natural GC; one separate diagnostic full collection.",
+  "operations": {
+    "realUI": "LMO-39332d717d636c472b0a8470bc26db8c",
+    "visualMemory": "LMO-7457413b3b53f2de2bc9d2250c41e2a3",
+    "finalTooltip": "LMO-0dc380cd6f57d9075e2514377c67a014",
+    "bugsBefore": "LMO-d0cd2ec05468917eecaa8940555fb3ac",
+    "bugsAfter": "LMO-b4911fef424df4bbb95972b6881f635a"
+  },
+  "realUI": {
+    "logs": {},
+    "ok": true,
+    "resourcesReleased": true,
+    "result": {
+      "accountConfigurationUnchanged": true,
+      "build": "70448",
+      "characterConfigurationUnchanged": true,
+      "closeSyncMs": 0.1064000129699707,
+      "closedMotionJobs": 0,
+      "closedReleasedInputs": true,
+      "gc": "natural",
+      "label100": {
+        "textWidth": 57.500003814697266,
+        "width": 60.0000114440918
+      },
+      "label130": {
+        "textWidth": 76.66667175292969,
+        "width": 79.00006103515625
+      },
+      "memoryAfter": {
+        "KiB": 41878.4375,
+        "observerRefreshMs": 82.31369999051094,
+        "packages": {
+          "LycheeGroup": 13305.0087890625,
+          "LycheeGroup_Group": 4067.1240234375,
+          "LycheeGroup_Notes": 124.900390625,
+          "LycheeGroup_UI": 24381.404296875
+        }
+      },
+      "memoryBefore": {
+        "KiB": 39133.6455078125,
+        "observerRefreshMs": 82.16539999842644,
+        "packages": {
+          "LycheeGroup": 13252.2861328125,
+          "LycheeGroup_Group": 3479.5166015625,
+          "LycheeGroup_Notes": 124.900390625,
+          "LycheeGroup_UI": 22276.9423828125
+        }
+      },
+      "nativeCreation": {
+        "descriptionWidth": 954.0000610351562,
+        "titleWidth": 970.0001831054688
+      },
+      "nativeSearch": {
+        "owned": true,
+        "sameObject": true,
+        "width": 757.1873779296875
+      },
+      "objectsAfter": {
+        "frames": 704,
+        "regions": 6566
+      },
+      "objectsBefore": {
+        "frames": 704,
+        "regions": 6566
+      },
+      "objectsReused": true,
+      "pages": [
+        {
+          "openSyncMs": 17.513799995183945,
+          "page": "settings"
+        },
+        {
+          "openSyncMs": 38.82119998335838,
+          "page": "notes"
+        },
+        {
+          "openSyncMs": 24.922100007534027,
+          "page": "create"
+        },
+        {
+          "openSyncMs": 29.520099997520447,
+          "page": "find"
+        }
+      ],
+      "profiling": "0",
+      "realTooltip": {
+        "height": 211.33334350585938,
+        "result": 24337,
+        "width": 320.00006103515625
+      },
+      "restoredPage": "find",
+      "restoredShown": true,
+      "resultsAfter": 0,
+      "resultsBefore": 50,
+      "revision": 34,
+      "screenshots": [
+        {
+          "label": "real-results-tooltip",
+          "time": "102326_131548"
+        },
+        {
+          "label": "real-filters-130",
+          "time": "102326_131550"
+        },
+        {
+          "label": "real-settings",
+          "time": "102326_131552"
+        },
+        {
+          "label": "real-notes",
+          "time": "102326_131554"
+        },
+        {
+          "label": "real-create",
+          "time": "102326_131555"
+        }
+      ],
+      "searchPreferencesUnchanged": true,
+      "settingsSwitchesChecked": 2,
+      "timing": {
+        "hover": {
+          "batchSize": 20,
+          "iterations": 400,
+          "maxBatchMs": 1.2430999875068665,
+          "totalMs": 16.38640007376671
+        },
+        "layout": {
+          "batchSize": 10,
+          "iterations": 200,
+          "maxBatchMs": 4.668099999427795,
+          "totalMs": 53.789099872112274
+        }
+      }
+    }
+  },
+  "visualMemory": {
+    "logs": {},
+    "ok": true,
+    "resourcesReleased": true,
+    "result": {
+      "fullGcMs": 145.06470000743866,
+      "gcPolicy": "unchanged; one diagnostic full collection",
+      "memory": [
+        {
+          "KiB": 43544.376953125,
+          "label": "natural_before",
+          "observerRefreshMs": 91.80950000882149,
+          "packages": {
+            "LycheeGroup": 13540.6123046875,
+            "LycheeGroup_Group": 4816.0439453125,
+            "LycheeGroup_Notes": 124.509765625,
+            "LycheeGroup_UI": 25063.2109375
+          }
+        },
+        {
+          "KiB": 27224.1748046875,
+          "label": "natural_after_visuals",
+          "observerRefreshMs": 84.39759999513626,
+          "packages": {
+            "LycheeGroup": 7378.8134765625,
+            "LycheeGroup_Group": 3556.0126953125,
+            "LycheeGroup_Notes": 40.666015625,
+            "LycheeGroup_UI": 16248.6826171875
+          }
+        },
+        {
+          "KiB": 24536.9228515625,
+          "label": "after_diagnostic_gc",
+          "observerRefreshMs": 81.34959998726845,
+          "packages": {
+            "LycheeGroup": 7084.5966796875,
+            "LycheeGroup_Group": 2151.8642578125,
+            "LycheeGroup_Notes": 40.095703125,
+            "LycheeGroup_UI": 15260.3662109375
+          }
+        }
+      ],
+      "profiling": "0",
+      "results": 100,
+      "revision": 34,
+      "screenshots": [
+        {
+          "label": "settled-settings",
+          "time": "102326_131756"
+        },
+        {
+          "label": "settled-notes",
+          "time": "102326_131759"
+        },
+        {
+          "label": "settled-create",
+          "time": "102326_131801"
+        },
+        {
+          "label": "settled-real-find-tooltip",
+          "time": "102326_131806"
+        }
+      ],
+      "searchState": "done",
+      "tooltipShown": false
+    }
+  },
+  "finalTooltip": {
+    "logs": {},
+    "ok": true,
+    "resourcesReleased": true,
+    "result": {
+      "fontScale": 100,
+      "height": 246.5,
+      "nativeSearchOwned": true,
+      "page": "find",
+      "reduceMotion": false,
+      "result": 25162,
+      "results": 69,
+      "screenshot": "102326_131925",
+      "searchState": "done",
+      "shown": true,
+      "uiScale": 90,
+      "width": 320.00006103515625
+    }
+  },
+  "errors": {
+    "availableCount": 42,
+    "returnedCount": 30,
+    "providerSession": 384,
+    "sampleUnchanged": true,
+    "incompleteReasons": [
+      "error[17].stack",
+      "error[17].locals"
+    ],
+    "scope": "Latest 30 retained entries; not complete historical coverage"
+  },
+  "screenshotNote": "First realUI screenshots named settings/notes/create were captured after the next navigation started, so visualMemory settled screenshots replace them. First tooltip image missed the tooltip; finalTooltip captures the actual tooltip.",
+  "cleanup": {
+    "session": "CON-efecc8f7aa2455ebb9f6b484eba92f4f",
+    "closed": true,
+    "bound": false,
+    "complete": true,
+    "temporaryConfigurationRestored": true,
+    "originalFindPageRestored": true
+  },
+  "remaining": [
+    "Full per-element public API coverage",
+    "20 MB memory budget",
+    "Real apply/invite/publish, combat and hardware input validation"
+  ]
+}

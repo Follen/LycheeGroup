@@ -5,13 +5,14 @@ if not A or U and (U:IsShown() or U.hiding or U.preview or U.activeModal) or InC
  return probe:Fail("requires_warm_closed_ui_with_animation")
 end
 local warmedHere=not U or not U.frame
-if warmedHere then A:Open("settings");U=A.UI;U:Hide(true) end
-if not C_AddOnProfiler.IsEnabled() then return probe:Fail("profiler_disabled") end
-local M=U.Motion
-local oldPage=U.page
+local M=U and U.Motion
+local oldPage=U and U.page
+local oldReturn=U and U.settingsReturnPage
+local oldShown={}
+if U then for key,page in pairs(U.pages) do oldShown[key]=page.frame and page.frame:IsShown() or false end end
 local oldFPS,oldBackground=GetCVar("maxFPS"),GetCVar("maxFPSBk")
-local oldPresence,oldTick=M.SetPresence,M.Tick
-local observer=CreateFrame("Frame")
+local oldPresence,oldTick=M and M.SetPresence,M and M.Tick
+local observer
 local modes={"normalA","fixedAnchor","normalB"}
 local stage,elapsed,pass,cycle="idle",0,1,0
 local metric=Enum.AddOnProfilerMetric.LastTime
@@ -48,14 +49,21 @@ local function Action(kind)
 end
 assert(probe:Async(28))
 assert(probe:OnCleanup(function()
- observer:SetScript("OnUpdate",nil);observer:Hide()
- M.SetPresence,M.Tick=oldPresence,oldTick
- if U:IsShown() then U:Hide(true) end
+ if observer then observer:SetScript("OnUpdate",nil);observer:Hide() end
+ if M then M.SetPresence,M.Tick=oldPresence,oldTick end
+ U=U or A.UI
+ if U and U.frame then
+  U:Hide(true)
+  for key,page in pairs(U.pages) do if page.frame then page.frame:SetShown(oldShown[key]==true) end end
+  U.page=oldPage;U.settingsReturnPage=oldReturn;U:UpdateNav();U.Motion:FinishRect(U.underline)
+ end
  SetCVar("maxFPS",oldFPS);SetCVar("maxFPSBk",oldBackground)
- if U.page~=oldPage then U.pages[U.page].frame:Hide() end
- U.page=oldPage;U.pages[oldPage].frame:Show();U:UpdateNav()
 end))
 assert(probe:Guard(function() return not InCombatLockdown() end,{"PLAYER_REGEN_DISABLED"},"combat_started"))
+if warmedHere then assert(A:Open("settings"));U=A.UI;U:Hide(true) end
+if not C_AddOnProfiler.IsEnabled() then return probe:Fail("profiler_disabled") end
+M=U.Motion;oldPresence,oldTick=M.SetPresence,M.Tick
+observer=CreateFrame("Frame")
 SetCVar("maxFPS",120);SetCVar("maxFPSBk",120)
 M.Tick=ProfileTick
 observer:SetScript("OnUpdate",assert(probe:Callback(function(_,dt)

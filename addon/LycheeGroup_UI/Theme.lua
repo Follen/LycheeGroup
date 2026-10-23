@@ -9,7 +9,11 @@ UI.context = _G.LycheeUI:CreateContext({
  end,
  themeDefaults=A.StyleDefaults.main,
  theme=A.Appearance:GetTheme("main"),
- onStyleChanged=function() if UI.OnAppearanceChanged then UI:OnAppearanceChanged() end end,
+ recipeDefaults=A.ThemeDefaults.appearance.main.components,
+ recipes=A.Appearance:GetRecipes("main"),
+ elementDefaults=A.ThemeDefaults.appearance.main.elements,
+ elements=A.Appearance:GetElements("main"),
+ utilities=A.Appearance:GetUtilities("main"),
  parent=UIParent, inputs=UI.inputs, text=UI.L,
  reducedMotion=function() return A:GetSetting("reduceMotion") end,
  isHiding=function() return UI.hiding end,
@@ -30,13 +34,20 @@ end
 UI:RefreshBrandText()
 function UI:SetText(region,text) return self.context:SetText(region,text) end
 function UI:Color(region,color)
- if type(color)=="string" then return self.C.ApplyStyle(region,{color=color}) end
+ if type(color)=="string" then color=self.Theme[color] end
  return self.context:Color(region,color)
 end
 function UI:Hex(color) return self.context:Hex(color) end
+local productImages={}
+for file in ("role-tank role-healer role-dps tank healer damage leader invite friend guild pvp delve tower mountain flag lychee-logo"):gmatch("%S+") do productImages[file..".tga"]=true end
+function UI:MediaPath(file) return (productImages[file] and self.Theme.productMedia or self.Theme.media)..file end
 function UI:SetMediaTexture(texture,file)
- local function Apply(object) object:SetTexture(self.Theme.media..file) end
- self.context:BindStyle(texture,"media",Apply);Apply(texture)
+ texture:SetTexture(self:MediaPath(file))
+end
+function UI:CreateGlyph(parent,kind,size,color)
+ local glyph=self.C.Glyph(parent,kind,size,color)
+ if productImages[kind..".tga"] then glyph:SetTexture(self:MediaPath(kind..".tga"));self:SetMediaTexture(glyph.texture,kind..".tga") end
+ return glyph
 end
 
 local scoreColors,scoreOrder={},{}
