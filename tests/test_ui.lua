@@ -169,6 +169,7 @@ T.eq(A.charPrefs.rememberFilters,false,"browse preference writes to this charact
 T.eq(A:GetSetting("rememberFilters"),false)
 T.eq(settings.panels.keywords,nil,"keyword filtering has been removed from settings")
 T.eq(settings.keywordInput,nil)
+settings:SelectSection("memberIcons")
 for _,mode in ipairs({"shift","alt","ctrl","always"}) do
  Pick(settings.controls.raidMembers.widget,mode);T.eq(A.db.raidMembers,mode,"raid roster controls save the selected display mode")
 end
@@ -523,6 +524,10 @@ do
  T.eq(row.race:IsShown(),false);T.eq(row.faction:IsShown(),true);T.eq(iconPoint[#iconPoint],0,"both states share the same vertical center")
  T.eq(row.factionButton:GetWidth(),32,"switching back restores the compact icon hit area")
  local member=G.applicants[71].members[1];local race=member.raceName
+ -- Full race text is checked with an explicitly wide faction column.
+ local factionWidthPath="layout.tables.createApplicants.widths.faction"
+ local savedFactionWidth=A.Configuration:Get(factionWidthPath)
+ A.Configuration:Set({[factionWidthPath]=.16},{storage="character"})
  for _,name in ipairs({"人类","血精灵","赞达拉巨魔","光铸德莱尼","至高岭牛头人"}) do
   member.raceName=name;create:RefreshApplicants()
   T.ok(row.race:GetStringWidth()<=row.race:GetWidth(),"long Chinese race names fit on one line")
@@ -539,6 +544,7 @@ do
  row:Hide();row:Show();T.eq(row.race:IsShown(),false,"hidden rows release transient expansion")
  member.factionGroup=factionGroup;create.batchScroll.mouseOver=nil
  member.raceName=race;create:RefreshApplicants()
+ A.Configuration:Set({[factionWidthPath]=savedFactionWidth},{storage="character"})
  local scores=member.dungeonScores;member.dungeonScores=nil;create:RefreshApplicants()
  T.eq(row.mapScore:GetText(),"—","missing map scores do not reuse the previous applicant's value")
  T.same({row.mapScore:GetTextColor()},U.Theme.muted,"missing map scores clear the previous rarity color")
@@ -706,13 +712,13 @@ T.eq(anonymousNameBorder:IsShown(),true);T.eq(anonymousNameBorder:GetAlpha(),.7)
 A:Open("notes",{add={name="Guest",realm="Away",class="WARRIOR",specID=71,type="positive"}})
 local notes=U.pages.notes
 T.eq(notes.reminderState,nil);T.eq(notes.historyState,nil,"notes and history leave preference states in Settings")
-T.eq(notes.left:GetWidth(),420);T.eq(notes.list.rowHeight,100,"note rows reserve the main-line paired body line and bottom padding")
+T.eq(notes.left:GetWidth(),420);T.eq(notes.list.rowHeight,92,"note rows keep the name and reason in two compact lines")
 T.eq(notes.search:GetWidth(),notes.list.rows[1]:GetWidth(),"notes search ends at the card edge before the scrollbar gutter")
 local function AnchorX(region) local point={region:GetPoint()};return point[#point-1] end
 T.eq(AnchorX(notes.listTitle),6,"notes heading keeps the shared header's text inset")
 T.eq(AnchorX(notes.list.rows[1].icon),notes.noteHeader.columns.player.x+12,"note icons remain in the player column")
-T.eq(notes.countText:GetParent(),notes.main,"record counts stay above the data columns")
-T.eq(notes.countText:GetPoint(),"TOPRIGHT","record counts remain aligned to the panel's right edge")
+T.eq(notes.countText,nil,"the redundant total count is removed from the page heading")
+T.eq(notes.actions:GetPoint(),"TOPRIGHT","note tools occupy the right side of the page heading")
 T.eq(notes.findPerson,nil,"note details no longer create the removed find-group shortcut")
 notes.eReason.box:SetText("A good teammate");notes:Save()
 local note=A.Notes:Find("Guest-Away")
@@ -874,8 +880,8 @@ do
  local combat=InCombatLockdown;_G.InCombatLockdown=function() return true end
  T.eq(A:Open("find"),true,"Find first opens during combat without protected mouse propagation")
  local page=U.pages.find
- T.eq(A:GetSetting("showImportantFilters"),false);T.eq(page.quickFilters:IsShown(),false,"important filters default to the popup")
- T.eq(page.quickFilters:GetParent(),page.applicationPanel)
+ T.eq(A:GetSetting("showImportantFilters"),false);T.eq(page.quickPlacement,"popup","important filters default to the popup")
+ T.eq(page.quickFilters:GetParent(),page.importantFilters)
  T.near(page.search:GetWidth(),page.main:GetWidth()-60,.001,"the search field uses the complete row")
  A:SetSetting("showImportantFilters",true)
  T.eq(G.filters.tankPresence,"present");T.eq(G.filters.healerPresence,"missing");T.eq(G.filters.damagePresence,"missing","first entry migrates the saved damage requirement alongside the other role-presence fields")
@@ -919,7 +925,7 @@ do
  T.eq(box:GetText(),"");T.ok(G.searchClears>0,"leader search and first native lease discard stale native activity tokens")
  T.eq(page.searchHint:GetText(),"队伍标题或钥石范围，如 12-15")
  T.eq(page.fMinLevel,nil);T.eq(page.fMaxLevel,nil,"unsupported local level range inputs are not created")
- T.ok(76+page.filterPanel:GetHeight()<=U.frame:GetHeight(),"the internal seasonal overlay fits below its top inset");T.eq(page.filterPanel:GetWidth(),368)
+ T.ok(76+page.filterPanel:GetHeight()<=U.frame:GetHeight(),"the internal seasonal overlay fits below its top inset");T.eq(page.filterPanel:GetWidth(),460)
  local revision=U.Native.searchLease.revision
  box:UserType("12-15");T.eq(U.Native.searchLease.revision,revision+1,"each native edit distinguishes a newer query without parsing it")
  T.eq(G.filters.text,nil);T.eq(G.filters.leaderText,nil);T.eq(G.filters.minLevel,nil);T.eq(G.filters.maxLevel,nil,"native range text is never copied into local result filters")
@@ -933,7 +939,7 @@ do
  page.fMinMembers.box:SetText("");T.eq(page.filterToggle.label:GetText(),"筛选 2")
  page:SelectCategory("seasonRaid");T.eq(box:GetText(),"","switching category clears incompatible native text and activity tokens")
  T.eq(page.hideZeroScore:IsShown(),false);T.eq(G.filters.hideZeroScore,nil,"the seasonal score filter does not affect other categories")
- T.eq(page.filterCount,0);T.ok(page.filterPanel:GetHeight()<500,"categories without role conditions use the shorter layout")
+ T.eq(page.filterCount,0);T.ok(not page.importantFilters:IsShown() and not page.roleChoice:IsShown(),"categories without role conditions omit those controls")
  T.eq(page.searchHint:GetText(),"队伍标题","raid search returns to title mode without a key-range hint")
  T.eq(page.searchModeToggle:IsShown(),true);T.eq(page.search.box,box)
  T.eq(G.filters.maxMembers,nil,"a category without saved conditions does not inherit the dungeon member limit")
@@ -1025,15 +1031,16 @@ do
  find.closeApplicationNotice:Fire("OnClick");find:ReadSearchState();T.eq(find.limitNotice:IsShown(),false,"passive state reads do not reopen a dismissed notice")
  G.GetResults=getResults;G.state=previousState;G.error=previousError;find.searchError=inputError;find:RefreshResults()
 end
-T.eq(find.rail:GetWidth(),208);T.near(find.main:GetWidth(),995.2,.001)
-T.eq(find.filterPanel:GetWidth(),368);T.eq(find.results.rowHeight,76)
+find:SetSidebarCollapsed(false,false)
+T.eq(find.rail:GetWidth(),208);T.near(find.main:GetWidth(),U.content:GetWidth()-208-U.Theme.contentGap-U.Theme.findContentInset*2,.001)
+T.eq(find.filterPanel:GetWidth(),460);T.near(find.results.rowHeight,58.88,.001)
 T.eq(find.seasonCategories.rows[1]:GetHeight(),48,"the activity sidebar keeps its original compact row height")
 do
  local countPoint={find.resultCount:GetPoint()}
- T.eq(countPoint[1],"LEFT");T.eq(countPoint[2],find.context);T.eq(countPoint[3],"RIGHT");T.eq(countPoint[4],12)
- T.eq(find.resultCount.justify,"LEFT","the result count stays beside the context heading")
+ T.eq(countPoint[1],"RIGHT");T.eq(countPoint[2],find.main);T.eq(countPoint[3],"TOPRIGHT");T.eq(countPoint[4],-16)
+ T.eq(find.resultCount.justify,"RIGHT","the result count aligns with the result body's right text edge")
  local headerPoint={find.resultsHeader:GetPoint()};local contextPoint={find.context:GetPoint()}
- T.eq(contextPoint[#contextPoint]-headerPoint[#headerPoint],find.context:GetHeight()+8,"the column headings follow the complete context line with the eight-unit gap")
+ T.eq(contextPoint[#contextPoint]-headerPoint[#headerPoint],find.context:GetHeight()+16,"the column headings follow the complete context line with the sixteen-unit gap")
  T.eq(select(2,find.context:GetFont()),23);T.eq(find.context:GetHeight(),32)
 end
 do
@@ -1364,41 +1371,44 @@ do
  local function Render() G:Notify("result",r.id);U.Motion:Tick(.016) end
  local body=target:GetWidth()
  local cells=find.resultsHeader.columns
- local markPoint={target.marks:GetPoint()};T.eq(markPoint[2],target.meta,"relationship and note icons follow the activity subtitle")
- T.eq(markPoint[3],"RIGHT");T.eq(markPoint[5],0,"icons share the activity line's vertical center")
+ local markPoint={target.marks:GetPoint()};T.eq(markPoint[2],target.leader,"relationship and note icons follow the leader name")
+ T.eq(markPoint[3],"RIGHT");T.eq(markPoint[5],0,"icons share the leader name's vertical center")
  T.eq(target.noteDot:IsShown(),false,"the old generic note dot is unused")
- T.near(Geometry(target.leader).x,cells.leader.x+8,.001,"the leader uses its full cell without a crown")
- T.near(target.leader:GetWidth(),cells.leader.width-16,.001);T.eq(target.leaderIcon:IsShown(),false)
- T.eq(select(2,target.title:GetFont()),21,"the description column preserves the group title's font size")
- T.near(target.title:GetWidth(),cells.title.width-76,.001)
- T.near(target.description:GetWidth(),cells.description.width-16,.001);T.eq(target.description:GetHeight(),48)
- T.near(Geometry(target.score).x,cells.rating.x+8,.001);T.near(target.score:GetWidth(),cells.rating.width-16,.001)
- T.near(Geometry(target.ilvl).x,cells.ilvl.x+8,.001);T.near(Geometry(target.membersButton).x+target.membersButton:GetWidth()/2,cells.members.x+cells.members.width/2,.001)
- T.near(Geometry(target.description).x,cells.description.x+8,.001);T.near(Geometry(target.age).x,cells.age.x+8,.001);T.near(target.age:GetWidth(),cells.age.width-20,.001)
- T.eq(target.description.maxLines,2);T.eq(target.description.wrap,true);T.eq(select(2,target.description:GetFont()),17)
+ T.near(Geometry(target.leader).x,cells.leader.x+4,.001,"the leader uses its full cell without a crown")
+ local leaderWidth=target.marks:IsShown() and math.min(math.ceil(target.leader:GetUnboundedStringWidth())+2,cells.leader.width-8-target.marks:GetWidth()-6) or cells.leader.width-8
+ T.near(target.leader:GetWidth(),leaderWidth,.001);T.eq(target.leaderIcon:IsShown(),false)
+ T.eq(select(2,target.title:GetFont()),19,"group titles use the same larger font size as their activity and description")
+ T.near(target.title:GetWidth(),cells.title.width-20,.001)
+ T.near(target.description:GetWidth(),cells.description.width-8,.001);T.eq(target.description:GetHeight(),26)
+ T.near(Geometry(target.score).x,cells.rating.x+4,.001);T.near(target.score:GetWidth(),cells.rating.width-8,.001)
+ T.near(Geometry(target.ilvl).x,cells.ilvl.x+4,.001);T.near(Geometry(target.membersButton).x+target.membersButton:GetWidth()/2,cells.members.x+cells.members.width/2,.001)
+ T.near(Geometry(target.description).x,cells.description.x+4,.001);T.near(Geometry(target.age).x,cells.age.x+4,.001);T.near(target.age:GetWidth(),cells.age.width-20,.001)
+ T.eq(target.description.maxLines,1);T.eq(target.description.wrap,false);T.eq(select(2,target.description:GetFont()),19)
  T.eq(find.resultHeadings.description:GetText(),"描述");T.eq(find.resultHeadings.description.justify,"LEFT")
- T.ok(Geometry(target.title).x+target.title:GetWidth()+16<=cells.leader.x)
- T.eq(Geometry(target.score).x+target.score:GetWidth()+16,Geometry(target.description).x)
- T.near(Geometry(target.description).x+target.description:GetWidth()+16,Geometry(target.age).x,.001,"description and age retain their two cell insets")
+ T.ok(Geometry(target.title).x+target.title:GetWidth()+4<=cells.activity.x+.001)
+ T.near(Geometry(target.score).x+target.score:GetWidth()+8,Geometry(target.description).x,.001)
+ T.near(Geometry(target.description).x+target.description:GetWidth()+8,Geometry(target.age).x,.001,"description and age retain their compact cell insets")
  T.eq(find.appList.rows[1].description,nil,"outbound applications do not gain a description column")
- T.near(find.appList.rows[1].title:GetWidth(),find.applicationHeader.columns.title.width-48,.001);T.near(Geometry(find.appList.rows[1].leader).x,find.applicationHeader.columns.leader.x+6,.001,"outbound applications retain their dedicated columns")
- r.comment="A complete group description that can wrap over two compact lines without shifting member slots or numeric columns";Render()
+ T.near(find.appList.rows[1].title:GetWidth(),find.applicationHeader.columns.title.width-6,.001);T.near(Geometry(find.appList.rows[1].leader).x,find.applicationHeader.columns.leader.x+6,.001,"outbound applications retain their dedicated columns")
+ r.comment="A complete group description stays on one line without shifting member slots or numeric columns";Render()
  T.eq(target.description:GetText(),r.comment,"search rows display the listing description independently of its title")
  r.comment="";Render();T.eq(target.description:GetText(),"—","empty descriptions replace any previous row text")
  r.comment=nil;Render();T.eq(target.description:GetText(),"—")
- T.near(Geometry(target.icon).x,cells.title.x+12,.001,"the activity icon stays inside the group cell")
+ T.near(Geometry(target.icon).x,cells.activity.x+4,.001,"the instance icon begins the activity cell")
+ T.near(Geometry(target.meta).x,Geometry(target.icon).x+target.icon:GetWidth()+6,.001,"the full activity name follows its icon")
+ T.near(Geometry(target.title).x,cells.title.x+16,.001,"the group title retains the shared left content inset")
  T.eq(target.ratingLabel,nil,"score labels appear once in the column header")
  T.eq(target.ilvlLabel,nil,"item-level labels do not repeat in every result")
- for key,region in pairs({description=target.description,leader=target.leader,rating=target.score,ilvl=target.ilvl,members=target.count,age=target.age}) do
+ for key,region in pairs({activity=target.meta,description=target.description,leader=target.leader,rating=target.score,ilvl=target.ilvl,members=target.count,age=target.age}) do
   local cell=cells[key];local label=find.resultHeadings[key]
   T.eq(label:GetParent().definition.key,key,"the visible heading belongs to the matching table cell")
   T.ok(Geometry(region).x>=cell.x-.001 and Geometry(region).x+region:GetWidth()<=cell.x+cell.width+.001,"data fits within its matching header cell")
  end
  for _,region in ipairs({target.leader,target.score,target.ilvl,target.age}) do T.eq(Geometry(region).y,0,"single-line values share the row center") end
  T.eq(target.score.justify,"CENTER");T.eq(target.ilvl.justify,"CENTER")
- T.eq(Geometry(target.leader).x+target.leader:GetWidth()+16,Geometry(target.membersButton).x)
- T.eq(Geometry(target.membersButton).x+target.membersButton:GetWidth()+16,Geometry(target.ilvl).x)
- T.eq(Geometry(target.ilvl).x+target.ilvl:GetWidth()+16,Geometry(target.score).x)
+ T.near(cells.leader.x+cells.leader.width+4,Geometry(target.membersButton).x,.001,"relationship marks do not shift the adjacent member cell")
+ T.near(Geometry(target.membersButton).x+target.membersButton:GetWidth()+8,Geometry(target.ilvl).x,.001)
+ T.near(Geometry(target.ilvl).x+target.ilvl:GetWidth()+8,Geometry(target.score).x,.001)
  T.eq(find.resultHeadings.members.justify,"CENTER");T.eq(find.resultHeadings.age.justify,"RIGHT")
  T.near(cells.members.x+cells.members.width/2,Geometry(target.membersButton).x+target.membersButton:GetWidth()/2,.001,"the member cell follows the visual roster center")
  T.ok(Geometry(find.resultsHeader).y-find.resultsHeader:GetHeight()-Geometry(find.results).y>=-.001,"the single header stays above the first result without overlap")
@@ -1409,13 +1419,15 @@ do
  r.categoryID=2;r.maxNumPlayers=5;r.numMembers=1;r.age=10;r.leaderRating=2500;r.requiredItemLevel=320;r.ratingKind=nil
  r.details={members=members,counts={TANK=1,HEALER=0,DAMAGER=0},encounters={}};Render()
  local roster,count,age,score=Geometry(target.roster),Geometry(target.count),Geometry(target.age),Geometry(target.score)
- T.eq(roster.anchor,"CENTER");T.eq(Geometry(target.membersButton).x,count.x);T.eq(Geometry(target.membersButton).y,0)
+ T.eq(roster.anchor,"CENTER");T.eq(Geometry(target.membersButton).x,count.x)
+ local memberY=Geometry(target.membersButton).y
+ T.ok(memberY<=0,"the compact row offsets the roster to reserve crown space")
  T.eq(target.count:IsShown(),false,"member totals are hidden until the role summary is clicked")
  T.eq(target.roster.slots[1].icon:IsShown(),true);T.eq(target.roster.slots[1].icon:GetTexture(),1100071,"a party result shows its member's specialization")
  T.eq(target.roster.counts[1].text:IsShown(),false,"party rows use individual specializations rather than aggregate role counts")
  target:Fire("OnClick","LeftButton");T.eq(target.count:IsShown(),false,"ordinary row clicks do not expand member totals")
  target.membersButton:Fire("OnClick");T.eq(target.count:IsShown(),false);T.eq(target.count:GetText(),"","party slots never reveal a redundant N/N counter")
- T.eq(Geometry(target.membersButton).y,0)
+ T.eq(Geometry(target.membersButton).y,memberY)
  target.membersButton:Fire("OnClick");T.eq(target.count:IsShown(),false)
  for i,role in ipairs({"TANK","HEALER","DAMAGER","DAMAGER","DAMAGER"}) do
   local slot=target.roster.slots[i]
@@ -1425,7 +1437,7 @@ do
   T.eq(slot.role.desaturated,i~=1,"only empty seasonal dungeon roles use grayscale")
   T.same(slot.role.vertex,i==1 and {1,1,1,1} or {.7,.7,.7,1},"missing roles are darker while occupied roles retain their colors")
  end
- T.eq(count.width,138);T.eq(age.width,88)
+ T.eq(count.width,138);T.near(age.width,cells.age.width-20,.001)
  members[1]={name="Damage1",class="MAGE",assignedRole="DAMAGER",specID=900063}
  members[2]={name="Tank",class="WARRIOR",assignedRole="TANK",specID=900071}
  members[3]={name="Damage2",class="MAGE",assignedRole="DAMAGER",specID=900062}
@@ -1467,8 +1479,13 @@ do
  local memberColumnPositions=MemberColumnPositions()
  T.eq(target.roster.slots[1].icon:IsShown(),false,"raid rows switch back to aggregate role counts")
  T.eq(target.roster.counts[1].text:GetText(),"2");T.eq(target.roster.counts[2].text:GetText(),"8");T.eq(target.roster.counts[3].text:GetText(),"30")
+ local height,viewport=find.results.rowHeight,find.results:GetHeight()
  target.membersButton:Fire("OnClick");T.eq(target.count:IsShown(),true);T.eq(target.count:GetText(),"40/40","raid results keep their member counter")
+ T.eq(target.roster:IsShown(),false,"the total replaces role counts in the same row")
+ T.eq(Geometry(target.count).y,Geometry(target.membersButton).y)
+ T.eq(find.results.rowHeight,height);T.eq(find.results:GetHeight(),viewport,"count toggles do not move the result viewport")
  target.membersButton:Fire("OnClick")
+ T.eq(target.count:IsShown(),false);T.eq(target.roster:IsShown(),true)
  local roleColumns={}
  for i,item in ipairs(target.roster.counts) do
   roleColumns[i]=Geometry(item.icon);T.eq(roleColumns[i].x,(i-1)*46);T.eq(item.text:GetWidth(),20)
@@ -1495,10 +1512,11 @@ do
 end
 do
  local r=G.records[target.key]
+ local activityText=target.meta:GetText()
  r.bnetFriends=1;r.charFriends=0;G:Notify("result",r.id);U.Motion:Tick(.016)
  T.ok(target.marks.icons.bnet:IsShown(),"Battle.net counts show the distinct Battle.net friend icon")
  T.eq(target.marks.icons.bnet:GetTexture(),"Interface\\AddOns\\LycheeGroup_UI\\Media\\battlenet-friend.tga")
- T.eq(target.meta:GetText(),r.activityName,"relationship names do not occupy the activity subtitle")
+ T.eq(target.meta:GetText(),activityText,"relationship changes preserve the compact activity label")
  T.eq(target.marks.flags.friend,false,"Battle.net friends do not become character friends")
  r.charFriends=1;G:Notify("result",r.id);U.Motion:Tick(.016)
  T.ok(target.marks.icons.friend:IsShown(),"both types of friendship can appear together")
@@ -1590,7 +1608,7 @@ do
  local expectedRows=5
  local row=find.results.rows[expectedRows];local point={row:GetPoint()}
  T.ok(#find.appList.ids>=3,"the density check keeps all three application rows visible")
- T.eq(math.floor(find.results:GetHeight()/find.results.rowHeight),expectedRows,"inline important filters preserve the complete result-row density")
+ T.eq(math.floor(find.results:GetHeight()/find.results.rowHeight),expectedRows,"larger result rows fit below three applications")
  T.ok(row.key and -point[#point]+row:GetHeight()<=find.results:GetHeight(),"the expected complete result rows fit below three applications")
 end
 G.apps[2].status="applied";U.Application:Apply(102)
@@ -2159,18 +2177,24 @@ for _,page in ipairs({"find","create","notes"}) do
  T.eq(U.navItems[page].active,true);T.eq(U.underline:IsShown(),true,"returning restores the correct underline")
 end
 U:Hide(true)
--- Larger content titles retain a real gap above the second line, while
--- navigation and activity choices keep their own compact type role.
+-- Find tables use one compact line; notes retain their title hierarchy.
 do
  T.near(U.Theme.width,1160*1.12,.001,"the main window is twelve percent wider")
  T.eq(U.Theme.height,840,"widening keeps the original window height")
- T.eq(select(2,find.appList.rows[1].title:GetFont()),18,"outgoing applications keep the released compact title")
- T.eq(find.appList.rows[1].title:GetHeight(),24)
+ T.eq(select(2,find.appList.rows[1].title:GetFont()),19,"outgoing applications use the larger single-line title")
+ T.eq(find.appList.rows[1].title:GetHeight(),26)
  local function Top(region) local point={region:GetPoint()};return -point[#point] end
  for _,row in ipairs({find.results.rows[1],notes.list.rows[1],notes.historyList.rows[1]}) do
-  T.eq(select(2,row.title:GetFont()),21)
-  T.eq(row.title:GetHeight(),28)
-  T.ok(Top(row.meta)-Top(row.title)-row.title:GetHeight()>=4,"content title and metadata keep a four-unit gap")
+  T.eq(select(2,row.title:GetFont()),row==find.results.rows[1] and 19 or 21)
+  T.eq(row.title:GetHeight(),row==find.results.rows[1] and 26 or 28)
+  if row==notes.list.rows[1] then
+   T.eq(row.meta:IsShown(),false,"notes omit the class/spec subtitle")
+   T.ok(Top(row.reason)-Top(row.title)-row.title:GetHeight()>=8,"note title and reason keep an eight-unit gap")
+  elseif row==find.results.rows[1] then
+   T.eq(Top(row.meta),Top(row.title),"the activity column and title share the result body center")
+  else
+   T.ok(Top(row.meta)-Top(row.title)-row.title:GetHeight()>=4,"content title and metadata keep a four-unit gap")
+  end
  end
  T.eq(select(2,find.categories.rows[1].title:GetFont()),19)
  T.eq(select(2,find.activities.rows[1].title:GetFont()),19)
@@ -2208,7 +2232,7 @@ do
  T.eq(#list.ids,1);T.eq(page.favoritesEmpty:IsShown(),false)
  T.eq(list.rows[1].title:GetText(),"Dungeon","a season-only favorite shows its dungeon, not the difficulty from shortName")
  T.ok(list.rows[1].meta:GetText():find(GetDifficultyInfo(8),1,true),"difficulty shares the conditions line below the activity title")
- T.ok(list.rows[1].meta:GetText():find("321",1,true));T.ok(list.rows[1].meta:GetText():find("3400",1,true))
+ T.ok(list.rows[1].conditions:GetText():find("321",1,true));T.ok(list.rows[1].conditions:GetText():find("3400",1,true))
  entry.Name:UserType("My draft");entry.Description.EditBox:UserType("My description")
  page.ilvl.box:SetText("300");T.eq(page.favorite.selected,false,"changing requirements updates the star state")
  list.clip.mouseOver=true;list.rows[1].create:Fire("OnClick")
@@ -2246,7 +2270,7 @@ do
  g.manageListing=true
  for i=1,20 do g.Presets:ToggleFavorite({activityID=2,requiredItemLevel=280+i}) end
  T.eq(#list.ids,22);T.ok(#list.rows<=5,"saved entries scroll through three visible rows and two overscan rows")
- list:SetPixelOffset(21*list.rowHeight,false);T.eq(list.rows[#list.rows].key,nil,"unused pool rows release their entries")
+ list:SetPixelOffset(list.contentHeight,false);T.eq(list.rows[#list.rows].key,nil,"unused pool rows release their entries")
  page.favoritesToggle:Fire("OnClick");T.eq(page.favoritesBody:IsShown(),false);T.eq(list.rows[1].key,nil)
  T.eq(page.rosterCard:GetHeight(),collapsedHeight);T.eq(CardGap(),16)
  page.favoritesToggle:Fire("OnClick");a:Open("find");a:Open("create");T.eq(page.favoritesExpanded,false,"returning to creation starts with favorites collapsed")
@@ -2336,7 +2360,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  g.prefs.find={category="seasonDungeon",categoryPrefs={seasonDungeon={selected=true,difficultyID=8}}}
  for id=1,3 do g.records[id]={id=id,partyGUID="Party-"..id,name="Group "..id,activityID=2,activity=g.Catalog:GetActivity(2),categoryID=2,numMembers=1,maxNumPlayers=5,age=10} end
  a:Open("find");local page=u.pages.find
- T.eq(page.declineClock,nil);T.eq(page.results.rowHeight,76,"ordinary results retain their existing row height")
+ T.eq(page.declineClock,nil);T.near(page.results.rowHeight,58.88,.001,"ordinary results use the eight-percent-shorter row height")
  now=59;g.declinedParties["Party-2"]=0;g:Notify("applications")
  T.same(page.results.ids,{1,3,2});T.ok(page.declineClock);T.eq(page.countdown,nil,"rejection text does not need an active application")
  local function Row(id) for _,row in ipairs(page.results.rows) do if row.key==id then return row end end;error("missing result "..id) end
@@ -2369,12 +2393,19 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  page.results:SetPixelOffset(0,false);T.eq(page.declineClock,nil,"scrolling the final rejection out of view stops its timer")
  g.declinedParties["Party-19"]=now-59;g:Notify("results")
  T.eq(page.declineClock,nil)
- local edge=(#page.results.ids-2)*page.results.rowHeight-page.results:GetHeight()
+ local rejectedIndex
+ for index,id in ipairs(page.results.ids) do if id==19 then rejectedIndex=index;break end end
+ T.ok(rejectedIndex,"the rejection used for the viewport edge remains in the result set")
+ local edge=page.results.geometryOffsets[rejectedIndex]-page.results:GetHeight()
  page.results:SetPixelOffset(edge,false);local edgeRow=Row(19)
  T.eq(page.declineClock,nil,"a rejected row merely touching the viewport does not start a timer")
- reads=0;g.Results.GetDetails=function(self,...) reads=reads+1;return details(self,...) end
+ local bound={};for _,row in ipairs(page.results.rows) do if row.key then bound[row.key]=true end end
+ reads=0;g.Results.GetDetails=function(self,record,...)
+  if bound[record.id] then reads=reads+1 end
+  return details(self,record,...)
+ end
  page.results:SetPixelOffset(edge+1,false)
- T.eq(Row(19),edgeRow);T.eq(reads,0,"revealing a bound partial row does not re-read its details")
+ T.eq(Row(19),edgeRow);T.eq(reads,0,"revealing a bound partial row does not re-read any already-bound details; the next variable-height buffer row may bind")
  T.ok(page.declineClock,"revealing an already-bound rejection also restarts its timer")
  g.Results.GetDetails=details
  page.results:SetPixelOffset(100000,false);local reused=page.results.rows[1]
@@ -2385,7 +2416,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  page.results:SetPixelOffset(0,false);T.eq(reused.declined:GetText(),"");T.eq(reused.declined:IsShown(),false,"row reuse removes the old rejection label")
  T.eq(page.declineClock,nil);T.eq(timer.cancelled,true)
  local normal=g.records[1];g.records={[1]=normal};g:Notify("results")
- T.eq(page.declineClock,nil);T.eq(timer.cancelled,true);T.eq(page.results.rowHeight,76,"a view without rejected results restores the original layout")
+ T.eq(page.declineClock,nil);T.eq(timer.cancelled,true);T.near(page.results.rowHeight,58.88,.001,"a view without rejected results restores the compact single-line layout")
  g.records[20]=rejected;g:Notify("results");timer=page.declineClock
  u:Hide(true);T.eq(timer.cancelled,true);T.eq(page.declineClock,nil)
  for _,row in ipairs(page.results.rows) do T.eq(row.declined:GetText(),"") end
@@ -2868,7 +2899,7 @@ do
  T.eq(page.buffReport.maxGroup,4,"difficulty changes update coverage without a roster event")
  for i=1,6 do g.Presets:ToggleFavorite({activityID=1,requiredItemLevel=300+i}) end
  page.favoritesToggle:Fire("OnClick")
- T.ok(page.buffList.slider:IsShown(),"expanded favorites leave the remaining buffs in a bounded scroll area")
+ T.eq(page.buffList.slider:IsShown(),false,"compact favorites leave enough room for the complete buff list")
  local p={page.rosterCard:GetPoint()}
  T.ok(-p[#p]+page.rosterCard:GetHeight()<=page.rail:GetHeight(),"expanded favorites leave the roster card inside the resized rail")
  members={}
@@ -3372,7 +3403,7 @@ do
  local row=u.pages.find.results.rows[1]
  T.ok(row.marks.icons.bnet:IsShown());T.ok(row.marks.icons.friend:IsShown());T.ok(row.marks.icons.guild:IsShown())
  T.eq(row.marks.icons.neutral,nil,"a member note never marks a search result")
- T.eq(row.meta:GetText(),record.activityName)
+ T.eq(row.meta:GetText(),record.activityName,"the activity column preserves the complete native activity name")
  u.Tooltip:ShowGroup(row,record)
  local view=u.Tooltip.interactive
  T.eq(view.relationshipRows.bnet.names:GetText(),"：战网昵称")
@@ -3391,7 +3422,7 @@ do
  a.Notes:Add("Caution","Away","Caution",nil,nil,{type="caution"})
  local caution={nameKey="Caution-Away"};record.details.members[3]=caution
  record.bnetFriends,record.charFriends,record.guildMates=1,1,1;g:Notify("relations")
- T.eq(row.marks:GetWidth(),84);T.ok(row.meta:GetWidth()+6+row.marks:GetWidth()<=row.title:GetWidth(),"activity text and relationship marks fit the adjustable title column")
+ T.eq(row.marks:GetWidth(),84);T.ok(row.leader:GetWidth()+6+row.marks:GetWidth()<=u.pages.find.resultsHeader.columns.leader.width-8+.001,"leader name and relationship marks fit within the leader column")
  T.ok(ordinary.marks.icons.neutral:IsShown(),"only the leader note appears in the search member list")
  CheckInlineSearchMarks(ordinary)
  T.eq(ordinary.faction:IsShown(),false,"search identities never show faction icons")
@@ -3477,7 +3508,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  T.eq(loads,0,"ordinary settings do not load Group");T.eq(page.blocksList,nil,"the block list is created on first use")
  for id=1,40 do g.Results:BlockTitle("Blocked title "..id,("Blocked%02d-Away"):format(id)) end
  page.nav.blocks:Fire("OnClick")
- T.eq(page.heading:GetText(),locale=="zhCN" and "屏蔽" or "Blocks")
+ T.eq(page.heading:GetText(),locale=="zhCN" and "屏蔽名单" or "Blocked leaders")
  T.eq(loads,1);T.eq(fresh.Count(g.subs),1,"only the active block section subscribes to result changes")
  local list=page.blocksList
  T.eq(#list.ids,40);T.ok(#list.rows<40,"blocked leaders use a virtualized row pool")
@@ -4368,9 +4399,11 @@ for _,locale in ipairs({"zhCN","enUS"}) do
   a:SetSetting("fontScale",scale)
   T.ok(76+page.filterPanel:GetHeight()<=u.frame:GetHeight(),locale.." internal filter panel fits below its top inset at "..scale.." percent")
   T.eq(Top(page.fMembers),Top(page.fMinMembers),"member range endpoints stay in one row")
-  T.ok(Top(page.fMembers)>=Top(page.filterFields.maxItemLevel)+page.filterFields.maxItemLevel:GetHeight()+12,"member bounds stay below the item-level range")
-  T.ok(Top(page.hideZeroScore)>=Top(page.sortChoice)+page.sortChoice:GetHeight()+14,"the score switch stays below sorting")
-  T.ok(Top(page.filterDone)+page.filterDone:GetHeight()<=page.filterPanel:GetHeight()-20,"the completion action retains bottom padding")
+  local membersRange,itemLevelRange=page.fMembers:GetParent(),page.filterFields.maxItemLevel:GetParent()
+  T.ok(Top(membersRange)>=Top(itemLevelRange)+itemLevelRange:GetHeight()+12,"member bounds stay below the item-level range")
+  T.ok(Top(page.hideZeroScore)>=Top(membersRange),"the score switch shares or follows the members range row")
+  T.ok(Top(page.socialChoice)>=Top(page.hideZeroScore)+page.hideZeroScore:GetHeight()+6,"relations start after the numeric group")
+  T.ok(Top(page.filterFooter)+Top(page.filterDone)+page.filterDone:GetHeight()<=page.filterPanel:GetHeight()-20,"the completion action retains bottom padding")
   for _,choice in pairs(page.quickChoices) do
    T.ok(choice.button.label:GetStringWidth()+42<=choice.button:GetWidth(),"quick role text and icon fit the selected font size")
   end
@@ -4387,13 +4420,13 @@ do
  a:Open("find");local page=u.pages.find
  T.eq(page.rail:GetWidth(),48,"interface preferences restore even when filter memory is off")
  T.eq(page.sidebarToggle:GetWidth(),40);T.eq(page.sidebarToggle:GetHeight(),40)
- T.eq(page.main:GetWidth(),1155.2);T.eq(page.sidebarToggle.label:IsShown(),false)
+ T.eq(page.main:GetWidth(),u.content:GetWidth()-48-u.Theme.contentGap-u.Theme.findContentInset*2);T.eq(page.sidebarToggle.label:IsShown(),false)
  for _,list in ipairs({page.seasonCategories,page.categories}) do
   for _,row in ipairs(list.rows) do T.eq(row.title:IsShown(),false);T.eq(row.chevron:IsShown(),false) end
  end
  page:UpdateFilters();T.eq(g.prefs.find.railCollapsed,true,"saving filters preserves the interface preference")
  page.sidebarToggle:Fire("OnClick");T.eq(page.rail:GetWidth(),208);T.eq(page.sidebarToggle:GetWidth(),192)
- T.eq(page.main:GetWidth(),995.2);T.eq(page.sidebarToggle.label:IsShown(),true)
+ T.eq(page.main:GetWidth(),u.content:GetWidth()-208-u.Theme.contentGap-u.Theme.findContentInset*2);T.eq(page.sidebarToggle.label:IsShown(),true)
  page:SelectCategory("seasonDungeon")
  local point={page.picker:GetPoint()};T.eq(point[2],page.rail);T.eq(point[3],"TOPRIGHT","the activity picker follows the animated rail edge")
  page:ClosePicker();u.Motion:Tick(1)
@@ -4456,33 +4489,35 @@ do
  C_LFGList.GetAvailableCategories=available;u:Hide(true)
 end
 
--- Relationship marks stay beside the activity text across data and geometry refreshes.
+-- Relationship marks stay beside the leader name across data and geometry refreshes.
 do
  local fresh=dofile("tests/ui_fixture.lua")("zhCN",{find={category="seasonDungeon",railCollapsed=true,categoryPrefs={seasonDungeon={selected=true,difficultyID=8}}}});local a,u,g=fresh.A,fresh.U,fresh.G
  a:SetSetting("reduceMotion",true)
  local record={id=1,activityID=2,activity=g.Catalog:GetActivity(2),activityName="Dungeon",categoryID=2,name="21/22",leaderName="Player-Home",numMembers=2,maxNumPlayers=5,age=10,bnetFriends=1}
  g.records[1]=record;a:Open("find");g:Notify("results")
- local page=u.pages.find;local row=page.results.rows[1];local width=row.meta:GetWidth()
+ local page=u.pages.find;local row=page.results.rows[1];local width=row.leader:GetWidth()
  T.ok(row.marks.icons.bnet:IsShown())
+ local point={row.marks:GetPoint()};T.eq(point[2],row.leader);T.eq(point[3],"RIGHT");T.eq(point[4],6)
  for i=1,3 do
   page:LayoutSize(u.content:GetWidth(),u.content:GetHeight())
-  T.eq(row.meta:GetWidth(),width,"same-size layout must not move the Battle.net mark")
+  T.eq(row.leader:GetWidth(),width,"same-size layout must not move the Battle.net mark")
   g:Notify("relations")
-  T.eq(row.meta:GetWidth(),width,"relationship refresh must preserve the same mark position")
+  T.eq(row.leader:GetWidth(),width,"relationship refresh must preserve the same mark position")
   page:SetSidebarCollapsed(i%2==1,false)
-  T.eq(row.meta:GetWidth(),width,"short activity text keeps its mark while the sidebar changes")
+  T.eq(row.leader:GetWidth(),width,"short leader names keep their marks while the sidebar changes")
  end
  u:SetWindowSize(1400,900)
  a:SetSetting("fontScale",130)
- T.eq(row.meta:GetWidth(),math.ceil(row.meta:GetUnboundedStringWidth())+2,"font changes remeasure the activity without waiting for new data")
- record.activityName=string.rep("Long activity ",8);record.charFriends=1;record.guildMates=1;g:Notify("relations")
+ T.eq(row.leader:GetWidth(),math.ceil(row.leader:GetUnboundedStringWidth())+2,"font changes remeasure the leader name without waiting for new data")
+ record.leaderName=string.rep("LongLeader",8).."-Home";record.charFriends=1;record.guildMates=1;g:Notify("relations")
  u:SetWindowSize(1,1)
- width=row.meta:GetWidth()
- T.eq(width+6+row.marks:GetWidth(),row.title:GetWidth(),"long text reserves space for every relationship mark at the minimum window width")
- g:Notify("results");T.eq(row.meta:GetWidth(),width,"data refresh preserves the compact column layout")
- page:LayoutResultColumns();T.eq(row.meta:GetWidth(),width,"column layout preserves the same truncation boundary")
+ width=row.leader:GetWidth()
+ T.eq(width+6+row.marks:GetWidth(),page.resultsHeader.columns.leader.width-8,"long names reserve space for every relationship mark at the minimum window width")
+ T.eq(row.meta:GetWidth(),page.resultsHeader.columns.activity.width-38,"relationship marks leave the activity text width intact")
+ g:Notify("results");T.eq(row.leader:GetWidth(),width,"data refresh preserves the compact column layout")
+ page:LayoutResultColumns();T.eq(row.leader:GetWidth(),width,"column layout preserves the same truncation boundary")
  record.bnetFriends,record.charFriends,record.guildMates=0,0,0;g:Notify("relations")
- T.eq(row.marks:IsShown(),false);T.eq(row.meta:GetWidth(),row.title:GetWidth(),"removing the final mark restores the full text column")
+ T.eq(row.marks:IsShown(),false);T.eq(row.leader:GetWidth(),page.resultsHeader.columns.leader.width-8,"removing the final mark restores the complete leader text width")
  u:Hide(true)
 end
 
@@ -4563,11 +4598,12 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  T.eq(page.themeReloadHint:IsVisible(),false,"pending feedback is confined to Interface settings")
  T.ok(a.API.Theme:Remove(definition.id));page:Sync()
  T.eq(page.themeReloadHint:IsShown(),false);T.eq(reload:IsShown(),false)
- a:SetSetting("language",locale=="zhCN" and "enUS" or "zhCN");page:SelectSection("interface")
+ a:SetSetting("language",locale=="zhCN" and "enUS" or "zhCN");page:SelectSection("general")
  T.eq(reload:IsVisible(),true,"language-only reload feedback keeps the existing button")
  T.eq(page.themeReloadHint:IsShown(),false,"a language change does not claim that a theme was saved")
  T.ok(a.API.Theme:Import(definition,{activate=true}));page:Sync()
  a:SetSetting("language","auto");page:Sync()
+ page:SelectSection("interface")
  T.eq(reload:IsVisible(),true,"clearing the language change still leaves a pending theme actionable")
  T.eq(page.themeReloadHint:IsVisible(),true)
  u:Hide(true)

@@ -38,9 +38,9 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  Order(notes.list,{"Old-Home","Same-Home","Fresh-Home","Unknown-Home"},"notes ascending, stable ties and unknown last")
  Click(notes.noteHeader,"timestamp")
  Order(notes.list,{"Fresh-Home","Old-Home","Same-Home","Unknown-Home"},"notes descending")
- Check(notes.list.rows[1].reason:GetWidth()>notes.noteHeader.columns.player.width,"note reason still spans the two data columns")
+ Check(X(notes.list.rows[1].reason)+notes.list.rows[1].reason:GetWidth()<=notes.noteHeader.columns.timestamp.x,"note reason stays clear of the date column")
  notes:SelectTab("history")
- Check(not notes.countText:IsShown(),"the player-note count is hidden on the history tab")
+ Check(notes.countText==nil and notes.tabs.all.count:GetText()~="","the page total is removed while sidebar category counts remain")
  Order(notes.historyList,{1,3,2,4},"history default completed time")
  Click(notes.historyHeader,"level");Order(notes.historyList,{2,3,1,4},"history level ascending")
  Click(notes.historyHeader,"level");Order(notes.historyList,{1,2,3,4},"history level descending")
@@ -78,7 +78,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  Check(settings.blocksList.rows[1].title:GetText()=="Blocked","the block list still uses real leader identities")
  Drag(settings.blocksHeader,-30)
  local blockRow=settings.blocksList.rows[1]
- Near(X(blockRow.meta),settings.blocksHeader.columns.realm.x+6,"blocked realm follows its header")
+ Near(X(blockRow.meta),settings.blocksHeader.columns.realm.x+X(settings.blocksHeader.labels.realm),"blocked realm follows its header")
  for _,percent in ipairs({70,100,130}) do
   A:SetSetting("fontScale",percent)
   local columns=settings.blocksHeader.columns

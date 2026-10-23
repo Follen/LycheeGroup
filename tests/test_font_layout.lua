@@ -13,6 +13,9 @@ end
 local function position(region,root)
  if region==root then return 0,0 end
  local point={region:GetPoint()};local relative,relativePoint,x,y
+ -- Scroll children use their viewport origin; SetAllPoints also has no point
+ -- tuple in this fixture, but retains the explicit relative region.
+ if not point[1] then return position(region.allPoints or region:GetParent(),root) end
  if type(point[2])=="table" then relative,relativePoint,x,y=point[2],point[3],point[4] or 0,point[5] or 0
  else relative,relativePoint,x,y=region:GetParent(),point[1],point[2] or 0,point[3] or 0 end
  local function fraction(anchor,first,last)
@@ -21,47 +24,161 @@ local function position(region,root)
  local px,py=position(relative,root)
  return px+relative:GetWidth()*fraction(relativePoint,"LEFT","RIGHT")+x-region:GetWidth()*fraction(point[1],"LEFT","RIGHT"),py+relative:GetHeight()*fraction(relativePoint,"TOP","BOTTOM")-y-region:GetHeight()*fraction(point[1],"TOP","BOTTOM")
 end
+local function centered(region,root)
+ local _,y=position(region,root)
+ return near(y+region:GetHeight()/2,root:GetHeight()/2)
+end
+local function activityCell(row,header)
+ local cell=header.columns.activity
+ local x,y=position(row.meta,row)
+ check(cell and x>=cell.x-.001 and x+row.meta:GetWidth()<=cell.x+cell.width+.001,"activity text stays inside its independent table cell")
+ check(y>=-.001 and y+row.meta:GetHeight()<=row:GetHeight()+.001,"activity text fits the compact row")
+ check(centered(row.title,row) and centered(row.meta,row),"title and activity share the compact row's vertical center")
+end
+local function leaderMarks(row,header)
+ local cell=header.columns.leader
+ local nameX,nameY=position(row.leader,row);local markX,markY=position(row.marks,row)
+ local anchor={row.marks:GetPoint()}
+ check(anchor[2]==row.leader and anchor[3]=="RIGHT" and near(anchor[4],6),"relationship and note marks follow the leader instead of the activity name")
+ check(row.leader:GetWidth()>0 and nameX>=cell.x-.001,"the leader retains a positive text box in its own column")
+ check(near(markX,nameX+row.leader:GetWidth()+6) and markX+row.marks:GetWidth()<=cell.x+cell.width-4+.001,"all concurrent marks fit beside the leader inside the same column")
+ check(near(nameY+row.leader:GetHeight()/2,markY+row.marks:GetHeight()/2),"leader marks share the name's vertical center")
+ check(near(row.meta:GetWidth(),header.columns.activity.width-38),"leader marks never consume activity text width")
+end
+local function findEdges(find,u)
+ local mainWidth=find.main:GetWidth()
+ local headerX=position(find.resultsHeader,find.main)
+ local row=find.results.rows[1];local rowX=position(row,find.main)
+ check(near(headerX,0) and near(find.resultsHeader:GetWidth(),mainWidth),"the result header spans the main panel without losing scrollbar space")
+ check(near(rowX,0) and near(row:GetWidth(),mainWidth),"result row backgrounds align with both main panel edges")
+ check(near(find.results:GetWidth(),mainWidth+14),"the result scrollbar gutter stays outside the aligned rows")
+ local app=find.appList.rows[1];local appX=position(app,find.main)
+ local appHeaderX=position(find.applicationHeader,find.main)
+ check(near(appX,16) and near(appX+app:GetWidth(),mainWidth-16),"application rows keep the same sixteen-unit left and right panel insets")
+ check(near(appHeaderX,appX) and near(find.applicationHeader:GetWidth(),app:GetWidth()),"application headings and backgrounds have identical horizontal bounds")
+ check(near(find.appList:GetWidth(),mainWidth-32+14),"the application scrollbar gutter does not shorten its rows")
+ local titleX=position(row.title,find.main);local appTitleX=position(app.title,find.main)
+ local contextX=position(find.context,find.main);local searchX=position(find.searchIcon,find.main)
+ check(near(titleX,16) and near(appTitleX,16) and near(contextX,16) and near(searchX,16),"both lists' titles align with the context and search icons")
+ local iconX=position(row.icon,row);local appIconX=position(app.icon,app)
+ check(near(iconX,find.resultsHeader.columns.activity.x+4) and near(appIconX,find.applicationHeader.columns.activity.x+6),"both lists keep the artwork inside the independent activity cell")
+ local countX=position(find.resultCount,find.main);local ageX=position(row.age,find.main)
+ local trackX=position(find.autoJoin.track,find.main)
+ check(near(countX+find.resultCount:GetWidth(),mainWidth-16),"the result total has the same right inset as the main controls")
+ check(near(ageX+row.age:GetWidth(),mainWidth-16),"the posted-age text ends sixteen units inside the main panel")
+ check(near(trackX+find.autoJoin.track:GetWidth(),mainWidth-16),"the automation track aligns with the result total and age column")
+ if row.marks:IsShown() then leaderMarks(row,find.resultsHeader) end
+ for _,list in ipairs({find.results,find.appList}) do
+  local listX=position(list,find.main);local sliderX=position(list.slider,find.main)
+  local clipX=position(list.clip,find.main);local item=list.rows[1];local itemX=position(item,find.main)
+  local rowRight=itemX+item:GetWidth()
+  check(near(clipX,itemX) and near(clipX+list.clip:GetWidth(),rowRight),"list clipping matches the usable row bounds")
+  check(sliderX>=rowRight-.001 and sliderX+list.slider:GetWidth()<=listX+list:GetWidth()+.001,"the scrollbar stays in the outside gutter without covering row content")
+ end
+ for _,header in ipairs({find.resultsHeader,find.applicationHeader}) do
+  for index,def in ipairs(header.definitions) do
+   local cell,label=header.columns[def.key],header.buttons[index].label
+   local declared=u.context:ResolveValue(def.min or 32)
+   local minimum=math.max(declared,label:GetUnboundedStringWidth()+u.Theme.tablePadding*2)
+   check(cell.width+.001>=minimum,"the smallest host never compresses a column below its declared or complete translated heading minimum")
+   check(label:GetUnboundedStringWidth()<=label:GetWidth()+.001,"each full localized column heading fits at the current font scale")
+  end
+ end
+ check(u.C.MeasureTextWidth(row.score,u:ScoreText(nil))<=row.score:GetWidth()+.001,"the smallest host preserves enough rating width for the complete unknown label")
+end
 for _,locale in ipairs({"zhCN","enUS"}) do
  for _,percent in ipairs({70,100,130}) do
   local f=dofile("tests/ui_fixture.lua")(locale,nil,{fontScale=percent,reduceMotion=true})
   local a,u,g=f.A,f.U,f.G
+  EJ_GetDifficulty=function() return 14 end;EJ_SelectInstance=function() end;EJ_GetEncounterInfoByIndex=function() end
   a:Open("find")
   local find=u.pages.find
+  local leaderName=locale=="zhCN" and "很长的队长名字用来验证同列截断" or "Verylongleadernameforcolumntruncation"
+  local leaderKey=leaderName.."-Home"
+  a.Notes:Add(leaderName,"Home","Leader mark layout",nil,nil,{type="positive"})
+  g.records[77]={id=77,activityID=2,activity=g.Catalog:GetActivity(2),activityName="Dungeon activity",categoryID=2,name="Compact result",leaderName=leaderKey,leaderKey=leaderKey,bnetFriends=1,charFriends=1,guildMates=1,numMembers=3,maxNumPlayers=5,age=1,details={members={},counts={TANK=1,HEALER=1,DAMAGER=1}}}
+  find:CommitChoice();find:DoSearch()
   local row=find.results.rows[1]
-  check(separated(row.title,row.meta),"result title and activity text overlap")
-  check(top(row.meta)+row.meta:GetHeight()<=row:GetHeight()+.001,"result text exceeds its row")
-  check(row.description:GetHeight()+.001>=(row.description:GetLineHeight()+row.description:GetSpacing())*2,"two-line result description is clipped")
-  g.apps[1]={id=901,status="applied",name="Raid application",categoryID=3,result={id=901,activity=g.Catalog:GetActivity(1),maxNumPlayers=30,numMembers=12}}
+  check(near(select(2,row.title:GetFont()),19*percent/100) and near(select(2,row.meta:GetFont()),19*percent/100) and near(select(2,row.description:GetFont()),19*percent/100),"result body cells share the enlarged nineteen-unit text role")
+  check(near(row.title:GetLineHeight()+row.title:GetSpacing(),26*percent/100) and near(row.meta:GetLineHeight()+row.meta:GetSpacing(),26*percent/100),"result body line boxes follow the enlarged twenty-six-unit line height")
+  activityCell(row,find.resultsHeader)
+  findEdges(find,u)
+  for _,kind in ipairs({"positive","neutral","caution"}) do
+   a.Notes:Edit(leaderKey,"Leader mark layout",{type=kind});g:Notify("relations")
+   check(row.marks.icons.bnet:IsShown() and row.marks.icons.friend:IsShown() and row.marks.icons.guild:IsShown() and row.marks.icons[kind]:IsShown(),"all three relationship marks and each supported leader note coexist")
+   check(row.leader:GetWidth()<row.leader:GetUnboundedStringWidth(),"a long leader name truncates to preserve every concurrent mark")
+   check(row.meta:GetText()=="Dungeon activity","all concurrent marks preserve the complete activity-name data")
+   leaderMarks(row,find.resultsHeader)
+  end
+  check(row.description.maxLines==1 and not row.description.wrap and row.description:GetHeight()<=row:GetHeight()+.001 and centered(row.description,row),"the result description stays on one centered line inside the compact row")
+  for _,score in ipairs({false,0}) do
+   g.records[77].leaderRating=score~=false and score or nil;g:Notify("result",77);u.Motion:Tick(.016)
+   check(row.score:GetText()==u:ScoreText(score~=false and score or nil),"unknown and zero ratings keep their complete display text")
+   check(row.score:GetUnboundedStringWidth()<=row.score:GetWidth()+.001,"unknown and zero ratings fit their numeric column at every font scale")
+  end
+  for _,age in ipairs({59*60,23*3600,99*86400}) do
+   g.records[77].age=age;g:Notify("result",77);u.Motion:Tick(.016)
+   check(row.age:GetText()~="" and row.age:GetUnboundedStringWidth()<=row.age:GetWidth()+.001,"long minute, hour and day ages fit their fixed column at every font scale")
+  end
+  g.apps[1]={id=901,status="applied",name="Raid application",categoryID=3,result={id=901,activity=g.Catalog:GetActivity(1),maxNumPlayers=30,numMembers=30,details={members={},counts={TANK=10,HEALER=10,DAMAGER=10}}}}
+  g.records[77].activity=g.Catalog:GetActivity(1);g.records[77].activityID=1;g.records[77].activityName=g.records[77].activity.name
+  g.records[77].maxNumPlayers=30;g.records[77].numMembers=30;g.records[77].categoryID=3;g.records[77].details.counts={TANK=10,HEALER=10,DAMAGER=10};g:Notify("result",77);u.Motion:Tick(.016)
   find:RefreshApplications();find.scopeToggle:Fire("OnClick","LeftButton")
   for _,list in ipairs({find.results,find.appList}) do
-   local item=list.rows[1];item.isParty=false;item.membersExpanded=true
+   local item=list.rows[1];item.isParty=false;item.membersExpanded=false
   end
   find:LayoutListRows()
-  for _,list in ipairs({find.results,find.appList}) do
-   local item=list.rows[1]
-   local upper={item.membersButton:GetPoint()};local lower={item.count:GetPoint()}
-   local upperBottom=upper[#upper]-item.roster.counts[1].text:GetHeight()/2
-   local lowerTop=lower[#lower]+item.count:GetHeight()/2
-   check(upperBottom+.001>=lowerTop,"expanded member totals overlap the role counts")
-   check(lowerTop-item.count:GetHeight()>=-item:GetHeight()/2-.001,"expanded member total exceeds its row")
-  end
   local application=find.appList.rows[1]
-  check(application.key==901 and find.appList.rowHeight>=application.count:GetHeight()+application.roster.counts[1].text:GetHeight(),"an expanded raid application fits both paired count lines")
-  application.membersButton:Fire("OnClick","LeftButton")
-  check(application.membersExpanded==false and find.appList.rowHeight==math.max(u.Theme.findApplicationRowHeight,math.ceil(application.count:GetHeight()*2)),"collapsed applications retain the main-line scaled count minimum")
-  g.apps[1]=nil;find:RefreshApplications();find.scopeToggle:Fire("OnClick","LeftButton")
-  if percent==100 then
-   check(row:GetHeight()==76 and top(row.meta)==42,"100% result geometry changed")
-   check(find.appList.rowHeight>=u.Theme.findApplicationRowHeight,"application stride preserves its base minimum")
+  check(application.key==901,"the cross-category application keeps its actual raid record")
+  activityCell(application,find.applicationHeader)
+  check(select(2,application.meta:GetFont())==select(2,row.meta:GetFont()) and near(application.meta:GetLineHeight(),row.meta:GetLineHeight()),"result and application activity cells use the same text role")
+  check(near(select(2,application.title:GetFont()),19*percent/100) and near(select(2,application.count:GetFont()),19*percent/100),"application titles and member totals share the enlarged body font")
+  local layoutRows,layoutCalls=find.LayoutListRows,0
+  find.LayoutListRows=function(self,...) layoutCalls=layoutCalls+1;return layoutRows(self,...) end
+  for _,list in ipairs({find.results,find.appList}) do
+   local item=list.rows[1];local height,viewport=list.rowHeight,list:GetHeight()
+   for index,role in ipairs(item.roster.counts) do
+    check(role.text:GetText()=="10" and role.text:GetUnboundedStringWidth()<=role.text:GetWidth()+.001,"two-digit role totals fit their text boxes at every font scale")
+    check(role.text:GetWidth()>=20 and left(role.icon)==(index-1)*46,"enlarging role text preserves the fixed icon starting positions")
+   end
+   item.membersButton:Fire("OnClick","LeftButton")
+   check(item.membersExpanded and item.count:IsShown() and not item.roster:IsShown(),"raid totals replace the role summary instead of adding a second line")
+   local _,buttonY=position(item.membersButton,item);local _,countY=position(item.count,item)
+   check(near(buttonY+item.membersButton:GetHeight()/2,countY+item.count:GetHeight()/2),"raid totals occupy the role summary's original vertical center")
+   check(centered(item.count,item),"raid totals remain centered in the compact member row")
+   check(list.rowHeight==height and list:GetHeight()==viewport,"showing raid totals does not change row height or viewport")
+   item.membersButton:Fire("OnClick","LeftButton")
+   check(not item.membersExpanded and not item.count:IsShown() and item.roster:IsShown(),"a second click restores the role summary")
+   check(list.rowHeight==height and list:GetHeight()==viewport,"restoring roles does not change row height or viewport")
   end
+  find.LayoutListRows=layoutRows
+  check(layoutCalls==0,"switching raid summaries never requests a list reflow")
+  check(find.appList.rowHeight>=application.meta:GetHeight()+8 and find.appList.rowHeight>=application.title:GetHeight()+8,"application stride fits its actual activity and title line boxes")
+  g.apps[1]=nil;find:RefreshApplications();find.scopeToggle:Fire("OnClick","LeftButton")
+  g.records[77].activity=g.Catalog:GetActivity(2);g.records[77].activityID=2;g.records[77].activityName=g.records[77].activity.name
+  g.records[77].maxNumPlayers=5;g.records[77].numMembers=3;g.records[77].categoryID=2;g.records[77].details.counts={TANK=1,HEALER=1,DAMAGER=1};g:Notify("result",77);u.Motion:Tick(.016)
+  if percent==100 then
+   check(near(row:GetHeight(),u.Theme.findResultRowHeight) and near(row:GetHeight(),58.88),"100% results use the eight-percent-shorter single-row baseline")
+   check(find.appList.rowHeight>=u.Theme.findApplicationRowHeight,"application stride preserves its base minimum")
+   check(u.Theme.findApplicationRowHeight==44,"applications keep the enlarged forty-four-unit row baseline")
+  end
+  -- The captured preset may keep Description at its minimum at both rail widths.
+  -- Give this growth/restore scenario a deliberately flexible description column.
+  local descriptionPath="layout.tables.findResults.widths.description"
+  local savedDescriptionWeight=a.Configuration:Get(descriptionPath)
+  a.Configuration:Set({[descriptionPath]=.25},{storage="character"})
+  find:SetSidebarCollapsed(false,false)
   local descriptionWidth=row.description:GetWidth()
+  local expandedMainWidth,expandedContentWidth=find.main:GetWidth(),u.content:GetWidth()
   for _,collapsed in ipairs({true,false}) do
    find:SetSidebarCollapsed(collapsed,false)
    check(near(find.rail:GetWidth(),collapsed and 48 or 208),"category rail width changes with its state")
-   check(near(find.main:GetWidth(),collapsed and 1155.2 or 995.2),"main content uses the available rail width")
+   local expectedMain=u.content:GetWidth()-find.rail:GetWidth()-u.Theme.contentGap-u.Theme.findContentInset*2
+   check(near(find.main:GetWidth(),expectedMain),"main content uses the current host width after rail, gap and panel insets")
+   check(near(find.main:GetWidth()-expandedMainWidth-(u.content:GetWidth()-expandedContentWidth),collapsed and 160 or 0),"collapsing the rail reclaims its complete one-hundred-sixty-unit width")
    local cell=find.resultsHeader.columns.description
-   check(near(left(row.description),cell.x+8) and near(row.description:GetWidth(),cell.width-16),"the result description follows its resized table cell")
-   check(collapsed and row.description:GetWidth()>descriptionWidth or not collapsed and near(row.description:GetWidth(),descriptionWidth),"the result description grows with reclaimed sidebar width and restores afterward")
+   check(near(left(row.description),cell.x+4) and near(row.description:GetWidth(),cell.width-8),"the result description follows its compact resized table cell")
+   check(collapsed and row.description:GetWidth()>descriptionWidth or not collapsed and near(row.description:GetWidth(),descriptionWidth),("the result description grows with reclaimed sidebar width and restores afterward (%s/%d/%s: %.3f, expanded %.3f)"):format(locale,percent,tostring(collapsed),row.description:GetWidth(),descriptionWidth))
    check(find.sidebarToggle:GetHeight()==40 and find.sidebarToggle:GetWidth()==(collapsed and 40 or 192),"sidebar toggle keeps its hit area")
    check(find.sidebarToggle.label:IsShown()~=collapsed,"toggle caption visibility matches the rail")
    if not collapsed then check(find.sidebarToggle.label:GetStringWidth()+52<=find.sidebarToggle:GetWidth(),"translated toggle caption fits the largest font") end
@@ -72,22 +189,40 @@ for _,locale in ipairs({"zhCN","enUS"}) do
     end
    end
    check(top(find.categories)+find.categories:GetHeight()+8<=find.rail:GetHeight()-48,"category viewport remains above the sidebar toggle")
-   check(separated(row.title,row.meta),"changing rail width preserves result line separation")
+   activityCell(row,find.resultsHeader)
+   findEdges(find,u)
   end
+  a.Configuration:Set({[descriptionPath]=savedDescriptionWeight},{storage="character"})
+  -- A minimum reached with the narrow rail cannot be reused unchanged when
+  -- expanding it: the target rail and both tables determine the new minimum.
+  local beforeEdgeWidth,beforeEdgeHeight=u.windowWidth,u.windowHeight
+  for _,animate in ipairs({false,true}) do
+   a:SetSetting("reduceMotion",not animate)
+   find:SetSidebarCollapsed(true,false);u:SetWindowSize(1,1)
+   findEdges(find,u)
+   find:SetSidebarCollapsed(false,animate)
+   u.Motion:Tick(1)
+   local required=u:GetWindowMinimum()
+   check(near(find.rail:GetWidth(),208),"expanding the rail reaches its full width after shrinking the collapsed host")
+   check(u.windowWidth+.001>=required,"expanding the rail grows a narrow host to its target content minimum")
+   findEdges(find,u)
+  end
+  a:SetSetting("reduceMotion",true);u:SetWindowSize(beforeEdgeWidth,beforeEdgeHeight)
   find:SelectCategory("seasonDungeon");find:CommitChoice();find:SetFiltersOpen(true)
-  check(not find.quickFilters:IsShown() and find.importantFilters:IsShown(),"important filters default to the popup")
-  check(find.filterPanel:GetWidth()>=592 and near(find.importantFilters:GetWidth(),find.filterPanel:GetWidth()-40),"seasonal popup uses the compact panel width")
-  for key,choice in pairs(find.presenceChoices) do
-   local label=find.presenceLabels[key]
-   check(left(choice)>=left(label)+label:GetWidth()+8-.001,"role segments leave room beside their label")
-   check(left(choice)+choice:GetWidth()<=find.importantFilters:GetWidth()+.001,"role segments stay inside the compact important-filter block")
-   for _,button in ipairs(choice.buttons) do
-    check(button.label:GetStringWidth()<=button.label:GetWidth()+.001,"translated role segment fits its text area")
-    check(button:GetHeight()+.001>=button.label:GetStringHeight(),"role segment height follows the selected font")
+  check(find.quickPlacement=="popup" and find.quickFilters:GetParent()==find.importantFilters and find.importantFilters:IsShown(),"shared important filters default to the popup")
+  check(find.filterPanel:GetWidth()>=560 and near(find.importantFilters:GetWidth(),find.filterViewport:GetWidth()),"seasonal conditions fill the scrollable body width")
+  local roleRight,roleCenter
+  for index,button in ipairs({find.quickChoices.tankPresence.button,find.quickChoices.healerPresence.button,find.quickChoices.damagePresence.button,find.quickIdentity,find.quickLogic}) do
+   local x,y=position(button,find.importantFilters)
+   check(x>=-.001 and x+button:GetWidth()<=find.importantFilters:GetWidth()+.001,"compact filter stays within its popup row")
+   check(y>=-.001 and y+button:GetHeight()<=find.importantFilters:GetHeight()+.001,"compact filter stays within its popup height")
+   check(button.label:GetStringWidth()<=button.label:GetWidth()+.001,"translated compact filter fits its text area")
+   check(button:GetHeight()+.001>=button.label:GetStringHeight(),"compact filter height follows the selected font")
+   if index<=3 then
+    check(not roleRight or x>=roleRight+5.999,"three role controls retain their horizontal gap")
+    check(not roleCenter or near(y+button:GetHeight()/2,roleCenter),"three role controls share one row")
+    roleRight,roleCenter=x+button:GetWidth(),y+button:GetHeight()/2
    end
-  end
-  for _,choice in ipairs({find.presenceLogic,find.identityChoice}) do
-   for _,button in ipairs(choice.buttons) do check(button.label:GetStringWidth()<=button.label:GetWidth()+.001,("logic and identity segment labels fit (%s/%d %s: %.2f/%.2f)"):format(locale,percent,button.label:GetText(),button.label:GetStringWidth(),button.label:GetWidth())) end
   end
   check(top(find.filterPanel)+find.filterPanel:GetHeight()<=u.frame:GetHeight()-20+.001,"compact filter popup stays within the window")
   local footerRight,footerCenter
@@ -103,14 +238,15 @@ for _,locale in ipairs({"zhCN","enUS"}) do
   for _,show in ipairs({true,false}) do
    a:SetSetting("showImportantFilters",show)
    check(near(find.search:GetWidth(),find.main:GetWidth()-60),"important-filter placement never reduces search width")
-   check(find.quickFilters:IsShown()==show and find.importantFilters:IsShown()~=show,"the setting shows exactly one set of important filters")
+   check(find.quickPlacement==(show and "header" or "popup") and find.quickFilters:GetParent()==(show and find.applicationPanel or find.importantFilters) and find.importantFilters:IsShown()~=show,"the setting moves the same important filters between header and popup")
    check(find.quickFilterHeight==0,"important filters never reserve a second header row")
    check(near(top(find.applicationPanel),68) and near(find.applicationPanel:GetHeight(),44+(find.appsHeight or 0)),"applications keep their existing vertical geometry")
    check(near(top(find.applicationHeader),40),"application headings keep their original top inset")
    check(near(top(find.appList),44+find.applicationHeader:GetHeight()),"application rows retain their original top inset")
-   check(show and find.filterPanel:GetWidth()==368 or not show and find.filterPanel:GetWidth()>=592,"popup width follows the important-filter placement")
+   check(find.filterPanel:GetWidth()>=(show and 460 or 560),"popup width fits the selected placement and translated grid labels")
    if show then
     u:SetWindowSize(1,1)
+    findEdges(find,u)
     local minimum=u:GetWindowMinimum()
     check(minimum>=find:GetMinimumWidth(),"window minimum respects the measured header width")
     check(u.preferredWindowWidth==preferredWidth,"header constraints preserve the user's preferred window width")
@@ -133,15 +269,22 @@ for _,locale in ipairs({"zhCN","enUS"}) do
   end
   u:SetWindowSize(windowWidth,windowHeight)
   find:SetFiltersOpen(false)
-  g.records[99]={id=99,partyGUID="Font-rejection",name="Rejected group",activityID=2,activity=g.Catalog:GetActivity(2),activityName="Dungeon activity",categoryID=2,numMembers=1,maxNumPlayers=5,age=1}
+  a.Notes:Remove(leaderKey)
+  g.records[77]=nil
+  g.records[99]={id=99,partyGUID="Font-rejection",name="Rejected group",activityID=2,activity=g.Catalog:GetActivity(2),activityName=string.rep(locale=="zhCN" and "很长的副本名称" or "Long dungeon activity ",6),categoryID=2,numMembers=1,maxNumPlayers=5,age=1}
   g.declinedParties["Font-rejection"]=GetTime();find:CommitChoice();find:DoSearch()
   local rejected=find.results.rows[1]
   local function CheckRejectionLayout()
    check(rejected.key==99 and rejected.declined:IsShown(),"geometry checks render a rejected result")
-   check(separated(rejected.meta,rejected.declined),"rejection text overlaps the activity line")
-   check(top(rejected.declined)+rejected.declined:GetHeight()+10<=rejected:GetHeight()+.001,"rejection text exceeds the result row")
+   local _,footerY=position(rejected.declined,rejected)
+   for _,body in ipairs({rejected.title,rejected.meta,rejected.description}) do
+    local _,bodyY=position(body,rejected)
+    check(footerY+.001>=bodyY+body:GetHeight()+4,"the rejection footer follows every complete body cell with a gap")
+   end
+   check(footerY+rejected.declined:GetHeight()<=rejected:GetHeight()+.001,"rejection text exceeds the result row")
    check(rejected.declined:GetStringWidth()<=rejected.declined:GetWidth(),"the complete rejection text fits at the selected font size")
-   check(rejected:GetHeight()/2+rejected.leader:GetHeight()/2<=top(rejected.declined),"rejection text overlaps the leader column")
+   local _,leaderY=position(rejected.leader,rejected)
+   check(leaderY+rejected.leader:GetHeight()<=footerY+.001,"rejection text overlaps the leader column")
   end
   CheckRejectionLayout()
   a:SetSetting("fontScale",percent==130 and 70 or 130);CheckRejectionLayout();a:SetSetting("fontScale",percent)
@@ -201,8 +344,8 @@ for _,locale in ipairs({"zhCN","enUS"}) do
   g.GetHistory=function() return {{mapName="Test dungeon",level=12,startedAt=1,completedAt=100,members={{name="Example",realm="Home",class="WARRIOR"}}}} end
   a:Open("notes")
   local notes=u.pages.notes;local item=notes.list.rows[1]
-  check(separated(item.title,item.meta),"note title and identity overlap")
-  check(separated(item.meta,item.reason),"note identity and reason overlap")
+  check(not item.meta:IsShown() and item.meta:GetText()=="","note rows omit class and specialization text")
+  check(separated(item.title,item.reason),"note title and reason overlap")
   check(top(item.reason)+item.reason:GetHeight()<=item:GetHeight(),"note reason exceeds its row")
   notes:SelectTab("history");notes:OpenRun(1)
   local historyRow=notes.historyList.rows[1]
@@ -223,12 +366,12 @@ for _,locale in ipairs({"zhCN","enUS"}) do
    end
   end
   a:SetSetting("fontScale",100)
-  check(find.results.rowHeight==76 and notes.list.rowHeight==100,"returning to 100% restores main-line row geometry")
+  check(near(find.results.rowHeight,u.Theme.findResultRowHeight) and near(find.results.rowHeight,58.88) and notes.list.rowHeight==92,"returning to 100% restores the compact result and unchanged note row geometry")
   check(top(create.titleLabel)==92 and top(create.titleShell)==116,"returning to 100% retains enlarged form geometry")
   a:SetSetting("fontScale",percent);a:Open("settings",{section="interface"})
   local settings=u.pages.settings
   local panel=settings.panels.interface
-  check(#panel.rows==6,"appearance settings contain all six rows including important-filter placement")
+  check(#panel.rows==4,"interface settings group font, font size, window scale and motion together")
   local previous
   for _,entry in ipairs(panel.rows) do
    if previous then check(separated(previous,entry.frame),"appearance setting rows overlap") end
@@ -237,11 +380,11 @@ for _,locale in ipairs({"zhCN","enUS"}) do
    check(entry.frame:GetHeight()+.001>=entry.help:GetStringHeight()+32,"appearance setting description exceeds its row")
    previous=entry.frame
   end
-  check(top(previous)+previous:GetHeight()<=panel:GetHeight()+.001,("all six appearance rows fit their panel (%s/%d: %.2f/%.2f)"):format(locale,percent,top(previous)+previous:GetHeight(),panel:GetHeight()))
+  check(top(previous)+previous:GetHeight()<=panel:GetHeight()+.001,("all four interface rows fit their panel (%s/%d: %.2f/%.2f)"):format(locale,percent,top(previous)+previous:GetHeight(),panel:GetHeight()))
   if settings.reloadLanguage:IsShown() then
-   check(separated(previous,settings.reloadLanguage),"reload action overlaps the sixth appearance row")
+   check(separated(previous,settings.reloadLanguage),"reload action overlaps the fourth interface row")
    check(top(settings.reloadLanguage)+settings.reloadLanguage:GetHeight()<=panel:GetHeight()+.001,
-    ("all six appearance rows and reload action fit their panel (%s/%d: end %.3f, panel %.3f)"):format(locale,percent,top(settings.reloadLanguage)+settings.reloadLanguage:GetHeight(),panel:GetHeight()))
+    ("all four interface rows and reload action fit their panel (%s/%d: end %.3f, panel %.3f)"):format(locale,percent,top(settings.reloadLanguage)+settings.reloadLanguage:GetHeight(),panel:GetHeight()))
   end
   for _,entry in pairs(settings.controls) do
    if not entry.definition[4] then

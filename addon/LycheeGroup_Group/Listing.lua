@@ -14,7 +14,7 @@ end
 
 local function NormalizeEntry()
 	if not C_LFGList.HasActiveEntryInfo() then return nil end
-	local data = C_LFGList.GetActiveEntryInfo()
+	local data = G.Public(C_LFGList.GetActiveEntryInfo())
 	-- An active entry can be waiting for its refreshed details; only native
 	-- inactive state ends the last confirmed listing.
 	if type(data) ~= "table" then return snapshot end
@@ -24,23 +24,29 @@ local function NormalizeEntry()
 		local activity = C_LFGList.GetActivityInfoTable(activityID)
 		activityName = activity and activity.fullName or nil
 	end
+	local autoAccept = G.Public(data.autoAccept)
+	local autoInvite = G.prefs.listingAutoInvite
+	if autoInvite == nil then autoInvite = autoAccept else autoInvite = autoInvite == true end
+	-- Entry fields can become secret during chat messaging lockdown. Keep the
+	-- activity identity, but expose unavailable fields as nil before any consumer
+	-- compares, formats, caches or uses them to decide an applicant action.
 	return {
 		activityID = activityID,
 		activityIDs = data.activityIDs,
 		activityName = activityName,
-		name = data.name,
-		comment = data.comment,
-		requiredItemLevel = data.requiredItemLevel,
-		requiredDungeonScore = data.requiredDungeonScore,
-		requiredPvpRating = data.requiredPvpRating,
-		autoAccept = data.autoAccept,
-		autoInvite = G.prefs.listingAutoInvite == true or G.prefs.listingAutoInvite == nil and data.autoAccept == true,
-		privateGroup = data.privateGroup,
-		questID = data.questID,
-		playstyle = data.playstyle,
-		generalPlaystyle = data.generalPlaystyle,
-		isCrossFactionListing = data.isCrossFactionListing,
-		newPlayerFriendly = data.newPlayerFriendly,
+		name = G.Public(data.name),
+		comment = G.Public(data.comment),
+		requiredItemLevel = G.Public(data.requiredItemLevel),
+		requiredDungeonScore = G.Public(data.requiredDungeonScore),
+		requiredPvpRating = G.Public(data.requiredPvpRating),
+		autoAccept = autoAccept,
+		autoInvite = autoInvite,
+		privateGroup = G.Public(data.privateGroup),
+		questID = G.Public(data.questID),
+		playstyle = G.Public(data.playstyle),
+		generalPlaystyle = G.Public(data.generalPlaystyle),
+		isCrossFactionListing = G.Public(data.isCrossFactionListing),
+		newPlayerFriendly = G.Public(data.newPlayerFriendly),
 	}
 end
 

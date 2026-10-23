@@ -10,7 +10,7 @@ local kinds={
  aboutHeader={root="box",icon="texture",name="text",versionLabel="text",version="text",authorLabel="text",author="text"},
  member={root="roundedBox",icon="texture",name="text",realm="text",leaderIcon="texture",role="texture",faction="texture",marks="box",label="text",fill="surface",hover="surface"},
  batch={root="box",bg="surface",comment="text",status="text",invite="roundedBox",decline="roundedBox",["invite/icon"]="texture",["invite/fill"]="surface",["invite/hover"]="surface",["decline/icon"]="texture",["decline/fill"]="surface",["decline/hover"]="surface"},
- applicant={root="box",icon="texture",title="text",factionButton="roundedBox",faction="texture",race="text",marks="box",role="texture",ilvl="text",score="text",mapScore="text"},
+ applicant={root="box",icon="texture",title="text",factionButton="roundedBox",faction="texture",race="text",marks="box",role="texture",ilvl="text",score="text",mapScore="text",mapScoreButton="box"},
  noteRow={root="box",title="text",meta="text",icon="texture",kind="text",date="text",reason="text",hover="surface",selected="surface",alternate="surface"},
  historyRow={chevron="texture",root="box",title="text",meta="text",icon="texture",level="text",duration="text",roster="box",date="text",hover="surface",selected="surface",alternate="surface"},
  historyMember={root="box",title="text",meta="text",icon="texture",action="text",hover="surface",selected="surface",alternate="surface"},
@@ -39,16 +39,17 @@ Add(main,"members","member","member.identity")
 Add(main,"native","text","native.application.note native.creation.description native.creation.title native.search")
 Add(main,"notes","component","notes.addButton notes.classChoice notes.eCancel notes.eClose notes.eDelete notes.eName notes.eReason notes.eSave notes.editor notes.emptyState notes.exportButton notes.frame notes.historyFrame notes.historyHeader notes.historyList notes.historyModal.header notes.historyModal.list notes.importButton notes.left notes.list notes.main notes.noteHeader notes.rail notes.search notes.specChoice notes.tBox notes.tExport notes.tImport notes.tSelect notes.toolbar notes.typeSwitch")
 Add(main,"notes","historyMember","notes.historyMember")
+Add(main,"notes","box","notes.actions")
 Add(main,"notes","historyRow","notes.history")
 Add(main,"notes","noteRow","notes.record")
-Add(main,"notes","text","notes.classLabel notes.countText notes.eDate notes.eIdentity notes.eNameHint notes.eNameLabel notes.eRealm notes.eReasonLabel notes.eStatus notes.eTitle notes.editorEmpty notes.emptyTitle notes.historyCaption notes.historyEmpty notes.historyModal.caption notes.pageTitle notes.searchHint notes.specLabel notes.tHint notes.tLabel notes.tStatus notes.typeLabel")
+Add(main,"notes","text","notes.classLabel notes.eDate notes.eIdentity notes.eNameHint notes.eNameLabel notes.eRealm notes.eReasonLabel notes.eStatus notes.eTitle notes.editorEmpty notes.emptyTitle notes.historyCaption notes.historyEmpty notes.historyModal.caption notes.pageTitle notes.searchHint notes.specLabel notes.tHint notes.tLabel notes.tStatus notes.typeLabel")
 Add(main,"notes","texture","notes.eAvatar")
 Add(main,"settings","aboutAddon","settings.about.addon")
 Add(main,"settings","aboutHeader","settings.aboutHeader")
 Add(main,"settings","box","settings.panel")
 Add(main,"settings","component","settings.about.link settings.aboutBrand settings.bindingNotice settings.block settings.blocksClear settings.blocksHeader settings.blocksList settings.cancelBinding settings.dedicationToast settings.frame settings.main settings.navigation settings.overwriteBinding settings.rail settings.reloadLanguage")
 Add(main,"settings","settingRow","settings.row")
-Add(main,"settings","text","settings.blocksCount settings.blocksEmpty settings.blocksHelp settings.heading settings.otherAddonsHeading settings.themeReloadHint")
+Add(main,"settings","text","settings.blocksCount settings.blocksEmpty settings.heading settings.otherAddonsHeading settings.themeReloadHint")
 Add(main,"tooltip","boss","tooltip.boss")
 Add(main,"tooltip","component","tooltip.back tooltip.canvas tooltip.composition tooltip.copyText.close tooltip.copyText.field tooltip.note tooltip.outside tooltip.plain tooltip.scroll tooltip.scrollbar tooltip.wcl")
 Add(main,"tooltip","dungeon","tooltip.dungeon")
@@ -152,7 +153,7 @@ main["application.autoApply"].slotKinds=Map(kinds.button,{box="box",["box/fill"]
 main["notes.eClose"].slotKinds=Map(kinds.button,{elementIcon="texture"})
 main["create.pickerSearch"].slotKinds=Map(kinds.edit,{elementIcon="texture"})
 main["create.pickerClear"].slotKinds=Map(kinds.button,{elementIcon="texture"})
-main["create.favoriteRow"].slotKinds=Map(kinds.row,{icon="texture",unavailable="text",create="roundedBox",["create/label"]="text",["create/fill"]="surface",["create/hover"]="surface",remove="roundedBox",["remove/label"]="text",["remove/fill"]="surface",["remove/hover"]="surface",["remove/elementIcon"]="texture"})
+main["create.favoriteRow"].slotKinds=Map(kinds.row,{icon="texture",conditions="text",unavailable="text",create="roundedBox",["create/label"]="text",["create/fill"]="surface",["create/hover"]="surface",remove="roundedBox",["remove/label"]="text",["remove/fill"]="surface",["remove/hover"]="surface",["remove/elementIcon"]="texture"})
 main["settings.block"].slotKinds=Map(kinds.row,{remove="roundedBox",["remove/label"]="text",["remove/fill"]="surface",["remove/hover"]="surface"})
 main["settings.navigation"].slotKinds=Map(kinds.button,{mark="texture"})
 main["create.pickerCategory"].slotKinds=Map(kinds.row,{symbol="texture"})

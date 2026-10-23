@@ -1,3 +1,52 @@
+-- Entry clicks toggle the actual UI, including Presence reversal and delayed hide.
+for _,integrated in ipairs({false,true}) do
+ local fixture=dofile("tests/ui_fixture.lua")("zhCN",nil,{reduceMotion=false})
+ local addon,ui,group=fixture.A,fixture.U,fixture.G
+ dofile("addon/LycheeGroup/Floating.lua");dofile("addon/LycheeGroup/API.lua")
+ local floating,api=addon.Floating,addon.API.Floating
+ floating:Bind(group);floating:UpdateSettings()
+ local entry=floating.button
+ if integrated then
+  local host=CreateFrame("Button",nil,UIParent);host:SetSize(120,24);host:SetPoint("CENTER")
+  local icon=host:CreateTexture(nil,"ARTWORK");icon:SetSize(24,24)
+  local label=host:CreateFontString(nil,"OVERLAY");label:SetFont("host",14,"");label:SetPoint("CENTER");label:SetText("Host entry")
+  local rightClicks=0;host:SetScript("OnClick",function(_,button) if button=="RightButton" then rightClicks=rightClicks+1 end end)
+  local view={records={meetingstone={frame=host,icon=icon,text=label,active=true}}}
+  function view:HideTooltip() end
+  _G.RurutiaSuite={TopBar={view=view}}
+  dofile("addon/LycheeGroup/Adapters/Rurutia.lua");addon.Adapters.Rurutia:Sync(view)
+  host:Fire("OnClick","RightButton");T.eq(rightClicks,1,"integrated right click retains the host action")
+  T.eq(ui.frame,nil,"the integrated right click does not create the main window")
+  entry=host
+ end
+ local function Click() entry:Fire("OnClick","LeftButton") end
+ local motionSetting=addon:GetSetting("reduceMotion")
+ local floatingScale,compatibility=addon:GetSetting("floatingScale"),addon:GetSetting("floatingCompatibility")
+ T.eq(ui.frame,nil,"the floating entry works before the main window exists")
+ Click();T.eq(ui:IsShown(),true);T.eq(ui.page,"find")
+ ui.Motion:Tick(.14);local openedPhase=ui.Motion.phase
+ T.ok(openedPhase>0 and openedPhase<1,"the main window is partway through its normal opening motion")
+ Click();T.eq(ui.hiding,true,"clicking the entry during opening starts closing")
+ T.near(ui.Motion.phase,openedPhase,.000001,"closing starts at the current opening phase")
+ local oldHide=ui.finishHide
+ ui.Motion:Tick(.04);local closingPhase=ui.Motion.phase
+ T.ok(closingPhase<openedPhase and closingPhase>0,"the closing animation progresses normally")
+ Click();T.eq(ui.hiding,nil,"clicking during exit reopens instead of starting another hide")
+ T.near(ui.Motion.phase,closingPhase,.000001,"reopening starts at the displayed closing phase")
+ oldHide();T.eq(ui:IsShown(),true,"a replaced exit callback cannot hide the reopened window")
+ ui.Motion:Tick(1);T.eq(ui.Motion.phase,1);T.eq(ui:IsShown(),true)
+ addon:Open("notes");Click();T.eq(ui.hiding,true,"the entry closes whichever main page is open")
+ T.eq(ui.page,"notes","closing does not first navigate to another page")
+ ui.Motion:Tick(1);T.eq(ui:IsShown(),false);T.eq(ui.hiding,nil)
+ group.listing={activityID=2,name="Current party listing",comment=""}
+ Click();T.eq(ui.page,"create","opening resolves the current native party listing")
+ ui.Motion:Tick(1)
+ api:Open();T.eq(ui.hiding,nil);T.eq(ui:IsShown(),true,"the public Open method retains its explicit open behavior")
+ Click();ui.Motion:Tick(1);T.eq(ui:IsShown(),false,"a completed entry close hides the main window")
+ Click();ui.Motion:Tick(1);T.eq(ui:IsShown(),true,"the hidden frame opens again on the next entry click")
+ T.eq(addon:GetSetting("reduceMotion"),motionSetting);T.eq(addon:GetSetting("floatingScale"),floatingScale);T.eq(addon:GetSetting("floatingCompatibility"),compatibility)
+ ui:Hide(true);addon:SetSetting("floating",false);_G.RurutiaSuite=nil
+end
 -- The status entry remains usable before the UI business package is loaded.
 local base=dofile("tests/stubs.lua");base.Install({locale="zhCN",realm="Home"})
 local stub=dofile("tests/ui_stubs.lua");stub.Install()

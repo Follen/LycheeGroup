@@ -23,12 +23,20 @@ local function SizeRows(list,height)
  list:SetRowHeight(height,height)
 end
 local function LayoutHistoryRows(list,x)
- local row=list.rows[1]
- local metaTop=math.max(44,12+row.title:GetHeight()+4)
- for _,item in ipairs(list.rows) do item.meta:SetPoint("TOPLEFT",x,-metaTop) end
- SizeRows(list,math.max(80,math.ceil(metaTop+row.meta:GetHeight()+12)))
+ local height=80
+ for _,row in ipairs(list.rows) do
+  local detail=row.meta:IsShown() and row.meta:GetText()~=""
+  height=math.max(height,math.ceil(row.title:GetHeight()+(detail and row.meta:GetHeight()+4 or 0)+24))
+ end
+ SizeRows(list,height)
+ for _,row in ipairs(list.rows) do
+  local detail=row.meta:IsShown() and row.meta:GetText()~=""
+  local top=(height-row.title:GetHeight()-(detail and row.meta:GetHeight()+4 or 0))/2
+  row.title:ClearAllPoints();row.title:SetPoint("TOPLEFT",row,"TOPLEFT",x,-top)
+  row.meta:ClearAllPoints();row.meta:SetPoint("TOPLEFT",row,"TOPLEFT",x,-top-row.title:GetHeight()-4)
+ end
 end
-local EDITOR_HEIGHT = math.min(T.notesEditorMaxHeight, HEIGHT - T.notesWorkTop - T.notesContentInset)
+local EDITOR_HEIGHT = math.min(T.notesEditorMaxHeight,HEIGHT - T.notesEditorTop - T.notesContentInset-T.notesEditorBottomInset)
 
 local state = {
 	search = "",
@@ -53,12 +61,15 @@ end
 
 local function LayoutNoteColumn(row,columns)
  local player,date=columns.player,columns.timestamp
-  row.icon:ClearAllPoints();C.SetPoint(row.icon,"TOPLEFT",row.icon:GetParent(),"TOPLEFT",player.x+12,"notesRowIconTopleftY")
+  local reasonTop=math.max(T.notesRowReasonTop,-T.notesRowTitleTopleftY+row.title:GetHeight()+8)
+  local iconTop=(-T.notesRowTitleTopleftY+reasonTop+row.reason:GetHeight()-row.icon:GetHeight())/2
+  row.icon:ClearAllPoints();row.icon:SetPoint("TOPLEFT",player.x+12,-iconTop)
   row.title:ClearAllPoints();C.SetPoint(row.title,"TOPLEFT",row.title:GetParent(),"TOPLEFT",player.x+50,"notesRowTitleTopleftY");row.title:SetWidth(player.width-56)
-  row.meta:SetWidth(player.width-56)
-  row.kind:ClearAllPoints();C.SetPoint(row.kind,"TOPLEFT",row.kind:GetParent(),"TOPLEFT",date.x+6,"notesRowKindTopleftY");row.kind:SetWidth(date.width-12)
-  row.date:SetWidth(date.width-12)
-  row.reason:SetWidth(CARD_WIDTH-player.x-50-T.notesCardRightInset)
+  row.meta:Hide()
+  local detailWidth=math.max(0,date.width-6-T.notesRowDetailRightInset)
+  row.kind:ClearAllPoints();row.kind:SetPoint("TOPLEFT",date.x+6,T.notesRowTitleTopleftY-(row.title:GetHeight()-row.kind:GetHeight())/2);row.kind:SetWidth(detailWidth)
+  row.date:ClearAllPoints();row.date:SetPoint("TOPLEFT",date.x+6,-reasonTop-(row.reason:GetHeight()-row.date:GetHeight())/2);row.date:SetWidth(detailWidth)
+  row.reason:ClearAllPoints();row.reason:SetPoint("TOPLEFT",player.x+50,-reasonTop);row.reason:SetWidth(player.width-56)
 end
 function P:LayoutNoteColumns(header)
  if not self.list then return end
@@ -147,12 +158,11 @@ local function RenderNote(row,key)
  local r=A.Notes:Find(key);if not r then return end
  local identity=A.Notes.PlayerInfo.ResolveRecord(r)
  UI:SetMemberIcon(row.icon,identity);UI:SetText(row.title,r.name.."-"..r.server);row.title:SetTextColor(UI:ClassColor(identity.class))
- UI:SetText(row.meta,identity.classSpec~="" and (identity.specID and identity.classSpec:gsub("%-"," · ",1) or identity.classSpec) or L.unknown)
+ UI:SetText(row.meta,"");row.meta:Hide()
  UI:SetText(row.reason,r.reason~="" and r.reason or L.noReason)
  local label;for _,entry in ipairs(NOTE_TYPES) do if r.type==entry.key then label=entry.label end end
  UI:SetText(row.kind,label);UI:Color(row.kind,r.type=="positive" and "good" or r.type=="caution" and "warning" or "muted")
- local dateColumn=P.noteHeader.columns.timestamp
- for kind,glyph in pairs(row.kindIcons) do glyph:SetShown(kind==r.type);if kind==r.type then glyph:ClearAllPoints();C.SetPoint(glyph,"TOPLEFT",glyph:GetParent(),"TOPLEFT",dateColumn.x+dateColumn.width-22-row.kind:GetStringWidth(),"notesGlyphTopleftY") end end
+ for kind,glyph in pairs(row.kindIcons) do glyph:SetShown(kind==r.type);if kind==r.type then glyph:ClearAllPoints();glyph:SetPoint("RIGHT",row.kind,"RIGHT",-row.kind:GetStringWidth()-T.notesRowKindGap,0) end end
  UI:SetText(row.date,UI:DateText(r.timestamp))
 end
 
@@ -178,19 +188,19 @@ function P:Build(parent)
  self.search.box:HookScript("OnTextChanged",function() P:OnSearchChanged() end)
  self.search.box:HookScript("OnEditFocusGained",function() P.searchHint:Hide() end)
  self.search.box:HookScript("OnEditFocusLost",function() P.searchHint:SetShown(P.search.box:GetText()=="") end)
- self.addButton=C.Button(self.toolbar,L.add,nil,function() P:OpenAdd() end);self.addButton:SetPrimary(true);self.addButton:SetPoint("RIGHT");self.addButton.label:ClearAllPoints();C.SetPoint(self.addButton.label,"LEFT",self.addButton.label:GetParent(),"LEFT","notesAddButtonLabelLeftX",0)
+ self.actions=CreateFrame("Frame",nil,main);self.actions:SetSize(DRAWER_W,T.notesToolbarHeight);self.actions:SetPoint("TOPRIGHT",-T.notesContentInset,-T.notesContentInset-(self.pageTitle:GetHeight()-T.notesToolbarHeight)/2)
+ self.addButton=C.Button(self.actions,L.add,nil,function() P:OpenAdd() end);self.addButton:SetPrimary(true);self.addButton:SetPoint("RIGHT");self.addButton.label:ClearAllPoints();C.SetPoint(self.addButton.label,"LEFT",self.addButton.label:GetParent(),"LEFT","notesAddButtonLabelLeftX",0)
  self.addButton.icon=C.Glyph(self.addButton,"plus",T.notesAddButtonIconWidth);C.Box(self.addButton.icon,{width="notesAddButtonIconWidth",height="notesAddButtonIconHeight"});C.SetPoint(self.addButton.icon,"LEFT",self.addButton.icon:GetParent(),"LEFT","notesAddButtonIconLeftX",0);self.addButton:SetWidth(math.ceil(self.addButton.label:GetStringWidth())+56)
- self.exportButton=C.Button(self.toolbar,L.export,nil,function() P:DoExport() end);self.exportButton:SetWidth(self.exportButton.label:GetStringWidth()+34);C.SetPoint(self.exportButton,"RIGHT",self.addButton,"LEFT","notesExportButtonRightX",0)
- self.importButton=C.Button(self.toolbar,L.import,nil,function() P:OpenTransfer("import") end);self.importButton:SetWidth(self.importButton.label:GetStringWidth()+34);C.SetPoint(self.importButton,"RIGHT",self.exportButton,"LEFT","notesImportButtonRightX",0)
+ self.exportButton=C.Button(self.actions,L.export,nil,function() P:DoExport() end);self.exportButton:SetWidth(self.exportButton.label:GetStringWidth()+28);C.SetPoint(self.exportButton,"RIGHT",self.addButton,"LEFT","notesExportButtonRightX",0)
+ self.importButton=C.Button(self.actions,L.import,nil,function() P:OpenTransfer("import") end);self.importButton:SetWidth(self.importButton.label:GetStringWidth()+28);C.SetPoint(self.importButton,"RIGHT",self.exportButton,"LEFT","notesImportButtonRightX",0)
  self.toolbarActionOptions={anchor="TOPRIGHT",width="content",height="notesToolbarHeight",align="center"}
- self.toolbarActions=C.Row(self.toolbar,{{frame=self.importButton,gapAfter=-T.notesImportButtonRightX},{frame=self.exportButton,gapAfter=-T.notesExportButtonRightX},{frame=self.addButton}},self.toolbarActionOptions)
+ self.toolbarActions=C.Row(self.actions,{{frame=self.importButton,gapAfter=-T.notesImportButtonRightX},{frame=self.exportButton,gapAfter=-T.notesExportButtonRightX},{frame=self.addButton}},self.toolbarActionOptions)
  self.left=CreateFrame("Frame",nil,main);self.left:SetSize(T.notesListWidth,HEIGHT-T.notesWorkTop-T.notesContentInset);self.left:SetPoint("TOPLEFT",T.notesContentInset,-T.notesWorkTop)
  self.noteHeader=C.TableHeader(self.left,{
   {key="player",label=S("玩家记录","Player notes"),width="notesColumnPlayerWidth264",min="notesColumnPlayerMin180"},
   {key="timestamp",label=S("类型 / 时间","Type / Date"),width="notesColumnTimestampWidth144",min="notesColumnTimestampMin132",align="RIGHT",sortable=true},
  },{onLayout=function(header) P:LayoutNoteColumns(header) end,onSort=function() P:RefreshList() end})
  self.noteHeader:SetPoint("TOPLEFT");self.listTitle=self.noteHeader.labels.player
- self.countText=C.Text(main,"",14,"dim");self.countText:SetPoint("TOPRIGHT",-T.notesContentInset,-T.notesContentInset-8);C.SetLineHeight(self.countText,20,true)
  self.list=C.List(self.left,T.notesListWidth,0,T.notesRowHeight,function(key,button) P:OnSelect(key,button) end);C.SetPoint(self.list,"TOPLEFT",self.list:GetParent(),"TOPLEFT",0,"notesListTopleftY");self.list.selectionMark=false
  self.list:SetRowInitializer(function(row)
   UI:BindTooltipArea(row,.25,
@@ -198,32 +208,28 @@ function P:Build(parent)
    function(r) if P.list.selectedKey~=r.key then UI.Tooltip:ShowNote(r,r.key) end end)
   row.icon=C.Icon(row,T.notesRowIconWidth);C.Box(row.icon,{width="notesRowIconWidth",height="notesRowIconHeight"});C.SetPoint(row.icon,"TOPLEFT",row.icon:GetParent(),"TOPLEFT","notesRowIconTopleftX","notesRowIconTopleftY")
   row.title:ClearAllPoints();C.SetPoint(row.title,"TOPLEFT",row.title:GetParent(),"TOPLEFT","notesRowTitleTopleftX","notesRowTitleTopleftY");row.title:SetWidth(CARD_WIDTH-T.notesCardRightInset-132-8-50);C.SetFont(row.title,T.listTitleSize);C.SetLineHeight(row.title,T.listTitleLineHeight,true)
-  row.meta:ClearAllPoints();C.SetPoint(row.meta,"TOPLEFT",row.meta:GetParent(),"TOPLEFT","notesRowMetaTopleftX","notesRowMetaTopleftY");row.meta:SetWidth(CARD_WIDTH-T.notesCardRightInset-132-8-50)
+  row.meta:Hide()
   row.reason=C.Text(row,"",14,"muted",CARD_WIDTH-50-T.notesCardRightInset);C.SetPoint(row.reason,"TOPLEFT",row.reason:GetParent(),"TOPLEFT","notesRowReasonTopleftX","notesRowReasonTopleftY");row.reason:SetMaxLines(1);C.SetLineHeight(row.reason,20,true)
-  row.kind=C.Text(row,"",14,"muted",T.notesRowKindWidth);row.kind:SetWidth(T.notesRowKindWidth);C.SetPoint(row.kind,"TOPRIGHT",row.kind:GetParent(),"TOPRIGHT","notesRowKindToprightX","notesRowKindToprightY");row.kind:SetJustifyH("RIGHT");C.SetLineHeight(row.kind,22,true)
+  row.kind=C.Text(row,"",T.notesDetailFontSize,"muted",T.notesRowKindWidth);row.kind:SetWidth(T.notesRowKindWidth);C.SetPoint(row.kind,"TOPRIGHT",row.kind:GetParent(),"TOPRIGHT","notesRowKindToprightX","notesRowKindToprightY");row.kind:SetJustifyH("RIGHT");C.SetLineHeight(row.kind,T.notesDetailLineHeight,true)
   row.kindIcons={}
-  for _,entry in ipairs(NOTE_TYPES) do local glyph=C.Glyph(row,entry.key=="positive" and "heart" or entry.key=="caution" and "caution" or "book",T.notesGlyphWidth,entry.key=="positive" and T.good or entry.key=="caution" and T.warning or T.muted);C.Box(glyph,{width="notesGlyphWidth",height="notesGlyphHeight"});C.SetPoint(glyph,"TOPRIGHT",glyph:GetParent(),"TOPRIGHT",-14-(zh and 26 or 68),"notesGlyphToprightY");glyph:Hide();row.kindIcons[entry.key]=glyph end
-  row.date=C.Text(row,"",14,"dim",T.notesRowDateWidth);row.date:SetWidth(T.notesRowDateWidth);C.SetPoint(row.date,"TOPRIGHT",row.date:GetParent(),"TOPRIGHT","notesRowDateToprightX","notesRowDateToprightY");row.date:SetJustifyH("RIGHT");C.SetLineHeight(row.date,20,true)
-  local metaTop=math.max(40,8+row.title:GetHeight()+4)
+  for _,entry in ipairs(NOTE_TYPES) do local neutral=entry.key=="neutral";local glyph=C.Glyph(row,entry.key=="positive" and "heart" or entry.key=="caution" and "caution" or "book",neutral and T.notesNeutralGlyphSize or T.notesGlyphWidth,entry.key=="positive" and T.good or entry.key=="caution" and T.warning or T.muted);C.Box(glyph,{width=neutral and "notesNeutralGlyphSize" or "notesGlyphWidth",height=neutral and "notesNeutralGlyphSize" or "notesGlyphHeight"});glyph:Hide();row.kindIcons[entry.key]=glyph end
+  row.date=C.Text(row,"",T.notesDetailFontSize,"dim",T.notesRowDateWidth);row.date:SetWidth(T.notesRowDateWidth);C.SetPoint(row.date,"TOPRIGHT",row.date:GetParent(),"TOPRIGHT","notesRowDateToprightX","notesRowDateToprightY");row.date:SetJustifyH("RIGHT");C.SetLineHeight(row.date,T.notesDetailLineHeight,true)
   local columns=P.noteHeader.columns
   LayoutNoteColumn(row,columns)
-  C.SetPoint(row.meta,"TOPLEFT",row.meta:GetParent(),"TOPLEFT",columns.player.x+50,-metaTop)
-  row.date:ClearAllPoints();C.SetPoint(row.date,"TOPLEFT",row.date:GetParent(),"TOPLEFT",columns.timestamp.x+6,-metaTop)
-  C.SetPoint(row.reason,"TOPLEFT",row.reason:GetParent(),"TOPLEFT",columns.player.x+50,-math.max(68,metaTop+row.meta:GetHeight()+4))
  end)
  local empty=CreateFrame("Frame",nil,self.left);empty:SetWidth(CARD_WIDTH);empty:SetHeight(T.notesEmptyHeight);empty:SetPoint("TOPLEFT",self.list,"TOPLEFT");self.emptyState=empty
  self.emptyTitle=C.Text(empty,L.notesEmptyTitle,18,"muted",CARD_WIDTH-24);C.SetLineHeight(self.emptyTitle,24,true);self.emptyTitle:SetPoint("CENTER");self.emptyTitle:SetJustifyH("CENTER")
  self.editorEmpty=C.Text(main,S("选择玩家查看记录","Select a player to view their note"),18,"dim",DRAWER_W-32);C.SetLineHeight(self.editorEmpty,24,true);self.editorEmpty:SetPoint("CENTER",main,"TOPLEFT",EDITOR_X-T.notesMainX+DRAWER_W/2,-T.notesWorkTop-(HEIGHT-T.notesWorkTop-T.notesContentInset)/2);self.editorEmpty:SetJustifyH("CENTER")
- local editor=CreateFrame("Frame",nil,main);editor:SetSize(DRAWER_W,EDITOR_HEIGHT);editor:SetPoint("TOPLEFT",EDITOR_X-T.notesMainX,-T.notesWorkTop);C.Panel(editor,"panel","notesPanelRadius2");self.editor=editor;editor:Hide()
- local inner=DRAWER_W-32;local half=(inner-12)/2
- self.eTitle=C.Text(editor,L.edit,18,"text");C.SetPoint(self.eTitle,"TOPLEFT",self.eTitle:GetParent(),"TOPLEFT","notesETitleTopleftX","notesETitleTopleftY");C.SetLineHeight(self.eTitle,24,true)
+ local editor=CreateFrame("Frame",nil,main);editor:SetSize(DRAWER_W,EDITOR_HEIGHT);editor:SetPoint("TOPLEFT",EDITOR_X-T.notesMainX,-T.notesEditorTop);C.Panel(editor,"panel","notesPanelRadius2");self.editor=editor;editor:Hide()
+ local inner=DRAWER_W-48;local half=(inner-12)/2
+ self.eTitle=C.Text(editor,L.edit,14,"muted");C.SetPoint(self.eTitle,"TOPLEFT",self.eTitle:GetParent(),"TOPLEFT","notesETitleTopleftX","notesETitleTopleftY");C.SetLineHeight(self.eTitle,20,true)
  self.eClose=C.Button(editor,"",T.notesECloseWidth,function() P:CloseEditor() end);self.eClose:SetWidth(T.notesECloseWidth);self.eClose.elementIcon=C.Glyph(self.eClose,"close",T.notesGlyphWidth2);self.eClose.elementIcon:SetPoint("CENTER");C.SetPoint(self.eClose,"TOPRIGHT",self.eClose:GetParent(),"TOPRIGHT","notesECloseToprightX","notesECloseToprightY")
  self.eNameLabel=C.Text(editor,S("玩家","Player"),14,"muted");C.SetPoint(self.eNameLabel,"TOPLEFT",self.eNameLabel:GetParent(),"TOPLEFT","notesENameLabelTopleftX","notesENameLabelTopleftY");C.SetLineHeight(self.eNameLabel,20,true)
  self.eName=C.Edit(editor,inner,T.notesENameHeight);self.eName:SetHeight(T.notesENameHeight);C.SetPoint(self.eName,"TOPLEFT",self.eName:GetParent(),"TOPLEFT","notesENameTopleftX","notesENameTopleftY")
  self.eNameHint=C.Text(self.eName,L.notesIdentityHint,14,"dim",inner-24);C.SetPoint(self.eNameHint,"LEFT",self.eNameHint:GetParent(),"LEFT","notesENameHintLeftX",0);C.SetLineHeight(self.eNameHint,20,true)
  self.eName.box:HookScript("OnTextChanged",function() DraftChanged();P.eNameHint:SetShown(P.eName.box:GetText()=="") end)
  self.eAvatar=C.Icon(editor,T.notesEAvatarWidth);C.Box(self.eAvatar,{width="notesEAvatarWidth",height="notesEAvatarHeight"});C.SetPoint(self.eAvatar,"TOPLEFT",self.eAvatar:GetParent(),"TOPLEFT","notesEAvatarTopleftX","notesEAvatarTopleftY")
- self.eIdentity=C.Text(editor,"",16,"text",inner-52);C.SetPoint(self.eIdentity,"TOPLEFT",self.eIdentity:GetParent(),"TOPLEFT","notesEIdentityTopleftX","notesEIdentityTopleftY");self.eIdentity:SetWordWrap(false);C.SetLineHeight(self.eIdentity,22,true)
+ self.eIdentity=C.Text(editor,"",18,"text",inner-52);C.SetPoint(self.eIdentity,"TOPLEFT",self.eIdentity:GetParent(),"TOPLEFT","notesEIdentityTopleftX","notesEIdentityTopleftY");self.eIdentity:SetWordWrap(false);C.SetLineHeight(self.eIdentity,24,true)
  self.eRealm=C.Text(editor,"",14,"muted",inner-52);C.SetPoint(self.eRealm,"TOPLEFT",self.eRealm:GetParent(),"TOPLEFT","notesERealmTopleftX","notesERealmTopleftY");C.SetLineHeight(self.eRealm,20,true)
  self.classLabel=C.Text(editor,S("职业","Class"),14,"muted");C.SetPoint(self.classLabel,"TOPLEFT",self.classLabel:GetParent(),"TOPLEFT","notesClassLabelTopleftX","notesClassLabelTopleftY");C.SetLineHeight(self.classLabel,20,true)
  self.specLabel=C.Text(editor,S("专精","Specialization"),14,"muted");C.SetPoint(self.specLabel,"TOPLEFT",self.specLabel:GetParent(),"TOPLEFT",28+half,"notesSpecLabelTopleftY");C.SetLineHeight(self.specLabel,20,true)
@@ -314,8 +320,7 @@ function P:SelectTab(tab,skipDefault)
  local selected=self.tabs[tab];self.tabSelection:Select(0,selected.tabY,T.notesSidebarWidth,selected:GetHeight(),self.frame:IsVisible())
  self:CloseTransfer();if changed then self:CloseEditor(true) end
  UI.Motion:FinishPlacement(history and self.left or self.historyFrame)
- self.toolbar:SetShown(not history);self.left:SetShown(not history);self.historyFrame:SetShown(history);self.editorEmpty:SetShown(not history and state.panel==nil)
- self.countText:SetShown(not history)
+ self.toolbar:SetShown(not history);self.actions:SetShown(not history);self.left:SetShown(not history);self.historyFrame:SetShown(history);self.editorEmpty:SetShown(not history and state.panel==nil)
  UI:SetText(self.pageTitle,history and L.history or L.notes)
  self:RefreshCounts()
  if history then self:RefreshHistory() else self:RefreshList();local keys=self.list.ids;if not skipDefault and keys and keys[1] and state.panel==nil then self:OpenEdit(keys[1]) end end
@@ -343,7 +348,7 @@ function P:RefreshHistory()
   UI:SetText(row.level,run.level and "+"..run.level or "—")
   UI:SetText(row.duration,duration and (math.floor(duration/60)..":"..("%02d"):format(duration%60)) or "—")
   row.roster:Update(run.members,nil,5);UI:SetText(row.date,UI:DateText(run.completedAt or run.startedAt))
- end);self.historyEmpty:SetShown(#indices==0)
+ end);LayoutHistoryRows(self.historyList,self.historyHeader.columns.activity.x+60);self.historyEmpty:SetShown(#indices==0)
 UI:ApplyElementScope("notes")
  end
 function P:OpenRun(index)
@@ -378,6 +383,7 @@ function P:OpenRun(index)
   UI:SetMemberIcon(row.icon,member);UI:SetText(row.title,member.name.."-"..member.realm);row.title:SetTextColor(UI:ClassColor(member.class))
   UI:SetText(row.meta,UI:SpecName(member) or L.unknown);UI:SetText(row.action,A.Notes:Find(key) and L.viewNote or L.record)
  end)
+ LayoutHistoryRows(modal.list,modal.header.columns.player.x+56)
 self:RegisterBuildElements()
  UI:ApplyElementScope("notes")
  end
@@ -400,7 +406,6 @@ function P:RefreshList()
 	self.list:SetItems(keys, RenderNote)
 	self.emptyState:SetShown(#keys == 0)
 	UI:SetText(self.emptyTitle, state.search ~= "" and S("没有匹配的记录","No matching notes") or S("这里还没有记录","No records here yet"))
-	UI:SetText(self.countText, S("%d 条记录","%d notes"):format(#keys))
 	if state.editKey ~= nil then
 		local found = false
 		for _, k in ipairs(keys) do
@@ -419,15 +424,12 @@ end
 
 function P:LayoutNoteRows()
  local row=self.list.rows[1]
- local player,date=self.noteHeader.columns.player,self.noteHeader.columns.timestamp
- local metaTop=math.max(40,8+row.title:GetHeight()+4)
- local reasonTop=math.max(68,metaTop+row.meta:GetHeight()+4)
+ local reasonTop=math.max(T.notesRowReasonTop,-T.notesRowTitleTopleftY+row.title:GetHeight()+8)
  for _,item in ipairs(self.list.rows) do
-  item.meta:ClearAllPoints();item.meta:SetPoint("TOPLEFT",player.x+50,-metaTop)
-  item.date:ClearAllPoints();item.date:SetPoint("TOPLEFT",date.x+6,-metaTop)
-  item.reason:ClearAllPoints();item.reason:SetPoint("TOPLEFT",player.x+50,-reasonTop)
+  LayoutNoteColumn(item,self.noteHeader.columns)
  end
- SizeRows(self.list,math.max(T.notesRowHeight,math.ceil(reasonTop+row.reason:GetHeight()+8)))
+ local height=math.max(T.notesRowHeight,math.ceil(reasonTop+row.reason:GetHeight()+14))
+ self.list:SetRowHeight(height,height)
 end
 function P:LayoutRows()
  self.noteHeader:Layout(CARD_WIDTH)
@@ -435,9 +437,10 @@ function P:LayoutRows()
  if self.historyModal then self.historyModal.header:Layout(self.historyModal.list:GetWidth()-C.listRightInset) end
 end
 function P:LayoutFont()
+ self.actions:SetPoint("TOPRIGHT",-T.notesContentInset,-T.notesContentInset-(self.pageTitle:GetHeight()-T.notesToolbarHeight)/2)
  self.addButton:SetWidth(math.ceil(self.addButton.label:GetStringWidth())+56)
- self.importButton:SetWidth(math.ceil(self.importButton.label:GetStringWidth())+34)
- self.exportButton:SetWidth(math.ceil(self.exportButton.label:GetStringWidth())+34)
+ self.importButton:SetWidth(math.ceil(self.importButton.label:GetStringWidth())+28)
+ self.exportButton:SetWidth(math.ceil(self.exportButton.label:GetStringWidth())+28)
  self.eDelete:SetWidth(math.max(96,math.ceil(C.MeasureText(self.eDelete.label))+32))
  self.toolbarActions.items[1].gapAfter=-T.notesImportButtonRightX;self.toolbarActions.items[2].gapAfter=-T.notesExportButtonRightX;self.toolbarActions:Layout()
  for _,button in pairs(self.typeButtons) do button.icon:SetPoint("CENTER",-(button.label:GetStringWidth()+6)/2,0) end
@@ -456,13 +459,15 @@ local function LayoutSize(self,width,height)
  EDITOR_X=LEFT+T.notesListWidth+T.notesColumnGap;CARD_WIDTH=T.notesListWidth-C.listRightInset
  MAIN_WIDTH=WIDTH-T.notesMainX;BODY_WIDTH=MAIN_WIDTH-T.notesContentInset*2
  DRAWER_W=BODY_WIDTH-T.notesListWidth-T.notesColumnGap
- LIST_HEIGHT=HEIGHT-T.notesWorkTop-32-T.notesContentInset;EDITOR_HEIGHT=math.min(T.notesEditorMaxHeight,HEIGHT-T.notesWorkTop-T.notesContentInset)
+ LIST_HEIGHT=HEIGHT-T.notesWorkTop-32-T.notesContentInset;EDITOR_HEIGHT=math.min(T.notesEditorMaxHeight,HEIGHT-T.notesEditorTop-T.notesContentInset-T.notesEditorBottomInset)
  self.rail:SetHeight(HEIGHT);self.main:SetSize(MAIN_WIDTH,HEIGHT);self.toolbar:SetWidth(BODY_WIDTH)
  self.search:SetWidth(CARD_WIDTH);self.emptyState:SetWidth(CARD_WIDTH)
+ self.actions:SetWidth(DRAWER_W);self.actions:SetPoint("TOPRIGHT",-T.notesContentInset,-T.notesContentInset-(self.pageTitle:GetHeight()-T.notesToolbarHeight)/2)
+ self.toolbarActions:Layout()
  self.left:SetHeight(HEIGHT-T.notesWorkTop-T.notesContentInset);self.list:SetViewport(LIST_HEIGHT)
  self.editor:SetSize(DRAWER_W,EDITOR_HEIGHT);self.editorEmpty:SetWidth(DRAWER_W-32)
  self.editorEmpty:SetPoint("CENTER",self.main,"TOPLEFT",EDITOR_X-T.notesMainX+DRAWER_W/2,-T.notesWorkTop-(HEIGHT-T.notesWorkTop-T.notesContentInset)/2)
- local inner=DRAWER_W-32;local half=(inner-12)/2
+ local inner=DRAWER_W-48;local half=(inner-12)/2
  self.eName:SetWidth(inner);self.eNameHint:SetWidth(inner-24)
  self.eIdentity:SetWidth(inner-52);self.eRealm:SetWidth(inner-52)
  self.classChoice:SetWidth(half);self.specChoice:SetWidth(half);self.typeSwitch:SetWidth(inner)
@@ -485,12 +490,11 @@ function P:ReflowMetrics(width,height)
  for _,button in pairs(self.tabs) do button:SetWidth(T.notesSidebarWidth) end
  self.main:SetPoint("TOPLEFT",T.notesMainX,0)
  self.pageTitle:SetPoint("TOPLEFT",T.notesContentInset,-T.notesContentInset)
- self.countText:SetPoint("TOPRIGHT",-T.notesContentInset,-T.notesContentInset-8)
  C.SetPoint(self.toolbar,"TOPLEFT",self.main,"TOPLEFT",T.notesContentInset,"notesToolbarTopleftY")
  C.SetPoint(self.historyFrame,"TOPLEFT",self.main,"TOPLEFT",T.notesContentInset,"notesHistoryFrameTopleftY")
  self.left:SetWidth(T.notesListWidth);self.left:SetPoint("TOPLEFT",T.notesContentInset,-T.notesWorkTop)
  self.list:SetWidth(T.notesListWidth)
- self.editor:SetPoint("TOPLEFT",EDITOR_X-T.notesMainX,-T.notesWorkTop)
+ self.editor:SetPoint("TOPLEFT",EDITOR_X-T.notesMainX,-T.notesEditorTop)
  self:LayoutFont()
 UI:ApplyElementScope("notes")
  end
@@ -498,18 +502,46 @@ UI:ApplyElementScope("notes")
 function P:LayoutEditor()
  if not state.panel then return end
  local add,missing=state.panel=="add",state.panel=="missing"
- local classTop=add and 156 or 128
+ local pad=24
+ local identityHeight=math.max(self.eAvatar:GetHeight(),self.eIdentity:GetHeight()+self.eRealm:GetHeight()+4)
+ local identityBlock=add and self.eNameLabel:GetHeight()+8+self.eName:GetHeight() or identityHeight
+ local labelHeight=math.max(self.classLabel:GetHeight(),self.specLabel:GetHeight())
+ local choiceHeight=math.max(self.classChoice:GetHeight(),self.specChoice:GetHeight())
+ local switchHeight=math.max(T.notesTypeSwitchHeight,self.typeButtons.positive.label:GetHeight()+12)
+ local statusHeight=self.eStatus:GetText()~="" and self.eStatus:GetStringHeight()+8 or 0
+ local dateHeight=not add and self.eDate:GetHeight()+8 or 0
+ local footerTop=EDITOR_HEIGHT-T.notesESaveBottomrightY-self.eSave:GetHeight()
+ local fullReasonTop=pad+self.eTitle:GetHeight()+20+identityBlock+24+labelHeight+8+choiceHeight+24+self.typeLabel:GetHeight()+8+switchHeight+24+self.eReasonLabel:GetHeight()+8
+ -- Preserve the normal spacing until the reason field reaches its minimum.
+ -- Short windows then tighten only section gaps, keeping labels and actions apart.
+ local tighten=math.min(16,math.max(0,(32-(footerTop-12-fullReasonTop-dateHeight-statusHeight))/4))
+ local sectionGap,headingGap=24-tighten,20-tighten
+ local identityTop=pad+self.eTitle:GetHeight()+headingGap
+ self.eIdentity:ClearAllPoints();self.eIdentity:SetPoint("TOPLEFT",T.notesEIdentityTopleftX,-identityTop)
+ self.eRealm:ClearAllPoints();self.eRealm:SetPoint("TOPLEFT",self.eIdentity,"BOTTOMLEFT",0,-4)
+ self.eAvatar:ClearAllPoints();self.eAvatar:SetPoint("TOPLEFT",pad,-identityTop-(identityHeight-self.eAvatar:GetHeight())/2)
+ self.eNameLabel:SetPoint("TOPLEFT",pad,-identityTop)
+ self.eName:SetPoint("TOPLEFT",pad,-identityTop-self.eNameLabel:GetHeight()-8)
+ local classTop=identityTop+identityBlock+sectionGap
+ local classInputTop=classTop+labelHeight+8
+ local half=(DRAWER_W-60)/2
  C.SetPoint(self.classLabel,"TOPLEFT",self.classLabel:GetParent(),"TOPLEFT","notesClassLabelTopleftX",-classTop)
- self.specLabel:SetPoint("TOPLEFT",28+(DRAWER_W-44)/2,-classTop)
- C.SetPoint(self.classChoice,"TOPLEFT",self.classChoice:GetParent(),"TOPLEFT","notesClassChoiceTopleftX",-classTop-32)
- self.specChoice:SetPoint("TOPLEFT",28+(DRAWER_W-44)/2,-classTop-32)
- C.SetPoint(self.typeLabel,"TOPLEFT",self.typeLabel:GetParent(),"TOPLEFT","notesTypeLabelTopleftX",-classTop-92);C.SetPoint(self.typeSwitch,"TOPLEFT",self.typeSwitch:GetParent(),"TOPLEFT","notesTypeSwitchTopleftX",-classTop-124)
- C.SetPoint(self.eReasonLabel,"TOPLEFT",self.eReasonLabel:GetParent(),"TOPLEFT","notesEReasonLabelTopleftX",-classTop-172);C.SetPoint(self.eReason,"TOPLEFT",self.eReason:GetParent(),"TOPLEFT","notesEReasonTopleftX",-classTop-204)
- local statusHeight=math.max(24,self.eStatus:GetStringHeight())
- local reasonHeight=math.max(32,math.min(112,EDITOR_HEIGHT-64-classTop-204-(add and 12 or 48)-statusHeight))
+ self.specLabel:SetPoint("TOPLEFT",pad+half+12,-classTop)
+ C.SetPoint(self.classChoice,"TOPLEFT",self.classChoice:GetParent(),"TOPLEFT","notesClassChoiceTopleftX",-classInputTop)
+ self.specChoice:SetPoint("TOPLEFT",pad+half+12,-classInputTop)
+ local typeTop=classInputTop+choiceHeight+sectionGap
+ local switchTop=typeTop+self.typeLabel:GetHeight()+8
+ self.typeSwitch:SetHeight(switchHeight);self.typeLayout:Layout()
+ C.SetPoint(self.typeLabel,"TOPLEFT",self.typeLabel:GetParent(),"TOPLEFT","notesTypeLabelTopleftX",-typeTop)
+ C.SetPoint(self.typeSwitch,"TOPLEFT",self.typeSwitch:GetParent(),"TOPLEFT","notesTypeSwitchTopleftX",-switchTop)
+ local reasonLabelTop=switchTop+switchHeight+sectionGap
+ local reasonTop=reasonLabelTop+self.eReasonLabel:GetHeight()+8
+ C.SetPoint(self.eReasonLabel,"TOPLEFT",self.eReasonLabel:GetParent(),"TOPLEFT","notesEReasonLabelTopleftX",-reasonLabelTop)
+ C.SetPoint(self.eReason,"TOPLEFT",self.eReason:GetParent(),"TOPLEFT","notesEReasonTopleftX",-reasonTop)
+ local reasonHeight=math.max(32,math.min(T.notesEReasonHeight,footerTop-12-reasonTop-dateHeight-statusHeight))
  self.eReason:SetHeight(reasonHeight)
- C.SetPoint(self.eDate,"TOPLEFT",self.eDate:GetParent(),"TOPLEFT","notesEDateTopleftX",-classTop-204-reasonHeight-12)
- C.SetPoint(self.eStatus,"TOPLEFT",self.editor,"TOPLEFT","notesEStatusTopleftX",missing and -76 or -classTop-204-reasonHeight-(add and 12 or 48))
+ C.SetPoint(self.eDate,"TOPLEFT",self.eDate:GetParent(),"TOPLEFT","notesEDateTopleftX",-reasonTop-reasonHeight-8)
+ C.SetPoint(self.eStatus,"TOPLEFT",self.editor,"TOPLEFT","notesEStatusTopleftX",missing and -76 or -reasonTop-reasonHeight-dateHeight-8)
 end
 
 function P:OnSelect(key, button)
@@ -541,7 +573,7 @@ local function ShowEditorChrome(mode,reveal)
 	local edit, add, missing = mode == "edit", mode == "add", mode == "missing"
 	state.panel = mode
 	P.editor:Show();P.editorEmpty:Hide()
-	if reveal~=false then UI.Motion:Reveal(P.editor,"TOPLEFT",P.main,"TOPLEFT",EDITOR_X-T.notesMainX,-T.notesWorkTop,12,0,.18) end
+	if reveal~=false then UI.Motion:Reveal(P.editor,"TOPLEFT",P.main,"TOPLEFT",EDITOR_X-T.notesMainX,-T.notesEditorTop,12,0,.18) end
  UI:SetText(P.eTitle,add and L.add or missing and L.viewNote or S("玩家记录","Player note"))
  P.eClose:SetShown(add or missing)
  P.eIdentity:SetShown(edit);P.eAvatar:SetShown(edit);P.eRealm:SetShown(edit);P.eDate:SetShown(edit)
@@ -826,7 +858,7 @@ end
 
 
 function P:RegisterBuildElements()
-UI:ElementFields(self,"notes","frame rail tabSelection main pageTitle toolbar search searchHint addButton exportButton importButton left noteHeader countText emptyState emptyTitle editorEmpty editor eTitle eClose eNameLabel eName eNameHint eAvatar eIdentity eRealm classLabel specLabel classChoice specChoice typeLabel typeSwitch eReasonLabel eReason eDate eStatus eSave eCancel eDelete historyFrame historyCaption historyHeader historyEmpty tHint tLabel tBox tStatus tImport tExport tSelect","notes")
+UI:ElementFields(self,"notes","frame rail tabSelection main pageTitle toolbar actions search searchHint addButton exportButton importButton left noteHeader emptyState emptyTitle editorEmpty editor eTitle eClose eNameLabel eName eNameHint eAvatar eIdentity eRealm classLabel specLabel classChoice specChoice typeLabel typeSwitch eReasonLabel eReason eDate eStatus eSave eCancel eDelete historyFrame historyCaption historyHeader historyEmpty tHint tLabel tBox tStatus tImport tExport tSelect","notes")
  UI:ElementList(self.list,"notes.list","notes","notes.record")
  UI:ElementList(self.historyList,"notes.historyList","notes","notes.history")
  for key,button in pairs(self.tabs or {}) do UI:Element(button,"notes.navigation","notes",button,"notes.navigation",key) end

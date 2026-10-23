@@ -3,9 +3,10 @@ local Fixture=dofile("tests/ui_fixture.lua")
 local function Click(button,mouse) button:Fire("OnClick",mouse or "LeftButton") end
 local function Top(region) local point={region:GetPoint()};return -point[#point] end
 local function Left(region) local point={region:GetPoint()};return point[#point-1] or 0 end
-local function Segment(choice,value)
- for _,button in ipairs(choice.buttons) do if button.value==value then Click(button);return button end end
- error("missing segment "..tostring(value))
+local function Role(page,key,value)
+ local button=page.quickChoices[key].button;Click(button,"RightButton")
+ if value then Click(button);if value=="present" then Click(button) end end
+ return button
 end
 local function CheckFooter(page,locale,count)
  T.eq(page.filteredResultCount,count,"the popup summary tracks the visible filtered result IDs")
@@ -17,22 +18,25 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  f.base.SetUnit("player",{name="Player",realm="Home",class="WARRIOR",classID=1})
  a:SetSetting("reduceMotion",true);a:Open("find")
  local p=u.pages.find
+ p:SetSidebarCollapsed(false,false)
  p:SelectCategory("seasonDungeon");p:CommitChoice()
  T.eq(a:GetSetting("showImportantFilters"),false)
- T.eq(p.quickFilters:GetParent(),p.applicationPanel)
- T.ok(not p.quickFilters:IsShown());T.eq(p.quickFilterHeight,0)
+ T.eq(p.quickFilters:GetParent(),p.importantFilters)
+ T.ok(not p.quickFilters:IsVisible());T.eq(p.quickPlacement,"popup");T.eq(p.quickFilterHeight,0)
  T.near(p.search:GetWidth(),p.main:GetWidth()-60,.01,"search always fills the main search row")
  T.eq(p.search:GetHeight(),48)
- p:SetFiltersOpen(true);T.ok(p.importantFilters:IsShown());T.eq(p.filterPanel:GetWidth(),592)
- T.eq(p.importantFilters:GetWidth(),552)
- T.eq(p.presenceChoices.damagePresence.buttons[1].label:GetText(),locale=="zhCN" and "不限" or "Any")
- T.eq(p.presenceChoices.damagePresence.buttons[2].label:GetText(),locale=="zhCN" and "缺少" or "Missing")
- T.eq(p.presenceChoices.damagePresence.buttons[3].label:GetText(),locale=="zhCN" and "已齐" or "Full")
- Segment(p.presenceChoices.tankPresence,"present");Segment(p.presenceChoices.healerPresence,"present")
- local damage
- for _,button in ipairs(p.presenceChoices.damagePresence.buttons) do if button.value=="present" then damage=button end end
- T.eq(damage:IsEnabled(),false,"AND disables only the impossible third present condition")
- Segment(p.presenceLogic,true);T.ok(damage:IsEnabled());Click(damage)
+ p:SetFiltersOpen(true);T.ok(p.importantFilters:IsShown());T.ok(p.filterPanel:GetWidth()>=u.Theme.findFilterWideWidth)
+ T.eq(p.importantFilters:GetWidth(),p.filterViewport:GetWidth())
+ local damage=p.quickChoices.damagePresence.button
+ T.eq(damage.label:GetText(),locale=="zhCN" and "不限" or "Any")
+ Click(damage);T.eq(damage.label:GetText(),locale=="zhCN" and "缺少" or "Lacks")
+ Click(damage);T.eq(damage.label:GetText(),locale=="zhCN" and "已齐" or "Full")
+ Click(damage,"RightButton")
+ Role(p,"tankPresence","present");Role(p,"healerPresence","present")
+ Click(damage);Click(damage)
+ T.eq(g.filters.damagePresence,nil,"AND skips the impossible third present condition")
+ T.ok(damage:IsEnabled(),"the role button still permits missing and reset under the AND constraint")
+ Click(p.quickLogic);Role(p,"damagePresence","present")
  T.eq(g.filters.damagePresence,"present");T.ok(p.filtersOpen,"direct choices stay open")
  CheckFooter(p,locale,0)
  local calls,searches=0,0;local setFilters,search=g.SetFilters,g.Search.Search
@@ -42,12 +46,12 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  a:SetSetting("showImportantFilters",true)
  T.same(g.filters,filters,"moving important filters preserves every active condition")
  T.eq(calls,0,"presentation settings do not apply filters again");T.eq(searches,0,"presentation settings do not search")
- T.ok(p.quickFilters:IsShown());T.ok(not p.importantFilters:IsShown());T.eq(p.filterPanel:GetWidth(),368)
+ T.ok(p.quickFilters:IsShown());T.ok(not p.importantFilters:IsShown());T.eq(p.filterPanel:GetWidth(),460)
  a:SetSetting("showImportantFilters",false)
  T.same(g.filters,filters);T.eq(calls,0);T.eq(searches,0)
- T.ok(p.importantFilters:IsShown());T.ok(not p.quickFilters:IsShown());T.eq(p.quickFilterHeight,0)
- Segment(p.presenceLogic,false);T.eq(g.filters.damagePresence,nil,"returning to AND clears the third present condition")
- Segment(p.identityChoice,"spec");T.eq(g.filters.hideSameSpec,true);T.eq(g.filters.hideSameClass,nil)
+ T.ok(p.importantFilters:IsShown());T.eq(p.quickFilters:GetParent(),p.importantFilters);T.eq(p.quickPlacement,"popup");T.eq(p.quickFilterHeight,0)
+ Click(p.quickLogic);T.eq(g.filters.damagePresence,nil,"returning to AND clears the third present condition")
+ Click(p.quickIdentity);Click(p.quickIdentity);T.eq(g.filters.hideSameSpec,true);T.eq(g.filters.hideSameClass,nil)
  Click(p.filterDone);p:SetFiltersOpen(true);T.eq(g.filters.hideSameSpec,true,"Done retains direct choices")
  Click(p.filterScrim);p:SetFiltersOpen(true);T.eq(g.filters.tankPresence,"present","outside closure retains choices")
  Click(p.clearFilters);T.eq(g.filters.tankPresence,nil);T.eq(g.filters.hideSameSpec,nil);T.eq(g.filters.roleMatchAny,nil)
@@ -90,7 +94,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  GameTooltip:Hide()
  p:SetFiltersOpen(true)
  local scale=u.frame:GetScale()
- T.ok(p.filterScrim:IsShown());T.eq(p.filterPanel:GetWidth(),368)
+ T.ok(p.filterScrim:IsShown());T.eq(p.filterPanel:GetWidth(),460)
  T.eq(p.filterWords,nil,"keyword UI is outside the selected scope")
  T.eq(p.memberLimit,5)
  T.eq(p.fMinMembers,p.filterFields.minMembers);T.eq(p.fMembers,p.filterFields.maxMembers,"member bounds use the validated numeric-field path")
@@ -167,23 +171,26 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  -- Geometry responds to the existing minimum window and large fonts.
  a:SetSetting("fontScale",130);u:SetWindowSize(1,1);p:SetFiltersOpen(true)
  a:SetSetting("showImportantFilters",false)
- T.ok(p.filterPanel:GetWidth()>=592,"the popup expands when the paired text styles need more width")
- T.eq(p.importantFilters:GetWidth(),p.filterPanel:GetWidth()-40)
+ T.ok(p.filterPanel:GetWidth()>=u.Theme.findFilterWideWidth,"the popup expands when the compact text styles need more width")
+ T.eq(p.importantFilters:GetWidth(),p.filterViewport:GetWidth())
  T.ok(p.filterPanel:GetWidth()<=u.frame:GetWidth()-40,"the expanded popup keeps both window margins")
  T.ok(p.importantFilters:IsShown())
  T.ok(Top(p.filterPanel)+p.filterPanel:GetHeight()<=u.frame:GetHeight()-20,locale.." default compact popup fits the minimum window at 130 percent")
- for _,choice in pairs(p.presenceChoices) do for _,button in ipairs(choice.buttons) do
-  T.ok(button.label:GetStringWidth()<=button.label:GetWidth(),locale.." role segment fits its full text at the minimum window")
- end end
- local damage=p.presenceChoices.damagePresence.buttons[3]
+ for _,entry in pairs(p.quickChoices) do
+  local button=entry.button
+  T.ok(button.label:GetStringWidth()<=button.label:GetWidth(),locale.." compact role fits its full text at the minimum window")
+ end
+ Role(p,"damagePresence","present")
+ local damage=p.quickChoices.damagePresence.button
  T.eq(damage.label:GetText(),locale=="zhCN" and "已齐" or "Full")
  a:SetSetting("showImportantFilters",true)
  T.ok(Top(p.filterPanel)+p.filterPanel:GetHeight()<=u.frame:GetHeight()-20,locale.." filter overlay stays inside the resized main window")
- T.ok(Top(p.filterDone)+p.filterDone:GetHeight()<=p.filterPanel:GetHeight()-20)
+ T.ok(Top(p.filterFooter)+Top(p.filterDone)+p.filterDone:GetHeight()<=p.filterPanel:GetHeight()-20)
  for _,pair in ipairs({{"minRating","maxRating"},{"minItemLevel","maxItemLevel"}}) do
   local low,high=p.filterFields[pair[1]],p.filterFields[pair[2]]
-  T.eq(Top(low),Top(high));T.ok(Left(low)+low:GetWidth()<Left(high))
-  T.ok(Left(high)+high:GetWidth()<=p.filterPanel:GetWidth()-20)
+  T.eq(low:GetParent(),high:GetParent(),"range bounds share one input group")
+  T.eq(Top(low),Top(high));T.ok(Left(low)+low:GetWidth()<=Left(high))
+  T.ok(Left(high)+high:GetWidth()<=high:GetParent():GetWidth())
  end
  T.eq(p.quickFilters:GetParent(),p.applicationPanel,"important filters belong to the application area")
  T.near(p.search:GetWidth(),p.main:GetWidth()-60,.01,"search keeps the entire available row")

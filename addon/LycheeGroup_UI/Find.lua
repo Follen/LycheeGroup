@@ -22,36 +22,36 @@ local function FitText(label)
 end
 local MAIN=T.contentWidth-T.findSidebarWidth-T.contentGap-T.findContentInset*2
 local HEIGHT=T.contentHeight-T.findContentInset*2
-local BODY=MAIN-T.findListGutter
-local APP_BODY=MAIN-T.findApplicationInset*2-T.findListGutter
+local BODY=MAIN
+local APP_BODY=MAIN-T.findApplicationInset*2
 local function SetRowHeight(list,height)
  list:SetRowHeight(height,height)
 end
 local function ApplicationRowHeight()
  local first=P.appList.rows[1]
- local height=math.max(T.findApplicationRowHeight,first and math.ceil(first.count:GetHeight()*2) or 0)
- for _,row in ipairs(P.appList.rows) do
-  if row.key and row.membersExpanded and not row.isParty then height=math.max(height,math.ceil(row.count:GetHeight()+row.roster.counts[1].text:GetHeight())) end
- end
- return height
+ if not first then return T.findApplicationRowHeight end
+ return math.max(T.findApplicationRowHeight,math.ceil(math.max(first.title:GetHeight(),first.meta:GetHeight(),first.count:GetHeight(),first.roster.counts[1].text:GetHeight(),first.status:GetHeight(),first.cancel:GetHeight())+8))
 end
 local RESULT_COLUMNS={
- title={x=60,width=210},leader={x=303,width=108},
+ title={x=60,width=120},activity={x=204,width=138},leader={x=366,width=94},
  members={x=427,width=138},ilvl={x=581,width=52},rating={x=649,width=76},
  description={x=741,width=BODY-765-(zh and T.findAgeWidthCN or T.findAgeWidthEN)},age={x=BODY-12-(zh and T.findAgeWidthCN or T.findAgeWidthEN),width=(zh and T.findAgeWidthCN or T.findAgeWidthEN)},
 }
-local APPLICATION_COLUMNS={title={x=36,width=APP_BODY-591},leader={x=APP_BODY-522,width=120}}
+local RESULT_TEXT_COLUMNS={leader="leader",ilvl="ilvl",rating="score",description="description",age="age"}
+local APPLICATION_COLUMNS={title={x=0,width=APP_BODY-591},leader={x=APP_BODY-522,width=120}}
 local resultDefinitions={
  {key="title",label=Say("队伍","Group"),width="findResultTitleWidth",min="findResultTitleMin"},
+ {key="activity",label=Say("活动","Activity"),width="findResultActivityWidth",min="findResultActivityMin",sortable=true},
  {key="leader",label=Say("队长","Leader"),width="findResultLeaderWidth",min="findResultLeaderMin"},
  {key="members",label=Say("成员","Members"),width="findResultMembersWidth",min="findResultMembersMin",align="CENTER",sortable=true},
  {key="ilvl",label=Say("装等","iLvl"),width="findResultIlvlWidth",min="findResultIlvlMin",align="CENTER",sortable=true},
  {key="rating",label=Say("评分","Score"),width="findResultRatingWidth",min="findResultRatingMin",align="CENTER",sortable=true},
  {key="description",label=Say("描述","Description"),width="findResultDescriptionWidth",min="findResultDescriptionMin"},
- {key="age",label=Say("发布","Posted"),width=(zh and T.findAgeWidthCN or T.findAgeWidthEN)+20,min="findResultAgeMin",align="RIGHT",sortable=true},
+ {key="age",label=Say("发布","Posted"),width=(zh and T.findAgeWidthCN or T.findAgeWidthEN)+T.findColumnInset+T.findResultRightInset,min="findResultAgeMin",align="RIGHT",sortable=true},
 }
 local applicationDefinitions={
- {key="title",label=Say("队伍","Group"),width=APP_BODY-542,min="findApplicationTitleMin"},
+ {key="title",label=Say("队伍","Group"),width=APP_BODY-542-T.findApplicationActivityWidth,min="findApplicationTitleMin"},
+ {key="activity",label=Say("活动","Activity"),width="findApplicationActivityWidth",min="findApplicationActivityMin"},
  {key="leader",label=Say("队长","Leader"),width="findApplicationLeaderWidth",min="findApplicationLeaderMin"},
  {key="members",label=Say("成员","Members"),width="findApplicationMembersWidth",min="findApplicationMembersMin",align="CENTER",sortable=true},
  {key="status",label=Say("状态 / 剩余","Status / time"),width="findApplicationStatusWidth",min="findApplicationStatusMin",align="CENTER",sortable=true},
@@ -115,38 +115,40 @@ local function LayoutMembers(row)
  else
   -- Keep the columns in place while the hover/click area fits the visible count.
   x=x-3
-  row.membersButton:SetHeight(row.membersCompact and 18 or 24)
+  for _,item in ipairs(row.roster.counts) do item.text:SetWidth(math.max(T.findItemTextWidth,math.ceil(item.text:GetUnboundedStringWidth()))) end
+  row.membersButton:SetHeight(math.max(row.membersCompact and 18 or 24,row.count:GetHeight()+4,row.roster.counts[1].text:GetHeight()+4))
   row.membersButton:SetWidth(112+row.roster.counts[3].text:GetStringWidth()+12)
   C.SetPoint(row.roster,"LEFT",row.roster:GetParent(),"LEFT","findRowRosterLeftX",0)
  end
- local extra=math.max(0,(row.count:GetHeight()+row.roster.counts[1].text:GetHeight())/2-(row.membersExpandedY-row.memberCountY))/2
  if row.membersWidth then x=row.membersX+(row.membersWidth-(row.isParty and row.membersButton:GetWidth() or 138))/2-(row.isParty and 0 or 3) end
- local y=row.membersExpanded and row.membersExpandedY+extra or 0
+ local y=row.resultContentOffset or 0
  if row.isParty and not row.membersCompact and A:GetSetting("memberLeaderMark") then
   local crownHeight=math.min(14*scale,19)
-  y=-math.max(0,10*scale+crownHeight+1-row:GetHeight()/2+2)
+  local contentHeight=row:GetHeight()-(row.resultContentOffset or 0)*2
+  y=y-math.max(0,10*scale+crownHeight+1-contentHeight/2+2)
  end
  row.membersButton:ClearAllPoints();row.membersButton:SetPoint("LEFT",x,y)
- row.count:SetWidth(row.membersWidth or 138)
- row.count:SetPoint("LEFT",row.membersX,row.memberCountY-extra)
- row.count:SetShown(not row.isParty and row.membersExpanded==true)
+ local total=not row.isParty and row.membersExpanded==true
+ row.roster:SetShown(not total)
+ row.count:SetWidth(row.isParty and row.membersButton:GetWidth() or 132)
+ row.count:ClearAllPoints();row.count:SetPoint("LEFT",x+(row.isParty and 0 or T.findRowRosterLeftX),y)
+ row.count:SetShown(total)
 end
 local function BuildMembers(row,x,compact)
  row.membersCompact=compact
- row.membersX=x;row.membersExpandedY=compact and 9 or 11
- row.memberCountY=compact and -9 or -13
+ row.membersX=x
  local partyGap=compact and 5 or 2
  row.partyWidth=18*5+partyGap*4
  row.partyScale=compact and 1 or T.findMemberBaseScale*T.findMemberScaleAdjustment
  row.membersButton=C.Button(row,"",T.findRowMembersButtonWidth,function()
   if row.isParty or not row.key or not row._hitVisible then return end
-  row.membersExpanded=not row.membersExpanded;if row.membersCompact then P:LayoutListRows() else LayoutMembers(row) end
+  row.membersExpanded=not row.membersExpanded;LayoutMembers(row)
  end);row.membersButton:SetWidth(T.findRowMembersButtonWidth)
  row.membersButton:SetStyle({height=compact and 18 or 24,radius=6})
  row.roster=UI:CreateRoster(row.membersButton,18,partyGap);row.roster:SetSize(T.findRowRosterWidth,compact and 18 or 20);row.roster:SetPoint("CENTER");RosterColumns(row.roster)
  if not compact then for _,slot in ipairs(row.roster.slots) do slot.icon.memberStyle=true end end
  if compact then for _,item in ipairs(row.roster.counts) do C.SetFont(item.text,12);C.SetLineHeight(item.text,14,true) end end
- row.count=C.Text(row,"",compact and 12 or 14,"muted",T.findRowCountWidth);row.count:SetWidth(T.findRowCountWidth);C.SetLineHeight(row.count,compact and 14 or 20,true);row.count:SetPoint("LEFT",x,compact and -9 or -13);row.count:SetJustifyH("CENTER");row.count:SetWordWrap(false)
+ row.count=C.Text(row,"",T.findTableFontSize,"muted",T.findRowCountWidth);row.count:SetWidth(T.findRowCountWidth);C.SetLineHeight(row.count,T.findTableLineHeight,true);row.count:SetJustifyH("CENTER");row.count:SetWordWrap(false)
  LayoutMembers(row)
 end
 local function UpdateMembers(row,id,record,details,counts)
@@ -165,15 +167,31 @@ end
 local function DeclinedAt(record)
  return record and record.partyGUID and UI:GetGroup().Applications:GetDeclinedAt(record.partyGUID)
 end
+local function HasRelations(record)
+ return (record.bnetFriends or 0)+(record.charFriends or 0)+(record.guildMates or 0)>0
+end
+function P:GetActivitySortRanks()
+ local groups=UI:GetGroup().Catalog:GetGroups(state.category)
+ if self.activitySortGroups~=groups then
+  self.activitySortRanks=self.activitySortRanks or {};wipe(self.activitySortRanks)
+  for index,group in ipairs(groups) do
+   for _,activity in ipairs(group.variants) do self.activitySortRanks[activity.id]=index end
+  end
+  self.activitySortGroups=groups
+ end
+ return self.activitySortRanks
+end
 function P:SortResultIDs(ids)
  local prefs=self.resultsHeader.state;local key=prefs.sortKey
  if not key then return ids end
  self.sortedResults=self.sortedResults or {};self.sortValues=self.sortValues or {}
  local sorted,values=self.sortedResults,self.sortValues;wipe(sorted);wipe(values)
  local group=UI:GetGroup()
+ local activityRanks=key=="activity" and self:GetActivitySortRanks()
  for i,id in ipairs(ids) do
   local r=group:GetResult(id);local value
-  if key=="members" then value=r.numMembers
+  if key=="activity" then value=activityRanks[r.activityID]
+  elseif key=="members" then value=r.numMembers
   elseif key=="ilvl" then value=r.requiredItemLevel
   elseif key=="age" then value=r.age
   elseif key=="rating" then
@@ -182,8 +200,11 @@ function P:SortResultIDs(ids)
   sorted[i]=id;values[id]=value
  end
  table.sort(sorted,function(a,b)
-  local ad,bd=DeclinedAt(group:GetResult(a))~=nil,DeclinedAt(group:GetResult(b))~=nil
+  local ar,br=group:GetResult(a),group:GetResult(b)
+  local ad,bd=DeclinedAt(ar)~=nil,DeclinedAt(br)~=nil
   if ad~=bd then return not ad end
+  local af,bf=HasRelations(ar),HasRelations(br)
+  if af~=bf then return af end
   local av,bv=values[a],values[b]
   if av~=bv then
    if av==nil then return false elseif bv==nil then return true end
@@ -195,9 +216,22 @@ function P:SortResultIDs(ids)
 end
 function P:OnHeaderSort(key,descending)
  local values={members="members",ilvl="itemLevel",rating="rating",age="newest"}
- state.filters.sort=values[key]
- self.sortChoice:SetValue(values[key],self.resultsHeader.labels[key]:GetText())
+ if values[key] then
+  state.filters.sort=values[key]
+  self.sortChoice:SetValue(values[key],self.resultsHeader.labels[key]:GetText())
+ end
  self:RefreshResults()
+end
+function P:CycleActivitySort()
+ if UI.hiding then return end
+ if UI.Tooltip:IsOwned(self.resultsHeader.buttons[2]) then UI.Tooltip:Hide() end
+ local prefs=self.resultsHeader.state
+ local key,descending="activity",false
+ if prefs.sortKey==key then
+  if prefs.descending then key=nil else descending=true end
+ end
+ self.resultsHeader:SetSort(key,descending,true)
+ self:OnHeaderSort(key,descending)
 end
 local EnsureDeclineClock
 local function UpdateDeclineLabel(row,record,now)
@@ -240,16 +274,31 @@ function P:RefreshDeclineState(ids)
  for _,id in ipairs(ids) do if DeclinedAt(UI:GetGroup():GetResult(id)) then declined=true;break end end
  if (self.hasDeclinedResults==true)~=declined then self.hasDeclinedResults=declined;self:LayoutListRows() end
 end
-local function LayoutResultActivity(row)
- local width=RESULT_COLUMNS.title.width
+local function LayoutResultLeader(row)
+ local width=RESULT_COLUMNS.leader.width
  if row.marks:IsShown() then
-  width=math.min(math.ceil(row.meta:GetUnboundedStringWidth())+2,width-row.marks:GetWidth()-6)
+  width=math.min(math.ceil(row.leader:GetUnboundedStringWidth())+2,width-row.marks:GetWidth()-6)
  end
  -- Data refresh and window layout must use the same text edge for the marks.
- if row.meta:GetWidth()~=width then row.meta:SetWidth(width) end
+ if row.leader:GetWidth()~=width then row.leader:SetWidth(math.max(1,width)) end
+end
+local function LayoutResultRow(row)
+ local y=row.resultContentOffset or 0
+ row.title:ClearAllPoints();row.title:SetPoint("LEFT",RESULT_COLUMNS.title.x,y)
+ row.meta:ClearAllPoints();row.meta:SetPoint("LEFT",RESULT_COLUMNS.activity.x,y);row.meta:SetWidth(RESULT_COLUMNS.activity.width)
+ row.icon:ClearAllPoints();row.icon:SetPoint("LEFT",P.resultsHeader.columns.activity.x+T.findColumnInset,y)
+ for key,field in pairs(RESULT_TEXT_COLUMNS) do
+  local region=row[field]
+  local column=RESULT_COLUMNS[key]
+  region:ClearAllPoints();region:SetPoint("LEFT",column.x,y);region:SetWidth(column.width)
+ end
+ row.declined:ClearAllPoints();row.declined:SetPoint("BOTTOMLEFT",RESULT_COLUMNS.title.x,T.findResultBottomInset)
+ row.declined:SetWidth(RESULT_COLUMNS.leader.x+RESULT_COLUMNS.leader.width-RESULT_COLUMNS.title.x)
+ LayoutResultLeader(row);LayoutMembers(row)
 end
 local function RenderResult(row,id)
  local r=Record(id);if not r then return end
+ row.resultContentOffset=DeclinedAt(r) and (P.resultFooterHeight or 0)/2 or 0
  UI:SetText(row.title,r.name or L.unknown)
  UI:SetText(row.description,r.comment and r.comment~="" and r.comment or "—")
  UI:Color(row.description,r.comment and r.comment~="" and "muted" or "dim")
@@ -268,7 +317,7 @@ local function RenderResult(row,id)
   slot.role:SetDesaturated(missing);slot.role:SetVertexColor(shade,shade,shade)
  end
  UI.Members:BindGroupMarks(row.marks,r)
- LayoutResultActivity(row)
+ LayoutResultLeader(row)
  row.leader:SetTextColor(UI:ClassColor(results:GetLeaderClass(r)))
  if A.GroupPresentation.Result(r).groupMetric=="progress" then
   local progress=UI:ProgressText(r,d)
@@ -278,6 +327,7 @@ local function RenderResult(row,id)
  UI:SetText(row.age,UI:AgeText(r.age))
  UpdateDeclineLabel(row,r,GetTime())
  row.noteDot:Hide()
+ LayoutResultRow(row)
 end
 local function UpdateApplicationStatus(row,app)
  local remaining=app.expiresAt and math.max(0,math.ceil(app.expiresAt-GetTime()))
@@ -307,7 +357,7 @@ end
 local function UpdateApplication(row,id)
  local app=UI:GetGroup():GetApplication(id);local r=app and app.result
  if not app then return end
- UI:SetText(row.title,app.name or L.unknown);UI:SetText(row.meta,"")
+ UI:SetText(row.title,app.name or L.unknown);UI:SetText(row.meta,r and r.activityName or app.activityName or L.unknown)
  UI:Color(row.title,app.status=="invited" and "good" or "text")
  UI:SetActivityIcon(row.icon,r and (r.activity or r))
  UI:SetText(row.leader,NameOnly(app.leaderName))
@@ -341,7 +391,7 @@ function P:Build(parent)
  self.search:SetScript("OnMouseDown",function(_,button) if button=="LeftButton" and P:EnsureSearchInput() then P.search.box:SetFocus() end end)
   self.previewSearchBox=self.search.box
  self.search.box:ClearAllPoints();C.SetPoint(self.search.box,"TOPLEFT",self.search.box:GetParent(),"TOPLEFT","findSearchBoxTopleftX","findSearchBoxTopleftY");C.SetPoint(self.search.box,"BOTTOMRIGHT",self.search.box:GetParent(),"BOTTOMRIGHT",0,"findSearchBoxBottomrightY")
- self.searchIcon=C.Glyph(self.search,"search",T.findGlyphWidth);self.searchIcon:SetPoint("LEFT",self.search,"TOPLEFT",18,-24)
+ self.searchIcon=C.Glyph(self.search,"search",T.findGlyphWidth);self.searchIcon:SetPoint("LEFT",self.search,"TOPLEFT",T.findResultIconInset,-24)
   self.searchHint=C.Text(self.search,SEARCH_HINT,14,"dim",MAIN-350);C.SetPoint(self.searchHint,"LEFT",self.search,"TOPLEFT","findSearchHintLeftX","findSearchHintLeftY")
   self.searchHint:SetWordWrap(false)
   self.search.box:SetScript("OnTextChanged",function(box) self:OnSearchTextChanged(box,true) end)
@@ -385,7 +435,7 @@ function P:Build(parent)
  self.applicationControlOptions={anchor="TOPRIGHT",width="content",height=44,align="center",padding={0,0,0,0}}
  self.applicationControls=C.Row(self.applicationPanel,self.applicationControlItems,self.applicationControlOptions)
  self.refresh=C.IconButton(main,"refresh",T.findRefreshWidth,function() P:DoSearch() end,{iconSize=22,radius=24,surfaceColors={"selected","refreshHover"}});C.Box(self.refresh,{width="findRefreshWidth",height="findRefreshHeight"});self.refresh:SetPoint("TOPRIGHT",main,"TOPRIGHT",0,0);self.refreshIcon=self.refresh.icon
- self.appList=C.List(self.applicationPanel,MAIN-32,0,T.findApplicationRowHeight,function(id,button,row) if button=="RightButton" then P:OpenResultMenu(row,id) end end);self.appList:SetGutter(T.findListGutter);C.SetPoint(self.appList,"TOPLEFT",self.appList:GetParent(),"TOPLEFT","findAppListTopleftX","findAppListTopleftY");self.appList.tooltipFraction=.25
+ self.appList=C.List(self.applicationPanel,APP_BODY+T.findListGutter,0,T.findApplicationRowHeight,function(id,button,row) if button=="RightButton" then P:OpenResultMenu(row,id) end end);self.appList:SetGutter(T.findListGutter);C.SetPoint(self.appList,"TOPLEFT",self.appList:GetParent(),"TOPLEFT","findAppListTopleftX","findAppListTopleftY");self.appList.tooltipFraction=.25
  self.appList.selectionFill=false;self.appList.selectionMark=false;self.appList.hoverFill=false;self.appList.alternateRows=false
  self.limitNotice=C.Notice(main,BODY,function()
   if state.applicationLimit then P:DismissApplicationNotice()
@@ -397,12 +447,13 @@ function P:Build(parent)
  self.limitNotice:Hide()
  self.appList:SetRowInitializer(function(row)
   ResultTooltipArea(row,self.appList)
-  row.title:ClearAllPoints();row.title:SetPoint("LEFT",APPLICATION_COLUMNS.title.x,0);row.title:SetWidth(APPLICATION_COLUMNS.title.width);C.SetFont(row.title,15);C.SetLineHeight(row.title,20,true);row.meta:Hide()
+  row.title:ClearAllPoints();row.title:SetPoint("LEFT",APPLICATION_COLUMNS.title.x,0);row.title:SetWidth(APPLICATION_COLUMNS.title.width);C.SetFont(row.title,T.findTableFontSize);C.SetLineHeight(row.title,T.findTableLineHeight,true)
+  row.meta:ClearAllPoints();row.meta:SetPoint("LEFT",0,0);C.SetFont(row.meta,T.findTableFontSize);C.SetLineHeight(row.meta,T.findTableLineHeight,true);row.meta:SetWordWrap(false);row.meta:Show()
   row.icon=C.Icon(row,T.findRowIconWidth);C.Box(row.icon,{width="findRowIconWidth",height="findRowIconHeight"});row.icon:SetPoint("LEFT",0,0)
   row.leaderIcon=C.Icon(row,T.findRowLeaderIconWidth);C.Box(row.leaderIcon,{width="findRowLeaderIconWidth",height="findRowLeaderIconHeight"});row.leaderIcon:Hide()
-  row.leader=C.Text(row,"",14,"muted",APPLICATION_COLUMNS.leader.width);row.leader:SetPoint("LEFT",APPLICATION_COLUMNS.leader.x,0);C.SetLineHeight(row.leader,20,true);row.leader:SetWordWrap(false)
+  row.leader=C.Text(row,"",T.findTableFontSize,"muted",APPLICATION_COLUMNS.leader.width);row.leader:SetPoint("LEFT",APPLICATION_COLUMNS.leader.x,0);C.SetLineHeight(row.leader,T.findTableLineHeight,true);row.leader:SetWordWrap(false)
   BuildMembers(row,APP_BODY-386,true)
-  row.status=C.Text(row,"",14,"dim",T.findRowStatusWidth);row.status:SetWidth(T.findRowStatusWidth);row.status:SetPoint("LEFT",APP_BODY-224,0);C.SetLineHeight(row.status,20,true);row.status:SetJustifyH("CENTER")
+  row.status=C.Text(row,"",T.findTableFontSize,"dim",T.findRowStatusWidth);row.status:SetWidth(T.findRowStatusWidth);row.status:SetPoint("LEFT",APP_BODY-224,0);C.SetLineHeight(row.status,T.findTableLineHeight,true);row.status:SetJustifyH("CENTER")
   row.cancel=C.Button(row,L.cancelApplication,T.findRowCancelWidth,function(b)
    local id=b.targetKey;local app=UI:GetGroup():GetApplication(id);if not app then return end
    if not UI:GetGroup().Applications:CanCancel(id) then return end
@@ -412,11 +463,17 @@ function P:Build(parent)
   self:LayoutApplicationRow(row)
  end)
  self.context=C.Text(main,"",20,"text",MAIN-180)
- self.resultCount=C.Text(main,"",14,"dim",T.findResultCountWidth);self.resultCount:SetWidth(T.findResultCountWidth);C.SetLineHeight(self.context,28,true);C.SetLineHeight(self.resultCount,20,true);self.resultCount:SetJustifyH("LEFT")
+ self.resultCount=C.Text(main,"",14,"dim",T.findResultCountWidth);self.resultCount:SetWidth(T.findResultCountWidth);C.SetLineHeight(self.context,28,true);C.SetLineHeight(self.resultCount,20,true);self.resultCount:SetJustifyH("RIGHT")
  self.resultsHeader=C.TableHeader(main,resultDefinitions,{
   onLayout=function() if P.results then P:ApplyResultColumns() end end,
   onSort=function(key,descending) P:OnHeaderSort(key,descending) end,
  })
+ self.resultsHeader.buttons[2]:SetScript("OnClick",function() P:CycleActivitySort() end)
+ UI.Tooltip:BindText(self.resultsHeader.buttons[2],function()
+  local prefs=P.resultsHeader.state
+  local order=prefs.sortKey~="activity" and Say("默认","Default") or prefs.descending and Say("降序","Descending") or Say("升序","Ascending")
+  return Say("活动排序：%s\n按活动选择菜单顺序排列。\n点击切换：默认 → 升序 → 降序。","Activity order: %s\nUses the activity menu order.\nClick to cycle: Default → Ascending → Descending."):format(order)
+ end)
  self.resultHeadings=self.resultsHeader.labels
  self.applicationHeader=C.TableHeader(self.applicationPanel,applicationDefinitions,{
   onLayout=function() P:LayoutApplicationColumns() end,
@@ -424,31 +481,34 @@ function P:Build(parent)
  })
  C.SetPoint(self.applicationHeader,"TOPLEFT",self.applicationHeader:GetParent(),"TOPLEFT","findApplicationHeaderTopleftX","findApplicationHeaderTopleftY")
  C.SetPoint(self.appList,"TOPLEFT",self.appList:GetParent(),"TOPLEFT","findAppListTopleftX","findAppListTopleftY2")
- self.results=C.List(main,MAIN,0,T.findResultRowHeight,function(id,button,row) P:OnResultSelect(id,button,row) end)
+ -- Keep row surfaces flush with the panels; the scrollbar uses the outer padding.
+ self.results=C.List(main,BODY+T.findListGutter,0,T.findResultRowHeight,function(id,button,row) P:OnResultSelect(id,button,row) end)
  self.results:SetGutter(T.findListGutter);self.results.tooltipFraction=.25
  self.results:SetRowInitializer(function(row)
   ResultTooltipArea(row,self.results)
-  row.title:ClearAllPoints();C.SetPoint(row.title,"TOPLEFT",row.title:GetParent(),"TOPLEFT",RESULT_COLUMNS.title.x,"findRowTitleTopleftY");row.title:SetWidth(RESULT_COLUMNS.title.width);C.SetFont(row.title,T.listTitleSize);C.SetLineHeight(row.title,T.listTitleLineHeight,true)
-  row.meta:ClearAllPoints();C.SetPoint(row.meta,"TOPLEFT",row.meta:GetParent(),"TOPLEFT",RESULT_COLUMNS.title.x,"findRowMetaTopleftY");row.meta:SetWidth(RESULT_COLUMNS.title.width);C.SetFont(row.meta,T.listMetaSize);C.SetLineHeight(row.meta,20,true)
+  row.title:ClearAllPoints();row.title:SetPoint("LEFT",RESULT_COLUMNS.title.x,0);row.title:SetWidth(RESULT_COLUMNS.title.width);C.SetFont(row.title,T.findTableFontSize);C.SetLineHeight(row.title,T.findTableLineHeight,true)
+  row.meta:ClearAllPoints();row.meta:SetPoint("LEFT",RESULT_COLUMNS.activity.x,0);row.meta:SetWidth(RESULT_COLUMNS.activity.width);C.SetFont(row.meta,T.findTableFontSize);C.SetLineHeight(row.meta,T.findTableLineHeight,true);row.meta:SetWordWrap(false);row.meta:SetMaxLines(1);row.meta:SetJustifyV("MIDDLE")
   row.declined=C.Text(row,"",12,"warning",RESULT_COLUMNS.leader.x+RESULT_COLUMNS.leader.width-RESULT_COLUMNS.title.x);C.SetLineHeight(row.declined,18,true);row.declined:SetWordWrap(false);row.declined:Hide()
   row:HookScript("OnHide",function() UI:SetText(row.declined,"");row.declined:Hide() end)
-  row.marks=UI.Members:CreateMarks(row);C.SetPoint(row.marks,"LEFT",row.meta,"RIGHT","findRowMarksLeftX",0)
+  row.marks=UI.Members:CreateMarks(row)
   row:HookScript("OnHide",function(self) UI.Members:ClearMarks(self.marks) end)
-  row.description=C.Text(row,"",14,"muted",RESULT_COLUMNS.description.width,20);row.description:SetPoint("LEFT",RESULT_COLUMNS.description.x,0);row.description:SetMaxLines(2);row.description:SetWordWrap(true);row.description:SetJustifyV("MIDDLE")
+  row.description=C.Text(row,"",T.findTableFontSize,"muted",RESULT_COLUMNS.description.width,T.findTableLineHeight);row.description:SetPoint("LEFT",RESULT_COLUMNS.description.x,0);row.description:SetMaxLines(1);row.description:SetWordWrap(false);row.description:SetJustifyV("MIDDLE")
   row.leaderIcon=C.Icon(row,T.findRowLeaderIconWidth);C.Box(row.leaderIcon,{width="findRowLeaderIconWidth",height="findRowLeaderIconHeight"});row.leaderIcon:Hide()
-  row.leader=C.Text(row,"",14,"muted",RESULT_COLUMNS.leader.width);row.leader:SetPoint("LEFT",RESULT_COLUMNS.leader.x,0);C.SetLineHeight(row.leader,20,true);row.leader:SetWordWrap(false)
-  row.icon=C.Icon(row,T.findResultIconSize);C.Box(row.icon,{width="findResultIconSize",height="findResultIconSize"});row.icon:SetPoint("LEFT",T.findResultIconInset,0)
-  row.score=C.Text(row,"",14,"text",RESULT_COLUMNS.rating.width);C.SetLineHeight(row.score,20,true);row.score:SetPoint("LEFT",RESULT_COLUMNS.rating.x,0);row.score:SetJustifyH("CENTER");row.score:SetWordWrap(false)
-  row.ilvl=C.Text(row,"",14,"text",RESULT_COLUMNS.ilvl.width);C.SetLineHeight(row.ilvl,20,true);row.ilvl:SetPoint("LEFT",RESULT_COLUMNS.ilvl.x,0);row.ilvl:SetJustifyH("CENTER");row.ilvl:SetWordWrap(false)
+  row.leader=C.Text(row,"",T.findTableFontSize,"muted",RESULT_COLUMNS.leader.width);row.leader:SetPoint("LEFT",RESULT_COLUMNS.leader.x,0);C.SetLineHeight(row.leader,T.findTableLineHeight,true);row.leader:SetWordWrap(false)
+  C.SetPoint(row.marks,"LEFT",row.leader,"RIGHT","findRowMarksLeftX",0)
+  row.icon=C.Icon(row,T.findResultIconSize);C.Box(row.icon,{width="findResultIconSize",height="findResultIconSize"});row.icon:SetPoint("LEFT",RESULT_COLUMNS.activity.x-T.findResultIconSize-6,0)
+  row.score=C.Text(row,"",T.findTableFontSize,"text",RESULT_COLUMNS.rating.width);C.SetLineHeight(row.score,T.findTableLineHeight,true);row.score:SetPoint("LEFT",RESULT_COLUMNS.rating.x,0);row.score:SetJustifyH("CENTER");row.score:SetWordWrap(false)
+  row.ilvl=C.Text(row,"",T.findTableFontSize,"text",RESULT_COLUMNS.ilvl.width);C.SetLineHeight(row.ilvl,T.findTableLineHeight,true);row.ilvl:SetPoint("LEFT",RESULT_COLUMNS.ilvl.x,0);row.ilvl:SetJustifyH("CENTER");row.ilvl:SetWordWrap(false)
   BuildMembers(row,RESULT_COLUMNS.members.x)
-  row.age=C.Text(row,"",14,"dim",RESULT_COLUMNS.age.width);row.age:SetPoint("LEFT",RESULT_COLUMNS.age.x,0);row.age:SetJustifyH("RIGHT");C.SetLineHeight(row.age,20,true);row.age:SetWordWrap(false)
-  local metaTop=math.max(42,10+row.title:GetHeight()+4)
-  row.meta:SetPoint("TOPLEFT",RESULT_COLUMNS.title.x,-metaTop)
-  row.declined:SetPoint("TOPLEFT",RESULT_COLUMNS.title.x,-metaTop-row.meta:GetHeight()-4)
-  row.description:SetHeight(math.max(T.findRowDescriptionHeight,T.findDescriptionMinHeight,(row.description:GetLineHeight()+row.description:GetSpacing())*2));LayoutMembers(row)
+  row.age=C.Text(row,"",T.findTableFontSize,"dim",RESULT_COLUMNS.age.width);row.age:SetPoint("LEFT",RESULT_COLUMNS.age.x,0);row.age:SetJustifyH("RIGHT");C.SetLineHeight(row.age,T.findTableLineHeight,true);row.age:SetWordWrap(false)
+  row.description:SetHeight(math.max(T.findRowDescriptionHeight,T.findDescriptionMinHeight,row.description:GetLineHeight()+row.description:GetSpacing()))
   row.membersWidth=RESULT_COLUMNS.members.width;LayoutMembers(row)
+  LayoutResultRow(row)
   row.tooltipArea:SetWidth(self.resultsHeader.columns.title.width)
   row:SetScript("OnDoubleClick",function(b,button) if button=="LeftButton" and b.key then P:Apply(b.key) end end)
+ end)
+ self.results:SetRowHeightResolver(function(id,_,bodyHeight)
+  return bodyHeight+(DeclinedAt(Record(id)) and (P.resultFooterHeight or 0) or 0)
  end)
  local refreshResultsList=self.results.Refresh
  function self.results:Refresh(...)
@@ -480,44 +540,49 @@ function P:Build(parent)
 self:RegisterBuildElements()
  end
 function P:ApplyResultColumns()
- local titleLabel=self.resultsHeader.labels.title
- titleLabel:ClearAllPoints();C.SetPoint(titleLabel,"LEFT",titleLabel:GetParent(),"LEFT","findTitleLabelLeftX",0);titleLabel:SetWidth(self.resultsHeader.columns.title.width-18)
  for key,cell in pairs(self.resultsHeader.columns) do
   local column=RESULT_COLUMNS[key]
-  local inset=key=="title" and T.findResultTitleX or T.findColumnInset
-  column.x=cell.x+inset;column.width=cell.width-inset-(key=="title" and 16 or key=="age" and 12 or 8)
+  local inset=key=="title" and T.findResultTitleX or key=="activity" and T.findColumnInset+T.findResultIconSize+6 or T.findColumnInset
+  column.x=cell.x+inset;column.width=cell.width-inset-(key=="age" and T.findResultRightInset or T.findColumnInset)
+  local label=self.resultsHeader.labels[key]
+  local labelInset=key=="title" and T.findTitleLabelLeftX or inset
+  label:ClearAllPoints();label:SetPoint("LEFT",labelInset,0);label:SetWidth(cell.width-labelInset-(key=="age" and T.findResultRightInset or T.findColumnInset))
  end
  for _,row in ipairs(self.results.rows) do
-  row.title:SetWidth(RESULT_COLUMNS.title.width);LayoutResultActivity(row)
-  C.SetPoint(row.title,"TOPLEFT",row.title:GetParent(),"TOPLEFT",RESULT_COLUMNS.title.x,"findRowTitleTopleftY")
-  row.leader:SetPoint("LEFT",RESULT_COLUMNS.leader.x,0);row.leader:SetWidth(RESULT_COLUMNS.leader.width)
-  row.declined:SetWidth(RESULT_COLUMNS.leader.x+RESULT_COLUMNS.leader.width-RESULT_COLUMNS.title.x)
-  row.membersX,row.membersWidth=RESULT_COLUMNS.members.x,RESULT_COLUMNS.members.width;LayoutMembers(row)
-  row.ilvl:SetPoint("LEFT",RESULT_COLUMNS.ilvl.x,0);row.ilvl:SetWidth(RESULT_COLUMNS.ilvl.width)
-  row.description:SetWidth(RESULT_COLUMNS.description.width);row.description:SetPoint("LEFT",RESULT_COLUMNS.description.x,0)
-  row.score:SetPoint("LEFT",RESULT_COLUMNS.rating.x,0);row.score:SetWidth(RESULT_COLUMNS.rating.width)
-  row.age:SetPoint("LEFT",RESULT_COLUMNS.age.x,0);row.age:SetWidth(RESULT_COLUMNS.age.width)
+  row.title:SetWidth(RESULT_COLUMNS.title.width)
+  row.membersX,row.membersWidth=RESULT_COLUMNS.members.x,RESULT_COLUMNS.members.width
+  LayoutResultRow(row)
   row.tooltipArea:SetWidth(self.resultsHeader.columns.title.width)
  end
 end
+local function MeasureResultColumnMinimums(self)
+ local raid=self.raidResultColumns
+ resultDefinitions[4].min=raid and 146 or ResultMemberWidth()+8
+ local first=self.results and self.results.rows[1]
+ local rating=resultDefinitions[6].key=="rating" and resultDefinitions[6] or resultDefinitions[7]
+ rating.min=not raid and first and math.max(T.findResultRatingMin,math.ceil(C.MeasureTextWidth(first.score,Say("未知分数","Unknown")))+8) or T.findResultRatingMin
+ if first then resultDefinitions[8].min=math.max(T.findResultAgeMin,math.ceil(math.max(C.MeasureTextWidth(first.age,UI:AgeText(59*60)),C.MeasureTextWidth(first.age,UI:AgeText(23*3600)),C.MeasureTextWidth(first.age,UI:AgeText(99*86400))))+T.findColumnInset+T.findResultRightInset) end
+end
 function P:LayoutResultColumns()
  local raid=self.raidResultColumns
- resultDefinitions[3].min=raid and 154 or ResultMemberWidth()+16
- local rating,description=resultDefinitions[5],resultDefinitions[6]
+ MeasureResultColumnMinimums(self)
+ local rating,description=resultDefinitions[6],resultDefinitions[7]
  if rating.key~="rating" then rating,description=description,rating end
  rating.label=raid and Say("进度","Progress") or Say("评分","Score")
- resultDefinitions[5],resultDefinitions[6]=raid and description or rating,raid and rating or description
+ resultDefinitions[6],resultDefinitions[7]=raid and description or rating,raid and rating or description
  self.resultsHeader:SetColumns(resultDefinitions,BODY,UI:GetTablePrefs(raid and "findRaidResults" or "findResults"))
 UI:ApplyElementScope("find")
  end
 function P:RefreshMemberStyle()
  if not self.results then return end
- self:LayoutResultColumns();self.results:Refresh()
+ self:LayoutResultColumns();self:LayoutListRows();self.results:Refresh()
 end
 function P:LayoutApplicationRow(row)
  if not self.applicationHeader then return end
  local cols=self.applicationHeader.columns
- row.title:SetWidth(cols.title.width-48)
+ row.title:ClearAllPoints();row.title:SetPoint("LEFT",cols.title.x,0);row.title:SetWidth(cols.title.width-6)
+ row.icon:ClearAllPoints();row.icon:SetPoint("LEFT",cols.activity.x+6,0)
+ row.meta:ClearAllPoints();row.meta:SetPoint("LEFT",cols.activity.x+T.findRowIconWidth+12,0);row.meta:SetWidth(cols.activity.width-T.findRowIconWidth-18)
  row.leader:SetPoint("LEFT",cols.leader.x+6,0);row.leader:SetWidth(cols.leader.width-12)
  row.membersX,row.membersWidth=cols.members.x+6,cols.members.width-12;LayoutMembers(row)
  row.status:SetPoint("LEFT",cols.status.x+6,0);row.status:SetWidth(cols.status.width-12)
@@ -527,7 +592,11 @@ end
 function P:LayoutApplicationColumns()
  if not self.applicationHeader then return end
  local cols=self.applicationHeader.columns
- APPLICATION_COLUMNS.title.width=cols.title.width-48
+ local title=self.applicationHeader.labels.title
+ title:ClearAllPoints();title:SetPoint("LEFT",0,0);title:SetWidth(cols.title.width-6)
+ local activity=self.applicationHeader.labels.activity
+ activity:ClearAllPoints();activity:SetPoint("LEFT",T.findRowIconWidth+12,0);activity:SetWidth(cols.activity.width-T.findRowIconWidth-18)
+ APPLICATION_COLUMNS.title.x,APPLICATION_COLUMNS.title.width=cols.title.x,cols.title.width-6
  APPLICATION_COLUMNS.leader.x,APPLICATION_COLUMNS.leader.width=cols.leader.x+6,cols.leader.width-12
  for _,row in ipairs(self.appList.rows) do self:LayoutApplicationRow(row) end
 UI:ApplyElementScope("find")
@@ -535,11 +604,12 @@ UI:ApplyElementScope("find")
 
 local function SizeSidebar(self,width)
  self.sidebarWidth=width
- MAIN=(self.layoutWidth or T.contentWidth)-width-T.contentGap-T.findContentInset*2;BODY=MAIN-T.findListGutter;APP_BODY=MAIN-T.findApplicationInset*2-T.findListGutter
- local compact=math.min(70,math.max(0,(T.contentWidth-T.findSidebarWidth-T.contentGap-T.findContentInset*2-T.findListGutter)-BODY))
+ MAIN=(self.layoutWidth or T.contentWidth)-width-T.contentGap-T.findContentInset*2;BODY=MAIN;APP_BODY=MAIN-T.findApplicationInset*2
+ local compact=math.min(70,math.max(0,(T.contentWidth-T.findSidebarWidth-T.contentGap-T.findContentInset*2)-BODY))
  resultDefinitions[1].width=T.findResultTitleWidth-compact
- for _,def in ipairs(resultDefinitions) do if def.key=="description" then def.width=BODY-753-(zh and T.findAgeWidthCN or T.findAgeWidthEN)+compact end end
- applicationDefinitions[1].width=APP_BODY-542
+ local fixed=T.findResultTitleWidth+T.findResultActivityWidth+T.findResultLeaderWidth+T.findResultMembersWidth+T.findResultIlvlWidth+T.findResultRatingWidth+(zh and T.findAgeWidthCN or T.findAgeWidthEN)+T.findColumnInset+T.findResultRightInset
+ for _,def in ipairs(resultDefinitions) do if def.key=="description" then def.width=math.max(T.findResultDescriptionWidth,BODY-fixed+compact) end end
+ applicationDefinitions[1].width=APP_BODY-542-T.findApplicationActivityWidth
  local alpha=math.max(0,math.min(1,(width-T.findCollapsedSidebarWidth)/(T.findSidebarWidth-T.findCollapsedSidebarWidth)))
  if math.abs(width-(state.railCollapsed and T.findCollapsedSidebarWidth or T.findSidebarWidth))<1/self.rail:GetEffectiveScale() then alpha=state.railCollapsed and 0 or 1 end
  for _,list in ipairs({self.seasonCategories,self.categories}) do
@@ -554,8 +624,8 @@ local function SizeSidebar(self,width)
  C.SetPoint(self.sidebarToggle,"BOTTOMLEFT",self.sidebarToggle:GetParent(),"BOTTOMLEFT",buttonInset,"findSidebarToggleBottomleftY");self.sidebarToggle:SetWidth(width-buttonInset*2)
  self.sidebarToggle.label:SetShown(alpha>0);self.sidebarToggle.label:SetAlpha(alpha)
  self.surface:SetPoint("TOPLEFT",width+T.contentGap,0);self.surface:SetWidth(MAIN+T.findContentInset*2);self.main:SetWidth(MAIN)
- self.applicationPanel:SetWidth(MAIN);self.appList:SetWidth(MAIN-32)
- self.results:SetWidth(MAIN);self.resultsHeader:SetWidth(BODY);self.emptyPanel:SetWidth(MAIN)
+ self.applicationPanel:SetWidth(MAIN);self.appList:SetWidth(APP_BODY+T.findListGutter)
+ self.results:SetWidth(BODY+T.findListGutter);self.resultsHeader:SetWidth(BODY);self.emptyPanel:SetWidth(MAIN)
  self.context:SetWidth(math.min(MAIN-180,self.contextNaturalWidth or self.context:GetStringWidth()))
  self.limitNotice:SetWidth(BODY);self.limitText:SetWidth(BODY-52)
 end
@@ -594,6 +664,8 @@ function P:SetSidebarCollapsed(collapsed,animate,persist)
  M:Rect(self.rail,0,0,state.railCollapsed and T.findCollapsedSidebarWidth or T.findSidebarWidth,self.layoutHeight or T.contentHeight,animate and T.findSidebarMotionDuration or 0)
  -- Size changes already run LayoutSidebar through the rail's native callback.
  if self.sidebarWidth~=self.rail:GetWidth() then self:LayoutSidebar(self.rail:GetWidth()) end
+ -- A window narrowed with the rail closed must fit the columns when it opens.
+ if UI.page=="find" and self:GetMinimumWidth()>UI.windowWidth then UI:FitToScreen() end
 end
 function P:FinishSidebar()
  M:FinishRect(self.rail)
@@ -626,7 +698,8 @@ function P:BuildQuickFilters()
    state.filters[key]=value;P:UpdateFilters()
   end,{height=32,radius=8});button:SetWidth(T.findButtonWidth)
   button:RegisterForClicks("LeftButtonUp","RightButtonUp")
-  UI.Tooltip:BindText(button,Say("左键切换，右键恢复","Left-click to cycle; right-click to reset."))
+  local present=role=="DAMAGER" and Say("已齐","Full") or Say("已有","Has")
+  UI.Tooltip:BindText(button,Say("左键切换不限／缺少／%s，右键恢复不限。全部满足时最多两项已有／已齐。","Left-click: Any / Lacks / %s. Right-click: Any. Match all allows at most two Has / Full conditions."):format(present))
   local icon=C.Icon(button,T.findIconWidth2);C.Box(icon,{width="findIconWidth2",height="findIconHeight2"});C.SetPoint(icon,"LEFT",icon:GetParent(),"LEFT","findIconLeftX",0);UI:SetRoleIcon(icon,role)
   button.elementIcon=icon
   button.label:ClearAllPoints();C.SetPoint(button.label,"LEFT",button.label:GetParent(),"LEFT","findButtonLabelLeftX2",0);C.SetFont(button.label,13)
@@ -650,6 +723,10 @@ function P:BuildQuickFilters()
  self.quickFilterItems={{frame=self.quickChoices.tankPresence.button},{frame=self.quickChoices.healerPresence.button},{frame=self.quickChoices.damagePresence.button},{frame=self.quickIdentity},{frame=self.quickLogic}}
  self.quickFilterOptions={width="content",gap=6,align="stretch"}
  self.quickFilterLayout=C.Row(self.quickFilters,self.quickFilterItems,self.quickFilterOptions)
+ self.quickRoleItems={self.quickFilterItems[1],self.quickFilterItems[2],self.quickFilterItems[3]}
+ self.quickModeItems={self.quickFilterItems[4],self.quickFilterItems[5]}
+ self.quickModeOptions={width="content",gap=6,align="stretch"}
+ self.quickModeLayout=C.Row(self.quickFilters,{},self.quickModeOptions)
  self.quickFilters:Hide()
 self:RegisterBuildQuickFiltersElements()
  end
@@ -664,18 +741,20 @@ function P:SetIdentityFilter(mode)
  self:UpdateFilters()
 end
 local function SyncQuickFilterValues(self,seasonDungeon)
- self.quickFilters:SetShown(seasonDungeon and A:GetSetting("showImportantFilters")==true)
- self.importantFilters:SetShown(seasonDungeon and not A:GetSetting("showImportantFilters"))
- local presentCount=(state.filters.tankPresence=="present" and 1 or 0)+(state.filters.healerPresence=="present" and 1 or 0)+(state.filters.damagePresence=="present" and 1 or 0)
+ self.quickPlacement=seasonDungeon and (A:GetSetting("showImportantFilters") and "header" or "popup") or "none"
+ local parent=self.quickPlacement=="header" and self.applicationPanel or self.importantFilters
+ if self.quickFilters:GetParent()~=parent then
+  self.quickFilters:Hide();UI.Tooltip:Hide();self.quickFilters:ClearAllPoints();self.quickFilters:SetParent(parent)
+  self.quickFilters:SetFrameLevel(parent:GetFrameLevel()+1)
+  for _,item in ipairs(self.quickFilterItems) do item.frame:SetFrameLevel(self.quickFilters:GetFrameLevel()+1) end
+ end
+ self.quickFilters:SetShown(seasonDungeon)
+ self.importantFilters:SetShown(self.quickPlacement=="popup")
  for key,entry in pairs(self.quickChoices) do
   local value=state.filters[key]
   UI:SetText(entry.button.label,value=="missing" and Say("缺少","Lacks") or value=="present" and (entry.role=="DAMAGER" and Say("已齐","Full") or Say("已有","Has")) or Say("不限","Any"))
   entry.button:SetActive(value~=nil and value~=false)
-  self.presenceChoices[key]:SetValue(value or false)
-  self.presenceChoices[key].buttons[3]:SetAvailable(state.filters.roleMatchAny or presentCount<2 or value=="present")
  end
- self.presenceLogic:SetValue(state.filters.roleMatchAny==true)
- self.identityChoice:SetValue(state.filters.hideSameClass and "class" or state.filters.hideSameSpec and "spec" or "any")
  UI:SetText(self.quickLogic.label,state.filters.roleMatchAny and Say("或","OR") or Say("全部","All"))
  self.quickLogic:SetActive(state.filters.roleMatchAny==true)
  local enabled=state.filters.hideSameClass==true or state.filters.hideSameSpec==true
@@ -698,6 +777,11 @@ function P:RefreshFilterPlacement()
  if UI.page=="find" then UI:FitToScreen() end
 end
 function P:LayoutApplicationControls()
+ -- A FontString can settle after hidden construction without changing its
+ -- font tuple. Refresh these two fixed captions at the layout boundary.
+ C.InvalidateTextMetrics(self.autoJoin.label);C.InvalidateTextMetrics(self.applicationSettings.label)
+ FitText(self.autoJoin.label);FitText(self.applicationSettings.label)
+ self.applicationSettings:SetWidth(self.applicationSettings.label:GetWidth())
  self.autoJoinOptions.gap=-T.findAutoJoinLabelRightX
  local width=self.autoJoinLayout:Layout()
  if self.autoJoin:GetWidth()~=width then self.autoJoin:SetWidth(width) end
@@ -736,11 +820,11 @@ local function MeasureQuickFilters(self)
 end
 local function MeasureQuickFilterMinimum(self,rowWidth)
  local infoWidth=C.MeasureTextWidth(self.appsTitle)
- for _,label in ipairs(APPLICATION_LABELS) do
-  infoWidth=math.max(infoWidth,C.MeasureTextWidth(self.scopeToggle.label,label)+14)
- end
+ local inline=self.quickPlacement=="header"
+ if inline then for _,label in ipairs(APPLICATION_LABELS) do infoWidth=math.max(infoWidth,C.MeasureTextWidth(self.scopeToggle.label,label)+14) end end
  local autoWidth=16+self.autoJoin:GetWidth()+20+self.autoApply:GetWidth()+10+self.applicationSettings:GetWidth()
- self.minimumMainWidth=math.ceil(16+infoWidth+10+self.appsBadge:GetWidth()+12+rowWidth+12+autoWidth)
+ local middle=inline and rowWidth+12 or self.scopeToggle:IsShown() and self.scopeToggle:GetWidth()+12 or 0
+ self.minimumMainWidth=math.ceil(16+infoWidth+10+self.appsBadge:GetWidth()+12+middle+autoWidth)
  return autoWidth
 end
 function P:LayoutQuickFilters()
@@ -753,11 +837,18 @@ function P:LayoutQuickFilters()
  local right=filterWidth+self.searchModeToggle:GetWidth()+52
  self.search:SetSize(C.ElementValue(self.search,"root","width",MAIN-60),C.ElementValue(self.search,"root","height",T.findSearchHeight))
  self.quickFilterOptions.height=height
- local rowX=self.quickFilterLayout:Layout()
- self.quickFilters:SetSize(rowX,height)
- C.SetPoint(self.quickFilters,"RIGHT",self.applicationSettings,"LEFT","findQuickFiltersRightX",0)
+ local rowX=0
+ for _,item in ipairs(self.quickFilterItems) do rowX=rowX+item.width end
+ rowX=rowX+6*(#self.quickFilterItems-1)
+ if self.quickPlacement=="header" then
+  self.quickModeLayout:SetItems({}):Layout()
+  self.quickFilterLayout:SetItems(self.quickFilterItems)
+  rowX=self.quickFilterLayout:Layout();self.quickFilters:SetSize(rowX,height)
+  self.quickFilters:ClearAllPoints();C.SetPoint(self.quickFilters,"RIGHT",self.applicationSettings,"LEFT","findQuickFiltersRightX",0)
+  for _,item in ipairs(self.quickFilterItems) do item.frame:SetHitRectInsets(0,0,0,0);item.frame:EnableMouse(true) end
+ end
  self.quickFilterHeight=0
- local inline=self.quickFilters:IsShown()
+ local inline=self.quickPlacement=="header"
  local scope=inline and self.hasOtherApplications
  self.appsTitle:SetShown(not scope)
  self.scopeToggle:SetShown(self.hasOtherApplications==true)
@@ -781,9 +872,21 @@ function P:LayoutQuickFilters()
  C.SetPoint(self.applicationHeader,"TOPLEFT",self.applicationHeader:GetParent(),"TOPLEFT","findApplicationHeaderTopleftX","findApplicationHeaderTopleftY")
  C.SetPoint(self.appList,"TOPLEFT",self.appList:GetParent(),"TOPLEFT","findAppListTopleftX",-44-self.applicationHeader:GetHeight())
 end
+local function TableMinimumWidth(header)
+ if not header then return 0 end
+ local width=0
+ for _,def in ipairs(header.definitions) do
+  local minimum=type(def.min)=="string" and T[def.min] or def.min or 32
+  width=width+math.max(minimum,C.MeasureTextWidth(header.labels[def.key])+T.tablePadding*2)
+ end
+ return math.ceil(width)
+end
 function P:GetMinimumWidth()
- if not self.quickFilters or not self.quickFilters:IsShown() then return 0 end
- return (self.layoutWidth or T.contentWidth)+T.pageInset*2-MAIN+self.minimumMainWidth
+ if not self.minimumMainWidth then return 0 end
+ MeasureResultColumnMinimums(self)
+ local mainMinimum=math.max(self.minimumMainWidth,TableMinimumWidth(self.resultsHeader),TableMinimumWidth(self.applicationHeader)+T.findApplicationInset*2)
+ local railWidth=state.railCollapsed and T.findCollapsedSidebarWidth or T.findSidebarWidth
+ return railWidth+T.contentGap+T.findContentInset*2+T.pageInset*2+mainMinimum
 end
 function P:LayoutSearchInput()
  local right,bottom=self.searchInputRight,4
@@ -848,6 +951,15 @@ function P:ApplyFilterFields()
  for _,key in ipairs(numericFilterKeys) do state.filters[key]=values[key] end
  self:UpdateFilters();return true
 end
+function P:ClipFilterBody()
+ local offset,height=self.filterViewport:GetVerticalScroll(),self.filterViewport:GetHeight()
+ for index=1,self.filterClipCount or 0 do
+  local entry=self.filterHitTargets[index];local target=entry.target
+  local top=math.min(entry.height,math.max(0,offset-entry.top))
+  local bottom=math.min(entry.height-top,math.max(0,entry.top+entry.height-offset-height))
+  target:SetHitRectInsets(0,0,top,bottom);target:EnableMouse(top+bottom<entry.height)
+ end
+end
 function P:BuildFilters()
  local f=CreateFrame("Frame",nil,UI.frame);C.Box(f,{width="findFWidth",height="findFHeight"});C.SetPoint(f,"TOPRIGHT",UI.frame,"TOPRIGHT","findFToprightX","findFToprightY");f:SetFrameLevel(UI.frame:GetFrameLevel()+5);f:SetFrameStrata("DIALOG");f:EnableMouse(true);C.Panel(f,"panel","findPanelRadius2");self.filterPanel=f
  local scrim=CreateFrame("Button",nil,UI.frame);scrim:SetAllPoints(UI.frame);scrim:SetFrameStrata("DIALOG");scrim:SetFrameLevel(UI.frame:GetFrameLevel()+4)
@@ -857,68 +969,53 @@ function P:BuildFilters()
  self.filterTitle=C.Text(f,Say("筛选队伍","Filter groups"),20);C.SetLineHeight(self.filterTitle,24,true)
  local close=C.IconButton(f,"close",T.findCloseWidth,function() P:SetFiltersOpen(false) end,{iconSize=20});C.Box(close,{width="findCloseWidth",height="findCloseHeight"});C.SetPoint(close,"TOPRIGHT",close:GetParent(),"TOPRIGHT","findCloseToprightX","findCloseToprightY")
  self.filterClose=close
+ local viewport=CreateFrame("ScrollFrame",nil,f);self.filterViewport=viewport
+ local body=CreateFrame("Frame",nil,viewport);viewport:SetScrollChild(body);self.filterBody=body
+ local bar=C.ScrollBar(f);self.filterScrollBar=bar
+ viewport:EnableMouseWheel(true)
+ local function Scroll(value)
+  local maximum=math.max(0,body:GetHeight()-viewport:GetHeight())
+  value=math.max(0,math.min(maximum,value));viewport:SetVerticalScroll(value)
+  P.syncingFilterScroll=true;bar:SetValue(value);P.syncingFilterScroll=nil
+  P:ClipFilterBody()
+ end
+ viewport:SetScript("OnMouseWheel",function(_,delta) Scroll(viewport:GetVerticalScroll()-delta*T.findFilterScrollStep) end)
+ bar:SetScript("OnValueChanged",function(_,value) if not P.syncingFilterScroll then Scroll(value) end end)
+ self.filterFooter=CreateFrame("Frame",nil,f);self.filterFooter:SetFrameLevel(viewport:GetFrameLevel()+20);self.filterFooter:EnableMouse(true)
  self.filterStatus=C.Text(f,"",14,"dim",T.findFilterStatusWidth);self.filterStatus:SetWidth(T.findFilterStatusWidth);C.SetLineHeight(self.filterStatus,20,true)
  self.clearFilters=C.Button(f,Say("重置","Reset"),T.findClearFiltersWidth,function() P:ClearFilters() end,{variant="text",height=32});self.clearFilters:SetWidth(T.findClearFiltersWidth)
- local important=CreateFrame("Frame",nil,f);important:SetWidth(T.findImportantWidth);self.importantFilters=important
- local function Segments(entries,onChange)
-  return C.Segmented(important,T.findSegmentWidth,entries,onChange,{
-   height="findSegmentHeight",padding="findSegmentPadding",gap="findSegmentGap",radius="findSegmentRadius",
-   fontSize="findSegmentFont",lineHeight="findSegmentLine",selectionMotion=false,wordWrap=false
-  })
- end
- self.presenceChoices={};self.presenceLabels={};self.presenceIcons={}
- for _,entry in ipairs({{"TANK","tankPresence",L.tank},{"HEALER","healerPresence",L.healer},{"DAMAGER","damagePresence",L.damage}}) do
-  local role,key=entry[1],entry[2]
-  local label=C.Text(important,entry[3],14,"muted");C.SetLineHeight(label,20,true);self.presenceLabels[key]=label
-  local icon=C.Icon(important,T.findIconWidth2);C.Box(icon,{width="findIconWidth2",height="findIconHeight2"});UI:SetRoleIcon(icon,role);self.presenceIcons[key]=icon
-  self.presenceChoices[key]=Segments({{value=false,label=Say("不限","Any")},{value="missing",label=Say("缺少","Missing")},{value="present",label=role=="DAMAGER" and Say("已齐","Full") or Say("已有","Present")}},function(value) state.filters[key]=value or nil;P:UpdateFilters() end)
-  UI.Tooltip:BindText(self.presenceChoices[key].buttons[3],Say("全部满足时，最多选择两项已有／已齐。","Match all allows at most two Present / Full conditions."))
- end
- self.presenceLogicLabel=C.Text(important,Say("匹配方式","Match mode"),14,"muted");C.SetLineHeight(self.presenceLogicLabel,20,true)
- self.presenceLogic=Segments({{value=false,label=Say("全部满足","Match all")},{value=true,label=Say("任一满足","Match any")}},function(value) P:SetRoleMatchAny(value) end)
- self.identityLabel=C.Text(important,Say("同职过滤","Class/spec filter"),14,"muted");C.SetLineHeight(self.identityLabel,20,true)
- self.identityChoice=Segments({{value="any",label=Say("不限","Any")},{value="class",label=Say("同职业","My class")},{value="spec",label=Say("同专精","My spec")}},function(value) P:SetIdentityFilter(value) end)
- for _,button in ipairs(self.identityChoice.buttons) do UI.Tooltip:BindText(button,Say("排除已有同职业或同专精成员的队伍，始终与其他条件共同满足。","Hide groups with your class or specialization. This always combines with the other filters.")) end
+ local important=CreateFrame("Frame",nil,body);important:SetWidth(T.findFilterWideWidth-T.findFilterPadding*2);self.importantFilters=important
  important:Hide()
  self.filterFields={}
  for _,key in ipairs(numericFilterKeys) do
-  local field=C.Number(f,T.findFieldWidth,T.findFieldHeight,function() P:ApplyFilterFields() end);C.Box(field,{width="findFieldWidth",height="findFieldHeight"});field.box:SetMaxLetters(5)
+  local field=C.Number(body,T.findFieldWidth,T.findFieldHeight,function() P:ApplyFilterFields() end);C.Box(field,{width="findFieldWidth",height="findFieldHeight"});field.box:SetMaxLetters(5)
   field:SetPlaceholder(key:sub(1,3)=="min" and Say("最低","Min") or Say("最高","Max"));self.filterFields[key]=field
  end
- self.ratingLabel=C.Text(f,Say("队长评分","Leader rating"),14,"muted",T.findRatingLabelWidth);self.ratingLabel:SetWidth(T.findRatingLabelWidth)
- self.ilvlLabel=C.Text(f,Say("要求装等","Required item level"),14,"muted",T.findIlvlLabelWidth);self.ilvlLabel:SetWidth(T.findIlvlLabelWidth)
- self.membersLabel=C.Text(f,Say("队伍人数","Group size"),14,"muted",T.findMembersLabelWidth);self.membersLabel:SetWidth(T.findMembersLabelWidth)
+ self.ratingLabel=C.Text(body,Say("队长评分","Leader rating"),14,"muted",T.findRatingLabelWidth);self.ratingLabel:SetWidth(T.findRatingLabelWidth)
+ self.ilvlLabel=C.Text(body,Say("要求装等","Required item level"),14,"muted",T.findIlvlLabelWidth);self.ilvlLabel:SetWidth(T.findIlvlLabelWidth)
+ self.membersLabel=C.Text(body,Say("队伍人数","Group size"),14,"muted",T.findMembersLabelWidth);self.membersLabel:SetWidth(T.findMembersLabelWidth)
  self.fMinMembers,self.fMembers=self.filterFields.minMembers,self.filterFields.maxMembers
- self.roleLabel=C.Text(f,Say("队伍缺少职责","Role needed"),14,"muted",T.findRoleLabelWidth);self.roleLabel:SetWidth(T.findRoleLabelWidth)
- self.roleChoice=C.Choice(f,T.findRoleChoiceWidth,{{value=false,label=L.anyRole},{value="TANK",label=L.tank},{value="HEALER",label=L.healer},{value="DAMAGER",label=L.damage}},function(value) state.filters.neededRole=value or nil;P:UpdateFilters() end);self.roleChoice:SetWidth(T.findRoleChoiceWidth)
- self.hideZeroScore=C.Check(f,Say("过滤队长 0 分队伍","Hide 0-score leaders"),function(value) state.filters.hideZeroScore=value or nil;P:UpdateFilters() end)
+ self.roleLabel=C.Text(body,Say("队伍缺少职责","Role needed"),14,"muted",T.findRoleLabelWidth);self.roleLabel:SetWidth(T.findRoleLabelWidth)
+ self.roleChoice=C.Choice(body,T.findRoleChoiceWidth,{{value=false,label=L.anyRole},{value="TANK",label=L.tank},{value="HEALER",label=L.healer},{value="DAMAGER",label=L.damage}},function(value) state.filters.neededRole=value or nil;P:UpdateFilters() end);self.roleChoice:SetWidth(T.findRoleChoiceWidth)
+ self.hideZeroScore=C.Check(body,Say("过滤队长 0 分队伍","Hide 0-score leaders"),function(value) state.filters.hideZeroScore=value or nil;P:UpdateFilters() end)
  C.Box(self.hideZeroScore,{width="findHideZeroScoreWidth",height="findHideZeroScoreHeight"});C.SetFont(self.hideZeroScore.label,14);C.SetLineHeight(self.hideZeroScore.label,20,true)
  self.hideZeroScore.label:ClearAllPoints();self.hideZeroScore.label:SetPoint("LEFT");self.hideZeroScore.label:SetWidth(T.findHideZeroScoreLabelWidth)
  self.hideZeroScore.track:ClearAllPoints();self.hideZeroScore.track:SetPoint("RIGHT")
- self.socialLabel=C.Text(f,Say("关系与笔记","Relations and notes"),14,"muted")
- self.socialChoice=C.Choice(f,T.findSocialChoiceWidth,{{value=false,label=Say("全部关系","All relations")},{value="friend",label=Say("好友在队","Friends in group")},{value="guild",label=Say("同公会成员","Guildmates")},{value="any",label=Say("含笔记记录","With player notes")},{value="positive",label=Say("含推荐玩家","Recommended players")},{value="noCaution",label=Say("不含拉黑记录","Without blocked players")}},function(value) state.social=value or nil;P:UpdateFilters() end);self.socialChoice:SetWidth(T.findSocialChoiceWidth)
- self.sortLabel=C.Text(f,L.sort,14,"muted")
- self.sortChoice=C.Choice(f,T.findSortChoiceWidth,{{value="newest",label=L.newest},{value="rating",label=Say("队长评分","Leader rating")},{value="itemLevel",label=Say("要求装等","Required item level")},{value="members",label=L.members}},function(value)
+ self.socialLabel=C.Text(body,Say("关系与笔记","Relations and notes"),14,"muted")
+ self.socialChoice=C.Choice(body,T.findSocialChoiceWidth,{{value=false,label=Say("全部关系","All relations")},{value="friend",label=Say("好友在队","Friends in group")},{value="guild",label=Say("同公会成员","Guildmates")},{value="any",label=Say("含笔记记录","With player notes")},{value="positive",label=Say("含推荐玩家","Recommended players")},{value="noCaution",label=Say("不含拉黑记录","Without blocked players")}},function(value) state.social=value or nil;P:UpdateFilters() end);self.socialChoice:SetWidth(T.findSocialChoiceWidth)
+ self.sortLabel=C.Text(body,L.sort,14,"muted")
+ self.sortChoice=C.Choice(body,T.findSortChoiceWidth,{{value="newest",label=L.newest},{value="rating",label=Say("队长评分","Leader rating")},{value="itemLevel",label=Say("要求装等","Required item level")},{value="members",label=L.members}},function(value)
   state.filters.sort=value;P.resultsHeader:SetSort(nil,false,true);P:UpdateFilters()
  end);self.sortChoice:SetWidth(T.findSortChoiceWidth)
  self.filterError=C.Text(f,"",13,"warning",T.findFilterErrorWidth);self.filterError:SetWidth(T.findFilterErrorWidth);C.SetLineHeight(self.filterError,20,true)
  self.filterDone=C.Button(f,Say("完成","Done"),T.findFilterDoneWidth,function() if P:ApplyFilterFields() then P:SetFiltersOpen(false) end end,{height=34});self.filterDone:SetWidth(T.findFilterDoneWidth);self.filterDone:SetPrimary(true)
  self.filterRanges={}
- for _,entry in ipairs({{self.ratingLabel,self.filterFields.minRating,self.filterFields.maxRating},{self.ilvlLabel,self.filterFields.minItemLevel,self.filterFields.maxItemLevel},{self.membersLabel,self.fMinMembers,self.fMembers}}) do
-  local options={gap=8,align="stretch"}
-  self.filterRanges[entry[1]]={options=options,layout=C.Row(f,{{frame=entry[2],width="fill"},{frame=entry[3],width="fill"}},options)}
+ for _,entry in ipairs({{self.ratingLabel,self.filterFields.minRating,self.filterFields.maxRating,"rating"},{self.ilvlLabel,self.filterFields.minItemLevel,self.filterFields.maxItemLevel,"itemLevel"},{self.membersLabel,self.fMinMembers,self.fMembers,"members"}}) do
+  local group=CreateFrame("Frame",nil,body)
+  entry[2]:SetParent(group);entry[3]:SetParent(group)
+  self.filterRanges[entry[1]]={id=entry[4],frame=group,low=entry[2],high=entry[3]}
  end
- self.presenceRows={}
- local function PresenceRow(label,control,icon)
-  local items=icon and {{frame=icon,gapAfter=8},{frame=label},{frame=control}} or {{frame=label},{frame=control}}
-  local options={width="content",align="center"}
-  self.presenceRows[label]={items=items,options=options,layout=C.Row(important,items,options)}
- end
- for _,key in ipairs(PRESENCE_KEYS) do PresenceRow(self.presenceLabels[key],self.presenceChoices[key],self.presenceIcons[key]) end
- PresenceRow(self.presenceLogicLabel,self.presenceLogic)
- PresenceRow(self.identityLabel,self.identityChoice)
- self.filterFooterOptions={width="content",x=20,gap=12,align="center"}
- self.filterFooterLayout=C.Row(f,{self.filterStatus,self.clearFilters,self.filterDone},self.filterFooterOptions)
+ self.filterStatus:SetParent(self.filterFooter);self.clearFilters:SetParent(self.filterFooter);self.filterDone:SetParent(self.filterFooter);self.filterError:SetParent(self.filterFooter)
  f:Hide()
 self:RegisterBuildFiltersElements()
  end
@@ -926,97 +1023,124 @@ function P:LayoutFilters()
  if not self.filterPanel then return end
  local function Place(frame,x,y) frame:ClearAllPoints();frame:SetPoint("TOPLEFT",x,-y) end
  local expanded=self.importantFilters:IsShown()
- local labelWidth,controlWidth=0,0
- if expanded then
-  labelWidth=math.max(FitText(self.presenceLogicLabel),FitText(self.identityLabel))
-  for _,label in pairs(self.presenceLabels) do labelWidth=math.max(labelWidth,FitText(label)+26) end
-  for _,control in ipairs({self.presenceChoices.tankPresence,self.presenceChoices.healerPresence,self.presenceChoices.damagePresence,self.presenceLogic,self.identityChoice}) do
-   local textWidth=0
-   for _,button in ipairs(control.buttons) do textWidth=math.max(textWidth,FitText(button.label)) end
-   controlWidth=math.max(controlWidth,T.findSegmentPadding*2+(#control.buttons-1)*T.findSegmentGap+#control.buttons*(textWidth+T.segmentTextInset*2))
-  end
- end
- local width=C.ElementValue(self.filterPanel,"root","width",expanded and math.max(592,labelWidth+16+controlWidth+40) or 368)
- local inner=width-40
+ local padding,gap=T.findFilterPadding,T.findFilterColumnGap
+ local labelWidth,minimum=0,0
+ for _,label in ipairs({self.ratingLabel,self.ilvlLabel,self.membersLabel}) do labelWidth=math.max(labelWidth,math.ceil(C.MeasureTextWidth(label))) end
+ for _,field in pairs(self.filterFields) do minimum=math.max(minimum,C.MeasureTextWidth(field.placeholder)) end
+ local gridWidth=labelWidth+16+(minimum+T.editInset*2)*2+8
+ local quickHeight=MeasureQuickFilters(self)
+ local quickWidth=24;for _,item in ipairs(self.quickFilterItems) do quickWidth=quickWidth+item.width end
+ local desired=math.max(expanded and math.max(T.findFilterWideWidth,quickWidth+padding*2) or T.findFilterCompactWidth,gridWidth+padding*2)
+ local width=math.min(UI.frame:GetWidth()-T.findFilterWindowInset*2,C.ElementValue(self.filterPanel,"root","width",desired))
+ local inner=width-padding*2
  self.filterPanel:SetWidth(width)
- Place(self.filterTitle,20,18)
- local y=18+self.filterTitle:GetHeight()+18
- local fieldHeight=math.max(36,math.ceil(self.socialChoice.label:GetHeight()+12))
- if expanded then
-  Place(self.importantFilters,20,y)
-  self.importantFilters:SetWidth(inner)
-  local controlX=labelWidth+16
-  local top=0
-  local function SegmentRow(label,control,icon)
-   local height=math.max(36,control.buttons[1].label:GetHeight()+18)
-   local row=self.presenceRows[label]
-   row.items[icon and 2 or 1].gapAfter=controlX-(icon and 26 or 0)-label:GetWidth()
-   row.options.y,row.options.height=-top,height
-   control:Layout(inner-controlX,height);row.layout:Layout()
-   top=top+height+6
+ Place(self.filterTitle,padding,padding)
+ self.filterTitle:SetWidth(inner-self.filterClose:GetWidth()-12)
+ local bodyTop=padding+self.filterTitle:GetHeight()+T.findFilterSectionGap
+ local fieldHeight=math.max(T.findFilterControlHeight,math.ceil(self.socialChoice.label:GetHeight()+12))
+ local function Label(label,w) label:SetWordWrap(true);label:SetWidth(w);label:SetHeight(math.ceil(label:GetStringHeight())) end
+ local function LayoutBody(w)
+  self.filterBody:SetWidth(w)
+  self.filterHitTargets=self.filterHitTargets or {}
+  for _,entry in ipairs(self.filterHitTargets) do
+   if entry.target:GetParent()==self.quickFilters and self.quickPlacement=="header" then entry.target:SetHitRectInsets(0,0,0,0);entry.target:EnableMouse(true)
+   else entry.target:EnableMouse(false) end
   end
-  for _,key in ipairs({"tankPresence","healerPresence","damagePresence"}) do SegmentRow(self.presenceLabels[key],self.presenceChoices[key],self.presenceIcons[key]) end
-  SegmentRow(self.presenceLogicLabel,self.presenceLogic)
-  SegmentRow(self.identityLabel,self.identityChoice)
-  self.importantFilters:SetHeight(top-6);y=y+top+14
-  local column=(inner-20)/2
-  local right=20+column+20
-  local function Range(label,low,high,x)
-   label:SetWidth(column);Place(label,x,y)
-   local top=y+label:GetHeight()+6
-   local row=self.filterRanges[label]
-   row.options.x,row.options.y,row.options.width,row.options.height=x,-top,column,fieldHeight
-   row.layout:Layout()
-   return top+fieldHeight
+  self.filterClipCount=0
+  local function Hit(target,top,height)
+   local index=self.filterClipCount+1;self.filterClipCount=index
+   local entry=self.filterHitTargets[index];if not entry then entry={};self.filterHitTargets[index]=entry end
+   entry.target,entry.top,entry.height=target,top,height
   end
-  local function Choice(label,control,x)
-   label:SetWidth(column);Place(label,x,y)
-   local top=y+label:GetHeight()+6
-   control:SetSize(column,fieldHeight);Place(control,x,top)
-   return top+fieldHeight
+  local y=0
+  if expanded then
+   Place(self.importantFilters,0,y);self.importantFilters:SetWidth(w)
+   self.quickFilters:ClearAllPoints();Place(self.quickFilters,0,0)
+   self.quickFilterOptions.height=quickHeight
+   local wrapped=quickWidth>w
+   self.quickModeLayout:SetItems({}):Layout()
+   self.quickFilterLayout:SetItems(wrapped and self.quickRoleItems or self.quickFilterItems):Layout()
+   local top=0
+   if wrapped then
+    top=quickHeight+8;self.quickModeOptions.y=-top;self.quickModeOptions.height=quickHeight
+    self.quickModeLayout:SetItems(self.quickModeItems):Layout()
+   end
+   self.quickFilters:SetSize(w,top+quickHeight);self.importantFilters:SetHeight(top+quickHeight)
+   for index,item in ipairs(self.quickFilterItems) do Hit(item.frame,index>3 and top or 0,quickHeight) end
+   y=y+top+quickHeight+T.findFilterSectionGap
+  elseif self.filterLayout=="needed" then
+   Label(self.roleLabel,w);Place(self.roleLabel,0,y);y=y+self.roleLabel:GetHeight()+6
+   self.roleChoice:SetSize(w,fieldHeight);Place(self.roleChoice,0,y);Hit(self.roleChoice,y,fieldHeight);y=y+fieldHeight+T.findFilterSectionGap
   end
-  y=math.max(Range(self.ratingLabel,self.filterFields.minRating,self.filterFields.maxRating,20),Range(self.ilvlLabel,self.filterFields.minItemLevel,self.filterFields.maxItemLevel,right))+14
-  y=math.max(Range(self.membersLabel,self.fMinMembers,self.fMembers,20),Choice(self.socialLabel,self.socialChoice,right))+14
-  local bottom=Choice(self.sortLabel,self.sortChoice,right)
-  self.hideZeroScore.label:SetWidth(column-54)
-  self.hideZeroScore:SetSize(column,math.max(32,self.hideZeroScore.label:GetStringHeight()))
-  Place(self.hideZeroScore,20,y+(bottom-y-self.hideZeroScore:GetHeight())/2)
-  y=math.max(bottom,y+self.hideZeroScore:GetHeight())+18
- else
-  for _,row in ipairs({{self.ratingLabel,self.filterFields.minRating,self.filterFields.maxRating},{self.ilvlLabel,self.filterFields.minItemLevel,self.filterFields.maxItemLevel},{self.membersLabel,self.fMinMembers,self.fMembers}}) do
-   row[1]:SetWidth(100)
-   local height=math.max(fieldHeight,row[1]:GetStringHeight())
-   Place(row[1],20,y+(height-row[1]:GetHeight())/2)
-   local range=self.filterRanges[row[1]]
-   range.options.x,range.options.y,range.options.width,range.options.height=132,-y,216,height
-   range.layout:Layout()
-   y=y+height+12
-  end
-  for _,row in ipairs({{self.socialLabel,self.socialChoice},{self.sortLabel,self.sortChoice}}) do
-   row[1]:SetWidth(inner);Place(row[1],20,y);y=y+row[1]:GetHeight()+6
-   row[2]:SetSize(inner,fieldHeight);Place(row[2],20,y);y=y+fieldHeight+14
+  local rangeX=labelWidth+16
+  local rangeWidth=w-rangeX
+  self.filterColumns=1
+  for _,label in ipairs({self.ratingLabel,self.ilvlLabel,self.membersLabel}) do
+    Label(label,labelWidth);Place(label,0,y+(fieldHeight-label:GetHeight())/2)
+    local top=y;local range=self.filterRanges[label]
+    range.frame:SetSize(rangeWidth,fieldHeight);Place(range.frame,rangeX,top)
+    local half=(rangeWidth-8)/2
+    range.low:SetSize(half,fieldHeight);Place(range.low,0,0)
+    range.high:SetSize(half,fieldHeight);Place(range.high,half+8,0)
+    for _,field in ipairs({range.low,range.high}) do
+     if field.placeholder then field.placeholder:SetWidth(half-T.editInset*2) end
+     Hit(field.box,top+T.editVerticalInset,fieldHeight-T.editVerticalInset*2)
+    end
+    y=y+fieldHeight+12
   end
   if self.filterLayout=="presence" then
-   self.hideZeroScore.label:SetWidth(inner-54)
-   self.hideZeroScore:SetSize(inner,math.max(32,self.hideZeroScore.label:GetStringHeight()))
-   Place(self.hideZeroScore,20,y);y=y+self.hideZeroScore:GetHeight()+12
-  elseif self.filterLayout=="needed" then
-   self.roleLabel:SetWidth(inner);Place(self.roleLabel,20,y);y=y+self.roleLabel:GetHeight()+6
-   self.roleChoice:SetSize(inner,fieldHeight);Place(self.roleChoice,20,y);y=y+fieldHeight+12
+   Label(self.hideZeroScore.label,w-T.switchWidth-16)
+   local height=math.max(32,self.hideZeroScore.label:GetHeight())
+   self.hideZeroScore:SetSize(w,height);Place(self.hideZeroScore,0,y+4);Hit(self.hideZeroScore,y+4,height)
+   y=y+height+T.findFilterSectionGap
   end
+  y=y+4
+  -- These choices use a full line in a narrow panel; the wide composition can
+  -- put them side by side only when their complete translated values fit.
+  local choiceMinimum=math.max(C.MeasureTextWidth(self.socialChoice.label,Say("不含拉黑记录","Without blocked players")),C.MeasureTextWidth(self.sortChoice.label,Say("要求装等","Required item level")))+T.choiceReserve
+  local paired=w>=choiceMinimum*2+gap
+  local choiceWidth=paired and (w-gap)/2 or w
+  local bottom=y
+  for slot,entry in ipairs({{self.socialLabel,self.socialChoice},{self.sortLabel,self.sortChoice}}) do
+   local x=paired and (slot-1)*(choiceWidth+gap) or 0
+   local top=not paired and slot==2 and bottom+12 or y
+   Label(entry[1],choiceWidth);Place(entry[1],x,top);top=top+entry[1]:GetHeight()+6
+   entry[2]:SetSize(choiceWidth,fieldHeight);entry[2].label:SetWidth(choiceWidth-T.choiceReserve);Place(entry[2],x,top)
+   Hit(entry[2],top,fieldHeight)
+   bottom=math.max(bottom,top+fieldHeight)
+  end
+  local height=bottom+2;self.filterBody:SetHeight(height);return height
  end
- local hasError=self.filterError:GetText()~=""
- self.filterError:SetWidth(inner)
- self.filterError:SetShown(hasError)
- if hasError then self.filterError:SetHeight(math.ceil(self.filterError:GetStringHeight()));Place(self.filterError,20,y);y=y+self.filterError:GetHeight()+8 end
- self.filterDone:SetSize(math.max(88,self.filterDone.label:GetStringWidth()+28),math.max(34,self.filterDone.label:GetHeight()+12))
- self.clearFilters:SetSize(math.max(72,self.clearFilters.label:GetStringWidth()+20),math.max(32,self.clearFilters.label:GetHeight()+8))
- self.filterStatus:SetWidth(inner-self.clearFilters:GetWidth()-self.filterDone:GetWidth()-24)
+ local natural=LayoutBody(inner)
+ self.filterDone:SetSize(math.max(T.findFilterDoneWidth,FitText(self.filterDone.label)+28),math.max(38,self.filterDone.label:GetHeight()+14))
+ self.clearFilters:SetSize(math.max(T.findClearFiltersWidth,FitText(self.clearFilters.label)+20),math.max(34,self.clearFilters.label:GetHeight()+10))
+ local actions=self.clearFilters:GetWidth()+12+self.filterDone:GetWidth()
+ self.filterStatus:SetWordWrap(true);self.filterStatus:SetWidth(math.max(1,inner-actions-16))
  self.filterStatus:SetHeight(math.ceil(self.filterStatus:GetStringHeight()))
  local footerHeight=math.max(self.filterStatus:GetHeight(),self.clearFilters:GetHeight(),self.filterDone:GetHeight())
- self.filterFooterOptions.y,self.filterFooterOptions.height=-y,footerHeight
- self.filterFooterLayout:Layout()
- self.filterPanel:SetHeight(y+footerHeight+20)
+ local errorHeight=0;local hasError=self.filterError:GetText()~=""
+ self.filterError:SetWordWrap(true);self.filterError:SetWidth(inner);self.filterError:SetShown(hasError)
+ if hasError then self.filterError:SetHeight(math.ceil(self.filterError:GetStringHeight()));Place(self.filterError,0,0);errorHeight=self.filterError:GetHeight()+12 end
+ footerHeight=footerHeight+errorHeight
+ local footerGap=T.findFilterSectionGap
+ local maximum=math.max(bodyTop+footerGap+footerHeight+padding+80,UI.frame:GetHeight()-T.findFilterWindowTop-T.findFilterWindowInset)
+ local height=math.min(maximum,bodyTop+natural+footerGap+footerHeight+padding)
+ local viewportHeight=height-bodyTop-footerGap-footerHeight-padding
+ local overflow=natural>viewportHeight+.001
+ if overflow then natural=LayoutBody(inner-T.findFilterScrollGutter) end
+ self.filterPanel:SetHeight(height)
+ self.filterViewport:SetSize(inner-(overflow and T.findFilterScrollGutter or 0),viewportHeight);Place(self.filterViewport,padding,bodyTop)
+ self.filterScrollBar:SetSize(T.scrollWidth,viewportHeight-4);Place(self.filterScrollBar,width-padding-T.scrollWidth,bodyTop+2)
+ local scrollMax=math.max(0,natural-viewportHeight)
+ self.syncingFilterScroll=true;self.filterScrollBar:SetMinMaxValues(0,scrollMax)
+ local offset=math.min(self.filterViewport:GetVerticalScroll(),scrollMax);self.filterViewport:SetVerticalScroll(offset);self.filterScrollBar:SetValue(offset);self.syncingFilterScroll=nil
+ self.filterScrollBar:SetShown(overflow)
+ self:ClipFilterBody()
+ local footerTop=height-padding-footerHeight
+ self.filterFooter:SetSize(inner,footerHeight);Place(self.filterFooter,padding,footerTop)
+ Place(self.filterStatus,0,errorHeight+(footerHeight-errorHeight-self.filterStatus:GetHeight())/2)
+ Place(self.clearFilters,inner-actions,errorHeight+(footerHeight-errorHeight-self.clearFilters:GetHeight())/2)
+ Place(self.filterDone,inner-self.filterDone:GetWidth(),errorHeight+(footerHeight-errorHeight-self.filterDone:GetHeight())/2)
 end
 function P:UpdateFilterSummary()
  local filters=state.filters
@@ -1457,9 +1581,9 @@ function P:LayoutResults()
  if message~="" then top=top+self.limitNotice:GetHeight()+12 end
  if self.resultsTop==top then return end
  self.resultsTop=top
- self.context:ClearAllPoints();self.context:SetPoint("TOPLEFT",0,-top)
- self.resultCount:ClearAllPoints();C.SetPoint(self.resultCount,"LEFT",self.context,"RIGHT","findResultCountLeftX",0)
- local headerOffset=self.context:GetHeight()+8
+ self.context:ClearAllPoints();self.context:SetPoint("TOPLEFT",T.findResultIconInset,-top)
+ self.resultCount:ClearAllPoints();self.resultCount:SetPoint("RIGHT",self.main,"TOPRIGHT",-T.findResultRightInset,-top-self.context:GetHeight()/2)
+ local headerOffset=self.context:GetHeight()+T.findResultHeaderGap
  local rowsOffset=headerOffset+self.resultsHeader:GetHeight()
  self.resultsHeader:ClearAllPoints();self.resultsHeader:SetPoint("TOPLEFT",0,-top-headerOffset)
  local resultsHeight=math.max(self.results.rowHeight,HEIGHT-top-rowsOffset)
@@ -1519,7 +1643,7 @@ UI:ApplyElementScope("find")
 function P:ShowApplicationLimit()
  state.applicationLimit=true;state.showGlobal=true
  self:ClosePicker();UI:CloseMenu();UI.Tooltip:Hide();self:RefreshApplications()
- M:Reveal(self.limitNotice,"TOPLEFT",self.main,"TOPLEFT",0,-140-(self.appsHeight or 0)-(self.quickFilterHeight or 0),0,7,.20)
+ M:Reveal(self.limitNotice,"TOPLEFT",self.main,"TOPLEFT",0,-self.noticeTop,0,7,.20)
 end
 function P:DismissApplicationNotice()
  state.applicationLimit=nil
@@ -1588,23 +1712,24 @@ function P:UpdateApplicationSettings()
 end
 function P:LayoutListRows()
  local first=self.results.rows[1]
- local metaTop=math.max(T.findResultMetaTop,T.findResultTitleTop+first.title:GetHeight()+T.findResultTextGap)
- local declineTop=metaTop+first.meta:GetHeight()+T.findResultTextGap
- local height=math.max(T.findResultRowHeight,math.ceil((first.description:GetLineHeight()+first.description:GetSpacing())*2+16),math.ceil(self.hasDeclinedResults and declineTop+first.declined:GetHeight()+T.findResultBottomInset or metaTop+first.meta:GetHeight()+T.findResultBottomInset))
+ local descriptionHeight=math.max(T.findRowDescriptionHeight,T.findDescriptionMinHeight,first.description:GetLineHeight()+first.description:GetSpacing())
+ local activityHeight=first.meta:GetLineHeight()+first.meta:GetSpacing()
+ local scale=T.findMemberBaseScale*T.findMemberScaleAdjustment*MemberIconScale()
+ local rosterHeight=20*scale+(A:GetSetting("memberLeaderMark") and math.min(14*scale,19)+1 or 0)
+ local bodyHeight=math.max(T.findResultRowHeight,math.ceil(math.max(descriptionHeight,activityHeight,first.title:GetHeight(),rosterHeight,T.findResultIconSize)+8))
+ local footerHeight=math.ceil(first.declined:GetHeight()+T.findResultTextGap)
+ self.resultFooterHeight=footerHeight
+ SetRowHeight(self.results,bodyHeight)
  for _,row in ipairs(self.results.rows) do
-  row.meta:SetPoint("TOPLEFT",RESULT_COLUMNS.title.x,-metaTop)
-  LayoutResultActivity(row)
-  row.declined:SetPoint("TOPLEFT",RESULT_COLUMNS.title.x,-declineTop)
-  row.description:SetHeight(math.max(T.findRowDescriptionHeight,T.findDescriptionMinHeight,(row.description:GetLineHeight()+row.description:GetSpacing())*2))
-  LayoutMembers(row)
+  row.resultContentOffset=row.key and DeclinedAt(Record(row.key)) and footerHeight/2 or 0
+  row.meta:SetHeight(activityHeight);row.description:SetHeight(descriptionHeight)
+  LayoutResultRow(row)
  end
- SetRowHeight(self.results,height)
- local appHeight=ApplicationRowHeight()
  for _,row in ipairs(self.appList.rows) do
   row.cancel:SetHeight(math.max(28,row.cancel.label:GetHeight()+2))
   LayoutMembers(row)
  end
- SetRowHeight(self.appList,appHeight)
+ SetRowHeight(self.appList,ApplicationRowHeight())
  if self.appsHeight then self:RefreshApplications() end
 end
 local function PrepareFontLayout(self)
@@ -1616,7 +1741,7 @@ local function PrepareFontLayout(self)
  SyncApplicationSettings(self)
 end
 function P:PrepareFontMinimum()
- if not self.quickFilters or not self.quickFilters:IsShown() then return end
+ if not self.quickFilters then return end
  FitText(self.autoJoin.label)
  SyncApplicationSettings(self)
  self:LayoutApplicationControls()
@@ -1748,6 +1873,8 @@ function P:Leave()
  StopCountdown();StopDeclineClock();M:Waiting(self.busyIcon,false);M:Spin(self.refreshIcon,false);self.busyState=nil
  wipe(state.apps);wipe(state.appIDs);state.selected=nil
  if self.sortedResults then wipe(self.sortedResults);wipe(self.sortValues) end
+ if self.activitySortRanks then wipe(self.activitySortRanks) end
+ self.activitySortGroups=nil
  state.showGlobal=nil
  UI:GetGroup():Detach(self);UI:FitToScreen()
 end
@@ -1796,16 +1923,9 @@ UI:ElementFields(self,"find","quickFilters quickLogic quickIdentity quickIdentit
 end
 
 function P:RegisterBuildFiltersElements()
-UI:ElementFields(self,"find","filterPanel filterScrim filterTitle filterClose filterStatus clearFilters importantFilters presenceLogicLabel presenceLogic identityLabel identityChoice ratingLabel ilvlLabel membersLabel roleLabel roleChoice hideZeroScore socialLabel socialChoice sortLabel sortChoice filterError filterDone","find")
+UI:ElementFields(self,"find","filterPanel filterScrim filterTitle filterClose filterStatus clearFilters importantFilters ratingLabel ilvlLabel membersLabel roleLabel roleChoice hideZeroScore socialLabel socialChoice sortLabel sortChoice filterError filterDone filterViewport filterBody filterFooter filterScrollBar","find")
+ for _,range in pairs(self.filterRanges) do UI:Element(range.frame,"find.filterRange","find",range.frame,"find.filterRange",range.id) end
  for key,field in pairs(self.filterFields) do UI:Element(field,"find.filterField","find",field,"find.filterField",key) end
- for _,key in ipairs(PRESENCE_KEYS) do
-  UI:Element(self.presenceChoices[key],"find.presenceChoice","find",self.presenceChoices[key],"find.presenceChoice",key)
-  for _,button in ipairs(self.presenceChoices[key].buttons) do UI:Element(button,"find.presenceOption","find",button,"find.presenceOption",key..":"..tostring(button.value or "any")) end
-  UI:Element(self.presenceLabels[key],"find.presenceLabel","find",nil,"find.presenceLabel",key)
-  UI:Element(self.presenceIcons[key],"find.presenceIcon","find",nil,"find.presenceIcon",key)
- end
- for _,button in ipairs(self.presenceLogic.buttons) do UI:Element(button,"find.presenceLogicOption","find",button,"find.presenceLogicOption",button.value and "any" or "all") end
- for _,button in ipairs(self.identityChoice.buttons) do UI:Element(button,"find.identityOption","find",button,"find.identityOption",button.value) end
 end
 
 function P:RegisterBuildPickerElements()

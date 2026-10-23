@@ -165,7 +165,7 @@ function Applicants:Decline(id) return Act(id,true) end
 -- option also handles those applicants, using the same action/state path.
 function Applicants:TryAutoInvite()
  local listing=G.Listing:GetListing()
- if self.autoInviting or not listing or not listing.autoInvite or listing.autoAccept or not G:CanManageListing() then return end
+ if self.autoInviting or not listing or listing.autoInvite~=true or listing.autoAccept~=false or not G:CanManageListing() then return end
  local activity=G.Catalog:GetActivity(listing.activityID)
  if not activity then return end
  local maximum=activity.maxNumPlayers
@@ -208,7 +208,9 @@ local function DungeonRun(info,activityID)
  if type(info)~="table" then return nil end
  local level,name=G.Public(info.bestRunLevel),G.Public(info.mapName)
  if not level or level<=0 or not name or name=="" then return nil end
- return {activityID=activityID,name=name,level=level,timed=G.Public(info.finishedSuccess)==true}
+ local duration=G.Public(info.bestRunDurationMs)
+ if type(duration)~="number" or duration<=0 or duration~=duration or duration==math.huge then duration=nil end
+ return {activityID=activityID,name=name,level=level,timed=G.Public(info.finishedSuccess)==true,durationMs=duration}
 end
 function Applicants:GetDungeonScores(member,currentOnly)
  local record=records[member.applicantID]
@@ -227,6 +229,34 @@ function Applicants:GetDungeonScores(member,currentOnly)
   scores.bestLoaded=true
  end
  return scores
+end
+-- One successful map lookup is enough for this listing; missing map data is
+-- retried on the next explicit consumer request, without polling.
+local limitMapID,limitSeconds
+function Applicants:GetTimeMargin(member)
+ local scores=self:GetDungeonScores(member,true)
+ if not scores then return nil,"unknown" end
+ local run=scores.current
+ if not run then return nil,scores.mapScore==0 and "none" or "unknown" end
+ if not run.timed or not run.durationMs then return nil,"unavailable",run end
+ if not run.timeLimitSeconds then
+  local activity=G.Catalog:GetActivity(run.activityID)
+  local mapID=activity and G.Public(activity.mapID)
+  if type(mapID)=="number" and mapID>0 then
+   if limitMapID~=mapID then
+    for _,challengeID in ipairs(G.Public(C_ChallengeMode.GetMapTable()) or {}) do
+     local _,_,seconds,_,_,gameMapID=C_ChallengeMode.GetMapUIInfo(challengeID)
+     seconds,gameMapID=G.Public(seconds),G.Public(gameMapID)
+     if gameMapID==mapID and type(seconds)=="number" and seconds>0 and seconds<math.huge then
+      limitMapID,limitSeconds=mapID,seconds;break
+     end
+    end
+   end
+   if limitMapID==mapID then run.timeLimitSeconds=limitSeconds end
+  end
+ end
+ if not run.timeLimitSeconds then return nil,"unknown",run end
+ return run.timeLimitSeconds-run.durationMs/1000,"known",run
 end
 function Applicants:GetCount()
  local total=0

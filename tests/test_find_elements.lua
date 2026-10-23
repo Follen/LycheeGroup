@@ -14,6 +14,13 @@ local P=U.pages.find
 P:LayoutQuickFilters()
 check(math.abs(P.quickChoices.tankPresence.button:GetWidth()-160)<.001,"fixed instance widths participate in initial layout")
 check(math.abs(select(2,P.quickChoices.tankPresence.button.label:GetFont())-U.context:GetFontSize(24))<.001,"fixed instance typography uses the current user scale")
+local strip,button=P.quickFilters,P.quickChoices.tankPresence.button
+P:SetFiltersOpen(true)
+check(strip:GetParent()==P.importantFilters and button:GetWidth()==160,"popup uses the same fixed themed role button")
+A:SetSetting("showImportantFilters",true)
+check(P.quickFilters==strip and strip:GetParent()==P.applicationPanel and P.quickChoices.tankPresence.button==button,"header placement reuses the same themed objects")
+check(button:GetWidth()==160,"moving the themed role button preserves its startup geometry")
+A:SetSetting("showImportantFilters",false);P:SetFiltersOpen(false)
 for id=1,20 do G.records[id]={id=id,name="Element group "..id,leaderName="Element-Away",activity=G.Catalog:GetActivity(2),activityID=2,categoryID=2,maxNumPlayers=5,numMembers=1,age=id,comment="Description",details={members={},counts={TANK=0,HEALER=0,DAMAGER=1}}} end
 P:CommitChoice();P:DoSearch()
 local row=P.results.rows[1]

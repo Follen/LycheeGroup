@@ -57,7 +57,7 @@ function R:Sync(view)
  if record.frame:GetScript("OnClick")~=self.click then
   self.originalClick=record.frame:GetScript("OnClick")
   self.click=function(button,mouseButton,...)
-   if mouseButton=="LeftButton" then return API:Open() end
+   if mouseButton=="LeftButton" then return A:ToggleWindow() end
    return R.originalClick(button,mouseButton,...)
   end
   record.frame:SetScript("OnClick",self.click)

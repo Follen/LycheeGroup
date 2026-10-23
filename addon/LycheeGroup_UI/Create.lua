@@ -39,9 +39,25 @@ local function ApplicantDefinitions(kind)
   {key="faction",width="createColumnFactionWidth",min="createColumnFactionMin",align="CENTER"},
  }
  if kind~="none" then definitions[#definitions+1]={key="rating",width=kind=="dungeon" and "createColumnRatingDungeonWidth" or "createColumnRatingWidth",min="createColumnRatingMin",align="CENTER",sortable=true} end
- if kind=="dungeon" then definitions[#definitions+1]={key="mapScore",width="createColumnMapScoreWidth",min="createColumnMapScoreMin",align="CENTER",sortable=true} end
+ if kind=="dungeon" then
+  local header=P.applicantTable
+  local width=0
+  if header then
+   -- Native glyph rounding follows effective frame scale; measure beside the table.
+   local measure=P.applicantTimeMeasure
+   if not measure then measure=C.Text(header,"99:59/99:59",14,"muted");measure:SetWordWrap(false);measure:Hide();P.applicantTimeMeasure=measure end
+   local batch=P.batchPool and P.batchPool[1]
+   local label=batch and batch.people[1] and batch.people[1].mapScore or header.labels.mapScore
+   if label then measure:SetFont(label:GetFont());measure:SetSpacing(label:GetSpacing() or 0) end
+   width=math.ceil(measure:GetUnboundedStringWidth())+12
+  end
+  local minimum=math.max(T.createColumnMapScoreMin,width)
+  definitions[#definitions+1]={key="mapScore",width=math.max(T.createColumnMapScoreWidth,minimum),min=minimum,align="CENTER",sortable=true}
+ end
  definitions[#definitions+1]={key="ilvl",width=kind=="dungeon" and "createColumnIlvlDungeonWidth" or "createColumnIlvlWidth",min="createColumnIlvlMin",align="CENTER",sortable=true}
- definitions[#definitions+1]={key="comment",width=BATCH_WIDTH-(kind=="dungeon" and 750 or kind=="rating" and 710 or 622),min="createColumnCommentMin",align="LEFT"}
+ local usedWidth=T.createColumnActionsWidth
+ for _,definition in ipairs(definitions) do usedWidth=usedWidth+(type(definition.width)=="string" and T[definition.width] or definition.width) end
+ definitions[#definitions+1]={key="comment",width=BATCH_WIDTH-usedWidth,min="createColumnCommentMin",align="LEFT"}
  definitions[#definitions+1]={key="actions",width="createColumnActionsWidth",min="createColumnActionsMin",align="CENTER"}
  for _,definition in ipairs(definitions) do definition.label=headerLabels[definition.key] end
  return definitions
@@ -87,6 +103,51 @@ local function UpdateApplicantFaction(row,member,applicantID)
  row.hasFaction=UI:SetFactionIcon(row.faction,member)
  UI:SetText(row.race,member.raceName or "—")
  LayoutApplicantFaction(row)
+end
+local function ClearApplicantTime(row)
+ row.mapScoreTime,row.mapScoreIdentity,row.mapScoreKey=nil,nil,nil
+ if row.mapScoreButton then
+  row.mapScoreButton.pressedIdentity=nil
+  if UI.Tooltip:IsOwned(row.mapScoreButton) then UI.Tooltip:Hide() end
+ end
+end
+local function ApplicantTimeKey(applicantID,member,index)
+ local memberID=UI.Members:ID(member)
+ if memberID then return tostring(applicantID)..":"..memberID end
+ -- Bare native names identify only this live applicant slot, never a saved player.
+ if type(member.name)=="string" and member.name~="" then
+  return tostring(applicantID)..":slot:"..tostring(member.applicantIndex or index)..":"..member.name
+ end
+end
+local function ClockText(seconds)
+ local total=math.floor(seconds+.5)
+ return ("%d:%02d"):format(math.floor(total/60),total%60)
+end
+local function ApplicantTime(row)
+ return UI:GetGroup():GetApplicantTimeMargin(row.member)
+end
+local function DrawApplicantMapScore(row)
+ if not row.mapScoreTime then UI:SetScore(row.mapScore,UI:GetGroup():GetApplicantMapScore(row.member),"map");return end
+ local seconds,status,run=ApplicantTime(row)
+ local text=seconds and (ClockText(run.durationMs/1000).."/"..ClockText(run.timeLimitSeconds)) or status=="none" and S("无记录","No run") or status=="unavailable" and S("无用时","No time") or S("未知","Unknown")
+ UI:SetText(row.mapScore,text);UI:Color(row.mapScore,T.muted)
+end
+local function ApplicantTimeTooltip(row)
+ if not row.mapScoreTime or not row.member or not row:IsEnabled() or row._hitVisible==false or not P.batchScroll:IsMouseOver() then return nil end
+ local seconds,_,run=ApplicantTime(row)
+ if not seconds or not run.level then return nil end
+ return S("%d 层 %s","+%d %s"):format(run.level,ClockText(run.durationMs/1000).."/"..ClockText(run.timeLimitSeconds))
+end
+local function LayoutApplicantMapScore(row,layout)
+ local cell=layout and layout.mapScore or row.applicantColumns and row.applicantColumns.mapScore or columns.mapScore
+ local button=row.mapScoreButton;local point,relative,relativePoint,x,y=button:GetPoint()
+ if button:GetNumPoints()~=1 or point~="LEFT" or relative~=row or relativePoint~="LEFT" or x~=cell.x or y~=0 then
+  button:ClearAllPoints();button:SetPoint("LEFT",row,"LEFT",cell.x,0)
+ end
+ local height=row:GetHeight()
+ if button:GetWidth()~=cell.width or button:GetHeight()~=height then button:SetSize(cell.width,height) end
+ local shown=P.showApplicantMapScore==true
+ if button:IsShown()~=shown then button:SetShown(shown) end
 end
 local function Shell(parent,w,h,x,y)
  local shell=C.Field(parent,w,h);shell:SetPoint("TOPLEFT",x,y);return shell
@@ -161,7 +222,7 @@ local function LayoutFont(self,definitions)
  if self.appIDs then self:LayoutBatches() end
 end
 function P:LayoutFont()
- LayoutFont(self)
+ LayoutFont(self,ApplicantDefinitions(self.applicantTableKind))
 UI:ApplyElementScope("create")
  end
 function P:Build(parent)
@@ -372,17 +433,21 @@ function P:BuildFavorites()
  local body=CreateFrame("Frame",nil,self.favoritesCard);C.SetPoint(body,"TOPLEFT",body:GetParent(),"TOPLEFT","createBodyTopleftX","createBodyTopleftY");body:SetWidth(T.createBodyWidth);self.favoritesBody=body
  self.favoritesEmpty=C.Text(body,S("暂无收藏","No favorites yet"),13,"dim",T.createFavoritesEmptyWidth);self.favoritesEmpty:SetWidth(T.createFavoritesEmptyWidth);C.SetLineHeight(self.favoritesEmpty,20);self.favoritesEmpty:SetWordWrap(true);self.favoritesEmpty:SetPoint("TOPLEFT")
  local list=C.List(body,T.createListWidth,T.createFavoriteHeight*3,T.createFavoriteHeight);list:SetWidth(T.createListWidth);list:SetPoint("TOPLEFT");list.selectionFill=false;list.selectionMark=false;list.hoverColor="createFavoriteHoverColor";list.alternateRows=false;self.favoritesList=list
+ list.favoriteLayouts={}
+ list.measure=C.Text(list.canvas,"",12,"muted");C.SetLineHeight(list.measure,18);list.measure:SetWordWrap(true);list.measure:Hide()
+ list:SetRowHeightResolver(function(entry) local layout=list.favoriteLayouts[entry];return layout and layout.height or T.createFavoriteHeight end)
  for _,row in ipairs(list.rows) do
   row:SetScript("OnClick",nil);row:SetScript("OnMouseDown",nil);row:SetScript("OnMouseUp",nil);row.hover:SetRadius(8)
   row.icon=C.GameIcon(row,T.createRowIconWidth);C.Box(row.icon,{width="createRowIconWidth",height="createRowIconHeight"});C.SetPoint(row.icon,"TOPLEFT",row.icon:GetParent(),"TOPLEFT","createRowIconTopleftX","createRowIconTopleftY")
   C.SetFont(row.title,14);C.SetLineHeight(row.title,20,true);row.title:ClearAllPoints();C.SetPoint(row.title,"TOPLEFT",row.title:GetParent(),"TOPLEFT","createRowTitleTopleftX","createRowTitleTopleftY")
-  C.SetFont(row.meta,12);C.SetLineHeight(row.meta,18);row.meta:SetHeight(T.createRowMetaHeight);row.meta:SetWordWrap(true);row.meta:ClearAllPoints();C.SetPoint(row.meta,"TOPLEFT",row.meta:GetParent(),"TOPLEFT","createRowMetaTopleftX","createRowMetaTopleftY")
+  C.SetFont(row.meta,12);C.SetLineHeight(row.meta,18);row.meta:SetWordWrap(true);row.meta:SetJustifyV("TOP");row.meta:ClearAllPoints();C.SetPoint(row.meta,"TOPLEFT",row.meta:GetParent(),"TOPLEFT","createRowMetaTopleftX","createRowMetaTopleftY")
+  row.conditions=C.Text(row,"",12,"muted");C.SetLineHeight(row.conditions,18);row.conditions:SetWordWrap(true);row.conditions:SetJustifyV("TOP")
   row.unavailable=C.Text(row,"",12,"muted");C.SetLineHeight(row.unavailable,18,true);row.unavailable:SetWordWrap(false);C.SetPoint(row.unavailable,"BOTTOMLEFT",row.unavailable:GetParent(),"BOTTOMLEFT","createRowUnavailableBottomleftX","createRowUnavailableBottomleftY")
   local function Active() return row.key and row._hitVisible and list.clip:IsMouseOver() end
   row.create=C.Button(row,S("应用","Apply"),T.createRowCreateWidth,function() if Active() then P:UsePreset(row.key) end end);row.create:SetWidth(T.createRowCreateWidth);row.create:SetHeight(T.createRowCreateHeight);C.SetPoint(row.create,"BOTTOMRIGHT",row.create:GetParent(),"BOTTOMRIGHT","createRowCreateBottomrightX","createRowCreateBottomrightY");C.SetFont(row.create.label,12);C.SetLineHeight(row.create.label,18,true);row.create:SetSurfaceColors("secondaryContainer","refreshHover","surfaceHighest")
   row.remove=C.Button(row,"",T.createRowRemoveWidth,function() if Active() then UI:GetGroup().Presets:Remove(row.key) end end);row.remove:SetWidth(T.createRowRemoveWidth);row.remove:SetHeight(T.createRowRemoveHeight);C.SetPoint(row.remove,"TOPRIGHT",row.remove:GetParent(),"TOPRIGHT","createRowRemoveToprightX","createRowRemoveToprightY");row.remove.elementIcon=C.Glyph(row.remove,"close",T.createGlyphWidth,T.dim);row.remove.elementIcon:SetPoint("CENTER")
  end
-self:RegisterBuildElements()
+ self:RegisterBuildElements()
  end
 local function RefreshFavorites(self)
  local bodyHeight=0
@@ -392,30 +457,68 @@ local function RefreshFavorites(self)
   self.favoritesBody:Show()
   local group=UI:GetGroup();local canManage=group:CanManageListing();local recruiting=group:GetListing()~=nil;local canCreate=canManage and not recruiting
    local entries=group.Presets:Get();local list=self.favoritesList
-   bodyHeight=#entries>0 and math.min(3,#entries)*T.createFavoriteHeight or math.max(40,self.favoritesEmpty:GetStringHeight())
-   self.favoritesEmpty:SetShown(#entries==0);list:SetShown(#entries>0);list:SetViewport(bodyHeight)
-   local gutter=#entries>3 and C.listRightInset or 0;if list.gutter~=gutter then list:SetGutter(gutter) end
-   list:SetItems(entries,function(row,entry)
+   local layouts=list.favoriteLayouts;for _,layout in pairs(layouts) do layout.active=false end
+   local measure=list.measure;measure:SetFont(list.rows[1].meta:GetFont());measure:SetSpacing(list.rows[1].meta:GetSpacing())
+   local lineHeight=measure:GetLineHeight()+measure:GetSpacing()
+   local function TextHeight(text,width)
+    measure:SetWidth(width);measure:SetText(text)
+    return math.max(lineHeight,measure:GetStringHeight())
+   end
+   local function Layout(gutter)
+    local width=list:GetWidth()-gutter;local total=0
+    -- Difficulty shares its first line with Apply; conditions use the width below.
+    local metaWidth=math.max(1,width-T.createRowMetaTopleftX+T.createRowCreateBottomrightX-T.createRowCreateWidth-8)
+    for _,entry in ipairs(entries) do
     local activity=group.Catalog:GetActivity(entry.activityID)
-    UI:SetActivityIcon(row.icon,activity)
     local context=activity and group.Catalog:GetContextForActivity(entry.activityID)
     local activityGroup=context and group.Catalog:GetGroup(context,group.Catalog:GetGroupKey(context,activity))
     local difficulty=activity and activity.difficultyID and GetDifficultyInfo(activity.difficultyID)
-    local summary={};if difficulty then summary[#summary+1]=difficulty end
+    local summary={}
     if entry.requiredItemLevel and entry.requiredItemLevel>0 then summary[#summary+1]=S("装等 ","iLvl ")..entry.requiredItemLevel end
     local ratingKind=A.GroupPresentation.Activity(activity).requirementRatingKind;local score=ratingKind=="pvp" and entry.requiredPvpRating or ratingKind=="dungeon" and entry.requiredDungeonScore
     if score and score>0 then summary[#summary+1]=S("评分 ","Rating ")..score end
-    UI:SetText(row.title,activityGroup and activityGroup.name or activity and activity.name or L.unavailable)
-    row.title:SetWidth(row:GetWidth()-104)
-    UI:SetText(row.meta,#summary>0 and table.concat(summary," · ") or S("无条件要求","No requirements"))
-    row.meta:SetWidth(row:GetWidth()-68)
-    row.create:SetAvailable(canCreate and activity~=nil)
+    local detail=difficulty or S("无条件要求","No requirements")
+    local conditions=table.concat(summary," · ")
     local reason=recruiting and S("结束招募后可应用","End listing first") or not canManage and S("没有管理权限","No permission") or not activity and L.unavailable or ""
-    UI:SetText(row.unavailable,reason);row.unavailable:SetWidth(row:GetWidth()-104);row.unavailable:SetShown(reason~="")
+    local metaTop=-T.createRowMetaTopleftY;local metaHeight=TextHeight(detail,metaWidth)
+    local createTop=metaTop+(lineHeight-T.createRowCreateHeight)/2
+    local bottom=math.max(metaTop+metaHeight,createTop+T.createRowCreateHeight)
+    local conditionsTop,conditionsHeight
+    if conditions~="" then conditionsTop=bottom+6;conditionsHeight=TextHeight(conditions,width-24);bottom=conditionsTop+conditionsHeight end
+    local reasonTop,reasonHeight
+    if reason~="" then reasonTop=bottom+6;reasonHeight=TextHeight(reason,width-24);bottom=reasonTop+reasonHeight end
+    local layout=layouts[entry] or {};layouts[entry]=layout;layout.active=true
+    layout.activity,layout.title=activity,activityGroup and activityGroup.name or activity and activity.name or L.unavailable
+    layout.detail,layout.metaWidth,layout.metaHeight,layout.createTop=detail,metaWidth,metaHeight,createTop
+    layout.conditions,layout.conditionsTop,layout.conditionsHeight=conditions,conditionsTop,conditionsHeight
+    layout.reason,layout.reasonTop,layout.reasonHeight=reason,reasonTop,reasonHeight
+    layout.height=math.max(T.createFavoriteHeight,math.ceil(bottom+T.createRowCreateBottomrightY));total=total+layout.height
+    end
+    return total
+   end
+   local maximum=T.createFavoriteHeight*3;local total=Layout(0);local gutter=total>maximum and C.listRightInset or 0
+   if gutter>0 then total=Layout(gutter) end
+   for entry,layout in pairs(layouts) do if not layout.active then layouts[entry]=nil end end
+   measure:SetText("")
+   bodyHeight=#entries>0 and math.min(maximum,total) or math.max(40,self.favoritesEmpty:GetStringHeight())
+   self.favoritesEmpty:SetShown(#entries==0);list:SetShown(#entries>0);list:SetViewport(bodyHeight)
+   if list.gutter~=gutter then list:SetGutter(gutter) end
+   list:SetItems(entries,function(row,entry)
+    local layout=layouts[entry];if not layout then return end
+    UI:SetActivityIcon(row.icon,layout.activity)
+    UI:SetText(row.title,layout.title);row.title:SetWidth(row:GetWidth()-104)
+    UI:SetText(row.meta,layout.detail);row.meta:SetWidth(layout.metaWidth);row.meta:SetHeight(layout.metaHeight)
+    row.create:ClearAllPoints();row.create:SetPoint("TOPRIGHT",row,"TOPRIGHT",T.createRowCreateBottomrightX,-layout.createTop)
+    row.create:SetAvailable(canCreate and layout.activity~=nil)
+    UI:SetText(row.conditions,layout.conditions);row.conditions:SetShown(layout.conditions~="")
+    if layout.conditionsTop then row.conditions:ClearAllPoints();row.conditions:SetPoint("TOPLEFT",row,"TOPLEFT",12,-layout.conditionsTop);row.conditions:SetWidth(row:GetWidth()-24);row.conditions:SetHeight(layout.conditionsHeight) end
+    UI:SetText(row.unavailable,layout.reason);row.unavailable:SetShown(layout.reason~="")
+    if layout.reasonTop then row.unavailable:ClearAllPoints();row.unavailable:SetPoint("TOPLEFT",row,"TOPLEFT",12,-layout.reasonTop);row.unavailable:SetWidth(row:GetWidth()-24);row.unavailable:SetHeight(layout.reasonHeight) end
    end)
   self.favoritesBody:SetHeight(bodyHeight)
  elseif self.favoritesBody then
   self.favoritesBody:Hide();self.favoritesList:Clear()
+  for entry in pairs(self.favoritesList.favoriteLayouts) do self.favoritesList.favoriteLayouts[entry]=nil end
  end
  self.favoritesCard:SetHeight(self.favoritesExpanded and 80+bodyHeight or 68)
  self:RefreshFavoriteState()
@@ -609,6 +712,8 @@ function P:LayoutApplicantColumns(header)
     row[field]:SetPoint("LEFT",layout[key].x,0);row[field]:SetWidth(layout[key].width)
    end
    row.race:SetWidth(layout.faction.width);LayoutApplicantFaction(row)
+   LayoutApplicantMapScore(row,layout)
+   if row.member and self.showApplicantMapScore then DrawApplicantMapScore(row) end
    if row.member then UpdateApplicantRoles(row,row.member,layout) end
   end
  end
@@ -680,11 +785,28 @@ function P:EnsureBatchMembers(f,count)
   row.ilvl=C.Text(row,"",14,"muted",columns.ilvl.width);row.ilvl:SetPoint("LEFT",columns.ilvl.x,0);row.ilvl:SetJustifyH(columns.ilvl.align);C.SetLineHeight(row.ilvl,20,true)
   row.score=C.Text(row,"",14,"muted",columns.rating.width);row.score:SetPoint("LEFT",columns.rating.x,0);row.score:SetJustifyH(columns.rating.align);C.SetLineHeight(row.score,20,true)
   row.mapScore=C.Text(row,"",14,"muted",columns.mapScore.width);row.mapScore:SetPoint("LEFT",columns.mapScore.x,0);row.mapScore:SetJustifyH(columns.mapScore.align);C.SetLineHeight(row.mapScore,20,true)
+  row.mapScoreButton=CreateFrame("Button",nil,row);row.mapScoreButton:RegisterForClicks("LeftButtonUp","RightButtonUp")
+  row.mapScoreButton:SetScript("OnMouseDown",function(button,key) button.pressedIdentity=key=="LeftButton" and row.mapScoreIdentity or nil end)
+  row.mapScoreButton:SetScript("OnClick",function(button,key)
+   if UI.hiding or not row.member or not P.showApplicantMapScore or not P.batchScroll:IsMouseOver() or row._hitVisible==false then return end
+   if key=="RightButton" then button.pressedIdentity=nil;if UI.Tooltip:IsOwned(button) then UI.Tooltip:Hide() end;P:OpenApplicantMenu(row);return end
+   if key~="LeftButton" or button.pressedIdentity~=row.mapScoreIdentity then return end
+   button.pressedIdentity=nil;row.mapScoreTime=not row.mapScoreTime
+   if row.mapScoreKey then
+    if row.mapScoreTime then P.applicantTimeModes=P.applicantTimeModes or {};P.applicantTimeModes[row.mapScoreKey]=true
+    elseif P.applicantTimeModes then P.applicantTimeModes[row.mapScoreKey]=nil;if not next(P.applicantTimeModes) then P.applicantTimeModes=nil end end
+   end
+   if UI.Tooltip:IsOwned(button) then UI.Tooltip:Hide() end
+   DrawApplicantMapScore(row)
+  end)
+  row.mapScoreButton:SetScript("OnLeave",function(button) button.pressedIdentity=nil end)
+  UI.Tooltip:BindText(row.mapScoreButton,function() return ApplicantTimeTooltip(row) end)
   row:SetScript("OnLeave",function(r) UI.Tooltip:LeaveOwner(r) end)
   row:SetScript("OnClick",function(r,button) if button=="RightButton" and r.member and P.batchScroll:IsMouseOver() then P:OpenApplicantMenu(r) end end)
-  row:SetScript("OnHide",function(r) UI:CloseMenuFor(r);UI.Members:ClearMarks(r.marks);r.factionExpanded=nil;LayoutApplicantFaction(r) end)
+  row:SetScript("OnHide",function(r) UI:CloseMenuFor(r);UI.Members:ClearMarks(r.marks);r.factionExpanded=nil;LayoutApplicantFaction(r);ClearApplicantTime(r) end)
   -- Bind after the product scripts: SetScript replaces earlier style hooks.
   f.cardStyle:Bind(row,{hover=true})
+  f.cardStyle:Bind(row.mapScoreButton,{hover=true})
   MemberTooltipArea(row,self.batchScroll)
   UI:Element(row,"create.applicantMember","create",row,"create.applicantMember");f.people[i]=row
  end
@@ -996,6 +1118,9 @@ function P:RefreshApplicants()
  local listing=group:GetListing();local activity=listing and group.Catalog:GetActivity(listing.activityID)
  self.applicantContext=A.GroupPresentation.Member("applicant",activity);self.hideApplicantRating=not self.applicantContext.showRating
  self.showApplicantMapScore=self.applicantContext.showDungeonRecords
+ if not self.showApplicantMapScore then self.applicantTimeModes=nil end
+ local timeModes=self.applicantTimeModes
+ if timeModes then for key in pairs(timeModes) do timeModes[key]=false end end
  local kind=self.hideApplicantRating and "none" or self.showApplicantMapScore and "dungeon" or "rating"
  if kind~=self.applicantTableKind then self.applicantTableKind=kind;self.applicantTable:SetColumns(ApplicantDefinitions(kind)) end
  if self.hideApplicantRating and state.sort=="score" or not self.showApplicantMapScore and state.sort=="mapScore" then state.sort="newest";state.descending=false end
@@ -1007,6 +1132,12 @@ function P:RefreshApplicants()
  local values=sortKey and {}
  local ids={};for _,id in ipairs(group:GetApplicants()) do
   local app=group:GetApplicant(id);local match=not state.roles
+  if timeModes then
+   for index,member in ipairs(app.members) do
+    local key=ApplicantTimeKey(id,member,index)
+    if key and timeModes[key]~=nil then timeModes[key]=true end
+   end
+  end
   if not match then
    for _,member in ipairs(app.members) do
     for _,role in ipairs(roleOrder) do if state.roles[role] and UI:MemberHasRole(member,role) then match=true;break end end
@@ -1014,6 +1145,10 @@ function P:RefreshApplicants()
    end
   end
   if match then ids[#ids+1]=id;if sortKey then values[id]=Minimum(app,sortKey) end end
+ end
+ if timeModes then
+  for key,present in pairs(timeModes) do if not present then timeModes[key]=nil end end
+  if not next(timeModes) then self.applicantTimeModes=nil end
  end
  table.sort(ids,function(a,b)
   if sortKey and values[a]~=values[b] then
@@ -1079,7 +1214,12 @@ function P:RenderBatches()
    for i,row in ipairs(f.people) do
     UI:CloseMenuFor(row)
     local m=app.members[i];if row.member~=m then HideMemberTooltip(row) end;row:SetShown(m~=nil);row.member=m
-    if m then C.RekeyElement(row,tostring(id)..":"..tostring(UI.Members:ID(m) or i));row.memberContext=self.applicantContext;row:SetWidth(self.applicantTable.columns.actions.x);row:SetHeight(memberLayout.heights[i]);row:ClearAllPoints();row:SetPoint("TOPLEFT",0,sharedY-memberLayout.tops[i]);row.icon:SetPoint("LEFT",layout.name.x,0);row.title:SetPoint("LEFT",layout.name.x+44,0);UI:SetMemberIcon(row.icon,m);UI:SetText(row.title,ApplicantName(m));row.title:SetTextColor(UI:ClassColor(m.class))
+    if m then
+     local timeKey=ApplicantTimeKey(id,m,i);local identity=timeKey or tostring(id)..":unknown:"..i
+     if row.mapScoreIdentity~=identity then ClearApplicantTime(row) end
+     row.mapScoreIdentity,row.mapScoreKey=identity,timeKey
+     row.mapScoreTime=timeKey and self.applicantTimeModes and self.applicantTimeModes[timeKey] or nil
+     C.RekeyElement(row,identity);row.memberContext=self.applicantContext;row:SetWidth(self.applicantTable.columns.actions.x);row:SetHeight(memberLayout.heights[i]);row:ClearAllPoints();row:SetPoint("TOPLEFT",0,sharedY-memberLayout.tops[i]);row.icon:SetPoint("LEFT",layout.name.x,0);row.title:SetPoint("LEFT",layout.name.x+44,0);UI:SetMemberIcon(row.icon,m);UI:SetText(row.title,ApplicantName(m));row.title:SetTextColor(UI:ClassColor(m.class))
      UpdateApplicantFaction(row,m,id)
      local marksWidth=UI.Members:BindMarks(row.marks,m)
      local available=columns.name.x+columns.name.width-T.createApplicantTitleX-(marksWidth>0 and marksWidth+6 or 0)
@@ -1093,12 +1233,13 @@ function P:RenderBatches()
      end
      if self.hideApplicantRating then UI:SetText(row.score,"") else UI:SetScore(row.score,UI:MemberRating(m)) end
      if self.showApplicantMapScore then
-      UI:SetScore(row.mapScore,UI:GetGroup():GetApplicantMapScore(m),"map")
-     else UI:SetText(row.mapScore,"") end
+      DrawApplicantMapScore(row)
+     else ClearApplicantTime(row);UI:SetText(row.mapScore,"") end
+     LayoutApplicantMapScore(row)
     end
    end
  end
- for i=bound+1,#self.batchPool do local f=self.batchPool[i];f:Hide();f.appID=nil;for _,row in ipairs(f.people) do HideMemberTooltip(row);UI.Members:ClearMarks(row.marks);row.member=nil;C.RekeyElement(row,nil) end;C.RekeyElement(f,nil) end
+ for i=bound+1,#self.batchPool do local f=self.batchPool[i];f:Hide();f.appID=nil;for _,row in ipairs(f.people) do HideMemberTooltip(row);UI.Members:ClearMarks(row.marks);ClearApplicantTime(row);row.member=nil;C.RekeyElement(row,nil) end;C.RekeyElement(f,nil) end
 UI:ApplyElementScope("create")
  end
 function P:ApplicantAction(btn,method)
@@ -1150,6 +1291,7 @@ function P:Enter(context)
  if context and context.applicantID then for i,id in ipairs(self.appIDs) do if id==context.applicantID then self:SetBatchOffset(self.batchTops[i],false);break end end end
 end
 function P:Leave()
+ self.applicantTimeModes=nil
  self.applicantTable:StopDrag(true)
  self:HideCorrectionNotice()
  UI:GetGroup():SetApplicantView(self,false)

@@ -1,0 +1,141 @@
+{
+  "date": "2026-10-24",
+  "character": "灵止光",
+  "realm": "死亡之翼",
+  "client": "12.1.5.70448",
+  "theme": {
+    "id": "lycheegroup.default",
+    "schema": 1,
+    "revision": 2
+  },
+  "scope": "UI settings and layout; no business data",
+  "capture": {
+    "reportState": "verified",
+    "ok": true,
+    "resourcesReleased": true
+  },
+  "settingsCount": 18,
+  "layoutCount": 52,
+  "values": {
+    "layout.find.railCollapsed": true,
+    "layout.floating.position": false,
+    "layout.tables.blockedLeaders.descending": false,
+    "layout.tables.blockedLeaders.sortKey": false,
+    "layout.tables.createApplicants.descending": false,
+    "layout.tables.createApplicants.sortKey": "mapScore",
+    "layout.tables.createApplicants.widths.actions": 0.1278195488721804,
+    "layout.tables.createApplicants.widths.comment": 0.1250605412480321,
+    "layout.tables.createApplicants.widths.faction": 0.09022556390977443,
+    "layout.tables.createApplicants.widths.ilvl": 0.1210238367526003,
+    "layout.tables.createApplicants.widths.mapScore": 0.1434837810480446,
+    "layout.tables.createApplicants.widths.name": 0.2094293346856588,
+    "layout.tables.createApplicants.widths.rating": 0.09022556390977443,
+    "layout.tables.createApplicants.widths.role": 0.09273182957393483,
+    "layout.tables.findApplications.descending": false,
+    "layout.tables.findApplications.sortKey": false,
+    "layout.tables.findApplications.widths.actions": 0.092346969592724,
+    "layout.tables.findApplications.widths.activity": 0.2912480687118069,
+    "layout.tables.findApplications.widths.leader": 0.1314168413434919,
+    "layout.tables.findApplications.widths.members": 0.1367445511276875,
+    "layout.tables.findApplications.widths.status": 0.1207614217751006,
+    "layout.tables.findApplications.widths.title": 0.2274821474491892,
+    "layout.tables.findRaidResults.descending": false,
+    "layout.tables.findRaidResults.sortKey": "members",
+    "layout.tables.findRaidResults.widths.activity": 0.1566671397539476,
+    "layout.tables.findRaidResults.widths.age": 0.1034858543458901,
+    "layout.tables.findRaidResults.widths.description": 0.1283985404069634,
+    "layout.tables.findRaidResults.widths.ilvl": 0.0985464798993925,
+    "layout.tables.findRaidResults.widths.leader": 0.1311149963766306,
+    "layout.tables.findRaidResults.widths.members": 0.1724244050953663,
+    "layout.tables.findRaidResults.widths.rating": 0.06798606932552302,
+    "layout.tables.findRaidResults.widths.title": 0.1413765147962864,
+    "layout.tables.findResults.descending": false,
+    "layout.tables.findResults.sortKey": "members",
+    "layout.tables.findResults.widths.activity": 0.1698398223320348,
+    "layout.tables.findResults.widths.age": 0.1002241840650933,
+    "layout.tables.findResults.widths.description": 0.09282494317308759,
+    "layout.tables.findResults.widths.ilvl": 0.05865965225248863,
+    "layout.tables.findResults.widths.leader": 0.1561387288593032,
+    "layout.tables.findResults.widths.members": 0.1540287460368802,
+    "layout.tables.findResults.widths.rating": 0.08017934725207465,
+    "layout.tables.findResults.widths.title": 0.1881045760290376,
+    "layout.tables.notesHistory.descending": true,
+    "layout.tables.notesHistory.sortKey": "completed",
+    "layout.tables.notesHistoryMembers.descending": false,
+    "layout.tables.notesHistoryMembers.sortKey": false,
+    "layout.tables.notesRecords.descending": true,
+    "layout.tables.notesRecords.sortKey": "timestamp",
+    "layout.tables.notesRecords.widths.player": 0.6716417910447762,
+    "layout.tables.notesRecords.widths.timestamp": 0.3283582089552239,
+    "layout.window.height": 844,
+    "layout.window.width": 1252,
+    "settings.floating": true,
+    "settings.floatingCompatibility": true,
+    "settings.floatingLocked": false,
+    "settings.floatingScale": 100,
+    "settings.font": "default",
+    "settings.fontScale": 100,
+    "settings.language": "auto",
+    "settings.memberClassBorder": false,
+    "settings.memberIconScale": 100,
+    "settings.memberIconShape": "square",
+    "settings.memberLeaderMark": true,
+    "settings.minimap": true,
+    "settings.minimapAngle": 225,
+    "settings.nativeLFGEntry": false,
+    "settings.raidMembers": "shift",
+    "settings.reduceMotion": false,
+    "settings.showImportantFilters": false,
+    "settings.uiScale": 100
+  },
+  "automaticWidths": [
+    "layout.tables.blockedLeaders.widths.actions",
+    "layout.tables.blockedLeaders.widths.name",
+    "layout.tables.blockedLeaders.widths.realm",
+    "layout.tables.notesHistory.widths.activity",
+    "layout.tables.notesHistory.widths.completed",
+    "layout.tables.notesHistory.widths.duration",
+    "layout.tables.notesHistory.widths.level",
+    "layout.tables.notesHistory.widths.teammates",
+    "layout.tables.notesHistoryMembers.widths.actions",
+    "layout.tables.notesHistoryMembers.widths.player"
+  ],
+  "verification": {
+    "capturedValues": 70,
+    "automaticWidths": 10,
+    "tableStates": 8,
+    "savedOverridesPreservedAcrossReload": 6,
+    "staticAppearanceUnchanged": true,
+    "product": {
+      "modules": 21,
+      "asserts": 11844,
+      "failures": 0
+    },
+    "layout": {
+      "scripts": 16,
+      "failures": 0
+    },
+    "legacyColumnMigration": "Existing title/activity split, other column weights, sort and saved reload assertions passed",
+    "live": "Read-only settings capture verified and connection closed; no game reload after deployment"
+  },
+  "deployment": {
+    "installedAt": "2026-10-24T04:39:06.2477677+08:00",
+    "target": "D:\\Game\\World of Warcraft\\_retail_\\Interface\\AddOns",
+    "changed": [
+      "LycheeGroup/Appearance.lua",
+      "LycheeGroup/Theme/Defaults.lua"
+    ],
+    "verifiedFiles": 136,
+    "activation": "pending_game_reload",
+    "files": [
+      {
+        "path": "LycheeGroup/Appearance.lua",
+        "sha256": "3fc6629c8fb98de777863a2770caf9536d175e5481fb7e9efe4157c3358be6af"
+      },
+      {
+        "path": "LycheeGroup/Theme/Defaults.lua",
+        "sha256": "ab6c35851e880e556fa42af2eed26e9fa49d7a4dc4bf0232799aabdaa6d49528"
+      }
+    ]
+  }
+}

@@ -4,7 +4,7 @@
 
 魔兽世界正式服组队插件。在一个窗口里寻找队伍、管理招募，并记录与玩家的组队经历。
 
-当前版本为 **1.2.3**，目标客户端为正式服 **12.1.5**（Interface `120105`），支持中文和英文。版本变更见[更新日志](CHANGELOG.md)。
+当前版本为 **1.2.4**，目标客户端为正式服 **12.1.5**（Interface `120105`），支持中文和英文。版本变更见[更新日志](CHANGELOG.md)。
 
 ## 功能
 
@@ -16,7 +16,7 @@
 - **队伍屏蔽**：右键屏蔽同标题队伍并记住命中队长，刷新或重载后继续生效；在设置“屏蔽”中逐项移除或清空，与玩家笔记独立。
 - **玩家笔记**：账号内各角色共享推荐、中性或拉黑记录，再次组队时提醒；支持导入与导出。
 - **大秘境历史**：按角色保存副本、层数、时间和队友，方便回顾与补充笔记。
-- **界面设置**：修改主窗口快捷键、整体缩放和字体大小，悬浮窗使用独立的缩放设置；再次点击设置按钮返回来源页。自动适配 RurutiaSuite 顶栏入口，可在“悬浮窗兼容”中开关。
+- **界面设置**：修改主窗口快捷键、整体缩放和字体大小，悬浮窗使用独立的缩放设置；再次点击设置按钮返回来源页。自动适配 RurutiaSuite 顶栏入口或 SEUI 标记栏骷髅左侧，需同时开启“显示悬浮窗”和“悬浮窗兼容”。
 
 界面采用原生 Lua，内置 LycheeUI，业务模块按需加载。安装时无需另外安装 UI 库。
 
@@ -56,7 +56,7 @@
 
 ## 开发
 
-1.1.5 提供 `LycheeGroup.API.Floating`，用于接入现有顶栏或其他入口。接口支持状态订阅、挂载、刷新、归还和展开同一份悬浮列表；接入合同见[架构文档](Architecture.md#92-浮窗公开接口)。RurutiaSuite 适配独立放在 [`Adapters/Rurutia.lua`](addon/LycheeGroup/Adapters/Rurutia.lua)，随主包分发，也作为接口使用示例。
+1.1.5 提供 `LycheeGroup.API.Floating`，用于接入现有顶栏或其他入口。接口支持状态订阅、挂载、刷新、归还和展开同一份悬浮列表；接入合同见[架构文档](Architecture.md#92-浮窗公开接口)。[`RurutiaSuite 适配`](addon/LycheeGroup/Adapters/Rurutia.lua)与 [`SEUI 适配`](addon/LycheeGroup/Adapters/SEUI.lua)独立放在 `Adapters/`，随主包分发，也作为接口使用示例。
 
 使用 Lua 5.1 在仓库根目录运行离线测试：
 
@@ -72,6 +72,6 @@ lua tests/runner.lua
 
 项目说明：[产品](Product.md) · [设计](Desgin.md) · [架构](Architecture.md) · [性能](perfermance.md) · [第三方配置 API](API.md) · [开发规范](Development.md) · [文档与变更记录规则](Agents.md)。当前实现与游戏内验证范围见产品文档。
 
-当前版本为 1.2.3，开发变化见 [未发布记录](CHANGELOG.md#未发布)。未发布实现采用 [主题 API v2](API.md)：导入和选择按账号或角色保存，登录或重载后统一生效；字号、缩放、窗口和表格偏好继续实时更新。默认业务和 UI 以指定 main 提交为准，开发规则见 [Development.md](Development.md)，验证方法见 [主题重载验证](tests/theme_reload.md)。共享库在源目录修改后由同步工具维护内置副本，冻结状态以 [.lock](../LycheeUI/.lock) 为准；通用接入见 [LycheeUI README](../LycheeUI/README.md)、[API](../LycheeUI/API.md) 和 [设计规范](../LycheeUI/DESIGN.md)。
+当前版本为 1.2.4，版本变化见 [更新日志](CHANGELOG.md)。本版采用 [主题 API v2](API.md)：导入和选择按账号或角色保存，登录或重载后统一生效；字号、缩放、窗口和表格偏好继续实时更新。默认业务和 UI 以指定 main 提交为准，开发规则见 [Development.md](Development.md)，验证方法见 [主题重载验证](tests/theme_reload.md)。共享库在源目录修改后由同步工具维护内置副本，冻结状态以 [.lock](../LycheeUI/.lock) 为准；通用接入见 [LycheeUI README](../LycheeUI/README.md)、[API](../LycheeUI/API.md) 和 [设计规范](../LycheeUI/DESIGN.md)。
 
 内置第三方库的来源与许可见[库说明](addon/LycheeGroup_Group/Libs/README.md)。

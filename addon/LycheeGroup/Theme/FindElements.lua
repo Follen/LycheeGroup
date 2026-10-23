@@ -39,18 +39,12 @@ local function Header(columns)
  end
  return slots
 end
-kinds.resultsHeader=Header("title leader members ilvl rating description age")
-kinds.applicationHeader=Header("title leader members status actions")
-local function Segments(count)
- local slots={root="box",surface="surface",fill="surface",selection="box",["selection/fill"]="surface"}
- for index=1,count do for name,kind in pairs(kinds.button) do slots["buttons/"..index..(name=="root" and "" or "/"..name)]=kind end end
- return slots
-end
-kinds.segments3,kinds.segments2=Segments(3),Segments(2)
+kinds.resultsHeader=Header("title activity leader members ilvl rating description age")
+kinds.applicationHeader=Header("title activity leader members status actions")
 local function Add(kind,names,template)
  for name in names:gmatch("%S+") do main["find."..name]={scope="find",slotKinds=kinds[kind],template=template or nil} end
 end
-Add("box","frame rail main appsBadge quickFilters emptyPanel importantFilters")
+Add("box","frame rail main appsBadge quickFilters emptyPanel importantFilters filterViewport filterBody filterFooter")
 Add("panel","surface applicationPanel filterPanel picker difficultySurface")
 Add("list","seasonCategories categories appList results activities")
 Add("button","filterToggle searchModeToggle scopeToggle applicationSettings start sidebarToggle quickLogic quickIdentity clearFilters filterDone pickerConfirm")
@@ -60,11 +54,10 @@ Add("iconButton","refresh filterClose pickerClose")
 Add("check","autoJoin autoApply hideZeroScore")
 Add("choice","roleChoice socialChoice sortChoice tierChoice")
 Add("number","filterField",true)
-Add("button","difficulty presenceOption presenceLogicOption identityOption",true)
-Add("text","searchHint appsTitle appsCount appsEmpty context resultCount emptyText emptyHelp filterTitle filterStatus presenceLogicLabel identityLabel ratingLabel ilvlLabel membersLabel roleLabel socialLabel sortLabel filterError picker.title searchInput")
-Add("text","presenceLabel",true)
+Add("box","filterRange",true)
+Add("button","difficulty",true)
+Add("text","searchHint appsTitle appsCount appsEmpty context resultCount emptyText emptyHelp filterTitle filterStatus ratingLabel ilvlLabel membersLabel roleLabel socialLabel sortLabel filterError picker.title searchInput")
 Add("texture","searchIcon filterChevron sidebarIcon quickIdentityIcon quickIdentityFunnel busyIcon")
-Add("texture","presenceIcon",true)
 Add("search","search")
 Add("category","category",true)
 Add("activity","activity",true)
@@ -72,9 +65,7 @@ Add("result","result",true)
 Add("application","application",true)
 Add("resultsHeader","resultsHeader")
 Add("applicationHeader","applicationHeader")
-Add("segments3","presenceChoice",true)
-Add("segments2","presenceLogic")
-Add("segments3","identityChoice")
 Add("selection","difficultySelection")
 Add("notice","limitNotice")
 main["find.filterScrim"]={scope="find",slotKinds={root="box",fill="texture"}}
+main["find.filterScrollBar"]={scope="find",slotKinds={root="box",thumb="texture"}}

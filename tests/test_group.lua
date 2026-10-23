@@ -506,19 +506,19 @@ do
 		G.Results:BeginSearch(G.Results.gen);G.Results:CommitResults(G.Results.gen)
 	end
 
-	-- 好友优先作为所有常用排序的第一关键字。
+	-- 关系汇总计数在所有常用排序中属于同一优先分区。
 	do
 		S.results[11].numBNetFriends=1;S.results[12].numCharFriends=1;S.results[13].numGuildMates=1
 		for id=11,13 do G.Results:OnResultUpdated(id) end
 		local reads,memberReads,playerReads=S.resultReads,S.memberCountReads,S.playerReads
-		for sort,expected in pairs({newest={12,11,13},rating={11,12,13},itemLevel={11,12,13},members={11,12,13}}) do
+		for sort,expected in pairs({newest={13,12,11},rating={11,12,13},itemLevel={11,12,13},members={11,12,13}}) do
 			G.Search:SetFilters({sort=sort})
-			T.same(G.Results:GetResults(),expected,"friend groups precede other groups while retaining the chosen sort within both sets")
+			T.same(G.Results:GetResults(),expected,"Battle.net, character and guild relationships share one priority partition under the chosen sort")
 		end
 		T.eq(S.resultReads,reads);T.eq(S.memberCountReads,memberReads);T.eq(S.playerReads,playerReads,"friend priority uses aggregate counts without looking up leaders or members")
 		S.results[11].numBNetFriends=0;S.results[12].numCharFriends=0
 		G.Results:OnResultUpdated(11);G.Results:OnResultUpdated(12);G.Search:SetFilters({})
-		T.same(G.Results:GetResults(),{13,12,11},"native friend-count changes update priority, and guild membership alone gives no priority")
+		T.same(G.Results:GetResults(),{13,12,11},"native friend-count changes preserve the remaining guild relationship priority")
 		S.results[13].numGuildMates=0;G.Results:OnResultUpdated(13)
 	end
 
@@ -822,7 +822,7 @@ do
  C_LFGList.CancelApplication=function() cancelled=cancelled+1 end
  T.ok(G:Cancel(25));T.ok(G.Applications:IsActive(25),"an unchanged native snapshot stays active until confirmation")
  S.applications={};S.appStatus[25]="none"
- T.ok(G:Cancel(25));T.eq(G:GetApplication(25),nil,"a native-absent stale row disappears after a no-op cancellation")
+ T.eq(G:Cancel(25),false,"a native-absent stale row no longer submits a no-op cancellation");T.eq(G:GetApplication(25),nil,"the explicit action removes its native-absent stale row")
 
  T.ok(G:Apply(26,{damage=true}))
  C_LFGList.CancelApplication=function(id) cancelled=cancelled+1;cancel(id);G:OnEvent("LFG_LIST_APPLICATION_STATUS_UPDATED",id,"cancelled","applied") end
@@ -836,6 +836,81 @@ do
  S.now=clock;C_LFGList.CancelApplication=cancel
  T.ok(G:Cancel(27));T.eq(G.Applications:GetActiveCount(),0)
  unsub()
+end
+
+-- Explicit cancellation must validate the current native snapshot instead of
+-- leaving an old submission-pending record permanently uncancellable.
+do
+ local id,otherID=99030,99031
+ local apply,cancel,info=C_LFGList.ApplyToGroup,C_LFGList.CancelApplication,C_LFGList.GetApplicationInfo
+ local oldApplications,oldStatus,oldPending=S.applications,S.appStatus[id],S.appPending[id]
+ local oldOtherStatus,oldOtherPending=S.appStatus[otherID],S.appPending[otherID]
+ local cancellations,reads=0,0
+ local startStatus,startPending="none","applied"
+ S.applications={}
+ C_LFGList.ApplyToGroup=function(target)
+  local found=false;for _,entry in ipairs(S.applications) do if entry==target then found=true;break end end
+  if not found then S.applications[#S.applications+1]=target end
+  S.appStatus[target],S.appPending[target]=startStatus,startPending
+ end
+ C_LFGList.GetApplicationInfo=function(target) reads=reads+1;return info(target) end
+ C_LFGList.CancelApplication=function(target) cancellations=cancellations+1;return cancel(target) end
+ T.ok(G:Apply(id,{damage=true}))
+ T.eq(G:GetApplication(id).pendingStatus,"applied")
+ startStatus,startPending="applied",nil;T.ok(G:Apply(otherID,{damage=true}))
+ local other=G:GetApplication(otherID);local beforeReads=reads
+ T.eq(G.Applications:CanCancel(id),false);T.ok(G.Applications:CanCancel(otherID));T.eq(reads,beforeReads,"routine CanCancel checks never read native snapshots")
+ local ok,reason=G:Cancel(id)
+ T.eq(ok,false);T.eq(reason,A.GroupLocale.actionBusy)
+ T.eq(cancellations,0,"a genuinely pending native submission still cannot be cancelled")
+ -- The native current-state getter has advanced, while no new local status
+ -- callback has been consumed. This tests the explicit-action boundary, not
+ -- a claim that any particular native event is guaranteed to be omitted.
+ S.appStatus[id],S.appPending[id]="applied",nil
+ ok,reason=G:Cancel(id)
+ T.ok(ok,"native pending has cleared, but cancellation still reports the previous action is awaiting confirmation: "..tostring(reason))
+ T.eq(cancellations,1,"the explicit cancellation reaches native exactly once after submission confirmation")
+ beforeReads=reads;T.eq(G:Cancel(id),false);T.eq(cancellations,1);T.eq(reads,beforeReads,"a retired record cannot submit another cancellation or create a ghost snapshot")
+ local playerReads,memberReads=S.playerReads,S.memberCountReads
+ local function Start()
+  S.applications={otherID};S.appStatus[id],S.appPending[id]=nil,nil;G.Applications:SyncAll()
+  T.ok(G:Apply(id,{damage=true}));T.ok(G.Applications:CanCancel(id))
+ end
+ local function OtherUnchanged()
+  T.eq(G:GetApplication(otherID),other);T.eq(other.status,"applied");T.eq(other.pendingStatus,nil,"checking one cancellation never clears another application")
+ end
+ for _,pending in ipairs({"applied","cancelled"}) do
+  Start();S.appPending[id]=pending
+  local count=cancellations;beforeReads=reads
+  ok,reason=G:Cancel(id)
+  T.eq(ok,false);T.eq(reason,A.GroupLocale.actionBusy);T.eq(cancellations,count)
+  T.eq(reads,beforeReads+1,"each explicit blocked cancellation checks only its one native application")
+  T.eq(G:GetApplication(id).pendingStatus,pending,"a current native operation remains pending rather than being force-cleared")
+  OtherUnchanged()
+ end
+ for _,status in ipairs({"invited","cancelled"}) do
+  Start();S.appStatus[id]=status
+  local count=cancellations
+  ok,reason=G:Cancel(id)
+  T.eq(ok,false);T.eq(reason,A.GroupLocale.invalidAction);T.eq(cancellations,count)
+  T.eq(G:GetApplication(id).status,status,"a newer native state replaces the stale applied state without submitting cancellation")
+  OtherUnchanged()
+ end
+ for _,missingID in ipairs({false,true}) do
+  Start();S.applications={otherID};S.appStatus[id],S.appPending[id]="none",nil
+  if missingID then C_LFGList.GetApplicationInfo=function(target) reads=reads+1;if target==id then return nil end;return info(target) end end
+  local count=cancellations
+  ok,reason=G:Cancel(id)
+  T.eq(ok,false);T.eq(reason,A.GroupLocale.invalidAction);T.eq(cancellations,count)
+  T.eq(G:GetApplication(id),nil,"native-absent records disappear instead of being recreated by an explicit action")
+  OtherUnchanged()
+  C_LFGList.GetApplicationInfo=function(target) reads=reads+1;return info(target) end
+ end
+ T.eq(S.playerReads,playerReads);T.eq(S.memberCountReads,memberReads,"cancel-state checks never retrieve member details")
+ C_LFGList.ApplyToGroup,C_LFGList.CancelApplication,C_LFGList.GetApplicationInfo=apply,cancel,info
+ S.applications,S.appStatus[id],S.appPending[id]=oldApplications,oldStatus,oldPending
+ S.appStatus[otherID],S.appPending[otherID]=oldOtherStatus,oldOtherPending
+ G.Applications:SyncAll()
 end
 
 -- ---------------------------------------------------------------- 招募/申请者
@@ -2607,9 +2682,18 @@ end
 do
  local entry,applicants,members=S.activeEntry,S.applicants,S.applicantMembers
  local best,current=C_LFGList.GetApplicantBestDungeonScore,C_LFGList.GetApplicantDungeonScoreForListing
+ local maps,mapInfo=C_ChallengeMode.GetMapTable,C_ChallengeMode.GetMapUIInfo
+ local duration,success=1600000,true
+ local mapReads=0
+ C_ChallengeMode.GetMapTable=function() return {900,901} end
+ C_ChallengeMode.GetMapUIInfo=function(challengeID)
+  mapReads=mapReads+1
+  T.ok(challengeID~=111,"the activity's game MapID is never passed as a challenge ID")
+  return "Current dungeon",challengeID,1800,nil,nil,challengeID==901 and 111 or 222
+ end
  local reads=0
  C_LFGList.GetApplicantBestDungeonScore=function(id,index) reads=reads+1;T.eq(id,8001);T.eq(index,1);return {mapName="Best dungeon",bestRunLevel=19,finishedSuccess=false} end
- C_LFGList.GetApplicantDungeonScoreForListing=function(id,index,activity) reads=reads+1;T.eq(id,8001);T.eq(index,1);T.eq(activity,502);return {mapScore=315.7,mapName="Current dungeon",bestRunLevel=18,finishedSuccess=true} end
+ C_LFGList.GetApplicantDungeonScoreForListing=function(id,index,activity) reads=reads+1;T.eq(id,8001);T.eq(index,1);T.eq(activity,502);return {mapScore=315.7,mapName="Current dungeon",bestRunLevel=18,finishedSuccess=success,bestRunDurationMs=duration} end
  S.activeEntry={activityIDs={502},name="Mythic listing"};S.applicants={[8001]={applicationStatus="applied",numMembers=2}};S.applicantMembers={[8001]={{name="Alliance-Away",class="MAGE",factionGroup=0,raceID=1},{name="Horde-Away",class="WARRIOR",factionGroup=0,raceID=2}}}
  G.Listing:OnEntryUpdate();G:RefreshApplicants()
  local member=G:GetApplicant(8001).members[1]
@@ -2619,6 +2703,11 @@ do
  T.eq(reads,0,"list refresh does not query dungeon detail APIs")
  T.eq(G:GetApplicantMapScore(member),315.7);T.eq(reads,1,"a visible map score reads only the listed dungeon")
  T.eq(G:GetApplicantMapScore(member),315.7);T.eq(reads,1,"row repaint reuses the current-dungeon snapshot")
+ local margin,status,run=G:GetApplicantTimeMargin(member)
+ T.eq(margin,200);T.eq(status,"known");T.eq(run.durationMs,1600000);T.eq(run.timeLimitSeconds,1800)
+ T.eq(mapReads,2,"challenge map IDs are matched by GetMapUIInfo's sixth return")
+ T.eq(reads,1,"showing real time reuses the current score and never reads the best-run API")
+ T.eq(G:GetApplicantTimeMargin(member),200);T.eq(mapReads,2,"unchanged time display reuses the listing-map limit")
  local scores=G:GetApplicantDungeonScores(member)
  T.eq(reads,2,"opening details only adds the best-run query");T.eq(scores.current.level,18);T.eq(scores.current.timed,true);T.eq(scores.best.level,19);T.eq(scores.best.timed,false)
  T.eq(G:GetApplicantDungeonScores(member),scores);T.eq(reads,2,"reopening unchanged details reuses the snapshot")
@@ -2628,11 +2717,32 @@ do
  T.eq(member.factionGroup,nil,"missing native faction clears the previous marker")
  T.eq(member.raceName,nil,"missing native race clears the reused member's previous race")
  T.ok(G:GetApplicantDungeonScores(member)~=scores);T.eq(reads,4)
+ duration=1830000;G.Applicants:OnApplicantUpdated(8001)
+ T.eq(G:GetApplicantTimeMargin(member),-30,"actual duration beyond the limit retains the negative margin")
+ success=false;G.Applicants:OnApplicantUpdated(8001)
+ local unavailable,reason=G:GetApplicantTimeMargin(member);T.eq(unavailable,nil);T.eq(reason,"unavailable","false success alone is not called overtime")
+ success=true
+ local secret,wasSecret={},issecretvalue;_G.issecretvalue=function(value) return value==secret end
+ for _,invalid in ipairs({0,-1,math.huge,0/0,"1600000",secret}) do
+  duration=invalid;G.Applicants:OnApplicantUpdated(8001)
+  local value,kind=G:GetApplicantTimeMargin(member);T.eq(value,nil);T.eq(kind,"unavailable","invalid or secret duration is never formatted or calculated")
+  T.eq(member.dungeonScores.current.durationMs,nil)
+ end
+ _G.issecretvalue=wasSecret
+ duration=1600000
+ local activity=G.Catalog:GetActivity(502);local mapID=activity.mapID;activity.mapID=333
+ G.Applicants:OnApplicantUpdated(8001)
+ local missingLimit,missingKind=G:GetApplicantTimeMargin(member);T.eq(missingLimit,nil);T.eq(missingKind,"unknown")
+ C_ChallengeMode.GetMapUIInfo=function(challengeID) return "Current dungeon",challengeID,1800,nil,nil,333 end
+ T.eq(G:GetApplicantTimeMargin(member),200,"temporarily missing map limits retry on the next explicit request")
+ activity.mapID=mapID
+ T.eq(G:GetApplicantTimeMargin({applicantID=8001,applicantIndex=1}),nil,"time summaries only belong to the current authoritative member object")
  C_LFGList.GetApplicantBestDungeonScore=function() return nil end
  C_LFGList.GetApplicantDungeonScoreForListing=function() return {mapScore=0,bestRunLevel=0,mapName="Current dungeon"} end
  G.Applicants:OnApplicantUpdated(8001);scores=G:GetApplicantDungeonScores(member)
  T.eq(scores.best,nil);T.eq(scores.current,nil,"empty native results remain unavailable, not fabricated level zero")
  T.eq(G:GetApplicantMapScore(member),0,"a real zero map score is kept even without a completed run")
+ local noRun,kind=G:GetApplicantTimeMargin(member);T.eq(noRun,nil);T.eq(kind,"none")
  C_LFGList.GetApplicantDungeonScoreForListing=function() reads=reads+1;return nil end
  G.Applicants:OnApplicantUpdated(8001);T.eq(G:GetApplicantMapScore(member),nil);local missingReads=reads
  T.eq(G:GetApplicantMapScore(member),nil);T.eq(reads,missingReads,"unavailable map scores are cached until the next applicant event")
@@ -2640,7 +2750,9 @@ do
  T.eq(G:GetApplicantMapScore(member),nil)
  G.Applicants:Clear();T.eq(G:GetApplicantDungeonScores(member),nil,"a retired member cannot query another applicant")
  T.eq(G:GetApplicantMapScore(member),nil)
+ T.eq(G:GetApplicantTimeMargin(member),nil,"retired members cannot reuse time data from a new record")
  C_LFGList.GetApplicantBestDungeonScore,C_LFGList.GetApplicantDungeonScoreForListing=best,current
+ C_ChallengeMode.GetMapTable,C_ChallengeMode.GetMapUIInfo=maps,mapInfo
  S.activeEntry,S.applicants,S.applicantMembers=entry,applicants,members;G.Listing:OnEntryUpdate()
 end
 
@@ -2867,6 +2979,50 @@ do
   G.Search:OnResultsReceived()
  end
  G:Detach(view)
+end
+
+-- Secret entry fields must be filtered before comparison or UI consumption.
+do
+ local active,autoInvite,wasSecret,permission=S.activeEntry,G.prefs.listingAutoInvite,issecretvalue,G.CanManageListing
+ local secret={};_G.issecretvalue=function(value) return rawequal(value,secret) end
+ local keys={"autoAccept","name","comment","requiredItemLevel","requiredDungeonScore","requiredPvpRating","privateGroup","questID","playstyle","generalPlaystyle","isCrossFactionListing","newPlayerFriendly"}
+ S.activeEntry=nil;G.Listing:OnEntryUpdate()
+ S.activeEntry={activityIDs={502}}
+ for _,key in ipairs(keys) do S.activeEntry[key]=secret end
+ -- Lua 5.1 cannot create the engine's secret scalar; the sentinel verifies
+ -- the real event path keeps every restricted value out of its decision snapshot.
+ G.Listing:OnEntryUpdate()
+ local listing=G:GetListing()
+ T.eq(listing.activityID,502,"a restricted active entry still retains its public activity")
+ for _,key in ipairs(keys) do T.eq(listing[key],nil,"restricted listing field is unavailable: "..key) end
+ T.eq(listing.autoInvite,nil,"an unreadable native flag does not imply an opt-in or opt-out")
+ T.eq(G.prefs.listingAutoInvite,nil,"observing a restricted entry does not write the local option")
+ local permissionReads=0
+ G.CanManageListing=function() permissionReads=permissionReads+1;return false end
+ for _,enabled in ipairs({false,true}) do
+  G.prefs.listingAutoInvite=enabled;G.Listing:OnEntryUpdate()
+  T.eq(G:GetListing().autoInvite,enabled,"explicit auto invitation survives a restricted native flag")
+  G.Applicants:TryAutoInvite()
+ end
+ T.eq(permissionReads,0,"unknown native auto-accept state never starts plugin auto-invitation")
+ S.activeEntry={activityIDs={502},name="公开标题",comment="公开说明",requiredItemLevel=328,autoAccept=false,privateGroup=false,isCrossFactionListing=true,newPlayerFriendly=false,generalPlaystyle=4}
+ G.prefs.listingAutoInvite=nil;G.Listing:OnEntryUpdate();listing=G:GetListing()
+ T.eq(listing.autoAccept,false);T.eq(listing.autoInvite,false);T.eq(listing.privateGroup,false)
+ T.eq(listing.isCrossFactionListing,true);T.eq(listing.requiredItemLevel,328);T.eq(listing.generalPlaystyle,4)
+ T.eq(listing.name,"公开标题");T.eq(listing.comment,"公开说明")
+ G.prefs.listingAutoInvite=true;G.Listing:OnEntryUpdate();G.Applicants:TryAutoInvite()
+ T.eq(permissionReads,1,"known native false allows the existing plugin auto-invitation path")
+ S.activeEntry.autoAccept=true;G.prefs.listingAutoInvite=nil;G.Listing:OnEntryUpdate();G.Applicants:TryAutoInvite()
+ T.eq(G:GetListing().autoInvite,true,"public native true remains the default when no local option is set")
+ T.eq(permissionReads,1,"native auto-accept continues to own invitation when enabled")
+ local confirmed=G:GetListing();S.activeEntry=secret;G.Listing:OnEntryUpdate()
+ T.eq(G:GetListing(),confirmed,"a wholly restricted details table retains the confirmed active entry")
+ S.activeEntry=nil;G.Listing:OnEntryUpdate()
+ T.eq(G:GetListing(),nil,"native inactive state still retires the listing")
+ T.eq(G.prefs.listingAutoInvite,nil)
+ S.activeEntry,G.prefs.listingAutoInvite=active,autoInvite
+ _G.issecretvalue,G.CanManageListing=wasSecret,permission
+ G.Listing:Restore()
 end
 
 -- Auto invitation is a listing-owned option even when ordinary raids reject
@@ -3433,6 +3589,85 @@ do
  S.results[id].numMembers=0;G.Results:OnResultUpdated(id);reads=S.playerReads
  T.eq(G.Results:GetLeaderClass(fresh),nil);T.eq(G.Results:GetLeaderClass(fresh),nil);T.eq(S.playerReads,reads)
  S.results[id],S.players[id],S.counts[id]=nil,nil,nil;S.resultIDs=ids
+end
+
+-- Default service sorting uses only native relationship totals, including
+-- guildmates; member details do not invent a relationship priority.
+do
+ local oldResults,oldIDs,oldPlayers=S.results,S.resultIDs,S.players
+ local function Result(id,age,value,kind)
+  return {searchResultID=id,activityIDs={502},name="Relation order "..id,partyGUID="Relation-order-"..id,
+   leaderName="RelationLeader"..id.."-Away",numMembers=value,age=age,requiredItemLevel=value*100,leaderOverallDungeonScore=value*1000,
+   numBNetFriends=kind=="bnet" and 1 or 0,numCharFriends=kind=="character" and 1 or 0,numGuildMates=kind=="guild" and 1 or 0}
+ end
+ S.results={
+  [99001]=Result(99001,100,1,"guild"),[99002]=Result(99002,0,5),[99003]=Result(99003,50,3,"bnet"),
+  [99004]=Result(99004,20,4,"character"),[99005]=Result(99005,10,5,"guild"),[99006]=Result(99006,1,4),
+ }
+ S.resultIDs={99001,99002,99003,99004,99005,99006};S.players={
+  [99006]={{name="ReportedMember-Away",classFilename="WARRIOR",isGuildMate=true}},
+ }
+ G.Search:SetFilters({});G.Results:BeginSearch(99001);G.Results:CommitResults(99001)
+ local playerReads,memberReads=S.playerReads,S.memberCountReads
+ for _,sort in ipairs({"newest","rating","itemLevel","members"}) do
+  G.Search:SetFilters({sort=sort})
+  T.same(G:GetResults(),{99005,99004,99003,99001,99002,99006},"guild-only results outrank a better ordinary result while all relationship types retain the selected ordering")
+ end
+ T.eq(G:GetResult(99006).guildMates,0,"member metadata alone does not change the native aggregate guild count")
+ T.eq(S.playerReads,playerReads);T.eq(S.memberCountReads,memberReads,"relation priority does not require roster inspection")
+ S.results[99001].numGuildMates=0;S.results[99006].numGuildMates=1
+ G.Results:OnResultUpdated(99001);G.Results:OnResultUpdated(99006);G.Search:SetFilters({sort="newest"})
+ T.same(G:GetResults(),{99006,99005,99004,99003,99002,99001},"new native guild counts move results between the relationship and ordinary partitions")
+ G.Search:SetFilters({guild=true,sort="newest"})
+ T.same(G:GetResults(),{99006,99005},"the explicit guild filter still uses guild totals rather than the broader relation priority")
+ S.results,S.resultIDs,S.players=oldResults,oldIDs,oldPlayers
+end
+
+-- The real floating cancel-all button can reach the action-time refresh even
+-- when cached pending entries cannot expose the ordinary row cancel button.
+do
+ local f=dofile("tests/ui_fixture.lua")("zhCN",nil,{reduceMotion=true})
+ local a,u,g=f.A,f.U,f.G
+ local pending={[42]="applied",[43]="applied"};local ids={42,43};local cancelled,checks,messages={},{},{}
+ g.Game={RefreshApplicationSubscriptions=function() end}
+ function g:HasViews() return true end
+ function a:Print(message) messages[#messages+1]=message end
+ C_LFGList.GetApplications=function() return ids end
+ C_LFGList.GetApplicationInfo=function(id) checks[#checks+1]=id;return id,"applied",pending[id],120 end
+ C_LFGList.CancelApplication=function(id)
+  cancelled[#cancelled+1]=id
+  for i=#ids,1,-1 do if ids[i]==id then table.remove(ids,i) end end
+ end
+ local activity=g.Catalog:GetActivity(2)
+ for _,id in ipairs(ids) do
+  g.records[id]={id=id,name="Offline application "..id,activityID=2,activity=activity,activityName=activity.name,categoryID=2,maxNumPlayers=5,numMembers=1,
+   leaderName="Leader-Home",leaderKey="Leader-Home",details={members={},counts={TANK=1,HEALER=0,DAMAGER=0}}}
+ end
+ -- Connect the shared UI fixture provider to the real application service.
+ g.Results.GetResult=function(_,id) return g.records[id] end
+ dofile("addon/LycheeGroup_Group/Applications.lua")
+ function g:GetApplications() return self.Applications:GetApplications() end
+ function g:GetApplication(id) return self.Applications:GetApplication(id) end
+ function g:Cancel(id) return self.Applications:Cancel(id) end
+ g.Applications:SyncAll()
+ dofile("addon/LycheeGroup/Floating.lua");dofile("addon/LycheeGroup/API.lua")
+ local floating=a.Floating;floating:Bind(g);floating:UpdateSettings();floating:ShowPanel()
+ T.ok(floating.cancel:IsShown() and floating.cancel:IsEnabled(),"the real floating cancel-all entry is available for native pending applications")
+ local details,detailReads=g.Results.GetDetails,0
+ g.Results.GetDetails=function(...) detailReads=detailReads+1;return details(...) end
+ wipe(checks);floating.cancel:Fire("OnClick","LeftButton")
+ T.same(checks,{42,43},"the bulk UI action rechecks each pending application independently")
+ T.eq(detailReads,0,"blocked action-time checks do not retrieve any member details")
+ T.eq(#cancelled,0);T.eq(#messages,2);T.eq(messages[1],a.GroupLocale.actionBusy)
+ T.eq(g:GetApplication(42).pendingStatus,"applied");T.eq(g:GetApplication(43).pendingStatus,"applied")
+ pending[42]=nil -- authoritative getter advances; the local UI is still pending
+ floating.cancel:Fire("OnClick","LeftButton")
+ T.same(cancelled,{42},"the real cancel-all click cancels only the application whose native pending flag has cleared")
+ T.eq(g:GetApplication(42),nil);T.eq(g:GetApplication(43).pendingStatus,"applied")
+ T.eq(g.Applications:GetActiveCount(),1,"the other genuinely pending application remains present")
+ T.eq(messages[#messages],a.GroupLocale.actionBusy,"genuine pending feedback remains distinct from the recovered application")
+ floating.cancel:Fire("OnClick","LeftButton");T.same(cancelled,{42},"repeating cancel-all does not resubmit the completed cancellation")
+ floating:Dismiss();a:SetSetting("floating",false)
 end
 
 _G.LycheeGroupDB = nil

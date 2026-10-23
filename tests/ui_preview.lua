@@ -1,6 +1,8 @@
 -- Local layout review from the real Lua widget tree. Sample data; no game calls.
 -- lua tests/ui_preview.lua -> tests/preview-data.js
 local f=dofile("tests/ui_fixture.lua")("zhCN")
+-- Keep note dates stable across midnight and later visual comparisons.
+f.base.SetTime(os.time({year=2026,month=10,day=23,hour=12,min=0,sec=0}))
 local A,U,G,S=f.A,f.U,f.G,f.S
 UIParent:SetSize(1640,1000);A:SetSetting("reduceMotion",true)
 C_LFGList.GetActivityGroupInfo=function(id) return id==20 and "塞塔里斯神庙" or "尼鲁巴尔王宫" end
@@ -133,7 +135,9 @@ U.Tooltip:ShowPlayer(U.pages.create.groupSummary,mage);snapshot("玩家详情优
 A:Open("find");U.pages.find:SelectCategory("seasonDungeon");U.pages.find:SetFiltersOpen(true)
 C_SpecializationInfo.GetSpecialization=function() return 3 end
 C_SpecializationInfo.GetSpecializationInfo=function() return 252,"邪恶",nil,135775 end
-U.pages.find.presenceChoices.tankPresence.buttons[2]:Fire("OnClick");U.pages.find.presenceChoices.damagePresence.buttons[3]:Fire("OnClick");U.pages.find.identityChoice.buttons[3]:Fire("OnClick");snapshot("职责筛选")
+U.pages.find.quickChoices.tankPresence.button:Fire("OnClick","LeftButton")
+U.pages.find.quickChoices.damagePresence.button:Fire("OnClick","LeftButton");U.pages.find.quickChoices.damagePresence.button:Fire("OnClick","LeftButton")
+U.pages.find.quickIdentity:Fire("OnClick","LeftButton");U.pages.find.quickIdentity:Fire("OnClick","LeftButton");snapshot("职责筛选")
 A:SetSetting("fontScale",130);snapshot("筛选字体130%")
 A:SetSetting("fontScale",70);snapshot("筛选字体70%")
 A:SetSetting("fontScale",100)

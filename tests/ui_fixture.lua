@@ -27,6 +27,10 @@ local G={db={prefs={},blockedLeaders={}},prefs=A.charPrefs,subs={},views={},reco
 local blockedTitles,blockedTitleCount={},0
 local unblockedLeaders={}
 A.Group=G
+function G.Public(value)
+ if issecretvalue and issecretvalue(value) then return nil end
+ return value
+end
 dofile("addon/LycheeGroup_Group/CreationPresets.lua")
 dofile("addon/LycheeGroup_Group/RaidBuffs.lua")
 dofile("addon/LycheeGroup/Presentation.lua")

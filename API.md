@@ -1,6 +1,6 @@
 # LycheeGroup 配置与主题 API
 
-本页维护未发布的 API v2。验证方法见 [tests/theme_reload.md](tests/theme_reload.md)，当前结果见 [perfermance.md](perfermance.md)，开发约束见 [Development.md](Development.md)。插件发布版本仍为 1.2.3；浮窗接入继续使用独立的 `API.Floating` v1，见[架构文档](Architecture.md#92-浮窗公开接口)。
+本页维护 1.2.4 引入的 API v2。验证方法见 [tests/theme_reload.md](tests/theme_reload.md)，当前结果见 [perfermance.md](perfermance.md)，开发约束见 [Development.md](Development.md)。插件发布版本为 1.2.4；浮窗接入继续使用独立的 `API.Floating` v1，见[架构文档](Architecture.md#92-浮窗公开接口)。
 
 ## 入口与生效时间
 

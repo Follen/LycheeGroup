@@ -78,7 +78,7 @@ function F:Build()
  local button=CreateFrame("Button",nil,f);C.Box(button,{width="floatingEntryWidth",height="floatingEntryHeight"})
  button:SetScript("OnClick",function()
   if F.dragging or F.dragClick then F.dragClick=nil;return end
-  A:Open(A:GetDefaultPage())
+  A:ToggleWindow()
  end)
  button:SetPoint("TOPLEFT");button:RegisterForDrag("LeftButton");self.button=button
  local logoAnchor=CreateFrame("Frame",nil,button);C.Box(logoAnchor,{width="floatingLogoSize",height="floatingLogoSize"});C.SetPoint(logoAnchor,"LEFT",logoAnchor:GetParent(),"LEFT","floatingLogoAnchorLeftX",0);logoAnchor:EnableMouse(false);self.logoAnchor=logoAnchor

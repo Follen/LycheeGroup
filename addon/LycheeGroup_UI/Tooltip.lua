@@ -118,9 +118,12 @@ local function Say(cn,en) return zh and cn or en end
 function Tip:BindText(owner,text)
  owner:HookScript("OnEnter",function(button)
   if UI.hiding or self.pinned then return end
+  local value=text
+  if type(value)=="function" then value=value(button) end
+  if value==nil then if self:IsOwned(button) then self:Hide() end;return end
   self:Hide();self.owner=button
   if not self.text then self.text=C.Tooltip(UI.frame,300);UI:Element(self.text,"tooltip.plain","tooltip") end
-  self.text:SetOwner(button,"ANCHOR_TOP");self.text:AddLine(text)
+  self.text:SetOwner(button,"ANCHOR_TOP");self.text:AddLine(value)
   local line=self.text.lines[1];local width=math.min(268,math.ceil(line:GetUnboundedStringWidth())+1)
   line:SetWidth(width);self.text:SetWidth(width+32);self.text:Show()
  end)

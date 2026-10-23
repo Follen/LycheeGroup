@@ -1,0 +1,127 @@
+{
+  "date": "2026-10-24",
+  "feature": "SEUI marker-bar integration",
+  "sourceHashes": [
+    {
+      "path": "addon/LycheeGroup/Adapters/SEUI.lua",
+      "sha256": "0a54ac13433e4ca40ce88ef7f19fe33b0a0200c8534ae8d8243d28cad702fdf5"
+    },
+    {
+      "path": "addon/LycheeGroup/Theme/Defaults.lua",
+      "sha256": "659c2d27021d09cc0c3b117bca82fc002a0048c9727fe292a2a98dbde2c7754c"
+    },
+    {
+      "path": "addon/LycheeGroup/LycheeGroup.toc",
+      "sha256": "0f1e0d9e361a0c76c4914f754604e5f68ae520a3254142a43f3da9d1459416da"
+    }
+  ],
+  "implementation": {
+    "conditions": [
+      "SeUI loaded",
+      "floating enabled",
+      "floatingCompatibility enabled"
+    ],
+    "placement": "Left of skull marker1=8",
+    "logoSize": 34,
+    "fontSize": 18,
+    "fontFlags": "OUTLINE",
+    "gap": 8,
+    "scale": "UIParent; do not multiply by SEUI marker scale",
+    "sharedLogoAndPopup": true,
+    "nativeMarkerMutations": false
+  },
+  "offline": {
+    "modules": 22,
+    "asserts": 12400,
+    "failures": 0,
+    "layoutScripts": 16,
+    "seuiAsserts": 556,
+    "sizeRegression": "Failed with host scale inherited from marker bar; passed after fixing host scale to 1"
+  },
+  "deployment": {
+    "files": 137,
+    "hashesMatched": true,
+    "manifest": ".lycheedev/seui-adapter-2026-10-24/deployed-size-fix.json",
+    "activated": true,
+    "seuiMarkersUnchanged": true
+  },
+  "live": {
+    "client": "12.1.5.70575",
+    "character": "灵止光",
+    "realm": "死亡之翼",
+    "seuiVersion": "1.8.10",
+    "session": "CON-f953f03fe13fef013417ade357962ae7",
+    "reportState": "verified",
+    "resourcesReleased": true,
+    "cleanup": "complete",
+    "checks": 62,
+    "settingsRestored": true,
+    "entryProtected": false,
+    "uiParentScale": 0.6399999856948853,
+    "hostEffectiveScale": 0.6399999856948853,
+    "barEffectiveScale": 0.41599997878074646,
+    "popupBelowMarkerBar": true,
+    "nativeMarkersPreserved": 8,
+    "newestErrorRowsCompared": 8,
+    "errorRowsUnchanged": true,
+    "beforeErrorSession": 4552,
+    "afterErrorSession": 4553,
+    "screenshots": [
+      "D:/Game/World of Warcraft/_retail_/Screenshots/WoWScrnShot_102426_050900.jpg",
+      "D:/Game/World of Warcraft/_retail_/Screenshots/WoWScrnShot_102426_051025.jpg"
+    ],
+    "scope": "Native geometry, controller switch/restore and popup checks; screenshots inspected",
+    "notCovered": [
+      "hardware pointer dispatch",
+      "combat interaction",
+      "new real applicants"
+    ]
+  },
+  "followupAppearance": {
+    "date": "2026-10-24",
+    "resultRowHeight": 58.88,
+    "rowHeightReduction": 0.08,
+    "findMemberScaleAdjustment": 1.012,
+    "memberSizeIncrease": 0.1,
+    "sourceHash": "ae63b69cc367ed50b64c1737de5bf195f1b894d2a99c56646f2f17a728798f24",
+    "offline": {
+      "memberGeometryChecks": 211,
+      "fontLayoutChecks": 4628,
+      "applicationNoticeChecks": 6548,
+      "failures": 0
+    },
+    "deploymentManifest": ".lycheedev/seui-adapter-2026-10-24/deployed-member110.json",
+    "live": {
+      "reportState": "verified",
+      "reportOk": true,
+      "cleanup": "complete",
+      "result": {
+        "checks": 2,
+        "defaultRowReduction": 0.08,
+        "displayRestored": true,
+        "fontScale": 100,
+        "listRowHeight": 58.88,
+        "memberIconScale": 100,
+        "memberIncrease": 0.1,
+        "normalRows": 0,
+        "originalPage": false,
+        "originalShown": false,
+        "rows": {},
+        "screenshot": "102426_052337",
+        "seuiAttached": true,
+        "seuiHostScale": 1,
+        "theme": {
+          "memberAdjustment": 1.012,
+          "rowHeight": 58.88
+        },
+        "visiblePartyRows": 0
+      },
+      "scope": "Loaded theme values and list base height verified. No visible result rows were available after reload."
+    }
+  },
+  "connectionCleanup": {
+    "closed": true,
+    "complete": true,
+    "cleanup": "complete"
+  }
+}

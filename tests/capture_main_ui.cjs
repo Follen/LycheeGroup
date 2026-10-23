@@ -22,6 +22,7 @@ end
 local input=assert(io.open("tests/ui_preview.lua","rb"))
 local source=input:read("*a");input:close()
 local n
+source,n=source:gsub('local A,U,G,S=f%%.A,f%%.U,f%%.G,f%%.S','f.base.SetTime(os.time({year=2026,month=10,day=23,hour=12,min=0,sec=0}))\\nlocal A,U,G,S=f.A,f.U,f.G,f.S');assert(n==1)
 source,n=source:gsub('io%%.open%%("tests/preview%%-data%%.js","wb"%%)','io.open('..${luaString(output)}..',"wb")')
 assert(n==1,"preview output path changed")
 source,n=source:gsub('rolePresenceChoices%%.TANK','presenceChoices.tankPresence');assert(n==1)
@@ -35,6 +36,6 @@ const safeHarness=harness.replace("'io.open('.."+luaString(output)+"..',\"wb\")'
 fs.writeFileSync(driver,safeHarness);
 const result=cp.execFileSync(process.env.LUA||'lua',[driver],{cwd:checkout,encoding:'utf8',maxBuffer:1024*1024});
 const hash=value=>crypto.createHash('sha256').update(value).digest('hex');
-fs.writeFileSync(output+'.meta.json',JSON.stringify({schema:1,commit:MAIN,substitute:{path:'tests/ui_stubs.lua',sha256:hash(fs.readFileSync(stub))},driverSha256:hash(safeHarness),captureSha256:hash(fs.readFileSync(output)),driverAdaptations:['same current UI substitute for main and candidate','three obsolete filter controller names mapped to the same current main actions','serialize numeric frame level only']},null,2)+'\n');
+fs.writeFileSync(output+'.meta.json',JSON.stringify({schema:1,commit:MAIN,substitute:{path:'tests/ui_stubs.lua',sha256:hash(fs.readFileSync(stub))},driverSha256:hash(safeHarness),captureSha256:hash(fs.readFileSync(output)),driverAdaptations:['same current UI substitute for main and candidate','fix sample note dates to 2026-10-23','three obsolete filter controller names mapped to the same current main actions','serialize numeric frame level only']},null,2)+'\n');
 console.log(result.trim());
 console.log('Main capture saved without changing its checkout: '+output);

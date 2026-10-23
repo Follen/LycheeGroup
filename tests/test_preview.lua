@@ -22,10 +22,6 @@ for _,key in ipairs({"Search","ApplyToGroup","CreateListing","UpdateListing","Re
 for _,key in ipairs({"Publish","Update","RemoveListing","Invite","Decline","Cancel"}) do Trap(G,key) end
 Trap(G.Search,"Search");Trap(_G,"SetLFGRoles")
 local function Click(button) button:Fire("OnMouseDown");button:Fire("OnClick","LeftButton") end
-local function Segment(choice,value)
- for _,button in ipairs(choice.buttons) do if button.value==value then Click(button);return end end
- error("missing segment "..tostring(value))
-end
 local combat=InCombatLockdown;_G.InCombatLockdown=function() return true end
 T.eq(A:Preview("applications"),true,"preview has no blanket combat gate")
 _G.InCombatLockdown=combat;U.pages.find.main:Fire("OnEvent","PLAYER_REGEN_ENABLED")
@@ -36,15 +32,15 @@ T.ok(preview.prefs~=A.charPrefs,"preview owns a separate character-preference ta
 T.eq(preview.applicationPrefs.roles,nil,"preview does not inherit the real character's application configuration")
 T.eq(U.page,"find");T.eq(U.previewExit:IsShown(),true)
 local find=U.pages.find
-T.eq(find.quickFilters:IsShown(),false);T.eq(find.quickFilterHeight,0)
+T.eq(find.quickPlacement,"popup");T.eq(find.quickFilters:IsVisible(),false);T.eq(find.quickFilterHeight,0)
 T.near(find.search:GetWidth(),find.main:GetWidth()-60,.001,"preview also keeps the search row clear")
 T.eq(find.search.box,find.previewSearchBox,"preview keeps its own ordinary search input")
 T.eq(U.Native.searchLease,nil);T.eq(nativeSearch:GetParent(),LFGListFrame.SearchPanel)
 find.search.box:SetText("Preview group 2");T.eq(preview.filters.text,"Preview group 2","preview group mode uses simulated title filtering")
 find.search.box:SetText("12-15")
-T.same(preview:GetResults(),{preview.recordIDs[5],preview.recordIDs[4],preview.recordIDs[6]},"preview combines group-mode keystone range filtering with friend priority")
+T.same(preview:GetResults(),{preview.recordIDs[4],preview.recordIDs[5],preview.recordIDs[6]},"preview combines group-mode keystone range filtering with friend and guild priority")
 find.search.box:SetText("12-13")
-T.same(preview:GetResults(),{preview.recordIDs[5],preview.recordIDs[4]},"preview range includes both bounds and excludes higher levels")
+T.same(preview:GetResults(),{preview.recordIDs[4],preview.recordIDs[5]},"preview range includes both bounds and excludes higher levels")
 find.search.box:SetText(preview.records[preview.recordIDs[4]].name)
 T.same(preview:GetResults(),{preview.recordIDs[4]},"preview simulates native group-name matching")
 find.search.box:SetText("描述检索样例")
@@ -83,6 +79,8 @@ do
  T.ok(first.partyGUID and second.partyGUID and third.partyGUID)
  T.ok(first.partyGUID~=second.partyGUID and second.partyGUID~=third.partyGUID,"every preview result has a distinct party identity")
  local old={first.bnetFriends,first.charFriends,second.bnetFriends,second.charFriends,third.bnetFriends,third.charFriends}
+ local oldGuild={first.guildMates,second.guildMates,third.guildMates}
+ first.guildMates,second.guildMates,third.guildMates=0,0,0
  first.bnetFriends,first.charFriends,second.bnetFriends,second.charFriends,third.bnetFriends,third.charFriends=1,0,0,0,0,0
  preview.declinedParties[first.partyGUID]=0
  preview:SetFilters({sort="newest"})
@@ -102,6 +100,7 @@ do
  T.same(preview:GetResults(),{first.id,second.id,third.id},"a new party does not inherit a matching title's rejection")
  first.partyGUID=originalGUID;preview.records[first.id]=nil;first.id,first.name=oldID,oldName;preview.records[oldID]=first;preview.recordIDs[4]=oldID
  first.bnetFriends,first.charFriends,second.bnetFriends,second.charFriends,third.bnetFriends,third.charFriends=unpack(old)
+ first.guildMates,second.guildMates,third.guildMates=unpack(oldGuild)
  wipe(preview.declinedParties);find:ClearFilters()
  T.eq(find.declineClock,nil,"clearing preview rejections releases the minute timer")
 end
@@ -152,7 +151,7 @@ do
  local saved={}
  for i=4,6 do
   local r=preview.records[preview.recordIDs[i]]
-  saved[i]={r.bnetFriends,r.charFriends};r.bnetFriends,r.charFriends=0,0
+  saved[i]={r.bnetFriends,r.charFriends,r.guildMates};r.bnetFriends,r.charFriends,r.guildMates=0,0,0
  end
  preview.records[preview.recordIDs[6]].charFriends=1
  preview:SetFilters({sort="newest"})
@@ -161,7 +160,12 @@ do
  T.same(preview:GetResults(),{preview.recordIDs[4],preview.recordIDs[6],preview.recordIDs[5]},"Battle.net and character friends have the same priority")
  preview:SetFilters({sort="itemLevel"})
  T.same(preview:GetResults(),{preview.recordIDs[6],preview.recordIDs[4],preview.recordIDs[5]},"preview sorts within the friend and other groups")
- for i=4,6 do local r=preview.records[preview.recordIDs[i]];r.bnetFriends,r.charFriends=unpack(saved[i]) end
+ preview.records[preview.recordIDs[5]].guildMates=1
+ T.same(preview:GetResults(),{preview.recordIDs[6],preview.recordIDs[5],preview.recordIDs[4]},"guildmates share the friend priority partition under item-level sorting")
+ preview.records[preview.recordIDs[4]].bnetFriends=0;preview.records[preview.recordIDs[6]].charFriends=0
+ preview:SetFilters({sort="newest"})
+ T.same(preview:GetResults(),{preview.recordIDs[5],preview.recordIDs[4],preview.recordIDs[6]},"guild-only preview groups precede newer ordinary groups")
+ for i=4,6 do local r=preview.records[preview.recordIDs[i]];r.bnetFriends,r.charFriends,r.guildMates=unpack(saved[i]) end
  find:ClearFilters()
 end
 do
@@ -194,10 +198,10 @@ local savedTank,savedHealer,savedDamage=previewCounts.TANK,previewCounts.HEALER,
 previewCounts.TANK,previewCounts.HEALER,previewCounts.DAMAGER=0,1,2
 T.eq(find.filterStatus:GetText(),"0 项条件 · 待搜索","unselected sample activities retain the no-search footer state")
 find:CommitChoice()
-find:SetFiltersOpen(true);T.ok(find.importantFilters:IsShown());T.eq(find.filterPanel:GetWidth(),592)
-Segment(find.presenceChoices.tankPresence,"missing")
-Segment(find.presenceChoices.healerPresence,"present")
-Segment(find.presenceChoices.damagePresence,"missing")
+find:SetFiltersOpen(true);T.ok(find.importantFilters:IsShown());T.eq(find.quickFilters:GetParent(),find.importantFilters);T.eq(find.filterPanel:GetWidth(),560)
+Click(find.quickChoices.tankPresence.button)
+Click(find.quickChoices.healerPresence.button);Click(find.quickChoices.healerPresence.button)
+Click(find.quickChoices.damagePresence.button)
 T.same(preview:GetResults(),{captainRecord.id},"preview combines missing tank, present healer and missing damage")
 T.eq(find.filteredResultCount,1);T.eq(find.filterStatus:GetText(),"3 项条件 · 1 支队伍","sample choices immediately refresh both footer counts")
 T.eq(A.charPrefs.find and A.charPrefs.find.categoryPrefs and A.charPrefs.find.categoryPrefs.seasonDungeon and A.charPrefs.find.categoryPrefs.seasonDungeon.tankPresence,nil,"popup sample choices never change the real role preferences")

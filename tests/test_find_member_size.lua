@@ -22,21 +22,21 @@ local function Render() G:Notify("result",41);U.Motion:Tick(.016) end
 local function PartyGeometry()
  local roster=row.roster
  local scale=roster:GetScale()
- Near(scale,1.2*1.15,"only result party members gain 15 percent scale")
+ Near(scale,1.2*.92*1.1,"default result party icons are ten percent larger")
  local width=roster:GetWidth()*scale
  local left=(row.membersButton:GetWidth()-width)/2
  for i,slot in ipairs(roster.slots) do
-  Near(slot.icon:GetWidth()*scale,18*1.2*1.15,"member avatars gain 15 percent")
+  Near(slot.icon:GetWidth()*scale,18*1.2*.92*1.1,"member avatars use the enlarged default size")
   local point={slot.icon:GetPoint()}
   local x=point[#point-1]
   local right=left+(x+slot.icon:GetWidth())*scale
   if slot.icon:IsShown() then
-   Near(slot.role:GetWidth()*scale,10*1.2*1.15,"occupied member role badges gain 15 percent")
+   Near(slot.role:GetWidth()*scale,10*1.2*.92*1.1,"occupied member role badges grow with their avatars")
    local badge={slot.role:GetPoint()}
    Check(badge[1]=="BOTTOMRIGHT" and badge[2]==slot.icon,"badges remain attached to the member avatar")
    right=right+badge[#badge-1]*scale
   else
-   Near(slot.role:GetWidth()*scale,18*1.2*1.15,"empty role slots match the enlarged member size")
+   Near(slot.role:GetWidth()*scale,18*1.2*.92*1.1,"empty role slots use the same enlarged default size")
   end
   Check(left+x*scale>=-.001 and right<=138.001,"every enlarged slot and badge fits the 138-unit member column")
   if i<5 then
@@ -79,6 +79,7 @@ local function CrownCount()
  return count
 end
 Check(CrownCount()==1 and row.roster.slots[2].icon.memberLeaderMark:IsShown(),"the native leader is marked in its actual member slot, not the first slot")
+Setting("memberIconShape","circle");Setting("memberClassBorder",true)
 for _,slot in ipairs(row.roster.slots) do
  Check(slot.icon._lycheeMask:GetTexture():find("member%-circle%-mask%.tga$")~=nil,"occupied result icons use the selected circular mask")
  Check(slot.icon.memberBorder and slot.icon.memberBorder:IsShown(),"occupied members receive a class-color border")
@@ -106,7 +107,7 @@ local header=page.resultsHeader;header:SetSort("rating",true)
 local widthState=header.state.widths
 for _,percent in ipairs({75,100,175,100}) do
  Setting("memberIconScale",percent)
- Near(row.roster:GetScale(),1.2*1.15*percent/100,"member percentages apply to the existing roster scale")
+ Near(row.roster:GetScale(),1.2*.92*1.1*percent/100,"saved member percentages apply to the enlarged default roster size")
  local cell=header.columns.members;local point={row.membersButton:GetPoint()};local start=point[#point-1]
  Check(start>=cell.x and start+row.membersButton:GetWidth()<=cell.x+cell.width+.001,"scaled members stay within the current resizable member cell")
  local scale=row.roster:GetScale();local left=(row.membersButton:GetWidth()-row.roster:GetWidth()*scale)/2

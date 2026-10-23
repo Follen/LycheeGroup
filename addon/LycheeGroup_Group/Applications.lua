@@ -58,7 +58,7 @@ function Applications:AdoptResult(id,result)
  AdoptResult(record,result)
  return true
 end
-local function Update(id,status,pending,remaining,groupName)
+local function Update(id,status,pending,remaining,groupName,statusOnly)
  if status=="applied" or (status==nil or status=="none") and pending=="applied" then retired[id]=nil
  elseif retired[id] then return nil end
  local record=records[id]
@@ -73,7 +73,7 @@ local function Update(id,status,pending,remaining,groupName)
  record.status,record.pendingStatus=status,pending
  if finished[status] then record.removeAt=record.removeAt or GetTime()+5 else record.removeAt=nil end
  if type(remaining)=="number" then record.expiresAt=GetTime()+remaining end
- local result=Active(record) and (G.Results:GetResult(id) or G.Results:Capture(id,record.result,true) or record.result)
+ local result=not statusOnly and Active(record) and (G.Results:GetResult(id) or G.Results:Capture(id,record.result,true) or record.result)
  if result then AdoptResult(record,result) end
  if declined then
   local partyGUID=record.partyGUID
@@ -128,6 +128,29 @@ function Applications:CanCancel(id)
  return true
 end
 function Applications:Cancel(id)
+ -- An explicit action rechecks its one native record. Routine CanCancel calls
+ -- remain cache-only, and a stale local pending flag never overrides a newer
+ -- native confirmation or permits cancelling a genuinely pending request.
+ local record=records[id]
+ if not record then return false,L.invalidAction end
+ local infoID,status,pending,remaining=C_LFGList.GetApplicationInfo(id)
+ local changed=false
+ if infoID==id and status~=nil then
+  if status=="none" and not pending then
+   records[id]=nil;dirty=true;changed=true
+  elseif status~=record.status or pending~=record.pendingStatus then
+   Update(id,status,pending,remaining,nil,true);changed=true
+  end
+ elseif not infoID and not pending then
+  records[id]=nil;dirty=true;changed=true
+ else
+  return false,L.invalidAction
+ end
+ if changed then
+  wipe(ordered);ScheduleRetirement()
+  G.Game:RefreshApplicationSubscriptions()
+  G.Results:InvalidateView();G:Notify("applications")
+ end
  local allowed,reason=self:CanCancel(id)
  if not allowed then return false,reason end
  local ok=pcall(C_LFGList.CancelApplication,id)

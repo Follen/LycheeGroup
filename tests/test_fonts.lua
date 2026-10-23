@@ -65,7 +65,7 @@ do
  a:Open("settings",{section="interface"})
  local page=u.pages.settings
  local slider=page.controls.fontScale.widget
- T.eq(page.panels.interface.rows[3].frame,page.controls.fontScale.frame,"font size follows main window scale")
+ T.eq(page.panels.interface.rows[2].frame,page.controls.fontScale.frame,"font size follows the interface font")
  T.eq(slider.slider:GetMinMaxValues(),70);T.eq(select(2,slider.slider:GetMinMaxValues()),130)
  T.eq(slider.valueLabel:GetText(),"100%")
  T.near(slider.progress:GetWidth(),slider:GetWidth()/2,.001,"the font slider fills the left half at 100 percent")
@@ -126,7 +126,7 @@ for _,case in ipairs({{"zhCN","enUS","Settings","LycheeFont"},{"enUS","zhCN","шо
  local savedSettings={language=case[2]}
  local languageFixture=dofile("tests/ui_fixture.lua")(case[1],nil,savedSettings)
  local a,u=languageFixture.A,languageFixture.U
- a:SetSetting("reduceMotion",true);a:Open("settings",{section="interface"})
+ a:SetSetting("reduceMotion",true);a:Open("settings",{section="general"})
  local page=u.pages.settings
  T.eq(GetLocale(),case[1],"addon language never changes the game's locale")
  T.eq(a:GetLocale(),case[2]);T.eq(u.L.settings,case[3])
@@ -142,7 +142,7 @@ for _,case in ipairs({{"zhCN","enUS","Settings","LycheeFont"},{"enUS","zhCN","шо
  _G.C_UI=nativeUI
  u:Hide(true)
  local reloaded=dofile("tests/ui_fixture.lua")(case[1],nil,savedSettings)
- reloaded.A:Open("settings",{section="interface"})
+ reloaded.A:Open("settings",{section="general"})
  T.eq(reloaded.A:GetLocale(),case[1],"the next session applies the saved game-language choice")
  T.eq(reloaded.A.Fonts:GetPath(),"Interface\\AddOns\\LycheeGroup\\Media\\Fonts\\LycheeFont-"..case[1]..".ttf","the default font changes with the language after reload")
  T.eq(reloaded.U.pages.settings.reloadLanguage:IsShown(),false)

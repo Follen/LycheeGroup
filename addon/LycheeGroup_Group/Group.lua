@@ -263,6 +263,7 @@ function G:SetApplicantView(owner,visible) self.Alerts:SetViewed(owner,visible) 
 function G:RefreshApplicants() return self.Applicants:RequestRefresh() end
 function G:GetApplicant(id) return self.Applicants:GetApplicant(id) end
 function G:GetApplicantDungeonScores(member) return self.Applicants:GetDungeonScores(member) end
+function G:GetApplicantTimeMargin(member) return self.Applicants:GetTimeMargin(member) end
 function G:GetApplicantMapScore(member)
  local scores=self.Applicants:GetDungeonScores(member,true)
  return scores and scores.mapScore

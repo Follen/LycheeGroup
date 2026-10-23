@@ -161,8 +161,13 @@ notes.eReason.box:UserType("Preserve this unsaved note")
 U:SetWindowSize(1200,760)
 T.eq(notes.eReason.box:GetText(),"Preserve this unsaved note")
 T.eq(notes.main:GetWidth()+224,U.content:GetWidth());T.eq(notes.historyList:GetWidth(),notes.main:GetWidth()-48)
-local point={notes.eStatus:GetPoint()}
-T.ok(-point[#point]+notes.eStatus:GetStringHeight()<=notes.editor:GetHeight()-56,"the short editor leaves space for its bottom actions")
+local footerTop=notes.editor:GetHeight()-U.Theme.notesESaveBottomrightY-notes.eSave:GetHeight()
+local point={notes.eReason:GetPoint()}
+T.ok(-point[#point]+notes.eReason:GetHeight()+12<=footerTop,"the short editor keeps its reason input above the actions")
+notes:SetEditorStatus("Draft validation message","error")
+point={notes.eStatus:GetPoint()}
+T.ok(-point[#point]+notes.eStatus:GetStringHeight()+12<=footerTop,"visible feedback leaves space for the bottom actions")
+notes:SetEditorStatus("")
 T.ok(notes.eReason:GetHeight()>=32)
 U:SetWindowSize(1500,960)
 T.eq(notes.eReason.box:GetText(),"Preserve this unsaved note")

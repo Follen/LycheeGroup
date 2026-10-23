@@ -5,9 +5,10 @@
 ## Notes: Group finding and player notes for retail World of Warcraft.
 ## Notes-zhCN: 正式服组队与玩家记录。
 ## IconTexture: Interface\AddOns\LycheeGroup\Media\addon-logo.tga
-## Version: 1.2.3
+## Version: 1.2.4
 ## SavedVariables: LycheeGroupDB
 ## SavedVariablesPerCharacter: LycheeGroupPrefsDB
+## OptionalDeps: SeUI
 Libs\LycheeUI\embeds.xml
 Locale.lua
 Theme\Defaults.lua
@@ -25,5 +26,7 @@ BrandMotion.lua
 Floating.lua
 API.lua
 Adapters\Rurutia.lua
+Adapters\SEUI.lua
 Minimap.lua
+PartyRoleCheck.lua
 Entrypoints.lua

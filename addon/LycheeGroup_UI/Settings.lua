@@ -5,28 +5,28 @@ local C,T,L=UI.C,UI.Theme,UI.L
 local P={section="general"};UI.pages.settings=P
 local zh=A:GetLocale()=="zhCN"
 local function S(cn,en) return zh and cn or en end
-local sections={{"general",S("入口与快捷键","Access & shortcuts")},{"interface",S("界面与外观","Appearance")},{"browse",S("队伍与成员","Groups & members")},{"memberIcons",S("成员图标","Member icons")},{"blocks",S("屏蔽","Blocks")},{"notes",S("笔记与提醒","Notes and reminders")},{"floating",S("悬浮窗","Floating window")},{"about",L.about}}
+local sections={{"general",S("常规","General")},{"interface",S("界面显示","Appearance")},{"browse",S("寻求组队","Find groups")},{"memberIcons",S("成员显示","Member display")},{"notes",S("笔记与提醒","Notes & reminders")},{"blocks",S("屏蔽名单","Blocked leaders")},{"floating",S("悬浮窗","Floating window")},{"about",L.about}}
 local types={{value="positive",label=S("推荐","Positive")},{value="neutral",label=S("中性","Neutral")},{value="caution",label=S("拉黑","Blocked")}}
 local definitions={
- general={{"toggleBinding",A.L.bindingToggle,"","binding"},
+ general={{"language",S("界面语言","Interface language"),S("仅改变插件文字，重载界面后生效。","Change addon text. Reload the UI to apply."),{{value="auto",label=S("跟随游戏","Game language")},{value="zhCN",label="简体中文"},{value="enUS",label="English"}}},
+ {"toggleBinding",A.L.bindingToggle,"","binding"},
  {"minimap",S("显示小地图按钮","Show minimap button"),S("是否显示小地图按钮","Show or hide the minimap button.")},
  {"nativeLFGEntry",S("隐藏原生组队眼睛","Hide the native LFG eye"),S("预组队隐藏原生眼睛按钮","Hide the native eye button for premade groups.")}},
- interface={{"language",S("界面语言","Interface language"),S("仅改变插件文字，重载界面后生效。","Change addon text. Reload the UI to apply."),{{value="auto",label=S("跟随游戏","Game language")},{value="zhCN",label="简体中文"},{value="enUS",label="English"}}},
+ interface={{"font",S("界面字体","Interface font"),S("选择主窗口与悬浮窗使用的字体。","Choose the main and floating window font."),function() return A.Fonts:Choices() end},
+ {"fontScale",S("字体大小","Font size"),S("调节插件全局文字大小。","Adjust text size throughout the addon."),"range",70,130},
  {"uiScale",S("主窗口缩放","Main window scale"),S("等比调整整个主窗口。","Scale the entire main window proportionally."),"range",75,125},
- {"fontScale",S("字体大小","Font size"),S("调节插件全局文字","Adjust text size throughout the addon."),"range",70,130},
- {"font",S("界面字体","Interface font"),S("界面字体选择","Choose the interface font."),function() return A.Fonts:Choices() end},
- {"showImportantFilters",S("在主界面显示重要过滤","Show key filters on the main page"),S("开启后在“我的申请”内显示；关闭时在筛选弹窗内调整。","Show them in My applications, or keep them in the filter panel when off.")},
  {"reduceMotion",L.reduceMotion,S("关闭开窗位移、Logo 动作和局部过渡。","Disable window movement, logo animation and local transitions.")}},
  browse={
- {"defaultSort",S("默认排序","Default sorting"),S("本角色进入其他活动分类时采用的排序。","Default sorting for this character's activity categories."),{{value="newest",label=L.newest},{value="rating",label=L.leaderRating},{value="itemLevel",label=L.requiredItemLevel},{value="members",label=L.members}}},
+ {"defaultSort",S("默认排序","Default sorting"),S("各分类未单独设置排序时使用。","Used when a category has no saved sorting preference."),{{value="newest",label=L.newest},{value="rating",label=L.leaderRating},{value="itemLevel",label=L.requiredItemLevel},{value="members",label=L.members}}},
  {"rememberFilters",S("记住本角色的筛选","Remember character filters"),S("本角色独立保存各分类筛选。","Save category filters for this character.")},
- {"relations",S("好友与公会标记","Friend and guild markers"),S("在队伍、申请者和成员提示中显示关系。","Show relationships in group, applicant and player details.")},
- {"raidMembers",S("团本成员列表","Raid members"),S("控制团本悬停提示中何时展开成员。","Choose when raid tooltips expand the member list."),{{value="shift",label=S("按 Shift 切换","Press Shift to toggle")},{value="alt",label=S("按 Alt 切换","Press Alt to toggle")},{value="ctrl",label=S("按 Ctrl 切换","Press Ctrl to toggle")},{value="always",label=S("始终展开","Always expand")}}}},
+ {"showImportantFilters",S("主界面重要筛选","Key filters on main page"),S("开启后在“我的申请”内显示；关闭时在筛选弹窗内调整。","Show them in My applications, or keep them in the filter panel when off.")}},
  memberIcons={
- {"memberIconShape",S("图标形状","Icon shape"),S("调整寻队五人成员图标及职业色边框的轮廓。","Choose the shape of five-player search-result icons and their borders."),{{value="circle",label=S("圆形","Circle")},{value="square",label=S("圆角方形","Rounded square")}}},
- {"memberLeaderMark",S("成员队长标记","Roster leader mark"),S("在实际队长的成员头像上方显示皇冠。","Show a crown above the actual leader's member icon.")},
- {"memberClassBorder",S("成员职业色边框","Class-color borders"),S("为寻队结果已有成员显示职业色边框。","Show class-color borders around occupied search-result member icons.")},
- {"memberIconScale",S("成员图标缩放","Member icon scale"),S("调整寻队结果五人成员图标大小，成员列自动预留空间。","Resize five-player search-result icons; reserve column space automatically."),"range",75,175}},
+ {"relations",S("好友与公会标记","Friend and guild markers"),S("在队伍、申请者和成员提示中显示关系。","Show relationships in group and player details.")},
+ {"raidMembers",S("团本成员名单","Raid member list"),S("选择团本提示展开成员名单的方式。","Choose how raid tooltips expand the roster."),{{value="shift",label=S("按 Shift 切换","Shift to toggle")},{value="alt",label=S("按 Alt 切换","Alt to toggle")},{value="ctrl",label=S("按 Ctrl 切换","Ctrl to toggle")},{value="always",label=S("始终展开","Always expand")}}},
+ {"memberIconShape",S("图标形状","Icon shape"),S("选择寻队五人成员图标与边框的形状。","Shape of five-player icons and borders."),{{value="circle",label=S("圆形","Circle")},{value="square",label=S("圆角方形","Rounded square")}}},
+ {"memberIconScale",S("图标缩放","Icon scale"),S("调整寻队五人成员图标大小，成员列自动留出空间。","Resize five-player icons; adjust column space."),"range",75,175},
+ {"memberClassBorder",S("职业色边框","Class-color borders"),S("在寻队已有成员图标周围显示职业色。","Show class colors around occupied member icons.")},
+ {"memberLeaderMark",S("队长皇冠","Leader crown"),S("在实际队长的成员头像上方显示皇冠。","Show a crown above the actual leader's icon.")}},
  notes={{"defaultNote",S("新记录的默认类型","Default note type"),S("每次记笔记时仍可选择其他类型。","Choose a different type whenever you record a player."),types},
  {"noteMarks",S("荔枝笔记标记","Player note markers"),S("分别显示推荐、中性和拉黑记录；包含队伍成员。","Show recommendation, neutral and block markers, including group members.")},
  {"reminders",S("组队与邀请提醒","Group and invite reminders"),S("收到邀请、邀请玩家或再次组队时，提示符合范围的记录。","Show matching player notes when receiving an invite, inviting a player or grouping again."),{{value="all",label=S("全部记录","All notes")},{value="positive",label=S("仅推荐","Recommended only")},{value="caution",label=S("仅拉黑","Blocked only")},{value="off",label=S("不提醒","Off")}}},
@@ -48,6 +48,7 @@ function P:Build(parent)
  local rail=CreateFrame("Frame",nil,root);rail:SetSize(T.settingsSidebarWidth,T.contentHeight);rail:SetPoint("TOPLEFT");self.rail=rail
  self.nav={};for i,entry in ipairs(sections) do
   local b=C.Navigation(rail,entry[2],T.settingsSidebarWidth,function() P:SelectSection(entry[1]) end,nil,{radius=8,fontSize=14});b:SetPoint("TOPLEFT",0,-12-(i-1)*52);b.label:SetWidth(T.settingsBLabelWidth)
+  b.label:SetWordWrap(true);C.SetLineHeight(b.label,T.navigationLineHeight)
   UI:Element(b,"settings.navigation","settings",b,"settings.navigation",entry[1]);self.nav[entry[1]]=b
  end
  local main=CreateFrame("Frame",nil,root);main:SetSize(T.contentWidth-T.settingsMainX,T.contentHeight);main:SetPoint("TOPLEFT",T.settingsMainX,0);C.Panel(main,"surfaceLow","settingsPanelRadius");self.main=main
@@ -59,22 +60,21 @@ function P:Build(parent)
  end
  local reset={"resetPosition",S("悬浮窗位置","Floating window position"),S("未锁定时拖动荔枝标志，可放在屏幕内任意位置。","Drag the lychee logo to position the window when unlocked."),"action"}
  self:BuildRow(self.panels.floating,reset,#definitions.floating+1)
- self.reloadLanguage=C.Button(self.panels.interface,S("重载界面","Reload UI"),T.settingsReloadLanguageWidth,function() C_UI.Reload() end);self.reloadLanguage:SetWidth(T.settingsReloadLanguageWidth)
+ self.reloadLanguage=C.Button(self.panels.general,S("重载界面","Reload UI"),T.settingsReloadLanguageWidth,function() C_UI.Reload() end);self.reloadLanguage:SetWidth(T.settingsReloadLanguageWidth)
  self:BuildAbout(self.panels.about)
 self:RegisterBuildElements()
  end
 function P:BuildBlocks()
  local panel=self.panels.blocks
- self.blocksHelp=C.Text(panel,S("屏蔽相同标题队伍时，也会屏蔽对应队长。","Blocking groups with the same title also blocks their leaders."),14,"muted",BODY_WIDTH)
- self.blocksHelp:SetPoint("TOPLEFT");self.blocksHelp:SetWordWrap(true);C.SetLineHeight(self.blocksHelp,20)
  self.blocksCount=C.Text(panel,"",14,"muted");C.SetLineHeight(self.blocksCount,20,true)
+ self.blocksCount:SetWordWrap(false)
  self.blocksClear=C.Button(panel,S("全部清空","Clear all"),nil,function() if P.blockGroup then P.blockGroup.Results:ClearBlockedTitles() end end,{variant="text"})
  -- SetRowInitializer grows the visible pool after the actual records arrive.
  local list=C.List(panel,BODY_WIDTH+12,0,52)
- list:SetStyle({selectionFill=false,selectionMark=false,hoverFill=false});self.blocksList=list
+ list:SetStyle({selectionFill=false,selectionMark=false,hoverFill=false,radius=0});self.blocksList=list
  list:SetRowInitializer(function(row)
-  row.title:ClearAllPoints();C.SetPoint(row.title,"LEFT",row.title:GetParent(),"LEFT","settingsRowTitleLeftX",0);row.title:SetWordWrap(false);C.SetFont(row.title,15);C.SetLineHeight(row.title,20,true)
-  row.meta:ClearAllPoints();row.meta:Show();row.meta:SetWordWrap(false);C.SetFont(row.meta,13);C.SetLineHeight(row.meta,18,true);UI:Color(row.meta,"muted")
+  row.title:ClearAllPoints();C.SetPoint(row.title,"LEFT",row.title:GetParent(),"LEFT","settingsRowTitleLeftX",0);row.title:SetWordWrap(false);C.SetFont(row.title,16);C.SetLineHeight(row.title,22,true)
+  row.meta:ClearAllPoints();row.meta:Show();row.meta:SetWordWrap(false);C.SetFont(row.meta,14);C.SetLineHeight(row.meta,20,true);UI:Color(row.meta,"muted")
   row:SetScript("OnClick",nil)
   row.remove=C.Button(row,S("移除","Remove"),nil,function(button)
    if P.blockGroup and row.key==button.targetKey and row._hitVisible and list.clip:IsMouseOver() then P.blockGroup.Results:RemoveBlockedLeader(button.targetKey) end
@@ -91,34 +91,46 @@ self:RegisterBuildElements()
 function P:LayoutBlockColumns(header)
  if not self.blocksList then return end
  local name,realm,actions=header.columns.name,header.columns.realm,header.columns.actions
+ for _,key in ipairs({"name","realm"}) do
+  local label=header.labels[key]
+  label:ClearAllPoints();label:SetPoint("LEFT",12,0);label:SetWidth(math.max(1,header.columns[key].width-24))
+ end
+ local actionLabel=header.labels.actions
+ actionLabel:ClearAllPoints();actionLabel:SetPoint("RIGHT",-12-T.settingsActionTextPadding/2,0);actionLabel:SetJustifyH("RIGHT");actionLabel:SetWidth(math.max(1,actions.width-24-T.settingsActionTextPadding/2))
  for _,row in ipairs(self.blocksList.rows) do
-  row.title:ClearAllPoints();row.title:SetPoint("LEFT",name.x+6,0);row.title:SetWidth(name.width-12)
-  row.meta:ClearAllPoints();row.meta:SetPoint("LEFT",realm.x+6,0);row.meta:SetWidth(realm.width-12)
-  row.remove:ClearAllPoints();row.remove:SetPoint("LEFT",actions.x+(actions.width-row.remove:GetWidth())/2,0)
+  row.title:ClearAllPoints();row.title:SetPoint("LEFT",name.x+12,0);row.title:SetWidth(math.max(1,name.width-24))
+  row.meta:ClearAllPoints();row.meta:SetPoint("LEFT",realm.x+12,0);row.meta:SetWidth(math.max(1,realm.width-24))
+  row.remove:ClearAllPoints();row.remove:SetPoint("LEFT",actions.x+actions.width-12-row.remove:GetWidth(),0)
  end
 end
 function P:LayoutBlocks()
  if not self.blocksList then return end
- local top=self.blocksHelp:GetStringHeight()+8
- self.blocksHelp:SetHeight(self.blocksHelp:GetStringHeight())
+ local top=0
  local list=self.blocksList
  local toolbarHeight=math.max(32,math.ceil(self.blocksClear.label:GetStringHeight())+12)
  self.blocksClear:SetHeight(toolbarHeight)
- self.blocksClear:SetWidth(math.ceil(self.blocksClear.label:GetStringWidth())+T.settingsActionTextPadding)
- self.blocksClear:ClearAllPoints();self.blocksClear:SetPoint("TOPRIGHT",-list.gutter-12,-top)
- self.blocksCount:ClearAllPoints();self.blocksCount:SetPoint("LEFT",self.panels.blocks,"TOPLEFT",0,-top-toolbarHeight/2)
- top=top+toolbarHeight+8
+ self.blocksClear:SetWidth(math.ceil(C.MeasureTextWidth(self.blocksClear.label))+T.settingsActionTextPadding)
+ -- The count belongs to the title line; its panel still owns visibility.
+ self.blocksCount:SetWidth(math.ceil(C.MeasureTextWidth(self.blocksCount))+2)
+ self.blocksCount:ClearAllPoints();self.blocksCount:SetPoint("LEFT",self.heading,"RIGHT",12,0)
+ local titleCenter=self.panels.blocks.layoutTop-T.settingsContentInset-self.heading:GetHeight()/2
+ self.blocksClear:ClearAllPoints();self.blocksClear:SetPoint("RIGHT",self.panels.blocks,"TOPRIGHT",-list.gutter-12,titleCenter)
+ local headingHeight=24
+ for _,label in pairs(self.blocksHeader.labels) do headingHeight=math.max(headingHeight,math.ceil(label:GetHeight())) end
+ self.blocksHeader:SetHeight(headingHeight)
  self.blocksHeader:ClearAllPoints();C.SetPoint(self.blocksHeader,"TOPLEFT",self.blocksHeader:GetParent(),"TOPLEFT","settingsBlocksHeaderTopleftX",-top)
  top=top+self.blocksHeader:GetHeight()+8
- local rowHeight=math.max(52,math.ceil(UI.context:GetLineHeight("label")+24))
+ local first=list.rows[1]
+ local rowHeight=math.max(52,math.ceil(math.max(first.title:GetHeight(),first.meta:GetHeight())+24))
  local viewport=math.max(rowHeight,self.panels.blocks:GetHeight()-top)
  list:ClearAllPoints();C.SetPoint(list,"TOPLEFT",list:GetParent(),"TOPLEFT","settingsListTopleftX",-top);list:SetRowHeight(rowHeight,rowHeight,viewport)
  for _,row in ipairs(list.rows) do
   row.remove:SetHeight(toolbarHeight)
-  row.remove:SetWidth(math.ceil(row.remove.label:GetStringWidth())+T.settingsActionTextPadding)
+  row.remove:SetWidth(math.ceil(C.MeasureTextWidth(row.remove.label))+T.settingsActionTextPadding)
  end
  self.blocksHeader:Layout(list:GetWidth()-list.gutter)
- self.blocksEmpty:ClearAllPoints();self.blocksEmpty:SetPoint("TOPLEFT",0,-top-48)
+ self.blocksEmpty:SetWidth(math.max(1,self.blocksHeader:GetWidth()-24));self.blocksEmpty:SetHeight(math.ceil(self.blocksEmpty:GetStringHeight()))
+ self.blocksEmpty:ClearAllPoints();self.blocksEmpty:SetPoint("CENTER",list.clip,"CENTER",0,0)
 end
 function P:RefreshBlocks()
  local results=self.blockGroup and self.blockGroup.Results
@@ -352,6 +364,15 @@ function P:BeginBindingCapture()
  self:Sync()
 end
 function P:LayoutRows()
+ local navTop=12
+ for _,entry in ipairs(sections) do
+  local button=self.nav[entry[1]]
+  button.label:SetHeight(0)
+  local labelHeight=math.ceil(button.label:GetStringHeight())
+  button.label:SetHeight(labelHeight);button:SetHeight(math.max(48,labelHeight+16))
+  button:ClearAllPoints();button:SetPoint("TOPLEFT",0,-navTop)
+  navTop=navTop+button:GetHeight()+4
+ end
  local offset=self.bindingNotice and self.bindingNotice:IsShown() and self.bindingNotice:GetHeight()+12 or 0
  for key,panel in pairs(self.panels) do
   UI.Motion:FinishPlacement(panel)
@@ -374,7 +395,8 @@ function P:LayoutRows()
   if panel.rowLayout then panel.rowLayout.options.width=BODY_WIDTH;panel.rowLayout:Layout() end
   panel.nextRowY=top
  end
- self.reloadLanguage:ClearAllPoints();self.reloadLanguage:SetPoint("TOPRIGHT",0,-self.panels.interface.nextRowY-16)
+ local reloadPanel=self.reloadLanguage:GetParent()
+ self.reloadLanguage:ClearAllPoints();self.reloadLanguage:SetPoint("TOPRIGHT",reloadPanel,"TOPRIGHT",0,-reloadPanel.nextRowY-16)
  if self.themeReloadHint then
   self.themeReloadHint:SetWidth(math.max(1,BODY_WIDTH-self.reloadLanguage:GetWidth()-24))
   self.themeReloadHint:ClearAllPoints();self.themeReloadHint:SetPoint("TOPLEFT",0,-self.panels.interface.nextRowY-16)
@@ -398,7 +420,7 @@ local function SizePage(self,width,height)
  for _,row in ipairs(self.otherAddons) do row.frame:SetWidth(BODY_WIDTH);row.title:SetWidth(BODY_WIDTH-84);row.summary:SetWidth(BODY_WIDTH-96) end
  if self.bindingNotice then self.bindingNotice:SetWidth(BODY_WIDTH) end
  if self.blocksList then
-  self.blocksHelp:SetWidth(BODY_WIDTH);self.blocksEmpty:SetWidth(BODY_WIDTH);self.blocksList:SetWidth(BODY_WIDTH+12)
+  self.blocksEmpty:SetWidth(BODY_WIDTH);self.blocksList:SetWidth(BODY_WIDTH+12)
  end
 end
 function P:LayoutSize(width,height)
@@ -465,7 +487,10 @@ function P:Sync()
   UI:Element(self.themeReloadHint,"settings.themeReloadHint","settings")
  end
  if self.themeReloadHint then self.themeReloadHint:SetShown(pendingTheme) end
- self.reloadLanguage:SetShown(pendingTheme or A:NeedsLanguageReload())
+ -- Language belongs to General; a pending theme belongs to Appearance.
+ -- Reuse the action while keeping each reload reason in its own section.
+ self.reloadLanguage:SetParent(self.section=="general" and self.panels.general or self.panels.interface)
+ self.reloadLanguage:SetShown(self.section=="general" and A:NeedsLanguageReload() or self.section=="interface" and pendingTheme)
  self:LayoutRows()
  if self.section=="about" then self:RefreshAbout() end
  if self.section=="blocks" then self:RefreshBlocks() end
@@ -485,6 +510,6 @@ end
 
 
 function P:RegisterBuildElements()
-UI:ElementFields(self,"settings","frame rail main heading reloadLanguage blocksHelp blocksCount blocksClear blocksHeader blocksEmpty aboutHeader aboutBrand otherAddonsHeading dedicationToast bindingNotice cancelBinding overwriteBinding","settings")
+UI:ElementFields(self,"settings","frame rail main heading reloadLanguage blocksCount blocksClear blocksHeader blocksEmpty aboutHeader aboutBrand otherAddonsHeading dedicationToast bindingNotice cancelBinding overwriteBinding","settings")
  if self.blocksList then UI:ElementList(self.blocksList,"settings.blocksList","settings","settings.block") end
 end

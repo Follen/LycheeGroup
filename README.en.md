@@ -4,7 +4,7 @@
 
 A group-finding addon for retail World of Warcraft. Find groups, manage recruitment, and keep notes on players you meet, all in one window.
 
-The current version is **1.2.3**, targeting retail **12.1.5** (Interface `120105`) with Chinese and English support. See the [changelog](CHANGELOG.md) for release notes (in Chinese).
+The current version is **1.2.4**, targeting retail **12.1.5** (Interface `120105`) with Chinese and English support. See the [changelog](CHANGELOG.md) for release notes (in Chinese).
 
 ## Features
 
@@ -16,7 +16,7 @@ The current version is **1.2.3**, targeting retail **12.1.5** (Interface `120105
 - **Group blocking:** block matching titles from a listing's context menu and remember their leaders across refreshes and reloads. Remove individual entries or clear the list under Settings → Blocks, independently of player notes.
 - **Player notes:** share positive, neutral, or blocked-player records across characters on the account, with reminders when you group again. Import and export your notes.
 - **Mythic+ history:** keep a per-character history of runs, key levels, dates, and teammates, then add notes from past runs.
-- **Interface settings:** change the main-window key binding, overall scale, and font size; the floating window has its own scale setting. Clicking Settings again returns to the page you came from. RurutiaSuite top bar integration is detected automatically and can be toggled in the floating window settings.
+- **Interface settings:** change the main-window key binding, overall scale, and font size; the floating window has its own scale setting. Clicking Settings again returns to the page you came from. Automatically integrate with the RurutiaSuite top bar or place the entry to the left of the skull in SEUI's marker bar when both the floating window and compatibility settings are enabled.
 
 The interface uses native Lua with bundled LycheeUI. Feature modules load on demand; no separate UI library installation is needed.
 
@@ -56,7 +56,7 @@ The default main-window key is the English semicolon `;`. It is assigned only wh
 
 ## Development
 
-Version 1.1.5 exposes `LycheeGroup.API.Floating` for existing top bars and other entry points. It supports status subscriptions, attachment, refresh, release, and the shared popup. See the [interface contract](Architecture.md#92-浮窗公开接口). The bundled RurutiaSuite adapter lives in [`Adapters/Rurutia.lua`](addon/LycheeGroup/Adapters/Rurutia.lua) and demonstrates the public interface.
+Version 1.1.5 exposes `LycheeGroup.API.Floating` for existing top bars and other entry points. It supports status subscriptions, attachment, refresh, release, and the shared popup. See the [interface contract](Architecture.md#92-浮窗公开接口). The bundled [RurutiaSuite adapter](addon/LycheeGroup/Adapters/Rurutia.lua) and [SEUI adapter](addon/LycheeGroup/Adapters/SEUI.lua) live in `Adapters/` and demonstrate the public interface.
 
 Run the offline tests from the repository root with Lua 5.1:
 
@@ -72,6 +72,6 @@ For the local widget-tree preview, run `lua tests/ui_preview.lua`, then open [`t
 
 Project documents (in Chinese): [Product](Product.md) · [Design](Desgin.md) · [Architecture](Architecture.md) · [Performance](perfermance.md) · [Third-party configuration API](API.md) · [Development rules](Development.md) · [Documentation and changelog rules](Agents.md). The product document describes the current implementation and in-game validation coverage.
 
-The current release is 1.2.3; development changes are in the [unreleased changelog](CHANGELOG.md#未发布). The unreleased implementation uses [Theme API v2](API.md): account or character themes apply at login or reload, while font size, scale, window size, and table preferences remain live. Business behavior and the default UI are compared against the pinned main commit. See [Development.md](Development.md) for development rules and [theme reload validation](tests/theme_reload.md) for verification methods. Edit LycheeUI in its source directory and use the sync tool to update the embedded copy; [.lock](../LycheeUI/.lock) records its freeze status. Shared-library contracts are in its [README](../LycheeUI/README.md), [API](../LycheeUI/API.md), and [design specification](../LycheeUI/DESIGN.md).
+The current release is 1.2.4; release notes are in the [changelog](CHANGELOG.md). This release uses [Theme API v2](API.md): account or character themes apply at login or reload, while font size, scale, window size, and table preferences remain live. Business behavior and the default UI are compared against the pinned main commit. See [Development.md](Development.md) for development rules and [theme reload validation](tests/theme_reload.md) for verification methods. Edit LycheeUI in its source directory and use the sync tool to update the embedded copy; [.lock](../LycheeUI/.lock) records its freeze status. Shared-library contracts are in its [README](../LycheeUI/README.md), [API](../LycheeUI/API.md), and [design specification](../LycheeUI/DESIGN.md).
 
 See the [library notes](addon/LycheeGroup_Group/Libs/README.md) for bundled third-party sources and licenses.

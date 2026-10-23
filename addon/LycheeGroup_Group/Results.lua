@@ -364,7 +364,7 @@ local function Sort(a,b)
  local x,y=records[a],records[b]
  local xd,yd=G.Applications:GetDeclinedAt(x.partyGUID)~=nil,G.Applications:GetDeclinedAt(y.partyGUID)~=nil
  if xd~=yd then return not xd end
- local xf,yf=x.bnetFriends+x.charFriends>0,y.bnetFriends+y.charFriends>0
+ local xf,yf=x.bnetFriends+x.charFriends+x.guildMates>0,y.bnetFriends+y.charFriends+y.guildMates>0
  if xf~=yf then return xf end
  local av,bv
  if sorting=="rating" then av,bv=x.leaderRating or -1,y.leaderRating or -1

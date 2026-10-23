@@ -35,9 +35,9 @@ definitions["layout.floating.position"]={default=layoutDefaults.floating.positio
 definitions["layout.find.railCollapsed"]={default=layoutDefaults.find.railCollapsed,type="boolean",storage="character",legacy={path={"find","railCollapsed"}}}
 
 local tables={
- findResults={columns={"title","leader","members","ilvl","rating","description","age"},sorts={"members","ilvl","rating","age"}},
- findRaidResults={columns={"title","leader","members","ilvl","rating","description","age"},sorts={"members","ilvl","rating","age"}},
- findApplications={columns={"title","leader","members","status","actions"},sorts={"members","status"}},
+ findResults={columns={"title","activity","leader","members","ilvl","rating","description","age"},sorts={"activity","members","ilvl","rating","age"}},
+ findRaidResults={columns={"title","activity","leader","members","ilvl","rating","description","age"},sorts={"activity","members","ilvl","rating","age"}},
+ findApplications={columns={"title","activity","leader","members","status","actions"},sorts={"members","status"}},
  createApplicants={columns={"name","role","faction","rating","mapScore","ilvl","comment","actions"},sorts={"rating","mapScore","ilvl"}},
  notesRecords={columns={"player","timestamp"},sorts={"timestamp"}},
  notesHistory={columns={"activity","level","duration","teammates","completed"},sorts={"level","duration","completed"}},
@@ -225,6 +225,16 @@ function Appearance:RefreshTableState(id)
  if not state then state={};self.tableStates[id]=state;stateIDs[state]=id end
  local widths={}
  for _,column in ipairs(tables[id].columns) do widths[column]=Configuration:Get(TableKey(id,"widths."..column)) end
+ if (id=="findResults" or id=="findRaidResults" or id=="findApplications") and widths.title then
+  local split=not widths.activity
+  if not split then
+   local titleSource=Configuration:GetSource(TableKey(id,"widths.title"))
+   local activitySource=Configuration:GetSource(TableKey(id,"widths.activity"))
+   -- A new built-in activity width must not conceal an old saved combined title.
+   split=activitySource.kind=="default" and (titleSource.kind=="user" or titleSource.kind=="preset")
+  end
+  if split then widths.activity=widths.title*.55;widths.title=widths.title*.45 end
+ end
  state.widths=next(widths) and widths or nil
  state.sortKey=Configuration:Get(TableKey(id,"sortKey")) or nil
  state.descending=Configuration:Get(TableKey(id,"descending"))
