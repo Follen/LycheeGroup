@@ -249,7 +249,7 @@ function Tip:BuildInteractive()
  for i=1,4 do local title=C.Text(canvas,"","font14","dim");C.SetLineHeight(title,"line20",true);local value=C.Text(canvas,"","font14","text");C.SetLineHeight(value,"line20",true);f.metrics[i]={title=title,value=value} end
  f.composition=C.Roster(canvas,22,5);C.SetPoint(f.composition,"TOPLEFT",f.composition:GetParent(),"TOPLEFT",0,"tooltipFCompositionTopleftY")
  f.raidLeader=C.Text(canvas,"","font14","muted");C.SetLineHeight(f.raidLeader,"line20");f.raidLeader:SetWordWrap(true);f.raidLeader:Hide()
- f.raidLeaderIcon=C.Icon(canvas,T.tooltipFRaidLeaderIconWidth);C.ApplyStyle(f.raidLeaderIcon,{width="tooltipFRaidLeaderIconWidth",height="tooltipFRaidLeaderIconHeight"});f.raidLeaderIcon:SetTexture(T.media.."leader.tga");f.raidLeaderIcon:Hide()
+ f.raidLeaderIcon=C.Icon(canvas,T.tooltipFRaidLeaderIconWidth);C.ApplyStyle(f.raidLeaderIcon,{width="tooltipFRaidLeaderIconWidth",height="tooltipFRaidLeaderIconHeight"});UI:SetMediaTexture(f.raidLeaderIcon,"leader.tga");f.raidLeaderIcon:Hide()
  f.comment=C.Text(canvas,"","font14","text");C.SetPoint(f.comment,"TOPLEFT",f.comment:GetParent(),"TOPLEFT",0,"tooltipFCommentTopleftY");f.comment:SetWordWrap(true);C.SetLineHeight(f.comment,"line22")
  f.footer=C.Text(canvas,"","font14","dim");f.footer:SetWordWrap(true);C.SetLineHeight(f.footer,"line20")
  f.bossTitle=C.Text(canvas,Say("首领进度","Boss progress"),"font14","text",T.tooltipFBossTitleWidth);C.ApplyStyle(f.bossTitle,{width="tooltipFBossTitleWidth"});C.SetLineHeight(f.bossTitle,"line20",true)
@@ -262,12 +262,12 @@ function Tip:BuildInteractive()
  f.dungeonTitle=C.Text(canvas,Say("本赛季大秘境","This season's Mythic+"),"font14","text");C.SetLineHeight(f.dungeonTitle,"line20",true);f.dungeonTitle:Hide()
  f.dungeonEmpty=C.Text(canvas,Say("未提供大秘境记录","No Mythic+ records provided"),"font14","dim");C.SetLineHeight(f.dungeonEmpty,"line20");f.dungeonEmpty:SetWordWrap(true);f.dungeonEmpty:Hide()
  f.dungeonRows={}
- f.playerRole=C.Icon(canvas,T.tooltipIdentityMarkSize);f.playerRole:Hide()
- f.playerFaction=C.Icon(canvas,T.tooltipIdentityMarkSize);f.playerFaction:Hide()
+ f.playerRole=C.Icon(canvas,T.tooltipIdentityMarkSize);C.ApplyStyle(f.playerRole,{width="tooltipIdentityMarkSize",height="tooltipIdentityMarkSize"});f.playerRole:Hide()
+ f.playerFaction=C.Icon(canvas,T.tooltipIdentityMarkSize);C.ApplyStyle(f.playerFaction,{width="tooltipIdentityMarkSize",height="tooltipIdentityMarkSize"});f.playerFaction:Hide()
  f.noteHeading=C.Text(canvas,"","font14","muted");C.SetLineHeight(f.noteHeading,"line20",true);f.noteHeading:Hide()
  f.noteGlyph=C.Glyph(canvas,"book",T.tooltipFNoteGlyphWidth);C.ApplyStyle(f.noteGlyph,{width="tooltipFNoteGlyphWidth",height="tooltipFNoteGlyphHeight"});f.noteGlyph:Hide()
  f.noteDate=C.Text(canvas,"","font14","dim");C.SetLineHeight(f.noteDate,"line20");f.noteDate:Hide()
- f.noteDivider=canvas:CreateTexture(nil,"ARTWORK");f.noteDivider:SetColorTexture(unpack(T.border));f.noteDivider:SetHeight(1);f.noteDivider:Hide()
+ f.noteDivider=C.Fill(canvas,"border","ARTWORK");f.noteDivider:SetHeight(1);f.noteDivider:Hide()
  f.back=C.Button(canvas,Say("返回队伍","Back to group"),T.tooltipFBackWidth,function()
   Tip.member=nil;Tip.memberContext=nil;Tip.adjustPoint=true
   if Tip.record then Tip:RenderGroup()
@@ -283,13 +283,13 @@ function Tip:BuildInteractive()
   local restore=(Tip.pinned or Tip.directPlayer) and Tip:Capture() or nil
   UI:CopyText(Say("复制 WCL 链接","Copy WCL link"),"https://"..(region=="cn" and "cn." or "www.").."warcraftlogs.com/character/"..region.."/"..Encode(realm).."/"..Encode(name),restore,name.."-"..realm)
  end);C.ApplyStyle(f.wcl,{width="tooltipFWclWidth"})
- f.wcl:SetSurfaceColors(T.secondaryContainer,T.refreshHover,T.surfaceHighest)
+ f.wcl:SetSurfaceColors("secondaryContainer","refreshHover","surfaceHighest")
  f.note=C.Button(canvas,L.record,T.tooltipFNoteWidth,function()
   local key,name,realm=Members:Identity(Tip.member)
   if UI.preview then return end
   if name then A:Open("notes",UI:HasNote(key) and {playerKey=key} or {add={name=name,realm=realm,class=Tip.member.class,specID=Tip.member.specID}}) end
  end);C.ApplyStyle(f.note,{width="tooltipFNoteWidth"})
- f.note:SetSurfaceColors(T.secondaryContainer,T.refreshHover,T.surfaceHighest)
+ f.note:SetSurfaceColors("secondaryContainer","refreshHover","surfaceHighest")
  self.interactive=f;f:Hide()
 end
 function Tip:EnsureMemberButtons(count)
@@ -653,7 +653,7 @@ local function NoteHeader(f,note,top)
  local color=note.type=="positive" and T.good or note.type=="caution" and T.warning or T.muted
  f.noteDivider:ClearAllPoints();f.noteDivider:SetPoint("TOPLEFT",0,-top);f.noteDivider:SetWidth(f.canvas:GetWidth());f.noteDivider:Show()
  f.noteHeading:ClearAllPoints();C.SetPoint(f.noteHeading,"TOPLEFT",f.noteHeading:GetParent(),"TOPLEFT","tooltipFNoteHeadingTopleftX",-top-17);UI:SetText(f.noteHeading,L.notes);UI:Color(f.noteHeading,color);f.noteHeading:Show()
- f.noteGlyph:SetTexture(T.media..(note.type=="positive" and "heart" or note.type=="caution" and "caution" or "book")..".tga");f.noteGlyph:SetColor(color);f.noteGlyph:ClearAllPoints();C.SetPoint(f.noteGlyph,"LEFT",f.noteHeading,"LEFT","tooltipFNoteGlyphLeftX",0);f.noteGlyph:Show()
+ UI:SetMediaTexture(f.noteGlyph,(note.type=="positive" and "heart" or note.type=="caution" and "caution" or "book")..".tga");f.noteGlyph:SetColor(color);f.noteGlyph:ClearAllPoints();C.SetPoint(f.noteGlyph,"LEFT",f.noteHeading,"LEFT","tooltipFNoteGlyphLeftX",0);f.noteGlyph:Show()
  f.comment:ClearAllPoints();f.comment:SetPoint("TOPLEFT",0,-top-17-f.noteHeading:GetStringHeight()-12);f.comment:SetHeight(0);UI:Color(f.comment,T.text);UI:SetText(f.comment,note.reason~="" and note.reason or L.noReason)
  local dateTop=top+17+f.noteHeading:GetStringHeight()+12+math.max(f.comment:GetLineHeight(),f.comment:GetStringHeight())+12
  f.noteDate:ClearAllPoints();f.noteDate:SetPoint("TOPLEFT",0,-dateTop);f.noteDate:SetWidth(f.canvas:GetWidth());UI:SetText(f.noteDate,(note.classSpec and note.classSpec~="" and note.classSpec.." · " or "")..UI:DateText(note.timestamp));f.noteDate:Show()
@@ -702,9 +702,9 @@ function Tip:RenderDungeons(scores,top)
   row:SetWidth(width);row:ClearAllPoints();row:SetPoint("TOPLEFT",0,-top)
   row.label:ClearAllPoints();row.label:SetPoint("TOPLEFT");row.label:SetWidth(labelWidth)
   row.keyLevel:ClearAllPoints();row.keyLevel:SetPoint("TOPLEFT",labelWidth+12,0);row.keyLevel:SetWidth(levelWidth);row.keyLevel:SetShown(run~=nil)
-  if run and row.coloredLevel~=run.level then
+  if run and (row.coloredLevel~=run.level or row.keyLevel._color~=nil) then
    local color=C_ChallengeMode.GetKeystoneLevelRarityColor(run.level)
-   row.keyLevel:SetTextColor(color.r,color.g,color.b);row.coloredLevel=run.level
+   row.keyLevel:SetTextColor(color.r,color.g,color.b);row.keyLevel._color=nil;row.coloredLevel=run.level
   end
   row.status:ClearAllPoints();row.status:SetPoint("TOPRIGHT");row.status:SetWidth(statusWidth);row.status:SetShown(run~=nil);UI:Color(row.status,run and run.timed and T.good or T.dim)
   local nameX=labelWidth+12+(run and levelWidth+12 or 0)
@@ -795,7 +795,12 @@ function Tip:RenderPlayer(member,fromGroup,adjustPoint)
 end
 function Tip:OnAppearanceChanged()
  local frame=self.interactive
- if not frame or not frame:IsShown() then return end
+ if not frame then return end
+ frame.scroll:SetPoint("TOPLEFT",T.tooltipPadding,-T.tooltipPadding)
+ frame.scroll:SetPoint("BOTTOMRIGHT",-T.tooltipPadding-T.scrollWidth,T.tooltipPadding)
+ frame.scrollbar:SetPoint("TOPRIGHT",0,-T.tooltipPadding)
+ frame.scrollbar:SetPoint("BOTTOMRIGHT",0,T.tooltipPadding)
+ if not frame:IsShown() then return end
  local offset=frame.scroll:GetVerticalScroll()
  if self.noteKey then self:ShowNote(self.owner,self.noteKey)
  else self:RefreshRelations() end

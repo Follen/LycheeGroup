@@ -82,9 +82,10 @@ function Context:SetTheme(overrides)
  self.themeOverrides={};for key,value in pairs(overrides) do self.themeOverrides[key]=value end
  if not changed then return false end
  if self.tableHeaders then for header in pairs(self.tableHeaders) do header:StopDrag(false) end end
- self:CloseMenu();self.Motion:StopAll()
+ self:CloseMenu();self.Motion:StopAll(true)
  for key,value in pairs(nextTheme) do if not SameValue(self.Theme[key],value) then self.Theme[key]=value end end
  self:RefreshStyles(changes)
+ self.Motion:RefreshTheme()
  return true
 end
 function Context:PatchTheme(patch)
@@ -155,7 +156,15 @@ end
 local roleFiles={TANK="role-tank",HEALER="role-healer",DAMAGER="role-dps"}
 function Context:SetRoleIcon(icon,role)
  local file=roleFiles[role]
+ icon._lycheeGameBounds=nil
+ icon._lycheeRole=role
  icon:SetTexture(file and self.Theme.media..file..".tga" or nil);icon:SetTexCoord(0,1,0,1)
+ if not icon._lycheeRoleBound then
+  icon._lycheeRoleBound=true
+  self:BindStyle(icon,"roleIcon",function(target)
+   if target._lycheeRole then local roleFile=roleFiles[target._lycheeRole];target:SetTexture(roleFile and self.Theme.media..roleFile..".tga" or nil) end
+  end)
+ end
 end
 function Context:SetActivityIcon(icon,activity)
  if self.options.setActivityIcon then return self.options.setActivityIcon(icon,activity) end

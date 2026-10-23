@@ -20,7 +20,7 @@ local report={schema="lycheegroup.heroic-memory.v1",packages=packages,units="KB"
  scenario={requestedRaid="烈毒之渊",difficultyID=15,nativeHeroicSearches=6,minimumSearchSpacingSeconds=8,
   scrollIntervalSeconds=.15,sampleIntervalSeconds=.5,gcPolicy="natural until closed_final; one separate diagnostic collection",
   input="normal page/list/tooltip controllers; no hardware hit-testing claim"},
- settings={reduceMotion=A.db.reduceMotion,rememberFilters=A.charPrefs.rememberFilters,raidMembers=A.db.raidMembers,scriptProfile=GetCVar("scriptProfile")},
+ settings={reduceMotion=A:GetSetting("reduceMotion"),rememberFilters=A:GetSetting("rememberFilters"),raidMembers=A:GetSetting("raidMembers"),scriptProfile=GetCVar("scriptProfile")},
  samples={},queries={},peaks={},checks={},operations={wheel=0,reversals=0,scrollableTicks=0,groupTips=0,memberTips=0,tipWheel=0,filterSort=0},
  nativeEvents={bulk=0,result=0},maximum={results=0,filtered=0,scrollOffset=0,members=0},peakBytes=0}
 for i=1,256 do
@@ -31,7 +31,9 @@ end
 local used,ui,g,page,ticker,eventFrame,cleaned=0
 local oldPage=A.UI and A.UI.page
 local oldMain=A.UI and A.UI.mainPage
-local oldRemember=A.charPrefs.rememberFilters
+local config=A.API.Configuration
+local oldRemember=config:Get("settings.rememberFilters")
+local rememberSource=config:GetSource("settings.rememberFilters")
 local oldShown,oldFilters={},{}
 if A.UI then for key,p in pairs(A.UI.pages) do oldShown[key]=p.frame and p.frame:IsShown() or false end end
 local oldPrefs,prefsSaved
@@ -45,7 +47,9 @@ local function Cleanup()
   for key,p in pairs(ui.pages) do if p.frame then p.frame:SetShown(oldShown[key]==true) end end
   ui.page,ui.mainPage=oldPage,oldMain
  end
- A.charPrefs.rememberFilters=oldRemember
+ if rememberSource.kind=="user" and rememberSource.storage=="session" then
+  assert(config:Set({["settings.rememberFilters"]=oldRemember}))
+ else assert(config:Reset("settings.rememberFilters")) end
 end
 assert(probe:Async(115));assert(probe:OnCleanup(Cleanup))
 assert(probe:Guard(function() return not InCombatLockdown() and not C_ChallengeMode.IsChallengeModeActive() and not C_LFGList.HasActiveEntryInfo() and #C_LFGList.GetApplications()==0 end,
@@ -85,7 +89,7 @@ for _,key in ipairs({"settings","notes","create"}) do
  local opened,err=A:Open(key);if not opened then return probe:Fail("warm_"..key.."_"..tostring(err)) end
  ui=A.UI;page=ui.pages.find;Sample("first_"..key);ui:Hide(true)
 end
-A.charPrefs.rememberFilters=true
+assert(config:Set({["settings.rememberFilters"]=true}))
 g.prefs.find={category="seasonRaid",categoryPrefs={seasonRaid={difficultyID=15}}}
 page.loaded=nil;page.restoredInitial=nil
 local opened,err=A:Open("find");if not opened then return probe:Fail("open_find_"..tostring(err)) end

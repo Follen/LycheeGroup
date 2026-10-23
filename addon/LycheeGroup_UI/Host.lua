@@ -68,7 +68,7 @@ function UI:LayoutHeader()
  local x,changed=0,false
  for _,key in ipairs({"find","create","notes"}) do
   local button=self.navItems[key]
-  local width=button.label:GetStringWidth()+38
+  local width=button.label:GetStringWidth()+T.hostNavTextReserve
   if button:GetWidth()~=width then button:SetWidth(width);changed=true end
   if button.navX~=x then
    button:ClearAllPoints();button:SetPoint("TOPLEFT",button:GetParent(),"TOPLEFT",x,0)
@@ -79,7 +79,7 @@ function UI:LayoutHeader()
  local nav=self.navItems.find:GetParent()
  if nav:GetWidth()~=x-T.navGap then nav:SetWidth(x-T.navGap) end
  local settings=self.settingsButton
- local width=settings.label:GetStringWidth()+52
+ local width=settings.label:GetStringWidth()+T.hostSettingsTextReserve
  if settings:GetWidth()~=width then settings:SetWidth(width);changed=true end
  if changed then self._nav=nil;self:UpdateNav() end
 end
@@ -120,6 +120,9 @@ function UI:OnAppearanceChanged()
  self:LoadWindowSize()
  self:FitToScreen()
  local logo=self.logo:GetParent()
+ self:RefreshBrandText()
+ UI:SetMediaTexture(self.logo,"lychee-logo.tga")
+ self.Members:RefreshAppearance()
  logo:SetSize(T.logoSize,T.logoSize);self.logo:SetSize(T.logoSize,T.logoSize)
  logo:SetPoint("TOPLEFT",self.frame,"TOPLEFT",T.pageInset+8,-(T.headerHeight-T.logoSize)/2)
  self.closeButton:SetPoint("TOPRIGHT",self.frame,"TOPRIGHT",-T.pageInset,-(T.headerHeight-self.closeButton:GetHeight())/2)
@@ -136,15 +139,16 @@ function UI:OnAppearanceChanged()
   if page.frame then page:LayoutAppearance(width,height) end
  end
  self:RefreshHeaderLayout()
+ self._nav=nil;self:UpdateNav()
  if self.Application.applicationModal and self.Application.applicationModal.frame:IsShown() then self.Application:LayoutApplication() end
  self.Tooltip:OnAppearanceChanged()
 end
 
 function UI:FitToScreen()
 	self:StopWindowResize()
-	local scale = math.min(1, (UIParent:GetWidth() - 40) / T.width, (UIParent:GetHeight() - 40) / T.height) * A:GetSetting("uiScale") / 100
+	local scale = math.min(1, (UIParent:GetWidth() - T.windowScreenInset*2) / T.width, (UIParent:GetHeight() - T.windowScreenInset*2) / T.height) * A:GetSetting("uiScale") / 100
 	local minWidth,minHeight=self:GetWindowMinimum()
-	scale=math.min(scale,(UIParent:GetWidth()-40)/minWidth,(UIParent:GetHeight()-40)/minHeight)
+	scale=math.min(scale,(UIParent:GetWidth()-T.windowScreenInset*2)/minWidth,(UIParent:GetHeight()-T.windowScreenInset*2)/minHeight)
 	local changed=self.frame:GetScale()~=scale
 	if changed then self.frame:SetScale(scale) end
 	self:SetWindowSize(self.preferredWindowWidth,self.preferredWindowHeight)
@@ -236,7 +240,7 @@ local function BuildNavButton(nav, page, x)
 	local label = C.Text(b, L[page],"font14")
 	C.SetLineHeight(label,"line21",true)
 	C.SetPoint(label,"LEFT",label:GetParent(),"LEFT","hostLabelLeftX",0)
-	b:SetWidth(label:GetStringWidth() + 38)
+	b:SetWidth(label:GetStringWidth() + T.hostNavTextReserve)
 	b:SetPoint("TOPLEFT", nav, "TOPLEFT", x, 0)
 	b.navX=x
 	b.label = label
@@ -259,8 +263,8 @@ function UI:Build()
 	frame:EnableMouse(true)
 	frame:SetAlpha(0)
 	frame:Hide()
-	C.Shadow(frame,T.windowRadius)
-	C.Panel(frame,"surface", T.windowRadius)
+	C.Shadow(frame,"windowRadius")
+	C.Panel(frame,"surface", "windowRadius")
 	self.frame = frame
 	self.drag=C.Draggable(frame,{onStart=function()
 		if UI.activeModal then return false end
@@ -277,7 +281,7 @@ function UI:Build()
 	logo:SetPoint("TOPLEFT", frame, "TOPLEFT", T.pageInset+8, -(T.headerHeight-T.logoSize)/2)
 	self.drag:AddHandle(logo)
 	local texture = logo:CreateTexture(nil, "ARTWORK")
-	texture:SetTexture(T.media .. "lychee-logo.tga")
+	UI:SetMediaTexture(texture,"lychee-logo.tga")
 	texture:SetSize(T.logoSize,T.logoSize)
 	texture:SetPoint("CENTER", logo, "CENTER", 0, 0)
 	self.logo = texture
@@ -289,17 +293,17 @@ function UI:Build()
 	C.SetLineHeight(title,"line28",true)
 	C.SetPoint(title,"LEFT",logo,"RIGHT","hostTitleLeftX",0)
 
-	local close = C.IconButton(frame,"close",T.hostCloseWidth,function() UI:Hide() end,{hoverColor=T.primaryContainer,pressedColor=T.primaryContainer});C.ApplyStyle(close,{width="hostCloseWidth",height="hostCloseHeight"})
+	local close = C.IconButton(frame,"close",T.hostCloseWidth,function() UI:Hide() end,{hoverColor="primaryContainer",pressedColor="primaryContainer"});C.ApplyStyle(close,{width="hostCloseWidth",height="hostCloseHeight"})
 	self.closeButton=close
 	close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -T.pageInset, -(T.headerHeight-40)/2)
 	local settings = C.Button(frame, L.settings, nil, function()
 		A:Open(UI.page=="settings" and (UI.settingsReturnPage or A:GetDefaultPage()) or "settings")
 	end)
-	settings:SetSize(settings.label:GetStringWidth()+52,40)
+	settings:SetSize(settings.label:GetStringWidth()+T.hostSettingsTextReserve,40)
 	settings.label:ClearAllPoints();C.SetPoint(settings.label,"LEFT",settings.label:GetParent(),"LEFT","hostSettingsLabelLeftX",0)
 	settings.icon=C.Glyph(settings,"settings",T.hostSettingsIconWidth);C.ApplyStyle(settings.icon,{width="hostSettingsIconWidth",height="hostSettingsIconHeight"});C.SetPoint(settings.icon,"LEFT",settings.icon:GetParent(),"LEFT","hostSettingsIconLeftX",0)
 	self.settingsButton=settings
-	settings:SetTextColors(T.muted,T.text,T.onSecondaryContainer)
+	settings:SetTextColors("muted","text","onSecondaryContainer")
 	C.SetPoint(settings,"TOPRIGHT",close,"TOPLEFT","hostSettingsToprightX",0)
 
 	-- 导航行:红色下划线跟随当前页,长度随文字。
@@ -369,7 +373,7 @@ function UI:UpdateNav()
 	if not item then M:FinishRect(self.underline);return end
 	local label = item.label
 	local u = self.underline
-	M:Rect(u,item.navX+34,-(T.headerHeight+label:GetHeight())/2-5,label:GetStringWidth(),3,animate and T.windowNavMotionDuration or 0)
+	M:Rect(u,item.navX+34,-(T.headerHeight+label:GetHeight())/2-5,label:GetStringWidth(),T.hostUnderlineHeight,animate and T.windowNavMotionDuration or 0)
 end
 
 -- ---------------------------------------------------------------- 路由

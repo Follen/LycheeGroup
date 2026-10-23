@@ -1,19 +1,18 @@
 {
   "schema": 1,
   "library": "LycheeUI",
-  "status": "unlocked",
+  "status": "frozen",
   "version": "1.3.0",
   "revision": 32,
-  "unlockedOn": "2026-10-23",
-  "note": "按用户要求重构主题与配置接口；实现及审计期间允许变更，完成后重新冻结。",
+  "note": "配置与样式 API 重构、全仓审计和离线验证已完成。清单内运行文件及 Media 冻结，外部源库与插件内置副本保持逐字节一致；产品通过公开 API 配置。后续修改须先由用户明确解除冻结，内置副本只通过同步脚本维护。文本使用 LF，以保证 Git 检出后清单哈希稳定。",
   "runtimeFiles": [
     {
       "path": "Components.lua",
-      "sha256": "d5db6f1222f29d1c0899a528d6ed6adbcce61448436fbae16bed51779cf9a6ed"
+      "sha256": "bf221b464d4ff057ea1a19b5367bb1779ba22bb7b11902a40af311651d2d4e72"
     },
     {
       "path": "Core.lua",
-      "sha256": "1715c11db104f447bca185ddf56ead07884d70ec274c11c980d8bd657688ce4e"
+      "sha256": "ec33178002d3674da1a9714ce1526c75cfa5368cfb2583a418760e5e3a5a2ecc"
     },
     {
       "path": "embeds.xml",
@@ -165,19 +164,20 @@
     },
     {
       "path": "Menu.lua",
-      "sha256": "f10f5e3514baaafaa5b6084b09b563419b4158dc6951f840038f36279d28d5aa"
+      "sha256": "de8b11c44435cceb559e560f35d1834cbbed6ea5765b7a61cbc7883f9060c4a6"
     },
     {
       "path": "Motion.lua",
-      "sha256": "7fcd225f900855a9c0b16b9b597fafa14e1d659b6ef8b62c1a7ff8b66a422204"
+      "sha256": "691e1d7fa62301203299537a817c9dfa260aefa9826a2e39f072b6a2feba9913"
     },
     {
       "path": "Native.lua",
-      "sha256": "502015dffa8ad28ea519736df79a58fdb1becea54e7d3a60d038d59c9a64271e"
+      "sha256": "1f0eaca0a539ab875db051eaa6449f97cd11259225092b1bda34d1fb0e8aa647"
     },
     {
       "path": "Theme.lua",
-      "sha256": "fa5eddb9e255cb6fa05a5087b5d96a545cd7cda93dbaf565ad74b7fd85176952"
+      "sha256": "72170bf2b388dc0910d1062efe0e1547946fd02befdcc1e88727d6a44c649d86"
     }
-  ]
+  ],
+  "frozenOn": "2026-10-23"
 }

@@ -3,6 +3,9 @@ return function(locale,preferences,settings)
 local base=dofile("tests/stubs.lua");base.Install({locale=locale,realm="Home"})
 local S=dofile("tests/ui_stubs.lua");S.Install()
 C_SpecializationInfo.GetSpecialization=function() return nil end
+C_AddOns.GetAddOnMetadata=function(_,field)
+ return ({Title="Lychee LFG",Version="fixture",Author="Fixture"})[field]
+end
 _G.LycheeGroup=nil;_G.LycheeGroupDB=nil;_G.LycheeGroupPrefsDB=nil;_G.LycheeGroupNotesDB=nil;_G.LibStub=nil
 _G.LycheeUI=nil
 local libraryPrivate={}

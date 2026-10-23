@@ -7,6 +7,7 @@ local function Start(account,character)
  Load.addon("LycheeGroup","Configuration.lua")
  return LycheeGroup,LycheeGroup.Configuration
 end
+
 local function Reload(account,character)
  local a,c=Start(account,character);a:LoadDB();return a,c
 end
@@ -279,4 +280,58 @@ do
  a.ValidateConfiguration=function() error("validation failed") end
  Rejected(function() return c:Set({[scale]=110},{storage="account"}) end)
  T.eq(c:Get(scale),100)
+end
+
+-- Theme aliases depend on whether a token is explicit, not just its raw value.
+do
+ local f=dofile("tests/ui_fixture.lua")("enUS");local a,u=f.A,f.U
+ a:SetSetting("reduceMotion",true);a:Open("settings")
+ local c,api=a.Configuration,a.API.Appearance
+ local original=api:Get("main").accent
+ local notices=0;local changed=a.OnConfigurationChanged
+ a.OnConfigurationChanged=function(self,changes) notices=notices+1;changed(self,changes) end
+ local function Accent(value) T.same(api:Get("main").accent,value);T.same(u.Theme.accent,value) end
+ T.ok(api:Set("main",{primary={.1,.2,.3,1}}));Accent({.1,.2,.3,1})
+ local before=notices
+ T.ok(api:Set("main",{accent=original}));Accent(original)
+ T.eq(notices,before+1,"a source-only alias change refreshes the existing context")
+ T.ok(api:Reset("main","accent"));Accent({.1,.2,.3,1})
+ before=notices
+ T.ok(api:Set("main",{accent={.1,.2,.3,1}}));Accent({.1,.2,.3,1})
+ T.eq(notices,before,"pinning the same effective alias does not notify")
+ T.ok(a:SetSetting("reduceMotion",true));T.eq(notices,before,"unchanged business settings do not notify")
+ T.ok(api:Reset("main","accent"));T.eq(notices,before)
+ T.ok(c:ApplyPreset("alias",1,{["theme.main.accent"]=original}));Accent(original)
+ T.ok(c:RegisterPreset("alias",2,{}));Accent({.1,.2,.3,1})
+ T.ok(c:RegisterPreset("alias",3,{["theme.main.accent"]=original}));Accent(original)
+ T.ok(c:ActivatePreset(false));Accent({.1,.2,.3,1})
+ T.ok(c:ActivatePreset("alias"));Accent(original)
+ T.ok(c:RemovePreset("alias"));Accent({.1,.2,.3,1})
+end
+
+-- Explicit default typography can invalidate a previously valid derived size.
+do
+ local f=dofile("tests/ui_fixture.lua")("enUS");local a,u=f.A,f.U
+ a:SetSetting("reduceMotion",true);a:Open("settings")
+ local c,api=a.Configuration,a.API.Appearance
+ local values={fontSizeDelta=-13}
+ for key,field in pairs(LycheeUI:GetThemeSchema(a.StyleDefaults.main)) do
+  if field.unit=="font" and key~="tooltipFontSize" then values[key]=50 end
+ end
+ T.ok(api:Set("main",values,{storage="account"}))
+ T.eq(api:Get("main").tooltipFontSize,50)
+ local root=a.db.uiConfig;local users,presets,imported=root.user,root.presets,root.imported
+ local function Rejected(operation)
+  local ok,err=operation();T.eq(ok,false);T.eq(type(err),"string")
+  T.eq(root.user,users);T.eq(root.presets,presets);T.eq(root.imported,imported)
+  T.eq(api:Get("main").tooltipFontSize,50);T.eq(u.Theme.tooltipFontSize,50)
+ end
+ Rejected(function() return api:Set("main",{tooltipFontSize=12},{storage="account"}) end)
+ T.eq(c:GetSource("theme.main.tooltipFontSize").kind,"default")
+ Rejected(function() return c:ApplyPreset("invalidAlias",1,{["theme.main.tooltipFontSize"]=12},{storage="account"}) end)
+ T.eq(c:ExportPreset("invalidAlias"),nil)
+ T.ok(c:RegisterPreset("invalidAlias",1,{["theme.main.tooltipFontSize"]=12},{storage="account"}))
+ users,presets,imported=root.user,root.presets,root.imported
+ Rejected(function() return c:ActivatePreset("invalidAlias",{storage="account"}) end)
+ T.eq(root.activePreset,nil)
 end

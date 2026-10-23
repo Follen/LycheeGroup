@@ -1,7 +1,7 @@
 local probe=...
 local A=LycheeGroup
 local U=A and A.UI
-if not A or U and (U:IsShown() or U.hiding or U.preview or U.activeModal) or InCombatLockdown() or A.db.reduceMotion then
+if not A or U and (U:IsShown() or U.hiding or U.preview or U.activeModal) or InCombatLockdown() or A:GetSetting("reduceMotion") then
  return probe:Fail("requires_warm_closed_ui_with_animation")
 end
 local warmedHere=not U or not U.frame

@@ -42,7 +42,7 @@ end
 function Library.CreateMotion(UI)
 -- 单一驱动;switches/alphas 记录进行中动画的终值,StopAll 据此落终态不留残影。
 local T=UI.Theme
-local M = {jobs={}, jobIds={}, nextJobId=0, startTimes={}, switches={}, alphas={}, colors={}, placements={},reveals={},rects={},selections={},waiting={},busy={},spins={},spinOwners={},tickBuffer={}}
+local M = {jobs={}, jobIds={}, nextJobId=0, startTimes={}, switches={}, alphas={}, alphaFinishes={}, colors={}, placements={},reveals={},rects={},selections={},waiting={},busy={},spins={},spinOwners={},tickBuffer={}}
 local function Pixel(value,scale) return math.floor(value*scale+.5)/scale end
 local function PlaceReveal(state,x,y,alpha)
  local region=state.region
@@ -91,10 +91,11 @@ function M:Stop(key,keepRect)
  self.jobs[key]=nil
  self.jobIds[key]=nil
  self.startTimes[key]=nil
+ if key=="presence" then self.presenceFinished=nil end
  if self.waiting[key] then RestoreWaiting(key,self.waiting[key]);self.waiting[key]=nil end
  if self.busy[key] then key:SetAlpha(self.busy[key]);self.busy[key]=nil end
  if self.spins[key] then key:SetRotation(0);self.spins[key]=nil end
- self.switches[key]=nil;self.alphas[key]=nil;self.colors[key]=nil;self.placements[key]=nil
+ self.switches[key]=nil;self.alphas[key]=nil;self.alphaFinishes[key]=nil;self.colors[key]=nil;self.placements[key]=nil
  if self.running and not next(self.jobs) then
   self.running=false;self.driver:SetScript("OnUpdate",nil);self.driver:Hide()
  end
@@ -111,10 +112,11 @@ function M:Spin(region,enabled,period)
   owner:HookScript("OnHide",function() self:Spin(texture,false) end)
   self.spinOwners[texture]=true
  end
- local elapsed=0;period=period or T.spinPeriod
+ local elapsed=0
  self:Start(texture,function(dt)
   if UI:IsReducedMotion() then self:Spin(texture,false);return true end
-  elapsed=(elapsed+dt)%period;texture:SetRotation(-2*math.pi*elapsed/period)
+  local cycle=period or T.spinPeriod
+  elapsed=(elapsed+dt)%cycle;texture:SetRotation(-2*math.pi*elapsed/cycle)
  end)
 end
 
@@ -266,11 +268,13 @@ function M:Alpha(region,target,duration,initial,finished)
  local elapsed=0
  region:SetAlpha(from)
  self.alphas[region]=target
+ self.alphaFinishes[region]=finished
  self:Start(region,function(dt)
   elapsed=math.min(duration,elapsed+dt)
   region:SetAlpha(from+(target-from)*curve(elapsed/duration))
   if elapsed==duration then
    self.alphas[region]=nil
+   self.alphaFinishes[region]=nil
    if finished then finished() end
    return true
   end
@@ -342,12 +346,13 @@ function M:Presence(shown,finished)
  local target=shown and 1 or 0
  local phase=self.phase or 0
  self:Stop("presence")
+ self.presenceTarget,self.presenceFinished=shown,finished
  self:SetPresence(phase)
- if UI:IsReducedMotion() or T.presenceDuration==0 or phase==target then self:SetPresence(target);if finished then finished() end;return end
+ if UI:IsReducedMotion() or T.presenceDuration==0 or phase==target then self:SetPresence(target);self.presenceFinished=nil;if finished then finished() end;return end
  local direction=shown and 1 or -1
  self:Start("presence",function(dt)
   phase=math.max(0,math.min(1,phase+direction*dt/T.presenceDuration));self:SetPresence(phase)
-  if phase==target then if finished then finished() end;return true end
+  if phase==target then self.presenceFinished=nil;if finished then finished() end;return true end
  end)
 end
 function M:StopBrand()
@@ -396,24 +401,43 @@ function M:Switch(region,from,to)
  end)
 end
 -- 停止全部活动动画,并把进行中的滑块与透明度直接置于终态。
-function M:StopAll()
- for texture in pairs(self.spins) do texture:SetRotation(0);self.spins[texture]=nil end
- for region,saved in pairs(self.waiting) do RestoreWaiting(region,saved);self.waiting[region]=nil end
- for region,alpha in pairs(self.busy) do region:SetAlpha(alpha);self.busy[region]=nil end
+function M:StopAll(keepPersistent)
+ for texture in pairs(self.spins) do if not keepPersistent then texture:SetRotation(0);self.spins[texture]=nil end end
+ for region,saved in pairs(self.waiting) do RestoreWaiting(region,saved);if not keepPersistent then self.waiting[region]=nil end end
+ for region,alpha in pairs(self.busy) do region:SetAlpha(alpha);if not keepPersistent then self.busy[region]=nil end end
  for region,target in pairs(self.placements) do PlaceReveal(target,target[4],target[5],1);self.placements[region]=nil end
  for _,state in pairs(self.rects) do if self.jobs[state] then PlaceRect(state,state.toX,state.toY,state.toWidth,state.toHeight) end end
  for region,state in pairs(self.selections) do if self.jobs[region]==state.step then PlaceSelection(state,state.target) end end
- for key in pairs(self.jobs) do self.jobs[key]=nil;self.jobIds[key]=nil;self.startTimes[key]=nil end
- if self.running then self.running=false;self.driver:SetScript("OnUpdate",nil);self.driver:Hide() end
+ for key in pairs(self.jobs) do
+  if not keepPersistent or not (key=="presence" or self.spins[key] or self.waiting[key] or self.busy[key] or self.alphaFinishes[key]) then self.jobs[key]=nil;self.jobIds[key]=nil;self.startTimes[key]=nil end
+ end
+ if not keepPersistent then self.presenceFinished=nil end
+ if self.running and not next(self.jobs) then self.running=false;self.driver:SetScript("OnUpdate",nil);self.driver:Hide() end
  for region,to in pairs(self.switches) do
   region:ClearAllPoints();region:SetPoint("LEFT",region:GetParent(),"LEFT",to,0);region._slideX=to
  end
- for region,target in pairs(self.alphas) do region:SetAlpha(target) end
+ for region,target in pairs(self.alphas) do if not keepPersistent or not self.alphaFinishes[region] then region:SetAlpha(target) end end
  for panel,target in pairs(self.colors) do panel:SetColor(target) end
  for region in pairs(self.switches) do self.switches[region]=nil end
- for region in pairs(self.alphas) do self.alphas[region]=nil end
+ for region in pairs(self.alphas) do if not keepPersistent or not self.alphaFinishes[region] then self.alphas[region]=nil end end
+ if not keepPersistent then for region in pairs(self.alphaFinishes) do self.alphaFinishes[region]=nil end end
  for panel in pairs(self.colors) do self.colors[panel]=nil end
  self:StopBrand()
+end
+
+-- Theme layout runs with waiting regions at their base geometry. Continue
+-- persistent visual work from those new endpoints, retaining lifecycle callbacks.
+function M:RefreshTheme()
+ for region,saved in pairs(self.waiting) do
+  saved.width,saved.height,saved.alpha=region:GetWidth(),region:GetHeight(),region:GetAlpha()
+  saved.point={region:GetPoint()}
+ end
+ for region in pairs(self.busy) do self.busy[region]=region:GetAlpha() end
+ for key,job in pairs(self.jobs) do if self.spins[key] or self.busy[key] or self.waiting[key] or self.alphaFinishes[key] then job(0) end end
+ if self.jobs.presence then
+  self.lastX,self.lastY,self.lastAlpha=nil,nil,nil
+  self:Presence(self.presenceTarget,self.presenceFinished)
+ end
 end
 
 return M

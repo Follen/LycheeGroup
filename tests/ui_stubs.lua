@@ -121,7 +121,12 @@ function N:AddMaskTexture(mask) self.mask=mask end
 function N:RemoveMaskTexture(mask) if self.mask==mask then self.mask=nil end end
 function N:SetDesaturated(value) self.desaturated=value end
 function N:IsDesaturated() return self.desaturated==true end
-function N:CreateTexture(name,layer) local n=S.New("Texture",name,self);n.layer=layer;return n end
+function N:CreateTexture(name,layer)
+ local n=S.New("Texture",name,self);n.layer=layer
+ -- Native textures are tinted with vertex color; only text has SetTextColor.
+ n.SetTextColor=false;n.GetTextColor=false
+ return n
+end
 function N:CreateFontString(name,layer) local n=S.New("FontString",name,self);n.layer=layer;return n end
 function N:SetBackdropColor(...) self.backdropColor={...} end
 for _,k in ipairs({"SetMovable","RegisterForDrag","StartMoving","StopMovingOrSizing","SetMaxLetters","SetMultiLine","SetAutoFocus","SetBackdrop","SetBackdropBorderColor","SetCursorPosition","HighlightText","SetNumeric","RegisterForClicks","EnableMouseWheel","SetOrientation","SetValueStep","SetObeyStepOnDrag","SetThumbTexture","SetClampedToScreen"}) do N[k]=function() end end

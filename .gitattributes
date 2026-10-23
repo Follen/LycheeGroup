@@ -1,0 +1,5 @@
+# Keep the frozen embedded library byte-identical to its source and hash manifest.
+addon/LycheeGroup/Libs/LycheeUI/*.lua text eol=lf
+addon/LycheeGroup/Libs/LycheeUI/embeds.xml text eol=lf
+addon/LycheeGroup/Libs/LycheeUI/.lock text eol=lf
+addon/LycheeGroup/Libs/LycheeUI/Media/** -text

@@ -231,7 +231,7 @@ function Library.AttachNative(context)
      skin:SetWidth(T.scrollWidth);skin:SetPoint("TOP",thumb,"TOP");skin:SetPoint("BOTTOM",thumb,"BOTTOM")
      thumb._lycheeNativeScrollArt=skin
     end
-    self.scrollArt=skin;skin:SetColorTexture(unpack(T.accent));skin:SetAlpha(1);skin:Show()
+    self.scrollArt=skin;skin:SetWidth(T.scrollWidth);skin:SetColorTexture(unpack(T.accent));skin:SetAlpha(1);skin:Show()
    end
    for _,region in ipairs(options.hide or {}) do self:Quiet(region) end
   end
@@ -295,7 +295,7 @@ function Library.AttachNative(context)
   end
   local inside,pressed
   function lease:RefreshStyle()
-   if self:IsOwned() then ApplyText(font,context,T.onPrimary);fill:SetRadius(T.nativeButtonRadius);fill:SetColor(button:IsEnabled() and (pressed and T.primaryPressed or inside and T.primaryHover) or T.primary);button:SetSize(math.max(options.minWidth or T.nativeButtonMinWidth,label:GetStringWidth()+T.nativeButtonPadding),T.nativeButtonHeight) end
+   if self:IsOwned() then ApplyText(font,context,T.onPrimary);fill:SetRadius(T.nativeButtonRadius);fill:SetColor(button:IsEnabled() and (pressed and T.primaryPressed or inside and T.primaryHover) or T.primary);button:SetAlpha(button:IsEnabled() and 1 or T.disabledAlpha);button:SetSize(math.max(options.minWidth or T.nativeButtonMinWidth,label:GetStringWidth()+T.nativeButtonPadding),T.nativeButtonHeight) end
   end
   lease:RefreshStyle()
   if options.text then button:SetText(options.text) end

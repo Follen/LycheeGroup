@@ -123,14 +123,22 @@ end
 function C:Snapshot()
  local snapshot={}
  for key in pairs(self.definitions) do snapshot[key]=self:Resolve(key) end
+ -- Appearance aliases can change when a default becomes an explicit override.
+ -- Keep that resolution at its owner, and compare the values consumers receive.
+ if A.ResolveConfigurationSnapshot then A:ResolveConfigurationSnapshot(snapshot) end
  return snapshot
 end
-function C:Notify(previous)
+function C:ChangesSince(previous)
+ local current=self:Snapshot()
  local changes={}
  for key in pairs(self.definitions) do
-  local value=self:Resolve(key)
+  local value=current[key]
   if not Equal(previous[key],value) then changes[key]={previous=Copy(previous[key]),value=Copy(value)} end
  end
+ return changes
+end
+function C:Notify(previous,changes)
+ changes=changes or self:ChangesSince(previous)
  if next(changes) then A:ApplyConfigurationChanges(changes) end
 end
 local function Shallow(value)
@@ -144,14 +152,15 @@ function C:Change(callback,storage,onCommit)
  draft.user,draft.presets,draft.imported=Shallow(original.user),Shallow(original.presets),Shallow(original.imported)
  self.stores[storage]=draft
  callback()
+ local changes=self:ChangesSince(previous)
  if A.ValidateConfiguration then
-  local ok,valid,reason=pcall(A.ValidateConfiguration,A,previous)
+  local ok,valid,reason=pcall(A.ValidateConfiguration,A,previous,changes)
   if not ok or not valid then self.stores[storage]=original;return false,ok and reason or valid end
  end
  original.user,original.presets,original.imported,original.activePreset=draft.user,draft.presets,draft.imported,draft.activePreset
  self.stores[storage]=original
  if onCommit then onCommit() end
- self:Notify(previous)
+ self:Notify(previous,changes)
  return true
 end
 local function LegacyPath(def)

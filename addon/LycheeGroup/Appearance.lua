@@ -58,13 +58,20 @@ function Appearance:GetTheme(scope)
  end
  return overrides
 end
-function A:ValidateConfiguration(previous)
+function A:ResolveConfigurationSnapshot(snapshot)
+ for scope,defaults in pairs(self.StyleDefaults) do
+  local theme=Library.ResolveTheme(Appearance:GetTheme(scope),defaults)
+  for token in pairs(Appearance.themes[scope]) do snapshot["theme."..scope.."."..token]=theme[token] end
+ end
+end
+function A:ValidateConfiguration(previous,changes)
+ if previous and not changes then changes=Configuration:ChangesSince(previous) end
  for scope,defaults in pairs(self.StyleDefaults) do
   local changed=previous==nil
   if not changed then
    for token in pairs(Appearance.themes[scope]) do
     local key="theme."..scope.."."..token
-    if Configuration:Resolve(key)~=previous[key] then changed=true;break end
+    if changes[key] then changed=true;break end
    end
   end
   if changed then

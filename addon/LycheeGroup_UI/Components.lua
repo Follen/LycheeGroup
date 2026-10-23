@@ -97,7 +97,7 @@ function UI:UpdateMemberIconStyle(icon,visible)
  local mark=icon.memberLeaderMark
  if leader and not mark then
   mark=icon:GetParent():CreateTexture(nil,"OVERLAY",nil,1)
-  mark:SetTexture(T.media.."leader.tga");icon.memberLeaderMark=mark
+  UI:SetMediaTexture(mark,"leader.tga");icon.memberLeaderMark=mark
  end
  local scale=icon:GetParent():GetScale()
  local appearance=icon.memberAppearance

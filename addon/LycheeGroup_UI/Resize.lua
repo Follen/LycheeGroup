@@ -33,8 +33,8 @@ end
 function UI:SetWindowSize(width,height)
  local minWidth,minHeight=self:GetWindowMinimum()
  local scale=self.frame:GetScale()
- local maxWidth=math.max(minWidth,(UIParent:GetWidth()-40)/scale)
- local maxHeight=math.max(minHeight,(UIParent:GetHeight()-40)/scale)
+ local maxWidth=math.max(minWidth,(UIParent:GetWidth()-T.windowScreenInset*2)/scale)
+ local maxHeight=math.max(minHeight,(UIParent:GetHeight()-T.windowScreenInset*2)/scale)
  width=math.max(minWidth,math.min(maxWidth,width))
  height=math.max(minHeight,math.min(maxHeight,height))
  if width==self.windowWidth and height==self.windowHeight and self.frame:GetWidth()==width and self.frame:GetHeight()==height then return end
@@ -89,8 +89,8 @@ function UI:BeginWindowResize()
  local minWidth,minHeight=self:GetWindowMinimum()
  local x,y=GetCursorPosition()
  self.resizing={cursorX=x,cursorY=y,width=self.windowWidth,height=self.windowHeight,scale=scale,
-  maxWidth=math.max(minWidth,(UIParent:GetWidth()*parentScale-20*parentScale-left)/scale),
-  maxHeight=math.max(minHeight,(top-20*parentScale)/scale)}
+  maxWidth=math.max(minWidth,(UIParent:GetWidth()*parentScale-T.windowScreenInset*parentScale-left)/scale),
+  maxHeight=math.max(minHeight,(top-T.windowScreenInset*parentScale)/scale)}
  frame:ClearAllPoints();frame:SetPoint("TOPLEFT",UIParent,"BOTTOMLEFT",left/scale,top/scale)
  M:CapturePosition()
  self:RefreshResizeState()

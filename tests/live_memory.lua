@@ -39,7 +39,7 @@ local version, build, date, interface = GetBuildInfo()
 local report = {
   schema = "lycheegroup.memory.v1", units = "KB", packages = PACKAGES,
   client = { version = version, build = build, date = date, interface = interface },
-  settings = { reduceMotion = A.db.reduceMotion, notesEnabled = A.db.notesEnabled,
+  settings = { reduceMotion = A:GetSetting("reduceMotion"), notesEnabled = A:GetSetting("notesEnabled"),
     notesHasRecords = A.db.notesHasRecords, scriptProfile = GetCVar("scriptProfile") },
   scenario = { settleSeconds = SETTLE, naturalWarmRounds = ROUNDS, retainedWarmRounds = ROUNDS,
     asyncLimitSeconds = LIMIT, explicitGCPolicy = "collect_only; never stop/restart/change GC settings" },
@@ -149,7 +149,7 @@ local function ObserveClosedOwners()
     activeListing = C_LFGList.HasActiveEntryInfo(), activeChallenge = C_ChallengeMode.IsChallengeModeActive(),
     searchState = g and g:GetSearchState() or "unloaded", extraGroupEvents = {},
     catalogUpdatesSubscribed = g and g.Game.frame:IsEventRegistered("LFG_LIST_AVAILABILITY_UPDATE") or false,
-    expectedNotesReminder = A.db.notesEnabled and A.db.notesHasRecords,
+    expectedNotesReminder = A:GetSetting("notesEnabled") and A.db.notesHasRecords,
   }
   local frame = g and g.Game.frame
   for _, event in ipairs(EVENTS) do

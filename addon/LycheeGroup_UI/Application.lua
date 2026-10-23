@@ -81,19 +81,19 @@ function Application:BuildApplication()
  for _,role in ipairs(roleKeys) do
   modal.roles[role]=C.RoleButton(content,role,nil,roleLabels[role],function() Application:SetApplicationRole(role) end)
   modal.roles[role]:SetSurfaceColors(nil)
-  modal.roles[role]:SetStyle({radius=T.compactRadius,textColor=T.muted,hoverTextColor=T.text,selectedTextColor=T.onSecondaryContainer})
+  modal.roles[role]:SetStyle({radius="compactRadius",textColor="muted",hoverTextColor="text",selectedTextColor="onSecondaryContainer"})
  end
  modal.noteLabel=C.Text(content,Say("给队长的备注","Note to the leader"),"font14","muted");C.SetLineHeight(modal.noteLabel,"line20",true)
  modal.note=C.Field(content,T.applicationModalNoteWidth,T.applicationModalNoteHeight,false,"modal");C.ApplyStyle(modal.note,{width="applicationModalNoteWidth",height="applicationModalNoteHeight"})
  modal.error=C.Text(content,"","font14","warning",T.applicationModalErrorWidth,"line20");C.ApplyStyle(modal.error,{width="applicationModalErrorWidth"});modal.error:SetMaxLines(1)
  modal.cancel=C.Button(modal.frame,L.cancel,nil,function() UI:CloseModal() end);C.ApplyStyle(modal.cancel,{height="applicationModalCancelHeight"})
- modal.submit=C.Button(modal.frame,L.apply,T.applicationModalSubmitWidth,function() Application:ConfirmApplication() end);C.ApplyStyle(modal.submit,{width="applicationModalSubmitWidth"});modal.submit:SetPrimary(true);C.ApplyStyle(modal.submit,{height="applicationModalSubmitHeight"})
- modal.autoApply=C.Button(modal.frame,Say("自动申请","Auto apply"),T.applicationModalAutoApplyWidth,function()
+ modal.submit=C.Button(modal.frame,L.apply,nil,function() Application:ConfirmApplication() end);modal.submit:SetPrimary(true);C.ApplyStyle(modal.submit,{height="applicationModalSubmitHeight"})
+ modal.autoApply=C.Button(modal.frame,Say("自动申请","Auto apply"),nil,function()
   local lease=Application.previewApplication or Application.applicationLease
   local requested=Application:IsAutoApplyEnabled() or lease and lease.enableOnSave==true
   local ok,err=Application:SetAutoApply(not requested)
   if not ok then UI:SetText(modal.error,err or L.failed);Application:LayoutApplication() end
- end,{height=40,variant="text"});C.ApplyStyle(modal.autoApply,{width="applicationModalAutoApplyWidth"})
+ end,{height=40,variant="text"});
  modal.autoApply.label:ClearAllPoints();C.SetPoint(modal.autoApply.label,"LEFT",modal.autoApply.label:GetParent(),"LEFT","applicationModalAutoApplyLabelLeftX",0)
  modal.autoApply.box=C.Checkbox(modal.autoApply,nil,{size=20,boxSize=18,radius=3})
  C.SetPoint(modal.autoApply.box,"LEFT",modal.autoApply.box:GetParent(),"LEFT","applicationModalAutoApplyBoxLeftX",0);modal.autoApply.box:EnableMouse(false);modal.autoApply.box:EnableMouseMotion(false)

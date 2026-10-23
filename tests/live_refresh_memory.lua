@@ -16,7 +16,7 @@ local started=GetTime()
 local version,build,_,interface=GetBuildInfo()
 local report={schema="lycheegroup.refresh-memory.v1",packages=packages,client={version=version,build=build,interface=interface},
  scenario={rounds=6,minimumSearchSpacingSeconds=8,gcPolicy="natural; no explicit collection",samplePolicy="each phase boundary and each second while waiting"},
- settings={reduceMotion=A.db.reduceMotion,scriptProfile=GetCVar("scriptProfile")},samples={},queries={},checks={},peakBytes=0}
+ settings={reduceMotion=A:GetSetting("reduceMotion"),scriptProfile=GetCVar("scriptProfile")},samples={},queries={},checks={},peakBytes=0}
 for i=1,128 do
  local row={addonKB={},loaded={}}
  for packageIndex=1,#packages do row.addonKB[packageIndex],row.loaded[packageIndex]=0,false end

@@ -7,6 +7,66 @@ local function Float(a)
  return a.Floating
 end
 
+-- Existing product surfaces keep token references instead of construction-time values.
+do
+ local f=Fixture("enUS");local a,u=f.A,f.U
+ local ok=a.API.Appearance:Set("main",{hostIconWidth=-1},{storage="account"})
+ T.eq(ok,false);T.eq(a.db.uiConfig.user["theme.main.hostIconWidth"],nil)
+ T.eq(u.frame,nil,"invalid tokens are rejected before any window is built")
+ a:SetSetting("reduceMotion",true);a:Open("notes");a:Open("settings")
+ local notes,settings=u.pages.notes,u.pages.settings
+ local radius=u.frame._lycheeVisuals[2].regions[4]
+ T.ok(a.API.Appearance:Set("main",{windowRadius=48,muted={.1,.2,.3,1},brand={.2,.4,.6,1},notesSidebarWidth=240,settingsSidebarWidth=232}))
+ T.eq(radius:GetWidth(),48)
+ T.same({u.settingsButton.label:GetTextColor()},u.Theme.onSecondaryContainer,"active settings uses the current selected foreground")
+ T.same({notes.tabs.positive.label:GetTextColor()},{.1,.2,.3,1})
+ T.same({u.navItems.find.label:GetTextColor()},{.1,.2,.3,1},"inactive navigation keeps its muted semantic state")
+ T.eq(notes.tabs.positive:GetWidth(),240);T.eq(settings.nav.general:GetWidth(),232)
+ T.eq(u.brandTitle:GetText(),"|cff336699Lychee|r LFG")
+ a:Open("settings")
+end
+
+-- Measured settings controls keep configurable minima and text padding.
+do
+ local f=Fixture("enUS");local a,u=f.A,f.U
+ a:SetSetting("reduceMotion",true);a:Open("settings",{section="about"})
+ local settings=u.pages.settings
+ T.ok(a.API.Appearance:Set("main",{settingsBrandMinWidth=400,settingsButtonMinWidth=260}))
+ T.eq(settings.aboutBrand:GetWidth(),400)
+ for _,row in ipairs(settings.otherAddons) do
+  for _,button in ipairs(row.links) do T.eq(button:GetWidth(),260) end
+ end
+ settings:SelectSection("blocks")
+ local clear=settings.blocksClear;local remove=settings.blocksList.rows[1].remove
+ local clearWidth,removeWidth=clear:GetWidth(),remove:GetWidth()
+ T.ok(a.API.Appearance:Set("main",{settingsActionTextPadding=48}))
+ T.eq(clear:GetWidth(),clearWidth+16);T.eq(remove:GetWidth(),removeWidth+16)
+end
+
+-- Retained lazy controls also refresh geometry, and zero-duration motion is immediate.
+do
+ local f=Fixture("enUS");local a,u,g=f.A,f.U,f.G
+ a:SetSetting("reduceMotion",true)
+ g.listing={activityID=2,name="Applicants"}
+ for id=1,20 do g.applicants[id]={id=id,status="applied",activityID=2,displayOrderID=id,members={{name="Member"..id.."-Away",class="WARRIOR",assignedRole="DAMAGER",itemLevel=300}}} end
+ a:Open("create");local create=u.pages.create
+ u.Tooltip:BuildInteractive();local tip=u.Tooltip.interactive
+ local scores={current={level=12,name="A dungeon",timed=true}}
+ u.Tooltip:RenderDungeons(scores,0)
+ local level=tip.dungeonRows[1].keyLevel
+ local beforeColor={level:GetTextColor()}
+ T.eq(tip:IsShown(),false)
+ T.ok(a.API.Appearance:Set("main",{tooltipPadding=30,createRoleIconSize=24,createScrollDuration=0,text={.1,.2,.3,1}}))
+ u.Tooltip:RenderDungeons(scores,0)
+ T.same({level:GetTextColor()},beforeColor,"same-level dungeon records retain the game's rarity color after a theme refresh")
+ local point={tip.scroll:GetPoint(1)};T.eq(point[#point-1],30);T.eq(point[#point],-30)
+ T.eq(create.batchPool[1].people[1].role:GetWidth(),24)
+ a:SetSetting("reduceMotion",false)
+ create:SetBatchOffset(100,true)
+ T.eq(create.batchScroll:GetVerticalScroll(),100)
+ T.eq(u.Motion.jobs[create.batchScroll],nil,"zero duration never enters a division-based scroll job")
+end
+
 -- Defaults preserve both contexts' typography, and querying/activating defaults is not a user edit.
 do
  local f=Fixture("enUS");local a,u=f.A,f.U;local c=a.Configuration
@@ -59,10 +119,12 @@ do
  T.same({mainText:GetTextColor()},{.1,.2,.3,1})
  T.eq(select(2,floatText:GetFont()),floatSize)
  T.eq(u.frame,frame);T.eq(u.pages.find,page);T.eq(page.resultsHeader,header)
- T.ok(a.API.Appearance:Set("floating",{text={.3,.4,.5,1},font14=19,floatingEntryHeight=50}))
+ T.ok(a.API.Appearance:Set("floating",{text={.3,.4,.5,1},font14=19,floatingEntryHeight=50,media="Interface\\AddOns\\CustomTheme\\"}))
  T.eq(select(2,floatText:GetFont()),19)
  T.same({floatText:GetTextColor()},{.3,.4,.5,1})
  T.eq(floating.frame:GetHeight(),50)
+ T.eq(floating.rows[1].invite.glyph:GetTexture(),"Interface\\AddOns\\CustomTheme\\invite.tga")
+ T.eq(floating.rows[1].decline.glyph:GetTexture(),"Interface\\AddOns\\CustomTheme\\decline.tga")
  T.eq(select(2,mainText:GetFont()),mainSize+4)
  T.eq(requests,0,"visual changes do not search, apply or publish")
  T.eq(#s.nodes,nodeCount,"restyling retained objects does not rebuild the UI")
@@ -205,6 +267,11 @@ do
  T.eq(page.rail:GetWidth(),u.Theme.findSidebarWidth)
  T.eq(a.charPrefs.uiConfig.user["layout.find.railCollapsed"],false)
  T.eq(requests,0)
+ u:Hide(true)
+ T.ok(c:Reset("layout.find.railCollapsed",{storage="character"}))
+ T.ok(c:RegisterPreset("rail",5,{["layout.find.railCollapsed"]=true}))
+ a:Open("find")
+ T.eq(page.rail:GetWidth(),u.Theme.findCollapsedSidebarWidth,"hidden-page preference changes take effect on next entry")
 end
 
 -- Theme dimensions are defaults; only explicit user resizing fixes the window dimensions.

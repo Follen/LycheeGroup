@@ -21,7 +21,7 @@ local report={schema="lycheegroup.list-memory.v2",units="KB",packages=PACKAGES,
   operations={"native_bulk_event","eight_native_result_events","local_filter_sort","refresh_scroll"},
   gcPolicy="natural phase first; first explicit collection follows all natural steps; collect only, never stop/restart GC",
   nativeObjects="known product UI roots; Frame/region/animation counts, no engine-byte attribution"},
- settings={reduceMotion=A.db.reduceMotion,noteMarks=A.db.noteMarks,scriptProfile=GetCVar("scriptProfile")},
+ settings={reduceMotion=A:GetSetting("reduceMotion"),noteMarks=A:GetSetting("noteMarks"),scriptProfile=GetCVar("scriptProfile")},
  observer={preallocatedSamples=SAMPLE_CAPACITY,periodicDrivers=1,wrappedCallbacks=2},
  samples={},checks={},summary={naturalPeakKB=0,naturalHeapPeakKB=0,sampledUncollectedPeakKB=0,retainedWorkloadPeakKB=0},
  operations={},frameCounts={}}

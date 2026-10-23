@@ -21,13 +21,23 @@ UI.context = _G.LycheeUI:CreateContext({
  end,
 })
 UI.Theme = UI.context.Theme
-UI.brandText = A:GetLocale()=="zhCN" and "|cffE87983荔枝|r 组队" or "|cffE87983Lychee|r LFG"
+function UI:RefreshBrandText()
+ local color=self.Theme.brand
+ local prefix=("|cff%02X%02X%02X"):format(math.floor(color[1]*255+.5),math.floor(color[2]*255+.5),math.floor(color[3]*255+.5))
+ self.brandText=prefix..(A:GetLocale()=="zhCN" and "荔枝|r 组队" or "Lychee|r LFG")
+ if self.brandTitle then self:SetText(self.brandTitle,self.brandText) end
+end
+UI:RefreshBrandText()
 function UI:SetText(region,text) return self.context:SetText(region,text) end
 function UI:Color(region,color)
  if type(color)=="string" then return self.C.ApplyStyle(region,{color=color}) end
  return self.context:Color(region,color)
 end
 function UI:Hex(color) return self.context:Hex(color) end
+function UI:SetMediaTexture(texture,file)
+ local function Apply(object) object:SetTexture(self.Theme.media..file) end
+ self.context:BindStyle(texture,"media",Apply);Apply(texture)
+end
 
 local scoreColors,scoreOrder={},{}
 function UI:ScoreColor(score)

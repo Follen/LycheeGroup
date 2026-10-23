@@ -30,6 +30,10 @@ local markTextures={
  positive=T.media.."heart.tga",neutral=T.media.."book.tga",caution=T.media.."caution.tga",
 }
 Members.relationshipTextures={bnet=markTextures.bnet,character=markTextures.friend,guild=markTextures.guild}
+function Members:RefreshAppearance()
+ for kind,file in pairs({friend="friend",guild="guild",positive="heart",neutral="book",caution="caution"}) do markTextures[kind]=T.media..file..".tga" end
+ self.relationshipTextures.character,self.relationshipTextures.guild=markTextures.friend,markTextures.guild
+end
 function Members:CreateMarks(parent,clickableNote)
  local frame=CreateFrame("Frame",nil,parent);frame:SetSize(1,T.memberMarkSize);frame:EnableMouse(false)
  frame.icons={};frame.flags={};frame.clickableNote=clickableNote==true;frame:Hide()
@@ -56,6 +60,7 @@ local function CollectMarks(frame,member,key)
  CollectNote(frame,key)
 end
 local function PaintMarks(frame)
+ frame:SetHeight(T.memberMarkSize)
  local count=0
  for _,kind in ipairs(markOrder) do if frame.flags[kind] then
   local icon
@@ -65,11 +70,11 @@ local function PaintMarks(frame)
      if frame.noteKey and not UI.preview then A:Open("notes",{playerKey=frame.noteKey}) end
     end,{iconSize=T.memberMarkSize,height=T.memberMarkSize,radius=4})
    end
-   icon=frame.noteButton;icon.icon:SetTexture(markTextures[kind])
+   icon=frame.noteButton;icon:SetSize(T.memberMarkSize,T.memberMarkSize);icon.icon:SetSize(T.memberMarkSize,T.memberMarkSize);icon.icon:SetTexture(markTextures[kind])
   else
    icon=frame.icons[kind]
    if not icon then icon=C.Icon(frame,T.memberMarkSize);frame.icons[kind]=icon end
-   icon:SetTexture(markTextures[kind])
+   icon:SetSize(T.memberMarkSize,T.memberMarkSize);icon:SetTexture(markTextures[kind])
   end
   icon:ClearAllPoints();icon:SetPoint("LEFT",count*(T.memberMarkSize+4),0);icon:Show();count=count+1
  end end
@@ -140,7 +145,7 @@ function Members:Create(parent,onClick)
  button:RegisterForClicks("LeftButtonUp","RightButtonUp");button.label:Hide()
  button.icon=C.GameIcon(button,T.memberIconSize)
  button.name=C.Text(button,"","memberNameFont","text");button.name:SetWordWrap(true);C.SetLineHeight(button.name,"memberNameLine")
- button.leaderIcon=C.Icon(button,T.memberLeaderSize);button.leaderIcon:SetDrawLayer("OVERLAY",1);button.leaderIcon:SetTexture(T.media.."leader.tga");button.leaderIcon:SetPoint("BOTTOM",button.icon,"TOP",0,T.memberLeaderGap);button.leaderIcon:Hide()
+ button.leaderIcon=C.Icon(button,T.memberLeaderSize);C.ApplyStyle(button.leaderIcon,{width="memberLeaderSize",height="memberLeaderSize"});button.leaderIcon:SetDrawLayer("OVERLAY",1);UI:SetMediaTexture(button.leaderIcon,"leader.tga");C.SetPoint(button.leaderIcon,"BOTTOM",button.icon,"TOP",0,"memberLeaderGap");button.leaderIcon:Hide()
  button.realm=C.Text(button,"","memberMetaFont","dim");button.realm:SetWordWrap(true);C.SetLineHeight(button.realm,"memberMetaLine")
  button.role=C.Icon(button,T.memberMarkSize)
  button.faction=C.Icon(button,T.memberMarkSize)

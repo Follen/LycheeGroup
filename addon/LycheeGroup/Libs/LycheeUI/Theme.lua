@@ -108,13 +108,15 @@ function Library.ResolveTheme(overrides,extraDefaults)
 end
 local function Kind(value) return type(value)=="table" and "color" or type(value) end
 local function Field(key,value)
- local field={type=Kind(value),default=value}
+ local field={type=Kind(value),default=type(value)=="table" and {unpack(value)} or value}
  if field.type=="number" then
-  if key:match("^font%d+$") or key:match("^line%d+$") or key:match("FontSize$") or key:match("LineHeight$") or key=="bodySize" or key=="metaSize" or key=="titleSize" or key=="headingSize" or key=="compactSize" or key=="listTitleSize" or key=="listMetaSize" then field.min=0;field.exclusiveMin=true;field.unit=key:lower():find("line") and "line" or "font"
+  if key~="tableLineHeight" and (key:match("^font%d+$") or key:match("^line%d+$") or key:match("FontSize$") or key:match("LineHeight$") or key:match("Font$") or key:match("Line$") or key=="bodySize" or key=="metaSize" or key=="titleSize" or key=="headingSize" or key=="compactSize" or key=="listTitleSize" or key=="listMetaSize") then field.min=0;field.exclusiveMin=true;field.unit=(key:match("^line%d+$") or key:match("LineHeight$") or key:match("Line$")) and "line" or "font"
   elseif key:match("Alpha$") or key:match("Tint$") then field.min,field.max=0,1
-  elseif T[key]~=nil and not key:match("Delta$") and (key:match("[Ww]idth$") or key:match("[Hh]eight$") or key:match("[Rr]adius$") or key:match("[Ss]ize$") or key:match("[Ii]nset$") or key:match("Padding$") or key:match("Gap$") or key:match("Extent$") or key:match("Reserve$") or key:match("Thickness$")) then field.min=0
+  elseif not key:match("Delta$") and (key:match("[Ww]idth%d*$") or key:match("[Hh]eight%d*$") or key:match("[Rr]adius%d*$") or key:match("[Ss]ize%d*$") or key:match("[Ii]nset%d*$") or key:match("Padding%d*$") or key:match("Gap%d*$") or key:match("Extent%d*$") or key:match("Reserve%d*$") or key:match("Thickness%d*$")) then field.min=0
   elseif key:match("Period$") then field.min=0;field.exclusiveMin=true
   elseif key:match("Duration$") then field.min=0 end
+  -- These heights are also row strides and divisors in virtualized lists.
+  if key=="listRowHeight" or key=="menuRowHeight" then field.min=0;field.exclusiveMin=true end
  end
  return field
 end

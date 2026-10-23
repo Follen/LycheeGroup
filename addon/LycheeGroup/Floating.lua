@@ -128,7 +128,7 @@ function F:Build()
   row.leader=Text(row,"font14",196);C.SetLineHeight(row.leader,"line20");C.SetPoint(row.leader,"TOPLEFT",row.leader:GetParent(),"TOPLEFT",40,-49);row.leader:SetWordWrap(false)
   row.timer=Text(row,"font14",56);C.SetLineHeight(row.timer,"line20",true);C.SetPoint(row.timer,"TOPRIGHT",row.timer:GetParent(),"TOPRIGHT",-4,-53);row.timer:SetJustifyH("RIGHT");C.ApplyStyle(row.timer,{color="muted"})
   local function DecisionButton(x,method)
-   local button=C.IconButton(row,nil,32,nil,{iconSize=18,hoverColor=method=="Invite" and T.positiveHover or T.negativeHover,pressedColor=method=="Invite" and T.positivePressed or T.negativePressed});C.SetPoint(button,"TOPRIGHT",button:GetParent(),"TOPRIGHT",x,-1)
+   local button=C.IconButton(row,nil,32,nil,{iconSize=18,hoverColor=method=="Invite" and "positiveHover" or "negativeHover",pressedColor=method=="Invite" and "positivePressed" or "negativePressed"});C.SetPoint(button,"TOPRIGHT",button:GetParent(),"TOPRIGHT",x,-1)
    button.glyph=button.icon;button.glyph:SetTexture(T.media..(method=="Invite" and "invite.tga" or "decline.tga"))
    button:HookScript("OnEnter",function() F:CancelHide();F:HoverRow(row,true) end);button:HookScript("OnLeave",function() F:HoverRow(row,false);F:ScheduleHide() end)
    button:HookScript("OnMouseDown",function(self) self.pressedTarget=self.applicantID end)
@@ -149,7 +149,7 @@ function F:Build()
   end
   row.invite=DecisionButton(-29,"Invite");row.invite:Hide()
   row.decline=DecisionButton(-7,"Decline");row.decline:Hide()
-  row.cancel=C.Button(row,"",T.floatingRowCancelWidth,nil,{height=T.floatingCancelButtonHeight,hoverColor=T.negativeHover,pressedColor=T.negativePressed});C.ApplyStyle(row.cancel,{width="floatingRowCancelWidth"});row.cancel.label:Hide();C.SetPoint(row.cancel,"TOPRIGHT",row.cancel:GetParent(),"TOPRIGHT","floatingRowCancelToprightX","floatingRowCancelToprightY");row.cancel:Hide()
+  row.cancel=C.Button(row,"",T.floatingRowCancelWidth,nil,{height=T.floatingCancelButtonHeight,hoverColor="negativeHover",pressedColor="negativePressed"});C.ApplyStyle(row.cancel,{width="floatingRowCancelWidth"});row.cancel.label:Hide();C.SetPoint(row.cancel,"TOPRIGHT",row.cancel:GetParent(),"TOPRIGHT","floatingRowCancelToprightX","floatingRowCancelToprightY");row.cancel:Hide()
   local cross=C.Glyph(row.cancel,"close",T.floatingCrossWidth);C.ApplyStyle(cross,{width="floatingCrossWidth",height="floatingCrossHeight"});cross:SetPoint("CENTER");cross:SetColor(T.dim)
   row.cancel:HookScript("OnEnter",function() F:CancelHide();F:HoverRow(row,true);cross:SetColor(T.brand) end)
   row.cancel:HookScript("OnLeave",function() cross:SetColor(T.dim);F:HoverRow(row,false);F:ScheduleHide() end)
@@ -362,6 +362,11 @@ function F:ApplyFont(path,scale)
 end
 function F:OnAppearanceChanged()
  if not self.frame then return end
+ self.logoTexture:SetTexture(T.media.."lychee-logo.tga")
+ for _,row in ipairs(self.rows) do
+  row.invite.glyph:SetTexture(T.media.."invite.tga")
+  row.decline.glyph:SetTexture(T.media.."decline.tga")
+ end
  local size=self.host and self.hostLogoSize or T.floatingLogoSize
  T.logoSize=size
  self.logoAnchor:SetSize(size,size);self.logoTexture:SetSize(size,size)

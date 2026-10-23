@@ -25,15 +25,15 @@ function Library.AttachMenus(UI)
    local entry=menu.items[index];if UI.options.onMenuHover then UI.options.onMenuHover(row,entry) end
   end)
   list:SetPoint("TOPLEFT",T.menuPadding,-T.menuPadding);list:SetStyle({selectionMark=false,alternateRows=false,singleLine=true,radius="selectionRadius",titleSize="menuFontSize",titleLineHeight="menuLineHeight"});menu.list=list
-  for _,row in ipairs(list.rows) do
+  list:SetRowInitializer(function(row)
    row.icon=C.Icon(row,T.menuIconSize);row.icon:SetPoint("LEFT",T.menuIconInset,0)
    row.check=C.CheckMark(row);row.check:SetPoint("LEFT",T.menuCheckInset,0)
    row.check:Hide()
-  end
+  end)
   UI:BindStyle(menu,"menu",function(object)
    object.list.rowHeight=T.menuRowHeight
    object.list:SetStyle({rowHeight=T.menuRowHeight,titleSize="menuFontSize",titleLineHeight="menuLineHeight"})
-   for i,row in ipairs(object.list.rows) do row:SetPoint("TOPLEFT",0,-(i-1)*T.menuRowHeight);row.icon:SetSize(T.menuIconSize,T.menuIconSize) end
+   for i,row in ipairs(object.list.rows) do row:SetPoint("TOPLEFT",0,-(i-1)*T.menuRowHeight);row.icon:SetSize(T.menuIconSize,T.menuIconSize);row.icon:SetPoint("LEFT",T.menuIconInset,0);row.check:SetPoint("LEFT",T.menuCheckInset,0) end
    object.list:SetPoint("TOPLEFT",T.menuPadding,-T.menuPadding)
   end)
   menu:SetScript("OnHide",function(self)
