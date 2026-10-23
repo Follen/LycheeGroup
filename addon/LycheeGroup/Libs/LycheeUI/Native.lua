@@ -27,7 +27,7 @@ end
 local function ApplyText(saved,context,color)
  local region=saved.region
  local theme=context.Theme
- region:SetFont(theme.font,(14+theme.fontSizeDelta)*context.fontScale,"");region:SetTextColor(unpack(color));region:SetShadowOffset(0,0)
+ region:SetFont(theme.font,context:GetFontSize("nativeFontSize"),"");region:SetTextColor(unpack(color));region:SetShadowOffset(0,0)
  -- Native setters may normalize font sizes and store colors as floats. The
  -- actual applied values identify our presentation during a foreign handoff.
  saved.applied={font={region:GetFont()},color={region:GetTextColor()},shadow={region:GetShadowOffset()}}
@@ -228,7 +228,7 @@ function Library.AttachNative(context)
     local skin=thumb._lycheeNativeScrollArt
     if not skin then
      skin=thumb:CreateTexture(nil,"ARTWORK");skin._lycheeNativeArt=true
-     skin:SetWidth(6);skin:SetPoint("TOP",thumb,"TOP");skin:SetPoint("BOTTOM",thumb,"BOTTOM")
+     skin:SetWidth(T.scrollWidth);skin:SetPoint("TOP",thumb,"TOP");skin:SetPoint("BOTTOM",thumb,"BOTTOM")
      thumb._lycheeNativeScrollArt=skin
     end
     self.scrollArt=skin;skin:SetColorTexture(unpack(T.accent));skin:SetAlpha(1);skin:Show()
@@ -282,7 +282,7 @@ function Library.AttachNative(context)
   lease:QuietTextures(button)
   local fill=context.nativeButtonArt[button]
   if not fill then
-   fill=C.Panel(button,T.accent,20);context.nativeButtonArt[button]=fill
+   fill=C.Panel(button,"accent","nativeButtonRadius");context.nativeButtonArt[button]=fill
    for _,region in ipairs(fill.regions) do region._lycheeNativeArt=true end
   end
   lease.fill=fill;fill:SetColor(T.accent);fill:SetAlpha(1);fill:Show()
@@ -290,22 +290,22 @@ function Library.AttachNative(context)
    M:Stop(fill);fill:Hide()
    RestoreText(font,owned)
    if owned then label:SetAlpha(alpha) end
-   if owned or button:GetAlpha()==(button:IsEnabled() and 1 or .38) then button:SetAlpha(buttonAlpha) end
+   if owned or button:GetAlpha()==(button:IsEnabled() and 1 or T.disabledAlpha) then button:SetAlpha(buttonAlpha) end
    if owned or options.text and button:GetText()==options.text then button:SetText(text) end
   end
+  local inside,pressed
   function lease:RefreshStyle()
-   if self:IsOwned() then ApplyText(font,context,T.onPrimary) end
+   if self:IsOwned() then ApplyText(font,context,T.onPrimary);fill:SetRadius(T.nativeButtonRadius);fill:SetColor(button:IsEnabled() and (pressed and T.primaryPressed or inside and T.primaryHover) or T.primary);button:SetSize(math.max(options.minWidth or T.nativeButtonMinWidth,label:GetStringWidth()+T.nativeButtonPadding),T.nativeButtonHeight) end
   end
   lease:RefreshStyle()
   if options.text then button:SetText(options.text) end
-  button:SetSize(math.max(options.minWidth or 96,label:GetStringWidth()+40),40)
+  button:SetSize(math.max(options.minWidth or T.nativeButtonMinWidth,label:GetStringWidth()+T.nativeButtonPadding),T.nativeButtonHeight)
   if not lease:IsOwned() then lease:Release();return lease end
-  local inside,pressed
   local function Surface(immediate)
    if not lease:IsOwned() then lease:Release();return end
    local enabled=button:IsEnabled()
-   button:SetAlpha(enabled and 1 or .38)
-   M:Color(fill,enabled and (pressed and T.primaryPressed or inside and T.primaryHover) or T.primary,not immediate and .12 or nil)
+   button:SetAlpha(enabled and 1 or T.disabledAlpha)
+   M:Color(fill,enabled and (pressed and T.primaryPressed or inside and T.primaryHover) or T.primary,not immediate and T.feedbackDuration or nil)
   end
   lease:Bind(button,"OnEnter",function(b,previous,...) if previous then previous(b,...) end;inside=true;Surface() end)
   lease:Bind(button,"OnLeave",function(b,previous,...) if previous then previous(b,...) end;inside=nil;pressed=nil;Surface() end)

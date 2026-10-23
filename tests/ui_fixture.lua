@@ -4,7 +4,10 @@ local base=dofile("tests/stubs.lua");base.Install({locale=locale,realm="Home"})
 local S=dofile("tests/ui_stubs.lua");S.Install()
 C_SpecializationInfo.GetSpecialization=function() return nil end
 _G.LycheeGroup=nil;_G.LycheeGroupDB=nil;_G.LycheeGroupPrefsDB=nil;_G.LycheeGroupNotesDB=nil;_G.LibStub=nil
-dofile("addon/LycheeGroup/Core.lua");dofile("addon/LycheeGroup/Specializations.lua");dofile("addon/LycheeGroup/Locale.lua");dofile("addon/LycheeGroup/Fonts.lua")
+_G.LycheeUI=nil
+local libraryPrivate={}
+for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Components.lua","Native.lua","Menu.lua"}) do assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/"..file))("LycheeGroup",libraryPrivate) end
+for _,file in ipairs({"Locale.lua","Core.lua","Configuration.lua","StyleDefaults.lua","Appearance.lua","Specializations.lua","Fonts.lua"}) do dofile("addon/LycheeGroup/"..file) end
 -- WoW restores SavedVariables after executing the addon's files.
 _G.LycheeGroupDB=settings;_G.LycheeGroupPrefsDB=preferences
 local A=LycheeGroup;A:LoadDB();dofile("addon/LycheeGroup/Bindings.lua")
@@ -157,9 +160,6 @@ C_LFGList={
 }
 dofile("tests/application_fixture.lua")(S)
 dofile("addon/LycheeGroup_Group/Locale.lua");G.L=A.GroupLocale;dofile("addon/LycheeGroup_Group/Catalog.lua")
-_G.LycheeUI=nil
-local libraryPrivate={}
-for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Components.lua","Native.lua","Menu.lua"}) do assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/"..file))("LycheeGroup",libraryPrivate) end
 for _,file in ipairs({"Locale.lua","Theme.lua","Motion.lua","Components.lua","Members.lua","Preview.lua","Tooltip.lua","Native.lua","Application.lua","Transfer.lua","Resize.lua","Host.lua","Find.lua","Create.lua","Notes.lua","Settings.lua"}) do dofile("addon/LycheeGroup_UI/"..file) end
 local U=A.UI;local C=U.C
 local Open=A.Open

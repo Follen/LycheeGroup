@@ -4,6 +4,7 @@ Stubs.Install({ locale = "zhCN", realm = "晨风号角" })
 
 Load.addon("LycheeGroup", "Locale.lua")
 Load.addon("LycheeGroup", "Core.lua")
+Load.addon("LycheeGroup", "Configuration.lua")
 
 local A = _G.LycheeGroup
 
@@ -187,9 +188,9 @@ do
 	local oldChallengeActive=C_ChallengeMode.IsChallengeModeActive
 	local challengeActive=true
 	C_ChallengeMode.IsChallengeModeActive=function() return challengeActive end
-	A.db.history=false
+	A:SetSetting("history",false)
 	local notesEnabled,notesHasRecords,reminders=A.db.notesEnabled,A.db.notesHasRecords,A.db.reminders
-	A.db.notesEnabled=true;A.db.notesHasRecords=true;A.db.reminders="off"
+	A:SetSetting("notesEnabled",true);A.db.notesHasRecords=true;A:SetSetting("reminders","off")
 	Load.addon("LycheeGroup", "Entrypoints.lua")
 	Stubs.FireEvent("ADDON_LOADED", "UnrelatedBefore")
 	T.eq(#loads, 0, "其他插件不唤醒业务")
@@ -204,7 +205,7 @@ do
 	T.eq(#Stubs.FramesWithEvent("PLAYER_LOGIN"), 0, "登录初始化只运行一次")
 	T.eq(#loads, 0, "只有已结束的申请时不加载业务包")
 	T.eq(A.Notes,nil,"登录时关闭记录提醒不提前加载完整笔记存档")
-	A.db.notesEnabled,A.db.notesHasRecords,A.db.reminders=notesEnabled,notesHasRecords,reminders
+	A.db.notesHasRecords=notesHasRecords;A:SetSetting("notesEnabled",notesEnabled);A:SetSetting("reminders",reminders)
 	T.eq(#Stubs.FramesWithEvent("CHALLENGE_MODE_START"),0,"关闭历史的秘境内登录不加载 Group 或监听开始事件")
 	Stubs.FireEvent("CHALLENGE_MODE_START")
 	T.eq(#loads,0,"关闭历史后秘境事件不唤醒 Group")
@@ -253,7 +254,7 @@ do
 	T.eq(call[2],"Foreign")
 	T.eq(call[3],"explicit reason")
 	T.ok(printed:find("Cross%-Foreign"), "笔记命令经统一提醒入口输出")
-	A.db.askReason=false
+	A:SetSetting("askReason",false)
 	A:RecordPlayer("Cross", "Foreign")
 	T.eq(call[3],"", "空理由保留语言无关语义")
 	A.Notes.Find=function() return nil end
@@ -261,7 +262,7 @@ do
 		T.eq(unit,"raid2")
 		callback("圣骑士-神圣",{class="PALADIN",specID=66,classSpec="圣骑士-神圣"})
 	end}
-	local notesEnabled=A.db.notesEnabled;A.db.notesEnabled=true
+	local notesEnabled=A:GetSetting("notesEnabled");A:SetSetting("notesEnabled",true)
 	Stubs.SetUnit("raid2",{name="右键目标",realm="Foreign",class="PALADIN",classID=2,guid="P-menu"})
 	local click,label
 	local menu={CreateDivider=function() end,CreateTitle=function() end,CreateButton=function(_,text,callback) label=text;click=callback end}
@@ -283,7 +284,7 @@ do
 	T.ok(call[6],"原生团队右键路径保留结构化查询结果")
 	T.eq(call[6].class,"PALADIN");T.eq(call[6].specID,66,"原生团队右键路径将结构化查询结果交给记录服务")
 	Stubs.SetUnit("raid2",nil)
-	A.db.notesEnabled=notesEnabled
+	A:SetSetting("notesEnabled",notesEnabled)
 
 	-- 聊天定位解析真实LinkUtil的options参数，不建立聊天历史索引。
 	nativeHandlers.lycheegroup("lycheegroup:note:Cross-Foreign",nil,{options="note:Cross-Foreign"},{button="LeftButton"})
@@ -496,8 +497,8 @@ for _,entry in ipairs({"start","login","enable"}) do
  local loginInRun=entry=="login"
  Stubs.Install({locale="enUS",realm="Home"});Stubs.SetTime(10000)
  Stubs.SetUnit("player",{name="New",realm="Home",class="WARRIOR",guid="Player-new"})
- Load.addon("LycheeGroup","Locale.lua");Load.addon("LycheeGroup","Core.lua")
- local core=LycheeGroup;core:LoadDB();core.db.history=entry~="enable";core.db.nativeLFGEntry=false
+ Load.addon("LycheeGroup","Locale.lua");Load.addon("LycheeGroup","Core.lua");Load.addon("LycheeGroup","Configuration.lua")
+ local core=LycheeGroup;core:LoadDB();core:SetSetting("history",entry~="enable");core:SetSetting("nativeLFGEntry",false)
  core.Minimap={Initialize=function() end}
  local active,loads=loginInRun,0
  C_ChallengeMode={IsChallengeModeActive=function() return active end,GetActiveChallengeMapID=function() return active and 502 end,

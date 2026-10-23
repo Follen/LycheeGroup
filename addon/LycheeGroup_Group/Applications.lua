@@ -152,7 +152,7 @@ function Applications:DeclineInvite(id)
  return ok,not ok and L.declineFailed or nil
 end
 function Applications:TryAutoJoin()
- if not A.db.autoJoin or accepting or joined or C_LFGList.HasActiveEntryInfo() then return end
+ if not A:GetSetting("autoJoin") or accepting or joined or C_LFGList.HasActiveEntryInfo() then return end
  if IsInGroup(LE_PARTY_CATEGORY_HOME) and not UnitIsGroupLeader("player",LE_PARTY_CATEGORY_HOME) then return end
  for _,record in ipairs(self:GetApplications()) do
   if record.status=="invited" and not record.pendingStatus and not record.autoAttempted then

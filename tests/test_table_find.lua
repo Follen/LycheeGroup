@@ -1,7 +1,7 @@
 local fixture=dofile("tests/ui_fixture.lua")
 local f=fixture("zhCN")
 local A,U,G,S=f.A,f.U,f.G,f.S
-A.db.reduceMotion=true;A:Open("find")
+A:SetSetting("reduceMotion",true);A:Open("find")
 local page=U.pages.find
 local function Left(region) local point={region:GetPoint()};return point[#point-1] or 0 end
 T.eq(Left(page.context),Left(page.search),"the dungeon heading shares the search and results left edge")
@@ -119,7 +119,7 @@ U.preview=nil;header:SetState(savedSort)
 -- Font and window scale changes keep all cells and numeric values in bounds.
 for _,locale in ipairs({"zhCN","enUS"}) do
  local nextF=fixture(locale);A,U,G,S=nextF.A,nextF.U,nextF.G,nextF.S
- A.db.reduceMotion=true;A:Open("find");page=U.pages.find
+ A:SetSetting("reduceMotion",true);A:Open("find");page=U.pages.find
  for _,scale in ipairs({70,100,130}) do
   A:SetSetting("fontScale",scale)
   for _,h in ipairs({page.resultsHeader,page.applicationHeader}) do

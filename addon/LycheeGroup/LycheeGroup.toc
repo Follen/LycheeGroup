@@ -11,6 +11,9 @@
 Libs\LycheeUI\embeds.xml
 Locale.lua
 Core.lua
+Configuration.lua
+StyleDefaults.lua
+Appearance.lua
 Specializations.lua
 Presentation.lua
 Bindings.lua

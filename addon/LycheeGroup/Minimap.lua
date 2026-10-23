@@ -22,7 +22,7 @@ local shapes = {
 
 function M:UpdatePosition()
     if self.button:GetParent() ~= Minimap then return end
-    local angle = math.rad(A.db.minimapAngle)
+    local angle = math.rad(self.dragAngle or A:GetSetting("minimapAngle"))
     local x, y = math.cos(angle), math.sin(angle)
     local quadrant = 1 + (x < 0 and 1 or 0) + (y > 0 and 2 or 0)
     local shape = shapes[GetMinimapShape and GetMinimapShape() or "ROUND"] or shapes.ROUND
@@ -31,57 +31,70 @@ function M:UpdatePosition()
         x, y = x / extent, y / extent
     end
     self.button:ClearAllPoints()
-    self.button:SetPoint("CENTER", Minimap, "CENTER", x * (Minimap:GetWidth() / 2 + 6), y * (Minimap:GetHeight() / 2 + 6))
+    self.button:SetPoint("CENTER", Minimap, "CENTER", x * (Minimap:GetWidth() / 2 + self.theme.minimapOrbitInset), y * (Minimap:GetHeight() / 2 + self.theme.minimapOrbitInset))
 end
 
 function M:Drag()
     local x, y = GetCursorPosition()
     local centerX, centerY = Minimap:GetCenter()
     local scale = Minimap:GetEffectiveScale()
-    A.db.minimapAngle = math.deg(math.atan2(y / scale - centerY, x / scale - centerX)) % 360
+    self.dragAngle = math.deg(math.atan2(y / scale - centerY, x / scale - centerX)) % 360
     self:UpdatePosition()
 end
 
 function M:StopDragging()
     self.dragging = nil
     self.button:SetScript("OnUpdate", nil)
+    if self.dragAngle then
+        local angle=self.dragAngle;self.dragAngle=nil
+        A:SetSetting("minimapAngle",angle)
+    end
+end
+
+function M:ApplyAppearance()
+    if not self.button then return end
+    local theme=LycheeUI.ResolveTheme(A.Appearance:GetTheme("main"),A.StyleDefaults.main)
+    self.theme=theme
+    self.button:SetSize(theme.minimapButtonSize,theme.minimapButtonSize)
+    self.button:SetFrameLevel(Minimap:GetFrameLevel()+theme.minimapFrameLevelOffset)
+    self.button.icon:SetSize(theme.minimapIconSize,theme.minimapIconSize)
+    self.background:SetTexture(theme.media.."circle.tga")
+    self.background:SetVertexColor(unpack(self.inside and theme.surfaceLowHover or theme.surfaceLow))
+    self.button.icon:SetTexture(theme.media.."lychee-logo.tga")
+    self:UpdatePosition()
 end
 
 function M:Initialize()
     if self.button then self:UpdateSettings(); return end
-    local theme = LycheeUI.Theme
     local button = CreateFrame("Button", "LycheeGroupMinimapButton", Minimap)
     self.button = button
-    button:SetSize(32, 32)
-    button:SetFrameLevel(Minimap:GetFrameLevel() + 5)
     button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     button:RegisterForDrag("LeftButton")
     local background = button:CreateTexture(nil, "BACKGROUND")
+    self.background=background
     background:SetAllPoints()
-    background:SetTexture(theme.media .. "circle.tga")
-    background:SetVertexColor(unpack(theme.surfaceLow))
     local icon = button:CreateTexture(nil, "ARTWORK")
     button.icon = icon
     icon:SetPoint("CENTER")
-    icon:SetSize(24, 24)
-    icon:SetTexture(theme.media .. "lychee-logo.tga")
     button:SetScript("OnEnter", function()
-        background:SetVertexColor(unpack(theme.surfaceLowHover))
+        M.inside=true
+        background:SetVertexColor(unpack(M.theme.surfaceLowHover))
         if M.dragging then return end
         local zh = A:GetLocale() == "zhCN"
         GameTooltip:SetOwner(button, "ANCHOR_LEFT")
         GameTooltip:AddLine(A.L.brand)
-        GameTooltip:AddLine(zh and "左键：打开／关闭荔枝组队" or "Left-click: toggle Lychee LFG", 1, 1, 1)
-        GameTooltip:AddLine(zh and "右键：打开设置" or "Right-click: open settings", 1, 1, 1)
+        GameTooltip:AddLine(zh and "左键：打开／关闭荔枝组队" or "Left-click: toggle Lychee LFG", unpack(M.theme.minimapTooltipTextColor,1,3))
+        GameTooltip:AddLine(zh and "右键：打开设置" or "Right-click: open settings", unpack(M.theme.minimapTooltipTextColor,1,3))
         GameTooltip:Show()
     end)
     button:SetScript("OnLeave", function()
-        background:SetVertexColor(unpack(theme.surfaceLow))
+        M.inside=nil
+        background:SetVertexColor(unpack(M.theme.surfaceLow))
         GameTooltip:Hide()
     end)
     button:SetScript("OnMouseDown", function(_, mouseButton)
         M.suppressClick = nil
-        if mouseButton == "LeftButton" then icon:SetAlpha(.75) end
+        if mouseButton == "LeftButton" then icon:SetAlpha(M.theme.minimapPressedAlpha) end
     end)
     button:SetScript("OnMouseUp", function() icon:SetAlpha(1) end)
     button:SetScript("OnClick", function(_, mouseButton)
@@ -106,14 +119,16 @@ function M:Initialize()
     button:SetScript("OnHide", function()
         M:StopDragging()
         icon:SetAlpha(1)
-        background:SetVertexColor(unpack(theme.surfaceLow))
+        M.inside=nil
+        background:SetVertexColor(unpack(M.theme.surfaceLow))
         if GameTooltip:IsOwned(button) then GameTooltip:Hide() end
     end)
+    self:ApplyAppearance()
     self:UpdateSettings()
 end
 
 function M:UpdateSettings()
     if not self.button then return end
     self:UpdatePosition()
-    self.button:SetShown(A.db.minimap == true)
+    self.button:SetShown(A:GetSetting("minimap") == true)
 end

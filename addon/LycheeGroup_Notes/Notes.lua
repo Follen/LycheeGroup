@@ -74,7 +74,7 @@ end
 function Notes:SyncEnabled()
 	local reminder = self.RosterReminder
 	if not reminder then return end
-	if A.db.notesEnabled and A.db.reminders ~= "off" and A.db.notesHasRecords then
+	if A:GetSetting("notesEnabled") and A:GetSetting("reminders") ~= "off" and A.db.notesHasRecords then
 		reminder.Start()
 	else
 		reminder.Stop()

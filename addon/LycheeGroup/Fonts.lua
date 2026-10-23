@@ -6,19 +6,16 @@ function F:GetDefaultPath()
 end
 
 function F:GetPath()
- local selected = A.db.font
+ local selected = A:GetSetting("font")
  if selected == "default" then return self:GetDefaultPath() end
  if selected == "game" then return STANDARD_TEXT_FONT end
  if self.selected ~= selected then
   self.check = self.check or CreateFont("LycheeGroupFontCheck")
   self.check:SetFont(selected, 14, "")
-  if self.check:GetFont() ~= selected then
-   A.db.font = "default"
-   return self:GetDefaultPath()
-  end
   self.selected = selected
+  self.resolved = self.check:GetFont()==selected and selected or self:GetDefaultPath()
  end
- return selected
+ return self.resolved
 end
 
 function F:Choices()
@@ -43,7 +40,7 @@ function F:Choices()
  return choices
 end
 
-function F:GetScale() return A.db.fontScale/100 end
+function F:GetScale() return A:GetSetting("fontScale")/100 end
 
 function F:IsOwned(region,window,menu,tooltip)
  while region do

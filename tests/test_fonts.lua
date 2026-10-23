@@ -46,8 +46,11 @@ T.eq(title:GetFont(),A.Fonts:GetDefaultPath());T.eq(settings.controls.font.widge
 local check=A.Fonts.check;local setter=check.SetFont
 check.SetFont=function(_,path,...) if path=="missing-font" then return false end;return setter(check,path,...) end
 A:SetSetting("font","missing-font")
-T.eq(A.db.font,"default","an uninstalled external font returns to LycheeFont")
+T.eq(A.db.font,"missing-font","an unavailable selection retains its explicit saved ownership")
 T.eq(title:GetFont(),A.Fonts:GetDefaultPath())
+local fontNodes=#S.nodes
+for _=1,20 do T.eq(A.Fonts:GetPath(),A.Fonts:GetDefaultPath()) end
+T.eq(#S.nodes,fontNodes,"cached fallback reads do not create another font object")
 check.SetFont=setter
 LibStub=nil
 T.eq(#A.Fonts:Choices(),4,"built-in font selection does not require SharedMedia")
@@ -123,7 +126,7 @@ for _,case in ipairs({{"zhCN","enUS","Settings","LycheeFont"},{"enUS","zhCN","шо
  local savedSettings={language=case[2]}
  local languageFixture=dofile("tests/ui_fixture.lua")(case[1],nil,savedSettings)
  local a,u=languageFixture.A,languageFixture.U
- a.db.reduceMotion=true;a:Open("settings",{section="interface"})
+ a:SetSetting("reduceMotion",true);a:Open("settings",{section="interface"})
  local page=u.pages.settings
  T.eq(GetLocale(),case[1],"addon language never changes the game's locale")
  T.eq(a:GetLocale(),case[2]);T.eq(u.L.settings,case[3])

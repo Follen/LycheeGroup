@@ -2,7 +2,7 @@
 -- lua tests/ui_preview.lua -> tests/preview-data.js
 local f=dofile("tests/ui_fixture.lua")("zhCN")
 local A,U,G,S=f.A,f.U,f.G,f.S
-UIParent:SetSize(1640,1000);A.db.reduceMotion=true
+UIParent:SetSize(1640,1000);A:SetSetting("reduceMotion",true)
 C_LFGList.GetActivityGroupInfo=function(id) return id==20 and "塞塔里斯神庙" or "尼鲁巴尔王宫" end
 G.Catalog:GetActivity(2).fullName="塞塔里斯神庙（史诗钥石）";G.Catalog:GetActivity(2).name="塞塔里斯神庙（史诗钥石）"
 local nativeDifficultyInfo=GetDifficultyInfo
@@ -39,7 +39,7 @@ local function snapshot(name,root)
  local nodes={}
  for i,n in ipairs(S.nodes) do
   local points={};for _,p in ipairs(n.points) do local point={};for j,v in ipairs(p) do point[j]=type(v)=="table" and {ref=ids[v]} or v end;points[#points+1]=point end
-  nodes[i]={id=i,parent=ids[n.parent],kind=n:GetObjectType(),shown=n.shown,alpha=n.alpha,w=n.w,h=n.h,points=points,all=ids[n.allPoints],text=(n:GetObjectType()=="FontString" or n:GetObjectType()=="EditBox") and n.text or nil,color=n.color,font=n.font,fill=n:GetObjectType()=="Texture" and n.fill or nil,vertex=n.vertex and {unpack(n.vertex)},texture=type(n.texture)~="table" and n.texture or nil,atlas=n.atlas,coords=n.texCoords,justify=n.justify,wrap=n.wrap,maxLines=n.maxLines,spacing=n.spacing,layer=n.layer,backdrop=n.backdropColor,rotation=n.rotation,level=n.level,strata=n.strata,scale=n.scale,clamp=n.clampInsets,thumb=ids[n.thumb],scroll=type(n.scroll)=="number" and n.scroll or nil,scrollChild=ids[n.scrollChild]}
+  nodes[i]={id=i,parent=ids[n.parent],kind=n:GetObjectType(),shown=n.shown,alpha=n.alpha,w=n.w,h=n.h,points=points,all=ids[n.allPoints],text=(n:GetObjectType()=="FontString" or n:GetObjectType()=="EditBox") and n.text or nil,color=n.color,font=n.font,fill=n:GetObjectType()=="Texture" and n.fill or nil,vertex=n.vertex and {unpack(n.vertex)},texture=type(n.texture)~="table" and n.texture or nil,atlas=n.atlas,coords=n.texCoords,justify=n.justify,wrap=n.wrap,maxLines=n.maxLines,spacing=n.spacing,layer=n.layer,backdrop=n.backdropColor,rotation=n.rotation,level=type(n.level)=="number" and n.level or nil,strata=n.strata,scale=n.scale,clamp=n.clampInsets,thumb=ids[n.thumb],scroll=type(n.scroll)=="number" and n.scroll or nil,scrollChild=ids[n.scrollChild]}
  end
  shots[#shots+1]={name=name,nodes=nodes,root=ids[root or U.frame],menu=U.context.menu and U.context.menu:IsShown() and ids[U.context.menu] or nil,tooltip=U.Tooltip.interactive and U.Tooltip.interactive:IsShown() and ids[U.Tooltip.interactive] or U.Tooltip.frame and U.Tooltip.frame:IsShown() and ids[U.Tooltip.frame] or nil}
 end
@@ -106,7 +106,7 @@ notes:SelectTab("history");notes.historyList.clip.mouseOver=true;notes.historyLi
 A:Open("settings");snapshot("设置")
 local raidMembers={}
 for i=1,30 do local member={};for key,value in pairs(members[(i-1)%5+1]) do member[key]=value end;member.nameKey=member.nameKey..i;member.name=member.nameKey;member.isLeader=i==1;member.isSelf=i==1;member.subgroup=math.ceil(i/5);member.unit="raid"..i;member.guid="SampleRaid-"..i;raidMembers[i]=member end
-A:Open("find");A.db.raidMembers="always"
+A:Open("find");A:SetSetting("raidMembers","always")
 U.Tooltip:ShowGroup(U.pages.find.results.rows[1],{name="英雄团本 熟练清场",leaderName=raidMembers[1].name,leaderKey=raidMembers[1].nameKey,categoryID=3,activityID=1,activity=G.Catalog:GetActivity(1),numMembers=30,maxNumPlayers=30,details={members=raidMembers,counts=U:MemberCounts(raidMembers),encounters={},relationships={bnet={"同路人"},character={"糖霜骑士-晨风号角"},guild={"暮色星河"}}}});snapshot("团本成员布局")
 function G:GetRoster() return raidMembers end
 G.listing=nil;A:Open("create");U.pages.create:UsePreset({activityID=1});snapshot("赛季团本增益")
@@ -133,7 +133,7 @@ U.Tooltip:ShowPlayer(U.pages.create.groupSummary,mage);snapshot("玩家详情优
 A:Open("find");U.pages.find:SelectCategory("seasonDungeon");U.pages.find:SetFiltersOpen(true)
 C_SpecializationInfo.GetSpecialization=function() return 3 end
 C_SpecializationInfo.GetSpecializationInfo=function() return 252,"邪恶",nil,135775 end
-U.pages.find.rolePresenceChoices.TANK.buttons[2]:Fire("OnClick");U.pages.find.rolePresenceChoices.DAMAGER.buttons[3]:Fire("OnClick");U.pages.find.hideSameSpec:Fire("OnClick");snapshot("职责筛选")
+U.pages.find.presenceChoices.tankPresence.buttons[2]:Fire("OnClick");U.pages.find.presenceChoices.damagePresence.buttons[3]:Fire("OnClick");U.pages.find.identityChoice.buttons[3]:Fire("OnClick");snapshot("职责筛选")
 A:SetSetting("fontScale",130);snapshot("筛选字体130%")
 A:SetSetting("fontScale",70);snapshot("筛选字体70%")
 A:SetSetting("fontScale",100)

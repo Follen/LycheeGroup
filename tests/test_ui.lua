@@ -87,7 +87,7 @@ do
  U:SetActivityIcon(icon,{categoryID=1,mapID=99998});T.eq(icon:GetTexture(),U.Theme.media.."flag.tga","a quest without journal art uses the quest category icon")
  C_Texture.GetAtlasInfo=getAtlas;C_EncounterJournal.GetInstanceForGameMap=getJournal;EJ_GetInstanceInfo=getInstance;G.Catalog.GetCategories=getCategories
 end
-A.db.reduceMotion=true
+A:SetSetting("reduceMotion",true)
 do
  local native=C_ChallengeMode.GetDungeonScoreRarityColor;local reads=0
  C_ChallengeMode.GetDungeonScoreRarityColor=function(score) reads=reads+1;return native(score) end
@@ -661,7 +661,7 @@ do
   local expected=1;for i=1,99 do if expected==10 then expected=11 end;T.eq(create.appIDs[i],expected,"equal ratings preserve native display order");expected=expected+1 end
   U.MemberRating=rating;G.applicants[10].members[1].rating=2000;Pick(create.sortChoice,"newest")
  end
- create:RefreshApplicants();create:SetBatchOffset(0,false);A.db.reduceMotion=false
+ create:RefreshApplicants();create:SetBatchOffset(0,false);A:SetSetting("reduceMotion",false)
  local get=G.GetApplicant;local reads,total=0,0
  G.GetApplicant=function(self,id) reads=reads+1;return get(self,id) end
  create.batchScroll:Fire("OnMouseWheel",-1)
@@ -687,8 +687,8 @@ do
  T.eq(#create.batchPool,pool);T.ok(pool<=10,"one hundred applicant batches retain only a viewport-sized native pool")
  G.GetApplicant=get;G.applicants=saved;create:RefreshApplicants();create:SetBatchOffset(0,false)
 end
-A.db.reduceMotion=false;create.batchScroll:Fire("OnMouseWheel",-1);T.ok(U.Motion.jobs[create.batchScroll],"applicant wheel movement starts one finite animation");U.Motion:Tick(.2);T.eq(create.batchScroll:GetVerticalScroll(),56);T.eq(U.Motion.jobs[create.batchScroll],nil)
-A.db.reduceMotion=true
+A:SetSetting("reduceMotion",false);create.batchScroll:Fire("OnMouseWheel",-1);T.ok(U.Motion.jobs[create.batchScroll],"applicant wheel movement starts one finite animation");U.Motion:Tick(.2);T.eq(create.batchScroll:GetVerticalScroll(),56);T.eq(U.Motion.jobs[create.batchScroll],nil)
+A:SetSetting("reduceMotion",true)
 U:Hide();T.eq(native.Name:GetParent(),native,"hiding restores native protected title parent")
 T.eq(U.Motion.jobs[create.batchScroll],nil,"leaving Create releases its scroll driver")
 for id=72,84 do G.applicants[id]=nil end
@@ -860,7 +860,7 @@ do
  local events={"OnTextChanged","OnEnterPressed","OnEscapePressed","OnTabPressed","OnArrowPressed","OnEditFocusGained","OnEditFocusLost","OnEnter","OnLeave","OnHide","OnShow"}
  local scripts={};for _,event in ipairs(events) do scripts[event]=box:GetScript(event) end
  box:UserType("Old native activity token")
- local remember=A.charPrefs.rememberFilters;A.charPrefs.rememberFilters=true
+ local remember=A.charPrefs.rememberFilters;A:SetSetting("rememberFilters",true)
  G.prefs.find={filters={text="Old saved local query",minLevel=12,maxLevel=99,tankPresence="present",healerPresence="missing",needsDamage=true,hideZeroScore=true}}
  local combat=InCombatLockdown;_G.InCombatLockdown=function() return true end
  T.eq(A:Open("find"),true,"Find first opens during combat without protected mouse propagation")
@@ -984,7 +984,7 @@ do
  A:Open("find")
  page:SetSearchMode("leader");T.eq(page.search.box,page.previewSearchBox);T.eq(U.Native.searchLease,nil)
  page.searchClear:Fire("OnClick")
- A.charPrefs.rememberFilters=remember
+ A:SetSetting("rememberFilters",remember)
 end
 A:Open("find")
 local find=U.pages.find
@@ -1094,7 +1094,7 @@ do
 end
 T.eq(G.filters.maxMembers,1,"direct numeric input immediately updates real filter state");T.eq(find.fMembers.placeholder:IsShown(),false)
 find.fMembers.box:SetText("");T.eq(G.filters.maxMembers,nil);T.eq(find.fMembers.placeholder:IsShown(),true)
-local rememberBounds=A.charPrefs.rememberFilters;A.charPrefs.rememberFilters=true
+local rememberBounds=A.charPrefs.rememberFilters;A:SetSetting("rememberFilters",true)
 find.fMembers.box:SetText("4");find.fMinMembers.box:SetText("2")
 T.eq(G.filters.minMembers,2);T.eq(G.filters.maxMembers,4,"minimum input never overwrites the maximum")
 find.fMinMembers.box:SetText("3");T.eq(G.filters.maxMembers,4)
@@ -1137,7 +1137,7 @@ do
  T.eq(find.quickFilters:IsShown(),false);T.eq(G.filters.tankPresence,nil);T.eq(G.filters.healerPresence,nil);T.eq(G.filters.damagePresence,nil,"seasonal conditions do not leak to raids")
  find:SelectCategory("seasonDungeon");find:ClearFilters()
 end
-A.charPrefs.rememberFilters=rememberBounds
+A:SetSetting("rememberFilters",rememberBounds)
 T.eq(find.filterToggle.label:GetText(),"筛选","the filter arrow is texture art rather than an unsupported font glyph")
 T.eq(find.seasonCategories.indicator:IsShown(),true,"category selection shares one moving tonal background and vertical marker")
 T.eq(find.seasonCategories.indicator.mark:IsShown(),true)
@@ -1179,7 +1179,7 @@ do
  catalog.GetGroups=function(self,key) if key=="seasonDungeon" or key=="2" then return groups end;return getGroups(self,key) end
  catalog.GetActivityTier=function(self,activity) return activity.fixtureTier or getTier(self,activity) end
  catalog.GetGroupShortName=function(self,key,groupKey) if groupKey==201 then return "毒牙" elseif groupKey==202 then return "红玉" end;return getShort(self,key,groupKey) end
- local remember=A.charPrefs.rememberFilters;A.charPrefs.rememberFilters=true
+ local remember=A.charPrefs.rememberFilters;A:SetSetting("rememberFilters",true)
  local function Row(key) for _,row in ipairs(find.activities.rows) do if row.key==key then return row end end;error("missing activity row "..key) end
  local function Difficulty(id) for _,button in ipairs(find.difficultyButtons) do if button.value==id and button:IsShown() then button:Fire("OnClick");return end end;error("missing difficulty "..tostring(id)) end
  local function Check(key) Row(key).multiSelect:Fire("OnClick") end
@@ -1292,7 +1292,7 @@ do
  T.eq(calls,ratedCalls);Row(909):Fire("OnClick","LeftButton");T.eq(calls,ratedCalls+1);T.same(lastActivity,{9009})
  find:SelectCategory("seasonRaid");catalog.GetCategories=getCategories
  catalog.GetActivities,catalog.GetGroups,catalog.GetActivityTier,catalog.GetGroupShortName=getActivities,getGroups,getTier,getShort
- G.Search.Search=search;A.charPrefs.rememberFilters=remember
+ G.Search.Search=search;A:SetSetting("rememberFilters",remember)
  find:SelectCategory("seasonRaid");find:SelectCategory("seasonDungeon");Row(0):Fire("OnClick","LeftButton")
 end
 find:SelectCategory("seasonDungeon");find:ClosePicker()
@@ -1537,7 +1537,7 @@ local savedApps=G.apps
 G.apps={savedApps[1]}
 for i=2,5 do G.apps[i]={id=900+i,name="Other category "..i,leaderName="Other-Away",categoryID=3,status=i==5 and "invited" or "applied"} end
 local previousID=LFGListApplicationDialog.resultID
-A.db.reduceMotion=false
+A:SetSetting("reduceMotion",false)
 U.Application:Apply(102)
 T.ok(find.limitNotice:IsShown(),"the sixth application explains the cap beside the primary action")
 T.ok(find.limitNotice:GetHeight()>=40)
@@ -1859,7 +1859,7 @@ do
 end
 raid.activity.difficultyID=15
 EJ_GetEncounterInfoByIndex=function(index) if journalReady and journalInstance==444 and journalDifficulty==15 then return ({"Boss A","Boss B","Boss C"})[index] end end
-A.db.raidMembers="shift"
+A:SetSetting("raidMembers","shift")
 U.Tooltip:ShowGroup(target,raid);T.eq(U.Tooltip.interactive:GetWidth(),624)
 CheckRaidLeaderFooter(U.Tooltip.interactive,raid.leaderName,U,"WARRIOR")
 do
@@ -1977,7 +1977,7 @@ T.eq(U.Tooltip.outsideClicks.events.GLOBAL_MOUSE_DOWN,nil)
 for _,mode in ipairs({"alt","ctrl"}) do
  local keyName=mode=="alt" and "Alt" or "Ctrl"
  local leftKey,rightKey="L"..mode:upper(),"R"..mode:upper()
- U.Tooltip:Hide();A.db.raidMembers=mode;U.Tooltip:ShowGroup(target,raid)
+ U.Tooltip:Hide();A:SetSetting("raidMembers",mode);U.Tooltip:ShowGroup(target,raid)
  T.eq(U.Tooltip.interactive:GetWidth(),624,"a configurable modifier still starts with a raid summary")
  T.eq(U.Tooltip.interactive.footer:GetText(),"按 "..keyName.." 展开成员名单","the collapsed hint follows the chosen modifier")
  for _,other in ipairs({"LSHIFT","RSHIFT","LALT","RALT","LCTRL","RCTRL"}) do
@@ -1998,7 +1998,7 @@ for _,mode in ipairs({"alt","ctrl"}) do
  U.Tooltip.interactive:Fire("OnEvent","MODIFIER_STATE_CHANGED",rightKey,0)
  T.eq(U.Tooltip.interactive:GetWidth(),624)
 end
-U.Tooltip:Hide();A.db.raidMembers="always";U.Tooltip:ShowGroup(target,raid)
+U.Tooltip:Hide();A:SetSetting("raidMembers","always");U.Tooltip:ShowGroup(target,raid)
 T.eq(U.Tooltip.interactive:GetWidth(),880,"the always setting opens the full roster")
 T.eq(U.Tooltip.interactive.memberButtons[1]:IsEnabled(),false,"returning to search data disables a previously interactive roster row")
 U.Tooltip.interactive.memberButtons[1]:Fire("OnClick");T.eq(U.Tooltip.member,nil)
@@ -2007,8 +2007,8 @@ for _,key in ipairs({"LSHIFT","RSHIFT","LALT","RALT","LCTRL","RCTRL"}) do
  U.Tooltip.interactive:Fire("OnEvent","MODIFIER_STATE_CHANGED",key,1)
  T.eq(U.Tooltip.interactive:GetWidth(),880,"modifiers do not collapse the always setting")
 end
-A.db.raidMembers="shift"
-A.db.reduceMotion=false
+A:SetSetting("raidMembers","shift")
+A:SetSetting("reduceMotion",false)
 local tipScroll=U.Tooltip.interactive.scroll
 tipScroll:Fire("OnMouseWheel",-1);T.ok(U.Motion.jobs[tipScroll],"tooltip wheel scrolling uses the shared finite motion driver")
 U.Motion:Tick(.07);T.ok(tipScroll:GetVerticalScroll()>0 and tipScroll:GetVerticalScroll()<42,"tooltip wheel movement is interpolated")
@@ -2017,7 +2017,7 @@ T.eq(U.Motion.jobs[tipScroll],nil,"tooltip hide stops its scroll interpolation")
 do
  local buttons=U.Tooltip.interactive.memberButtons;local first=buttons[1]
  for i=31,40 do raidMembers[i]={name="Raider"..i.."-Away",nameKey="Raider"..i.."-Away",class="WARRIOR",assignedRole="DAMAGER"} end
- raid.numMembers,raid.maxNumPlayers=40,40;A.db.raidMembers="always"
+ raid.numMembers,raid.maxNumPlayers=40,40;A:SetSetting("raidMembers","always")
  U.Tooltip:ShowGroup(target,raid)
  T.eq(#buttons,40,"opening a larger raid expands the existing member pool")
  T.eq(buttons[40].member,raidMembers[40]);T.ok(buttons[40]:IsVisible(),"the full forty-player roster remains accessible")
@@ -2041,7 +2041,7 @@ do
  T.eq(#S.nodes,nodes,"reopening a roster reuses its native object high-water mark");T.eq(buttons[1],first)
  U.Tooltip:Hide();T.eq(buttons[40].member,nil,"closing clears newly grown member bindings too")
  for i=40,31,-1 do raidMembers[i]=nil end
- raid.numMembers,raid.maxNumPlayers=30,30;A.db.raidMembers="shift"
+ raid.numMembers,raid.maxNumPlayers=30,30;A:SetSetting("raidMembers","shift")
 end
 U.Tooltip:ShowGroup(target,raid);T.eq(U.Tooltip.interactive:GetWidth(),624,"a new tooltip starts in summary mode");U.Tooltip:LeaveOwner(target);U.Motion:Tick(.23)
 T.eq(U.Tooltip.interactive:IsShown(),false,"leaving both owner and tooltip closes it through the native region mouse query")
@@ -2106,7 +2106,7 @@ do
 end
 find:SetFiltersOpen(true);T.ok(U.Motion.jobs[find.filterPanel]);find:SetFiltersOpen(false);T.eq(U.Motion.jobs[find.filterPanel],nil)
 find:SelectCategory("seasonDungeon");T.ok(U.Motion.jobs[find.picker]);find:ClosePicker();T.eq(U.Motion.jobs[find.picker],nil)
-A.db.reduceMotion=false;G.state="searching";find:ReadSearchState();T.ok(U.Motion.jobs[find.busyIcon],"only an active search animates the lychee")
+A:SetSetting("reduceMotion",false);G.state="searching";find:ReadSearchState();T.ok(U.Motion.jobs[find.busyIcon],"only an active search animates the lychee")
 find:ShowApplicationLimit();local closingRecords=G.records
 local applicationClock=find.countdown
 U:Hide(true);T.eq(next(U.Motion.jobs),nil,"closing releases scroll, tooltip and waiting jobs")
@@ -2125,7 +2125,7 @@ T.eq(LFGListApplicationDialog.submissions,submissions+1,"closing and reopening p
 T.eq(U.activeModal,nil);T.eq(LFGListApplicationDialog.submitted.note,"Updated native note")
 U:Hide(true)
 -- The actual page stays painted until its window finishes leaving.
-A.db.reduceMotion=false;A:Open("find");G.records=closingRecords;find:RefreshResults();U.Motion:Tick(.5)
+A:SetSetting("reduceMotion",false);A:Open("find");G.records=closingRecords;find:RefreshResults();U.Motion:Tick(.5)
 local closingRow=find.results.rows[1];local closingTitle=closingRow.title:GetText()
 T.ok(closingRow.key and closingRow:IsShown(),"close coverage starts from a real populated result row")
 local closingLogoWidth,closingLogoHeight=U.logo:GetWidth(),U.logo:GetHeight()
@@ -2181,7 +2181,7 @@ do
   return nativeActivities(category,group,flags)
  end
  g.Catalog:GetActivity(2).shortName=GetDifficultyInfo(8)
- a.db.reduceMotion=true;a:Open("create")
+ a:SetSetting("reduceMotion",true);a:Open("create")
  local page=u.pages.create;local entry=LFGListFrame.EntryCreation
  T.eq(page.favoritesExpanded,nil);T.eq(page.favoritesBody,nil,"collapsed favorites build no row controls")
  local collapsedHeight=page.rosterCard:GetHeight()
@@ -2306,7 +2306,7 @@ end
 -- Relations can repaint after native deletion but before the queued applicant notification.
 do
  local fresh=dofile("tests/ui_fixture.lua")("zhCN")
- local a,u,g=fresh.A,fresh.U,fresh.G;a.db.reduceMotion=true
+ local a,u,g=fresh.A,fresh.U,fresh.G;a:SetSetting("reduceMotion",true)
  g.listing={activityID=2,name="Recruiting"}
  for id=1,2 do g.applicants[id]={id=id,status="applied",displayOrderID=id,members={{name="Member"..id.."-Away",nameKey="Member"..id.."-Away",class="MAGE",assignedRole="DAMAGER"}}} end
  a:Open("create");local page=u.pages.create
@@ -2322,7 +2322,7 @@ end
 -- Rejection text follows party identity and its timer only repaints visible labels.
 for _,locale in ipairs({"zhCN","enUS"}) do
  local fresh=dofile("tests/ui_fixture.lua")(locale)
- local a,u,g=fresh.A,fresh.U,fresh.G;a.db.reduceMotion=true
+ local a,u,g=fresh.A,fresh.U,fresh.G;a:SetSetting("reduceMotion",true)
  local now=0;GetTime=function() return now end
  g.prefs.find={category="seasonDungeon",categoryPrefs={seasonDungeon={selected=true,difficultyID=8}}}
  for id=1,3 do g.records[id]={id=id,partyGUID="Party-"..id,name="Group "..id,activityID=2,activity=g.Catalog:GetActivity(2),categoryID=2,numMembers=1,maxNumPlayers=5,age=10} end
@@ -2381,7 +2381,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  u:Hide(true);T.eq(timer.cancelled,true);T.eq(page.declineClock,nil)
  for _,row in ipairs(page.results.rows) do T.eq(row.declined:GetText(),"") end
  now=240;a:Open("find");T.ok(page.declineClock);T.eq(Row(20).declined:GetText(),locale=="zhCN" and "4分钟前拒绝了你" or "Rejected you 4 min ago","re-entering recovers the session's rejection time")
- a.db.reduceMotion=false;u:Hide();T.eq(u.hiding,true)
+ a:SetSetting("reduceMotion",false);u:Hide();T.eq(u.hiding,true)
  now=300;fresh.base.AdvanceClock(60);T.eq(page.declineClock,nil,"a callback during window exit cannot renew the timer")
  u:Show("find");T.ok(page.declineClock,"reversing the exit restores the current visible rejection timer")
  u:Hide(true)
@@ -2390,7 +2390,7 @@ end
 -- Offscreen applications still own the countdown until the final deadline.
 do
  local fresh=dofile("tests/ui_fixture.lua")("zhCN")
- local a,u,g=fresh.A,fresh.U,fresh.G;a.db.reduceMotion=true
+ local a,u,g=fresh.A,fresh.U,fresh.G;a:SetSetting("reduceMotion",true)
  local clock,now=GetTime,0;GetTime=function() return now end
  for i=1,5 do g.apps[i]={id=i,name="Application "..i,categoryID=2,status=i==5 and "applied" or "invited",expiresAt=i==5 and 90 or nil} end
  a:Open("find");local page=u.pages.find;page:ShowApplicationLimit()
@@ -2411,7 +2411,7 @@ end
 -- Applicant details keep the selected identity when native member slots are reused.
 do
  local fresh=dofile("tests/ui_fixture.lua")("zhCN")
- local a,u,g=fresh.A,fresh.U,fresh.G;a.db.reduceMotion=true
+ local a,u,g=fresh.A,fresh.U,fresh.G;a:SetSetting("reduceMotion",true)
  local function Member(name,score)
   return {applicantID=71,name=name.."-Away",nameKey=name.."-Away",class="MAGE",assignedRole="DAMAGER",itemLevel=320,dungeonScore=score}
  end
@@ -2457,7 +2457,7 @@ end
 do
  local fresh=dofile("tests/ui_fixture.lua")("zhCN")
  local a,u,g=fresh.A,fresh.U,fresh.G
- a.db.reduceMotion=true
+ a:SetSetting("reduceMotion",true)
  local person={applicantID=81,applicantIndex=1,name="RaidGuest-Away",nameKey="RaidGuest-Away",class="MAGE",localizedClass="法师",specName="冰霜",assignedRole="DAMAGER",factionGroup=1,itemLevel=324,dungeonScore=0,subgroup=1}
  local app={id=81,status="applied",activityID=1,members={person}}
  g.listing={activityID=1,name="Raid recruitment"};g.applicants[81]=app
@@ -2551,7 +2551,7 @@ end
 do
  local fresh=dofile("tests/ui_fixture.lua")("zhCN")
  local a,u,g=fresh.A,fresh.U,fresh.G
- a.db.reduceMotion=true
+ a:SetSetting("reduceMotion",true)
  local active,pending
  local creates,titleChecks=0,0
  g.Game={RefreshSubscriptions=function() end}
@@ -2626,7 +2626,7 @@ end
 for _,synchronous in ipairs({false,true}) do
  local fresh=dofile("tests/ui_fixture.lua")("zhCN")
  local a,u,g=fresh.A,fresh.U,fresh.G
- a.db.reduceMotion=true
+ a:SetSetting("reduceMotion",true)
  local active={activityIDs={2},name="Existing listing",comment="Existing description",isCrossFactionListing=true}
  local reject=true
  local submitted
@@ -2672,7 +2672,7 @@ end
 do
  local fresh=dofile("tests/ui_fixture.lua")("zhCN")
  local a,u,g,base=fresh.A,fresh.U,fresh.G,fresh.base
- a.db.reduceMotion=true
+ a:SetSetting("reduceMotion",true)
  g.prefs.find={category="seasonDungeon",categoryPrefs={seasonDungeon={selected=true,difficultyID=8}}}
  for id=1,2 do g.records[id]={id=id,activityID=2,activity=g.Catalog:GetActivity(2),categoryID=2,name="Group "..id,leaderName="Leader"..id.."-Away",leaderKey="Leader"..id.."-Away",leaderFactionGroup=1,numMembers=1,maxNumPlayers=5,age=10} end
  g.apps={{id=2,status="applied",categoryID=2,result=g.records[2],expiresAt=GetTime()+300}}
@@ -2750,7 +2750,7 @@ end
 -- new search; this also covers the English all-instances label.
 do
  local fresh=dofile("tests/ui_fixture.lua")("enUS")
- fresh.A.charPrefs.rememberFilters=true
+ fresh.A:SetSetting("rememberFilters",true)
  fresh.G.prefs.find={category="seasonDungeon",categoryPrefs={seasonDungeon={groupKey=20,difficultyID=8}}}
  fresh.A:Open("find")
  local page=fresh.U.pages.find
@@ -2787,7 +2787,7 @@ end
 do
  local fresh=dofile("tests/ui_fixture.lua")("zhCN")
  local a,u,g=fresh.A,fresh.U,fresh.G
- a.db.reduceMotion=true
+ a:SetSetting("reduceMotion",true)
  local members={}
  for i=1,40 do members[i]={guid="Roster-"..i,name="Player"..i.."-Away",nameKey="Player"..i.."-Away",class="WARRIOR",assignedRole=i==1 and "TANK" or "DAMAGER",subgroup=math.ceil(i/5),isLeader=i==40} end
  g.GetRoster=function() return members end
@@ -2881,7 +2881,7 @@ end
 do
  local fresh=dofile("tests/ui_fixture.lua")("zhCN")
  local a,u,g=fresh.A,fresh.U,fresh.G
- a.db.reduceMotion=true
+ a:SetSetting("reduceMotion",true)
  local saved={}
  local function Stub(key,value) saved[key]={value=_G[key]};_G[key]=value end
  local state={leader=true,inspect=true}
@@ -2963,7 +2963,7 @@ end
 -- Binding capture uses Blizzard's binding map, and scale applies to the whole window.
 do
  local fresh=dofile("tests/ui_fixture.lua")("zhCN")
- local a,u,g=fresh.A,fresh.U,fresh.G;a.db.reduceMotion=true
+ local a,u,g=fresh.A,fresh.U,fresh.G;a:SetSetting("reduceMotion",true)
  local one={guid="Inline-1",name="First-Away",nameKey="First-Away",class="MAGE",assignedRole="DAMAGER",dungeonScore=2500,subgroup=1}
  local two={guid="Inline-2",name="Longnamehere-Away",nameKey="Longnamehere-Away",class="PRIEST",assignedRole="HEALER",factionGroup=0,isBNetFriend=true,subgroup=1}
  local members={one,two};g.GetRoster=function() return members end
@@ -3001,7 +3001,7 @@ do
  local a,u,g=fresh.A,fresh.U,fresh.G
  g.records[901]={id=901,activityID=2,name="Closing shortcut",leaderName="Leader-Home",numMembers=1}
  g.prefs.find={category="seasonDungeon",categoryPrefs={seasonDungeon={selected=true,difficultyID=8}}}
- a.db.reduceMotion=false;a:Open("find")
+ a:SetSetting("reduceMotion",false);a:Open("find")
  u.Motion:Tick(2)
  local page=u.pages.find;page:RefreshResults();T.eq(page.results.rows[1].key,901);page.results.rows[1]:Fire("OnClick","LeftButton")
  page.autoApply:Fire("OnClick");u.Application.applicationModal.submit:Fire("OnClick")
@@ -3027,7 +3027,7 @@ end
 do
  local fresh=dofile("tests/ui_fixture.lua")("zhCN")
  local a,u,s=fresh.A,fresh.U,fresh.S
- a.db.reduceMotion=true
+ a:SetSetting("reduceMotion",true)
  SetBinding(";","OPENALLBAGS");SetBinding("M","TOGGLEWORLDMAP")
  a:Open("settings")
  local page=u.pages.settings
@@ -3082,14 +3082,14 @@ do
  T.eq(page.bindingCapture,nil);T.eq(capture.keyboardEnabled,false);T.eq(capture:GetScript("OnKeyDown"),nil)
  capture:Show();page:BeginBindingCapture();u:Navigate("notes")
  T.eq(page.bindingCapture,nil);T.eq(page.frame.events.PLAYER_REGEN_DISABLED,nil);T.eq(capture.keyboardEnabled,false)
- u:Navigate("settings",{section="general"});a.db.reduceMotion=false;page:BeginBindingCapture()
+ u:Navigate("settings",{section="general"});a:SetSetting("reduceMotion",false);page:BeginBindingCapture()
  local beforeClose=#s.bindingSaves
  u:Hide();T.ok(u.hiding);T.ok(u.frame:IsShown(),"closing preserves the animated page")
  T.eq(page.bindingCapture,nil);T.eq(capture.keyboardEnabled,false);T.eq(capture:GetScript("OnKeyDown"),nil)
  T.eq(page.frame.events.PLAYER_REGEN_DISABLED,nil)
  capture:Fire("OnKeyDown","F8");T.eq(#s.bindingSaves,beforeClose,"closing immediately cancels key capture")
  a:Open("settings");page:BeginBindingCapture();T.eq(page.bindingCapture,capture,"capture remains available after reversing close")
- page:CancelBindingCapture();a.db.reduceMotion=true
+ page:CancelBindingCapture();a:SetSetting("reduceMotion",true)
  u:Navigate("settings",{section="interface"})
  local baseline=math.min(1,(UIParent:GetWidth()-40)/u.Theme.width,(UIParent:GetHeight()-40)/u.Theme.height)
  local floatingScale=a.db.floatingScale
@@ -3252,7 +3252,7 @@ end
 -- Native layout rounds scaled heights; a fitting roster must not expose a thumb.
 do
  local fresh=dofile("tests/ui_fixture.lua")("zhCN")
- local a,u=fresh.A,fresh.U;a.db.reduceMotion=true;a:Open("create")
+ local a,u=fresh.A,fresh.U;a:SetSetting("reduceMotion",true);a:Open("create")
  local members={}
  for i=1,40 do members[i]={name="Member"..i,nameKey="Member"..i.."-Home",class="MAGE",assignedRole="DAMAGER",subgroup=math.ceil(i/5)} end
  local fitting={};for i=1,10 do fitting[i]=members[i] end
@@ -3312,7 +3312,7 @@ end
 do
  local fresh=dofile("tests/ui_fixture.lua")("zhCN")
  local a,u,g,s=fresh.A,fresh.U,fresh.G,fresh.S
- a.db.reduceMotion=true
+ a:SetSetting("reduceMotion",true)
  local person={applicantID=81,name="荔枝小月亮-燃烧之刃",nameKey="荔枝小月亮-燃烧之刃",class="PALADIN",specName="神圣",assignedRole="HEALER",factionGroup=0,isBNetFriend=true}
  local plain={name="Ordinary-Away",nameKey="Ordinary-Away",class="MAGE",assignedRole="DAMAGER",factionGroup=1}
  a.Notes:Add("荔枝小月亮","燃烧之刃","备注内容",nil,nil,{type="neutral"})
@@ -3352,11 +3352,11 @@ do
  person.isCharFriend=true;person.isGuildMate=true
  T.eq(u.Members:BindMarks(marks,person),84,"all three relationships coexist with the specific note kind")
  T.eq(marks.icons.friend:GetTexture(),u.Theme.media.."friend.tga");T.eq(marks.icons.guild:GetTexture(),u.Theme.media.."guild.tga")
- a.db.relations=false;T.eq(u.Members:BindMarks(marks,person),18,"relationship settings leave the enabled note visible")
- a.db.relations=true;a.db.noteMarks=false;T.eq(u.Members:BindMarks(marks,person),62)
+ a:SetSetting("relations",false);T.eq(u.Members:BindMarks(marks,person),18,"relationship settings leave the enabled note visible")
+ a:SetSetting("relations",true);a:SetSetting("noteMarks",false);T.eq(u.Members:BindMarks(marks,person),62)
  T.eq(button:IsShown(),false);T.eq(marks.noteKey,nil)
- a.db.noteMarks=true;a.db.notesEnabled=false;T.eq(u.Members:BindMarks(marks,person),62)
- a.db.notesEnabled=true
+ a:SetSetting("noteMarks",true);a:SetSetting("notesEnabled",false);T.eq(u.Members:BindMarks(marks,person),62)
+ a:SetSetting("notesEnabled",true)
  g.prefs.find={category="seasonDungeon",categoryPrefs={seasonDungeon={selected=true,difficultyID=8}}}
  local record={id=1,activityID=2,activity=g.Catalog:GetActivity(2),activityName="Dungeon activity",categoryID=2,name="Known members",leaderName=plain.name,leaderKey=plain.nameKey,numMembers=2,maxNumPlayers=5,age=10,bnetFriends=1,charFriends=1,guildMates=1,details={members={plain,person},counts={HEALER=1,DAMAGER=1},relationships={bnet={"战网昵称"},character={person.name},guild={"公会玩家"}}}}
  g.records[1]=record;a:Open("find")
@@ -3391,10 +3391,10 @@ do
  T.ok(row.marks.icons.positive:IsShown());T.eq(row.marks.icons.neutral:IsShown(),false)
  T.ok(ordinary.marks.icons.positive:IsShown());T.eq(ordinary.marks.icons.neutral:IsShown(),false)
  T.eq(ordinary.marks.icons.bnet,nil,"summary-only counts stay separate from member identity")
- a.db.relations=false;g:Notify("relations")
+ a:SetSetting("relations",false);g:Notify("relations")
  T.eq(view.relationshipRows.character:IsShown(),false);T.eq(view.relationshipRows.guild:IsShown(),false)
  T.eq(row.marks:GetWidth(),18);T.ok(ordinary.marks.icons.positive:IsShown(),"relationship visibility leaves the leader note intact")
- a.db.relations=true
+ a:SetSetting("relations",true)
  u.Tooltip:Hide();g.listing={activityID=1,name="Raid recruitment"};g.manageApplicants=false
  person.isBNetFriend=true;g.applicants[81]={id=81,status="applied",displayOrderID=1,activityID=1,members={person}}
  a:Open("create")
@@ -3423,7 +3423,7 @@ end
 for _,locale in ipairs({"zhCN","enUS"}) do
  local fresh=dofile("tests/ui_fixture.lua")(locale)
  local a,u,g=fresh.A,fresh.U,fresh.G
- a.db.reduceMotion=true
+ a:SetSetting("reduceMotion",true)
  g.prefs.find={category="seasonDungeon",categoryPrefs={seasonDungeon={selected=true,difficultyID=8}}}
  for id=1,4 do g.records[id]={id=id,activityID=2,activity=g.Catalog:GetActivity(2),categoryID=2,name=id==3 and "Different title" or "Repeated title",leaderName="Leader"..id.."-Home",leaderKey="Leader"..id.."-Home",numMembers=1,maxNumPlayers=5,age=10} end
  local application={id=4,status="applied",categoryID=2,result=g.records[4],expiresAt=GetTime()+300}
@@ -3461,7 +3461,7 @@ end
 -- Block management loads Group only on entry and reuses the existing list pool.
 for _,locale in ipairs({"zhCN","enUS"}) do
  local fresh=dofile("tests/ui_fixture.lua")(locale)
- local a,u,g=fresh.A,fresh.U,fresh.G;a.db.reduceMotion=true
+ local a,u,g=fresh.A,fresh.U,fresh.G;a:SetSetting("reduceMotion",true)
  local ensure,loads=a.Ensure,0
  a.Ensure=function(self,module) if module=="Group" then loads=loads+1 end;return ensure(self,module) end
  a:Open("settings");local page=u.pages.settings
@@ -3514,7 +3514,7 @@ end
 -- A failed lazy load stays local to block management and can be retried on entry.
 do
  local fresh=dofile("tests/ui_fixture.lua")("zhCN")
- local a,u,g=fresh.A,fresh.U,fresh.G;a.db.reduceMotion=true
+ local a,u,g=fresh.A,fresh.U,fresh.G;a:SetSetting("reduceMotion",true)
  local ensure=a.Ensure
  a.Ensure=function(self,module) if module=="Group" then return nil,"Group load failed" end;return ensure(self,module) end
  a:Open("settings",{section="blocks"});local page=u.pages.settings
@@ -3528,7 +3528,7 @@ end
 for _,locale in ipairs({"zhCN","enUS"}) do
  local fresh=dofile("tests/ui_fixture.lua")(locale)
  local a,u,s=fresh.A,fresh.U,fresh.S
- a.db.reduceMotion=true
+ a:SetSetting("reduceMotion",true)
  local proto=getmetatable(s.nodes[1]);local measure=proto.GetStringWidth
  local pending,factor=true,1
  function proto:GetStringWidth()
@@ -3565,7 +3565,7 @@ end
 -- The settings pill centers its complete icon/label group, including after font changes.
 for _,locale in ipairs({"zhCN","enUS"}) do
  local fresh=dofile("tests/ui_fixture.lua")(locale)
- fresh.A.db.reduceMotion=true;fresh.A:Open("settings")
+ fresh.A:SetSetting("reduceMotion",true);fresh.A:Open("settings")
  local u=fresh.U;local button=u.settingsButton
  local function CheckSettingsPadding()
   local iconPoint={button.icon:GetPoint()};local textPoint={button.label:GetPoint()}
@@ -3630,7 +3630,7 @@ end
 -- English layout uses the addon locale even on a Chinese client.
 for _,locale in ipairs({"enUS","zhCN"}) do
  local fresh=dofile("tests/ui_fixture.lua")("zhCN",nil,{language=locale})
- local a,u=fresh.A,fresh.U;a.db.reduceMotion=true;a:Open("find")
+ local a,u=fresh.A,fresh.U;a:SetSetting("reduceMotion",true);a:Open("find")
  local page=u.pages.find
  local any=locale=="zhCN" and "不限" or "Any"
  T.eq(page.fMinMembers.placeholder:GetText(),locale=="zhCN" and "最少 1" or "Min 1","minimum endpoint follows the addon language and lower capacity bound")
@@ -3657,9 +3657,9 @@ end
 -- Character defaults survive a new UI session; only confirmed, available roles are saved.
 do
  local preferences={defaultSort="members",rememberFilters=true,applicationRoles={TANK=true,HEALER=true,DAMAGER=false},find={category="seasonDungeon",categoryPrefs={seasonDungeon={selected=true,groupKey=20,difficultyID=8,minMembers="2",maxMembers="4",sort="rating"}}}}
- local fresh=dofile("tests/ui_fixture.lua")("enUS",preferences)
+ local fresh=dofile("tests/ui_fixture.lua")("enUS",preferences,{defaultSort="itemLevel",rememberFilters=false})
  local a,u,g=fresh.A,fresh.U,fresh.G
- a.db.reduceMotion=true;a.db.defaultSort="itemLevel";a.db.rememberFilters=false
+ a:SetSetting("reduceMotion",true)
  g.records[901]={id=901,name="Saved roles",activityID=2,activity=g.Catalog:GetActivity(2),activityName="Dungeon activity",categoryID=2,leaderName="Leader-Home",leaderKey="Leader-Home",numMembers=2,maxNumPlayers=5,age=1,details={members={{name="Leader-Home",nameKey="Leader-Home",class="WARRIOR",assignedRole="TANK",isLeader=true},{name="Member-Home",nameKey="Member-Home",class="MAGE",assignedRole="DAMAGER"}}}}
  local countMembers=u.MemberCounts
  u.MemberCounts=function() error("five-player result and application rows must not calculate unused role counts") end
@@ -3698,7 +3698,7 @@ do
  settings.controls.rememberFilters.widget:Fire("OnClick");T.eq(a.charPrefs.rememberFilters,false);T.eq(a.db.rememberFilters,false)
  u:Hide(true)
  local restored=dofile("tests/ui_fixture.lua")("zhCN",preferences)
- restored.A.db.reduceMotion=true;restored.A:Open("find")
+ restored.A:SetSetting("reduceMotion",true);restored.A:Open("find")
  T.eq(restored.U.Application:IsAutoApplyEnabled(),false,"reloading without an enabled flag restores roles and keeps automation off")
  T.same(restored.U.Application.applicationPrefs.roles,{DAMAGER=true})
  T.eq(restored.A.charPrefs.applicationRoles,preferences.applicationRoles)
@@ -3743,7 +3743,7 @@ end
 -- Selected dungeon groups must narrow the native request, before local filtering.
 do
  local fresh=dofile("tests/ui_fixture.lua")("enUS")
- local a,u,g=fresh.A,fresh.U,fresh.G;a.db.reduceMotion=true
+ local a,u,g=fresh.A,fresh.U,fresh.G;a:SetSetting("reduceMotion",true)
  local nativeActivity,nativeGroups=C_LFGList.GetActivityInfoTable,C_LFGList.GetActivityGroupInfo
  local activities={}
  for index,entry in ipairs({{2001,201,8},{2002,201,1},{2003,201,2},{2101,202,8},{2102,202,1},{2201,203,8}}) do
@@ -3844,7 +3844,7 @@ end
 do
  for _,notification in ipairs({"result","results","applications","dirtyBatch"}) do
   local fresh=dofile("tests/ui_fixture.lua")("zhCN",{find={category="3",categoryPrefs={["3"]={selected=true}}}})
-  local a,u,g=fresh.A,fresh.U,fresh.G;a.db.reduceMotion=true;a.db.raidMembers="shift"
+  local a,u,g=fresh.A,fresh.U,fresh.G;a:SetSetting("reduceMotion",true);a:SetSetting("raidMembers","shift")
   EJ_GetDifficulty=function() return 14 end;EJ_SelectInstance=function() end;EJ_GetEncounterInfoByIndex=function() end
   local alpha={name="Alpha-Away",nameKey="Alpha-Away",class="WARRIOR",assignedRole="TANK",isLeader=true,factionGroup=1}
   local beta={name="Beta-Away",nameKey="Beta-Away",class="MAGE",assignedRole="DAMAGER"}
@@ -3917,7 +3917,7 @@ do
  local a,u=f.A,f.U
  a.Notes:Add("MotionNeutral","Away","neutral",nil,nil,{type="neutral"})
  a.Notes:Add("MotionPositive","Away","positive",nil,nil,{type="positive"})
- a.db.reduceMotion=false;a:Open("notes")
+ a:SetSetting("reduceMotion",false);a:Open("notes")
  local p,m=u.pages.notes,u.Motion;m:Tick(2)
  T.ok(p.tabSelection,"notes use the shared moving sidebar background and mark")
  local function X(region) return select(4,region:GetPoint()) end
@@ -3968,7 +3968,7 @@ do
  u:Hide(true)
  T.eq(m:Count(),0,"hiding notes releases sidebar, list, history and editor motion")
  a:Open("notes");m:Tick(2)
- p.tabs.positive:Fire("OnClick");a.db.reduceMotion=true;u:SetReducedMotion(true)
+ p.tabs.positive:Fire("OnClick");a:SetSetting("reduceMotion",true);u:SetReducedMotion(true)
  T.eq(m:Count(),0);T.eq(X(p.left),24);T.eq(p.left:GetAlpha(),1)
  u:Hide(true)
 end
@@ -3977,7 +3977,7 @@ end
 do
  local f=dofile("tests/ui_fixture.lua")("zhCN")
  local a,u,g=f.A,f.U,f.G
- a.db.reduceMotion=false;a.db.showImportantFilters=true;a:Open("find");local m=u.Motion;m:Tick(2)
+ a:SetSetting("reduceMotion",false);a:SetSetting("showImportantFilters",true);a:Open("find");local m=u.Motion;m:Tick(2)
  local firstX=select(4,u.underline:GetPoint())
  u:Navigate("create")
  T.eq(select(4,u.pages.create.frame:GetPoint()),32,"forward navigation slides the entire page from the right")
@@ -4039,7 +4039,7 @@ do
  end
  T.eq(#f.S.nodes,nodes,"warmed page, sidebar, popup and dropdown transitions reuse their native objects")
  T.eq(m:Count(),0,"settled UI transitions leave no frame driver")
- p:SelectCategory("seasonRaid");a.db.reduceMotion=true;u:SetReducedMotion(true)
+ p:SelectCategory("seasonRaid");a:SetSetting("reduceMotion",true);u:SetReducedMotion(true)
  T.eq(m:Count(),0);T.eq(p.picker:GetAlpha(),1,"reduce motion settles an active secondary menu immediately")
  u:Hide(true);T.eq(m:Count(),0,"closing the host leaves no local motion jobs")
 end
@@ -4049,7 +4049,7 @@ do
  local function LateNotes(pageName,settings,existing)
   local fresh=dofile("tests/ui_fixture.lua")("enUS",nil,settings)
   local a,u,g=fresh.A,fresh.U,fresh.G
-  a.db.reduceMotion=true
+  a:SetSetting("reduceMotion",true)
   local notes=a.Notes
   if existing then notes:Add("LateNote","Away","Existing before login") end
   a.Notes=nil
@@ -4080,7 +4080,7 @@ do
   T.eq(loads(),1,"opening "..pageName.." loads existing notes even with reminders off")
   T.eq(a.Notes,notes);T.ok(page.notesUnsub)
   T.eq(row.marks.flags.neutral,true,"the first displayed member retains its existing note marker")
-  a.db.noteMarks=false
+  a:SetSetting("noteMarks",false)
   T.eq(u:GetNote("LateNote-Away").reason,"Existing before login","note details remain available when markers are hidden")
   T.eq(u:HasNote("LateNote-Away"),true,"existing records still open for viewing rather than creation")
   u:Hide(true)
@@ -4126,7 +4126,7 @@ do
  end
  for _,pageName in ipairs({"find","create"}) do
   local a,u,g,page,row=LateNotes(pageName)
-  a.db.reduceMotion=false;u.Motion:Tick(.5);u:Hide()
+  a:SetSetting("reduceMotion",false);u.Motion:Tick(.5);u:Hide()
   local changes=0;local changed=page.OnNotesChanged
   page.OnNotesChanged=function(self) changes=changes+1;return changed(self) end
   a:RecordPlayer("LateNote","Away",nil,"Recorded during closing")
@@ -4137,7 +4137,7 @@ do
  end
  for _,scenario in ipairs({"applications","applicants"}) do
   local fresh=dofile("tests/ui_fixture.lua")("enUS")
-  local a,u=fresh.A,fresh.U;a.db.reduceMotion=true
+  local a,u=fresh.A,fresh.U;a:SetSetting("reduceMotion",true)
   dofile("addon/LycheeGroup/Entrypoints.lua")
   local subscriptions=0;local subscribe=a.Notes.Subscribe
   function a.Notes:Subscribe(callback) subscriptions=subscriptions+1;return subscribe(self,callback) end
@@ -4154,7 +4154,7 @@ end
 -- A direct current-roster hover needs only the final player-detail reset.
 do
  local fresh=dofile("tests/ui_fixture.lua")("enUS")
- local a,u,g=fresh.A,fresh.U,fresh.G;a.db.reduceMotion=true
+ local a,u,g=fresh.A,fresh.U,fresh.G;a:SetSetting("reduceMotion",true)
  local members={}
  for i=1,40 do members[i]={guid="Player-detail-"..i,name="Member"..i,nameKey="Member"..i.."-Away",class="WARRIOR",assignedRole="DAMAGER",isLeader=i==1} end
  function g:GetRoster() return members end
@@ -4188,7 +4188,7 @@ end
 -- Editor labels reuse the class-matched metadata already needed by the record.
 do
  local fresh=dofile("tests/ui_fixture.lua")("enUS")
- local a,u,pick=fresh.A,fresh.U,fresh.Pick;a.db.reduceMotion=true
+ local a,u,pick=fresh.A,fresh.U,fresh.Pick;a:SetSetting("reduceMotion",true)
  a.Notes:Add("Label","Away","same reason",nil,"",{class="PALADIN",specID=66,type="neutral"})
  a:Open("notes",{playerKey="Label-Away"});local page=u.pages.notes
  local className,specName=page.classChoice.label:GetText(),page.specChoice.label:GetText()
@@ -4210,7 +4210,7 @@ do
 end
 do
  local fresh=dofile("tests/ui_fixture.lua")("enUS")
- local a,u=fresh.A,fresh.U;a.db.reduceMotion=true
+ local a,u=fresh.A,fresh.U;a:SetSetting("reduceMotion",true)
  local getClass,getSpec=GetClassInfo,GetSpecializationInfoForClassID
  -- Keep the token even if the class label is temporarily missing.
  GetClassInfo=function(index) local name,token,id=getClass(index);if token=="PALADIN" then name=nil end;return name,token,id end
@@ -4219,7 +4219,7 @@ do
  GetClassInfo=getClass;page:OpenAdd({class="PALADIN",specID=66})
  T.eq(page.classChoice.label:GetText(),select(1,getClass(2)),"an incomplete class directory is retried")
  u:Hide(true)
- fresh=dofile("tests/ui_fixture.lua")("enUS");a,u=fresh.A,fresh.U;a.db.reduceMotion=true
+ fresh=dofile("tests/ui_fixture.lua")("enUS");a,u=fresh.A,fresh.U;a:SetSetting("reduceMotion",true)
  getSpec=GetSpecializationInfoForClassID
  GetSpecializationInfoForClassID=function() return end
  a:Open("notes",{add={class="PALADIN",specID=70}});page=u.pages.notes
@@ -4232,11 +4232,11 @@ end
 -- Rejected wheel movement applies its clamped position once, without a driver.
 do
  local fresh=dofile("tests/ui_fixture.lua")("enUS")
- local a,u,g=fresh.A,fresh.U,fresh.G;a.db.reduceMotion=true
+ local a,u,g=fresh.A,fresh.U,fresh.G;a:SetSetting("reduceMotion",true)
  local member={name="Wheel",nameKey="Wheel-Away",class="WARRIOR",assignedRole="DAMAGER"}
  g.listing={activityID=2,name="Wheel listing"}
  g.applicants[1]={id=1,status="applied",displayOrderID=1,members={member}}
- a:Open("create");local page=u.pages.create;a.db.reduceMotion=false
+ a:Open("create");local page=u.pages.create;a:SetSetting("reduceMotion",false)
  local calls=0;local render=page.RenderBatches
  page.RenderBatches=function(self,...) calls=calls+1;return render(self,...) end
  page.batchScroll:Fire("OnMouseWheel",1)
@@ -4271,7 +4271,7 @@ end
 for _,target in ipairs({"creationTitle","creationDescription","applicationDescription","search"}) do
  local fresh=dofile("tests/ui_fixture.lua")("zhCN")
  local a,u,g=fresh.A,fresh.U,fresh.G
- a.db.reduceMotion=true
+ a:SetSetting("reduceMotion",true)
  local creation=target=="creationTitle" or target=="creationDescription"
  if not creation then a:Open("find") end
  local page=u.pages[creation and "create" or "find"]
@@ -4316,7 +4316,7 @@ end
 -- Entering the creation page binds the current roster only after mode setup.
 do
  local f=dofile("tests/ui_fixture.lua")("enUS");local a,u,g=f.A,f.U,f.G
- a.db.reduceMotion=true
+ a:SetSetting("reduceMotion",true)
  local members={}
  for i=1,5 do members[i]={name="P"..i,nameKey="P"..i.."-Home",class="WARRIOR",assignedRole="DAMAGER"} end
  g.GetRoster=function() return members end
@@ -4338,7 +4338,7 @@ end
 -- seasonal filter panel inside the main window with separated controls.
 for _,locale in ipairs({"zhCN","enUS"}) do
  local f=dofile("tests/ui_fixture.lua")(locale);local a,u,g=f.A,f.U,f.G
- a.db.reduceMotion=true;a.db.showImportantFilters=true
+ a:SetSetting("reduceMotion",true);a:SetSetting("showImportantFilters",true)
  local name=locale=="zhCN" and "邪恶" or "Unholy"
  C_SpecializationInfo.GetSpecialization=function() return 3 end
  C_SpecializationInfo.GetSpecializationInfo=function() return 252,name,nil,135775 end
@@ -4374,9 +4374,8 @@ end
 
 -- The category rail changes geometry only; filters, search and row bindings survive.
 do
- local fresh=dofile("tests/ui_fixture.lua")("enUS")
- local a,u,g=fresh.A,fresh.U,fresh.G;a.db.reduceMotion=true
- a.charPrefs.rememberFilters=false;g.prefs.find={railCollapsed=true}
+ local fresh=dofile("tests/ui_fixture.lua")("enUS",{rememberFilters=false,find={railCollapsed=true}})
+ local a,u,g=fresh.A,fresh.U,fresh.G;a:SetSetting("reduceMotion",true)
  a:Open("find");local page=u.pages.find
  T.eq(page.rail:GetWidth(),48,"interface preferences restore even when filter memory is off")
  T.eq(page.sidebarToggle:GetWidth(),40);T.eq(page.sidebarToggle:GetHeight(),40)
@@ -4399,7 +4398,7 @@ do
  -- The shared animation driver is lazy and is not a sidebar control.
  u.Motion:Start("rail-test",function() return true end);u.Motion:Stop("rail-test")
  local nodes=#fresh.S.nodes;local originalRow=page.results.rows[1]
- a.db.reduceMotion=false;page.sidebarToggle:Fire("OnClick");u.Motion:Tick(.06)
+ a:SetSetting("reduceMotion",false);page.sidebarToggle:Fire("OnClick");u.Motion:Tick(.06)
  T.eq(page.sidebarToggle.label:GetText(),"Collapse","collapsing fades the current caption without flashing Expand")
  local middle=page.rail:GetWidth();T.ok(middle>48 and middle<208,"the rail interpolates its width")
  page.sidebarToggle:Fire("OnClick");T.eq(page.rail:GetWidth(),middle,"reversing starts at the current geometry")
@@ -4411,12 +4410,12 @@ do
  g.GetResults,g.Results.GetDetails,g.Search.Search,page.results.SetItems=results,details,search,items
  page.sidebarToggle:Fire("OnClick");u.Motion:Tick(.03);a:SetSetting("reduceMotion",true)
  T.eq(page.rail:GetWidth(),208);T.eq(u.Motion.jobs[u.Motion.rects[page.rail]],nil,"reduced motion settles the active rail")
- a.db.reduceMotion=false;page.sidebarToggle:Fire("OnClick");u.Motion:Tick(.03);u:Navigate("settings")
+ a:SetSetting("reduceMotion",false);page.sidebarToggle:Fire("OnClick");u.Motion:Tick(.03);u:Navigate("settings")
  T.eq(page.rail:GetWidth(),48);T.eq(u.Motion.jobs[u.Motion.rects[page.rail]],nil,"leaving settles the rail")
  u:Navigate("find");T.eq(page.rail:GetWidth(),48)
  page.sidebarToggle:Fire("OnClick");u.Motion:Tick(.03);u:Hide()
  T.eq(page.rail:GetWidth(),208);T.eq(u.Motion.jobs[u.Motion.rects[page.rail]],nil,"closing settles before the window fade completes")
- u:Hide(true);a.db.reduceMotion=true;a:Open("find");page:SetSidebarCollapsed(true,false)
+ u:Hide(true);a:SetSetting("reduceMotion",true);a:Open("find");page:SetSidebarCollapsed(true,false)
  dofile("addon/LycheeGroup/Entrypoints.lua");T.eq(a:Preview("applications"),true)
  T.eq(page.rail:GetWidth(),208,"preview starts with its independent interface preference")
  local provider=u.preview.provider;page:SetSidebarCollapsed(true,false);page:UpdateFilters()
@@ -4431,7 +4430,7 @@ do
  local fresh=dofile("tests/ui_fixture.lua")("zhCN");local a,u,g=fresh.A,fresh.U,fresh.G
  local available=C_LFGList.GetAvailableCategories
  C_LFGList.GetAvailableCategories=function() return {4,7,8,9} end
- g.Catalog:Invalidate();a.db.reduceMotion=true;a:Open("find")
+ g.Catalog:Invalidate();a:SetSetting("reduceMotion",true);a:Open("find")
  local page=u.pages.find;local expected={[4]="arena",[7]="skirmish",[8]="battleground",[9]="rated-battleground"};local textures={}
  for _,row in ipairs(page.categories.rows) do
   local suffix=expected[tonumber(row.key)]
@@ -4451,9 +4450,8 @@ end
 
 -- Relationship marks stay beside the activity text across data and geometry refreshes.
 do
- local fresh=dofile("tests/ui_fixture.lua")("zhCN");local a,u,g=fresh.A,fresh.U,fresh.G
- a.db.reduceMotion=true
- g.prefs.find={category="seasonDungeon",railCollapsed=true,categoryPrefs={seasonDungeon={selected=true,difficultyID=8}}}
+ local fresh=dofile("tests/ui_fixture.lua")("zhCN",{find={category="seasonDungeon",railCollapsed=true,categoryPrefs={seasonDungeon={selected=true,difficultyID=8}}}});local a,u,g=fresh.A,fresh.U,fresh.G
+ a:SetSetting("reduceMotion",true)
  local record={id=1,activityID=2,activity=g.Catalog:GetActivity(2),activityName="Dungeon",categoryID=2,name="21/22",leaderName="Player-Home",numMembers=2,maxNumPlayers=5,age=10,bnetFriends=1}
  g.records[1]=record;a:Open("find");g:Notify("results")
  local page=u.pages.find;local row=page.results.rows[1];local width=row.meta:GetWidth()
@@ -4483,7 +4481,7 @@ end
 -- The settings button toggles back to the actual business page that opened it.
 for _,locale in ipairs({"zhCN","enUS"}) do
  local fresh=dofile("tests/ui_fixture.lua")(locale)
- local a,u,g=fresh.A,fresh.U,fresh.G;a.db.reduceMotion=true
+ local a,u,g=fresh.A,fresh.U,fresh.G;a:SetSetting("reduceMotion",true)
  for _,page in ipairs({"find","create","notes"}) do
   -- Make the ordinary entry default disagree with the visible source page.
   g.listing=page=="find" and {name="Active listing",activityID=2,comment=""} or nil
@@ -4503,7 +4501,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  u.settingsButton:Fire("OnClick","LeftButton");T.eq(u.page,"create")
  u:Hide(true)
  local cold=dofile("tests/ui_fixture.lua")(locale)
- cold.A.db.reduceMotion=true;cold.A:Open("settings")
+ cold.A:SetSetting("reduceMotion",true);cold.A:Open("settings")
  T.eq(cold.U.settingsReturnPage,nil,"a cold settings entry does not invent a source")
  cold.U.settingsButton:Fire("OnClick","LeftButton");T.eq(cold.U.page,"find","a cold settings entry can return through the ordinary default")
  cold.U:Hide(true)

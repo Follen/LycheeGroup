@@ -120,7 +120,8 @@ for _,locale in ipairs({"zhCN","enUS"}) do
     local leading=find.scopeToggle:IsShown() and find.scopeToggle or find.appsTitle
     local x=position(leading,root);local countX=position(find.appsBadge,root)
     local filterX=position(find.quickFilters,root)
-    check(countX>=x+leading:GetWidth()-.001 and countX+find.appsBadge:GetWidth()<=filterX-.001,"scope/title and count fit before the important filters")
+    check(countX>=x+leading:GetWidth()-.001 and countX+find.appsBadge:GetWidth()<=filterX-.001,
+     ("scope/title and count fit before the important filters (%s/%d: leading %.3f..%.3f, badge %.3f..%.3f, filters %.3f)"):format(locale,percent,x,x+leading:GetWidth(),countX,countX+find.appsBadge:GetWidth(),filterX))
    end
   end
   u:SetWindowSize(windowWidth,windowHeight)
@@ -224,12 +225,17 @@ for _,locale in ipairs({"zhCN","enUS"}) do
   local previous
   for _,entry in ipairs(panel.rows) do
    if previous then check(separated(previous,entry.frame),"appearance setting rows overlap") end
-   check(entry.label:GetStringWidth()<=entry.label:GetWidth()+.001,"appearance setting title fits its column")
+   check(entry.label:GetWidth()>0 and entry.frame:GetHeight()+.001>=entry.label:GetStringHeight()+32,
+    ("appearance setting title fits its row after wrapping (%s/%d: %s)"):format(locale,percent,entry.label:GetText()))
    check(entry.frame:GetHeight()+.001>=entry.help:GetStringHeight()+32,"appearance setting description exceeds its row")
    previous=entry.frame
   end
-  check(separated(previous,settings.reloadLanguage),"reload action overlaps the sixth appearance row")
-  check(top(settings.reloadLanguage)+settings.reloadLanguage:GetHeight()<=panel:GetHeight()+.001,"all six appearance rows and reload action fit their panel")
+  check(top(previous)+previous:GetHeight()<=panel:GetHeight()+.001,"all six appearance rows fit their panel")
+  if settings.reloadLanguage:IsShown() then
+   check(separated(previous,settings.reloadLanguage),"reload action overlaps the sixth appearance row")
+   check(top(settings.reloadLanguage)+settings.reloadLanguage:GetHeight()<=panel:GetHeight()+.001,
+    ("all six appearance rows and reload action fit their panel (%s/%d: end %.3f, panel %.3f)"):format(locale,percent,top(settings.reloadLanguage)+settings.reloadLanguage:GetHeight(),panel:GetHeight()))
+  end
   local function CheckRange(control)
    local value=control.valueLabel;local anchor={control:GetPoint()}
    check(value:GetStringWidth()<=value:GetWidth(),"the complete percentage fits its measured label")

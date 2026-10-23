@@ -3,7 +3,7 @@ local checks=0
 local function Check(value,message) checks=checks+1;assert(value,message) end
 local function Fixture(locale,prefs)
  local f=dofile("tests/ui_fixture.lua")(locale,prefs)
- f.A.db.reduceMotion=true;f.A:Open("find")
+ f.A:SetSetting("reduceMotion",true);f.A:Open("find")
  return f,f.A,f.U,f.G,f.U.Application,f.U.pages.find
 end
 local function Click(button) button:Fire("OnClick","LeftButton") end

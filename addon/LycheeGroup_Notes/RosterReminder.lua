@@ -15,7 +15,7 @@ local inviteHooked = false
 
 local function ShowRecord(key, template)
 	local record = key and Notes.Records.Find(key)
-	if record and (A.db.reminders == "all" or A.db.reminders == record.type) then
+	if record and (A:GetSetting("reminders") == "all" or A:GetSetting("reminders") == record.type) then
 		local reason = record.reason ~= "" and record.reason or A.L.noReason
 		A:NoteMessage(template:format(record.name .. "-" .. record.server, reason) .. A:RecordLink(key))
 	end

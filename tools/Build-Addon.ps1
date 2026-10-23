@@ -1,5 +1,5 @@
 param(
-    [string]$LibraryPath = (Join-Path $PSScriptRoot '..\..\LycheeUI'),
+    [string]$LibraryPath,
     [string]$OutputPath = (Join-Path $PSScriptRoot '..\dist\LycheeGroup.zip')
 )
 

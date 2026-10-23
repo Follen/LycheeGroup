@@ -1,12 +1,24 @@
 param(
-    [string]$LibraryPath = (Join-Path $PSScriptRoot '..\..\LycheeUI')
+    [string]$LibraryPath
 )
 
 $ErrorActionPreference = 'Stop'
-$libraryRoot = (Resolve-Path -LiteralPath $LibraryPath).Path
 $productRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+if (-not $LibraryPath) {
+    # Linked worktrees share the original checkout's Git directory. Resolve
+    # the sibling source library from there, not from the worktree's parent.
+    $gitCommonDirectory = git -C $productRoot rev-parse --path-format=absolute --git-common-dir
+    if ($LASTEXITCODE -eq 0) {
+        $checkoutRoot = Split-Path -Parent $gitCommonDirectory
+        $LibraryPath = Join-Path (Split-Path -Parent $checkoutRoot) 'LycheeUI'
+    } else {
+        $LibraryPath = Join-Path (Split-Path -Parent $productRoot) 'LycheeUI'
+    }
+}
+$libraryRoot = (Resolve-Path -LiteralPath $LibraryPath).Path
 $embeddedRoot = Join-Path $productRoot 'addon\LycheeGroup\Libs\LycheeUI'
-$runtimeFiles = @('embeds.xml', 'Core.lua', 'Theme.lua', 'Motion.lua', 'Components.lua', 'Native.lua', 'Menu.lua')
+$embeds = [xml](Get-Content -LiteralPath (Join-Path $libraryRoot 'embeds.xml') -Raw)
+$runtimeFiles = @('embeds.xml') + @($embeds.SelectNodes('//*[local-name()="Script"]') | ForEach-Object { $_.file })
 
 foreach ($file in $runtimeFiles) {
     if (-not (Test-Path -LiteralPath (Join-Path $libraryRoot $file) -PathType Leaf)) {
@@ -39,4 +51,7 @@ foreach ($file in $runtimeFiles) {
     Copy-Item -LiteralPath (Join-Path $libraryRoot $file) -Destination (Join-Path $embeddedRoot $file) -Force
 }
 Copy-Item -LiteralPath (Join-Path $libraryRoot 'Media') -Destination $embeddedRoot -Recurse -Force
+if (Test-Path -LiteralPath $lockPath -PathType Leaf) {
+    Copy-Item -LiteralPath $lockPath -Destination (Join-Path $embeddedRoot '.lock') -Force
+}
 Write-Output "LycheeUI embedded at $embeddedRoot"

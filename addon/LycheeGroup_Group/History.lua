@@ -91,7 +91,7 @@ end
 
 -- START 接管当前秘境;同一次冷启动交接幂等,重置由 RESET 清理旧基线。
 function History:OnStart()
-	if not A.db.history then return end
+	if not A:GetSetting("history") then return end
 	-- 事件的 mapID 不是历史存储合同;以当前活动秘境的 challenge map 身份为准。
 	if not C_ChallengeMode.IsChallengeModeActive() then return end
 	local activeID = C_ChallengeMode.GetActiveChallengeMapID()
@@ -157,7 +157,7 @@ end
 
 -- 活动中重登复用持久基线;首次接管的原生 run 才以接管时刻建立记录。
 function History:Restore()
-	if not A.db.history then self:Discard(); return end
+	if not A:GetSetting("history") then self:Discard(); return end
 	local activeID = C_ChallengeMode.GetActiveChallengeMapID()
 	if not C_ChallengeMode.IsChallengeModeActive() or not activeID then
 		self:Discard()

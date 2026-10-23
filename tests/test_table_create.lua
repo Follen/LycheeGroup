@@ -24,7 +24,7 @@ end
 
 for _,locale in ipairs({"zhCN","enUS"}) do
  local f=dofile("tests/ui_fixture.lua")(locale)
- local a,u,g,s=f.A,f.U,f.G,f.S;a.db.reduceMotion=true
+ local a,u,g,s=f.A,f.U,f.G,f.S;a:SetSetting("reduceMotion",true)
  local long=locale=="zhCN" and "很长的申请人姓名-很长的服务器名称" or "LongApplicantName-LongServerName"
  g.listing={name="Table test",activityID=2,comment="",requiredItemLevel=0}
  g.applicants={

@@ -14,7 +14,7 @@ local function CallExternal(callback,...)
 end
 
 function API:IsAvailable()
- return A.db~=nil and A.db.floating==true and A.db.floatingCompatibility==true and F.frame~=nil and not F.standaloneTest
+ return A.db~=nil and A:GetSetting("floating")==true and A:GetSetting("floatingCompatibility")==true and F.frame~=nil and not F.standaloneTest
 end
 function API:GetStatus()
  return {available=self:IsAvailable(),text=F.statusText or "",count=F.lastCount or 0,
@@ -84,4 +84,12 @@ function F:PublishStatus()
  if lastAvailable==available and lastText==text and lastCount==count and lastRecruiting==recruiting and lastIdle==idle and lastAttention==attention then return end
  lastAvailable,lastText,lastCount,lastRecruiting,lastIdle,lastAttention=available,text,count,recruiting,idle,attention
  for callback in pairs(subscribers) do CallExternal(callback,API:GetStatus()) end
+end
+
+-- Whole-product configuration; this entry does not load a UI or business package.
+local configuration={version=1}
+A.API.Configuration=configuration
+for _,name in ipairs({"Get","GetSource","GetSchema","Set","Reset","RegisterPreset","ActivatePreset","ApplyPreset","RemovePreset","ListPresets","ExportPreset"}) do
+ local method=name
+ configuration[method]=function(_,...) return A.Configuration[method](A.Configuration,...) end
 end

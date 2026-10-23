@@ -75,28 +75,28 @@ function Application:BuildApplication()
  if self.applicationModal then return self.applicationModal end
  local modal=UI:OpenModal("application",Say("申请加入","Apply to group"),512,452)
  local content=modal.content
- modal.group=C.Text(content,"",14,T.muted,464,22);modal.group:SetPoint("TOPLEFT");modal.group:SetWordWrap(true);modal.group:SetMaxLines(2)
- modal.roleLabel=C.Text(content,Say("选择申请职责（可多选）","Choose your roles (multiple allowed)"),14,T.muted);C.SetLineHeight(modal.roleLabel,20,true)
+ modal.group=C.Text(content,"","font14","muted",T.applicationModalGroupWidth,"line22");C.ApplyStyle(modal.group,{width="applicationModalGroupWidth"});modal.group:SetPoint("TOPLEFT");modal.group:SetWordWrap(true);modal.group:SetMaxLines(2)
+ modal.roleLabel=C.Text(content,Say("选择申请职责（可多选）","Choose your roles (multiple allowed)"),"font14","muted");C.SetLineHeight(modal.roleLabel,"line20",true)
  modal.roles={}
  for _,role in ipairs(roleKeys) do
   modal.roles[role]=C.RoleButton(content,role,nil,roleLabels[role],function() Application:SetApplicationRole(role) end)
   modal.roles[role]:SetSurfaceColors(nil)
   modal.roles[role]:SetStyle({radius=T.compactRadius,textColor=T.muted,hoverTextColor=T.text,selectedTextColor=T.onSecondaryContainer})
  end
- modal.noteLabel=C.Text(content,Say("给队长的备注","Note to the leader"),14,T.muted);C.SetLineHeight(modal.noteLabel,20,true)
- modal.note=C.Field(content,464,112,false,"modal")
- modal.error=C.Text(content,"",14,T.warning,464,20);modal.error:SetMaxLines(1)
- modal.cancel=C.Button(modal.frame,L.cancel,nil,function() UI:CloseModal() end);modal.cancel:SetHeight(40)
- modal.submit=C.Button(modal.frame,L.apply,112,function() Application:ConfirmApplication() end);modal.submit:SetPrimary(true);modal.submit:SetHeight(40)
- modal.autoApply=C.Button(modal.frame,Say("自动申请","Auto apply"),150,function()
+ modal.noteLabel=C.Text(content,Say("给队长的备注","Note to the leader"),"font14","muted");C.SetLineHeight(modal.noteLabel,"line20",true)
+ modal.note=C.Field(content,T.applicationModalNoteWidth,T.applicationModalNoteHeight,false,"modal");C.ApplyStyle(modal.note,{width="applicationModalNoteWidth",height="applicationModalNoteHeight"})
+ modal.error=C.Text(content,"","font14","warning",T.applicationModalErrorWidth,"line20");C.ApplyStyle(modal.error,{width="applicationModalErrorWidth"});modal.error:SetMaxLines(1)
+ modal.cancel=C.Button(modal.frame,L.cancel,nil,function() UI:CloseModal() end);C.ApplyStyle(modal.cancel,{height="applicationModalCancelHeight"})
+ modal.submit=C.Button(modal.frame,L.apply,T.applicationModalSubmitWidth,function() Application:ConfirmApplication() end);C.ApplyStyle(modal.submit,{width="applicationModalSubmitWidth"});modal.submit:SetPrimary(true);C.ApplyStyle(modal.submit,{height="applicationModalSubmitHeight"})
+ modal.autoApply=C.Button(modal.frame,Say("自动申请","Auto apply"),T.applicationModalAutoApplyWidth,function()
   local lease=Application.previewApplication or Application.applicationLease
   local requested=Application:IsAutoApplyEnabled() or lease and lease.enableOnSave==true
   local ok,err=Application:SetAutoApply(not requested)
   if not ok then UI:SetText(modal.error,err or L.failed);Application:LayoutApplication() end
- end,{height=40,variant="text"})
- modal.autoApply.label:ClearAllPoints();modal.autoApply.label:SetPoint("LEFT",32,0)
+ end,{height=40,variant="text"});C.ApplyStyle(modal.autoApply,{width="applicationModalAutoApplyWidth"})
+ modal.autoApply.label:ClearAllPoints();C.SetPoint(modal.autoApply.label,"LEFT",modal.autoApply.label:GetParent(),"LEFT","applicationModalAutoApplyLabelLeftX",0)
  modal.autoApply.box=C.Checkbox(modal.autoApply,nil,{size=20,boxSize=18,radius=3})
- modal.autoApply.box:SetPoint("LEFT",2,0);modal.autoApply.box:EnableMouse(false);modal.autoApply.box:EnableMouseMotion(false)
+ C.SetPoint(modal.autoApply.box,"LEFT",modal.autoApply.box:GetParent(),"LEFT","applicationModalAutoApplyBoxLeftX",0);modal.autoApply.box:EnableMouse(false);modal.autoApply.box:EnableMouseMotion(false)
  function modal.autoApply:SetValue(value) self.value=value==true;self.box:SetValue(self.value) end
  modal.autoApply:SetValue(self:IsAutoApplyEnabled())
  self.applicationModal=modal
@@ -119,9 +119,9 @@ function Application:LayoutApplication()
  local hasError=modal.error:GetText()~=""
  modal.error:SetShown(hasError);modal.error:SetPoint("TOPLEFT",0,-groupOffset-252);modal.error:SetHeight(hasError and 24 or 0)
  modal.frame:SetHeight(408+groupOffset+(hasError and 28 or 0))
- modal.submit:SetWidth(math.max(96,modal.submit.label:GetStringWidth()+40));modal.submit:SetPoint("BOTTOMRIGHT",-24,24)
- modal.cancel:SetWidth(math.max(72,modal.cancel.label:GetStringWidth()+40));modal.cancel:SetPoint("RIGHT",modal.submit,"LEFT",-8,0)
- modal.autoApply:SetWidth(modal.autoApply.label:GetStringWidth()+40);modal.autoApply:SetPoint("BOTTOMLEFT",24,24)
+ modal.submit:SetWidth(math.max(96,modal.submit.label:GetStringWidth()+40));C.SetPoint(modal.submit,"BOTTOMRIGHT",modal.submit:GetParent(),"BOTTOMRIGHT","applicationModalSubmitBottomrightX","applicationModalSubmitBottomrightY")
+ modal.cancel:SetWidth(math.max(72,modal.cancel.label:GetStringWidth()+40));C.SetPoint(modal.cancel,"RIGHT",modal.submit,"LEFT","applicationModalCancelRightX",0)
+ modal.autoApply:SetWidth(modal.autoApply.label:GetStringWidth()+40);C.SetPoint(modal.autoApply,"BOTTOMLEFT",modal.autoApply:GetParent(),"BOTTOMLEFT","applicationModalAutoApplyBottomleftX","applicationModalAutoApplyBottomleftY")
 end
 function Application:SetApplicationRole(role)
  local lease=self.previewApplication or self.applicationLease;if not lease or not lease.available[role] then return end
@@ -181,7 +181,7 @@ function Application:OpenApplicationSettings(resultID,enableOnSave)
  for _,role in ipairs(roleKeys) do if prefs.roles and prefs.roles[role] then lease.roles[role]=true end end
  if UI.preview then
   self.previewApplication=lease
-  if not modal.previewNote then modal.previewNote=C.Edit(modal.note,464,112,true,false,"modal");modal.previewNote:SetAllPoints(modal.note) end
+  if not modal.previewNote then modal.previewNote=C.Edit(modal.note,T.applicationModalPreviewNoteWidth,T.applicationModalPreviewNoteHeight,true,false,"modal");C.ApplyStyle(modal.previewNote,{width="applicationModalPreviewNoteWidth",height="applicationModalPreviewNoteHeight"});modal.previewNote:SetAllPoints(modal.note) end
   modal.previewNote.box:SetText(prefs.note or "");modal.previewNote:Show();modal.previewNote.box:SetFocus()
  else
   self.applicationLease=lease

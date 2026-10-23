@@ -6,6 +6,7 @@ Stubs.SetUnit("player", { name = "本人", realm = "晨风号角", class = "WARR
 
 Load.addon("LycheeGroup", "Locale.lua")
 Load.addon("LycheeGroup", "Core.lua")
+Load.addon("LycheeGroup", "Configuration.lua")
 LycheeGroup:LoadDB() -- Core ADDON_LOADED precedes every LoD package.
 Load.addon("LycheeGroup", "Specializations.lua")
 
@@ -1752,7 +1753,7 @@ T.eq(G:GetApplication(11).expiresAt,220,"deadline uses native remaining seconds"
 S.appStatus[11]="cancelled";G:OnEvent("LFG_LIST_APPLICATION_STATUS_UPDATED",11,"cancelled")
 T.eq(G.Applications:GetActiveCount(),4,"native cancellation frees a global slot")
 T.ok(G:Apply(16,{damage=true}));T.eq(G.Applications:GetActiveCount(),5)
-A.db.autoJoin=false
+A:SetSetting("autoJoin",false)
 S.appStatus[12]="invited";S.appStatus[13]="invited";G.Applications:SyncAll()
 local accepts=0;C_LFGList.AcceptInvite=function() accepts=accepts+1 end
 A:SetSetting("autoJoin",true);T.eq(accepts,1,"enable accepts only one pending invitation")
@@ -1784,7 +1785,7 @@ T.ok(G:Apply(17,{healer=true}),"a later application round uses the same business
 S.appStatus[17]="invited";G:OnEvent("LFG_LIST_APPLICATION_STATUS_UPDATED",17,"invited","applied")
 T.eq(accepts,4,"the new application round can auto-accept after the previous round joined")
 S.appStatus[17]="inviteaccepted";G:OnEvent("LFG_LIST_APPLICATION_STATUS_UPDATED",17,"inviteaccepted","invited")
-A.db.autoJoin=false
+A:SetSetting("autoJoin",false)
 -- Cancellation clears the shared native loop, including a later native event handler.
 do
  local eye=QueueStatusButton
@@ -2373,7 +2374,7 @@ end
 
 -- Hidden applications reuse their containers while every native refresh stays fresh.
 do
- A.db.autoJoin=false
+ A:SetSetting("autoJoin",false)
  ACTIVITY[9002]={fullName="Private application",shortName="",categoryID=2,mapID=0,maxNumPlayers=5,groupFinderActivityGroupID=9002,difficultyID=0}
  S.results[9003]={activityIDs={9002},name="Before refresh",leaderName="PrivateLeader-Away",numMembers=2}
  S.players[9003]={
@@ -2822,7 +2823,7 @@ do
  Load.addon("LycheeGroup_Notes","RosterReminder.lua")
  local reminder=A.Notes.RosterReminder
  local chatBefore=#Stubs.ChatMessages()
- A.db.reminders="all";reminder.Start()
+ A:SetSetting("reminders","all");reminder.Start()
  Stubs.SetUnit("party1",{name="团长乙",realm="晨风号角",class="WARRIOR",classID=1,guid="Reminder-Leader"})
  Stubs.SetUnit("party2",{name="治疗者",realm="银松森林",class="PRIEST",classID=5,guid="Reminder-Member"})
  Stubs.FireEvent("GROUP_JOINED")
@@ -2836,11 +2837,11 @@ do
  T.ok(joinedMember,"已入队名单保留非队长完整身份供笔记和详情读取")
  Stubs.FireEvent("GROUP_ROSTER_UPDATE")
  T.eq(#Stubs.ChatMessages()-chatBefore,2,"重复队伍事件不重复播报")
- reminder.Stop();A.db.reminders="positive";reminder.Start()
+ reminder.Stop();A:SetSetting("reminders","positive");reminder.Start()
  T.eq(#Stubs.ChatMessages()-chatBefore,3,"入队后的全队核对仍遵循原有提醒类型设置")
  T.ok(Stubs.ChatMessages()[#Stubs.ChatMessages()]:find("团长乙-晨风号角",1,true))
  reminder.Stop();Stubs.SetUnit("party1",nil);Stubs.SetUnit("party2",nil);G:InvalidateRoster("group")
- A.Notes,A.NotesLocale,A.db.reminders=previousNotes,previousLocale,reminders
+ A.Notes,A.NotesLocale=previousNotes,previousLocale;A:SetSetting("reminders",reminders)
 end
 
 -- Failure belongs to the request that was in flight, not the newer queued choice.
@@ -3011,7 +3012,7 @@ do
  UnitIsGroupLeader=function(_,category) return category==LE_PARTY_CATEGORY_HOME and homeLeader end
  C_LFGList.AcceptInvite=function(id) T.eq(id,9001);accepts=accepts+1 end
  S.activeEntry=nil;S.applications={9001};S.appStatus={[9001]="invited"};S.appPending={}
- A.db.autoJoin=true
+ A:SetSetting("autoJoin",true)
  Load.addon("LycheeGroup_Group","Applications.lua");G.Applications:Restore()
  T.eq(accepts,1,"an instance-party member with no home party can accept an LFG invitation")
  homeGrouped=true

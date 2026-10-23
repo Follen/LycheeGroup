@@ -7,9 +7,11 @@ UI.context = _G.LycheeUI:CreateContext({
  ownsText=function(region)
   return A.Fonts:IsOwned(region,UI.frame,UI.context and UI.context:GetMenu(),UI.Tooltip and UI.Tooltip.interactive)
  end,
- theme={width=1299.2,contentWidth=1267.2,fontSizeDelta=3,lineHeightDelta=4},
+ themeDefaults=A.StyleDefaults.main,
+ theme=A.Appearance:GetTheme("main"),
+ onStyleChanged=function() if UI.OnAppearanceChanged then UI:OnAppearanceChanged() end end,
  parent=UIParent, inputs=UI.inputs, text=UI.L,
- reducedMotion=function() return A.db.reduceMotion end,
+ reducedMotion=function() return A:GetSetting("reduceMotion") end,
  isHiding=function() return UI.hiding end,
  onRowRelease=function(row)
   if UI.Tooltip and UI.Tooltip:IsOwned(row) then UI.Tooltip:Hide() end
@@ -21,7 +23,10 @@ UI.context = _G.LycheeUI:CreateContext({
 UI.Theme = UI.context.Theme
 UI.brandText = A:GetLocale()=="zhCN" and "|cffE87983荔枝|r 组队" or "|cffE87983Lychee|r LFG"
 function UI:SetText(region,text) return self.context:SetText(region,text) end
-function UI:Color(region,color) return self.context:Color(region,color) end
+function UI:Color(region,color)
+ if type(color)=="string" then return self.C.ApplyStyle(region,{color=color}) end
+ return self.context:Color(region,color)
+end
 function UI:Hex(color) return self.context:Hex(color) end
 
 local scoreColors,scoreOrder={},{}

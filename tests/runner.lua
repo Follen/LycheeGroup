@@ -3,7 +3,7 @@
 --   lua tests/runner.lua core notes (runs selected modules only)
 -- Business logic and UI controllers use offline substitutes; passing these
 -- proves nothing about in-game API permissions, rendering or event ordering.
-local ALL = { "core", "notes", "group", "transfer", "ui", "resize", "table_find", "table_create", "table_notes", "filters", "auto_apply", "preview", "floating", "minimap", "fonts" }
+local ALL = { "core", "configuration", "appearance", "notes", "group", "transfer", "ui", "resize", "table_find", "table_create", "table_notes", "filters", "auto_apply", "preview", "floating", "minimap", "fonts" }
 
 local requested = {}
 local known = {}
@@ -52,6 +52,7 @@ function T.eq(actual, expected, info)
 end
 
 function T.same(actual, expected, info)
+	if actual == expected then return T.eq(actual, expected, info) end
 	if type(actual) ~= "table" or type(expected) ~= "table" then
 		return T.eq(actual, expected, info)
 	end

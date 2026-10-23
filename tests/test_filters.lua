@@ -15,7 +15,7 @@ end
 for _,locale in ipairs({"zhCN","enUS"}) do
  local f=Fixture(locale);local a,u,g=f.A,f.U,f.G
  f.base.SetUnit("player",{name="Player",realm="Home",class="WARRIOR",classID=1})
- a.db.reduceMotion=true;a:Open("find")
+ a:SetSetting("reduceMotion",true);a:Open("find")
  local p=u.pages.find
  p:SelectCategory("seasonDungeon");p:CommitChoice()
  T.eq(a:GetSetting("showImportantFilters"),false)
@@ -241,7 +241,7 @@ end
 
 -- Capacity follows the real catalog, picker selections and validated UI fields.
 do
- local f=Fixture("enUS");local a,u,g=f.A,f.U,f.G;a.db.reduceMotion=true;a:Open("find")
+ local f=Fixture("enUS");local a,u,g=f.A,f.U,f.G;a:SetSetting("reduceMotion",true);a:Open("find")
  local p=u.pages.find
  local function Activity(key)
   if not p.picker:IsShown() then p:SelectCategory(g.filters.category) end
@@ -307,7 +307,7 @@ end
 -- Old saved drafts are normalized once, then persisted as valid numeric bounds.
 do
  local prefs={find={category="seasonDungeon",categoryPrefs={seasonDungeon={selected=true,difficultyID=8,minMembers=100,maxMembers=0}}}}
- local f=Fixture("enUS",prefs);local a,u,g=f.A,f.U,f.G;a.db.reduceMotion=true;a:Open("find")
+ local f=Fixture("enUS",prefs);local a,u,g=f.A,f.U,f.G;a:SetSetting("reduceMotion",true);a:Open("find")
  local p=u.pages.find;local saved=a.charPrefs.find.categoryPrefs.seasonDungeon
  T.eq(g.filters.minMembers,1);T.eq(g.filters.maxMembers,5,"restoring old bounds clamps and orders them against current capacity")
  T.eq(p.fMinMembers.box:GetText(),"1");T.eq(p.fMembers.box:GetText(),"5")

@@ -11,6 +11,7 @@ Stubs.SetUnit("player", { name = "本人", realm = "晨风号角", class = "WARR
 
 Load.addon("LycheeGroup", "Locale.lua")
 Load.addon("LycheeGroup", "Core.lua")
+Load.addon("LycheeGroup", "Configuration.lua")
 Load.addon("LycheeGroup", "Specializations.lua")
 LycheeGroup:LoadDB() -- Core ADDON_LOADED precedes every LoD package.
 Load.addon("LycheeGroup_Notes", "Locale.lua")
@@ -215,7 +216,7 @@ end
 do
 	-- 自己进入已有队伍必须检查现有成员,重复入组/花名册事件不刷屏。
 	Notes:Add("危险人", "晨风号角", "划水", nil)
-	A.db.notesEnabled = true
+	A:SetSetting("notesEnabled",true)
 	Notes:SyncEnabled()
 	local recorded = { name = "危险人", realm = "晨风号角", class = "WARRIOR", classID = 1, guid = "P-1" }
 	Stubs.SetUnit("party1", recorded)

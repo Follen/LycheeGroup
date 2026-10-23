@@ -5,9 +5,6 @@ local UI = A.UI
 local T, L = UI.Theme, UI.L
 local M, C = UI.Motion, UI.C
 
-local PAD = T.pageInset
-local LOGO = T.logoSize
-local NAV_H = T.headerHeight
 local PAGE_ORDER = {find=1,create=2,notes=3,settings=4}
 
 function UI:Initialize()
@@ -24,13 +21,13 @@ function UI:SetGroupSetting(key,value)
 end
 
 function UI:PrepareNotes()
- if self.preview or not A.db.notesEnabled or not A.db.notesHasRecords or A.Notes then return end
+ if self.preview or not A:GetSetting("notesEnabled") or not A.db.notesHasRecords or A.Notes then return end
  local notes,err=A:Ensure("Notes")
  if not notes then A:NoteMessage(A.L.loadFailed:format(tostring(err))) end
 end
 
 function UI:GetNote(key)
- if self.preview or not A.db.notesEnabled or not key or not A.Notes then return nil end
+ if self.preview or not A:GetSetting("notesEnabled") or not key or not A.Notes then return nil end
  return A.Notes:Find(key)
 end
 function UI:HasNote(key)
@@ -116,9 +113,36 @@ function UI:ApplyFont(path,scale)
  self:FitToScreen()
 end
 
+-- Theme changes reuse all built pages and preserve their business/input state.
+function UI:OnAppearanceChanged()
+ if not self.frame then return end
+ self:StopWindowResize()
+ self:LoadWindowSize()
+ self:FitToScreen()
+ local logo=self.logo:GetParent()
+ logo:SetSize(T.logoSize,T.logoSize);self.logo:SetSize(T.logoSize,T.logoSize)
+ logo:SetPoint("TOPLEFT",self.frame,"TOPLEFT",T.pageInset+8,-(T.headerHeight-T.logoSize)/2)
+ self.closeButton:SetPoint("TOPRIGHT",self.frame,"TOPRIGHT",-T.pageInset,-(T.headerHeight-self.closeButton:GetHeight())/2)
+ local nav=self.navItems.find:GetParent()
+ nav:SetHeight(T.headerHeight);nav:SetPoint("TOPLEFT",self.frame,"TOPLEFT",T.pageInset+T.sidebarWidth+T.contentGap+T.mainInset,0)
+ for _,button in pairs(self.navItems) do button:SetHeight(T.headerHeight) end
+ self.underline:SetColorTexture(unpack(T.accent))
+ self.content:SetPoint("TOPLEFT",self.frame,"TOPLEFT",T.pageInset,-T.headerHeight)
+ self.content:SetPoint("BOTTOMRIGHT",self.frame,"BOTTOMRIGHT",-T.pageInset,T.pageInset)
+ self:LayoutWindow()
+ local width,height=self.content:GetWidth(),self.content:GetHeight()
+ for _,name in ipairs({"find","create","notes","settings"}) do
+  local page=self.pages[name]
+  if page.frame then page:LayoutAppearance(width,height) end
+ end
+ self:RefreshHeaderLayout()
+ if self.Application.applicationModal and self.Application.applicationModal.frame:IsShown() then self.Application:LayoutApplication() end
+ self.Tooltip:OnAppearanceChanged()
+end
+
 function UI:FitToScreen()
 	self:StopWindowResize()
-	local scale = math.min(1, (UIParent:GetWidth() - 40) / T.width, (UIParent:GetHeight() - 40) / T.height) * A.db.uiScale / 100
+	local scale = math.min(1, (UIParent:GetWidth() - 40) / T.width, (UIParent:GetHeight() - 40) / T.height) * A:GetSetting("uiScale") / 100
 	local minWidth,minHeight=self:GetWindowMinimum()
 	scale=math.min(scale,(UIParent:GetWidth()-40)/minWidth,(UIParent:GetHeight()-40)/minHeight)
 	local changed=self.frame:GetScale()~=scale
@@ -200,7 +224,7 @@ function UI:OpenModal(key,title,width,height)
  end
  self:CloseMenu();UI.Tooltip:Hide()
  modal:SetTitle(title);modal.frame:SetSize(width,height)
- self.activeModal=modal;modal.frame:Show();M:Alpha(modal.frame,1,.16,.2)
+ self.activeModal=modal;modal.frame:Show();M:Alpha(modal.frame,1,T.windowModalFadeDuration,T.windowModalFadeDelay)
  return modal
 end
 
@@ -208,16 +232,16 @@ end
 
 local function BuildNavButton(nav, page, x)
 	local b = CreateFrame("Button", nil, nav)
-	b:SetHeight(NAV_H)
-	local label = C.Text(b, L[page], 14)
-	C.SetLineHeight(label,21,true)
-	label:SetPoint("LEFT",34,0)
+	b:SetHeight(T.headerHeight)
+	local label = C.Text(b, L[page],"font14")
+	C.SetLineHeight(label,"line21",true)
+	C.SetPoint(label,"LEFT",label:GetParent(),"LEFT","hostLabelLeftX",0)
 	b:SetWidth(label:GetStringWidth() + 38)
 	b:SetPoint("TOPLEFT", nav, "TOPLEFT", x, 0)
 	b.navX=x
 	b.label = label
-	local icon=C.Glyph(b,page=="find" and "search" or page=="create" and "plus" or "book",22)
-	icon:SetPoint("LEFT",4,0)
+	local icon=C.Glyph(b,page=="find" and "search" or page=="create" and "plus" or "book",T.hostIconWidth);C.ApplyStyle(icon,{width="hostIconWidth",height="hostIconHeight"})
+	C.SetPoint(icon,"LEFT",icon:GetParent(),"LEFT","hostIconLeftX",0)
 	b.icon=icon
 	-- 当前页暖白、其余次要灰;悬停只变前景,不移动下划线。
 	b:SetScript("OnEnter", function(self) UI:Color(self.label, T.text);self.icon:SetSelected(self.active,true) end)
@@ -229,14 +253,14 @@ end
 function UI:Build()
 	self:LoadWindowSize()
 	local frame = CreateFrame("Frame", nil, UIParent)
-	frame:SetSize(T.width, T.height)
+	frame:SetSize(T.width,T.height)
 	frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
 	frame:SetFrameStrata("HIGH")
 	frame:EnableMouse(true)
 	frame:SetAlpha(0)
 	frame:Hide()
 	C.Shadow(frame,T.windowRadius)
-	C.Panel(frame, T.surface, T.windowRadius)
+	C.Panel(frame,"surface", T.windowRadius)
 	self.frame = frame
 	self.drag=C.Draggable(frame,{onStart=function()
 		if UI.activeModal then return false end
@@ -249,41 +273,42 @@ function UI:Build()
 
 	-- 72-unit header, with navigation aligned to the main content at x264.
 	local logo = CreateFrame("Button", nil, frame)
-	logo:SetSize(LOGO, LOGO)
-	logo:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD+8, -(NAV_H-LOGO)/2)
+	logo:SetSize(T.logoSize,T.logoSize)
+	logo:SetPoint("TOPLEFT", frame, "TOPLEFT", T.pageInset+8, -(T.headerHeight-T.logoSize)/2)
 	self.drag:AddHandle(logo)
 	local texture = logo:CreateTexture(nil, "ARTWORK")
 	texture:SetTexture(T.media .. "lychee-logo.tga")
-	texture:SetSize(LOGO, LOGO)
+	texture:SetSize(T.logoSize,T.logoSize)
 	texture:SetPoint("CENTER", logo, "CENTER", 0, 0)
 	self.logo = texture
 	self.context:SetWindow(frame,texture,logo)
 	-- 空闲时鼠标进入可重播;播放中经过不重启、不叠加。
 	logo:SetScript("OnEnter", function() M:Brand() end)
 
-	local title = C.Text(frame, UI.brandText, 20)
-	C.SetLineHeight(title,28,true)
-	title:SetPoint("LEFT", logo, "RIGHT", 6, 0)
+	local title = C.Text(frame, UI.brandText,"font20");self.brandTitle=title
+	C.SetLineHeight(title,"line28",true)
+	C.SetPoint(title,"LEFT",logo,"RIGHT","hostTitleLeftX",0)
 
-	local close = C.IconButton(frame,"close",40,function() UI:Hide() end,{hoverColor=T.primaryContainer,pressedColor=T.primaryContainer})
-	close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -PAD, -(NAV_H-40)/2)
+	local close = C.IconButton(frame,"close",T.hostCloseWidth,function() UI:Hide() end,{hoverColor=T.primaryContainer,pressedColor=T.primaryContainer});C.ApplyStyle(close,{width="hostCloseWidth",height="hostCloseHeight"})
+	self.closeButton=close
+	close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -T.pageInset, -(T.headerHeight-40)/2)
 	local settings = C.Button(frame, L.settings, nil, function()
 		A:Open(UI.page=="settings" and (UI.settingsReturnPage or A:GetDefaultPage()) or "settings")
 	end)
 	settings:SetSize(settings.label:GetStringWidth()+52,40)
-	settings.label:ClearAllPoints();settings.label:SetPoint("LEFT",40,0)
-	settings.icon=C.Glyph(settings,"settings",20);settings.icon:SetPoint("LEFT",12,0)
+	settings.label:ClearAllPoints();C.SetPoint(settings.label,"LEFT",settings.label:GetParent(),"LEFT","hostSettingsLabelLeftX",0)
+	settings.icon=C.Glyph(settings,"settings",T.hostSettingsIconWidth);C.ApplyStyle(settings.icon,{width="hostSettingsIconWidth",height="hostSettingsIconHeight"});C.SetPoint(settings.icon,"LEFT",settings.icon:GetParent(),"LEFT","hostSettingsIconLeftX",0)
 	self.settingsButton=settings
 	settings:SetTextColors(T.muted,T.text,T.onSecondaryContainer)
-	settings:SetPoint("TOPRIGHT", close, "TOPLEFT", -4, 0)
+	C.SetPoint(settings,"TOPRIGHT",close,"TOPLEFT","hostSettingsToprightX",0)
 
 	-- 导航行:红色下划线跟随当前页,长度随文字。
 	local nav = CreateFrame("Frame", nil, frame)
-	nav:SetHeight(NAV_H)
-	nav:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD+T.sidebarWidth+T.contentGap+T.mainInset, 0)
+	nav:SetHeight(T.headerHeight)
+	nav:SetPoint("TOPLEFT", frame, "TOPLEFT", T.pageInset+T.sidebarWidth+T.contentGap+T.mainInset, 0)
 	local underline = nav:CreateTexture(nil, "ARTWORK")
 	underline:SetColorTexture(unpack(T.accent))
-	underline:SetHeight(3)
+	C.ApplyStyle(underline,{height="hostUnderlineHeight"})
 	self.navItems = {}
 	local x = 0
 	for _, page in ipairs({ "find", "create", "notes" }) do
@@ -297,8 +322,8 @@ function UI:Build()
 
 	-- 内容区容器:页面在此创建并复用。
 	local content = CreateFrame("Frame", nil, frame)
-	content:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD, -NAV_H)
-	content:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -PAD, PAD)
+	content:SetPoint("TOPLEFT", frame, "TOPLEFT", T.pageInset, -T.headerHeight)
+	content:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -T.pageInset, T.pageInset)
 	self.content = content
 	-- One transparent shield revokes all mouse input while the visible shell exits.
 	local blocker = CreateFrame("Button", nil, frame)
@@ -344,7 +369,7 @@ function UI:UpdateNav()
 	if not item then M:FinishRect(self.underline);return end
 	local label = item.label
 	local u = self.underline
-	M:Rect(u,item.navX+34,-(NAV_H+label:GetHeight())/2-5,label:GetStringWidth(),3,animate and .18 or 0)
+	M:Rect(u,item.navX+34,-(T.headerHeight+label:GetHeight())/2-5,label:GetStringWidth(),3,animate and T.windowNavMotionDuration or 0)
 end
 
 -- ---------------------------------------------------------------- 路由
@@ -402,7 +427,7 @@ function UI:Navigate(page, context)
 	p:Enter(context)
 	self:FitToScreen()
 	local direction=previous and PAGE_ORDER[page]<PAGE_ORDER[previous] and -1 or 1
-	M:Reveal(p.frame,"TOPLEFT",self.content,"TOPLEFT",0,0,direction*(previous and 32 or 4),0,.18)
+	M:Reveal(p.frame,"TOPLEFT",self.content,"TOPLEFT",0,0,direction*(previous and T.windowPageMotionOffset or T.windowFirstPageMotionOffset),0,T.windowPageMotionDuration)
 end
 
 -- UI:Hide(immediate):立即阻止输入,整页随 Presence 退场,隐藏后才清内容和页面订阅。
@@ -439,7 +464,7 @@ function UI:Hide(immediate)
 		UI.hiding = nil
 	end
 	self.finishHide = done
-	if immediate or A.db.reduceMotion then
+	if immediate or A:GetSetting("reduceMotion") then
 		M:StopAll()
 		M:SetPresence(0)
 		done()

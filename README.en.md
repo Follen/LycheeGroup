@@ -70,8 +70,8 @@ For the local widget-tree preview, run `lua tests/ui_preview.lua`, then open [`t
 
 [`tools/Build-Addon.ps1`](tools/Build-Addon.ps1) builds the addon archive. It syncs the bundled library from a sibling `LycheeUI` source directory by default; use `-LibraryPath` to select another location.
 
-Project documents (in Chinese): [Product](Product.md) · [Design](Desgin.md) · [Architecture](Architecture.md) · [Performance](perfermance.md) · [Documentation and changelog rules](Agents.md). The product document describes the current implementation and in-game validation coverage.
+Project documents (in Chinese): [Product](Product.md) · [Design](Desgin.md) · [Architecture](Architecture.md) · [Performance](perfermance.md) · [Third-party configuration API](API.md) · [Documentation and changelog rules](Agents.md). The product document describes the current implementation and in-game validation coverage.
 
-The current version is 1.2.3; development changes are listed in the [unreleased changelog](CHANGELOG.md#未发布). The working tree bundles LycheeUI 1.2.0 (revision 31), with shared font scaling, selection and menu transitions, and resizable, sortable table headers. The source library and embedded copy match. The user has lifted the freeze recorded in [.lock](../LycheeUI/.lock). See the [integration guide](../LycheeUI/README.md), [API](../LycheeUI/API.md), and [component design specification](../LycheeUI/DESIGN.md).
+The current version is 1.2.3; development changes are listed in the [unreleased changelog](CHANGELOG.md#未发布). The working branch bundles LycheeUI 1.3.0 (revision 32), with shared theme tokens, component style bindings, and immediate updates. The new [configuration API v1](API.md) supports session, account, and character storage; preset upgrades preserve user overrides. The sync tool maintains the source and embedded copies, and [.lock](../LycheeUI/.lock) records the library state. See the [integration guide](../LycheeUI/README.md), [API](../LycheeUI/API.md), and [component design specification](../LycheeUI/DESIGN.md).
 
 See the [library notes](addon/LycheeGroup_Group/Libs/README.md) for bundled third-party sources and licenses.

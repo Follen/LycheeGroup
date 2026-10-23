@@ -59,6 +59,29 @@ local function FontScale(value)
  return math.max(70,math.min(130,math.floor(value+.5)))
 end
 
+-- Core owns setting defaults and lifecycle effects; Configuration owns provenance.
+function A:RegisterConfigurationSettings()
+ local definitions={}
+ local choices={language={"auto","zhCN","enUS"},defaultNote={"positive","neutral","caution"},reminders={"all","positive","caution","off"},raidMembers={"shift","alt","ctrl","always"},memberIconShape={"circle","square"},defaultSort={"newest","rating","itemLevel","members"}}
+ local ranges={fontScale={70,130},uiScale={75,125},floatingScale={50,150},memberIconScale={75,175},minimapAngle={0,360}}
+ local function Add(key,value,storage)
+  local definition={default=value,storage=storage,type=type(value),legacy={storage=storage,key=key},enum=choices[key]}
+  local range=ranges[key];if range then definition.min,definition.max=range[1],range[2];definition.integer=key~="minimapAngle" end
+  if key=="font" then definition.validate=function(path) return path~="","font path must not be empty" end end
+  if key=="fontScale" then definition.import=function(account)
+   if account.fontScale~=nil then return FontScale(account.fontScale),true end
+  end end
+  if storage=="character" then definition.import=function(account,character)
+   if character[key]~=nil then return character[key],true end
+   if account[key]~=nil then return account[key],true end
+  end end
+  definitions["settings."..key]=definition
+ end
+ for key,value in pairs(DEFAULTS) do if key~="schema" and key~="notesHasRecords" then Add(key,value,"account") end end
+ for key,value in pairs(CHARACTER_DEFAULTS) do Add(key,value,"character") end
+ return self.Configuration:RegisterDefinitions(definitions)
+end
+
 local initialized = {}
 local loading = {}
 
@@ -71,6 +94,15 @@ function A:LoadDB()
 		raw = {}
 		_G.LycheeGroupDB = raw
 	end
+	self.db = raw
+	local prefs = _G.LycheeGroupPrefsDB
+	if type(prefs) ~= "table" then
+		prefs = {}
+		_G.LycheeGroupPrefsDB = prefs
+	end
+	self.charPrefs = prefs
+	-- Bind captures real legacy presence before the compatibility fields are filled.
+	self.Configuration:Bind(raw,prefs)
 	for key, value in pairs(DEFAULTS) do
 		if raw[key] == nil then raw[key] = value end
 	end
@@ -78,13 +110,7 @@ function A:LoadDB()
 	raw.schema = DEFAULTS.schema
 	raw.keywordFilters = nil
 	raw.fontScale = FontScale(raw.fontScale)
-	self.db = raw
 	self:InitializeLocale()
-	local prefs = _G.LycheeGroupPrefsDB
-	if type(prefs) ~= "table" then
-		prefs = {}
-		_G.LycheeGroupPrefsDB = prefs
-	end
 	for key, default in pairs(CHARACTER_DEFAULTS) do
 		if prefs[key] == nil then
 			local value = raw[key]
@@ -244,6 +270,7 @@ end
 -- ---------------------------------------------------------------- 设置
 
 function A:GetSetting(key)
+	if self.Configuration.definitions["settings."..key] then return self.Configuration:Get("settings."..key) end
 	if CHARACTER_DEFAULTS[key] ~= nil then return self.charPrefs[key] end
 	return self.db[key]
 end
@@ -251,25 +278,33 @@ end
 -- A:SetSetting(key, value) 同步配置与生命周期。
 function A:SetSetting(key, value)
 	if key == "fontScale" then value = FontScale(value) end
-	local db = CHARACTER_DEFAULTS[key] ~= nil and self.charPrefs or self.db
-	if db[key] == value then return end
-	db[key] = value
-	if key == "nativeLFGEntry" then self:SyncNativeLFGEntry() end
-	if key == "minimap" then self.Minimap:UpdateSettings() end
-	if key == "font" or key == "fontScale" then self.Fonts:Apply() end
-	if self.Group and (key == "history" or key == "autoJoin") then
-		self.Group:OnSettingChanged(key, value)
-	elseif key == "history" then self:SyncHistoryWake(value) end
-	if self.Floating and (key == "floating" or key == "floatingCompatibility" or key == "floatingLocked" or key == "floatingScale") then self.Floating:UpdateSettings() end
-	if key == "reduceMotion" and self.Floating then
-		if value and self.Floating.running then self.Floating:Tick(1) end
-		self.Floating:Update()
+	if type(key)~="string" or value==nil then return false,"a setting key and value are required; use Configuration:Reset to clear an override" end
+	local path="settings."..key;local definition=self.Configuration.definitions[path]
+	if not definition then return false,"unknown setting: "..key end
+	return self.Configuration:Set({[path]=value},{storage=definition.storage})
+end
+
+function A:ApplyConfigurationChanges(changes)
+	local function Changed(key) return changes["settings."..key]~=nil end
+	local function Value(key) return self:GetSetting(key) end
+	if Changed("nativeLFGEntry") and self.SyncNativeLFGEntry then self:SyncNativeLFGEntry() end
+	if (Changed("minimap") or Changed("minimapAngle")) and self.Minimap then self.Minimap:UpdateSettings() end
+	if (Changed("font") or Changed("fontScale")) and self.Fonts then self.Fonts:Apply() end
+	for _,key in ipairs({"history","autoJoin"}) do
+		if Changed(key) then
+			if self.Group then self.Group:OnSettingChanged(key,Value(key))
+			elseif key=="history" and self.SyncHistoryWake then self:SyncHistoryWake(Value(key)) end
+		end
 	end
-	if key == "reduceMotion" and self.UI and type(self.UI.SetReducedMotion) == "function" then
-		self.UI:SetReducedMotion(value)
+	local floating=Changed("floating") or Changed("floatingCompatibility") or Changed("floatingLocked") or Changed("floatingScale")
+	if self.Floating then
+		if Changed("reduceMotion") and Value("reduceMotion") and self.Floating.running then self.Floating:Tick(1) end
+		if floating then self.Floating:UpdateSettings()
+		elseif Changed("reduceMotion") then self.Floating:Update() end
 	end
-	if key == "notesEnabled" or key == "reminders" then
-		if self.db.notesEnabled and self.db.reminders~="off" and self.db.notesHasRecords then
+	if Changed("reduceMotion") and self.UI and self.UI.SetReducedMotion then self.UI:SetReducedMotion(Value("reduceMotion")) end
+	if Changed("notesEnabled") or Changed("reminders") then
+		if Value("notesEnabled") and Value("reminders")~="off" and self.db.notesHasRecords then
 			-- 重新启用提醒属于真实后台需求,允许此刻加载 Notes。
 			local notes, err = self:Ensure("Notes")
 			if not notes then self:NoteMessage(self.L.loadFailed:format(tostring(err))) end
@@ -278,7 +313,11 @@ function A:SetSetting(key, value)
 			self.Notes:SyncEnabled()
 		end
 	end
-	if self.UI and self.UI.OnSettingChanged then self.UI:OnSettingChanged(key, value) end
+	if self.UI and self.UI.OnSettingChanged then
+		local keys={};for path in pairs(changes) do if path:sub(1,9)=="settings." then keys[#keys+1]=path:sub(10) end end;table.sort(keys)
+		for _,key in ipairs(keys) do self.UI:OnSettingChanged(key,Value(key)) end
+	end
+	if self.OnConfigurationChanged then self:OnConfigurationChanged(changes) end
 end
 
 -- ---------------------------------------------------------------- 输出

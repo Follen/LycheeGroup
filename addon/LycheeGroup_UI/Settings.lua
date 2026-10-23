@@ -35,8 +35,7 @@ local definitions={
  {"floatingCompatibility",S("悬浮窗兼容","Floating window integration"),S("自动接入第三方UI配置的视觉兼容","Automatically adapt the appearance to third-party UI configurations.")},
  {"floatingScale",S("悬浮窗缩放","Floating window scale"),S("调整悬浮窗大小。","Adjust the floating window size."),"range"},
  {"floatingLocked",S("锁定位置","Lock position"),S("锁定后不能拖动，查看状态和点击入口不受影响。","Lock movement while keeping the status and shortcuts active.")}}}
-local RAIL, MAIN_X, PAD = 208, 224, 24
-local BODY_WIDTH = T.contentWidth - MAIN_X - PAD*2 - 12
+local BODY_WIDTH = T.contentWidth - T.settingsMainX - T.settingsContentInset*2 - 12
 function P:Build(parent)
  local root=CreateFrame("Frame",nil,parent);root:SetAllPoints();self.frame=root
  root:SetScript("OnEvent",function(_,event)
@@ -46,45 +45,45 @@ function P:Build(parent)
   end
  end)
  root:HookScript("OnHide",function() P:CancelBindingCapture(true) end)
- local rail=CreateFrame("Frame",nil,root);rail:SetSize(RAIL,T.contentHeight);rail:SetPoint("TOPLEFT");self.rail=rail
+ local rail=CreateFrame("Frame",nil,root);rail:SetSize(T.settingsSidebarWidth,T.contentHeight);rail:SetPoint("TOPLEFT");self.rail=rail
  self.nav={};for i,entry in ipairs(sections) do
-  local b=C.Navigation(rail,entry[2],RAIL,function() P:SelectSection(entry[1]) end,nil,{radius=8,fontSize=14});b:SetPoint("TOPLEFT",0,-12-(i-1)*52);b.label:SetWidth(176)
+  local b=C.Navigation(rail,entry[2],T.settingsSidebarWidth,function() P:SelectSection(entry[1]) end,nil,{radius=8,fontSize="font14"});b:SetPoint("TOPLEFT",0,-12-(i-1)*52);C.ApplyStyle(b.label,{width="settingsBLabelWidth"})
   self.nav[entry[1]]=b
  end
- local main=CreateFrame("Frame",nil,root);main:SetSize(T.contentWidth-MAIN_X,T.contentHeight);main:SetPoint("TOPLEFT",MAIN_X,0);C.Panel(main,T.surfaceLow,24);self.main=main
- self.heading=C.Text(main,"",24);self.heading:SetPoint("TOPLEFT",PAD,-PAD);C.SetLineHeight(self.heading,32,true)
+ local main=CreateFrame("Frame",nil,root);main:SetSize(T.contentWidth-T.settingsMainX,T.contentHeight);main:SetPoint("TOPLEFT",T.settingsMainX,0);C.Panel(main,"surfaceLow","settingsPanelRadius");self.main=main
+ self.heading=C.Text(main,"","font24");self.heading:SetPoint("TOPLEFT",T.settingsContentInset,-T.settingsContentInset);C.SetLineHeight(self.heading,"line32",true)
  self.panels={};self.controls={}
  for _,entry in ipairs(sections) do
-  local panel=CreateFrame("Frame",nil,main);panel:SetSize(BODY_WIDTH,T.contentHeight-120);panel:SetPoint("TOPLEFT",PAD,-80);self.panels[entry[1]]=panel
+  local panel=CreateFrame("Frame",nil,main);panel:SetSize(BODY_WIDTH,T.contentHeight-120);C.SetPoint(panel,"TOPLEFT",panel:GetParent(),"TOPLEFT",T.settingsContentInset,"settingsPanelTopleftY");self.panels[entry[1]]=panel
   for i,row in ipairs(definitions[entry[1]] or {}) do self:BuildRow(panel,row,i) end
  end
  local reset={"resetPosition",S("悬浮窗位置","Floating window position"),S("未锁定时拖动荔枝标志，可放在屏幕内任意位置。","Drag the lychee logo to position the window when unlocked."),"action"}
  self:BuildRow(self.panels.floating,reset,#definitions.floating+1)
- self.reloadLanguage=C.Button(self.panels.interface,S("重载界面","Reload UI"),220,function() C_UI.Reload() end)
+ self.reloadLanguage=C.Button(self.panels.interface,S("重载界面","Reload UI"),T.settingsReloadLanguageWidth,function() C_UI.Reload() end);C.ApplyStyle(self.reloadLanguage,{width="settingsReloadLanguageWidth"})
  self:BuildAbout(self.panels.about)
 end
 function P:BuildBlocks()
  local panel=self.panels.blocks
- self.blocksHelp=C.Text(panel,S("屏蔽相同标题队伍时，也会屏蔽对应队长。","Blocking groups with the same title also blocks their leaders."),14,T.muted,BODY_WIDTH)
- self.blocksHelp:SetPoint("TOPLEFT");self.blocksHelp:SetWordWrap(true);C.SetLineHeight(self.blocksHelp,20)
- self.blocksCount=C.Text(panel,"",14,T.muted);C.SetLineHeight(self.blocksCount,20,true)
- self.blocksClear=C.Button(panel,S("全部清空","Clear all"),120,function() if P.blockGroup then P.blockGroup.Results:ClearBlockedTitles() end end,{variant="text"})
+ self.blocksHelp=C.Text(panel,S("屏蔽相同标题队伍时，也会屏蔽对应队长。","Blocking groups with the same title also blocks their leaders."),"font14","muted",BODY_WIDTH)
+ self.blocksHelp:SetPoint("TOPLEFT");self.blocksHelp:SetWordWrap(true);C.SetLineHeight(self.blocksHelp,"line20")
+ self.blocksCount=C.Text(panel,"","font14","muted");C.SetLineHeight(self.blocksCount,"line20",true)
+ self.blocksClear=C.Button(panel,S("全部清空","Clear all"),T.settingsBlocksClearWidth,function() if P.blockGroup then P.blockGroup.Results:ClearBlockedTitles() end end,{variant="text"});C.ApplyStyle(self.blocksClear,{width="settingsBlocksClearWidth"})
  local list=C.List(panel,BODY_WIDTH+12,T.contentHeight-120,52)
  list:SetStyle({selectionFill=false,selectionMark=false,hoverFill=false});self.blocksList=list
  list:SetRowInitializer(function(row)
-  row.title:ClearAllPoints();row.title:SetPoint("LEFT",12,0);row.title:SetWordWrap(false);C.SetFont(row.title,15);C.SetLineHeight(row.title,20,true)
-  row.meta:ClearAllPoints();row.meta:Show();row.meta:SetWordWrap(false);C.SetFont(row.meta,13);C.SetLineHeight(row.meta,18,true);UI:Color(row.meta,T.muted)
+  row.title:ClearAllPoints();C.SetPoint(row.title,"LEFT",row.title:GetParent(),"LEFT","settingsRowTitleLeftX",0);row.title:SetWordWrap(false);C.SetFont(row.title,"font15");C.SetLineHeight(row.title,"line20",true)
+  row.meta:ClearAllPoints();row.meta:Show();row.meta:SetWordWrap(false);C.SetFont(row.meta,"font13");C.SetLineHeight(row.meta,"line18",true);UI:Color(row.meta,T.muted)
   row:SetScript("OnClick",nil)
-  row.remove=C.Button(row,S("移除","Remove"),96,function(button)
+  row.remove=C.Button(row,S("移除","Remove"),T.settingsRowRemoveWidth,function(button)
    if P.blockGroup and row.key==button.targetKey and row._hitVisible and list.clip:IsMouseOver() then P.blockGroup.Results:RemoveBlockedLeader(button.targetKey) end
-  end,{variant="text"});row.remove:SetPoint("RIGHT",-12,0)
+  end,{variant="text"});C.ApplyStyle(row.remove,{width="settingsRowRemoveWidth"});C.SetPoint(row.remove,"RIGHT",row.remove:GetParent(),"RIGHT","settingsRowRemoveRightX",0)
  end)
  self.blocksHeader=C.TableHeader(panel,{
-  {key="name",label=S("名字","Name"),width=340,min=140},
-  {key="realm",label=S("服务器","Realm"),width=280,min=120},
-  {key="actions",label=S("操作","Actions"),width=148,min=132,align="CENTER"},
+  {key="name",label=S("名字","Name"),width="settingsColumnNameWidth340",min="settingsColumnNameMin140"},
+  {key="realm",label=S("服务器","Realm"),width="settingsColumnRealmWidth280",min="settingsColumnRealmMin120"},
+  {key="actions",label=S("操作","Actions"),width="settingsColumnActionsWidth148",min="settingsColumnActionsMin132",align="CENTER"},
  },{onLayout=function(header) P:LayoutBlockColumns(header) end})
- self.blocksEmpty=C.Text(panel,"",18,T.dim,BODY_WIDTH);C.SetLineHeight(self.blocksEmpty,24);self.blocksEmpty:SetJustifyH("CENTER");self.blocksEmpty:SetWordWrap(true)
+ self.blocksEmpty=C.Text(panel,"","font18","dim",BODY_WIDTH);C.SetLineHeight(self.blocksEmpty,"line24");self.blocksEmpty:SetJustifyH("CENTER");self.blocksEmpty:SetWordWrap(true)
 end
 function P:LayoutBlockColumns(header)
  if not self.blocksList then return end
@@ -106,15 +105,15 @@ function P:LayoutBlocks()
  self.blocksClear:ClearAllPoints();self.blocksClear:SetPoint("TOPRIGHT",-list.gutter-12,-top)
  self.blocksCount:ClearAllPoints();self.blocksCount:SetPoint("LEFT",self.panels.blocks,"TOPLEFT",0,-top-toolbarHeight/2)
  top=top+toolbarHeight+8
- self.blocksHeader:ClearAllPoints();self.blocksHeader:SetPoint("TOPLEFT",-12,-top)
+ self.blocksHeader:ClearAllPoints();C.SetPoint(self.blocksHeader,"TOPLEFT",self.blocksHeader:GetParent(),"TOPLEFT","settingsBlocksHeaderTopleftX",-top)
  top=top+self.blocksHeader:GetHeight()+8
- local rowHeight=math.max(52,math.ceil((20+T.lineHeightDelta)*UI.context.fontScale+24))
+ local rowHeight=math.max(52,math.ceil(UI.context:GetLineHeight("line20")+24))
  local changed=list.rowHeight~=rowHeight
  list.rowHeight=rowHeight;list.capacity=math.min(list.poolCapacity-1,math.ceil(list:GetHeight()/rowHeight))
  list.canvas:SetHeight(list:GetHeight()+rowHeight*2)
  local viewport=math.max(rowHeight,self.panels.blocks:GetHeight()-top)
  local sameViewport=list.viewportHeight==viewport
- list:ClearAllPoints();list:SetPoint("TOPLEFT",-12,-top);list:SetViewport(viewport)
+ list:ClearAllPoints();C.SetPoint(list,"TOPLEFT",list:GetParent(),"TOPLEFT","settingsListTopleftX",-top);list:SetViewport(viewport)
  for i,row in ipairs(list.rows) do
   row:SetHeight(rowHeight);row:SetPoint("TOPLEFT",0,-(i-1)*rowHeight)
   row.remove:SetHeight(toolbarHeight)
@@ -154,21 +153,21 @@ function P:EnterBlocks()
  end
 end
 function P:BuildAbout(parent)
- local header=CreateFrame("Frame",nil,parent);header:SetSize(BODY_WIDTH,80);header:SetPoint("TOPLEFT");UI.drag:AddHandle(header);self.aboutHeader=header
- local logo=C.Icon(header,44);logo:SetTexture(T.media.."lychee-logo.tga");logo:SetPoint("TOPLEFT",12,-4)
+ local header=CreateFrame("Frame",nil,parent);header:SetSize(BODY_WIDTH,T.settingsHeaderHeight);header:SetPoint("TOPLEFT");UI.drag:AddHandle(header);self.aboutHeader=header
+ local logo=C.Icon(header,T.settingsLogoWidth);C.ApplyStyle(logo,{width="settingsLogoWidth",height="settingsLogoHeight"});logo:SetTexture(T.media.."lychee-logo.tga");C.SetPoint(logo,"TOPLEFT",logo:GetParent(),"TOPLEFT","settingsLogoTopleftX","settingsLogoTopleftY")
  self.aboutValues={}
- local name=C.Text(header,"",18,T.text,BODY_WIDTH-84);C.SetLineHeight(name,24,true);name:SetWordWrap(false);name:SetPoint("TOPLEFT",72,-4);self.aboutValues.name=name
- local versionLabel=C.Text(header,L.addonVersion,14,T.muted);C.SetLineHeight(versionLabel,20,true);versionLabel:SetPoint("TOPLEFT",72,-44)
- local version=C.Text(header,"",14,T.text,160);C.SetLineHeight(version,20,true);version:SetWordWrap(false);version:SetPoint("TOPLEFT",versionLabel,"TOPRIGHT",8,0);self.aboutValues.version=version
- local authorLabel=C.Text(header,L.addonAuthor,14,T.muted);C.SetLineHeight(authorLabel,20,true);authorLabel:SetPoint("TOPLEFT",version,"TOPRIGHT",24,0)
- local author=C.Text(header,"",14,T.text);C.SetLineHeight(author,20,true);author:SetWordWrap(false);author:SetPoint("TOPLEFT",authorLabel,"TOPRIGHT",8,0);author:SetPoint("TOPRIGHT",header,"TOPRIGHT",-12,-44);self.aboutValues.author=author
- local brand=CreateFrame("Button",nil,header);brand:SetSize(220,80);brand:SetPoint("TOPLEFT");brand:RegisterForClicks("LeftButtonUp");self.aboutBrand=brand
+ local name=C.Text(header,"","font18","text",BODY_WIDTH-84);C.SetLineHeight(name,"line24",true);name:SetWordWrap(false);C.SetPoint(name,"TOPLEFT",name:GetParent(),"TOPLEFT","settingsNameTopleftX","settingsNameTopleftY");self.aboutValues.name=name
+ local versionLabel=C.Text(header,L.addonVersion,"font14","muted");C.SetLineHeight(versionLabel,"line20",true);C.SetPoint(versionLabel,"TOPLEFT",versionLabel:GetParent(),"TOPLEFT","settingsVersionLabelTopleftX","settingsVersionLabelTopleftY")
+ local version=C.Text(header,"","font14","text",T.settingsVersionWidth);C.ApplyStyle(version,{width="settingsVersionWidth"});C.SetLineHeight(version,"line20",true);version:SetWordWrap(false);C.SetPoint(version,"TOPLEFT",versionLabel,"TOPRIGHT","settingsVersionTopleftX",0);self.aboutValues.version=version
+ local authorLabel=C.Text(header,L.addonAuthor,"font14","muted");C.SetLineHeight(authorLabel,"line20",true);C.SetPoint(authorLabel,"TOPLEFT",version,"TOPRIGHT","settingsAuthorLabelTopleftX",0)
+ local author=C.Text(header,"","font14","text");C.SetLineHeight(author,"line20",true);author:SetWordWrap(false);C.SetPoint(author,"TOPLEFT",authorLabel,"TOPRIGHT","settingsAuthorTopleftX",0);C.SetPoint(author,"TOPRIGHT",header,"TOPRIGHT","settingsAuthorToprightX","settingsAuthorToprightY");self.aboutValues.author=author
+ local brand=CreateFrame("Button",nil,header);C.ApplyStyle(brand,{width="settingsBrandWidth",height="settingsBrandHeight"});brand:SetPoint("TOPLEFT");brand:RegisterForClicks("LeftButtonUp");self.aboutBrand=brand
  brand:SetScript("OnClick",function()
   P.aboutClicks=(P.aboutClicks or 0)+1
   if P.aboutClicks==10 then P.aboutClicks=0;P:ShowDedicationToast() end
  end)
  parent:HookScript("OnHide",function() P.aboutClicks=0;P:HideDedicationToast() end)
- self.otherAddonsHeading=C.Text(parent,L.otherAddons,14,T.muted,BODY_WIDTH-24);C.SetLineHeight(self.otherAddonsHeading,20,true);self.otherAddonsHeading:SetPoint("TOPLEFT",12,-100)
+ self.otherAddonsHeading=C.Text(parent,L.otherAddons,"font14","muted",BODY_WIDTH-24);C.SetLineHeight(self.otherAddonsHeading,"line20",true);C.SetPoint(self.otherAddonsHeading,"TOPLEFT",self.otherAddonsHeading:GetParent(),"TOPLEFT","settingsOtherAddonsHeadingTopleftX","settingsOtherAddonsHeadingTopleftY")
  local media="Interface\\AddOns\\LycheeGroup_UI\\Media\\"
  local entries={
   {name=L.lycheeLauncher,summary=L.lycheeLauncherHelp,icon=media.."about-launcher.tga",links={{L.newBeeBox,"https://www.wclbox.com/share/AJKkdJtw8gt"},{L.neteaseDD,"https://url.cc.163.com/HoH0Od"}}},
@@ -176,15 +175,15 @@ function P:BuildAbout(parent)
  }
  self.otherAddons={}
  for index,entry in ipairs(entries) do
-  local holder=CreateFrame("Frame",nil,parent);holder:SetSize(BODY_WIDTH,148);UI.drag:AddHandle(holder)
-  C.Panel(holder,T.rowAlternate,12):SetShown(index%2==0)
-  local icon=C.Icon(holder,44);icon:SetTexture(entry.icon);icon:SetPoint("TOPLEFT",12,-12)
-  local title=C.Text(holder,entry.name,18,T.text,BODY_WIDTH-84);C.SetLineHeight(title,24,true);title:SetPoint("TOPLEFT",72,-12)
-  local summary=C.Text(holder,entry.summary,14,T.muted,BODY_WIDTH-96);C.SetLineHeight(summary,20);summary:SetWordWrap(true);summary:SetPoint("TOPLEFT",72,-48)
+  local holder=CreateFrame("Frame",nil,parent);holder:SetSize(BODY_WIDTH,T.settingsHolderHeight);UI.drag:AddHandle(holder)
+  C.Panel(holder,"rowAlternate","settingsPanelRadius2"):SetShown(index%2==0)
+  local icon=C.Icon(holder,T.settingsIconWidth);C.ApplyStyle(icon,{width="settingsIconWidth",height="settingsIconHeight"});icon:SetTexture(entry.icon);C.SetPoint(icon,"TOPLEFT",icon:GetParent(),"TOPLEFT","settingsIconTopleftX","settingsIconTopleftY")
+  local title=C.Text(holder,entry.name,"font18","text",BODY_WIDTH-84);C.SetLineHeight(title,"line24",true);C.SetPoint(title,"TOPLEFT",title:GetParent(),"TOPLEFT","settingsTitleTopleftX","settingsTitleTopleftY")
+  local summary=C.Text(holder,entry.summary,"font14","muted",BODY_WIDTH-96);C.SetLineHeight(summary,"line20");summary:SetWordWrap(true);C.SetPoint(summary,"TOPLEFT",summary:GetParent(),"TOPLEFT","settingsSummaryTopleftX","settingsSummaryTopleftY")
   local row={frame=holder,icon=icon,title=title,summary=summary,links={}}
   for i,link in ipairs(entry.links) do
    local url,identity=link[2],entry.name.." · "..link[1]
-   local button=C.Button(holder,link[1],120,function() UI:CopyText(L.copyDownloadLink,url,nil,identity,L.downloadLink) end);button:SetHeight(32);button:SetPoint("BOTTOMLEFT",72+(i-1)*132,12);button:SetSurfaceColors(T.surfaceContainer,T.surfaceHighest)
+   local button=C.Button(holder,link[1],T.settingsButtonWidth,function() UI:CopyText(L.copyDownloadLink,url,nil,identity,L.downloadLink) end);C.ApplyStyle(button,{width="settingsButtonWidth"});C.ApplyStyle(button,{height="settingsButtonHeight"});C.SetPoint(button,"BOTTOMLEFT",button:GetParent(),"BOTTOMLEFT",72+(i-1)*132,"settingsButtonBottomleftY");button:SetSurfaceColors(T.surfaceContainer,T.surfaceHighest)
    row.links[i]=button
   end
   self.otherAddons[index]=row
@@ -197,7 +196,7 @@ end
 function P:ShowDedicationToast()
  self:HideDedicationToast()
  if not self.dedicationToast then
-  local toast=C.Notice(self.main,400);toast:SetPoint("BOTTOM",0,24);toast:SetFrameLevel(self.main:GetFrameLevel()+10)
+  local toast=C.Notice(self.main,400);C.SetPoint(toast,"BOTTOM",toast:GetParent(),"BOTTOM",0,"settingsToastBottomY");toast:SetFrameLevel(self.main:GetFrameLevel()+10)
   toast.close:Hide();toast.text:SetJustifyH("CENTER");self.dedicationToast=toast
  end
  local toast,message=self.dedicationToast,"谨献给挚爱：荔枝小月亮"
@@ -217,7 +216,7 @@ function P:RefreshAbout()
   local left=72
   for _,button in ipairs(row.links) do
    local width=math.max(120,math.ceil(button.label:GetStringWidth())+32)
-   button:SetWidth(width);button:ClearAllPoints();button:SetPoint("BOTTOMLEFT",left,12);left=left+width+12
+   button:SetWidth(width);button:ClearAllPoints();C.SetPoint(button,"BOTTOMLEFT",button:GetParent(),"BOTTOMLEFT",left,"settingsButtonBottomleftY");left=left+width+12
   end
  end
 end
@@ -234,12 +233,12 @@ local function WindowScaleControl(parent)
 end
 
 function P:BuildRow(parent,row,index)
- local holder=CreateFrame("Frame",nil,parent);holder:SetSize(BODY_WIDTH,88);holder:SetPoint("TOPLEFT",0,-(parent.nextRowY or 0));holder:EnableMouse(true)
+ local holder=CreateFrame("Frame",nil,parent);holder:SetSize(BODY_WIDTH,T.settingsHolderHeight2);holder:SetPoint("TOPLEFT",0,-(parent.nextRowY or 0));holder:EnableMouse(true)
  UI.drag:AddHandle(holder)
- local fill=C.Panel(holder,T.rowAlternate,12);fill:SetShown(index%2==0)
+ local fill=C.Panel(holder,"rowAlternate","settingsFillRadius");fill:SetShown(index%2==0)
  local controlWidth=220;local content=BODY_WIDTH-24-controlWidth-48;local labelWidth=content*.4;local helpWidth=content-labelWidth
- local label=C.Text(holder,row[2],14,T.text,labelWidth);label:SetPoint("LEFT",12,0);label:SetWordWrap(true);C.SetLineHeight(label,20)
- local help=C.Text(holder,row[3],14,T.muted,helpWidth);help:SetPoint("LEFT",36+labelWidth,0);help:SetWordWrap(true);C.SetLineHeight(help,20)
+ local label=C.Text(holder,row[2],"font14","text",labelWidth);C.SetPoint(label,"LEFT",label:GetParent(),"LEFT","settingsLabelLeftX",0);label:SetWordWrap(true);C.SetLineHeight(label,"line20")
+ local help=C.Text(holder,row[3],"font14","muted",helpWidth);help:SetPoint("LEFT",36+labelWidth,0);help:SetWordWrap(true);C.SetLineHeight(help,"line20")
  local rowHeight=math.max(88,label:GetStringHeight()+32,help:GetStringHeight()+32);holder:SetHeight(rowHeight);parent.nextRowY=(parent.nextRowY or 0)+rowHeight
  local layoutRow={frame=holder,label=label,help=help}
  parent.rows=parent.rows or {};parent.rows[#parent.rows+1]=layoutRow
@@ -252,7 +251,7 @@ function P:BuildRow(parent,row,index)
    UI:SetText(widget.valueLabel,value.."%")
    A:SetSetting(row[1],value)
   end) end
-  control.valueLabel=C.Text(control,"",14,T.muted,52);control.valueLabel:SetPoint("LEFT",control,"RIGHT",12,0);control.valueLabel:SetJustifyH("RIGHT")
+  control.valueLabel=C.Text(control,"","font14","muted",T.settingsControlValueLabelWidth);C.ApplyStyle(control.valueLabel,{width="settingsControlValueLabelWidth"});C.SetPoint(control.valueLabel,"LEFT",control,"RIGHT","settingsControlValueLabelLeftX",0);control.valueLabel:SetJustifyH("RIGHT")
   function control:LayoutValueWidth()
    local text=self.valueLabel:GetText()
    self.valueLabel:SetWidth(0);self.valueLabel:SetWordWrap(false)
@@ -267,15 +266,15 @@ function P:BuildRow(parent,row,index)
   end
   control:LayoutValueWidth()
  elseif row[4]=="binding" then
-  control=C.Button(holder,A.L.bindingChange,controlWidth,function() P:BeginBindingCapture() end);control:SetPoint("RIGHT",-12,0)
+  control=C.Button(holder,A.L.bindingChange,controlWidth,function() P:BeginBindingCapture() end);C.SetPoint(control,"RIGHT",control:GetParent(),"RIGHT","settingsControlRightX",0)
   holder:HookScript("OnHide",function() if P.bindingCapture==holder then P:CancelBindingCapture(true) end end)
  elseif row[4]=="action" then
-  control=C.Button(holder,S("重置位置","Reset position"),controlWidth,function() A.db.floatingPosition=nil;if A.Floating then A.Floating:ResetPosition() end end);control:SetPoint("RIGHT",-12,0)
+  control=C.Button(holder,S("重置位置","Reset position"),controlWidth,function() A.Appearance:SaveFloatingPosition(false) end);C.SetPoint(control,"RIGHT",control:GetParent(),"RIGHT","settingsControlRightX",0)
  elseif row[4] then
-  control=C.Choice(holder,controlWidth,function() return type(row[4])=="function" and row[4]() or row[4] end,function(value) A:SetSetting(row[1],value) end);control:SetHeight(44);control:SetPoint("RIGHT",-12,0)
+  control=C.Choice(holder,controlWidth,function() return type(row[4])=="function" and row[4]() or row[4] end,function(value) A:SetSetting(row[1],value) end);C.ApplyStyle(control,{height="settingsControlHeight"});C.SetPoint(control,"RIGHT",control:GetParent(),"RIGHT","settingsControlRightX",0)
  else
   control=C.Check(holder,"",function(value) A:SetSetting(row[1],value);P:Sync() end)
-  control.track:ClearAllPoints();control.track:SetPoint("RIGHT",-12,0);control.label:ClearAllPoints();control.label:SetPoint("RIGHT",control.track,"LEFT",-12,0);C.SetFont(control.label,14);control:SetPoint("RIGHT",0,0)
+  control.track:ClearAllPoints();C.SetPoint(control.track,"RIGHT",control.track:GetParent(),"RIGHT","settingsControlTrackRightX",0);control.label:ClearAllPoints();C.SetPoint(control.label,"RIGHT",control.track,"LEFT","settingsControlLabelRightX",0);C.SetFont(control.label,"font14");control:SetPoint("RIGHT",0,0)
   control:HookScript("OnEnter",function(button) UI:Color(button.label,T.text) end)
   control:HookScript("OnLeave",function(button) UI:Color(button.label,T.muted) end)
   control:HookScript("OnHide",function(button) UI:Color(button.label,T.muted) end)
@@ -286,10 +285,10 @@ end
 
 function P:ShowBindingNotice(message,conflict)
  if not self.bindingNotice then
-  local notice=C.Notice(self.main,BODY_WIDTH);notice:SetPoint("TOPLEFT",PAD,-80);notice.close:Hide()
+  local notice=C.Notice(self.main,BODY_WIDTH);C.SetPoint(notice,"TOPLEFT",notice:GetParent(),"TOPLEFT",T.settingsContentInset,"settingsNoticeTopleftY");notice.close:Hide()
   self.bindingNotice=notice
-  self.cancelBinding=C.Button(notice,A.L.bindingCancel,96,function() P:CancelBindingCapture() end);self.cancelBinding:SetHeight(32);self.cancelBinding:SetPoint("RIGHT",-12,0)
-  self.overwriteBinding=C.Button(notice,S("覆盖","Overwrite"),112,function() P:TryBinding(P.pendingBindingKey,P.pendingBindingAction) end);self.overwriteBinding:SetHeight(32);self.overwriteBinding:SetPoint("RIGHT",self.cancelBinding,"LEFT",-8,0)
+  self.cancelBinding=C.Button(notice,A.L.bindingCancel,T.settingsCancelBindingWidth,function() P:CancelBindingCapture() end);C.ApplyStyle(self.cancelBinding,{width="settingsCancelBindingWidth"});self.cancelBinding:SetHeight(T.settingsCancelBindingHeight);C.SetPoint(self.cancelBinding,"RIGHT",self.cancelBinding:GetParent(),"RIGHT","settingsCancelBindingRightX",0)
+  self.overwriteBinding=C.Button(notice,S("覆盖","Overwrite"),T.settingsOverwriteBindingWidth,function() P:TryBinding(P.pendingBindingKey,P.pendingBindingAction) end);C.ApplyStyle(self.overwriteBinding,{width="settingsOverwriteBindingWidth"});self.overwriteBinding:SetHeight(T.settingsOverwriteBindingHeight);C.SetPoint(self.overwriteBinding,"RIGHT",self.cancelBinding,"LEFT","settingsOverwriteBindingRightX",0)
  end
  self.overwriteBinding:SetShown(conflict==true)
  self.bindingNotice:SetMessage(message,conflict and 216 or 96)
@@ -338,8 +337,8 @@ function P:LayoutRows()
  local offset=self.bindingNotice and self.bindingNotice:IsShown() and self.bindingNotice:GetHeight()+12 or 0
  for key,panel in pairs(self.panels) do
   UI.Motion:FinishPlacement(panel)
-  panel.layoutTop=(key=="blocks" and PAD+self.heading:GetHeight()+12 or 80)+offset
-  panel:ClearAllPoints();panel:SetPoint("TOPLEFT",self.main,"TOPLEFT",PAD,-panel.layoutTop);panel:SetHeight((self.layoutHeight or T.contentHeight)-panel.layoutTop-40)
+  panel.layoutTop=(key=="blocks" and T.settingsContentInset+self.heading:GetHeight()+12 or 80)+offset
+  panel:ClearAllPoints();panel:SetPoint("TOPLEFT",self.main,"TOPLEFT",T.settingsContentInset,-panel.layoutTop);panel:SetHeight((self.layoutHeight or T.contentHeight)-panel.layoutTop-40)
   local top=0
   for _,row in ipairs(panel.rows or {}) do
    if row.action then row.action:SetWidth(math.ceil(row.action.label:GetStringWidth())+32) end
@@ -351,8 +350,8 @@ function P:LayoutRows()
  self.reloadLanguage:ClearAllPoints();self.reloadLanguage:SetPoint("TOPRIGHT",0,-self.panels.interface.nextRowY-16)
 end
 function P:LayoutSize(width,height)
- self.layoutHeight=height;BODY_WIDTH=width-MAIN_X-PAD*2-12
- self.rail:SetHeight(height);self.main:SetSize(width-MAIN_X,height)
+ self.layoutHeight=height;BODY_WIDTH=width-T.settingsMainX-T.settingsContentInset*2-12
+ self.rail:SetHeight(height);self.main:SetSize(width-T.settingsMainX,height)
  local content=BODY_WIDTH-24-220-48;local labelWidth=content*.4;local helpWidth=content-labelWidth
  for _,panel in pairs(self.panels) do
   panel:SetWidth(BODY_WIDTH)
@@ -379,8 +378,18 @@ function P:SelectSection(key)
  for _,entry in ipairs(sections) do if entry[1]==key then UI:SetText(self.heading,entry[2]);break end end
  if key=="blocks" then self:EnterBlocks() end
  self:Sync()
- if changed then UI.Motion:Reveal(self.panels[key],"TOPLEFT",self.main,"TOPLEFT",PAD,-self.panels[key].layoutTop,4,0,.14) end
+ if changed then UI.Motion:Reveal(self.panels[key],"TOPLEFT",self.main,"TOPLEFT",T.settingsContentInset,-self.panels[key].layoutTop,4,0,.14) end
 end
+function P:LayoutAppearance(width,height)
+ self:LayoutSize(width,height)
+ self.rail:SetWidth(T.settingsSidebarWidth);self.main:SetPoint("TOPLEFT",T.settingsMainX,0)
+ self:LayoutRows()
+ if self.blocksHeader then
+  self.blocksHeader:Layout(self.blocksList:GetWidth()-C.listRightInset)
+  self.blocksList:Refresh(true)
+ end
+end
+
 function P:Sync()
  for key,entry in pairs(self.controls) do
   local c,row=entry.widget,entry.definition
@@ -396,7 +405,7 @@ function P:Sync()
   else c:SetValue(value==true);UI:SetText(c.label,value and S("已开启","On") or S("已关闭","Off"));c:SetWidth(math.ceil(c.label:GetStringWidth())+c.track:GetWidth()+36);UI:Color(c.label,c._inside and T.text or T.muted) end
  end
  local floatingScale=self.controls.floatingScale.widget
- local scaleAvailable=not A.db.floatingCompatibility
+ local scaleAvailable=not A:GetSetting("floatingCompatibility")
  floatingScale.slider:EnableMouse(scaleAvailable)
  floatingScale.progress:SetShown(scaleAvailable)
  floatingScale.thumb:SetVertexColor(unpack(scaleAvailable and T.accent or T.disabled))

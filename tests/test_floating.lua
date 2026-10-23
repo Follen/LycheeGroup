@@ -5,7 +5,7 @@ _G.LycheeUI=nil
 local libraryPrivate={}
 for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Components.lua","Native.lua","Menu.lua"}) do assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/"..file))("LycheeGroup",libraryPrivate) end
 _G.LycheeGroup=nil;_G.LycheeGroupDB=nil
-for _,file in ipairs({"Locale.lua","Core.lua","Specializations.lua","Fonts.lua","Floating.lua","API.lua"}) do dofile("addon/LycheeGroup/"..file) end
+for _,file in ipairs({"Locale.lua","Core.lua","Configuration.lua","StyleDefaults.lua","Appearance.lua","Specializations.lua","Fonts.lua","Floating.lua","API.lua"}) do dofile("addon/LycheeGroup/"..file) end
 local A=LycheeGroup;local API=A.API.Floating
 local startupNotifications=0
 local stopStartup=API:Subscribe(function(status)
@@ -814,8 +814,8 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  _G.LycheeUI=nil;_G.LycheeGroup=nil;_G.LycheeGroupDB=nil
  local private={}
  for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Components.lua","Native.lua","Menu.lua"}) do assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/"..file))("LycheeGroup",private) end
- for _,file in ipairs({"Locale.lua","Core.lua","Specializations.lua","Fonts.lua","Floating.lua","API.lua","Presentation.lua"}) do dofile("addon/LycheeGroup/"..file) end
- local addon=LycheeGroup;addon:LoadDB();addon.db.reduceMotion=true
+ for _,file in ipairs({"Locale.lua","Core.lua","Configuration.lua","StyleDefaults.lua","Appearance.lua","Specializations.lua","Fonts.lua","Floating.lua","API.lua","Presentation.lua"}) do dofile("addon/LycheeGroup/"..file) end
+ local addon=LycheeGroup;addon:LoadDB();addon:SetSetting("reduceMotion",true)
  local applications,activeListing,notify={},nil,nil
  local group={Applications={GetActiveCount=function() return #applications end,IsActive=function() return true end},
   Catalog={GetActivity=function() return {categoryID=2,maxNumPlayers=5} end}}

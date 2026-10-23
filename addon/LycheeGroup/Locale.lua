@@ -10,10 +10,10 @@ function A:ResolveLocale(value)
 	return GetLocale() == "zhCN" and "zhCN" or "enUS"
 end
 function A:GetLocale() return self.locale end
-function A:NeedsLanguageReload() return self:ResolveLocale(self.db.language) ~= self.locale end
+function A:NeedsLanguageReload() return self:ResolveLocale(self:GetSetting("language")) ~= self.locale end
 -- SavedVariables are available at ADDON_LOADED, after these files execute.
 function A:InitializeLocale()
-	self.locale = self:ResolveLocale(self.db.language)
+	self.locale = self:ResolveLocale(self:GetSetting("language"))
 	local zh = self.locale == "zhCN"
 	local function choose(cn, en) return zh and cn or en end
 

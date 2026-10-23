@@ -41,6 +41,7 @@ for index,pose in ipairs(poses) do
 end
 function Library.CreateMotion(UI)
 -- 单一驱动;switches/alphas 记录进行中动画的终值,StopAll 据此落终态不留残影。
+local T=UI.Theme
 local M = {jobs={}, jobIds={}, nextJobId=0, startTimes={}, switches={}, alphas={}, colors={}, placements={},reveals={},rects={},selections={},waiting={},busy={},spins={},spinOwners={},tickBuffer={}}
 local function Pixel(value,scale) return math.floor(value*scale+.5)/scale end
 local function PlaceReveal(state,x,y,alpha)
@@ -110,7 +111,7 @@ function M:Spin(region,enabled,period)
   owner:HookScript("OnHide",function() self:Spin(texture,false) end)
   self.spinOwners[texture]=true
  end
- local elapsed=0;period=period or .9
+ local elapsed=0;period=period or T.spinPeriod
  self:Start(texture,function(dt)
   if UI:IsReducedMotion() then self:Spin(texture,false);return true end
   elapsed=(elapsed+dt)%period;texture:SetRotation(-2*math.pi*elapsed/period)
@@ -119,6 +120,7 @@ end
 
 -- One owner moves and fades; child geometry and hit targets are not animated.
 function M:Reveal(region,point,parent,relative,x,y,dx,dy,duration)
+ duration=duration or T.revealDuration
  local state=self.reveals[region]
  if not state then
   state={region=region};self.reveals[region]=state
@@ -149,7 +151,7 @@ function M:Reveal(region,point,parent,relative,x,y,dx,dy,duration)
  if not sameAnchor then region:ClearAllPoints();state.x,state.y=nil,nil end
  if duration==0 or UI:IsReducedMotion() then PlaceReveal(state,x,y,1);return end
  state.fromX,state.fromY,state.fromAlpha=fromX,fromY,fromAlpha
- state.elapsed,state.duration=0,duration or .18
+ state.elapsed,state.duration=0,duration or T.revealDuration
  PlaceReveal(state,fromX,fromY,fromAlpha)
  self.placements[region]=state
  self.alphas[region]=1
@@ -163,6 +165,7 @@ end
 -- Passive highlight geometry owns a separate job key, so its opacity/color
 -- transition can run on the same region without cancelling the movement.
 function M:Rect(region,x,y,width,height,duration)
+ duration=duration or T.revealDuration
  local state=self.rects[region]
  if not state then
   state={region=region};self.rects[region]=state
@@ -197,7 +200,7 @@ function M:Rect(region,x,y,width,height,duration)
   PlaceRect(state,x,y,width,height);return
  end
  state.fromX,state.fromY,state.fromWidth,state.fromHeight=state.x,state.y,state.width,state.height
- state.elapsed,state.duration=0,duration or .18
+ state.elapsed,state.duration=0,duration or T.revealDuration
  self:Start(state,state.step)
 end
 function M:FinishRect(region)
@@ -213,8 +216,8 @@ function M:Busy(region,enabled)
  if UI:IsReducedMotion() then region:SetAlpha(1);return end
  local elapsed=0
  self:Start(region,function(dt)
-  elapsed=(elapsed+dt)%.9
-  region:SetAlpha(.35+.65*(.5+.5*math.sin(elapsed/.9*math.pi*2)))
+  elapsed=(elapsed+dt)%T.busyPeriod
+  region:SetAlpha(T.busyAlpha+(1-T.busyAlpha)*(.5+.5*math.sin(elapsed/T.busyPeriod*math.pi*2)))
  end)
 end
 -- Waiting is local to the lychee texture and lives only for an active search.
@@ -226,10 +229,10 @@ function M:Waiting(region,enabled)
  if UI:IsReducedMotion() then return end
  local elapsed,placed=0,false
  self:Start(region,function(dt)
-  elapsed=(elapsed+dt)%1.2;local wave=.5-.5*math.cos(elapsed/1.2*math.pi*2)
-  region:SetSize(saved.width*(1+.035*wave),saved.height*(1-.025*wave));region:SetAlpha(.65+.35*wave)
+  elapsed=(elapsed+dt)%T.waitingPeriod;local wave=.5-.5*math.cos(elapsed/T.waitingPeriod*math.pi*2)
+  region:SetSize(saved.width*(1+T.waitingWidth*wave),saved.height*(1-T.waitingHeight*wave));region:SetAlpha(T.waitingAlpha+(1-T.waitingAlpha)*wave)
   if not placed then region:ClearAllPoints();placed=true end
-  if saved.point[1] then region:SetPoint(saved.point[1],saved.point[2],saved.point[3],saved.point[4],saved.point[5]+wave*3) end
+  if saved.point[1] then region:SetPoint(saved.point[1],saved.point[2],saved.point[3],saved.point[4],saved.point[5]+wave*T.waitingOffset) end
  end)
 end
 function M:Count() local count=0;for _ in pairs(self.jobs) do count=count+1 end;return count end
@@ -291,6 +294,7 @@ function M:Color(panel,target,duration)
 end
 -- 选择反馈:100ms 局部过渡;取消后彻底隐藏,不留半透明残影。
 function M:Selection(region,selected,duration)
+ duration=duration or T.selectionDuration
  local state=self.selections[region]
  if not state then
   state={region=region};self.selections[region]=state
@@ -309,7 +313,7 @@ function M:Selection(region,selected,duration)
  state.target=selected and 1 or 0
  if selected then region:Show() end
  if duration==0 or UI:IsReducedMotion() or from==state.target then PlaceSelection(state,state.target);return end
- state.from,state.elapsed,state.duration=from,0,duration or .10
+ state.from,state.elapsed,state.duration=from,0,duration or T.selectionDuration
  PlaceSelection(state,from)
  self.alphas[region]=state.target
  self:Start(region,state.step)
@@ -323,9 +327,9 @@ function M:SetPresence(p)
  local frame=UI.frame
   self.phase=p
   local pixelScale=frame:GetEffectiveScale()
-  local offset=math.floor(-64*(1-curve(p))*pixelScale+.5)/pixelScale
+  local offset=math.floor(-T.presenceOffset*(1-curve(p))*pixelScale+.5)/pixelScale
   local x,y=self.originX or 0,(self.originY or 0)+offset
-  local u=math.min(1,p*.42/.10)
+  local u=T.presenceFadeDuration==0 and (p>0 and 1 or 0) or math.min(1,p*T.presenceDuration/T.presenceFadeDuration)
   -- Zero slope at both ends keeps the final visible frame close to transparent.
   local alpha=u*u*(3-2*u)
   if self.lastX~=x or self.lastY~=y then
@@ -339,10 +343,10 @@ function M:Presence(shown,finished)
  local phase=self.phase or 0
  self:Stop("presence")
  self:SetPresence(phase)
- if UI:IsReducedMotion() or phase==target then self:SetPresence(target);if finished then finished() end;return end
+ if UI:IsReducedMotion() or T.presenceDuration==0 or phase==target then self:SetPresence(target);if finished then finished() end;return end
  local direction=shown and 1 or -1
  self:Start("presence",function(dt)
-  phase=math.max(0,math.min(1,phase+direction*dt/.42));self:SetPresence(phase)
+  phase=math.max(0,math.min(1,phase+direction*dt/T.presenceDuration));self:SetPresence(phase)
   if phase==target then if finished then finished() end;return true end
  end)
 end
@@ -353,11 +357,12 @@ end
 -- 变换只作用于图标自身(枢轴 64,103,原图 128),不移动父容器、命中区或标题。
 function M:Brand()
  if self.jobs.brand or UI:IsReducedMotion() then return end
+ if T.brandDuration==0 then self:StopBrand();return end
  local elapsed,segment=0,1
  local logo=UI.logo
  logo:ClearAllPoints();logo:SetPoint("CENTER",UI.logoButton,"CENTER",0,0)
  self:Start("brand",function(dt)
-  elapsed=elapsed+dt
+  elapsed=elapsed+dt*1.386/T.brandDuration
   if elapsed>=1.386 then self:StopBrand();return true end
   while elapsed>poses[segment][1] do segment=segment+1 end
   local pose=poses[segment]
@@ -375,7 +380,7 @@ end
 function M:Switch(region,from,to)
  from=region._slideX or from
  self:Stop(region)
- if UI:IsReducedMotion() then
+ if UI:IsReducedMotion() or T.switchDuration==0 then
   self.switches[region]=nil
   region:ClearAllPoints();region:SetPoint("LEFT",region:GetParent(),"LEFT",to,0);region._slideX=to
   return
@@ -383,11 +388,11 @@ function M:Switch(region,from,to)
  local elapsed,placed=0,false
  self.switches[region]=to
  self:Start(region,function(dt)
-  elapsed=math.min(.18,elapsed+dt)
-  region._slideX=from+(to-from)*curve(elapsed/.18)
+  elapsed=math.min(T.switchDuration,elapsed+dt)
+  region._slideX=from+(to-from)*curve(elapsed/T.switchDuration)
   if not placed then region:ClearAllPoints();placed=true end
   region:SetPoint("LEFT",region:GetParent(),"LEFT",region._slideX,0)
-  if elapsed==.18 then self.switches[region]=nil;return true end
+  if elapsed==T.switchDuration then self.switches[region]=nil;return true end
  end)
 end
 -- 停止全部活动动画,并把进行中的滑块与透明度直接置于终态。

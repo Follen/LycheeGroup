@@ -8,7 +8,7 @@ for _, file in ipairs({"Core.lua", "Theme.lua"}) do
     assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/" .. file))("LycheeGroup", private)
 end
 _G.LycheeGroup, _G.LycheeGroupDB = nil, nil
-for _, file in ipairs({"Locale.lua", "Core.lua", "Minimap.lua"}) do
+for _, file in ipairs({"Locale.lua", "Core.lua", "Configuration.lua", "StyleDefaults.lua", "Appearance.lua", "Minimap.lua"}) do
     dofile("addon/LycheeGroup/" .. file)
 end
 local A = LycheeGroup
@@ -55,7 +55,8 @@ stub.cursorX, stub.cursorY = 300, 450 -- local offset (100, 100), effective scal
 button:Fire("OnMouseDown", "LeftButton")
 button:Fire("OnDragStart")
 T.ok(button:GetScript("OnUpdate"))
-T.near(A.db.minimapAngle, 45, .001, "dragging uses the minimap's effective scale")
+T.near(M.dragAngle, 45, .001, "dragging uses the minimap's effective scale")
+T.eq(A.db.minimapAngle,225,"drag samples keep the saved preference unchanged")
 local x, y = Position()
 T.near(x, 76 / math.sqrt(2), .001); T.near(y, x, .001)
 shape = "SQUARE"
@@ -64,6 +65,7 @@ x, y = Position()
 T.near(x, 76, .001); T.near(y, 76, .001, "square minimaps use their actual outer edge")
 button:Fire("OnDragStop")
 T.eq(button:GetScript("OnUpdate"), nil)
+T.near(A.db.minimapAngle,45,.001,"releasing the drag persists its final angle once")
 openedPage = nil
 button:Fire("OnClick", "LeftButton")
 T.eq(openedPage, nil, "releasing a drag cannot open the main window")
@@ -73,11 +75,11 @@ button:Fire("OnClick", "LeftButton")
 T.eq(openedPage, "find", "a fresh click works after a drag")
 
 shape = "CORNER-TOPLEFT"
-A.db.minimapAngle = 135
+A:SetSetting("minimapAngle",135)
 M:UpdateSettings()
 x, y = Position()
 T.near(x, -76 / math.sqrt(2), .001); T.near(y, -x, .001)
-A.db.minimapAngle = 45
+A:SetSetting("minimapAngle",45)
 M:UpdateSettings()
 x, y = Position()
 T.near(x, 76, .001); T.near(y, 76, .001, "mixed shapes keep only their declared round corners")

@@ -70,8 +70,8 @@ lua tests/runner.lua
 
 [`tools/Build-Addon.ps1`](tools/Build-Addon.ps1) 用于打包，默认从相邻的 `LycheeUI` 源码目录同步内置库，也可用 `-LibraryPath` 指定位置。
 
-项目说明：[产品](Product.md) · [设计](Desgin.md) · [架构](Architecture.md) · [性能](perfermance.md) · [文档与变更记录规则](Agents.md)。当前实现与游戏内验证范围见产品文档。
+项目说明：[产品](Product.md) · [设计](Desgin.md) · [架构](Architecture.md) · [性能](perfermance.md) · [第三方配置 API](API.md) · [文档与变更记录规则](Agents.md)。当前实现与游戏内验证范围见产品文档。
 
-当前版本为 1.2.3，开发中的变化见 [未发布记录](CHANGELOG.md#未发布)。当前工作区内置 LycheeUI 1.2.0（修订 31），包含共享字体比例、选择与菜单动效、可调整列宽及排序的表头；源库与内置副本保持一致。共享库已按用户要求解除 [.lock](../LycheeUI/.lock) 冻结。开发接入见 [README](../LycheeUI/README.md)、[API](../LycheeUI/API.md) 和 [组件设计规范](../LycheeUI/DESIGN.md)。
+当前版本为 1.2.3，开发中的变化见 [未发布记录](CHANGELOG.md#未发布)。当前工作分支内置 LycheeUI 1.3.0（修订 32），统一主题 token、控件样式绑定与即时更新；插件新增 [配置 API v1](API.md)，支持会话、账号和角色存储，配置包升级保留用户修改。源库与内置副本通过同步工具维护，[.lock](../LycheeUI/.lock) 记录共享库状态。开发接入见 [README](../LycheeUI/README.md)、[API](../LycheeUI/API.md) 和 [组件设计规范](../LycheeUI/DESIGN.md)。
 
 内置第三方库的来源与许可见[库说明](addon/LycheeGroup_Group/Libs/README.md)。

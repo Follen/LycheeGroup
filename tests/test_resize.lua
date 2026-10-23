@@ -2,7 +2,7 @@
 local fixture=dofile("tests/ui_fixture.lua")
 local f=fixture("zhCN")
 local A,U,G,S=f.A,f.U,f.G,f.S
-A.db.reduceMotion=true
+A:SetSetting("reduceMotion",true)
 A:Open("find")
 local handle=U.resizeHandle
 local pressed=false
@@ -90,7 +90,7 @@ IsMouseButtonDown=previousMouse
 -- Reload restores the character's dimensions, and other pages use the same bounds.
 local restored=fixture("zhCN",{windowSize={width=saved.width,height=saved.height}})
 A,U,G,S=restored.A,restored.U,restored.G,restored.S
-A.db.reduceMotion=true;A:Open("create")
+A:SetSetting("reduceMotion",true);A:Open("create")
 T.eq(U.windowWidth,saved.width);T.eq(U.windowHeight,saved.height)
 local create=U.pages.create
 LFGListFrame.EntryCreation.Name:UserType("Keep this title")

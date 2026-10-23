@@ -58,7 +58,7 @@ function Game:RefreshApplicationSubscriptions()
 		frame:RegisterEvent("LFG_LIST_SEARCH_RESULT_UPDATED")
 	else frame:UnregisterEvent("LFG_LIST_SEARCH_RESULT_UPDATED") end
 	local listing = C_LFGList.HasActiveEntryInfo()
-	local autoJoin = A.db.autoJoin and applications
+	local autoJoin = A:GetSetting("autoJoin") and applications
 	SetEvents(frame, PERMISSION_EVENTS, listing or G:HasViews("create") or autoJoin)
 	if self.runTracking or G:HasViews() or listing or autoJoin then frame:RegisterEvent("GROUP_ROSTER_UPDATE") else frame:UnregisterEvent("GROUP_ROSTER_UPDATE") end
 end

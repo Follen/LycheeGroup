@@ -4,10 +4,35 @@ local context = UI.context
 local T = context.Theme
 UI.C = context.C
 function UI:GetTablePrefs(id)
- local prefs=self.preview and self.preview.provider.prefs or _G.LycheeGroup.charPrefs
+ if not self.preview then return _G.LycheeGroup.Appearance:GetTableState(id) end
+ local prefs=self.preview.provider.prefs
  prefs.tableLayouts=prefs.tableLayouts or {}
  prefs.tableLayouts[id]=prefs.tableLayouts[id] or {}
  return prefs.tableLayouts[id]
+end
+context.options.onTablePreferenceChanged=function(header,changes)
+ return _G.LycheeGroup.Appearance:SaveTableState(header,changes)
+end
+function UI:OnLayoutPreferencesChanged(changed,rail)
+ if self.preview then return end
+ local appearance=_G.LycheeGroup.Appearance
+ for header in pairs(context.tableHeaders or {}) do
+  if changed[appearance:GetTableID(header.state)] and header.layoutWidth then header:Layout(header.layoutWidth) end
+ end
+ if not self:IsShown() then return end
+ local page=self.page and self.pages[self.page]
+ if not page or not page.frame then return end
+ if self.page=="find" then
+  if rail then page:SetSidebarCollapsed(appearance:GetRailCollapsed(),false,false) end
+  if changed[appearance:GetTableID(page.resultsHeader.state)] then
+   local sorting=page.resultsHeader.state
+   if sorting.sortKey then page:OnHeaderSort(sorting.sortKey,sorting.descending) else page:RefreshResults() end
+  elseif changed.findApplications then page:RefreshApplications() end
+ elseif self.page=="create" and changed.createApplicants then page:ApplyTablePreferences()
+ elseif self.page=="notes" then
+  if changed.notesRecords and page.left:IsShown() then page:RefreshList() end
+  if changed.notesHistory and page.historyFrame:IsShown() then page:RefreshHistory() end
+ end
 end
 function UI:StopTableDrags()
  for header in pairs(context.tableHeaders or {}) do header:StopDrag(false) end
@@ -62,48 +87,37 @@ function UI:SpecName(member)
 end
 -- These decorations belong only to opted-in search-result member slots.
 function UI:UpdateMemberIconStyle(icon,visible)
- local settings=_G.LycheeGroup.db
- local shape=settings.memberIconShape
+ local addon=_G.LycheeGroup
+ local shape=addon:GetSetting("memberIconShape")
  local media="Interface\\AddOns\\LycheeGroup_UI\\Media\\member-"..shape
- context:RoundIcon(icon)
- if icon.memberShape~=shape then
-  icon._lycheeMask:SetTexture(shape=="square" and T.media.."icon-mask.tga" or media.."-mask.tga","CLAMPTOBLACKADDITIVE","CLAMPTOBLACKADDITIVE")
-  icon.memberShape=shape
- end
  local colors=CUSTOM_CLASS_COLORS or RAID_CLASS_COLORS
  local color=icon.memberClass and colors and colors[icon.memberClass]
- local bordered=visible and settings.memberClassBorder and color~=nil
- local border=icon.memberBorder
- if bordered and not border then
-  border=icon:GetParent():CreateTexture(nil,"OVERLAY",nil,0);icon.memberBorder=border
- end
- if border then
-  if border.memberShape~=shape then
-   border:ClearAllPoints()
-   if shape=="square" then
-    -- Reuse the original rounded silhouette underneath the unchanged avatar.
-    border:SetTexture(T.media.."icon-mask.tga");border:SetDrawLayer("ARTWORK",-1)
-    border:SetPoint("TOPLEFT",icon,"TOPLEFT",-.5,.5);border:SetPoint("BOTTOMRIGHT",icon,"BOTTOMRIGHT",.5,-.5)
-   else
-    border:SetTexture(media.."-border.tga");border:SetDrawLayer("OVERLAY",0);border:SetAllPoints(icon)
-   end
-   border.memberShape=shape
-  end
-  if bordered then border:SetVertexColor(color.r,color.g,color.b,1) end
-  border:SetShown(bordered==true)
- end
- local leader=visible and icon.memberIsLeader and settings.memberLeaderMark
+ local bordered=visible and addon:GetSetting("memberClassBorder") and color~=nil
+ local leader=visible and icon.memberIsLeader and addon:GetSetting("memberLeaderMark")
  local mark=icon.memberLeaderMark
  if leader and not mark then
   mark=icon:GetParent():CreateTexture(nil,"OVERLAY",nil,1)
-  mark:SetTexture(T.media.."leader.tga")
-  icon.memberLeaderMark=mark
+  mark:SetTexture(T.media.."leader.tga");icon.memberLeaderMark=mark
  end
- if mark then
-  local scale=icon:GetParent():GetScale();local size=math.min(14,19/scale)
-  mark:SetSize(size,size);mark:ClearAllPoints();mark:SetPoint("BOTTOM",icon,"TOP",0,1/scale);mark:SetShown(leader==true)
- end
+ local scale=icon:GetParent():GetScale()
+ local appearance=icon.memberAppearance
+ if not appearance then appearance={classColor={0,0,0,1}};icon.memberAppearance=appearance end
+ appearance.mask=shape=="square" and T.media.."icon-mask.tga" or media.."-mask.tga"
+ appearance.border=icon.memberBorder
+ appearance.borderTexture=(bordered or icon.memberBorder) and (shape=="square" and T.media.."icon-mask.tga" or media.."-border.tga") or nil
+ if bordered then
+  appearance.classColor[1],appearance.classColor[2],appearance.classColor[3]=color.r,color.g,color.b
+  appearance.borderColor=appearance.classColor
+ else appearance.borderColor=nil end
+ appearance.borderVisible=bordered==true
+ appearance.borderWidth=shape=="square" and T.memberSquareBorderWidth or 0
+ appearance.borderLayer,appearance.borderSublevel=shape=="square" and "ARTWORK" or "OVERLAY",shape=="square" and -1 or 0
+ appearance.crown,appearance.crownSize,appearance.crownGap=mark,math.min(T.memberCrownSize,T.memberCrownScreenSize/scale),T.memberCrownGap/scale
+ appearance.crownVisible=leader==true
+ context:StyleMemberIcon(icon,appearance)
+ icon.memberShape=shape
 end
+
 function UI:SetMemberIcon(icon,member)
  if icon.memberStyle then
   icon.memberClass=member and member.class

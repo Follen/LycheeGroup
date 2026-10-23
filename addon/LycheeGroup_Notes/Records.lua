@@ -120,7 +120,7 @@ function Records.Add(name, realm, reason, unit, preClassSpec, details)
 		timestamp = time(),
 		reason = cleanReason,
 		classSpec = playerInfo.classSpec,
-		type = details and details.type or A.db.defaultNote,
+		type = details and details.type or A:GetSetting("defaultNote"),
 		class = playerInfo.class,
 		specID = playerInfo.specID,
 	}

@@ -17,7 +17,7 @@ local function X(region) local point={region:GetPoint()};return point[#point-1] 
 for _,locale in ipairs({"zhCN","enUS"}) do
  local f=dofile("tests/ui_fixture.lua")(locale)
  local A,U,G,S=f.A,f.U,f.G,f.S
- A.db.reduceMotion=true
+ A:SetSetting("reduceMotion",true)
  A.Notes:Merge({
   {name="Fresh",server="Home",timestamp=300,reason="a complete reason across both columns",type="positive"},
   {name="Old",server="Home",timestamp=100,reason="old"},

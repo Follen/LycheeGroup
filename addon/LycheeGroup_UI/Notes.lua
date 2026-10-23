@@ -9,22 +9,16 @@ local P = {}
 UI.pages.notes = P
 
 local WIDTH, HEIGHT = T.contentWidth, T.contentHeight
-local RAIL, MAIN_X, PAD = 208, 224, 24
-local LEFT = MAIN_X + PAD
-local MAIN_WIDTH = WIDTH - MAIN_X
-local BODY_WIDTH = MAIN_WIDTH - PAD * 2
-local GAP = 20
-local LIST_WIDTH=420
-local DRAWER_W = BODY_WIDTH - LIST_WIDTH - GAP
-local EDITOR_X = LEFT + LIST_WIDTH + GAP
-local WORK_TOP = 128
-local CARD_WIDTH=LIST_WIDTH-C.listRightInset
-local CARD_RIGHT_INSET=12
+local LEFT = T.notesMainX + T.notesContentInset
+local MAIN_WIDTH = WIDTH - T.notesMainX
+local BODY_WIDTH = MAIN_WIDTH - T.notesContentInset * 2
+local DRAWER_W = BODY_WIDTH - T.notesListWidth - T.notesColumnGap
+local EDITOR_X = LEFT + T.notesListWidth + T.notesColumnGap
+local CARD_WIDTH=T.notesListWidth-C.listRightInset
 local zh=A:GetLocale()=="zhCN"
 local function S(cn,en) return zh and cn or en end
 local NOTE_TYPES={{key="positive",label=S("推荐","Positive")},{key="neutral",label=S("中性","Neutral")},{key="caution",label=S("拉黑","Blocked")}}
-local ROW_HEIGHT = 100
-local LIST_HEIGHT = HEIGHT - WORK_TOP - 32 - PAD
+local LIST_HEIGHT = HEIGHT - T.notesWorkTop - 32 - T.notesContentInset
 local function SizeRows(list,height)
  list.rowHeight=height;list.capacity=math.min(list.poolCapacity-1,math.ceil(list:GetHeight()/height))
  list.canvas:SetHeight(list:GetHeight()+height*2)
@@ -37,7 +31,7 @@ local function LayoutHistoryRows(list,x)
  for _,item in ipairs(list.rows) do item.meta:SetPoint("TOPLEFT",x,-metaTop) end
  SizeRows(list,math.max(80,math.ceil(metaTop+row.meta:GetHeight()+12)))
 end
-local EDITOR_HEIGHT = math.min(620, HEIGHT - WORK_TOP - PAD)
+local EDITOR_HEIGHT = math.min(T.notesEditorMaxHeight, HEIGHT - T.notesWorkTop - T.notesContentInset)
 
 local state = {
 	search = "",
@@ -64,12 +58,12 @@ function P:LayoutNoteColumns(header)
  if not self.list then return end
  local player,date=header.columns.player,header.columns.timestamp
  for _,row in ipairs(self.list.rows) do
-  row.icon:ClearAllPoints();row.icon:SetPoint("TOPLEFT",player.x+12,-21)
-  row.title:ClearAllPoints();row.title:SetPoint("TOPLEFT",player.x+50,-8);row.title:SetWidth(player.width-56)
+  row.icon:ClearAllPoints();C.SetPoint(row.icon,"TOPLEFT",row.icon:GetParent(),"TOPLEFT",player.x+12,"notesRowIconTopleftY")
+  row.title:ClearAllPoints();C.SetPoint(row.title,"TOPLEFT",row.title:GetParent(),"TOPLEFT",player.x+50,"notesRowTitleTopleftY");row.title:SetWidth(player.width-56)
   row.meta:SetWidth(player.width-56)
-  row.kind:ClearAllPoints();row.kind:SetPoint("TOPLEFT",date.x+6,-8);row.kind:SetWidth(date.width-12)
+  row.kind:ClearAllPoints();C.SetPoint(row.kind,"TOPLEFT",row.kind:GetParent(),"TOPLEFT",date.x+6,"notesRowKindTopleftY");row.kind:SetWidth(date.width-12)
   row.date:SetWidth(date.width-12)
-  row.reason:SetWidth(CARD_WIDTH-player.x-50-CARD_RIGHT_INSET)
+  row.reason:SetWidth(CARD_WIDTH-player.x-50-T.notesCardRightInset)
  end
  self:LayoutNoteRows()
 end
@@ -78,7 +72,7 @@ function P:LayoutHistoryColumns(header)
  local col=header.columns
  for _,row in ipairs(self.historyList.rows) do
   row.icon:ClearAllPoints();row.icon:SetPoint("LEFT",col.activity.x+12,0)
-  row.title:ClearAllPoints();row.title:SetPoint("TOPLEFT",col.activity.x+60,-12);row.title:SetWidth(col.activity.width-66)
+  row.title:ClearAllPoints();C.SetPoint(row.title,"TOPLEFT",row.title:GetParent(),"TOPLEFT",col.activity.x+60,"notesRowTitleTopleftY2");row.title:SetWidth(col.activity.width-66)
   row.meta:SetWidth(col.activity.width-66)
   row.level:ClearAllPoints();row.level:SetPoint("LEFT",col.level.x+6,0);row.level:SetWidth(col.level.width-12)
   row.duration:ClearAllPoints();row.duration:SetPoint("LEFT",col.duration.x+6,0);row.duration:SetWidth(col.duration.width-12)
@@ -93,7 +87,7 @@ function P:LayoutHistoryMemberColumns(header)
  local player,actions=header.columns.player,header.columns.actions
  for _,row in ipairs(modal.list.rows) do
   row.icon:ClearAllPoints();row.icon:SetPoint("LEFT",player.x+12,0)
-  row.title:ClearAllPoints();row.title:SetPoint("TOPLEFT",player.x+56,-12);row.title:SetWidth(player.width-62)
+  row.title:ClearAllPoints();C.SetPoint(row.title,"TOPLEFT",row.title:GetParent(),"TOPLEFT",player.x+56,"notesRowTitleTopleftY2");row.title:SetWidth(player.width-62)
   row.meta:SetWidth(player.width-62)
   row.action:ClearAllPoints();row.action:SetPoint("LEFT",actions.x+6,0);row.action:SetWidth(actions.width-12)
  end
@@ -103,10 +97,10 @@ end
 function P:BindTableStates()
  self.noteTableState=UI:GetTablePrefs("notesRecords")
  self.noteHeader:SetState(self.noteTableState)
- if not self.noteTableState.sortKey then self.noteHeader:SetSort("timestamp",true) end
+ if UI.preview and not self.noteTableState.sortKey then self.noteHeader:SetSort("timestamp",true) end
  self.historyTableState=UI:GetTablePrefs("notesHistory")
  self.historyHeader:SetState(self.historyTableState)
- if not self.historyTableState.sortKey then self.historyHeader:SetSort("completed",true) end
+ if UI.preview and not self.historyTableState.sortKey then self.historyHeader:SetSort("completed",true) end
  if self.historyModal then self.historyModal.header:SetState(UI:GetTablePrefs("notesHistoryMembers")) end
  self:LayoutRows()
 end
@@ -159,7 +153,7 @@ local function RenderNote(row,key)
  local label;for _,entry in ipairs(NOTE_TYPES) do if r.type==entry.key then label=entry.label end end
  UI:SetText(row.kind,label);UI:Color(row.kind,r.type=="positive" and T.good or r.type=="caution" and T.warning or T.muted)
  local dateColumn=P.noteHeader.columns.timestamp
- for kind,glyph in pairs(row.kindIcons) do glyph:SetShown(kind==r.type);if kind==r.type then glyph:ClearAllPoints();glyph:SetPoint("TOPLEFT",dateColumn.x+dateColumn.width-22-row.kind:GetStringWidth(),-15) end end
+ for kind,glyph in pairs(row.kindIcons) do glyph:SetShown(kind==r.type);if kind==r.type then glyph:ClearAllPoints();C.SetPoint(glyph,"TOPLEFT",glyph:GetParent(),"TOPLEFT",dateColumn.x+dateColumn.width-22-row.kind:GetStringWidth(),"notesGlyphTopleftY") end end
  UI:SetText(row.date,UI:DateText(r.timestamp))
 end
 
@@ -167,104 +161,104 @@ end
 
 function P:Build(parent)
  local root=CreateFrame("Frame",nil,parent);root:SetAllPoints();self.frame=root
- local rail=CreateFrame("Frame",nil,root);rail:SetSize(RAIL,HEIGHT);rail:SetPoint("TOPLEFT");self.rail=rail
+ local rail=CreateFrame("Frame",nil,root);rail:SetSize(T.notesSidebarWidth,HEIGHT);rail:SetPoint("TOPLEFT");self.rail=rail
  self.tabs={};self.tabSelection=C.Selection(rail,{radius=8,mark=true})
  for i,entry in ipairs({{"all",S("全部记录","All notes")},{"positive",S("推荐","Positive")},{"neutral",S("中性","Neutral")},{"caution",S("拉黑","Blocked")},{"history",S("历史队友","History")}}) do
-  local button=C.Button(rail,entry[2],RAIL,function() P:SelectTab(entry[1]) end,{height=60,radius=8,fontSize=16,lineHeight=22,selectionFill=false});button:SetTextColors(T.muted,T.text,T.onSecondaryContainer);button:SetFrameLevel(self.tabSelection:GetFrameLevel()+1)
-  button.order=i;button.tabY=-12-(i-1)*64-(i==5 and 20 or 0);button:SetPoint("TOPLEFT",0,button.tabY);button.label:ClearAllPoints();button.label:SetPoint("LEFT",52,0);button.label:SetWidth(100);button.label:SetWordWrap(false);C.SetLineHeight(button.label,22,true)
+  local button=C.Button(rail,entry[2],T.notesSidebarWidth,function() P:SelectTab(entry[1]) end,{height=60,radius=8,fontSize="font16",lineHeight="line22",selectionFill=false});button:SetTextColors(T.muted,T.text,T.onSecondaryContainer);button:SetFrameLevel(self.tabSelection:GetFrameLevel()+1)
+  button.order=i;button.tabY=-12-(i-1)*64-(i==5 and 20 or 0);button:SetPoint("TOPLEFT",0,button.tabY);button.label:ClearAllPoints();C.SetPoint(button.label,"LEFT",button.label:GetParent(),"LEFT","notesButtonLabelLeftX",0);C.ApplyStyle(button.label,{width="notesButtonLabelWidth"});button.label:SetWordWrap(false);C.SetLineHeight(button.label,"line22",true)
   local glyph=entry[1]=="all" and "friend" or entry[1]=="positive" and "heart" or entry[1]=="caution" and "caution" or entry[1]=="history" and "history" or "book"
-  button.glyph=C.Glyph(button,glyph,24);button.glyph:SetPoint("LEFT",16,0)
+  button.glyph=C.Glyph(button,glyph,T.notesButtonGlyphWidth);C.ApplyStyle(button.glyph,{width="notesButtonGlyphWidth",height="notesButtonGlyphHeight"});C.SetPoint(button.glyph,"LEFT",button.glyph:GetParent(),"LEFT","notesButtonGlyphLeftX",0)
   button.icon=button.glyph
-  button.count=C.Text(button,"",14,T.dim,32);button.count:SetPoint("RIGHT",-16,0);button.count:SetJustifyH("RIGHT");C.SetLineHeight(button.count,20,true);self.tabs[entry[1]]=button
+  button.count=C.Text(button,"","font14","dim",T.notesButtonCountWidth);C.ApplyStyle(button.count,{width="notesButtonCountWidth"});C.SetPoint(button.count,"RIGHT",button.count:GetParent(),"RIGHT","notesButtonCountRightX",0);button.count:SetJustifyH("RIGHT");C.SetLineHeight(button.count,"line20",true);self.tabs[entry[1]]=button
  end
- local main=CreateFrame("Frame",nil,root);main:SetSize(MAIN_WIDTH,HEIGHT);main:SetPoint("TOPLEFT",MAIN_X,0);C.Panel(main,T.surfaceLow,24);self.main=main
- self.pageTitle=C.Text(main,L.notes,24);C.SetLineHeight(self.pageTitle,32,true);self.pageTitle:SetPoint("TOPLEFT",PAD,-PAD)
- self.toolbar=CreateFrame("Frame",nil,main);self.toolbar:SetSize(BODY_WIDTH,44);self.toolbar:SetPoint("TOPLEFT",PAD,-72)
- self.search=C.Edit(self.toolbar,CARD_WIDTH,44);self.search:SetPoint("LEFT")
- self.searchHint=C.Text(self.search,L.noteSearch,14,T.dim);self.searchHint:SetPoint("LEFT",12,0);C.SetLineHeight(self.searchHint,20,true)
+ local main=CreateFrame("Frame",nil,root);main:SetSize(MAIN_WIDTH,HEIGHT);main:SetPoint("TOPLEFT",T.notesMainX,0);C.Panel(main,"surfaceLow","notesPanelRadius");self.main=main
+ self.pageTitle=C.Text(main,L.notes,"font24");C.SetLineHeight(self.pageTitle,"line32",true);self.pageTitle:SetPoint("TOPLEFT",T.notesContentInset,-T.notesContentInset)
+ self.toolbar=CreateFrame("Frame",nil,main);self.toolbar:SetSize(BODY_WIDTH,T.notesToolbarHeight);C.SetPoint(self.toolbar,"TOPLEFT",self.toolbar:GetParent(),"TOPLEFT",T.notesContentInset,"notesToolbarTopleftY")
+ self.search=C.Edit(self.toolbar,CARD_WIDTH,T.notesSearchHeight);C.ApplyStyle(self.search,{height="notesSearchHeight"});self.search:SetPoint("LEFT")
+ self.searchHint=C.Text(self.search,L.noteSearch,"font14","dim");C.SetPoint(self.searchHint,"LEFT",self.searchHint:GetParent(),"LEFT","notesSearchHintLeftX",0);C.SetLineHeight(self.searchHint,"line20",true)
  self.search.box:HookScript("OnTextChanged",function() P:OnSearchChanged() end)
  self.search.box:HookScript("OnEditFocusGained",function() P.searchHint:Hide() end)
  self.search.box:HookScript("OnEditFocusLost",function() P.searchHint:SetShown(P.search.box:GetText()=="") end)
- self.addButton=C.Button(self.toolbar,L.add,120,function() P:OpenAdd() end);self.addButton:SetPrimary(true);self.addButton:SetPoint("RIGHT");self.addButton.label:ClearAllPoints();self.addButton.label:SetPoint("LEFT",40,0)
- self.addButton.icon=C.Glyph(self.addButton,"plus",16);self.addButton.icon:SetPoint("LEFT",16,0);self.addButton:SetWidth(math.ceil(self.addButton.label:GetStringWidth())+56)
- self.exportButton=C.Button(self.toolbar,L.export,72,function() P:DoExport() end);self.exportButton:SetWidth(self.exportButton.label:GetStringWidth()+34);self.exportButton:SetPoint("RIGHT",self.addButton,"LEFT",-8,0)
- self.importButton=C.Button(self.toolbar,L.import,72,function() P:OpenTransfer("import") end);self.importButton:SetWidth(self.importButton.label:GetStringWidth()+34);self.importButton:SetPoint("RIGHT",self.exportButton,"LEFT",-8,0)
- self.left=CreateFrame("Frame",nil,main);self.left:SetSize(LIST_WIDTH,HEIGHT-WORK_TOP-PAD);self.left:SetPoint("TOPLEFT",PAD,-WORK_TOP)
+ self.addButton=C.Button(self.toolbar,L.add,T.notesAddButtonWidth,function() P:OpenAdd() end);C.ApplyStyle(self.addButton,{width="notesAddButtonWidth"});self.addButton:SetPrimary(true);self.addButton:SetPoint("RIGHT");self.addButton.label:ClearAllPoints();C.SetPoint(self.addButton.label,"LEFT",self.addButton.label:GetParent(),"LEFT","notesAddButtonLabelLeftX",0)
+ self.addButton.icon=C.Glyph(self.addButton,"plus",T.notesAddButtonIconWidth);C.ApplyStyle(self.addButton.icon,{width="notesAddButtonIconWidth",height="notesAddButtonIconHeight"});C.SetPoint(self.addButton.icon,"LEFT",self.addButton.icon:GetParent(),"LEFT","notesAddButtonIconLeftX",0);self.addButton:SetWidth(math.ceil(self.addButton.label:GetStringWidth())+56)
+ self.exportButton=C.Button(self.toolbar,L.export,T.notesExportButtonWidth,function() P:DoExport() end);C.ApplyStyle(self.exportButton,{width="notesExportButtonWidth"});self.exportButton:SetWidth(self.exportButton.label:GetStringWidth()+34);C.SetPoint(self.exportButton,"RIGHT",self.addButton,"LEFT","notesExportButtonRightX",0)
+ self.importButton=C.Button(self.toolbar,L.import,T.notesImportButtonWidth,function() P:OpenTransfer("import") end);C.ApplyStyle(self.importButton,{width="notesImportButtonWidth"});self.importButton:SetWidth(self.importButton.label:GetStringWidth()+34);C.SetPoint(self.importButton,"RIGHT",self.exportButton,"LEFT","notesImportButtonRightX",0)
+ self.left=CreateFrame("Frame",nil,main);self.left:SetSize(T.notesListWidth,HEIGHT-T.notesWorkTop-T.notesContentInset);self.left:SetPoint("TOPLEFT",T.notesContentInset,-T.notesWorkTop)
  self.noteHeader=C.TableHeader(self.left,{
-  {key="player",label=S("玩家记录","Player notes"),width=264,min=180},
-  {key="timestamp",label=S("类型 / 时间","Type / Date"),width=144,min=132,align="RIGHT",sortable=true},
+  {key="player",label=S("玩家记录","Player notes"),width="notesColumnPlayerWidth264",min="notesColumnPlayerMin180"},
+  {key="timestamp",label=S("类型 / 时间","Type / Date"),width="notesColumnTimestampWidth144",min="notesColumnTimestampMin132",align="RIGHT",sortable=true},
  },{onLayout=function(header) P:LayoutNoteColumns(header) end,onSort=function() P:RefreshList() end})
  self.noteHeader:SetPoint("TOPLEFT");self.listTitle=self.noteHeader.labels.player
- self.countText=C.Text(main,"",14,T.dim);self.countText:SetPoint("TOPRIGHT",-PAD,-PAD-8);C.SetLineHeight(self.countText,20,true)
- self.list=C.List(self.left,LIST_WIDTH,LIST_HEIGHT,ROW_HEIGHT,function(key,button) P:OnSelect(key,button) end);self.list:SetPoint("TOPLEFT",0,-32);self.list.selectionMark=false
+ self.countText=C.Text(main,"","font14","dim");self.countText:SetPoint("TOPRIGHT",-T.notesContentInset,-T.notesContentInset-8);C.SetLineHeight(self.countText,"line20",true)
+ self.list=C.List(self.left,T.notesListWidth,LIST_HEIGHT,T.notesRowHeight,function(key,button) P:OnSelect(key,button) end);C.SetPoint(self.list,"TOPLEFT",self.list:GetParent(),"TOPLEFT",0,"notesListTopleftY");self.list.selectionMark=false
  self.list:SetRowInitializer(function(row)
   UI:BindTooltipArea(row,.25,
    function(r) return r:IsEnabled() and r.key and r._hitVisible and P.list.clip:IsMouseOver() end,
    function(r) if P.list.selectedKey~=r.key then UI.Tooltip:ShowNote(r,r.key) end end)
-  row.icon=C.Icon(row,30);row.icon:SetPoint("TOPLEFT",12,-21)
-  row.title:ClearAllPoints();row.title:SetPoint("TOPLEFT",50,-8);row.title:SetWidth(CARD_WIDTH-CARD_RIGHT_INSET-132-8-50);C.SetFont(row.title,T.listTitleSize);C.SetLineHeight(row.title,T.listTitleLineHeight,true)
-  row.meta:ClearAllPoints();row.meta:SetPoint("TOPLEFT",50,-40);row.meta:SetWidth(CARD_WIDTH-CARD_RIGHT_INSET-132-8-50)
-  row.reason=C.Text(row,"",14,T.muted,CARD_WIDTH-50-CARD_RIGHT_INSET);row.reason:SetPoint("TOPLEFT",50,-68);row.reason:SetMaxLines(1);C.SetLineHeight(row.reason,20,true)
-  row.kind=C.Text(row,"",14,T.muted,132);row.kind:SetPoint("TOPRIGHT",-12,-8);row.kind:SetJustifyH("RIGHT");C.SetLineHeight(row.kind,22,true)
+  row.icon=C.Icon(row,T.notesRowIconWidth);C.ApplyStyle(row.icon,{width="notesRowIconWidth",height="notesRowIconHeight"});C.SetPoint(row.icon,"TOPLEFT",row.icon:GetParent(),"TOPLEFT","notesRowIconTopleftX","notesRowIconTopleftY")
+  row.title:ClearAllPoints();C.SetPoint(row.title,"TOPLEFT",row.title:GetParent(),"TOPLEFT","notesRowTitleTopleftX","notesRowTitleTopleftY");row.title:SetWidth(CARD_WIDTH-T.notesCardRightInset-132-8-50);C.SetFont(row.title,"listTitleSize");C.SetLineHeight(row.title,"listTitleLineHeight",true)
+  row.meta:ClearAllPoints();C.SetPoint(row.meta,"TOPLEFT",row.meta:GetParent(),"TOPLEFT","notesRowMetaTopleftX","notesRowMetaTopleftY");row.meta:SetWidth(CARD_WIDTH-T.notesCardRightInset-132-8-50)
+  row.reason=C.Text(row,"","font14","muted",CARD_WIDTH-50-T.notesCardRightInset);C.SetPoint(row.reason,"TOPLEFT",row.reason:GetParent(),"TOPLEFT","notesRowReasonTopleftX","notesRowReasonTopleftY");row.reason:SetMaxLines(1);C.SetLineHeight(row.reason,"line20",true)
+  row.kind=C.Text(row,"","font14","muted",T.notesRowKindWidth);C.ApplyStyle(row.kind,{width="notesRowKindWidth"});C.SetPoint(row.kind,"TOPRIGHT",row.kind:GetParent(),"TOPRIGHT","notesRowKindToprightX","notesRowKindToprightY");row.kind:SetJustifyH("RIGHT");C.SetLineHeight(row.kind,"line22",true)
   row.kindIcons={}
-  for _,entry in ipairs(NOTE_TYPES) do local glyph=C.Glyph(row,entry.key=="positive" and "heart" or entry.key=="caution" and "caution" or "book",12,entry.key=="positive" and T.good or entry.key=="caution" and T.warning or T.muted);glyph:SetPoint("TOPRIGHT",-14-(zh and 26 or 68),-13);glyph:Hide();row.kindIcons[entry.key]=glyph end
-  row.date=C.Text(row,"",14,T.dim,132);row.date:SetPoint("TOPRIGHT",-12,-40);row.date:SetJustifyH("RIGHT");C.SetLineHeight(row.date,20,true)
+  for _,entry in ipairs(NOTE_TYPES) do local glyph=C.Glyph(row,entry.key=="positive" and "heart" or entry.key=="caution" and "caution" or "book",T.notesGlyphWidth,entry.key=="positive" and T.good or entry.key=="caution" and T.warning or T.muted);C.ApplyStyle(glyph,{width="notesGlyphWidth",height="notesGlyphHeight"});C.SetPoint(glyph,"TOPRIGHT",glyph:GetParent(),"TOPRIGHT",-14-(zh and 26 or 68),"notesGlyphToprightY");glyph:Hide();row.kindIcons[entry.key]=glyph end
+  row.date=C.Text(row,"","font14","dim",T.notesRowDateWidth);C.ApplyStyle(row.date,{width="notesRowDateWidth"});C.SetPoint(row.date,"TOPRIGHT",row.date:GetParent(),"TOPRIGHT","notesRowDateToprightX","notesRowDateToprightY");row.date:SetJustifyH("RIGHT");C.SetLineHeight(row.date,"line20",true)
   local metaTop=math.max(40,8+row.title:GetHeight()+4)
-  row.meta:SetPoint("TOPLEFT",50,-metaTop);row.date:SetPoint("TOPRIGHT",-12,-metaTop)
-  row.reason:SetPoint("TOPLEFT",50,-math.max(68,metaTop+row.meta:GetHeight()+4))
+  C.SetPoint(row.meta,"TOPLEFT",row.meta:GetParent(),"TOPLEFT","notesRowMetaTopleftX",-metaTop);C.SetPoint(row.date,"TOPRIGHT",row.date:GetParent(),"TOPRIGHT","notesRowDateToprightX",-metaTop)
+  C.SetPoint(row.reason,"TOPLEFT",row.reason:GetParent(),"TOPLEFT","notesRowReasonTopleftX",-math.max(68,metaTop+row.meta:GetHeight()+4))
  end)
- local empty=CreateFrame("Frame",nil,self.left);empty:SetSize(CARD_WIDTH,220);empty:SetPoint("TOPLEFT",self.list,"TOPLEFT");self.emptyState=empty
- self.emptyTitle=C.Text(empty,L.notesEmptyTitle,18,T.muted,CARD_WIDTH-24);C.SetLineHeight(self.emptyTitle,24,true);self.emptyTitle:SetPoint("CENTER");self.emptyTitle:SetJustifyH("CENTER")
- self.editorEmpty=C.Text(main,S("选择玩家查看记录","Select a player to view their note"),18,T.dim,DRAWER_W-32);C.SetLineHeight(self.editorEmpty,24,true);self.editorEmpty:SetPoint("CENTER",main,"TOPLEFT",EDITOR_X-MAIN_X+DRAWER_W/2,-WORK_TOP-(HEIGHT-WORK_TOP-PAD)/2);self.editorEmpty:SetJustifyH("CENTER")
- local editor=CreateFrame("Frame",nil,main);editor:SetSize(DRAWER_W,EDITOR_HEIGHT);editor:SetPoint("TOPLEFT",EDITOR_X-MAIN_X,-WORK_TOP);C.Panel(editor,T.container,20);self.editor=editor;editor:Hide()
+ local empty=CreateFrame("Frame",nil,self.left);empty:SetSize(CARD_WIDTH,T.notesEmptyHeight);empty:SetPoint("TOPLEFT",self.list,"TOPLEFT");self.emptyState=empty
+ self.emptyTitle=C.Text(empty,L.notesEmptyTitle,"font18","muted",CARD_WIDTH-24);C.SetLineHeight(self.emptyTitle,"line24",true);self.emptyTitle:SetPoint("CENTER");self.emptyTitle:SetJustifyH("CENTER")
+ self.editorEmpty=C.Text(main,S("选择玩家查看记录","Select a player to view their note"),"font18","dim",DRAWER_W-32);C.SetLineHeight(self.editorEmpty,"line24",true);self.editorEmpty:SetPoint("CENTER",main,"TOPLEFT",EDITOR_X-T.notesMainX+DRAWER_W/2,-T.notesWorkTop-(HEIGHT-T.notesWorkTop-T.notesContentInset)/2);self.editorEmpty:SetJustifyH("CENTER")
+ local editor=CreateFrame("Frame",nil,main);editor:SetSize(DRAWER_W,EDITOR_HEIGHT);editor:SetPoint("TOPLEFT",EDITOR_X-T.notesMainX,-T.notesWorkTop);C.Panel(editor,T.container,"notesPanelRadius2");self.editor=editor;editor:Hide()
  local inner=DRAWER_W-32;local half=(inner-12)/2
- self.eTitle=C.Text(editor,L.edit,18,T.text);self.eTitle:SetPoint("TOPLEFT",16,-24);C.SetLineHeight(self.eTitle,24,true)
- self.eClose=C.Button(editor,"",40,function() P:CloseEditor() end);C.Glyph(self.eClose,"close",20):SetPoint("CENTER");self.eClose:SetPoint("TOPRIGHT",-16,-16)
- self.eNameLabel=C.Text(editor,S("玩家","Player"),14,T.muted);self.eNameLabel:SetPoint("TOPLEFT",16,-68);C.SetLineHeight(self.eNameLabel,20,true)
- self.eName=C.Edit(editor,inner,44);self.eName:SetPoint("TOPLEFT",16,-100)
- self.eNameHint=C.Text(self.eName,L.notesIdentityHint,14,T.dim,inner-24);self.eNameHint:SetPoint("LEFT",12,0);C.SetLineHeight(self.eNameHint,20,true)
+ self.eTitle=C.Text(editor,L.edit,"font18","text");C.SetPoint(self.eTitle,"TOPLEFT",self.eTitle:GetParent(),"TOPLEFT","notesETitleTopleftX","notesETitleTopleftY");C.SetLineHeight(self.eTitle,"line24",true)
+ self.eClose=C.Button(editor,"",T.notesECloseWidth,function() P:CloseEditor() end);C.ApplyStyle(self.eClose,{width="notesECloseWidth"});C.Glyph(self.eClose,"close",T.notesGlyphWidth2):SetPoint("CENTER");C.SetPoint(self.eClose,"TOPRIGHT",self.eClose:GetParent(),"TOPRIGHT","notesECloseToprightX","notesECloseToprightY")
+ self.eNameLabel=C.Text(editor,S("玩家","Player"),"font14","muted");C.SetPoint(self.eNameLabel,"TOPLEFT",self.eNameLabel:GetParent(),"TOPLEFT","notesENameLabelTopleftX","notesENameLabelTopleftY");C.SetLineHeight(self.eNameLabel,"line20",true)
+ self.eName=C.Edit(editor,inner,T.notesENameHeight);C.ApplyStyle(self.eName,{height="notesENameHeight"});C.SetPoint(self.eName,"TOPLEFT",self.eName:GetParent(),"TOPLEFT","notesENameTopleftX","notesENameTopleftY")
+ self.eNameHint=C.Text(self.eName,L.notesIdentityHint,"font14","dim",inner-24);C.SetPoint(self.eNameHint,"LEFT",self.eNameHint:GetParent(),"LEFT","notesENameHintLeftX",0);C.SetLineHeight(self.eNameHint,"line20",true)
  self.eName.box:HookScript("OnTextChanged",function() DraftChanged();P.eNameHint:SetShown(P.eName.box:GetText()=="") end)
- self.eAvatar=C.Icon(editor,40);self.eAvatar:SetPoint("TOPLEFT",16,-72)
- self.eIdentity=C.Text(editor,"",16,T.text,inner-52);self.eIdentity:SetPoint("TOPLEFT",68,-66);self.eIdentity:SetWordWrap(false);C.SetLineHeight(self.eIdentity,22,true)
- self.eRealm=C.Text(editor,"",14,T.muted,inner-52);self.eRealm:SetPoint("TOPLEFT",68,-96);C.SetLineHeight(self.eRealm,20,true)
- self.classLabel=C.Text(editor,S("职业","Class"),14,T.muted);self.classLabel:SetPoint("TOPLEFT",16,-148);C.SetLineHeight(self.classLabel,20,true)
- self.specLabel=C.Text(editor,S("专精","Specialization"),14,T.muted);self.specLabel:SetPoint("TOPLEFT",28+half,-148);C.SetLineHeight(self.specLabel,20,true)
- self.classChoice=C.Choice(editor,half,function() return P:ClassItems() end,function(value) DraftChanged();state.identityEdited=true;state.legacyClassSpec=nil;state.recordClass=value or nil;state.recordSpec=nil;P:SyncSpec() end);self.classChoice:SetPoint("TOPLEFT",16,-172);self.classChoice:SetHeight(44)
- self.specChoice=C.Choice(editor,half,function() return P:SpecItems() end,function(value) DraftChanged();state.identityEdited=true;state.legacyClassSpec=nil;state.recordSpec=value or nil;P:SyncSpec() end);self.specChoice:SetPoint("TOPLEFT",28+half,-172);self.specChoice:SetHeight(44)
- self.typeLabel=C.Text(editor,S("记录类型","Note type"),14,T.muted);C.SetLineHeight(self.typeLabel,20,true)
- self.typeSwitch=CreateFrame("Frame",nil,editor);self.typeSwitch:SetSize(inner,36);self.typeSwitch:SetPoint("TOPLEFT",16,-228);C.Panel(self.typeSwitch,T.surfaceLow,8)
- self.typeButtons={};for i,entry in ipairs(NOTE_TYPES) do local w=(inner-14)/3;local button=C.Button(self.typeSwitch,entry.label,w,function() DraftChanged();state.recordType=entry.key;P:SyncType() end,{variant="compact",textColor=T.text});button:SetPoint("TOPLEFT",3+(i-1)*(w+4),-3);button.label:ClearAllPoints();button.label:SetPoint("CENTER",10,0);button.icon=C.Glyph(button,entry.key=="positive" and "heart" or entry.key=="caution" and "caution" or "book",14);button.icon:SetPoint("CENTER",-(button.label:GetStringWidth()+6)/2,0);self.typeButtons[entry.key]=button end
- self.eReasonLabel=C.Text(editor,L.reason,14,T.muted);self.eReasonLabel:SetPoint("TOPLEFT",16,-276);C.SetLineHeight(self.eReasonLabel,20,true)
- self.eReason=C.Edit(editor,inner,112,true);self.eReason:SetPoint("TOPLEFT",16,-300);self.eReason:SetPlaceholder(S("写下当时发生的事","Describe what happened"));C.SetLineHeight(self.eReason.box,20)
+ self.eAvatar=C.Icon(editor,T.notesEAvatarWidth);C.ApplyStyle(self.eAvatar,{width="notesEAvatarWidth",height="notesEAvatarHeight"});C.SetPoint(self.eAvatar,"TOPLEFT",self.eAvatar:GetParent(),"TOPLEFT","notesEAvatarTopleftX","notesEAvatarTopleftY")
+ self.eIdentity=C.Text(editor,"","font16","text",inner-52);C.SetPoint(self.eIdentity,"TOPLEFT",self.eIdentity:GetParent(),"TOPLEFT","notesEIdentityTopleftX","notesEIdentityTopleftY");self.eIdentity:SetWordWrap(false);C.SetLineHeight(self.eIdentity,"line22",true)
+ self.eRealm=C.Text(editor,"","font14","muted",inner-52);C.SetPoint(self.eRealm,"TOPLEFT",self.eRealm:GetParent(),"TOPLEFT","notesERealmTopleftX","notesERealmTopleftY");C.SetLineHeight(self.eRealm,"line20",true)
+ self.classLabel=C.Text(editor,S("职业","Class"),"font14","muted");C.SetPoint(self.classLabel,"TOPLEFT",self.classLabel:GetParent(),"TOPLEFT","notesClassLabelTopleftX","notesClassLabelTopleftY");C.SetLineHeight(self.classLabel,"line20",true)
+ self.specLabel=C.Text(editor,S("专精","Specialization"),"font14","muted");C.SetPoint(self.specLabel,"TOPLEFT",self.specLabel:GetParent(),"TOPLEFT",28+half,"notesSpecLabelTopleftY");C.SetLineHeight(self.specLabel,"line20",true)
+ self.classChoice=C.Choice(editor,half,function() return P:ClassItems() end,function(value) DraftChanged();state.identityEdited=true;state.legacyClassSpec=nil;state.recordClass=value or nil;state.recordSpec=nil;P:SyncSpec() end);C.SetPoint(self.classChoice,"TOPLEFT",self.classChoice:GetParent(),"TOPLEFT","notesClassChoiceTopleftX","notesClassChoiceTopleftY");C.ApplyStyle(self.classChoice,{height="notesClassChoiceHeight"})
+ self.specChoice=C.Choice(editor,half,function() return P:SpecItems() end,function(value) DraftChanged();state.identityEdited=true;state.legacyClassSpec=nil;state.recordSpec=value or nil;P:SyncSpec() end);C.SetPoint(self.specChoice,"TOPLEFT",self.specChoice:GetParent(),"TOPLEFT",28+half,"notesSpecChoiceTopleftY");C.ApplyStyle(self.specChoice,{height="notesSpecChoiceHeight"})
+ self.typeLabel=C.Text(editor,S("记录类型","Note type"),"font14","muted");C.SetLineHeight(self.typeLabel,"line20",true)
+ self.typeSwitch=CreateFrame("Frame",nil,editor);self.typeSwitch:SetSize(inner,T.notesTypeSwitchHeight);C.SetPoint(self.typeSwitch,"TOPLEFT",self.typeSwitch:GetParent(),"TOPLEFT","notesTypeSwitchTopleftX","notesTypeSwitchTopleftY");C.Panel(self.typeSwitch,"surfaceLow","notesPanelRadius3")
+ self.typeButtons={};for i,entry in ipairs(NOTE_TYPES) do local w=(inner-14)/3;local button=C.Button(self.typeSwitch,entry.label,w,function() DraftChanged();state.recordType=entry.key;P:SyncType() end,{variant="compact",textColor=T.text});C.SetPoint(button,"TOPLEFT",button:GetParent(),"TOPLEFT",3+(i-1)*(w+4),"notesButtonTopleftY");button.label:ClearAllPoints();C.SetPoint(button.label,"CENTER",button.label:GetParent(),"CENTER","notesButtonLabelCenterX",0);button.icon=C.Glyph(button,entry.key=="positive" and "heart" or entry.key=="caution" and "caution" or "book",T.notesButtonIconWidth);C.ApplyStyle(button.icon,{width="notesButtonIconWidth",height="notesButtonIconHeight"});button.icon:SetPoint("CENTER",-(button.label:GetStringWidth()+6)/2,0);self.typeButtons[entry.key]=button end
+ self.eReasonLabel=C.Text(editor,L.reason,"font14","muted");C.SetPoint(self.eReasonLabel,"TOPLEFT",self.eReasonLabel:GetParent(),"TOPLEFT","notesEReasonLabelTopleftX","notesEReasonLabelTopleftY");C.SetLineHeight(self.eReasonLabel,"line20",true)
+ self.eReason=C.Edit(editor,inner,T.notesEReasonHeight,true);C.ApplyStyle(self.eReason,{height="notesEReasonHeight"});C.SetPoint(self.eReason,"TOPLEFT",self.eReason:GetParent(),"TOPLEFT","notesEReasonTopleftX","notesEReasonTopleftY");self.eReason:SetPlaceholder(S("写下当时发生的事","Describe what happened"));C.SetLineHeight(self.eReason.box,"line20")
  self.eReason.box:HookScript("OnTextChanged",DraftChanged)
- self.eDate=C.Text(editor,"",14,T.dim,inner);self.eDate:SetPoint("TOPLEFT",16,-420);C.SetLineHeight(self.eDate,20,true)
- self.eStatus=C.Text(editor,"",14,T.muted,inner);self.eStatus:SetPoint("TOPLEFT",16,-448);self.eStatus:SetMaxLines(2);C.SetLineHeight(self.eStatus,20)
- self.eSave=C.Button(editor,L.save,88,function() P:Save() end);self.eSave:SetPrimary(true);self.eSave:SetPoint("BOTTOMRIGHT",-16,16)
- self.eCancel=C.Button(editor,L.cancel,96,function() P:CloseEditor() end);self.eCancel:SetPoint("RIGHT",self.eSave,"LEFT",-8,0)
- self.eDelete=C.Button(editor,S("删除记录","Delete note"),96,function() P:Delete() end);self.eDelete:SetWidth(math.max(96,math.ceil(self.eDelete.label:GetStringWidth())+32));self.eDelete:SetTextColors(T.muted,T.accent);self.eDelete:SetPoint("BOTTOMLEFT",16,16)
- self.historyFrame=CreateFrame("Frame",nil,main);self.historyFrame:SetSize(BODY_WIDTH,HEIGHT-76-PAD);self.historyFrame:SetPoint("TOPLEFT",PAD,-76);self.historyFrame:Hide()
- self.historyCaption=C.Text(self.historyFrame,S("当前角色完成的大秘境","Mythic+ runs completed by this character"),14,T.muted);self.historyCaption:SetPoint("TOPLEFT");C.SetLineHeight(self.historyCaption,20,true)
+ self.eDate=C.Text(editor,"","font14","dim",inner);C.SetPoint(self.eDate,"TOPLEFT",self.eDate:GetParent(),"TOPLEFT","notesEDateTopleftX","notesEDateTopleftY");C.SetLineHeight(self.eDate,"line20",true)
+ self.eStatus=C.Text(editor,"","font14","muted",inner);C.SetPoint(self.eStatus,"TOPLEFT",self.eStatus:GetParent(),"TOPLEFT","notesEStatusTopleftX","notesEStatusTopleftY");self.eStatus:SetMaxLines(2);C.SetLineHeight(self.eStatus,"line20")
+ self.eSave=C.Button(editor,L.save,T.notesESaveWidth,function() P:Save() end);C.ApplyStyle(self.eSave,{width="notesESaveWidth"});self.eSave:SetPrimary(true);C.SetPoint(self.eSave,"BOTTOMRIGHT",self.eSave:GetParent(),"BOTTOMRIGHT","notesESaveBottomrightX","notesESaveBottomrightY")
+ self.eCancel=C.Button(editor,L.cancel,T.notesECancelWidth,function() P:CloseEditor() end);C.ApplyStyle(self.eCancel,{width="notesECancelWidth"});C.SetPoint(self.eCancel,"RIGHT",self.eSave,"LEFT","notesECancelRightX",0)
+ self.eDelete=C.Button(editor,S("删除记录","Delete note"),T.notesEDeleteWidth,function() P:Delete() end);C.ApplyStyle(self.eDelete,{width="notesEDeleteWidth"});self.eDelete:SetWidth(math.max(96,math.ceil(self.eDelete.label:GetStringWidth())+32));self.eDelete:SetTextColors(T.muted,T.accent);C.SetPoint(self.eDelete,"BOTTOMLEFT",self.eDelete:GetParent(),"BOTTOMLEFT","notesEDeleteBottomleftX","notesEDeleteBottomleftY")
+ self.historyFrame=CreateFrame("Frame",nil,main);self.historyFrame:SetSize(BODY_WIDTH,HEIGHT-76-T.notesContentInset);C.SetPoint(self.historyFrame,"TOPLEFT",self.historyFrame:GetParent(),"TOPLEFT",T.notesContentInset,"notesHistoryFrameTopleftY");self.historyFrame:Hide()
+ self.historyCaption=C.Text(self.historyFrame,S("当前角色完成的大秘境","Mythic+ runs completed by this character"),"font14","muted");self.historyCaption:SetPoint("TOPLEFT");C.SetLineHeight(self.historyCaption,"line20",true)
  self.historyHeader=C.TableHeader(self.historyFrame,{
-  {key="activity",label=S("活动","Activity"),width=260,min=180},
-  {key="level",label=S("层数","Level"),width=76,min=64,align="CENTER",sortable=true},
-  {key="duration",label=S("耗时","Duration"),width=108,min=90,align="CENTER",sortable=true},
-  {key="teammates",label=S("队友","Teammates"),width=165,min=147},
-  {key="completed",label=S("完成时间","Completed"),width=172,min=144,sortable=true},
+  {key="activity",label=S("活动","Activity"),width="notesColumnActivityWidth260",min="notesColumnActivityMin180"},
+  {key="level",label=S("层数","Level"),width="notesColumnLevelWidth76",min="notesColumnLevelMin64",align="CENTER",sortable=true},
+  {key="duration",label=S("耗时","Duration"),width="notesColumnDurationWidth108",min="notesColumnDurationMin90",align="CENTER",sortable=true},
+  {key="teammates",label=S("队友","Teammates"),width="notesColumnTeammatesWidth165",min="notesColumnTeammatesMin147"},
+  {key="completed",label=S("完成时间","Completed"),width="notesColumnCompletedWidth172",min="notesColumnCompletedMin144",sortable=true},
  },{onLayout=function(header) P:LayoutHistoryColumns(header) end,onSort=function() P:RefreshHistory() end})
- self.historyHeader:SetPoint("TOPLEFT",0,-36);self.teammateHeading=self.historyHeader.labels.teammates
- self.historyList=C.List(self.historyFrame,BODY_WIDTH,HEIGHT-148-PAD,80,function(index) P:OpenRun(index) end);self.historyList:SetPoint("TOPLEFT",0,-72)
+ C.SetPoint(self.historyHeader,"TOPLEFT",self.historyHeader:GetParent(),"TOPLEFT",0,"notesHistoryHeaderTopleftY");self.teammateHeading=self.historyHeader.labels.teammates
+ self.historyList=C.List(self.historyFrame,BODY_WIDTH,HEIGHT-148-T.notesContentInset,80,function(index) P:OpenRun(index) end);C.SetPoint(self.historyList,"TOPLEFT",self.historyList:GetParent(),"TOPLEFT",0,"notesHistoryListTopleftY")
  self.historyList:SetRowInitializer(function(row)
-  row.icon=C.Icon(row,36);row.icon:SetPoint("LEFT",12,0)
-  row.title:ClearAllPoints();row.title:SetPoint("TOPLEFT",60,-12);C.SetFont(row.title,T.listTitleSize);C.SetLineHeight(row.title,T.listTitleLineHeight,true)
-  row.meta:ClearAllPoints();row.meta:SetPoint("TOPLEFT",60,-44);row.meta:Hide()
-  row.level=C.Text(row,"",14,T.muted);row.level:SetJustifyH("CENTER");C.SetLineHeight(row.level,20,true)
-  row.duration=C.Text(row,"",14,T.muted);row.duration:SetJustifyH("CENTER");C.SetLineHeight(row.duration,20,true)
+  row.icon=C.Icon(row,T.notesRowIconWidth2);C.ApplyStyle(row.icon,{width="notesRowIconWidth2",height="notesRowIconHeight2"});C.SetPoint(row.icon,"LEFT",row.icon:GetParent(),"LEFT","notesRowIconLeftX",0)
+  row.title:ClearAllPoints();C.SetPoint(row.title,"TOPLEFT",row.title:GetParent(),"TOPLEFT","notesRowTitleTopleftX2","notesRowTitleTopleftY2");C.SetFont(row.title,"listTitleSize");C.SetLineHeight(row.title,"listTitleLineHeight",true)
+  row.meta:ClearAllPoints();C.SetPoint(row.meta,"TOPLEFT",row.meta:GetParent(),"TOPLEFT","notesRowMetaTopleftX2","notesRowMetaTopleftY2");row.meta:Hide()
+  row.level=C.Text(row,"","font14","muted");row.level:SetJustifyH("CENTER");C.SetLineHeight(row.level,"line20",true)
+  row.duration=C.Text(row,"","font14","muted");row.duration:SetJustifyH("CENTER");C.SetLineHeight(row.duration,"line20",true)
   row.roster=C.Roster(row,23,5)
-  row.date=C.Text(row,"",14,T.muted,108);row.date:SetPoint("RIGHT",-48,0);row.date:SetJustifyH("LEFT");C.SetLineHeight(row.date,20,true)
-  C.Glyph(row,"chevron",16):SetPoint("RIGHT",-16,0)
-  row.meta:SetPoint("TOPLEFT",60,-math.max(44,12+row.title:GetHeight()+4))
+  row.date=C.Text(row,"","font14","muted",T.notesRowDateWidth2);C.ApplyStyle(row.date,{width="notesRowDateWidth2"});C.SetPoint(row.date,"RIGHT",row.date:GetParent(),"RIGHT","notesRowDateRightX",0);row.date:SetJustifyH("LEFT");C.SetLineHeight(row.date,"line20",true)
+  C.Glyph(row,"chevron",T.notesGlyphWidth3):SetPoint("RIGHT",-16,0)
+  C.SetPoint(row.meta,"TOPLEFT",row.meta:GetParent(),"TOPLEFT","notesRowMetaTopleftX2",-math.max(44,12+row.title:GetHeight()+4))
  end)
- self.historyEmpty=C.Text(self.historyFrame,L.historyEmpty,16,T.dim,BODY_WIDTH);self.historyEmpty:SetPoint("TOP",0,-140);self.historyEmpty:SetJustifyH("CENTER")
+ self.historyEmpty=C.Text(self.historyFrame,L.historyEmpty,"font16","dim",BODY_WIDTH);C.SetPoint(self.historyEmpty,"TOP",self.historyEmpty:GetParent(),"TOP",0,"notesHistoryEmptyTopY");self.historyEmpty:SetJustifyH("CENTER")
  self:LayoutRows()
 end
 function P:ClassItems()
@@ -309,7 +303,7 @@ function P:SelectTab(tab,skipDefault)
  local direction=previous and self.tabs[tab].order<self.tabs[previous].order and -1 or 1
  state.tab=tab;local history=tab=="history"
  for key,button in pairs(self.tabs) do button:SetActive(key==tab);UI:Color(button.label,key==tab and T.text or T.muted);button.glyph:SetSelected(key==tab) end
- local selected=self.tabs[tab];self.tabSelection:Select(0,selected.tabY,RAIL,selected:GetHeight(),self.frame:IsVisible())
+ local selected=self.tabs[tab];self.tabSelection:Select(0,selected.tabY,T.notesSidebarWidth,selected:GetHeight(),self.frame:IsVisible())
  self:CloseTransfer();if changed then self:CloseEditor(true) end
  UI.Motion:FinishPlacement(history and self.left or self.historyFrame)
  self.toolbar:SetShown(not history);self.left:SetShown(not history);self.historyFrame:SetShown(history);self.editorEmpty:SetShown(not history and state.panel==nil)
@@ -317,7 +311,7 @@ function P:SelectTab(tab,skipDefault)
  UI:SetText(self.pageTitle,history and L.history or L.notes)
  self:RefreshCounts()
  if history then self:RefreshHistory() else self:RefreshList();local keys=self.list.ids;if not skipDefault and keys and keys[1] and state.panel==nil then self:OpenEdit(keys[1]) end end
- if changed then UI.Motion:Reveal(history and self.historyFrame or self.left,"TOPLEFT",self.main,"TOPLEFT",PAD,history and -76 or -WORK_TOP,direction*32,0,.18) end
+ if changed then UI.Motion:Reveal(history and self.historyFrame or self.left,"TOPLEFT",self.main,"TOPLEFT",T.notesContentInset,history and -76 or -T.notesWorkTop,direction*32,0,.18) end
 end
 function P:RefreshHistory()
  local group,err=A:Ensure("Group");if not group then A:NoteMessage(err);return end
@@ -346,22 +340,22 @@ function P:OpenRun(index)
  local run=self.runs[index];if not run then return end
  local modal=UI:OpenModal("history",L.history,560,576);self.historyModal=modal
  if not modal.built then
-  modal.caption=C.Text(modal.content,"",14,T.muted,512);modal.caption:SetPoint("TOPLEFT");C.SetLineHeight(modal.caption,22,true)
+  modal.caption=C.Text(modal.content,"","font14","muted",T.notesModalCaptionWidth);C.ApplyStyle(modal.caption,{width="notesModalCaptionWidth"});modal.caption:SetPoint("TOPLEFT");C.SetLineHeight(modal.caption,"line22",true)
   modal.header=C.TableHeader(modal.content,{
-   {key="player",label=S("玩家","Player"),width=364,min=220},
-   {key="actions",label=S("操作","Actions"),width=136,min=124,align="RIGHT"},
+   {key="player",label=S("玩家","Player"),width="notesColumnPlayerWidth364",min="notesColumnPlayerMin220"},
+   {key="actions",label=S("操作","Actions"),width="notesColumnActionsWidth136",min="notesColumnActionsMin124",align="RIGHT"},
   },{onLayout=function(header) P:LayoutHistoryMemberColumns(header) end})
-  modal.header:SetPoint("TOPLEFT",0,-34)
-  modal.list=C.List(modal.content,512,368,80,function(memberIndex)
+  C.SetPoint(modal.header,"TOPLEFT",modal.header:GetParent(),"TOPLEFT",0,"notesModalHeaderTopleftY")
+  modal.list=C.List(modal.content,T.notesModalListWidth,T.notesModalListHeight,80,function(memberIndex)
    local member=P.historyRun.members[memberIndex];local key=A:PlayerKey(member.name,member.realm)
    modal:Close();P:SelectTab("all")
    if A.Notes:Find(key) then P:OpenEdit(key);P.list:Select(key,true) else P:OpenAdd({name=member.name,realm=member.realm,class=member.class,specID=member.specID}) end
-  end);modal.list:SetPoint("TOPLEFT",0,-66)
+  end);C.ApplyStyle(modal.list,{width="notesModalListWidth",height="notesModalListHeight"});C.SetPoint(modal.list,"TOPLEFT",modal.list:GetParent(),"TOPLEFT",0,"notesModalListTopleftY")
   for _,row in ipairs(modal.list.rows) do
-   row.icon=C.Icon(row,32);row.icon:SetPoint("LEFT",12,0)
-   row.title:ClearAllPoints();row.title:SetPoint("TOPLEFT",56,-12);row.title:SetWidth(310);C.SetFont(row.title,T.listTitleSize);C.SetLineHeight(row.title,T.listTitleLineHeight,true)
-   row.meta:ClearAllPoints();row.meta:SetPoint("TOPLEFT",56,-44);row.meta:SetWidth(310)
-   row.action=C.Text(row,"",14,T.dim,110);row.action:SetPoint("RIGHT",-12,0);row.action:SetJustifyH("RIGHT");C.SetLineHeight(row.action,20,true)
+   row.icon=C.Icon(row,T.notesRowIconWidth3);C.ApplyStyle(row.icon,{width="notesRowIconWidth3",height="notesRowIconHeight3"});C.SetPoint(row.icon,"LEFT",row.icon:GetParent(),"LEFT","notesRowIconLeftX",0)
+   row.title:ClearAllPoints();C.SetPoint(row.title,"TOPLEFT",row.title:GetParent(),"TOPLEFT","notesRowTitleTopleftX3","notesRowTitleTopleftY2");row.title:SetWidth(T.notesRowTitleWidth);C.SetFont(row.title,"listTitleSize");C.SetLineHeight(row.title,"listTitleLineHeight",true)
+   row.meta:ClearAllPoints();C.SetPoint(row.meta,"TOPLEFT",row.meta:GetParent(),"TOPLEFT","notesRowMetaTopleftX3","notesRowMetaTopleftY2");row.meta:SetWidth(T.notesRowMetaWidth)
+   row.action=C.Text(row,"","font14","dim",T.notesRowActionWidth);C.ApplyStyle(row.action,{width="notesRowActionWidth"});C.SetPoint(row.action,"RIGHT",row.action:GetParent(),"RIGHT","notesRowActionRightX",0);row.action:SetJustifyH("RIGHT");C.SetLineHeight(row.action,"line20",true)
   end
   modal.onClose=function() modal.header:StopDrag(false);modal.list:Clear();P.historyRun=nil end;modal.built=true
  end
@@ -420,7 +414,7 @@ function P:LayoutNoteRows()
   item.date:ClearAllPoints();item.date:SetPoint("TOPLEFT",date.x+6,-metaTop)
   item.reason:ClearAllPoints();item.reason:SetPoint("TOPLEFT",player.x+50,-reasonTop)
  end
- SizeRows(self.list,math.max(ROW_HEIGHT,math.ceil(reasonTop+row.reason:GetHeight()+8)))
+ SizeRows(self.list,math.max(T.notesRowHeight,math.ceil(reasonTop+row.reason:GetHeight()+8)))
 end
 function P:LayoutRows()
  self.noteHeader:Layout(CARD_WIDTH)
@@ -442,43 +436,55 @@ end
 
 function P:LayoutSize(width,height)
  WIDTH,HEIGHT=width,height
- MAIN_WIDTH=WIDTH-MAIN_X;BODY_WIDTH=MAIN_WIDTH-PAD*2
- DRAWER_W=BODY_WIDTH-LIST_WIDTH-GAP
- LIST_HEIGHT=HEIGHT-WORK_TOP-32-PAD;EDITOR_HEIGHT=math.min(620,HEIGHT-WORK_TOP-PAD)
+ LEFT=T.notesMainX+T.notesContentInset
+ EDITOR_X=LEFT+T.notesListWidth+T.notesColumnGap;CARD_WIDTH=T.notesListWidth-C.listRightInset
+ MAIN_WIDTH=WIDTH-T.notesMainX;BODY_WIDTH=MAIN_WIDTH-T.notesContentInset*2
+ DRAWER_W=BODY_WIDTH-T.notesListWidth-T.notesColumnGap
+ LIST_HEIGHT=HEIGHT-T.notesWorkTop-32-T.notesContentInset;EDITOR_HEIGHT=math.min(T.notesEditorMaxHeight,HEIGHT-T.notesWorkTop-T.notesContentInset)
  self.rail:SetHeight(HEIGHT);self.main:SetSize(MAIN_WIDTH,HEIGHT);self.toolbar:SetWidth(BODY_WIDTH)
- self.left:SetHeight(HEIGHT-WORK_TOP-PAD);self.list:SetViewport(LIST_HEIGHT)
+ self.left:SetHeight(HEIGHT-T.notesWorkTop-T.notesContentInset);self.list:SetViewport(LIST_HEIGHT)
  self.editor:SetSize(DRAWER_W,EDITOR_HEIGHT);self.editorEmpty:SetWidth(DRAWER_W-32)
- self.editorEmpty:SetPoint("CENTER",self.main,"TOPLEFT",EDITOR_X-MAIN_X+DRAWER_W/2,-WORK_TOP-(HEIGHT-WORK_TOP-PAD)/2)
+ self.editorEmpty:SetPoint("CENTER",self.main,"TOPLEFT",EDITOR_X-T.notesMainX+DRAWER_W/2,-T.notesWorkTop-(HEIGHT-T.notesWorkTop-T.notesContentInset)/2)
  local inner=DRAWER_W-32;local half=(inner-12)/2
  self.eName:SetWidth(inner);self.eNameHint:SetWidth(inner-24)
  self.eIdentity:SetWidth(inner-52);self.eRealm:SetWidth(inner-52)
  self.classChoice:SetWidth(half);self.specChoice:SetWidth(half);self.typeSwitch:SetWidth(inner)
  for i,entry in ipairs(NOTE_TYPES) do
   local button=self.typeButtons[entry.key];local w=(inner-14)/3
-  button:SetWidth(w);button:SetPoint("TOPLEFT",3+(i-1)*(w+4),-3)
+  button:SetWidth(w);C.SetPoint(button,"TOPLEFT",button:GetParent(),"TOPLEFT",3+(i-1)*(w+4),"notesButtonTopleftY")
  end
  self.eReason:SetWidth(inner);self.eDate:SetWidth(inner);self.eStatus:SetWidth(inner)
  self:LayoutEditor()
- self.historyFrame:SetSize(BODY_WIDTH,HEIGHT-76-PAD);self.historyList:SetWidth(BODY_WIDTH)
- self.historyList:SetViewport(HEIGHT-148-PAD);self.historyEmpty:SetWidth(BODY_WIDTH)
+ self.historyFrame:SetSize(BODY_WIDTH,HEIGHT-76-T.notesContentInset);self.historyList:SetWidth(BODY_WIDTH)
+ self.historyList:SetViewport(HEIGHT-148-T.notesContentInset);self.historyEmpty:SetWidth(BODY_WIDTH)
  self:LayoutRows()
+end
+
+function P:LayoutAppearance(width,height)
+ self:LayoutSize(width,height)
+ self.rail:SetWidth(T.notesSidebarWidth)
+ self.main:SetPoint("TOPLEFT",T.notesMainX,0)
+ self.left:SetWidth(T.notesListWidth);self.left:SetPoint("TOPLEFT",T.notesContentInset,-T.notesWorkTop)
+ self.list:SetWidth(T.notesListWidth)
+ self.editor:SetPoint("TOPLEFT",EDITOR_X-T.notesMainX,-T.notesWorkTop)
+ self:LayoutFont()
 end
 
 function P:LayoutEditor()
  if not state.panel then return end
  local add,missing=state.panel=="add",state.panel=="missing"
  local classTop=add and 156 or 128
- self.classLabel:SetPoint("TOPLEFT",16,-classTop)
+ C.SetPoint(self.classLabel,"TOPLEFT",self.classLabel:GetParent(),"TOPLEFT","notesClassLabelTopleftX",-classTop)
  self.specLabel:SetPoint("TOPLEFT",28+(DRAWER_W-44)/2,-classTop)
- self.classChoice:SetPoint("TOPLEFT",16,-classTop-32)
+ C.SetPoint(self.classChoice,"TOPLEFT",self.classChoice:GetParent(),"TOPLEFT","notesClassChoiceTopleftX",-classTop-32)
  self.specChoice:SetPoint("TOPLEFT",28+(DRAWER_W-44)/2,-classTop-32)
- self.typeLabel:SetPoint("TOPLEFT",16,-classTop-92);self.typeSwitch:SetPoint("TOPLEFT",16,-classTop-124)
- self.eReasonLabel:SetPoint("TOPLEFT",16,-classTop-172);self.eReason:SetPoint("TOPLEFT",16,-classTop-204)
+ C.SetPoint(self.typeLabel,"TOPLEFT",self.typeLabel:GetParent(),"TOPLEFT","notesTypeLabelTopleftX",-classTop-92);C.SetPoint(self.typeSwitch,"TOPLEFT",self.typeSwitch:GetParent(),"TOPLEFT","notesTypeSwitchTopleftX",-classTop-124)
+ C.SetPoint(self.eReasonLabel,"TOPLEFT",self.eReasonLabel:GetParent(),"TOPLEFT","notesEReasonLabelTopleftX",-classTop-172);C.SetPoint(self.eReason,"TOPLEFT",self.eReason:GetParent(),"TOPLEFT","notesEReasonTopleftX",-classTop-204)
  local statusHeight=math.max(24,self.eStatus:GetStringHeight())
  local reasonHeight=math.max(32,math.min(112,EDITOR_HEIGHT-64-classTop-204-(add and 12 or 48)-statusHeight))
  self.eReason:SetHeight(reasonHeight)
- self.eDate:SetPoint("TOPLEFT",16,-classTop-204-reasonHeight-12)
- self.eStatus:SetPoint("TOPLEFT",self.editor,"TOPLEFT",16,missing and -76 or -classTop-204-reasonHeight-(add and 12 or 48))
+ C.SetPoint(self.eDate,"TOPLEFT",self.eDate:GetParent(),"TOPLEFT","notesEDateTopleftX",-classTop-204-reasonHeight-12)
+ C.SetPoint(self.eStatus,"TOPLEFT",self.editor,"TOPLEFT","notesEStatusTopleftX",missing and -76 or -classTop-204-reasonHeight-(add and 12 or 48))
 end
 
 function P:OnSelect(key, button)
@@ -510,7 +516,7 @@ local function ShowEditorChrome(mode,reveal)
 	local edit, add, missing = mode == "edit", mode == "add", mode == "missing"
 	state.panel = mode
 	P.editor:Show();P.editorEmpty:Hide()
-	if reveal~=false then UI.Motion:Reveal(P.editor,"TOPLEFT",P.main,"TOPLEFT",EDITOR_X-MAIN_X,-WORK_TOP,12,0,.18) end
+	if reveal~=false then UI.Motion:Reveal(P.editor,"TOPLEFT",P.main,"TOPLEFT",EDITOR_X-T.notesMainX,-T.notesWorkTop,12,0,.18) end
  UI:SetText(P.eTitle,add and L.add or missing and L.viewNote or S("玩家记录","Player note"))
  P.eClose:SetShown(add or missing)
  P.eIdentity:SetShown(edit);P.eAvatar:SetShown(edit);P.eRealm:SetShown(edit);P.eDate:SetShown(edit)
@@ -553,7 +559,7 @@ function P:OpenAdd(draft)
  if draft and draft.unit and not state.identityEdited and A:UnitIdentity(draft.unit)==state.identityKey then
   local _,snapshot=A.Notes.PlayerInfo.Snapshot(draft.unit);identity=snapshot or identity
  end
- state.legacyClassSpec=nil;state.recordClass,state.recordSpec,state.recordType=identity.class,identity.specID,draft and draft.type or A.db.defaultNote;self:SyncSpec()
+ state.legacyClassSpec=nil;state.recordClass,state.recordSpec,state.recordType=identity.class,identity.specID,draft and draft.type or A:GetSetting("defaultNote");self:SyncSpec()
 	ShowEditorChrome("add")
 	UI:SetText(self.eIdentity,draft and draft.name or "");UI:SetText(self.eRealm,draft and draft.realm or "")
 	self.eName.box:SetText(draft and draft.name and (draft.name..(draft.realm and "-"..draft.realm or "")) or "")
@@ -667,13 +673,13 @@ function P:BuildTransfer(mode)
  local modal=UI:OpenModal("notesTransfer",mode=="import" and S("导入记录","Import notes") or S("导出记录","Export notes"),560,512);self.transferModal=modal;self.transfer=modal.frame
  if modal.built then return end
  local parent=modal.content
- self.tHint=C.Text(parent,L.importHelp,14,T.muted,512);self.tHint:SetPoint("TOPLEFT");self.tHint:SetWordWrap(true);C.SetLineHeight(self.tHint,20)
- self.tLabel=C.Text(parent,S("记录文本","Record text"),14,T.muted);C.SetLineHeight(self.tLabel,20,true);self.tLabel:SetPoint("TOPLEFT",self.tHint,"BOTTOMLEFT",0,-16)
- self.tBox=C.Edit(parent,512,192,true,false,"modal");self.tBox:SetPoint("TOPLEFT",self.tLabel,"BOTTOMLEFT",0,-8);C.SetLineHeight(self.tBox.box,22)
- self.tStatus=C.Text(parent,"",14,T.accent,512);self.tStatus:SetPoint("TOPLEFT",self.tBox,"BOTTOMLEFT",0,-12);C.SetLineHeight(self.tStatus,20,true)
- self.tImport=C.Button(parent,L.import,104,function() P:DoImport() end);self.tImport:SetPrimary(true);self.tImport:SetPoint("BOTTOMRIGHT")
- self.tExport=C.Button(parent,L.export,104,function() P:DoExport() end);self.tExport:SetPrimary(true);self.tExport:SetPoint("BOTTOMRIGHT")
- self.tSelect=C.Button(parent,L.selectAll,128,function() P.tBox.box:SetFocus();P.tBox.box:HighlightText() end);self.tSelect:SetPoint("BOTTOMLEFT")
+ self.tHint=C.Text(parent,L.importHelp,"font14","muted",T.notesTHintWidth);C.ApplyStyle(self.tHint,{width="notesTHintWidth"});self.tHint:SetPoint("TOPLEFT");self.tHint:SetWordWrap(true);C.SetLineHeight(self.tHint,"line20")
+ self.tLabel=C.Text(parent,S("记录文本","Record text"),"font14","muted");C.SetLineHeight(self.tLabel,"line20",true);C.SetPoint(self.tLabel,"TOPLEFT",self.tHint,"BOTTOMLEFT",0,"notesTLabelTopleftY")
+ self.tBox=C.Edit(parent,T.notesTBoxWidth,T.notesTBoxHeight,true,false,"modal");C.ApplyStyle(self.tBox,{width="notesTBoxWidth",height="notesTBoxHeight"});C.SetPoint(self.tBox,"TOPLEFT",self.tLabel,"BOTTOMLEFT",0,"notesTBoxTopleftY");C.SetLineHeight(self.tBox.box,"line22")
+ self.tStatus=C.Text(parent,"","font14","accent",T.notesTStatusWidth);C.ApplyStyle(self.tStatus,{width="notesTStatusWidth"});C.SetPoint(self.tStatus,"TOPLEFT",self.tBox,"BOTTOMLEFT",0,"notesTStatusTopleftY");C.SetLineHeight(self.tStatus,"line20",true)
+ self.tImport=C.Button(parent,L.import,T.notesTImportWidth,function() P:DoImport() end);C.ApplyStyle(self.tImport,{width="notesTImportWidth"});self.tImport:SetPrimary(true);self.tImport:SetPoint("BOTTOMRIGHT")
+ self.tExport=C.Button(parent,L.export,T.notesTExportWidth,function() P:DoExport() end);C.ApplyStyle(self.tExport,{width="notesTExportWidth"});self.tExport:SetPrimary(true);self.tExport:SetPoint("BOTTOMRIGHT")
+ self.tSelect=C.Button(parent,L.selectAll,T.notesTSelectWidth,function() P.tBox.box:SetFocus();P.tBox.box:HighlightText() end);C.ApplyStyle(self.tSelect,{width="notesTSelectWidth"});self.tSelect:SetPoint("BOTTOMLEFT")
  modal.onClose=function() P:CloseTransfer() end;modal.built=true
 end
 

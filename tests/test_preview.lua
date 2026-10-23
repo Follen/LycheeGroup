@@ -1,7 +1,7 @@
 -- Explicit preview uses the production pages, with all real mutation exits trapped.
 local f=dofile("tests/ui_fixture.lua")("zhCN")
 local A,U,G=f.A,f.U,f.G
-A.db.reduceMotion=true
+A:SetSetting("reduceMotion",true)
 local function Clone(value)
  if type(value)~="table" then return value end
  local copy={};for k,v in pairs(value) do copy[k]=Clone(v) end;return copy

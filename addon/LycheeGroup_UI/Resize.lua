@@ -1,7 +1,7 @@
 -- User-sized window geometry and the bottom-right three-state resize grip.
 local A=_G.LycheeGroup
 local UI=A.UI
-local T,M=UI.Theme,UI.Motion
+local T,M,C=UI.Theme,UI.Motion,UI.C
 local MEDIA="Interface\\AddOns\\LycheeGroup_UI\\Media\\resize-grip-lines-"
 
 function UI:GetWindowMinimum()
@@ -9,15 +9,13 @@ function UI:GetWindowMinimum()
  local page=self.page and self.pages[self.page]
  local pageWidth=page and page.frame and page.GetMinimumWidth and page:GetMinimumWidth() or 0
  local pageHeight=page and page.frame and page.GetMinimumHeight and page:GetMinimumHeight() or 0
- return math.max(1200+math.floor(large*220+.5),pageWidth),math.max(760+math.floor(large*240+.5),pageHeight)
+ return math.max(T.windowMinWidth+math.floor(large*T.windowFontWidthGrowth+.5),pageWidth),math.max(T.windowMinHeight+math.floor(large*T.windowFontHeightGrowth+.5),pageHeight)
 end
 
 function UI:LoadWindowSize()
- local saved=A.charPrefs.windowSize
- local width,height
- if type(saved)=="table" then width,height=tonumber(saved.width),tonumber(saved.height) end
- self.windowWidth=width and width==width and width or T.width
- self.windowHeight=height and height==height and height or T.height
+ local width,height=A.Appearance:GetWindowSize()
+ self.windowWidth=width or T.width
+ self.windowHeight=height or T.height
  self.preferredWindowWidth,self.preferredWindowHeight=self.windowWidth,self.windowHeight
 end
 
@@ -72,7 +70,7 @@ function UI:StopWindowResize()
  self.resizing=nil
  self.resizeHandle:SetScript("OnUpdate",nil)
  self.preferredWindowWidth,self.preferredWindowHeight=self.windowWidth,self.windowHeight
- A.charPrefs.windowSize={width=self.windowWidth,height=self.windowHeight}
+ A.Appearance:SaveWindowSize(self.windowWidth,self.windowHeight)
  M:CapturePosition();M:SetPresence(1)
  self:RefreshResizeState()
 end
@@ -104,9 +102,9 @@ end
 
 function UI:BuildResizeHandle()
  local handle=CreateFrame("Button",nil,self.frame)
- handle:SetSize(28,28);handle:SetPoint("BOTTOMRIGHT",-2,2)
+ UI.C.ApplyStyle(handle,{width="windowResizeHandleSize",height="windowResizeHandleSize"});C.SetPoint(handle,"BOTTOMRIGHT",handle:GetParent(),"BOTTOMRIGHT","resizeHandleBottomrightX","resizeHandleBottomrightY")
  handle:SetFrameLevel(self.frame:GetFrameLevel()+30)
- local icon=handle:CreateTexture(nil,"ARTWORK");icon:SetSize(14,14);icon:SetPoint("BOTTOMRIGHT",-8,8)
+ local icon=handle:CreateTexture(nil,"ARTWORK");UI.C.ApplyStyle(icon,{width="windowResizeIconSize",height="windowResizeIconSize"});C.SetPoint(icon,"BOTTOMRIGHT",icon:GetParent(),"BOTTOMRIGHT","resizeIconBottomrightX","resizeIconBottomrightY")
  handle.icon=icon;self.resizeHandle=handle
  handle:SetScript("OnEnter",function() handle.inside=true;UI:RefreshResizeState() end)
  handle:SetScript("OnLeave",function() handle.inside=nil;UI:RefreshResizeState() end)

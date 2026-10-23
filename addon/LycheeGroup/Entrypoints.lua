@@ -11,7 +11,7 @@ local WAKE_EVENTS = {
 local nativeLFGHooked = false
 local nativeLFGState
 local function ShouldConcealNativeLFGEntry()
-    if not A.db.nativeLFGEntry then return false end
+    if not A:GetSetting("nativeLFGEntry") then return false end
     -- Match QueueStatusFrame's dungeon/raid entries, including role checks,
     -- proposals and in-instance teleport actions, not just the queued phase.
     for category = 1, NUM_LE_LFG_CATEGORYS do
@@ -40,11 +40,11 @@ end
 function A:SyncNativeLFGEntry()
     local button = QueueStatusButton
     if not button then
-        if self.db.nativeLFGEntry then events:RegisterEvent("ADDON_LOADED")
+        if self:GetSetting("nativeLFGEntry") then events:RegisterEvent("ADDON_LOADED")
         else events:UnregisterEvent("ADDON_LOADED") end
         return
     end
-    if not nativeLFGHooked and self.db.nativeLFGEntry then
+    if not nativeLFGHooked and self:GetSetting("nativeLFGEntry") then
         nativeLFGHooked = true
         button:HookScript("OnShow", UpdateNativeLFGEntry)
         hooksecurefunc(button, "SetAlpha", function(eye, alpha)
@@ -82,7 +82,7 @@ local function HasActiveLFGBusiness()
 end
 
 function A:SyncHistoryWake(enabledNow)
-    if groupReady or not self.db.history then
+    if groupReady or not self:GetSetting("history") then
         events:UnregisterEvent("CHALLENGE_MODE_START")
         return
     end
@@ -112,7 +112,7 @@ function A:RecordPlayer(name, realm, unit, reason)
     local key, cleanName, cleanRealm = self:PlayerKey(name, realm)
     if not key then self:NoteMessage(self.L.invalidName); return false end
     reason = type(reason) == "string" and reason:match("^%s*(.-)%s*$") or ""
-    if self.db.askReason and reason == "" then
+    if self:GetSetting("askReason") and reason == "" then
         return self:Open("notes", {add = {name = cleanName, realm = cleanRealm, unit = unit}})
     end
     local notes, err = self:Ensure("Notes")
@@ -137,7 +137,7 @@ local menusRegistered = false
 local function RegisterPlayerMenus()
     if menusRegistered or not (Menu and Menu.ModifyMenu) then return end
     local function AddNoteActions(_, root, context)
-        if not A.db.notesEnabled or not context then return end
+        if not A:GetSetting("notesEnabled") or not context then return end
         local unit = context.unit
         local key, name, realm
         if type(unit) == "string" and not (issecretvalue and issecretvalue(unit)) then
@@ -155,7 +155,7 @@ local function RegisterPlayerMenus()
         root:CreateDivider()
         root:CreateTitle(A.L.brand)
         root:CreateButton(record and A.L.removeRecord or A.L.recordPlayer, function()
-            if not A.db.notesEnabled then return end
+            if not A:GetSetting("notesEnabled") then return end
             if record then
                 if A.Notes:Remove(key) then A:NoteMessage(A.L.removed:format(name .. "-" .. realm)) end
             else
@@ -174,7 +174,7 @@ local function OnPlayerLogin()
     A.Minimap:Initialize()
     A:SyncNativeLFGEntry()
     RegisterPlayerMenus()
-    if A.db.notesEnabled and A.db.notesHasRecords and A.db.reminders ~= "off" then
+    if A:GetSetting("notesEnabled") and A.db.notesHasRecords and A:GetSetting("reminders") ~= "off" then
         local notes, err = A:Ensure("Notes")
         if not notes then A:NoteMessage(A.L.loadFailed:format(tostring(err))) end
     end
