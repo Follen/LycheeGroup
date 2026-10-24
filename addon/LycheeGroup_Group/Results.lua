@@ -10,6 +10,7 @@ end
 function Results:MatchesNumericFilters(record,filters)
  return InRange(record.requiredItemLevel,filters.minItemLevel,filters.maxItemLevel)
   and InRange(record.leaderRating,filters.minRating,filters.maxRating)
+  and InRange(record.numMembers,filters.minMembers,filters.maxMembers)
 end
 local ROLE_FILTERS={{"tankPresence","TANK",1},{"healerPresence","HEALER",1},{"damagePresence","DAMAGER",3}}
 function Results:MatchesRolePresence(counts,filters,maximum)
@@ -94,9 +95,9 @@ local function Normalize(id,record,invalidateDetails,expectedScan,metadataDirty)
  record.leaderKey=G:RemotePlayerKey(record.leaderName)
  RememberBlockedLeader(record)
  record.leaderFactionGroup=Public(info.leaderFactionGroup)
- record.numMembers=Public(info.numMembers) or 0
- record.age=Public(info.age) or 0
- record.requiredItemLevel=Public(info.requiredItemLevel) or 0
+ record.numMembers=Public(info.numMembers)
+ record.age=Public(info.age)
+ record.requiredItemLevel=Public(info.requiredItemLevel)
  record.requiredDungeonScore=Public(info.requiredDungeonScore)
  record.leaderOverallDungeonScore=Public(info.leaderOverallDungeonScore)
  record.ratingKind=activity and (activity.isPvpActivity or activity.isRatedPvpActivity) and "pvp" or "dungeon"
@@ -170,7 +171,7 @@ function Results:GetLeaderClass(record)
   end
  else
   local getter=C_LFGList.GetSearchResultLeaderInfo
-  local leader=record.numMembers>0 and getter and Public(getter(record.id))
+  local leader=(record.numMembers or 0)>0 and getter and Public(getter(record.id))
   if type(leader)=="table" and Public(leader.isLeader)==true then
    local class=Public(leader.classFilename)
    if type(class)=="string" and class~="" then
@@ -178,7 +179,7 @@ function Results:GetLeaderClass(record)
     return class
    end
   end
-  for index=1,record.numMembers do
+  for index=1,record.numMembers or 0 do
    local member=Public(C_LFGList.GetSearchResultPlayerInfo(record.id,index))
    if type(member)=="table" and (Public(member.isLeader)==true or record.leaderKey and G:RemotePlayerKey(Public(member.name))==record.leaderKey) then
     record.leaderClass=Public(member.classFilename);break
@@ -197,7 +198,7 @@ function Results:HasMemberSpec(record,playerSpecID)
    if G:ResolveMemberSpec(member)==playerSpecID then found=true;break end
   end
  else
-  for index=1,record.numMembers do
+  for index=1,record.numMembers or 0 do
    local member=Public(C_LFGList.GetSearchResultPlayerInfo(record.id,index))
    if type(member)=="table" and G:ResolveMemberSpec(member)==playerSpecID then found=true;break end
   end
@@ -213,7 +214,7 @@ function Results:HasMemberClass(record,playerClass)
    if member.class==playerClass then found=true;break end
   end
  else
-  for index=1,record.numMembers do
+  for index=1,record.numMembers or 0 do
    local member=Public(C_LFGList.GetSearchResultPlayerInfo(record.id,index))
    if type(member)=="table" and Public(member.classFilename)==playerClass then found=true;break end
   end
@@ -227,7 +228,7 @@ local BLOODLUST_CLASSES={SHAMAN=true,MAGE=true,HUNTER=true,EVOKER=true}
 function Results:MatchesPartyFilters(record,playerClass,playerRole,needBloodlust)
  local checkRole=playerRole and not (record.checkedRoleClass==playerClass and record.checkedRole==playerRole)
  if playerRole and not checkRole and record.hasMemberClassRole then return false end
- local checkBloodlust=needBloodlust and record.numMembers>=4
+ local checkBloodlust=needBloodlust and (record.numMembers or 0)>=4
  if checkBloodlust and record.bloodlustKnown then
   if not record.hasBloodlust then return false end
   checkBloodlust=false
@@ -236,7 +237,7 @@ function Results:MatchesPartyFilters(record,playerClass,playerRole,needBloodlust
  local lustOK=false
  local details=record.details
  local members=details and not record.detailsDirty and details.members
- for index=1,record.numMembers do
+ for index=1,record.numMembers or 0 do
   local member
   if members then member=Public(members[index])
   else member=Public(C_LFGList.GetSearchResultPlayerInfo(record.id,index)) end
@@ -294,7 +295,7 @@ function Results:GetDetails(idOrRecord)
  local memberCount=0
  local leaderClass,leaderFound
  details.counts=record.memberCounts or record.maxNumPlayers~=5 and self:GetMemberCounts(record) or nil
- for index=1,record.numMembers do
+ for index=1,record.numMembers or 0 do
   local info=Public(C_LFGList.GetSearchResultPlayerInfo(record.id,index))
   if type(info)=="table" then
    local name=Public(info.name)
@@ -371,8 +372,6 @@ local function Pass(record,filters,leaderText,playerSpecID,playerClass,roleClass
   if not match then for _,member in ipairs(Results:GetDetails(record).members) do if member.nameKey==filters.personKey then match=true;break end end end
   if not match then return false end
  end
- if filters.minMembers and record.numMembers<filters.minMembers then return false end
- if filters.maxMembers and record.numMembers>filters.maxMembers then return false end
  if filters.neededRole then
   local counts=Results:GetMemberCounts(record)
   local target=filters.neededRole=="DAMAGER" and 3 or 1
@@ -404,11 +403,17 @@ local function Sort(a,b)
  local xf,yf=x.bnetFriends+x.charFriends+x.guildMates>0,y.bnetFriends+y.charFriends+y.guildMates>0
  if xf~=yf then return xf end
  local av,bv
- if sorting=="rating" then av,bv=x.leaderRating or -1,y.leaderRating or -1
+ if sorting=="rating" then av,bv=x.leaderRating,y.leaderRating
  elseif sorting=="members" then av,bv=x.numMembers,y.numMembers
  elseif sorting=="itemLevel" then av,bv=x.requiredItemLevel,y.requiredItemLevel end
- if av and av~=bv then return av>bv end
- if x.age~=y.age then return x.age<y.age end
+ if av~=bv then
+  if av==nil then return false elseif bv==nil then return true end
+  return av>bv
+ end
+ if x.age~=y.age then
+  if x.age==nil then return false elseif y.age==nil then return true end
+  return x.age<y.age
+ end
  return a<b
 end
 function Results:InvalidateView() dirty=true end
@@ -436,6 +441,7 @@ function Results:ClearBlockedTitles()
  return true
 end
 function Results:GetBlockedTitleCount() return blockedTitleCount end
+function Results:BindBlockedLeaders() blockedLeadersDirty=true end
 function Results:GetBlockedLeaders()
  if blockedLeadersDirty then
   wipe(blockedLeaderIDs)

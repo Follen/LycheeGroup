@@ -97,7 +97,23 @@ local function LayoutApplicantFaction(row)
  row.faction:SetShown(not showRace and row.hasFaction==true);row.race:SetShown(showRace)
  UI:SetText(row.factionButton.label,not showRace and not row.hasFaction and "—" or "")
 end
-local function UpdateApplicantFaction(row,member,applicantID)
+local function SetApplicantTarget(button,identity)
+ if button.targetKey==identity then return end
+ if button.pressedKey then button.pressCancelled=true end
+ button.targetKey=identity
+end
+local function CaptureApplicantPress(button,mouse)
+ button.pressedKey=button.targetKey or true;button.pressedMouse=mouse;button.pressCancelled=nil
+end
+-- Keep cancellation across reuse until this click or a new press consumes it.
+local function ConsumeApplicantPress(button,mouse)
+ local pressed=button.pressedKey~=nil
+ local valid=button.targetKey~=nil and not button.pressCancelled and (not pressed or button.pressedKey==button.targetKey and button.pressedMouse==mouse)
+ button.pressedKey,button.pressedMouse,button.pressCancelled=nil,nil,nil
+ return valid,pressed
+end
+local function UpdateApplicantFaction(row,member,applicantID,identity)
+ SetApplicantTarget(row.factionButton,identity)
  local key=member.nameKey or member.name
  if row.factionApplicantID~=applicantID or row.factionMemberKey~=key then row.factionExpanded=nil end
  row.factionApplicantID,row.factionMemberKey=applicantID,key
@@ -108,7 +124,7 @@ end
 local function ClearApplicantTime(row)
  row.mapScoreTime,row.mapScoreIdentity,row.mapScoreKey=nil,nil,nil
  if row.mapScoreButton then
-  row.mapScoreButton.pressedIdentity=nil
+  SetApplicantTarget(row.mapScoreButton,nil)
   if UI.Tooltip:IsOwned(row.mapScoreButton) then UI.Tooltip:Hide() end
  end
 end
@@ -408,14 +424,19 @@ function P:SetFormError(message)
 end
 function P:HideCorrectionNotice()
  if self.correctionTimer then self.correctionTimer:Cancel();self.correctionTimer=nil end
+ self.correctionExpired=nil
  if not self.correctionNotice:IsShown() then return end
  self.correctionNotice:SetMessage("");self:LayoutFormNotices()
 end
 function P:ShowCorrectionNotice(message)
  if self.correctionTimer then self.correctionTimer:Cancel() end
+ self.correctionExpired=nil
  self.correctionNotice:SetMessage(message);self:LayoutFormNotices()
  UI:RefreshWindowSize()
- self.correctionTimer=C_Timer.NewTimer(4,function() P:HideCorrectionNotice() end)
+ self.correctionTimer=C_Timer.NewTimer(4,function()
+  P.correctionTimer=nil
+  if UI.hiding then P.correctionExpired=true else P:HideCorrectionNotice() end
+ end)
 end
 function P:RefreshFavoriteState()
  local group=UI:GetGroup()
@@ -425,6 +446,11 @@ function P:RefreshFavoriteState()
   button.icon:SetTexture("Interface\\AddOns\\LycheeGroup_UI\\Media\\favorite-"..(button.selected and "on" or "off")..".tga")
  end
  Update(self.favorite,self:FormData());Update(self.listingFavorite,group:GetListing())
+end
+local function SetFavoriteTarget(button,entry)
+ if button.targetKey==entry then return end
+ if button.pressedKey then button.pressCancelled=true end
+ button.targetKey=entry
 end
 function P:BuildFavorites()
  local body=CreateFrame("Frame",nil,self.favoritesCard);C.SetPoint(body,"TOPLEFT",body:GetParent(),"TOPLEFT","createBodyTopleftX","createBodyTopleftY");body:SetWidth(T.createBodyWidth);self.favoritesBody=body
@@ -441,8 +467,9 @@ function P:BuildFavorites()
   row.conditions=C.Text(row,"",12,"muted");C.SetLineHeight(row.conditions,18);row.conditions:SetWordWrap(true);row.conditions:SetJustifyV("TOP")
   row.unavailable=C.Text(row,"",12,"muted");C.SetLineHeight(row.unavailable,18,true);row.unavailable:SetWordWrap(false);C.SetPoint(row.unavailable,"BOTTOMLEFT",row.unavailable:GetParent(),"BOTTOMLEFT","createRowUnavailableBottomleftX","createRowUnavailableBottomleftY")
   local function Active() return row.key and row._hitVisible and list.clip:IsMouseOver() end
-  row.create=C.Button(row,S("应用","Apply"),T.createRowCreateWidth,function() if Active() then P:UsePreset(row.key) end end);row.create:SetWidth(T.createRowCreateWidth);row.create:SetHeight(T.createRowCreateHeight);C.SetPoint(row.create,"BOTTOMRIGHT",row.create:GetParent(),"BOTTOMRIGHT","createRowCreateBottomrightX","createRowCreateBottomrightY");C.SetFont(row.create.label,12);C.SetLineHeight(row.create.label,18,true);row.create:SetSurfaceColors("secondaryContainer","refreshHover","surfaceHighest")
-  row.remove=C.Button(row,"",T.createRowRemoveWidth,function() if Active() then UI:GetGroup().Presets:Remove(row.key) end end);row.remove:SetWidth(T.createRowRemoveWidth);row.remove:SetHeight(T.createRowRemoveHeight);C.SetPoint(row.remove,"TOPRIGHT",row.remove:GetParent(),"TOPRIGHT","createRowRemoveToprightX","createRowRemoveToprightY");row.remove.elementIcon=C.Glyph(row.remove,"close",T.createGlyphWidth,T.dim);row.remove.elementIcon:SetPoint("CENTER")
+  row.create=C.Button(row,S("应用","Apply"),T.createRowCreateWidth,function(button) if Active() and button.targetKey==row.key then P:UsePreset(button.targetKey) end end);row.create:SetWidth(T.createRowCreateWidth);row.create:SetHeight(T.createRowCreateHeight);C.SetPoint(row.create,"BOTTOMRIGHT",row.create:GetParent(),"BOTTOMRIGHT","createRowCreateBottomrightX","createRowCreateBottomrightY");C.SetFont(row.create.label,12);C.SetLineHeight(row.create.label,18,true);row.create:SetSurfaceColors("secondaryContainer","refreshHover","surfaceHighest")
+  row.remove=C.Button(row,"",T.createRowRemoveWidth,function(button) if Active() and button.targetKey==row.key then UI:GetGroup().Presets:Remove(button.targetKey) end end);row.remove:SetWidth(T.createRowRemoveWidth);row.remove:SetHeight(T.createRowRemoveHeight);C.SetPoint(row.remove,"TOPRIGHT",row.remove:GetParent(),"TOPRIGHT","createRowRemoveToprightX","createRowRemoveToprightY");row.remove.elementIcon=C.Glyph(row.remove,"close",T.createGlyphWidth,T.dim);row.remove.elementIcon:SetPoint("CENTER")
+  row:HookScript("OnHide",function() SetFavoriteTarget(row.create,nil);SetFavoriteTarget(row.remove,nil) end)
  end
  self:RegisterBuildElements()
  end
@@ -502,6 +529,7 @@ local function RefreshFavorites(self)
    if list.gutter~=gutter then list:SetGutter(gutter) end
    list:SetItems(entries,function(row,entry)
     local layout=layouts[entry];if not layout then return end
+    SetFavoriteTarget(row.create,entry);SetFavoriteTarget(row.remove,entry)
     UI:SetActivityIcon(row.icon,layout.activity)
     UI:SetText(row.title,layout.title);row.title:SetWidth(row:GetWidth()-104)
     UI:SetText(row.meta,layout.detail);row.meta:SetWidth(layout.metaWidth);row.meta:SetHeight(layout.metaHeight)
@@ -766,8 +794,8 @@ function P:EnsureBatchMembers(f,count)
   local row=CreateFrame("Button",nil,f);row:SetSize(columns.actions.x,T.createMemberHeight);row:RegisterForClicks("LeftButtonUp","RightButtonUp")
   row.icon=C.Icon(row,T.createApplicantIconSize);C.Box(row.icon,{width="createApplicantIconSize",height="createApplicantIconSize"});row.icon:SetPoint("LEFT",columns.name.x,0)
   row.title=C.Text(row,"",14,"text",nil);row.title:SetPoint("LEFT",T.createApplicantTitleX,0);C.SetLineHeight(row.title,19);row.title:SetWordWrap(true)
-  row.factionButton=C.Button(row,"",T.createRowFactionButtonWidth,function(_,button)
-   if not row.member or not P.batchScroll:IsMouseOver() then return end
+  row.factionButton=C.Button(row,"",T.createRowFactionButtonWidth,function(action,button)
+   if not row.member or not action.targetKey or not P.batchScroll:IsMouseOver() then return end
    if button=="RightButton" then P:OpenApplicantMenu(row);return end
    row.factionExpanded=not row.factionExpanded;LayoutApplicantFaction(row)
   end,{height=24,radius=6,textColor="muted"});row.factionButton:SetWidth(T.createRowFactionButtonWidth)
@@ -783,12 +811,13 @@ function P:EnsureBatchMembers(f,count)
   row.score=C.Text(row,"",14,"muted",columns.rating.width);row.score:SetPoint("LEFT",columns.rating.x,0);row.score:SetJustifyH(columns.rating.align);C.SetLineHeight(row.score,20,true)
   row.mapScore=C.Text(row,"",14,"muted",columns.mapScore.width);row.mapScore:SetPoint("LEFT",columns.mapScore.x,0);row.mapScore:SetJustifyH(columns.mapScore.align);C.SetLineHeight(row.mapScore,20,true)
   row.mapScoreButton=CreateFrame("Button",nil,row);row.mapScoreButton:RegisterForClicks("LeftButtonUp","RightButtonUp")
-  row.mapScoreButton:SetScript("OnMouseDown",function(button,key) button.pressedIdentity=key=="LeftButton" and row.mapScoreIdentity or nil end)
+  row.mapScoreButton:SetScript("OnMouseDown",CaptureApplicantPress)
   row.mapScoreButton:SetScript("OnClick",function(button,key)
-   if UI.hiding or not row.member or not P.showApplicantMapScore or not P.batchScroll:IsMouseOver() or row._hitVisible==false then return end
-   if key=="RightButton" then button.pressedIdentity=nil;if UI.Tooltip:IsOwned(button) then UI.Tooltip:Hide() end;P:OpenApplicantMenu(row);return end
-   if key~="LeftButton" or button.pressedIdentity~=row.mapScoreIdentity then return end
-   button.pressedIdentity=nil;row.mapScoreTime=not row.mapScoreTime
+   local valid,pressed=ConsumeApplicantPress(button,key)
+   if not valid or UI.hiding or not row.member or not P.showApplicantMapScore or not P.batchScroll:IsMouseOver() or row._hitVisible==false then return end
+   if key=="RightButton" then if UI.Tooltip:IsOwned(button) then UI.Tooltip:Hide() end;P:OpenApplicantMenu(row);return end
+   if key~="LeftButton" or not pressed then return end
+   row.mapScoreTime=not row.mapScoreTime
    if row.mapScoreKey then
     if row.mapScoreTime then P.applicantTimeModes=P.applicantTimeModes or {};P.applicantTimeModes[row.mapScoreKey]=true
     elseif P.applicantTimeModes then P.applicantTimeModes[row.mapScoreKey]=nil;if not next(P.applicantTimeModes) then P.applicantTimeModes=nil end end
@@ -796,11 +825,16 @@ function P:EnsureBatchMembers(f,count)
    if UI.Tooltip:IsOwned(button) then UI.Tooltip:Hide() end
    DrawApplicantMapScore(row)
   end)
-  row.mapScoreButton:SetScript("OnLeave",function(button) button.pressedIdentity=nil end)
+  row.mapScoreButton:SetScript("OnLeave",function(button) if button.pressedKey then button.pressCancelled=true end end)
+  row.mapScoreButton:SetScript("OnHide",function(button) SetApplicantTarget(button,nil) end)
   UI.Tooltip:BindText(row.mapScoreButton,function() return ApplicantTimeTooltip(row) end)
-  row:SetScript("OnLeave",function(r) UI.Tooltip:LeaveOwner(r) end)
-  row:SetScript("OnClick",function(r,button) if button=="RightButton" and r.member and P.batchScroll:IsMouseOver() then P:OpenApplicantMenu(r) end end)
-  row:SetScript("OnHide",function(r) UI:CloseMenuFor(r);UI.Members:ClearMarks(r.marks);r.factionExpanded=nil;LayoutApplicantFaction(r);ClearApplicantTime(r) end)
+  row:SetScript("OnMouseDown",CaptureApplicantPress)
+  row:SetScript("OnLeave",function(r) if r.pressedKey then r.pressCancelled=true end;UI.Tooltip:LeaveOwner(r) end)
+  row:SetScript("OnClick",function(r,button)
+   local valid=ConsumeApplicantPress(r,button)
+   if valid and button=="RightButton" and not UI.hiding and r.member and r._hitVisible~=false and P.batchScroll:IsMouseOver() then P:OpenApplicantMenu(r) end
+  end)
+  row:SetScript("OnHide",function(r) UI:CloseMenuFor(r);UI.Members:ClearMarks(r.marks);SetApplicantTarget(r,nil);SetApplicantTarget(r.factionButton,nil);r.factionExpanded=nil;LayoutApplicantFaction(r);ClearApplicantTime(r) end)
   -- Bind after the product scripts: SetScript replaces earlier style hooks.
   f.cardStyle:Bind(row,{hover=true})
   f.cardStyle:Bind(row.mapScoreButton,{hover=true})
@@ -836,7 +870,7 @@ function P:BuildPicker(parent)
  self.pickerCategories:SetStyle({selectionMotion=true,radius=8})
  self.pickerSurface=CreateFrame("Frame",nil,popup);C.Box(self.pickerSurface,{width="createPickerSurfaceWidth",height="createPickerSurfaceHeight"});C.SetPoint(self.pickerSurface,"TOPLEFT",self.pickerSurface:GetParent(),"TOPLEFT","createPickerSurfaceTopleftX","createPickerSurfaceTopleftY");C.Panel(self.pickerSurface,"surfaceLow","createPanelRadius4")
  self.tierChoice=C.Choice(self.pickerSurface,T.createTierChoiceWidth,function() return P:TierItems(P.pickerCategory) end,function(value) P.pickerTier=value or nil;P:RefreshPickerRows() end);self.tierChoice:SetWidth(T.createTierChoiceWidth);self.tierChoice:SetHeight(T.createTierChoiceHeight);C.SetPoint(self.tierChoice,"TOPLEFT",self.tierChoice:GetParent(),"TOPLEFT","createTierChoiceTopleftX","createTierChoiceTopleftY")
- self.pickerResults=C.List(self.pickerSurface,T.createPickerResultsWidth,T.createPickerResultsHeight,44,function(index) P:SelectPickerRow(index) end);C.Box(self.pickerResults,{width="createPickerResultsWidth",height="createPickerResultsHeight"});C.SetPoint(self.pickerResults,"TOPLEFT",self.pickerResults:GetParent(),"TOPLEFT","createPickerResultsTopleftX","createPickerResultsTopleftY")
+ self.pickerResults=C.List(self.pickerSurface,T.createPickerResultsWidth,T.createPickerResultsHeight,44,function(key) P:SelectPickerRow(key) end);C.Box(self.pickerResults,{width="createPickerResultsWidth",height="createPickerResultsHeight"});C.SetPoint(self.pickerResults,"TOPLEFT",self.pickerResults:GetParent(),"TOPLEFT","createPickerResultsTopleftX","createPickerResultsTopleftY")
  self.pickerResults.alternateRows=false
  for _,row in ipairs(self.pickerResults.rows) do row.selected:SetRadius(8);row.hover:SetRadius(8);row.alternate:SetRadius(8);row.icon=C.Icon(row,T.createRowIconWidth2);C.Box(row.icon,{width="createRowIconWidth2",height="createRowIconHeight2"});C.SetPoint(row.icon,"LEFT",row.icon:GetParent(),"LEFT","createRowIconLeftX",0);row.title:ClearAllPoints();C.SetPoint(row.title,"TOPLEFT",row.title:GetParent(),"TOPLEFT","createRowTitleTopleftX2","createRowTitleTopleftY2");row.title:SetWidth(T.createRowTitleWidth2);C.SetFont(row.title,16);C.SetLineHeight(row.title,22,true);row.meta:ClearAllPoints();C.SetPoint(row.meta,"TOPLEFT",row.meta:GetParent(),"TOPLEFT","createRowMetaTopleftX2","createRowMetaTopleftY2");row.meta:SetWidth(T.createRowMetaWidth) end
  self.pickerEmpty=C.Text(popup,S("没有匹配的活动","No matching activities"),14,"dim",T.createPickerEmptyWidth);self.pickerEmpty:SetWidth(T.createPickerEmptyWidth);C.SetPoint(self.pickerEmpty,"TOPLEFT",self.pickerEmpty:GetParent(),"TOPLEFT","createPickerEmptyTopleftX","createPickerEmptyTopleftY")
@@ -865,13 +899,14 @@ function P:RefreshPickerRows()
  if not showTier and not searching then self.pickerTier=nil end
  self.pickerCategories.selectedKey=self.pickerCategory;self.pickerCategories:SetShown(not searching);self.pickerCategories:SetItems(cats,function(row,key) UI:SetText(row.title,catMap[key].name);row.symbol:SetTexture(UI:CategoryIcon(catMap[key].icon));row.symbol:SetTexCoord(0,1,0,1);UI:SetText(row.meta,"") end)
  local tierNames={};for _,tier in ipairs(catalog:GetTiers()) do tierNames[tier.id]=tier.name end
- local entries,indices={},{}
+ local entries,keys={},{}
  for _,cat in ipairs(catalog:GetCategories()) do
   if searching or cat.key==self.pickerCategory then
    for _,group in ipairs(catalog:GetGroups(cat.key)) do
     local context=cat.name..(group.tier and " · "..(tierNames[group.tier] or "") or "")
     if (searching and (group.name.." "..context):lower():find(query,1,true)) or (not searching and (not self.pickerTier or group.tier==self.pickerTier)) then
-     entries[#entries+1]={category=cat.key,group=group,context=context};indices[#indices+1]=#entries
+     local key=cat.key..":"..group.key
+     entries[key]={category=cat.key,group=group,context=context};keys[#keys+1]=key
     end
    end
   end
@@ -880,18 +915,18 @@ function P:RefreshPickerRows()
  self.pickerResults:ClearAllPoints();C.SetPoint(self.pickerResults,"TOPLEFT",self.pickerResults:GetParent(),"TOPLEFT","createPickerResultsTopleftX",searching and -8 or -64);self.pickerResults:SetViewport(searching and 368 or 312)
  for _,row in ipairs(self.pickerResults.rows) do row:SetWidth((searching and 600 or 412)-C.listRightInset);row.title:SetWidth(searching and 534 or 334);row.meta:SetWidth(searching and 534 or 334) end
  self.pickerResults.selectedKey=nil
- for index,entry in ipairs(entries) do if entry.category==state.category and entry.group.key==state.group then self.pickerResults.selectedKey=index;break end end
- self.pickerResults:SetItems(indices,function(row,index)
-  local entry=entries[index];UI:SetActivityIcon(row.icon,entry.group.activity);UI:SetText(row.title,ActivityLabel(entry.group.name));UI:SetText(row.meta,entry.context)
+ for key,entry in pairs(entries) do if entry.category==state.category and entry.group.key==state.group then self.pickerResults.selectedKey=key;break end end
+ self.pickerResults:SetItems(keys,function(row,key)
+  local entry=entries[key];UI:SetActivityIcon(row.icon,entry.group.activity);UI:SetText(row.title,ActivityLabel(entry.group.name));UI:SetText(row.meta,entry.context)
   row.title:ClearAllPoints();C.SetPoint(row.title,"LEFT",row.title:GetParent(),"LEFT","createRowTitleLeftX2",0);row.title:SetWidth(searching and 382 or 334);C.SetLineHeight(row.title,22,true)
   row.meta:ClearAllPoints();C.SetPoint(row.meta,"RIGHT",row.meta:GetParent(),"RIGHT","createRowMetaRightX",0);row.meta:SetWidth(T.createRowMetaWidth2);C.SetLineHeight(row.meta,20,true);row.meta:SetJustifyH("RIGHT");row.meta:SetShown(searching)
  end)
  if not showTier then self.pickerResults:ClearAllPoints();C.SetPoint(self.pickerResults,"TOPLEFT",self.pickerResults:GetParent(),"TOPLEFT","createPickerResultsTopleftX","createPickerResultsTopleftY2");self.pickerResults:SetViewport(368) end
- self.pickerEmpty:SetShown(#entries==0);self.tierChoice:SetShown(showTier)
+ self.pickerEmpty:SetShown(#keys==0);self.tierChoice:SetShown(showTier)
  local tierName=self.pickerTier and tierNames[self.pickerTier] or L.all;self.tierChoice:SetValue(self.pickerTier,tierName)
 end
-function P:SelectPickerRow(index)
- local entry=self.pickerEntries[index];if not entry then return end
+function P:SelectPickerRow(key)
+ local entry=self.pickerEntries and self.pickerEntries[key];if not entry then return end
  state.category=entry.category;state.group=entry.group.key;state.tier=entry.group.tier;form.activityID=nil
  self:ClosePicker();self:RefreshPicker()
 end
@@ -1078,6 +1113,16 @@ function P:Submit()
   if listingChanged then self:RefreshApplicants() end
  else self:ValidateForm();state.submissionError=reason or L.failed;self:SetFormError(state.submissionError) end
 end
+local function ApplicantMarkInputs(member)
+ return (member.isBNetFriend and 1 or 0)+((member.isCharFriend or member.isFriend) and 2 or 0)+(member.isGuildMate and 4 or 0)
+end
+local function ApplicantLayoutMatches(layout,members)
+ if not layout or #layout.names~=#members then return false end
+ for index,member in ipairs(members) do
+  if layout.names[index]~=ApplicantName(member) or layout.markInputs[index]~=ApplicantMarkInputs(member) then return false end
+ end
+ return true
+end
 function P:LayoutBatches(ids)
  ids=ids or self.appIDs
  if not ids then return end
@@ -1095,13 +1140,14 @@ function P:LayoutBatches(ids)
    self.applicantMeasure=holder
   end
   local measure=self.applicantMeasure
-  local layout={tops={},heights={}};local memberTop=0
+  local layout={tops={},heights={},names={},markInputs={},source=app};local memberTop=0
   for i,member in ipairs(app.members) do
    local marks=UI.Members:BindMarks(measure.marks,member)
    measure.text:SetWidth(columns.name.x+columns.name.width-T.createApplicantTitleX-(marks>0 and marks+6 or 0))
-   UI:SetText(measure.text,ApplicantName(member))
+   local name=ApplicantName(member);UI:SetText(measure.text,name)
    local height=math.max(T.createMemberHeight,math.ceil(measure.text:GetStringHeight()))
    layout.tops[i],layout.heights[i]=memberTop,height
+   layout.names[i],layout.markInputs[i]=name,ApplicantMarkInputs(member)
    memberTop=memberTop+height+T.createMemberStride-T.createMemberHeight
   end
   batchTops[index]=top;batchLayouts[id]=layout
@@ -1193,13 +1239,22 @@ function P:RenderBatches()
   last=first;local bottom=offset+self.batchScroll:GetHeight()
   while last<count and self.batchTops[last+1]<bottom do last=last+1 end
  end
- if self.boundAppIDs==self.appIDs and self.firstBatch==first and self.lastBatch==last then return end
+ if self.boundAppIDs==self.appIDs and self.firstBatch==first and self.lastBatch==last then
+  -- Member records change in place before the merged business notification.
+  -- Check the already-bound inputs without rereading or remeasuring the list.
+  for index=first or 1,last or 0 do
+   local memberLayout=self.batchLayouts[self.appIDs[index]]
+   if not ApplicantLayoutMatches(memberLayout,memberLayout.source.members) then self:LayoutBatches();return end
+  end
+  return
+ end
  self.boundAppIDs,self.firstBatch,self.lastBatch=self.appIDs,first,last
  local canManage=UI:GetGroup():CanManageApplicants()
  for index=first or 1,last or 0 do
    local id=self.appIDs[index];local app=UI:GetGroup():GetApplicant(id);local top=self.batchTops[index];local height=self.batchTops[index+1]-top
    -- Native removal precedes the queued applicant notification; another repaint can arrive first.
    if not app then self:RefreshApplicants();return end
+   if not ApplicantLayoutMatches(self.batchLayouts[id],app.members) then self:LayoutBatches();return end
    bound=bound+1;local f=self.batchPool[bound];if not f then f=self:BuildBatch(self.batchBody);self.batchPool[bound]=f end
    if f.appID~=id then for _,row in ipairs(f.people) do HideMemberTooltip(row) end end
    f:ClearAllPoints();f:SetPoint("TOPLEFT",0,-top);f:SetHeight(height);f:Show();C.RekeyElement(f,id);f.appID=id;f.alternate=index%2==0;f.cardStyle:SetState("selected",f.alternate)
@@ -1219,9 +1274,10 @@ function P:RenderBatches()
      local timeKey=ApplicantTimeKey(id,m,i);local identity=timeKey or tostring(id)..":unknown:"..i
      if row.mapScoreIdentity~=identity then ClearApplicantTime(row) end
      row.mapScoreIdentity,row.mapScoreKey=identity,timeKey
+     SetApplicantTarget(row,identity);SetApplicantTarget(row.mapScoreButton,self.showApplicantMapScore and identity or nil)
      row.mapScoreTime=timeKey and self.applicantTimeModes and self.applicantTimeModes[timeKey] or nil
      C.RekeyElement(row,identity);row.memberContext=self.applicantContext;row:SetWidth(self.applicantTable.columns.actions.x);row:SetHeight(memberLayout.heights[i]);row:ClearAllPoints();row:SetPoint("TOPLEFT",0,sharedY-memberLayout.tops[i]);row.icon:SetPoint("LEFT",layout.name.x,0);row.title:SetPoint("LEFT",layout.name.x+44,0);UI:SetMemberIcon(row.icon,m);UI:SetText(row.title,ApplicantName(m));row.title:SetTextColor(UI:ClassColor(m.class))
-     UpdateApplicantFaction(row,m,id)
+     UpdateApplicantFaction(row,m,id,identity)
      local marksWidth=UI.Members:BindMarks(row.marks,m)
      local available=columns.name.x+columns.name.width-T.createApplicantTitleX-(marksWidth>0 and marksWidth+6 or 0)
      row.title:SetWidth(math.min(available,FitText(row.title)));row.title:SetHeight(0);row.title:SetWordWrap(true)
@@ -1240,7 +1296,7 @@ function P:RenderBatches()
     end
    end
  end
- for i=bound+1,#self.batchPool do local f=self.batchPool[i];f:Hide();f.appID=nil;for _,row in ipairs(f.people) do HideMemberTooltip(row);UI.Members:ClearMarks(row.marks);ClearApplicantTime(row);row.member=nil;C.RekeyElement(row,nil) end;C.RekeyElement(f,nil) end
+ for i=bound+1,#self.batchPool do local f=self.batchPool[i];f:Hide();f.appID=nil;for _,row in ipairs(f.people) do HideMemberTooltip(row);UI.Members:ClearMarks(row.marks);SetApplicantTarget(row,nil);SetApplicantTarget(row.factionButton,nil);ClearApplicantTime(row);row.member=nil;C.RekeyElement(row,nil) end;C.RekeyElement(f,nil) end
 UI:ApplyElementScope("create")
  end
 function P:ApplicantAction(btn,method)
@@ -1278,11 +1334,13 @@ function P:ApplyTablePreferences()
  self:RefreshApplicants()
 end
 function P:Enter(context)
+ if self.correctionExpired then self:HideCorrectionNotice() end
  local tablePrefs=UI:GetTablePrefs("createApplicants");self.applicantTable:SetState(tablePrefs)
  state.sort=columnSorts[tablePrefs.sortKey] or "newest";state.descending=tablePrefs.descending==true
  local group=UI:GetGroup();group:Attach(self,"create");group:RefreshApplicants()
  if not self.unsub then self.unsub=group:Subscribe(function(kind)
   if kind=="listing" and P.submitting then P.submissionListingChanged=true;return end
+  if UI.hiding then return end
   if kind=="listing" or kind=="permissions" then P:RefreshMode();P:RefreshApplicants() elseif kind=="applicants" or kind=="applicant" then P:RefreshApplicants() elseif kind=="roster" then P:RefreshRoster() elseif kind=="relations" then P:OnNotesChanged() elseif kind=="creationPresets" then P:RefreshFavorites() elseif kind=="activities" then if P.formFrame:IsShown() then P:RefreshPicker() else P:RefreshRosterPresentation() end end
  end) end
  self:WatchNotes()

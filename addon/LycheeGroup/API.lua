@@ -27,9 +27,11 @@ function API:Subscribe(callback,options)
   F.backgroundStatusSubscribers=(F.backgroundStatusSubscribers or 0)+1
   F:Update()
  end
- subscribers[callback]=true
+ local subscription={}
+ subscribers[callback]=subscription
  CallExternal(callback,self:GetStatus())
  return function()
+  if subscribers[callback]~=subscription then return end
   subscribers[callback]=nil
   if backgroundSubscribers[callback] then
    backgroundSubscribers[callback]=nil;F.backgroundStatusSubscribers=F.backgroundStatusSubscribers-1
@@ -38,9 +40,16 @@ function API:Subscribe(callback,options)
 end
 function API:Attach(newOwner,newHost,newLogoSize,newLabel,release)
  assert(newOwner and newHost and newLabel and type(newLogoSize)=="number" and newLogoSize>0 and type(release)=="function","Attach requires an owner, host, positive logo size, label and release callback")
- if owner==newOwner and (host~=newHost or label~=newLabel) then self:Detach(newOwner) end
+ local changingHost=owner==newOwner and (host~=newHost or label~=newLabel)
+ if changingHost then self:Detach(newOwner) end
  if not self:IsAvailable() then return false,"unavailable" end
  if owner and owner~=newOwner then return false,"occupied" end
+ if changingHost and owner then
+  -- Release may have mounted this owner again. Keep that mount's cleanup;
+  -- only refresh it when it already satisfies the requested target.
+  if host~=newHost or label~=newLabel then return false,"occupied" end
+  return self:Refresh(newOwner,newLogoSize)
+ end
  owner,host,logoSize,label,onDetach=newOwner,newHost,newLogoSize,newLabel,release
  F:SetHost(host,logoSize,label)
  return true

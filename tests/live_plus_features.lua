@@ -52,15 +52,13 @@ local saved={page=U.page,shown=U:IsShown(),filtersOpen=P.filtersOpen==true,offse
 local generation,searchGeneration=G.Results.gen,G.Search.generation
 local playerGUID=Public(UnitGUID("player"))
 if not playerGUID then Unavailable("player_identity_unavailable");return end
-local timer,ownModal,ioOpening,cleaned,completed,mutated
+local timer,cleaned,completed,mutated
 local function CloseScores()
  if P.picker then P:ClosePicker() end
 end
 local function Clean()
  if cleaned then return end
  if timer then timer:Cancel();timer=nil end
- local copyModal=ownModal or ioOpening and U.modals and U.modals.copyText
- if copyModal and U.activeModal==copyModal then copyModal:Close("probe_cleanup") end
  Tip:Hide();CloseScores();U:CloseMenu()
  if mutated then
   -- No settings API is used. Restore both the original preference reference
@@ -80,7 +78,7 @@ assert(probe:OnCleanup(function()
  if not completed then out.aborted=true;out.elapsedSeconds=GetTime()-started;probe:Log(out) end
 end))
 assert(probe:Guard(function()
- return not InCombatLockdown() and Public(UnitGUID("player"))==playerGUID and U:IsShown() and U.page=="find" and not U.hiding and not U.preview and (not U.activeModal or U.activeModal==ownModal) and G.Results.gen==generation and G.Search.generation==searchGeneration
+ return not InCombatLockdown() and Public(UnitGUID("player"))==playerGUID and U:IsShown() and U.page=="find" and not U.hiding and not U.preview and not U.activeModal and G.Results.gen==generation and G.Search.generation==searchGeneration
 end,{"PLAYER_REGEN_DISABLED","PLAYER_LEAVING_WORLD"},"real_scene_changed"))
 assert(probe:Async(105))
 local function Check(value,reason) assert(value,reason) end
@@ -230,14 +228,17 @@ ScoreStage=assert(probe:Callback(function()
  local expected="https://raider.io"..(A:GetLocale()=="zhCN" and "/cn" or "").."/characters/"..regions[region].."/"..Encode(slug).."/"..Encode(name)
  Tip:ShowPlayer(P.frame,selfMember,A.GroupPresentation.Member("roster"))
  local identity=Tip.selectedMemberID;Check(Tip.directPlayer==true and Tip.interactive.io:IsEnabled(),"real_player_io_action_unavailable")
- ioOpening=true;Tip.interactive.io:Click();ownModal=U.activeModal
- Check(ownModal and U.copyDialog and U.copyDialog:IsShown(),"io_copy_dialog_missing")
- local url=Public(U.copyDialog.field.box:GetText())
- Check(url==expected and Public(U.copyDialog.help:GetText())==name.."-"..realm,"io_copy_identity_or_url_mismatch")
- U.copyDialog.close:Click();ownModal=nil;ioOpening=nil
- Check(Tip.selectedMemberID==identity and Tip.directPlayer==true and Tip.interactive:IsShown(),"io_copy_close_did_not_restore_identity")
- out.io={identity=key,url=url,returned=true}
- Tip:Hide();out.phase="restore"
+ Tip.interactive.io:Click()
+ local view=Tip.interactive;local box=view.copyField.box
+ Check(view.copyField:IsShown() and not U.activeModal,"io_inline_copy_missing")
+ local url=Public(box:GetText())
+ Check(url==expected,"io_copy_url_mismatch")
+ Check(Tip.selectedMemberID==identity and Tip.directPlayer==true and view:IsShown(),"io_copy_changed_player_identity")
+ Check(Tip.pinned and box:HasFocus(),"io_copy_not_focused")
+ Tip:Hide()
+ Check(not view.copyField:IsShown() and not box:HasFocus() and Public(box:GetText())=="","io_copy_focus_or_text_retained")
+ out.io={identity=key,url=url,inline=true,identityPreserved=true,focusReleased=true}
+ out.phase="restore"
  Clean();out.elapsedSeconds=GetTime()-started;completed=true;probe:Finish(out)
 end))
 timer=C_Timer.NewTimer(2,ScoreStage)

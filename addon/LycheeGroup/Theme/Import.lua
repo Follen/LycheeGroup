@@ -122,14 +122,13 @@ local function Values(definition)
 end
 local function IsVisual(key) return type(key)=="string" and key:match("^(%a+)%.") and (key:match("^theme%.") or key:match("^style%.") or key:match("^element%.") or key:match("^utility%.")) end
 local function ThemePreference(key)
- local name=key:match("^settings%.(.+)$")
- return name and A.ThemeDefaults.settings[name]~=nil or key:match("^layout%.") and Configuration.definitions[key]~=nil
+ return A.Appearance:GetPreferenceField(key)~=nil
 end
 local function Clone(value) return Configuration:CopyValue(value) end
 local function Equal(a,b) return Configuration:SameValue(a,b) end
 local function Identity(id,revision)
  if type(id)~="string" or not id:match("^[%w][%w_.%-]*$") then return false,"theme id must be a nonempty identifier" end
- if type(revision)~="number" and type(revision)~="string" or type(revision)=="string" and revision:match("^%s*$") then return false,"theme revision must be a nonempty string or finite number" end
+ if type(revision)~="number" and type(revision)~="string" or type(revision)=="string" and revision:match("^%s*$") or type(revision)=="number" and (revision~=revision or revision==math.huge or revision==-math.huge) then return false,"theme revision must be a nonempty string or finite number" end
  return true
 end
 function Service:Parse(definition)
@@ -142,7 +141,6 @@ function Service:Parse(definition)
  if not compiled then return nil,err end
  return package
 end
-local function NewStore() return {presets={},overrides={}} end
 local function Split(values,visual)
  local themed,preferences,unknown={},{},{}
  for key,value in pairs(values) do
@@ -153,7 +151,6 @@ local function Split(values,visual)
  return themed,preferences,unknown
 end
 function Service:Migrate(store)
- if not store.theme then store.theme=NewStore() end
  if store.schema~=1 then return end
  local theme=store.theme
  local user={};local unknown={}
@@ -177,10 +174,16 @@ function Service:Migrate(store)
  store.presets,store.schema=presets,2
 end
 function Service:Bind()
- self.stores={}
+ self.stores={};self.bindingErrors={}
  for _,storage in ipairs({"account","character"}) do
-  local store=Configuration.stores[storage];self:Migrate(store)
-  self.stores[storage]=store.theme
+  local store=Configuration.stores[storage];local root=Configuration.roots[storage]
+  local theme,err=Configuration:BindTable(root,store,"theme","uiConfig.theme")
+  err=err or Configuration.namespaceErrors[root]
+  local _,presetsError=Configuration:BindTable(root,theme,"presets","uiConfig.theme.presets")
+  local _,overridesError=Configuration:BindTable(root,theme,"overrides","uiConfig.theme.overrides")
+  if err or presetsError or overridesError then self.bindingErrors[storage]={store=theme,error=err or presetsError or overridesError} end
+  self:Migrate(store)
+  self.stores[storage]=theme
  end
  for _,storage in ipairs({"account","character"}) do
   local theme=self.stores[storage];local selected=theme.migrationSelection
@@ -196,12 +199,33 @@ function Service:Bind()
 end
 function Service:Source(stores)
  stores=stores or self.stores
- local id,activation
- for _,storage in ipairs({"character","account"}) do if stores[storage].activePreset~=nil then id,activation=stores[storage].activePreset,storage;break end end
+ local id,activation,err
+ for _,storage in ipairs({"character","account"}) do
+  local selected=stores[storage].activePreset
+  if selected~=nil then
+   activation=storage
+   if selected~=false and (type(selected)~="string" or not selected:match("^[%w][%w_.%-]*$")) then err=storage.." theme selection must be an identifier or false";id=false
+   else id=selected end
+   break
+  end
+ end
  local package,owner
- if id then for _,storage in ipairs({"character","account"}) do if stores[storage].presets[id] then package,owner=stores[storage].presets[id],storage;break end end end
- local selection={id=id or false,revision=package and package.revision or nil,storage=owner,activationStorage=activation}
- return {selection=selection,values=package and package.values or {},overrides={account=stores.account.overrides,character=stores.character.overrides},error=id and not package and "selected theme definition is missing: "..id or nil}
+ if id then for _,storage in ipairs({"character","account"}) do if stores[storage].presets[id]~=nil then package,owner=stores[storage].presets[id],storage;break end end end
+ local revision
+ if owner then
+  if type(package)~="table" then err="selected theme definition must be a table: "..id
+  else
+   local valid,reason=Identity(package.id,package.revision)
+   if not valid or package.schema~=1 or package.id~=id or type(package.values)~="table" then err="invalid selected theme definition "..id..": "..(reason or "schema, id and values must match the theme package")
+   else revision=package.revision end
+  end
+ elseif id then err="selected theme definition is missing: "..id end
+ for _,storage in ipairs({"character","account"}) do
+  local binding=self.bindingErrors and self.bindingErrors[storage]
+  if binding and binding.store==stores[storage] then err=err or binding.error end
+ end
+ local selection={id=id or false,revision=revision,storage=owner,activationStorage=activation}
+ return {selection=selection,values=revision~=nil and package.values or {},overrides={account=stores.account.overrides,character=stores.character.overrides},error=err}
 end
 function A:InitializeRuntimeTheme()
  if self.RuntimeTheme then return end
@@ -274,9 +298,11 @@ end
 function API:List()
  Ready();local source=Service:Source();local list={}
  for _,storage in ipairs({"character","account"}) do for id,package in pairs(Service.stores[storage].presets) do
-  list[#list+1]={id=id,revision=package.revision,storage=storage,current=A.RuntimeTheme.selection.id==id and A.RuntimeTheme.selection.storage==storage,selected=source.selection.id==id and source.selection.storage==storage}
+  local revision=type(package)=="table" and package.revision or nil
+  if type(revision)~="string" and type(revision)~="number" or type(revision)=="number" and (revision~=revision or revision==math.huge or revision==-math.huge) then revision=nil end
+  list[#list+1]={id=type(id)=="string" and id or tostring(id),revision=revision,storage=storage,current=A.RuntimeTheme.selection.id==id and A.RuntimeTheme.selection.storage==storage,selected=source.selection.id==id and source.selection.storage==storage}
  end end
- table.sort(list,function(a,b)return a.id==b.id and a.storage<b.storage or a.id<b.id end);return list
+ table.sort(list,function(a,b)return a.id==b.id and a.storage<b.storage or tostring(a.id)<tostring(b.id) end);return list
 end
 function API:Export(id,options)
  Ready()
@@ -296,7 +322,11 @@ function API:Export(id,options)
   if storage then package=Service.stores[storage].presets[id]
   else package=Service.stores.character.presets[id] or Service.stores.account.presets[id] end
  else package={id=source.selection.id or A.ThemeDefaults.id,revision=source.selection.revision or A.ThemeDefaults.revision,values=source.values} end
- if not package then return nil,"unknown theme: "..tostring(id) end
+ if package==nil then return nil,"unknown theme: "..tostring(id) end
+ if type(package)~="table" or type(package.values)~="table" then return nil,"invalid theme package: "..tostring(id) end
+ local valid,reason=Identity(package.id,package.revision);if not valid then return nil,reason end
+ valid,reason=Configuration:CheckSerializable(package.values);if not valid then return nil,reason end
+ for key in pairs(package.values) do if type(key)~="string" or not A.Appearance:GetField(key) and not ThemePreference(key) then return nil,"unknown theme path: "..tostring(key) end end
  local definition={schema=1,id=package.id,revision=package.revision}
  for key,value in pairs(package.values) do A.Appearance:WriteDeclaration(definition,key,Clone(value)) end
  return definition
@@ -314,6 +344,6 @@ function API:ResetOverrides(scope,paths,options)
    if owner~=scope or not IsVisual(key) then return false,"override path must include its visual prefix and selected scope" end
    draft.overrides[key]=nil
   end
- else for key in pairs(draft.overrides) do if key:match("^[^.]+%.([^.]+)%.")==scope then draft.overrides[key]=nil end end end
+ else for key in pairs(draft.overrides) do if type(key)=="string" and key:match("^[^.]+%.([^.]+)%.")==scope then draft.overrides[key]=nil end end end
  return Commit(storage,draft)
 end

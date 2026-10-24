@@ -48,8 +48,7 @@ function B:InitializeDefault()
     events:UnregisterEvent("PLAYER_REGEN_ENABLED")
     local scope = GetCurrentBindingSet()
     local scopeKey = scope == 2 and ("character:" .. UnitGUID("player")) or "account"
-    local initialized = A.db.bindingDefaultScopes
-    if not initialized then initialized = {}; A.db.bindingDefaultScopes = initialized end
+    local initialized = A.Configuration:BindTable(A.db, A.db, "bindingDefaultScopes", "bindingDefaultScopes")
     if initialized[scopeKey] then return end
     initialized[scopeKey] = true
     if self:Keys() or self:Conflict(self.defaultKey) then return end

@@ -30,7 +30,7 @@ local RELATION_EVENTS = {
  "GUILD_ROSTER_UPDATE", "PLAYER_GUILD_UPDATE", "CLUB_ADDED", "CLUB_MEMBER_ADDED",
  "CLUB_MEMBER_REMOVED", "CLUB_MEMBER_UPDATED", "CLUB_MEMBERS_UPDATED",
 }
-local ROSTER_EVENTS = { "ACTIVE_PLAYER_SPECIALIZATION_CHANGED", "PLAYER_SPECIALIZATION_CHANGED", "PLAYER_EQUIPMENT_CHANGED", "INSPECT_READY", "PLAYER_REGEN_ENABLED", "UNIT_CONNECTION" }
+local ROSTER_EVENTS = { "PLAYER_ROLES_ASSIGNED", "ACTIVE_PLAYER_SPECIALIZATION_CHANGED", "PLAYER_SPECIALIZATION_CHANGED", "PLAYER_EQUIPMENT_CHANGED", "INSPECT_READY", "PLAYER_REGEN_ENABLED", "UNIT_CONNECTION" }
 
 local RUN_EVENTS = {
 	"CHALLENGE_MODE_COMPLETED",
@@ -60,7 +60,7 @@ function Game:RefreshApplicationSubscriptions()
 	local listing = C_LFGList.HasActiveEntryInfo()
 	local autoJoin = A:GetSetting("autoJoin") and applications
 	SetEvents(frame, PERMISSION_EVENTS, listing or G:HasViews("create") or autoJoin)
-	if self.runTracking or G:HasViews() or listing or autoJoin then frame:RegisterEvent("GROUP_ROSTER_UPDATE") else frame:UnregisterEvent("GROUP_ROSTER_UPDATE") end
+	if self.runTracking or G:HasViews() or listing or autoJoin or G.Roster:NeedsRosterEvents() then frame:RegisterEvent("GROUP_ROSTER_UPDATE") else frame:UnregisterEvent("GROUP_ROSTER_UPDATE") end
 end
 
 function Game:RefreshSubscriptions()

@@ -158,7 +158,9 @@ function P:EnterBlocks()
   local group,err
   if UI.preview then group=UI:GetGroup() else group,err=A:Ensure("Group") end
   self.blockGroup,self.blockError=group,err
-  if group then self.blocksUnsub=group:Subscribe(function(kind) if kind=="results" then P:RefreshBlocks() end end) end
+  if group then self.blocksUnsub=group:Subscribe(function(kind)
+   if kind=="results" and not UI.hiding and P.section=="blocks" and P.frame:IsVisible() then P:RefreshBlocks() end
+  end) end
  end
 end
 function P:LayoutLinkCopy(row,baseHeight,left)
@@ -319,6 +321,7 @@ function P:LayoutCredits()
 end
 function P:HideDedicationToast()
  if self.dedicationTimer then self.dedicationTimer:Cancel();self.dedicationTimer=nil end
+ self.dedicationExpired=nil
  if self.dedicationToast then self.dedicationToast:Hide() end
 end
 function P:ShowDedicationToast()
@@ -329,7 +332,10 @@ function P:ShowDedicationToast()
  end
  local toast,message=self.dedicationToast,"谨献给挚爱：荔枝小月亮"
  UI:SetText(toast.text,message);toast:SetWidth(math.ceil(toast.text:GetStringWidth())+48);toast:SetMessage(message,-28)
- self.dedicationTimer=C_Timer.NewTimer(5,function() P:HideDedicationToast() end)
+ self.dedicationTimer=C_Timer.NewTimer(5,function()
+  P.dedicationTimer=nil
+  if UI.hiding then P.dedicationExpired=true else P:HideDedicationToast() end
+ end)
 self:RegisterBuildElements()
  end
 function P:RefreshAbout()
@@ -619,7 +625,10 @@ function P:Sync()
  if self.section=="blocks" then self:RefreshBlocks() end
 UI:ApplyElementScope("settings")
  end
-function P:Enter(context) self.frame:RegisterEvent("UPDATE_BINDINGS");self:SelectSection(context and context.section or self.section) end
+function P:Enter(context)
+ if self.dedicationExpired then self:HideDedicationToast() end
+ self.frame:RegisterEvent("UPDATE_BINDINGS");self:SelectSection(context and context.section or self.section)
+end
 function P:Leave()
  self:CloseLinkCopy(true)
  self:StopBlocks()

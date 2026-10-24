@@ -205,6 +205,158 @@ do
  end
 end
 
+-- Public single-column writes and partial presets use current column keys.
+-- An omitted activity column keeps its own default, independently of title.
+for _,storage in ipairs({"session","character","account"}) do
+ for _,kind in ipairs({"user","preset"}) do
+  local current=fixture("enUS");local a,c=current.A,current.A.Configuration
+  for _,id in ipairs({"findResults","findRaidResults","findApplications"}) do
+   local prefix="layout.tables."..id..".widths."
+   local activity=c:Get(prefix.."activity")
+   local defaults=a.Appearance:GetTableState(id).widths
+   local untouched={};for key,value in pairs(defaults) do untouched[key]=value end
+   if kind=="user" then T.ok(c:Set({[prefix.."title"]=.4},{storage=storage}))
+   else T.ok(c:ApplyPreset("partial-title",1,{[prefix.."title"]=.4},{storage=storage})) end
+   local widths=a.Appearance:GetTableState(id).widths
+   T.eq(c:Get(prefix.."title"),.4)
+   T.eq(widths.title,.4,storage.." "..kind.." title writes retain their current-column meaning")
+   T.eq(widths.activity,activity,"an omitted activity width keeps its own default")
+   T.eq(c:GetSource(prefix.."activity").kind,"default")
+   local captured=c.legacy.character.tableLayouts
+   T.eq(captured and captured[id],nil,"new API values do not become captured legacy layouts")
+   if storage=="character" and kind=="user" then
+    T.eq(a.charPrefs.tableLayouts[id].widths.title,.4,"the compatibility mirror records the explicit current-column value")
+    T.eq(a.charPrefs.tableLayouts[id].widths.activity,nil,"the compatibility mirror does not invent an activity choice")
+   end
+   for key,value in pairs(untouched) do if key~="title" then T.eq(widths[key],value,"a single title value leaves every other column unchanged") end end
+  end
+  local reloaded=fixture("enUS",a.charPrefs,a.db)
+  for _,id in ipairs({"findResults","findRaidResults","findApplications"}) do
+   local prefix="layout.tables."..id..".widths."
+   local nextC=reloaded.A.Configuration
+   -- Replacing the same partial preset above leaves only the final table in it.
+   local saved=storage~="session" and (kind=="user" or id=="findApplications")
+   T.eq(nextC:Get(prefix.."title"),saved and .4 or nextC:GetSchema(prefix.."title")[prefix.."title"].default)
+   local widths=reloaded.A.Appearance:GetTableState(id).widths
+   T.eq(widths.title,nextC:Get(prefix.."title"),"a compatibility mirror is not split again on reload")
+   T.eq(widths.activity,nextC:Get(prefix.."activity"))
+   T.eq(nextC:GetSource(prefix.."activity").kind,"default")
+  end
+ end
+end
+
+-- A current saved title can have an older/incomplete activity import marker.
+-- Its compatibility mirror is still a current column, not an old combined one.
+for _,schema in ipairs({1,2}) do
+ local current=fixture("enUS");local a,c=current.A,current.A.Configuration
+ for _,id in ipairs({"findResults","findRaidResults","findApplications"}) do
+  local prefix="layout.tables."..id..".widths."
+  T.ok(c:Set({[prefix.."title"]=.4},{storage="character"}))
+  a.charPrefs.uiConfig.imported[prefix.."activity"]=nil
+ end
+ a.charPrefs.uiConfig.schema=schema
+ local reloaded=fixture("enUS",a.charPrefs,a.db)
+ for _,id in ipairs({"findResults","findRaidResults","findApplications"}) do
+  local prefix="layout.tables."..id..".widths."
+  local nextC=reloaded.A.Configuration;local widths=reloaded.A.Appearance:GetTableState(id).widths
+  T.eq(widths.title,.4)
+  T.eq(nextC:GetSource(prefix.."activity").kind,"default","an incomplete marker does not turn a current mirror into old layout data")
+  T.eq(widths.activity,nextC:GetSchema(prefix.."activity")[prefix.."activity"].default)
+ end
+end
+
+-- Captured with the real 23bbdb2 fixture startup from raw title=.4:
+-- display=.18/.22; canonical title=.4, activity=default; both imported=true;
+-- raw title=.4 and no activity. A current character Set(title=.4) persists the
+-- same leaves. Interpret both by canonical values instead of guessing history.
+do
+ local released={uiConfig={schema=2,user={},presets={},imported={}},tableLayouts={}}
+ local modern=fixture("enUS");local c=modern.A.Configuration
+ for _,id in ipairs({"findResults","findRaidResults","findApplications"}) do
+  local prefix="layout.tables."..id..".widths."
+  released.uiConfig.user[prefix.."title"]=.4
+  released.uiConfig.imported[prefix.."title"],released.uiConfig.imported[prefix.."activity"]=true,true
+  released.tableLayouts[id]={widths={title=.4}}
+  T.ok(c:Set({[prefix.."title"]=.4},{storage="character"}))
+  for _,leaf in ipairs({"title","activity"}) do
+   T.eq(modern.A.charPrefs.uiConfig.user[prefix..leaf],released.uiConfig.user[prefix..leaf])
+   T.eq(modern.A.charPrefs.uiConfig.imported[prefix..leaf],released.uiConfig.imported[prefix..leaf])
+   T.eq(modern.A.charPrefs.tableLayouts[id].widths[leaf],released.tableLayouts[id].widths[leaf])
+  end
+ end
+ local upgraded=fixture("enUS",released)
+ for _,id in ipairs({"findResults","findRaidResults","findApplications"}) do
+  local prefix="layout.tables."..id..".widths."
+  local nextC=upgraded.A.Configuration;local widths=upgraded.A.Appearance:GetTableState(id).widths
+  T.eq(widths.title,.4,"already imported 1.2.4 values use their canonical single-column meaning")
+  T.eq(widths.title,nextC:Get(prefix.."title"))
+  T.eq(nextC:GetSource(prefix.."activity").kind,"default")
+  T.eq(widths.activity,nextC:Get(prefix.."activity"))
+ end
+end
+
+-- Schema 1/2 do not change layout storage priority. Raw tableLayouts belong to
+-- characters; account canonical values remain lower priority than a real old
+-- character import. Already independent legacy title/activity pairs stay exact.
+for _,schema in ipairs({1,2}) do
+ for _,independent in ipairs({false,true}) do
+  local function Namespace() return {schema=schema,user={},presets={},imported={}} end
+  local account={uiConfig=Namespace(),tableLayouts={}}
+  local character={uiConfig=Namespace(),tableLayouts={}}
+  for _,id in ipairs({"findResults","findRaidResults","findApplications"}) do
+   local prefix="layout.tables."..id..".widths."
+   account.tableLayouts[id]={widths={title=.8}}
+   account.uiConfig.user[prefix.."title"]=.7
+   character.tableLayouts[id]={widths={title=.4,activity=independent and .2 or nil}}
+  end
+  local old=fixture("enUS",character,account)
+  for _,id in ipairs({"findResults","findRaidResults","findApplications"}) do
+   local prefix="layout.tables."..id..".widths."
+   local c=old.A.Configuration;local widths=old.A.Appearance:GetTableState(id).widths
+   T.near(widths.title,independent and .4 or .18,.000001)
+   T.near(widths.activity,independent and .2 or .22,.000001)
+   T.eq(c:GetSource(prefix.."title").storage,"character")
+   T.eq(account.uiConfig.user[prefix.."title"],.7)
+  end
+ end
+ local account={uiConfig={schema=schema,user={},presets={},imported={}},tableLayouts={findResults={widths={title=.8}}}}
+ local current=fixture("enUS",{},account);local c=current.A.Configuration
+ T.eq(c:GetSource("layout.tables.findResults.widths.title").kind,"default","account raw layouts do not become character preferences")
+ T.eq(current.A.Appearance:GetTableState("findResults").widths.title,c:Get("layout.tables.findResults.widths.title"))
+end
+
+-- Convert only old raw tableLayouts, once, into canonical independent values.
+-- Keeping the original snapshot separate from the compatibility mirror avoids
+-- treating later public writes as another migration input.
+do
+ local preferences={tableLayouts={}}
+ for _,id in ipairs({"findResults","findRaidResults","findApplications"}) do
+  preferences.tableLayouts[id]={widths={title=.4,leader=.2},sortKey="members",descending=true}
+ end
+ local old=fixture("enUS",preferences)
+ for _,id in ipairs({"findResults","findRaidResults","findApplications"}) do
+  local prefix="layout.tables."..id..".widths."
+  local c=old.A.Configuration;local widths=old.A.Appearance:GetTableState(id).widths
+  T.near(c:Get(prefix.."title"),.18,.000001);T.near(c:Get(prefix.."activity"),.22,.000001)
+  T.eq(widths.title,c:Get(prefix.."title"));T.eq(widths.activity,c:Get(prefix.."activity"))
+  T.eq(c:Get(prefix.."leader"),.2)
+  T.eq(c.legacy.character.tableLayouts[id].widths.title,.4,"the captured legacy value remains the original combined width")
+  T.eq(preferences.tableLayouts[id].widths.title,.4,"import leaves the old compatibility data intact until an explicit write")
+  T.eq(preferences.tableLayouts[id].widths.activity,nil)
+  T.ok(c:Set({[prefix.."title"]=.5},{storage="character"}))
+  T.eq(preferences.tableLayouts[id].widths.title,.5)
+  T.eq(c.legacy.character.tableLayouts[id].widths.title,.4,"compatibility writes do not change the startup snapshot")
+ end
+ local reloaded=fixture("enUS",old.A.charPrefs,old.A.db)
+ for _,id in ipairs({"findResults","findRaidResults","findApplications"}) do
+  local prefix="layout.tables."..id..".widths."
+  local c=reloaded.A.Configuration;local widths=reloaded.A.Appearance:GetTableState(id).widths
+  T.eq(widths.title,.5);T.eq(c:Get(prefix.."title"),.5)
+  T.near(widths.activity,.22,.000001,"migrated activity is not recomputed from a later title write")
+  T.eq(widths.activity,c:Get(prefix.."activity"))
+ end
+end
+
 -- Exercise the real Catalog and page route, including native categories that
 -- the small default fixture does not advertise. Keep API records internally
 -- consistent instead of replacing Catalog's grouping or matching methods.

@@ -54,7 +54,6 @@ function R:ResolveDrop(guid,subgroup,targetGUID)
  local size=0
  if targetGUID~=nil then
   target,reason=Resolve(targetGUID);if not target then return nil,reason end
-  allowed,reason=Combat(target,"targetCombat");if not allowed then return nil,reason end
   -- The member's current subgroup wins over an old rendered drop position.
   subgroup=target.subgroup
  else
@@ -68,6 +67,7 @@ function R:ResolveDrop(guid,subgroup,targetGUID)
   if source.subgroup~=subgroup and size>=5 then return nil,"full" end
  end
  if source.subgroup==subgroup then return nil,"same" end
+ if target then allowed,reason=Combat(target,"targetCombat");if not allowed then return nil,reason end end
  -- Never let a reused raid index receive an action meant for a departed GUID.
  if Guid(UnitGUID(source.unit))~=source.guid or target and Guid(UnitGUID(target.unit))~=target.guid then return nil,"identity" end
  return {mode=target and "swap" or size==0 and "empty" or "join",subgroup=subgroup,source=source,target=target}

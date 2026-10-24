@@ -372,7 +372,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
   check(not item.meta:IsShown() and item.meta:GetText()=="","note rows omit class and specialization text")
   check(separated(item.title,item.reason),"note title and reason overlap")
   check(top(item.reason)+item.reason:GetHeight()<=item:GetHeight(),"note reason exceeds its row")
-  notes:SelectTab("history");notes:OpenRun(1)
+  notes:SelectTab("history");notes:OpenRun(notes.historyList.ids[1])
   local historyRow=notes.historyList.rows[1]
   check(top(historyRow.title)+historyRow.title:GetHeight()<=historyRow:GetHeight(),"the history activity title exceeds its row")
   for _,entry in ipairs({{"level",historyRow.level},{"duration",historyRow.duration},{"completed",historyRow.date}}) do

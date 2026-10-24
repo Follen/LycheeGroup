@@ -227,6 +227,7 @@ _G.C_LFGList = {
 		local activity=S.applicantPvp[activityID]
 		return activity and activity[id] and activity[id][index]
 	end,
+	GetNumInvitedApplicantMembers = function() return 0 end,
 	InviteApplicant = function(id) S.inviteCalls[#S.inviteCalls + 1] = id end,
 	DeclineApplicant = function(id) S.declineCalls=(S.declineCalls or 0)+1;S.lastDeclined=id end,
 }
@@ -264,7 +265,7 @@ Load.addon("LycheeGroup_Group", "History.lua")
 
 local A = _G.LycheeGroup
 local G = A.Group
-local legacyFind={category="seasonDungeon",categoryPrefs={seasonDungeon={groupKeys={"dungeon-1"},sort="rating",tankPresence="missing"}},filters={sort="rating"}}
+local legacyFind={category="seasonDungeon",categoryPrefs={seasonDungeon={groupKeys={[20]=true},sort="rating",tankPresence="missing"}},filters={sort="rating"}}
 _G.LycheeGroupGroupDB={prefs={find=legacyFind}}
 G:Initialize()
 T.eq(type(G.prefs), "table", "搜索页面偏好由角色存档入口初始化")
@@ -273,18 +274,60 @@ do
  T.eq(first,A.charPrefs);T.eq(first,_G.LycheeGroupPrefsDB)
  T.same(first.find,legacyFind,"the first character inherits the complete saved filters")
  T.ok(first.find~=legacyFind);T.ok(first.find.categoryPrefs.seasonDungeon.groupKeys~=legacyFind.categoryPrefs.seasonDungeon.groupKeys)
- first.find.categoryPrefs.seasonDungeon.groupKeys[1]="dungeon-2"
+ first.find.categoryPrefs.seasonDungeon.groupKeys[20]=false
  first.find.categoryPrefs.seasonDungeon.sort="members"
  _G.LycheeGroupPrefsDB={};A.db=nil;G:Initialize()
  local second=G.prefs
- T.eq(second.find.categoryPrefs.seasonDungeon.groupKeys[1],"dungeon-1","another character inherits the untouched account seed")
+ T.eq(second.find.categoryPrefs.seasonDungeon.groupKeys[20],true,"another character inherits the untouched account seed")
  second.find.categoryPrefs.seasonDungeon.sort="itemLevel"
  _G.LycheeGroupPrefsDB=first;A.db=nil;G:Initialize()
  T.eq(G.prefs,first);T.eq(first.find.categoryPrefs.seasonDungeon.sort,"members","returning to a character never overwrites its filters")
- T.eq(first.find.categoryPrefs.seasonDungeon.groupKeys[1],"dungeon-2")
+ T.eq(first.find.categoryPrefs.seasonDungeon.groupKeys[20],false)
  T.eq(second.find.categoryPrefs.seasonDungeon.sort,"itemLevel")
  T.eq(legacyFind.categoryPrefs.seasonDungeon.sort,"rating")
  G.prefs.find={};G.db.prefs=nil
+end
+
+-- Real startup tolerates damaged saved presets and migrates only valid favorites.
+do
+ local db,ensure=G.db,A.Ensure
+ local merged={};local notes={Find=function(_,key) return merged[key] end,Merge=function(_,records) for _,r in ipairs(records) do merged[r.name.."-"..r.server]=r end end}
+ A.Ensure=function(self,name) if name=="Notes" then return notes end;return ensure(self,name) end
+ local good={activityID=502,favorite=true,requiredItemLevel=300}
+ local invalid={activityID=501,favorite=true,requiredItemLevel=math.huge,usedAt=0/0}
+ local invalidTime={activityID=501,favorite=true,usedAt=0/0}
+ local invalidOption={activityID=501,favorite=true,questID=math.huge}
+ local invalidActivity={activityID=math.huge,favorite=true}
+ local old={activityID=501,favorite=false}
+ local legacy={name="旧收藏",realm="晨风号角",note="保留说明",favAt=12}
+ local broken={name="坏收藏",note=false}
+ local saved={creationPresets={false,7,good,invalid,old,invalidTime,invalidOption,invalidActivity,invalidEntries=false},favorites={valid=legacy,broken=false,wrong=broken}}
+ _G.LycheeGroupGroupDB=saved
+ local ok,err=pcall(function() G:Initialize() end)
+ T.ok(ok,"damaged saved entries must not abort real Group initialization: "..tostring(err))
+ T.eq(G.Presets:Get(),saved.creationPresets);T.eq(#saved.creationPresets,1);T.eq(saved.creationPresets[1],good,"valid preset object retains its identity")
+ local recovered=saved.creationPresets.invalidEntries
+ T.eq(recovered.previous,false,"a pre-existing malformed recovery field is preserved too")
+ T.eq(#recovered,6);T.eq(recovered[1].value,false);T.eq(recovered[2].value,7);T.eq(recovered[3].value,invalid);T.eq(recovered[4].value,invalidTime);T.eq(recovered[5].value,invalidOption);T.eq(recovered[6].value,invalidActivity)
+ T.eq(saved.favorites.broken,false);T.eq(saved.favorites.wrong,broken);T.eq(saved.favorites.valid,nil)
+ T.eq(merged["旧收藏-晨风号角"].reason,"保留说明")
+ G:Initialize();T.eq(#recovered,6,"reload does not append the same damage again")
+ T.eq(G.Presets:ToggleFavorite({activityID=502,requiredItemLevel=300}),nil);T.eq(#saved.creationPresets,0)
+ T.ok(G.Presets:ToggleFavorite({activityID=503}));T.eq(#saved.creationPresets,1)
+ for _,value in ipairs({false,7}) do
+  _G.LycheeGroupGroupDB={creationPresets=value};G:Initialize()
+  T.eq(G.db.creationPresets.invalidContainer,value,"a malformed container remains recoverable verbatim")
+  G:Initialize();T.eq(G.db.creationPresets.invalidContainer,value)
+ end
+ _G.LycheeGroupGroupDB=db;A.Ensure=ensure;G:Initialize()
+end
+
+-- Reusing a callback creates a new subscription that an old disposer cannot remove.
+do
+ local calls=0;local callback=function() calls=calls+1 end
+ local old=G:Subscribe(callback);old();local current=G:Subscribe(callback);old()
+ G:Notify("roster");T.eq(calls,1)
+ current();G:Notify("roster");T.eq(calls,1)
 end
 
 local searchView, listingView = {}, {}
@@ -1448,6 +1491,21 @@ do
  G:InvalidateRoster()
 end
 
+-- Assigned roles change independently of specialization and roster membership.
+do
+ local view={};local player={name="本人",realm="晨风号角",class="WARRIOR",classID=1,guid="P-0",role="TANK"}
+ Stubs.SetUnit("player",player);G:Attach(view,"create")
+ T.eq(G:GetRoster()[1].assignedRole,"TANK")
+ local updates,role=0
+ local stop=G:Subscribe(function(kind) if kind=="roster" then updates=updates+1;role=G:GetRoster()[1].assignedRole end end)
+ T.eq(#Stubs.FramesWithEvent("PLAYER_ROLES_ASSIGNED"),1,"only the create view consumes assigned role events")
+ player.role="HEALER";Stubs.FireEvent("PLAYER_ROLES_ASSIGNED");Stubs.AdvanceClock(0)
+ T.eq(updates,1);T.eq(role,"HEALER","the real cached roster refreshes after role assignment")
+ stop();G:Detach(view)
+ T.eq(#Stubs.FramesWithEvent("PLAYER_ROLES_ASSIGNED"),0,"leaving the create view releases the role event")
+ Stubs.SetUnit("player",{name="本人",realm="晨风号角",class="WARRIOR",classID=1,guid="P-0"});G:InvalidateRoster()
+end
+
 -- A fresh teammate has no inspect cache: prefer LibSpecialization, then inspect.
 do
  local view={}
@@ -1555,6 +1613,59 @@ do
  Stubs.SetUnit("party1",nil);Stubs.SetUnit("party2",nil)
  GetAverageItemLevel,C_PaperDollInfo.GetInspectItemLevel,C_SpecializationInfo.GetInspectSpecialization,issecretvalue=average,inspectLevel,inspectSpec,secretCheck
  G:InvalidateRoster()
+end
+
+-- A hidden roster must release a departed member before Notes can reuse its
+-- cached specialization for the same player as an ordinary target.
+do
+ local notes=A.Notes;A.Notes={};Load.addon("LycheeGroup_Notes","PlayerInfo.lua")
+ local playerInfo=A.Notes.PlayerInfo
+ local view={};local guid="HIDDEN-FORMER-MEMBER"
+ local member={name="旧队友",realm="晨风号角",class="WARRIOR",classID=1,guid=guid}
+ local function sync(spec) for _,callback in pairs(specCallbacks) do callback(spec,"DAMAGER","MELEE","旧队友-晨风号角") end end
+ Stubs.SetUnit("party1",member);Stubs.SetInspectSpec("party1",71)
+ G:Attach(view,"create");G:GetRoster();Fire("INSPECT_READY",guid);sync(71);Stubs.AdvanceClock(0)
+ T.eq(G.Roster:GetCachedSpec(guid),71)
+ G:Detach(view);T.eq(G.Roster.active,false)
+ T.eq(G.Roster:GetCachedSpec(guid),71,"closing retains a still-current teammate's valid cache")
+ T.eq(#Stubs.FramesWithEvent("GROUP_ROSTER_UPDATE"),1,"the current remote cache keeps only its membership lifecycle subscribed")
+ T.eq(G.Roster.timer,nil);T.eq(G.Roster.refreshTimer,nil)
+ local inspectRequests=#Stubs.InspectRequests()
+ Stubs.SetUnit("party1",nil);Stubs.SetUnit("target",member);Stubs.SetInspectSpec("target",72)
+ local getRoster,rosterReads=G.Roster.Get,0
+ G.Roster.Get=function(self) rosterReads=rosterReads+1;return getRoster(self) end
+ Stubs.FireEvent("GROUP_ROSTER_UPDATE")
+ G.Roster.Get=getRoster
+ T.eq(rosterReads,0,"hidden membership cleanup does not rebuild member presentation or start inspections")
+ local _,snapshot=playerInfo.Snapshot("target")
+ T.eq(snapshot.specID,72,"Notes uses the target's current native spec after the hidden member has left")
+ T.eq(G.Roster:GetCachedSpec(guid),nil);T.eq(G.Roster.librarySpecs[guid],nil);T.eq(G.Roster.inspected[guid],nil)
+ for _,cached in ipairs(G.Roster.members) do T.ok(cached.guid~=guid,"hidden member bindings no longer retain the former teammate") end
+ T.eq(#Stubs.FramesWithEvent("GROUP_ROSTER_UPDATE"),0,"the final remote cache releases its roster event when solo")
+ sync(71);Fire("INSPECT_READY",guid)
+ T.eq(G.Roster:GetCachedSpec(guid),nil,"late library/inspect callbacks cannot recreate an unowned former-member cache")
+ T.eq(#Stubs.FramesWithEvent("GROUP_ROSTER_UPDATE"),0)
+ G:Attach(view,"create");T.eq(#G:GetRoster(),1,"reopening after departure reads the actual solo roster")
+ Stubs.SetUnit("party1",member);Stubs.SetInspectSpec("party1",72);Stubs.FireEvent("GROUP_ROSTER_UPDATE")
+ T.eq(G:GetRoster()[2].specID,72,"rejoining the same GUID does not reuse the previous group's library spec")
+ sync(72);T.eq(G.Roster:GetCachedSpec(guid),72,"new current-member broadcasts remain available")
+ local previousMap=S.activeMap;S.activeMap=502;Fire("CHALLENGE_MODE_START")
+ local historyMember
+ for _,record in ipairs(G:GetActiveRun().members) do if record.key=="旧队友-晨风号角" then historyMember=record end end
+ T.eq(historyMember.specID,72)
+ G:Detach(view);Stubs.SetUnit("party1",nil);Stubs.FireEvent("GROUP_ROSTER_UPDATE")
+ T.eq(G.Roster:GetCachedSpec(guid),nil)
+ T.eq(historyMember.specID,72,"retiring the current-member cache leaves the active run's historical member unchanged")
+ T.eq(#Stubs.FramesWithEvent("GROUP_ROSTER_UPDATE"),1,"a real active run retains its independent roster event ownership")
+ S.activeMap=previousMap;Fire("CHALLENGE_MODE_COMPLETED")
+ local completed=G:GetHistory()[1]
+ local savedHistoryMember
+ for _,record in ipairs(completed.members) do if record.key==historyMember.key then savedHistoryMember=record end end
+ T.eq(savedHistoryMember,historyMember);T.eq(savedHistoryMember.specID,72)
+ T.eq(#Stubs.FramesWithEvent("GROUP_ROSTER_UPDATE"),0,"completing the run releases the final independent owner")
+ table.remove(G.charDB.runs)
+ T.eq(#Stubs.InspectRequests(),inspectRequests,"cache retirement and Notes snapshots add no inspection requests")
+ Stubs.SetUnit("target",nil);A.Notes=notes
 end
 
 -- A raid's same-frame library messages publish one fresh, complete roster.
@@ -2455,6 +2566,7 @@ end
 
 -- Native applicant bursts update business state now and publish one display refresh.
 do
+ local inRaid=IsInRaid;IsInRaid=function() return true end
  local applicants,members=S.applicants,S.applicantMembers
  S.activeEntry={activityIDs={501},name="Burst listing"};S.applicants={};S.applicantMembers={}
  Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE",true)
@@ -2507,6 +2619,7 @@ do
  Stubs.AdvanceClock(0);T.eq(updates,before+1);T.eq(#G:GetApplicants(),0)
  unsubscribe();table.sort=sort
  S.activeEntry=nil;Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE",false)
+ IsInRaid=inRaid
  S.applicants,S.applicantMembers=applicants,members
 end
 
@@ -2623,6 +2736,37 @@ do
  T.eq(cancelled,2,"a new application round still publishes its cancellation")
  unsub();S.applications={};G.Applications:SyncAll()
  S.results[9901],S.players[9901],S.appStatus[9901],ACTIVITY[9901]=nil,nil,nil,nil
+end
+
+-- External/native submissions also reconcile the bounded terminal deduplication set.
+do
+ local retired
+ for index=1,20 do
+  local name,value=debug.getupvalue(G.Applications.SyncAll,index)
+  if name=="retired" then retired=value;break end
+ end
+ T.ok(retired,"the bounded terminal deduplication state is inspectable")
+ S.applications={};G.Applications:SyncAll()
+ local getInfo=C_LFGList.GetApplicationInfo
+ C_LFGList.GetApplicationInfo=function(id) if S.appStatus[id]~=nil then return getInfo(id) end end
+ local cancelled=0;local stop=G:Subscribe(function(kind) if kind=="applicationCancelled" then cancelled=cancelled+1 end end)
+ for index=1,120 do
+  local id=110000+index
+  S.applications={id};S.appStatus[id]="applied"
+  G.Applications:OnStatusUpdated(id,"applied","none")
+  S.appStatus[id]="cancelled";G.Applications:OnStatusUpdated(id,"cancelled","applied")
+  local count=0;for _ in pairs(retired) do count=count+1 end
+  T.eq(count,1,"native events prune retired IDs that are no longer in the native list")
+  T.eq(G.Applications:GetActiveCount(),0);T.eq(#G:GetApplications(),0)
+  S.applications={};S.appStatus[id]=nil
+ end
+ T.eq(cancelled,120)
+ G.Applications:OnStatusUpdated(110120,"none","cancelled")
+ T.eq(next(retired),nil,"the final native absence releases its deduplication marker")
+ G.Applications:OnStatusUpdated(110120,"cancelled","cancelled")
+ T.eq(cancelled,120,"a late event for a removed native application does not repeat cancellation")
+ T.eq(#G:GetApplications(),0)
+ stop();C_LFGList.GetApplicationInfo=getInfo
 end
 
 -- Reuse only a known identity at the same position; tooltip-held identities stay stable.
@@ -3138,6 +3282,89 @@ do
  G.Listing:Restore()
 end
 
+-- Manual invitations validate whole-party capacity and confirm party conversion.
+do
+ local active,applicants,members=S.activeEntry,S.applicants,S.applicantMembers
+ local groupCount,inRaid,invitedCount=GetNumGroupMembers,IsInRaid,C_LFGList.GetNumInvitedApplicantMembers
+ local convert,show,hide,dialogs=C_PartyInfo.ConfirmConvertToRaid,StaticPopup_Show,StaticPopup_Hide,StaticPopupDialogs
+ local warning,inviteLabel,cancelLabel=LFG_LIST_CONVERT_TO_RAID_WARNING,INVITE,CANCEL
+ LFG_LIST_CONVERT_TO_RAID_WARNING="Convert the party before inviting?";INVITE="Invite";CANCEL="Cancel"
+ local count,invited,raid,conversions=4,0,false,0
+ GetNumGroupMembers=function() return count end;IsInRaid=function() return raid end
+ C_LFGList.GetNumInvitedApplicantMembers=function() return invited end
+ C_PartyInfo.ConfirmConvertToRaid=function() conversions=conversions+1;raid=true end
+ StaticPopupDialogs={};local popup
+ StaticPopup_Show=function(which,_,__,data) popup={which=which,data=data};return popup end
+ StaticPopup_Hide=function(which) if popup and popup.which==which then local old=popup;popup=nil;StaticPopupDialogs[which].OnHide(old) end end
+ S.activeEntry=nil;S.applicants={};S.applicantMembers={};G.Listing:Restore();G.Applicants:Clear()
+ T.ok(G:Publish({activityID=501,isAutoAccept=false}))
+ local function Add(id,size)
+  S.applicants[id]={applicationStatus="applied",numMembers=size,displayOrderID=id};G.Applicants:OnApplicantUpdated(id)
+ end
+ Add(6501,2);Add(6502,1)
+ local before=#S.inviteCalls
+ local ok,err=G:Invite(6501)
+ T.eq(ok,nil,"manual conversion awaits explicit confirmation");T.eq(err,nil)
+ T.eq(#S.inviteCalls,before);T.eq(conversions,0,"opening confirmation cannot convert the party")
+ T.ok(popup);T.eq(StaticPopupDialogs[popup.which].text,LFG_LIST_CONVERT_TO_RAID_WARNING);T.eq(StaticPopupDialogs[popup.which].button1,INVITE)
+ T.eq(G:Invite(6501),false,"the same pending confirmation cannot be opened twice")
+ local pending=popup;StaticPopupDialogs[pending.which].OnCancel(pending,pending.data)
+ T.eq(G:GetApplicant(6501).acting,nil);T.eq(#S.inviteCalls,before)
+ G:Invite(6501);pending=popup;StaticPopup_Hide(pending.which)
+ T.eq(#S.inviteCalls,before,"hiding the popup cancels its request")
+ G:Invite(6501);pending=popup;S.applicants[6501].pendingApplicationStatus="invited"
+ StaticPopupDialogs[pending.which].OnAccept(pending,pending.data)
+ T.eq(conversions,0,"confirmation checks the newest native pending status even without an event")
+ S.applicants[6501].pendingApplicationStatus=nil
+ G:Invite(6501);pending=popup
+ Add(6503,2);G:Invite(6503);local replacement=popup
+ StaticPopupDialogs[pending.which].OnAccept(pending,pending.data)
+ T.eq(conversions,0,"replaced dialogs cannot submit their previous request")
+ StaticPopup_Hide(replacement.which)
+ G:Invite(6501);pending=popup;StaticPopupDialogs[pending.which].OnAccept(pending,pending.data)
+ T.eq(conversions,1);T.eq(S.inviteCalls[#S.inviteCalls],6501);T.eq(G:GetApplicant(6501).acting,"invite")
+ count=29;T.eq(G:Invite(6502),false,"local unconfirmed invites reserve capacity")
+ count=28;G:GetApplicant(6501).acting=nil;invited=2
+ T.eq(G:Invite(6502),false,"native pending invitations reserve capacity")
+ invited=0;count=40;T.eq(G:Invite(6502),false,"the home group cannot exceed forty members")
+ count=4;raid=false;G:Invite(6502);T.eq(S.inviteCalls[#S.inviteCalls],6502,"a fifth member does not require conversion")
+ G:GetApplicant(6502).acting=nil
+ G:Invite(6501);pending=popup;count=30
+ StaticPopupDialogs[pending.which].OnAccept(pending,pending.data)
+ T.eq(conversions,1,"confirmation rechecks capacity before converting")
+ count=4;G:Invite(6501);pending=popup
+ local permission=G.CanManageApplicants;G.CanManageApplicants=function() return false,G.L.applicantPermission end
+ StaticPopupDialogs[pending.which].OnAccept(pending,pending.data)
+ T.eq(conversions,1,"confirmation rechecks management rights")
+ G.CanManageApplicants=permission
+ G:Invite(6501);pending=popup;S.activeEntry.activityIDs={502}
+ StaticPopupDialogs[pending.which].OnAccept(pending,pending.data)
+ T.eq(conversions,1,"the newest native activity must match the listing snapshot")
+ S.activeEntry.activityIDs={501}
+ G:Invite(6501);pending=popup;G.Applicants:Clear();Add(6501,2)
+ StaticPopupDialogs[pending.which].OnAccept(pending,pending.data)
+ T.eq(conversions,1,"an old dialog cannot invite a reused applicant ID")
+ T.eq(popup,nil,"clear hides the owned confirmation")
+ G:RemoveListing();G.Listing:OnEntryUpdate();G.Applicants:Clear()
+ T.eq(G:Invite(6501),false,"manual invitation requires a live listing")
+ T.ok(G:Publish({activityID=502,isAutoAccept=false}));Add(6501,2)
+ T.eq(G:Invite(6501),false,"a five-player activity never converts to accommodate extra members")
+ T.eq(conversions,1)
+ S.activeEntry.activityIDs={999998};G.Listing:OnEntryUpdate()
+ T.eq(G:Invite(6501),false,"invalid native activity data cannot submit an invitation")
+ S.activeEntry.activityIDs={501};G.Listing:OnEntryUpdate();count=39;raid=true
+ local originalMaximum=G.Catalog:GetActivity(501).maxNumPlayers
+ G.Catalog:GetActivity(501).maxNumPlayers=50
+ T.eq(G:Invite(6501),false,"the absolute forty-player limit applies even when an activity reports a larger size")
+ G.Catalog:GetActivity(501).maxNumPlayers=originalMaximum
+ G:RemoveListing();G.Listing:OnEntryUpdate();G.Applicants:Clear()
+ S.activeEntry,S.applicants,S.applicantMembers=active,applicants,members
+ GetNumGroupMembers,IsInRaid,C_LFGList.GetNumInvitedApplicantMembers=groupCount,inRaid,invitedCount
+ C_PartyInfo.ConfirmConvertToRaid,StaticPopup_Show,StaticPopup_Hide,StaticPopupDialogs=convert,show,hide,dialogs
+ LFG_LIST_CONVERT_TO_RAID_WARNING,INVITE,CANCEL=warning,inviteLabel,cancelLabel
+ G.Listing:Restore();G.Applicants:Restore()
+end
+
 -- Auto invitation is a listing-owned option even when ordinary raids reject
 -- Blizzard's native autoAccept flag. Exercise update -> native events -> actions.
 do
@@ -3218,6 +3445,55 @@ do
  before=#S.inviteCalls;T.ok(G:Update({activityID=999,isAutoAccept=true}))
  T.eq(#S.inviteCalls,before+1,"a rated battleground never auto-invites a party beyond its tenth slot")
  T.eq(S.inviteCalls[#S.inviteCalls],6402,"the final single applicant still fits")
+ G:RemoveListing();Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE",false)
+ -- A full listing with a hundred applicants reads capacity once and never
+ -- queries or submits every applicant simply because the option is enabled.
+ S.applicants={};count=30;invited=0;raid=true
+ T.ok(G:Publish({activityID=501,isAutoAccept=false}))
+ for id=6601,6700 do Add(id,1) end
+ Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE",true)
+ G.prefs.listingAutoInvite=true;G.Listing:Restore()
+ local nativeEntry,nativeInvited,nativeInvite=C_LFGList.GetActiveEntryInfo,C_LFGList.GetNumInvitedApplicantMembers,C_LFGList.InviteApplicant
+ local entryReads,invitedReads=0,0
+ C_LFGList.GetActiveEntryInfo=function() entryReads=entryReads+1;return nativeEntry() end
+ C_LFGList.GetNumInvitedApplicantMembers=function() invitedReads=invitedReads+1;return nativeInvited() end
+ local infoReads=S.applicantInfoReads;before=#S.inviteCalls
+ G.Applicants:TryAutoInvite()
+ T.eq(#S.inviteCalls,before);T.eq(S.applicantInfoReads,infoReads,"a full group does not re-read a hundred applicant packets")
+ T.eq(entryReads,1);T.eq(invitedReads,1,"one native capacity read suffices for the whole full batch")
+ count=27;S.applicants[6601].numMembers=2 -- latest native size differs from the cached row
+ entryReads,invitedReads=0,0;G.Applicants:TryAutoInvite()
+ T.eq(#S.inviteCalls,before+2);T.eq(S.inviteCalls[before+1],6601);T.eq(S.inviteCalls[before+2],6602)
+ T.eq(S.applicantInfoReads,infoReads+2,"only the two parties fitting the remaining three slots need action reads")
+ T.eq(entryReads,1);T.eq(invitedReads,1,"successful actions update the same batch capacity without repeated native scans")
+ -- Reentrant native events can revoke permission between two submissions.
+ for _,record in pairs(S.applicants) do record.applicationStatus="applied" end
+ G.Applicants:Clear();G.prefs.listingAutoInvite=false;G.Listing:Restore();G.Applicants:RefreshList()
+ local permission=G.CanManageListing;local canManage=true
+ G.CanManageListing=function(self) if not canManage then return false end;return permission(self) end
+ C_LFGList.InviteApplicant=function(id) nativeInvite(id);canManage=false;Fire("GROUP_ROSTER_UPDATE") end
+ count=20;G.prefs.listingAutoInvite=true;G.Listing:Restore();before=#S.inviteCalls
+ G.Applicants:TryAutoInvite();T.eq(#S.inviteCalls,before+1,"a synchronous permission change stops the remaining batch")
+ G.CanManageListing=permission;C_LFGList.InviteApplicant=nativeInvite
+ -- A synchronous native pending count replaces local reservations through the
+ -- existing applicant event before the next candidate is considered.
+ G.Applicants:Clear();G.prefs.listingAutoInvite=false;G.Listing:Restore();G.Applicants:RefreshList()
+ count=27;invited=0
+ C_LFGList.InviteApplicant=function(id)
+  nativeInvite(id);S.applicants[id].applicationStatus="invited";invited=invited+S.applicants[id].numMembers;Fire("LFG_LIST_APPLICANT_UPDATED",id)
+ end
+ G.prefs.listingAutoInvite=true;G.Listing:Restore();before=#S.inviteCalls
+ G.Applicants:TryAutoInvite();T.eq(#S.inviteCalls,before+2,"synchronous applicant acknowledgements rebuild capacity without double-counting the invite")
+ T.eq(invited,3)
+ for _,record in pairs(S.applicants) do record.applicationStatus="applied" end
+ G.Applicants:Clear();G.prefs.listingAutoInvite=false;G.Listing:Restore();G.Applicants:RefreshList()
+ count=20;invited=0
+ C_LFGList.InviteApplicant=function(id)
+  nativeInvite(id);S.activeEntry.activityIDs={502};Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE",false)
+ end
+ G.prefs.listingAutoInvite=true;G.Listing:Restore();before=#S.inviteCalls
+ G.Applicants:TryAutoInvite();T.eq(#S.inviteCalls,before+1,"a synchronous activity change discards the former raid capacity")
+ C_LFGList.GetActiveEntryInfo,C_LFGList.GetNumInvitedApplicantMembers,C_LFGList.InviteApplicant=nativeEntry,nativeInvited,nativeInvite
  G:RemoveListing();Fire("LFG_LIST_ACTIVE_ENTRY_UPDATE",false)
  S.activeEntry,S.applicants,S.applicantMembers=active,applicants,members
  _G.GetNumGroupMembers,_G.IsInRaid=groupCount,inRaid

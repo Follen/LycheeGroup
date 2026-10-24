@@ -101,7 +101,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
   local _,titleY=Position(row.title,row);local _,reasonY=Position(row.reason,row)
   Check(not row.meta:IsShown() and row.meta:GetText()=="" and reasonY>=titleY+row.title:GetHeight()+8,"reused and newly created rows keep the same two-line layout")
  end end
- P:SelectTab("history");P:OpenRun(1)
+ P:SelectTab("history");P:OpenRun(P.historyList.ids[1])
  local member=P.historyModal.list.rows[1]
  local _,titleY=Position(member.title,member);local _,metaY=Position(member.meta,member);local _,iconY=Position(member.icon,member)
  Near((titleY+metaY+member.meta:GetHeight())/2,iconY+member.icon:GetHeight()/2,"history member identity remains centered as a pair")

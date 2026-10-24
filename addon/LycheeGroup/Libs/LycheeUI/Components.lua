@@ -646,6 +646,14 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover,options)
  list.clip,list.canvas=clip,canvas
  local slider=C.ScrollBar(list);slider:SetPoint("TOPRIGHT",0,-2);slider:SetPoint("BOTTOMRIGHT",0,2)
  list.slider=slider
+ function list:GetElementKey(key,index)
+  if key==nil then return nil end
+  if self.rowElementKey then
+   if not index then for position,value in ipairs(self.ids or {}) do if value==key then index=position;break end end end
+   return self.rowElementKey(key,index)
+  end
+  return key
+ end
  local function Variable() return list.rowHeightResolver~=nil or list.elementHeights==true end
  local function RowTop(index) return list.geometryOffsets and list.geometryOffsets[index] or (index-1)*list.rowHeight end
  local function FindRow(pixel)
@@ -673,7 +681,7 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover,options)
   for index=1,count do
    local key=list.ids[index];local height=list.bodyHeight
    if list.rowHeightResolver then height=list.rowHeightResolver(key,index,height) or height end
-   if list.elementHeights then height=UI:ResolveListElementHeight(list,key,height,rows[key]) end
+   if list.elementHeights then height=UI:ResolveListElementHeight(list,key,height,rows[key],index) end
    if type(height)~="number" or height<0 or height~=height or height==math.huge then error("list row height must be finite and nonnegative",2) end
    offsets[index]=top
    if height>0 then visible=visible+1;indices[visible]=index;top=top+height+gap end
@@ -682,11 +690,14 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover,options)
   for index=#indices,visible+1,-1 do indices[index]=nil end
   list.contentHeight=visible>0 and top-gap or 0;list.geometryGap=gap;list.geometryStride,list.geometryBody=list.rowHeight,list.bodyHeight;list.geometryDirty=false
  end
- local function MaxOffset()
+ local function ContentHeight()
   BuildGeometry()
   local count=list.ids and #list.ids or 0
-  local contentHeight=list.geometryOffsets and list.contentHeight or (count>0 and (count-1)*list.rowHeight+list.rows[1]:GetHeight() or 0)
-  local overflow=contentHeight-list:GetHeight()
+  return list.geometryOffsets and list.contentHeight or (count>0 and (count-1)*list.rowHeight+list.rows[1]:GetHeight() or 0)
+ end
+ function list:GetContentHeight() return ContentHeight() end
+ local function MaxOffset()
+  local overflow=ContentHeight()-list:GetHeight()
   return overflow>.01 and overflow or 0
  end
  function list:RefreshGeometry()
@@ -703,6 +714,7 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover,options)
  local function Release(row)
   if C.RekeyElement then C.RekeyElement(row,nil) end
   if row.pressedKey then row.pressCancelled=true end
+  row._lycheeListIndex=nil
   row.key=nil;row.noteDot:Hide();row.alternate:Hide();row.hover:Hide();row.hover:SetAlpha(0)
   row._inside=nil;row._pressed=nil
   M:Stop(row.selected);M:Stop(row.mark);M:Stop(row.hover)
@@ -773,6 +785,13 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover,options)
    local key=ids and i<=visible and ids[absolute] or nil
    local rebound=row.key~=key
    if rebound then Release(row);row.key=key;if UI.CloseMenuFor then UI:CloseMenuFor(self) end end
+   if self.rowElementKey then row._lycheeListIndex=key~=nil and absolute or nil end
+   if key and self.elementHeights and self.rowElementState then
+    local checked=self.rowElementState(key,absolute,"checked")
+    if checked~=nil then row._checked=checked==true end
+    local disabled=self.rowElementState(key,absolute,"disabled")
+    if disabled~=nil then local enabled=disabled~=true;if row:IsEnabled()~=enabled then row:SetEnabled(enabled) end end
+   end
    row.alternate:SetShown(key~=nil and self.alternateRows~=false and absolute%2==0)
    if row:IsShown()~=(key~=nil) then row:SetShown(key~=nil) end
    if key and self.geometryOffsets then
@@ -785,7 +804,7 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover,options)
    end
    if key and self.render then
     if rebound or not positionOnly then
-     if list.elementTemplate then if not row._lycheeElementRegistered then C.Element(row,list.elementTemplate,{template=list.elementTemplate,key=key,scope=list.elementScope,slots=list.elementRowSlots or row});row._lycheeElementRegistered=true else C.RekeyElement(row,key,list.elementTemplate) end end
+     if list.elementTemplate then local elementKey=list:GetElementKey(key,absolute);if not row._lycheeElementRegistered then C.Element(row,list.elementTemplate,{template=list.elementTemplate,key=elementKey,scope=list.elementScope,slots=list.elementRowSlots or row});row._lycheeElementRegistered=true else C.RekeyElement(row,elementKey,list.elementTemplate) end end
      self.render(row,key);if C.ApplyElement then C.ApplyElement(row) end
     end
     local selected=key==self.selectedKey
@@ -818,6 +837,10 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover,options)
   end
   self.refreshing=nil
   if self.geometryDirty then self:Refresh(true) end
+  if Variable() and options and options.onGeometryChanged then
+   local height=ContentHeight()
+   if self.notifiedContentHeight~=height then self.notifiedContentHeight=height;options.onGeometryChanged(self,height) end
+  end
  end
  local scrollFrom,scrollElapsed=0,0
  local function ScrollStep(dt)
@@ -951,7 +974,7 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover,options)
   row:SetScript("OnHide",function(self) self._inside=nil;self._pressed=nil;M:Stop(self.hover);self.hover:Hide();if self.pressedKey then self.pressCancelled=true end end)
   if options and options.initializeRow then options.initializeRow(row) end
   C.Style(row,{recipe=options and options.recipe or "listRow",legacy=true,trackNative=true,slots={root=row,label=row.title,meta=row.meta,surface=row.alternate,hover=row.hover,selected=row.selected,mark=row.mark,icon=row.icon,check=row.check}})
-  if list.elementTemplate and C.Element then C.Element(row,list.elementTemplate,{template=list.elementTemplate,key=row.key,scope=list.elementScope,slots=list.elementRowSlots or row});row._lycheeElementRegistered=true end
+  if list.elementTemplate and C.Element then C.Element(row,list.elementTemplate,{template=list.elementTemplate,key=list:GetElementKey(row.key,row._lycheeListIndex),scope=list.elementScope,slots=list.elementRowSlots or row});row._lycheeElementRegistered=true end
   list.rows[i]=row
   if list.rowStyle then ApplyRowStyle(row,list.rowStyle) end
  end

@@ -361,6 +361,14 @@ T.eq(failure,"Decline failed","immediate action failures are reported")
 T.eq(#F.entries,2);T.eq(actionRow.decline:IsEnabled(),true,"a failed call restores the available action")
 T.eq(actionRow.exit,nil,"failed calls do not leave an exit state")
 T.ok(F.attention and F.attentionTimer,"the operable applicant keeps its independent logo reminder after a failed action")
+local inviteBeforeConfirm=G.Invite;local printed=0
+G.Invite=function() return nil,nil end
+A.Print=function() printed=printed+1 end
+actionRow.invite:Fire("OnClick")
+T.eq(printed,0,"opening a conversion confirmation is not reported as an action error")
+T.eq(actionRow.exit,nil,"an unconfirmed invitation keeps the applicant visible")
+T.eq(#F.entries,2);T.eq(actionRow.invite:IsEnabled(),true)
+G.Invite=inviteBeforeConfirm
 A.Print=printMessage;G.failDecline=nil
 actionRow.decline:Fire("OnClick");T.eq(G.declined,77,"decline also submits in the click callback");F:Tick(.15);T.eq(F.panel:IsShown(),true);T.eq(#F.entries,0)
 applicant.acting=nil;callback("applicants");F:ShowPanel();F:SetOffset(0,false)
@@ -729,6 +737,22 @@ do
  T.eq(released,2);T.eq(F.frame:IsShown(),false);T.eq(base.PendingTimers(),0)
  local previous=notifications;unsubscribe()
  A:SetSetting("floating",true);T.eq(notifications,previous,"unsubscribe stops later availability notifications")
+ local resubscribeCalls=0
+ local function Resubscribed() resubscribeCalls=resubscribeCalls+1 end
+ local baseline=F.backgroundStatusSubscribers or 0
+ local oldStop=API:Subscribe(Resubscribed,{background=true})
+ T.eq(F.backgroundStatusSubscribers,baseline+1)
+ oldStop();T.eq(F.backgroundStatusSubscribers,baseline)
+ local newStop=API:Subscribe(Resubscribed,{background=true})
+ oldStop();oldStop()
+ T.eq(F.backgroundStatusSubscribers,baseline+1,"a retired cancellation cannot remove a later background subscription")
+ local beforeResubscribe=resubscribeCalls
+ A:SetSetting("floatingCompatibility",false)
+ T.eq(resubscribeCalls,beforeResubscribe+1,"the new subscription still receives status changes")
+ local newestStop=API:Subscribe(Resubscribed,{background=true})
+ newStop();T.eq(F.backgroundStatusSubscribers,baseline+1,"re-registering the same callback replaces its cancellation handle")
+ newestStop();newestStop();T.eq(F.backgroundStatusSubscribers,baseline,"repeated cancellation removes exactly one background demand")
+ A:SetSetting("floatingCompatibility",true)
  -- Public callbacks may re-enter Attach or fail. Keep external failures at
  -- the API boundary so the remaining notifications and cleanup still run.
  local errors={};local oldErrorHandler=geterrorhandler
@@ -762,11 +786,81 @@ do
  T.eq(reason,"occupied");T.eq(F.host,host2)
  T.eq(API:Detach(ownerB),true)
 
+ -- A release callback can also remount its own owner. The outer host change
+ -- must not overwrite the newer mount or replace its cleanup callback.
+ local host3=CreateFrame("Button",nil,UIParent);host3:SetSize(120,24)
+ local label2=host2:CreateFontString(nil,"OVERLAY")
+ local nestedReleased,outerReleased,initialReleased=0,0,0
+ local function NestedRelease() nestedReleased=nestedReleased+1 end
+ local function OuterRelease() outerReleased=outerReleased+1 end
+ local function RemountSameOwner(target)
+  return function()
+   initialReleased=initialReleased+1
+   T.eq(API:Attach(owner,target,28,label,NestedRelease),true)
+  end
+ end
+ T.eq(API:Attach(owner,host,24,label,RemountSameOwner(host3)),true)
+ ok,reason=API:Attach(owner,host2,24,label,OuterRelease)
+ T.eq(ok,false,"a newer mount by the same owner keeps its host")
+ T.eq(reason,"occupied");T.eq(F.host,host3)
+ T.eq(initialReleased,1);T.eq(nestedReleased,0);T.eq(outerReleased,0)
+ T.eq(API:Refresh(owner,30),true);T.eq(F.host,host3)
+ T.eq(API:Detach(owner),true);T.eq(nestedReleased,1)
+ T.eq(API:Detach(owner),false);T.eq(nestedReleased,1,"the nested release runs exactly once")
+ T.eq(outerReleased,0,"a rejected outer mount never owns a release callback")
+
+ T.eq(API:Attach(owner,host,24,label,RemountSameOwner(host2)),true)
+ ok,reason=API:Attach(owner,host2,24,label,OuterRelease)
+ T.eq(ok,true,"a release callback that already mounted the requested target satisfies Attach")
+ T.eq(reason,nil);T.eq(F.host,host2)
+ T.eq(F.logoAnchor:GetWidth(),24,"an already satisfied attach still applies the requested logo size")
+ T.eq(API:Detach(owner),true);T.eq(nestedReleased,2)
+ T.eq(outerReleased,0,"an already satisfied outer attach retains the nested release callback")
+
+ T.eq(API:Attach(owner,host,24,label,function()
+  API:Attach(owner,host2,28,label2,NestedRelease)
+ end),true)
+ ok,reason=API:Attach(owner,host2,24,label,OuterRelease)
+ T.eq(ok,false,"a newer label on the requested host remains a different mount")
+ T.eq(reason,"occupied");T.eq(F.host,host2);T.eq(F.count,label2)
+ T.eq(API:Detach(owner),true);T.eq(nestedReleased,3)
+
+ T.eq(API:Attach(owner,host,24,label,function()
+  T.eq(API:Attach(owner,host3,28,label,NestedRelease),true)
+  T.eq(API:Detach(owner),true)
+ end),true)
+ T.eq(API:Attach(owner,host2,24,label,OuterRelease),true,"a nested mount that was released leaves the slot available")
+ T.eq(F.host,host2);T.eq(nestedReleased,4)
+ T.eq(API:Detach(owner),true);T.eq(outerReleased,1)
+
+ local normalReleased=0
+ local function NormalRelease() normalReleased=normalReleased+1 end
+ T.eq(API:Attach(owner,host,24,label,NormalRelease),true)
+ T.eq(API:Attach(owner,host,28,label,NormalRelease),true,"same-target Attach remains idempotent")
+ T.eq(normalReleased,0);T.eq(F.host,host)
+ T.eq(API:Attach(owner,host2,24,label,NormalRelease),true,"a normal host change still succeeds")
+ T.eq(normalReleased,1);T.eq(F.host,host2)
+ T.eq(API:Attach(owner,host2,24,label2,NormalRelease),true,"a normal label change still succeeds")
+ T.eq(normalReleased,2);T.eq(F.count,label2)
+ T.eq(API:Detach(owner),true);T.eq(normalReleased,3)
+
  releaseMode="disable"
  T.eq(API:Attach(owner,host,24,label,ReentrantRelease),true)
  ok,reason=API:Attach(owner,host2,24,label,function() end)
  T.eq(ok,false,"a release callback that disables compatibility blocks the outer attach")
  T.eq(reason,"unavailable");T.eq(F.host,nil)
+ A:SetSetting("floatingCompatibility",true)
+
+ local disabledReleased,disabledAttached,disabledReason=0
+ T.eq(API:Attach(owner,host,24,label,function()
+  disabledReleased=disabledReleased+1
+  disabledAttached,disabledReason=API:Attach(owner,host3,24,label,NestedRelease)
+ end),true)
+ A:SetSetting("floatingCompatibility",false)
+ T.eq(disabledReleased,1);T.eq(F.host,nil)
+ T.eq(disabledAttached,false,"a release callback cannot remount while compatibility is disabled")
+ T.eq(disabledReason,"unavailable")
+ T.eq(API:Detach(owner),false,"the failed disabled remount leaves no owner")
  A:SetSetting("floatingCompatibility",true)
 
  releaseMode="error"
@@ -1089,4 +1183,92 @@ do
  end
  floating:Dismiss();a:SetSetting("floating",false)
 end
+-- Clearing a pooled floating action keeps its earlier press cancelled on reuse.
+do
+ local function Session(recruiting)
+  local f=dofile("tests/ui_fixture.lua")("enUS",nil,{reduceMotion=true})
+  local a,g=f.A,f.G
+  local function Applicant(id) return {id=id,status="applied",displayOrderID=id,members={{name="Member"..id.."-Away",nameKey="Member"..id.."-Away",class="MAGE",assignedRole="DAMAGER",itemLevel=320,dungeonScore=2500}}} end
+  local function Application(id) return {id=id,status="applied",name="Group "..id,activityName="Dungeon",activityID=2,leaderName="Leader-Away"} end
+  if recruiting then g.listing={activityID=2,name="Current listing"};g.applicants={[1]=Applicant(1),[2]=Applicant(2)}
+  else g.apps={Application(1),Application(2)} end
+  dofile("addon/LycheeGroup/Floating.lua");dofile("addon/LycheeGroup/API.lua")
+  local floating=a.Floating;floating:Bind(g);floating:UpdateSettings();floating:ShowPanel()
+  return f,floating,Applicant,Application
+ end
+ local function Row(floating,id,kind)
+  for _,row in ipairs(floating.rows) do if row:IsShown() and row.kind==kind and (row.applicantID or row.applicationID)==id then return row end end
+  error("missing floating row "..id.."/"..kind)
+ end
+ for _,method in ipairs({"invite","decline"}) do
+  local f,floating,Applicant=Session(true);local g=f.G
+  local footer=Row(floating,2,"footer");local button=footer[method]
+  button:Fire("OnMouseDown","LeftButton")
+  g.applicants[2]=nil;g:Notify("applicants")
+  g.applicants[3]=Applicant(3);g:Notify("applicants")
+  T.eq(footer.applicantID,3,"the cleared native footer is reused for the next applicant")
+  button:Fire("OnMouseUp","LeftButton");button:Fire("OnClick","LeftButton")
+  T.eq(g.invitedApplicant,nil);T.eq(g.declinedApplicant,nil,"release after reuse cannot decide the new applicant")
+  button:Fire("OnClick","LeftButton")
+  T.eq(method=="invite" and g.invitedApplicant or g.declinedApplicant,3,"direct activation still decides the current applicant")
+  T.eq(footer.exit,nil,"reduced motion completes the synchronous decision exit")
+  floating:Dismiss();f.A:SetSetting("floating",false)
+ end
+ for _,action in ipairs({"cancel","row"}) do
+  local f,floating,_,Application=Session(false);local g=f.G
+  local row=Row(floating,2,"application");local button=action=="row" and row or row.cancel
+  local opened;f.A.Open=function(_,page,context) opened={page,context} end
+  button:Fire("OnMouseDown","LeftButton")
+  table.remove(g.apps,2);g:Notify("applications")
+  g.apps[2]=Application(3);g:Notify("applications")
+  T.eq(row.applicationID,3)
+  button:Fire("OnMouseUp","LeftButton");button:Fire("OnClick","LeftButton")
+  T.eq(g.cancelled,nil);T.eq(opened,nil,"release after reuse cannot open the new application")
+  button:Fire("OnMouseDown","LeftButton");button:Fire("OnMouseUp","LeftButton");button:Fire("OnClick","LeftButton")
+  if action=="cancel" then T.eq(g.cancelled,3,"a new press cancels the current application")
+  else T.eq(opened[1],"find");T.eq(opened[2].applicationID,3,"a new press opens the current application") end
+  floating:Dismiss();f.A:SetSetting("floating",false)
+ end
+ for _,kind in ipairs({"member","batch"}) do
+  local f,floating,Applicant=Session(true);local g=f.G
+  local row=Row(floating,2,"member");local button=kind=="batch" and row.batch or row
+  local opened;f.A.Open=function(_,page,context) opened={page,context} end
+  button:Fire("OnMouseDown","LeftButton")
+  g.applicants[2]=nil;g:Notify("applicants")
+  g.applicants[3]=Applicant(3);g:Notify("applicants")
+  T.eq(button.applicantID,3)
+  button:Fire("OnMouseUp","LeftButton");button:Fire("OnClick","LeftButton")
+  T.eq(opened,nil,"release after reuse cannot open the new applicant through "..kind)
+  button:Fire("OnClick","LeftButton");T.eq(opened[1],"create");T.eq(opened[2].applicantID,3)
+  floating:Dismiss();f.A:SetSetting("floating",false)
+ end
+ for _,action in ipairs({"invite","decline","cancel","row","member","batch","header"}) do
+  local recruiting=action=="invite" or action=="decline" or action=="member" or action=="batch"
+  local f,floating=Session(recruiting);local g=f.G
+  local row=Row(floating,2,recruiting and (action=="member" or action=="batch") and "member" or recruiting and "footer" or "application")
+  local button=action=="header" and floating.cancel or action=="batch" and row.batch or (action=="row" or action=="member") and row or row[action]
+  local opened;f.A.Open=function(_,page,context) opened={page,context} end
+  button:Fire("OnMouseDown","LeftButton");floating:Dismiss();floating:ShowPanel()
+  button:Fire("OnMouseUp","LeftButton");button:Fire("OnClick","LeftButton")
+  T.eq(g.invitedApplicant,nil);T.eq(g.declinedApplicant,nil);T.eq(g.cancelled,nil);T.eq(opened,nil,"hiding cancels the old "..action.." press even when the same target returns")
+  button:Fire("OnMouseDown","LeftButton");g:Notify(recruiting and "applicants" or "applications")
+  button:Fire("OnMouseUp","LeftButton");button:Fire("OnClick","LeftButton")
+  if action=="invite" then T.eq(g.invitedApplicant,2)
+  elseif action=="decline" then T.eq(g.declinedApplicant,2)
+  elseif action=="cancel" or action=="header" then T.eq(g.cancelled,2)
+  elseif recruiting then T.eq(opened[1],"create");T.eq(opened[2].applicantID,2)
+  else T.eq(opened[1],"find");T.eq(opened[2].applicationID,2) end
+  floating:Dismiss();f.A:SetSetting("floating",false)
+ end
+ do
+  local f,floating=Session(false);local g=f.G
+  floating.cancel:Fire("OnMouseDown","LeftButton")
+  g.listing={activityID=2,name="New recruitment"};g:Notify("listing")
+  floating.cancel:Fire("OnMouseUp","LeftButton");floating.cancel:Fire("OnClick","LeftButton")
+  T.ok(g.listing,"a Cancel all press cannot become an End listing action after a mode change")
+  floating.cancel:Fire("OnClick","LeftButton");T.eq(g.listing,nil,"direct activation still ends the current listing")
+  floating:Dismiss();f.A:SetSetting("floating",false)
+ end
+end
+
 _G.LycheeGroup=nil;_G.LycheeGroupDB=nil

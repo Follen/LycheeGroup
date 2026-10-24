@@ -2,7 +2,7 @@
 
 更新日期：2026-10-24。
 
-状态：当前发布版本为 1.2.4；本版采用启动时固定主题。主题启动固定、实时偏好和业务状态分别管理，架构改造以 main 提交 `5ce215182c15b59e44c573db9a1a6488536bb8bd` 为默认界面等价基线；此后用户指定的布局和交互调整按产品、设计文档维护。验证方法见 [tests/theme_reload.md](tests/theme_reload.md)，开发规范见 [Development.md](Development.md)；本次及历史验证集中记录在 [perfermance.md 第 12 节](perfermance.md#12-当前内存测试与验证状态)。
+状态：当前发布版本为 1.2.5；本版采用启动时固定主题。主题启动固定、实时偏好和业务状态分别管理，架构改造以 main 提交 `5ce215182c15b59e44c573db9a1a6488536bb8bd` 为默认界面等价基线；此后用户指定的布局和交互调整按产品、设计文档维护。验证方法见 [tests/theme_reload.md](tests/theme_reload.md)，开发规范见 [Development.md](Development.md)；本次及历史验证集中记录在 [perfermance.md 第 12 节](perfermance.md#12-当前内存测试与验证状态)。
 
 产品范围见 [Product.md](Product.md)，视觉与动画轨迹见 [Desgin.md](Desgin.md)，资源额度与测量方法见 [perfermance.md](perfermance.md)。历史 `.lycheedev/` 链接指向未随仓库分发的本地调查记录。
 
@@ -16,19 +16,21 @@ Group 包内置 LibSpecialization minor 28 和 LibStub，加载顺序为 LibStub
 
 Host 通过 `Context:SetWindow(frame)` 接入主窗口并捕获动画终点锚点。主窗口的通用拖动由 `LycheeUI.C.Draggable` 管理，应用仅登记外壳、品牌及具有 hover 的被动背景区域；子级交互控件自行接收输入。拖动结束将当前锚点交给同一 Context 的 Motion，开关动画沿该锚点运行，位置只保留于当前会话。Logo 纹理与播放控制由产品持有，不登记到共享 Context。
 
-多列表格复用 `LycheeUI.C.TableHeader`：组件持有表头、边界、拖动状态和排序字段，当前排序标题提亮、不显示箭头，页面通过 `onLayout` 更新行几何、通过 `onSort` 重排展示键。右键分隔线调用 `ResetWidths` 清除该表比例并重新布局，不修改排序。`UI:GetTablePrefs` 从 Appearance 的有效配置缓存取得每表的列宽比例与排序字段／方向；用户拖动和点击由组件偏好回调提交角色用户层，程序重排不保存用户覆盖。Preview 使用自身 provider.prefs。Find 的团本和其他活动使用各自布局，结果与申请表均显式包含 `activity` 列；Appearance 读取旧列宽时，将仅有 `title` 的保存比例按 45%／55% 分给 `title`／`activity`，保留其他列与排序，下一次用户拖动再保存新比例。Create 根据活动切换可见列。Host 在关窗、导航、字体切换和打开模态窗口时取消未完成拖动。结果、历史和笔记服务仍持有原始数据；页面不重排服务数组。结果服务与 Find 表头排序共用同一关系口径：已归一化的战网好友、角色好友及公会聚合计数。Find 在产品层接入活动表头三态点击，并按当前分类的 `Catalog:GetGroups` 顺序派生活动 ID 到副本序号的映射；只在活动排序时建立或按目录引用变化重建，离页清空，复杂度与复用约束见性能文档。`Results:GetProgressCount` 只读取并缓存当前结果的击败数量，结果失效时一并清除，详情读取也回填同一数值。
+多列表格复用 `LycheeUI.C.TableHeader`：组件持有表头、边界、拖动状态和排序字段，当前排序标题提亮、不显示箭头，页面通过 `onLayout` 更新行几何、通过 `onSort` 重排展示键。右键分隔线调用 `ResetWidths` 清除该表比例并重新布局，不修改排序。`UI:GetTablePrefs` 从 Appearance 的有效配置缓存取得每表的列宽比例与排序字段／方向；用户拖动和点击由组件偏好回调提交角色用户层，程序重排不保存用户覆盖。Preview 使用自身 provider.prefs。Find 的团本和其他活动使用各自布局，结果与申请表均显式包含 `activity` 列；Appearance 仅在首次导入尚未规范化的角色旧列宽时，将仅有 `title` 的组合比例按 45%／55% 分给 `title`／`activity`，保留其他列与排序。已有规范用户值和偏好包均按单列语义使用，不从来源类型猜测旧组合宽度；1.2.4 已导入且无法区分来源的值也以规范保存值为准。后续 API 单键写入及兼容镜像不重新触发拆分。Create 根据活动切换可见列。Host 在关窗、导航、字体切换和打开模态窗口时取消未完成拖动。结果、历史和笔记服务仍持有原始数据；页面不重排服务数组。结果服务与 Find 表头排序共用同一关系口径：已归一化的战网好友、角色好友及公会聚合计数。Find 在产品层接入活动表头三态点击，并按当前分类的 `Catalog:GetGroups` 顺序派生活动 ID 到副本序号的映射；只在活动排序时建立或按目录引用变化重建，离页清空，复杂度与复用约束见性能文档。`Results:GetProgressCount` 只读取并缓存当前结果的击败数量，结果失效时一并清除，详情读取也回填同一数值。
 
 主包保存启动所需的小配置、明确入口、加载关系及跨包共用的静态展示规则。组队业务、玩家记录和界面使用真实 AddOn 按需加载；不把整套代码放在主包后只延迟创建窗口。后台记录提醒无需加载界面，单独打开笔记无需加载组队业务。
 
 每项业务只有一个状态所有者。游戏事件推动相关变化，可见页面订阅所需字段，后台功能只保留真实业务需要的数据和事件。组队与笔记通过玩家身份直接联系，不互相 hook 控件，不将理由复制到各条队伍记录。
 
-主包 [Presentation.lua](addon/LycheeGroup/Presentation.lua) 在 Core 后定义 `A.GroupPresentation`，通过 Activity／Result／Member 纯函数为 Find、Create、Tooltip 和 Floating 提供活动与来源视图规则：名单模式、进度或评分、评分要求、成员详情入口与菜单类型，以及申请者评分和大秘境记录的显示范围。它不持有业务状态、缓存或事件，也不读取原生数据；listing、applications、applicants 和 roster 仍由 Group 服务持有。笔记使用来源规则时不必加载 Group。
+主包 [Presentation.lua](addon/LycheeGroup/Presentation.lua) 在 Core 后定义 `A.GroupPresentation`，通过 Activity／Result／Member 纯函数为 Find、Create、Tooltip 和 Floating 提供活动与来源视图规则：名单模式、进度或评分、评分要求、成员详情入口，以及申请者评分和大秘境记录的显示范围。它不持有业务状态、缓存或事件，也不读取原生数据；listing、applications、applicants 和 roster 仍由 Group 服务持有。这些静态规则不要求 Group 已加载。
 
 主包 [ActivityLabels.lua](addon/LycheeGroup/ActivityLabels.lua) 独立维护原生活动与难度名称的显示别名，`A.ActivityLabels.Display` 由 Find、Create、Tooltip 和 Floating 共用。它只接收公开字符串并返回展示文字，不修改 Catalog、Results、原生搜索条件或玩家文本，也不持有事件、缓存和游戏 API。映射属于产品，LycheeUI 只接收处理后的文字。
 
 模块直接调用具名接口，不预建通用插件平台、全局广播总线、万能任务系统或多层兼容框架。加载、激活与清理使用明确函数与状态。
 
 Notes 首次按需加载完成后，核心通过现有模块就绪入口通知已加载的 UI。当前可见 Find／Create 补上记录订阅并刷新标记；启停笔记沿同一入口同步订阅，离页释放。隐藏、退场和 Preview 不消费这次界面通知，也不为显示空标记提前加载 Notes。
+
+Host 开始退场时调用笔记页的 `CancelPendingSave`，使草稿令牌失效并取消该编辑器的 PlayerInfo 请求。Find、Create 和 Notes 的展示订阅在退场中跳过重绘，活动目录更新也不重新取得原生输入；Notes 仅保留当前编辑记录已变化的标记，快速重开由 Enter 重读最新内容，其余业务状态继续由服务更新。
 
 暴雪 API 的调用条件、频率和事件通过荔枝 Dev 的固定版本源码核实。本地读取与服务器请求分开处理，请求在明确入口合并并尊重原生限流状态，不通过常驻轮询或重试风暴维持同步。
 
@@ -86,7 +88,7 @@ Host 在从 find／create／notes 进入 settings 时保存本次会话的 `sett
 
 独立 `Minimap` 持有本插件小地图按钮及拖动状态，与原生组队眼睛路由分开。主配置 `minimap` 默认 true，`minimapAngle` 保存位置；左键开关主窗、右键打开设置。显示开关显式调用 Show／Hide，使小地图按钮收集器的同名钩子同步记录显示意图。左键、快捷键与 `/lg` 共用 `A:ToggleWindow`，按 Host 的可见及退场状态决定关闭或调用 `Open(GetDefaultPage())` 反转开窗；`UI:IsShown()` 仍表示实际可见。`GetDefaultPage` 在每次普通打开时读取 `C_LFGList.HasActiveEntryInfo()`，当前队伍有招募即进入 create，不检查自身管理权限；独立浮窗和公开 API 的无页名 Open 也走同一入口，第三方适配沿用该 API。显式页名及定位上下文不改写。拖动期间才安装位置更新的 OnUpdate，停止拖动即移除并保存角度；按钮被收集器重新托管时不强行改回小地图锚点。
 
-[Bindings.xml](addon/LycheeGroup/Bindings.xml) 注册 `LYCHEEGROUP_TOGGLE` 动作，由 `A:ToggleWindow` 路由；[Bindings.lua](addon/LycheeGroup/Bindings.lua) 持有主键、冲突和默认初始化入口。PLAYER_LOGIN 在当前账号／角色绑定范围内尝试一次默认键，`bindingDefaultScopes` 记录已尝试范围；战斗时只延迟到一次脱战事件。改键使用该动作的原生 context，保留第二键并按 GetCurrentBindingSet 保存。Settings 仅在可见时订阅 UPDATE_BINDINGS，由设置行临时接收键盘输入，冲突复用 Notice 并在玩家确认后写入；Esc、切分类、离页、隐藏和战斗开始都释放键盘捕获及临时冲突状态。
+[Bindings.xml](addon/LycheeGroup/Bindings.xml) 注册 `LYCHEEGROUP_TOGGLE` 动作，由 `A:ToggleWindow` 路由；[Bindings.lua](addon/LycheeGroup/Bindings.lua) 持有主键、冲突和默认初始化入口。PLAYER_LOGIN 在当前账号／角色绑定范围内尝试一次默认键，`bindingDefaultScopes` 记录已尝试范围；容器损坏时通过 Configuration 保留原值并恢复空表，不替换玩家已有绑定。战斗时只延迟到一次脱战事件。改键使用该动作的原生 context，保留第二键并按 GetCurrentBindingSet 保存。Settings 仅在可见时订阅 UPDATE_BINDINGS，由设置行临时接收键盘输入，冲突复用 Notice 并在玩家确认后写入；Esc、切分类、离页、隐藏和战斗开始都释放键盘捕获及临时冲突状态。
 
 Settings 持有鸣谢分类、静态名单、头像及用户提供的平台链接；底部入口复用分类导航，首次选择时创建两位贡献者的控件。平台按钮复用 `C.IconButton` 与 `Tooltip:BindText`。Settings 为关于与鸣谢的每个条目按需创建一组行内复制控件，最多四组；当前链接、输入焦点与有限展开任务归页面持有，同条目的平台按钮共用一组。复制不请求网络，离页或隐藏时清空链接、焦点和任务。头像来自用户于 2026-10-24 提供的附件，平台图标逐字节沿用 Lychee 的 `Media/About/bilibili.tga` 与 `douyin.tga`；其 [素材说明](../Lychee/assets/about/README.md)记录了 Simple Icons 的 CC0 来源。头像与平台图标随 UI 子包发布，保留比例及透明度。该分类不加载 Group 或 Notes，也不创建设置项；控件生命周期见 [perfermance.md](perfermance.md#3-先明确工作何时存在)。
 
@@ -111,7 +113,7 @@ Settings 持有鸣谢分类、静态名单、头像及用户提供的平台链�
 
 主配置保存 `notesEnabled`、`notesHasRecords` 等小摘要供冷启动选择，不复制名单。Notes 写入、删除和导入时同步摘要；记录仍以 Notes 的唯一存档为准，初始化时核对摘要。停用自动提醒后登录不加载 Notes；首次进入真实 Find／Create 页面时，页面的 WatchNotes 通过 UI:PrepareNotes 按需加载已有记录，保留成员标记、详情与记录操作。可见页面重新启用笔记沿用同一入口及模块就绪通知，只订阅一次；预览不加载真实记录。原生玩家菜单也在查询已有记录前按需加载，名单管理仍可随时打开。
 
-`ADDON_LOADED` 仅处理主包自身并随即退订，`PLAYER_LOGIN` 只执行一次。冷启动对原生仍存在的申请／招募做必要恢复；大秘境仅在历史记录启用时恢复。空闲时主包保留申请状态与招募变化唤醒，秘境开始监听随历史设置启停；尚未加载 Group 时中途开启历史，会立即接管当前进行中的秘境。若是 CHALLENGE_MODE_START 首次唤醒 Group，或本次会话在秘境中显式启用记录才加载 Group，Entrypoints 在初始化后丢弃恢复出的旧基线，再交给 History 建立本次记录；登录时已经进行中且记录开启的秘境继续按原存档恢复。Group 初始化完成后主包撤销这些监听，由 Group.Game 接管；搜索监听随 `Attach/Detach`；Group 加载后保留活动可用性事件，使隐藏期间的目录也能失效，目录请求在同次登录内由所有页面共用一次；申请者监听随真实招募启停，不让两套处理器推进同一状态。
+`ADDON_LOADED` 只初始化主包自身一次；原生组队按钮尚未就绪时继续等待 `Blizzard_QueueStatusFrame`，绑定入口后退订。`PLAYER_LOGIN` 只执行一次。冷启动对原生仍存在的申请／招募做必要恢复；大秘境仅在历史记录启用时恢复。空闲时主包保留申请状态与招募变化唤醒，秘境开始监听随历史设置启停；尚未加载 Group 时中途开启历史，会立即接管当前进行中的秘境。若是 CHALLENGE_MODE_START 首次唤醒 Group，或本次会话在秘境中显式启用记录才加载 Group，Entrypoints 在初始化后丢弃恢复出的旧基线，再交给 History 建立本次记录；登录时已经进行中且记录开启的秘境继续按原存档恢复。Group 初始化完成后主包撤销这些监听，由 Group.Game 接管；搜索监听随 `Attach/Detach`；Group 加载后保留活动可用性事件，使隐藏期间的目录也能失效，目录请求在同次登录内由所有页面共用一次；申请者监听随真实招募启停，不让两套处理器推进同一状态。
 
 ## 4. 状态所有权与数据流
 
@@ -147,27 +149,37 @@ flowchart LR
 | Group.Roster | 当前成员快照、按 GUID 保存的库同步专精／检视结果与单个检视请求、职业／小队统计输入 | LibSpecialization 回调与游戏事件使快照失效；创建页需要且缺专精时才检视；装等独立接纳已有原生值，复用当前 GUID 缓存 |
 | Group.RaidGroups | 当前团队成员换小队的落点判断、动作检查与原生提交 | 预览与动作共用身份、权限、容量和战斗校验；提交时按 GUID 重新解析 raid 索引，不保存名单副本或乐观结果 |
 | Group.Relations | 当前观察者的 GUID／角色全名关系索引、实际角色短名索引及一个可取消任务 | Apply 为成员补充独立关系字段并排除自身；ApplyMembers 按同批次姓名消歧；好友／公会事件使索引失效，通知可见消费者；无消费者时释放 |
-| Notes.Records | `playerKey → record` 持久记录 | 唯一读写入口，命中后按需读取理由 |
-| Notes.RosterReminder | 当前队伍命中集合、收邀事件与一次安全出邀 hook | 成员差异及邀请触发本地提醒；离队清集合，停用退订，hook 静默 |
+| Notes.Records | `playerKey → record` 持久记录 | 唯一读写入口，命中后按需读取理由；导入与初始化共用有限时间戳边界 |
+| Notes.RosterReminder | 当前成员 GUID／已知姓名、待解析单位与去重集合，收邀事件和一次安全出邀 hook | 按当前单位对账成员身份，暂不可读时保留对应身份；成员差异及邀请触发本地提醒，离队清集合，停用退订，hook 静默 |
 | Notes.PlayerInfo | 单个待完成的单位／GUID 查询、回调和超时任务 | 先借用已加载 Roster 的专精缓存，再读取原生检视；不另存结果缓存，完成或取消后释放请求 |
 | UI.Native | 搜索及创建表单的原生输入租借、原生创建校验 | 显式绑定／释放 Search 的输入 token，原生控件失去所有权时通知页面 |
 | UI.Application | 当前角色的自动申请开关、多职责偏好、当前申请 lease 和申请弹窗 | 主界面与弹窗共用状态；有效保存职责可直接开启，否则确认后开启；原生备注仅留安全字段；配置变更通过一个回调通知 Find |
 | UI.Tooltip | 当前来源、所选成员身份、固定／展开状态、团队拖动与落点反馈、复制弹窗返回快照及复用的短说明控件 | 自行重新解析最新成员；BindText 为按钮接入共享 C.Tooltip，按当前字宽调整短说明尺寸，与详情提示统一所有权及关闭生命周期；页面不写入内部字段 |
 | 各页面 | 活动单选／多选草稿、滚动、可见行身份 | 确认后提交搜索选择，订阅所需变更，不另建业务状态机 |
 
+Notes 初始化原位核对当前记录容器及条目，缺失、非有限或原生日期函数无法显示的时间统一记为未知 `0`；可用记录继续保留原引用。无法消费的容器或记录移入同一存档的 `invalidRecords`，以 `{key, value}` 保留原来源和内容，不参与名单、提醒与导出。笔记存档根异常以 `key="$root"` 保存原值和 `error` 原因，首次缺失不记错误。旧 schema 迁移采用相同时间边界，合并仅检查导入身份及命中的已有记录；排序复用已验证时间，不重复格式化日期。Notes 另持有大小写折叠身份到实际存档键的索引，优先使用原生 `C_Intl.FoldCase`，不可用时按 ASCII 折叠；Core 身份格式、原键和显示姓名保持原样。查询、编辑与删除优先匹配精确旧键，其他大小写写法选择有效时间最新的匹配记录，同时间按实际键升序选择；旧碰撞记录均可独立管理。新增与合并按该逻辑身份去重并拒绝记录自己，保留已有展示姓名。Find 同时返回实际键，笔记页据此选择、编辑和处理通知。
+
+Core 先核对账号与角色存档根，非空异常根由 Configuration 保留到新根的 `uiConfigRecovery["$root"]`；在 Configuration 绑定前清理已废弃的声音与关键词设置，避免迁移快照保留无用列表。Configuration 在绑定时检查保存容器与实时偏好；非法原值保存在账号或角色根的 `uiConfigRecovery[完整路径]={value,error,previous}`，正常对象保留引用，恢复记录不进入旧设置快照。其余旧值快照供迟注册定义及自定义导入函数读取。写入旧设置兼容镜像时也检查路径容器，异常原值按同一方式保留，避免阻断已保存偏好的即时应用。Theme.Source 检查选中包外壳，Appearance.Compile 验证实际选中值与覆盖并返回具体错误，交由启动入口回退；查询不重复编译全部主题。
+
+创建收藏的异常容器保存在 `creationPresets.invalidContainer`，异常数字键条目移入 `creationPresets.invalidEntries`，按 `{key,value}` 保留来源；有效收藏继续使用原对象。旧玩家收藏迁移只处理有效条目，异常条目留在原位置。
+
+Group 初始化时校验旧账号筛选、当前角色筛选及职责、屏蔽名单和大秘境历史。账号及历史存档的异常原值写入各自 `storageRecovery[路径]={value,error,previous}`；角色偏好使用 Configuration 的 `uiConfigRecovery`。合法筛选容器、历史条目及成员保持原引用；坏历史条目整体隔离，仅在出现空洞时压紧原数组，不按数量裁剪。进行中历史同时核对成员表和唯一完整的顺序表，异常基线隔离后按当前真实秘境重新接管；可选的未知层数、地图名称与时间继续保留未知含义。隔离内容不进入正常读取和重复初始化扫描。
+
 Find 的非五人结果与申请行从 Results 分别读取职责人数、队长职业和进度，不构建完整成员快照。`GetLeaderClass` 优先复用干净详情，再尝试原生队长接口；只有公开的队长标志和有效职业同时存在时才采用。接口缺失或数据不完整时，按原生成员顺序读取到首个队长标记／完整队长身份命中；缓存包含暂时未知的职业。结果更新沿既有详情失效路径清除这些摘要，完整详情读取回填同一缓存。五人头像、Tooltip 和需要成员身份的过滤仍通过 `GetDetails` 取得完整名单与关系信息，摘要不能冒充完整详情。
 
 首次捕获结果时，Results 接管本次原生查询返回的独立表，移除不消费的字段并写入标准字段；再次更新继续使用已发布 record 的身份，不以新的原生表替换消费者持有的对象。搜索换代检查发生在接管前，旧代次不再加工数据。跨搜索不复用 record，也不保留队长职业缓存。
 
-Listing 更新跨阵营时执行下架再创建。即使创建失败，也在 Update 返回前同步原生招募快照并通知消费者；Create 在提交期间保留编辑草稿，随后只切换为可再次发布的表单。提交错误由页面状态持有，被动招募通知不清除错误，用户修改输入或再次提交时重新校验；预览沿用独立页面状态。Create 独立持有装等纠正 Notice 和单个到期任务，与失败 Notice 分别保存消息、共同计算表单让位；表单隐藏或离页时释放纠正提示和任务，Host 不再持有底部 Toast。
+Listing 更新跨阵营时执行下架再创建。即使创建失败，也在 Update 返回前同步原生招募快照并通知消费者；Create 在提交期间保留编辑草稿，随后只切换为可再次发布的表单。提交错误由页面状态持有，被动招募通知不清除错误，用户修改输入或再次提交时重新校验；预览沿用独立页面状态。Create 独立持有装等纠正 Notice 和单个到期任务，与失败 Notice 分别保存消息、共同计算表单让位；到期发生在退场期间时仅标记过期，快速重开再隐藏，表单隐藏或离页时释放提示和任务。设置彩蛋提示沿用相同到期处理，Host 不再持有底部 Toast。
 
 Listing 在当前角色偏好 `listingAutoInvite` 保存本插件的自动邀请选择，成功发布／更新后写入，失败保留原值，原生确认招募结束时清除。招募快照的 `autoInvite` 与原生 `autoAccept` 分开：创建表单和收藏使用前者，原生标记为真时由游戏处理邀请，明确为假时 Applicants 在已有申请、招募及队伍事件中调用同一 Invite 动作。`acting` 区分邀请与拒绝，尚未取得原生状态的邀请先占用容量，状态变化后释放该占位；同一轮自动处理避免事件重入；自动邀请的展示通知复用现有延迟任务合并，手动邀请与拒绝保持即时通知。页面关闭不持有或停止这项业务。
+
+Applicants 在邀请前核对当前招募活动、操作权限、申请状态、整组人数与剩余名额；手动邀请跨过五人上限时，由该服务持有一次转团确认和目标记录身份。接受确认后重新校验再提交，取消、招募结束、活动或目标替换使旧确认失效；等待确认返回独立的待决状态，浮窗保留对应条目。自动邀请每批共享一次容量计算，逐次按实际提交人数扣减，事件同步重入时才更新容量上下文。创建页活动期间，`PLAYER_ROLES_ASSIGNED` 沿既有队伍失效通知刷新快照，离页解除该展示需求。
 
 `GetActiveEntryInfo` 的字段可在聊天消息限制期间变为 secret。Listing 在写入本地快照前过滤受限的文本、数值、布尔与枚举字段，保留公开的活动 ID；字段不可读时返回 nil，整条详情暂缺时仍保留已有快照。没有显式自动邀请偏好且原生开关未知时，`autoInvite` 也保持未知；已有偏好不被改写。Applicants 只在 `autoInvite == true` 且 `autoAccept == false` 时尝试代邀请，未知状态等待下一次原生招募事件。真实标题和说明的编辑继续由原生复制入口处理，不从 Lua 快照回填。
 
 [Host.lua](addon/LycheeGroup_UI/Host.lua) 持有 `UI:GetGroup()` 和组队设置访问入口；显式模拟开启时选择 [Preview.lua](addon/LycheeGroup_UI/Preview.lua) 的独立内存 provider，否则返回真实 `A.Group`。Preview 按正式接口的聚合关系计数、队长查询规范化和有效申请状态筛选。页面与提示经同一入口读取组队数据；真实 Group 服务、原生登记输入对象和 SavedVariables 不被替换或写入。模拟命令与退出行为见 [Product.md 第 5.3 节](Product.md#53-显式模拟入口)，分配及释放边界见 [perfermance.md](perfermance.md)。
 
-`Results:BlockTitle(title, leaderKey)` 保存本会话的原生标题键，并从当前完整结果中收集匹配队长，写入账号存档 `Group.db.blockedLeaders`；可选队长参数覆盖已经离开当前搜索的申请。标题键不解析或序列化，跨搜索稳定性由持久的完整 `leaderKey` 承担；后续归一化遇到仍可匹配的标题时补充新取得的队长身份。过滤只改变结果视图，不删除记录或修改 Applications。`GetBlockedLeaders` 在名单变化后重建并复用排序 key 数组；`RemoveBlockedLeader` 删除单个保存项，并用本会话例外防止旧标题规则立即重新加入；显式再次屏蔽匹配标题会撤销该例外。`ClearBlockedTitles` 同时清除标题、队长名单与例外，`GetBlockedTitleCount` 只统计临时标题。用户操作产生实际变化时使视图失效并发送一次 results 通知。Find 和 Settings 经 provider 调用这些接口；Preview 持有自己的临时数据，不影响真实服务或 SavedVariables。刷新、分类切换和 EndBrowse 释放搜索快照，保留屏蔽状态。设置仅进入“屏蔽”分区时按需加载 Group，分区可见期间订阅结果变化；退出后退订。
+`Results:BlockTitle(title, leaderKey)` 保存本会话的原生标题键，并从当前完整结果中收集匹配队长，写入账号存档 `Group.db.blockedLeaders`；可选队长参数覆盖已经离开当前搜索的申请。标题键不解析或序列化，跨搜索稳定性由持久的完整 `leaderKey` 承担；后续归一化遇到仍可匹配的标题时补充新取得的队长身份。过滤只改变结果视图，不删除记录或修改 Applications。`GetBlockedLeaders` 在名单变化后重建并复用排序 key 数组；`RemoveBlockedLeader` 删除单个保存项，并用本会话例外防止旧标题规则立即重新加入；显式再次屏蔽匹配标题会撤销该例外。`ClearBlockedTitles` 同时清除标题、队长名单与例外，`GetBlockedTitleCount` 只统计临时标题。用户操作产生实际变化时使视图失效并发送一次 results 通知。Find 和 Settings 经 provider 调用这些接口；Preview 持有自己的临时数据，不影响真实服务或 SavedVariables。刷新、分类切换和 EndBrowse 释放搜索快照，保留屏蔽状态。设置仅进入“屏蔽”分区时按需加载 Group，分区可见期间订阅结果变化；关窗动画期间跳过通知绘制，重开同步当前名单，退出后退订。
 
 Results 归一化原生 `partyGUID`，Applications 在活动申请快照中保留该身份。确认 `declined` 时，以 `GetTime()` 记录该队伍最近拒绝时间，优先用已保留身份；没有快照时只补读一份原生结果元数据。取消、超时、满员、下架和拒绝邀请不写入。独立的会话时间表不随五秒终态记录、搜索快照或页面释放而清除，重复终态不重置时间，新申请再次被拒绝才更新；重载后重新开始，不写 SavedVariables。
 
@@ -177,7 +189,7 @@ Find 将 `hideSameSpec` 与赛季地下城的角色偏好一同保存，其他�
 
 `PlayerKey` 统一名字和服务器的规范化与键构造，`UnitIdentity` 在原生单位读取边界过滤未知、非玩家和受限身份；两者不持有全服玩家缓存。远程 LFG 的 `RemotePlayerKey` 只接受原生明确的完整身份，不把裸名猜成本服玩家。记录写入确认单位仍对应该身份，异步专精完成确认 GUID。Group 的专精解析优先已知 specID，否则只在已知职业内精确匹配原生专精名；未知保留未知，不为图标编造字段。当前队伍以 `UnitIsUnit(unit,"player")` 识别自身的 `raidN` 等别名，自身使用当前专精接口与平均装等。
 
-队友专精由 Roster 优先读取 LibSpecialization 回调缓存，其次读取原生检视结果。库回调的名字可能省略本服，先与当前真实成员身份匹配，再按 GUID 保存；不保存天赋字符串，不匹配队外玩家。库没有历史回放，公开 `RequestGroupSpecialization()` 已为空函数，因此不通过它重复发消息。Group 加载后接收库事件，创建页隐藏时仍可保存新广播；不会停掉其他插件共用的库监听。
+队友专精由 Roster 优先读取 LibSpecialization 回调缓存，其次读取原生检视结果。库回调的名字可能省略本服，先与当前真实成员身份匹配，再按 GUID 保存；不保存天赋字符串，不匹配队外玩家。库没有历史回放，公开 `RequestGroupSpecialization()` 已为空函数，因此不通过它重复发消息。Group 加载后接收库事件，创建页隐藏时仍可保存新广播；不会停掉其他插件共用的库监听。只要仍持有远端成员快照或专精／检视缓存，Roster 就持有成员变化事件；隐藏时只按当前 GUID 清除离队缓存与成员引用，不构建关系、重读成员资料或启动检视。最后一个远端缓存退出后释放该事件所有权，历史、招募等其他消费者独立决定是否继续监听。
 
 `Roster:GetUnitSpec(unit, guid, isSelf)` 集中读取自身当前专精、队友同步缓存及未失效的原生／既有检视数据；Roster 构建与 History 采集共用此入口。它不调用完整 `Roster:Get()`、不启动通信或检视。匹配当前成员的库回调与已接受的检视结果通过 `History:OnSpecUpdate(key, specID)` 只补齐进行中记录的空专精；History 继续独占历史写入，完成后不追溯修改。
 
@@ -213,7 +225,7 @@ Find 将 `hideSameSpec` 与赛季地下城的角色偏好一同保存，其他�
 
 Applicants 逐条接收原生事件并立即更新状态，将同一轮事件的页面通知合并到单个可取消任务；用户动作、显式刷新及清理仍立即通知并取消旧任务。Find 修改筛选后由 provider 的结果通知刷新一次。Create 重入时复用现有 Group／Notes 订阅，离开统一撤销，避免隐藏页面仍被旧回调更新。
 
-Find 的可见申请倒计时由页面持有一个按秒 ticker，只刷新状态文字，离页或无待倒计时项目时取消；申请服务继续独立持有后台业务。拒绝提示另由页面持有一个可取消的单次 timer，对齐可见提示最近的分钟边界；只更新可见行文字，不重绑成员或重排结果。行重绑时立即显示当前分钟并安排下一次更新，离页或没有可见拒绝标签后停止。Notes 的分类数量在记录变化及进入分类时更新；历史页不派生隐藏记录名单，选择只更新选中呈现，实际数据变化才重绘对应行。
+Find 的可见申请倒计时由页面持有一个按秒 ticker，只刷新状态文字，离页或无待倒计时项目时取消；申请服务继续独立持有后台业务。拒绝提示另由页面持有一个可取消的单次 timer，对齐可见提示最近的分钟边界；只更新可见行文字，不重绑成员或重排结果。行重绑时立即显示当前分钟并安排下一次更新，离页或没有可见拒绝标签后停止。Notes 的分类数量在记录变化及进入分类时更新；页面订阅已加载 Group 的 history 通知，更新数量与当前历史列表。外部业务首次加载 Group 时，经 OnModuleReady、UI.OnGroupReady 为可见笔记页补接订阅；普通笔记页不为数量加载 Group。离页退订，关窗动画期间不绘制，重开读取当前记录。历史页不派生隐藏记录名单，选择只更新选中呈现，实际数据变化才重绘对应行。
 
 ## 6. 搜索与组队链路
 
@@ -289,7 +301,9 @@ Find 根据目录将已确认的 groupKey／groupKeys、difficultyID 与 tier �
 
 原生结果 ID 的寿命与全局搜索上下文绑定。其他组队界面完成搜索时，Search 在可见浏览且没有等待提交的请求时，通过 Results 对比当前原生 ID 列表与缓存；数量或成员不同即开启新代次并用同一次读取的 ID 列表完整提交，两者一致的重复完成通知只核对 ID，不重复读取未变元数据。关闭后的迟到结果继续丢弃，waiting 保留自身待请求和计时器。跨搜索仍有效的申请单独保留所需身份和最小字段，不因一个申请保留整套旧结果。过期任务在提交边界判断代次，不在每层重复验证同一事实。
 
-行、菜单与动作绑定明确目标。普通字段刷新保留交互身份；换绑清理旧提示、按下与菜单，松开不能作用于旧目标或新占位行。
+行、菜单与动作绑定明确目标。普通字段刷新保留交互身份；换绑清理旧提示、按下与菜单，松开不能作用于旧目标或新占位行。收藏应用／删除、成员人数及申请者阵营按钮分别绑定自身目标；活动多选框由 Find 记录按下的分组身份，换绑、隐藏或移出取消该次选择，下一次按下重新取当前身份。创建活动选择器以分类与活动组组成稳定键；历史列表按记录对象绑定行，排序仅改变展示顺序，新增历史不会把旧按下状态交给同下标的新记录。
+
+结果双击由 Find 保留首个完整左击的行、结果 ID 和队伍 GUID；缺少 GUID 时使用该结果对象。第二次点击只消费同一目标，普通字段刷新保持序列，换绑、隐藏、移出、右键或离页清除。此临时记录只有一份，不写存档或另设计时器，确认与自动申请继续走同一 Apply 入口。
 
 SeasonScores 归 Group 持有，Find 只在可见的赛季钥石选择器中通过 `Begin`／`GetRecord`／`End` 消费。服务将目录地图 ID 映射到唯一的挑战模式 ID，分别读取 `GetSeasonBestForMap` 第一返回值的限时层数和 `GetSeasonBestAffixScoreInfoForMap` 第二返回值的分数；异图变体或同图多 ID 保留未知。地图更新、挑战完成与进入世界使本次缓存失效，关闭、离页或切到其他模式解除订阅并释放数据。Preview 提供相同接口的样例服务，不访问真实成绩。API 声明核对基于 `wow-ui-source` retail 提交 `15881d522c44cd106d3d8660106ec9f9d2f44167` 的 `MythicPlusInfoDocumentation.lua` 与 `ChallengeModeInfoDocumentation.lua`。
 
@@ -335,7 +349,7 @@ SeasonScores 归 Group 持有，Find 只在可见的赛季钥石选择器中通�
 
 LoadDB 先捕获旧字段、绑定账号与角色数据并完成迁移，再由 InitializeRuntimeTheme 确定 RuntimeTheme，之后才选择语言、字体和创建任何 Context。主题选择、定义、静态覆盖的来源在本次启动固定；导入和选择通过替换表更新下次启动数据。已创建和迟建的主窗、浮窗、小地图、菜单、提示、原生输入及池行都读取 RuntimeTheme，不读取待生效存档。
 
-Theme/Defaults.lua 是产品默认主题的唯一入口，包含纯 UI 默认设置、布局、主窗与浮窗 token 及产品 recipe；Elements.lua 与 FindElements.lua 维护静态元素目录。共享库提供通用默认值，产品文件只声明产品值。启动时仅编译选中主题及有效静态覆盖，不为所有已安装主题保留解析结果。导入边界校验外部数据，启动边界校验最终组合；失败保留原定义与可定位错误，本次使用内置默认，不另存整套“最后成功主题”。
+Theme/Defaults.lua 是产品默认主题的唯一入口，包含纯 UI 默认设置、布局、主窗与浮窗 token 及产品 recipe；Elements.lua 与 FindElements.lua 维护静态元素目录。共享库提供通用默认值，产品文件只声明产品值。启动时仅编译选中主题及有效静态覆盖，不为所有已安装主题保留解析结果。导入、启动与导出共用主题偏好键范围，只接受内置主题中的界面设置与已登记布局；静态覆盖层只接受视觉字段，不接受设置或布局。导入边界校验外部数据，启动边界校验最终组合；失败保留原定义与可定位错误，本次使用内置默认，不另存整套“最后成功主题”。
 
 旧视觉用户覆盖迁到 theme.overrides。旧混合包按主题与业务偏好投影，纯设置／布局包仍留在 Configuration；保存 ID、revision、位置和有效选择。旧字段迁移标记防止 Reset 后重新导入，无法识别的条目保留用于定位。笔记、历史、收藏、屏蔽和组队业务不复制进主题数据。
 
@@ -355,7 +369,7 @@ UI 包的 `PlayerLinks` 仅负责已提供身份、地区与语言的 URL 构造
 
 ## 9. 统一界面与本地化
 
-Find 持有活动侧栏宽度和 `state.railCollapsed`，当前角色的 `prefs.find.railCollapsed` 独立于筛选记忆保存；Preview 使用独立 provider 偏好，退出后恢复正式页面状态。侧栏通过共享 Motion 的有限 Rect 任务改变宽度，`OnSizeChanged` 调整既有列表、搜索区和申请列，活动菜单保持相对侧栏的锚点。四类 PvP 与侧栏按钮静态素材由 LycheeGroup_UI/Media 持有，Catalog 只提供图标键，`UI:CategoryIcon` 统一解析产品素材与共享库图标。
+Find 的侧栏分类与外部申请入口共用分类切换：保存原分类已确认选择和筛选，恢复目标分类偏好，并清理跨分类的搜索输入与人物条件。申请按实际活动查询 Catalog 分类，缺少目录时使用已有普通分类或展开全部申请，随后定位目标行，不打开活动选择器。Find 持有活动侧栏宽度和 `state.railCollapsed`，当前角色的 `prefs.find.railCollapsed` 独立于筛选记忆保存；Preview 使用独立 provider 偏好，退出后恢复正式页面状态。侧栏通过共享 Motion 的有限 Rect 任务改变宽度，`OnSizeChanged` 调整既有列表、搜索区和申请列，活动菜单保持相对侧栏的锚点。四类 PvP 与侧栏按钮静态素材由 LycheeGroup_UI/Media 持有，Catalog 只提供图标键，`UI:CategoryIcon` 统一解析产品素材与共享库图标。
 
 LycheeUI 提供通用主题、控件、动效、菜单、阴影和弹窗；产品 `UI.Theme`、`UI.Motion` 接入共享库；`UI.Components` 持有成员、职责和活动等产品组合控件，评分、活动封面和业务视图适配仍在 LycheeGroup_UI，静态职业／专精资料由主包 Specializations 供 Group、Notes 与 UI 共用。Context 持有使用者的控件、动效任务和菜单，库自身没有登录事件或 SavedVariables。产品 Host 持有路由与业务弹窗生命周期。共享 C.Notice 只负责提示的外观与内容尺寸，页面持有关闭时机和状态；寻队、创建表单、招募和设置改键各复用一条，显示时由页面调整后续锚点和视口，隐藏后恢复。设置的关于页读取主 TOC 元数据，荔枝启动器与荔枝天赋两款插件的静态介绍与链接由 UI 持有，链接复制由设置页在对应条目下按需展开并复用输入控件，不访问网络或加载其他插件。页面函数按包加载，各页控件首次进入创建并复用。Find／Create 活动选择器首次展开才创建，数据与默认选择的校正不依赖弹层存在；Create 用一个复用的隐藏控件测量当前申请者姓名及标记占宽，生成成员行高和批次累计高度；测量后清空内容，离页释放布局表。实际批次与成员行仍只按当前视口需要构建，滚动使用累计高度定位可见范围。Tooltip 的成员按钮按实际展示数量增长，笔记详情不预建整个团队名单；Notes 进入时由当前 tab 统一刷新。保留控件不等于保留业务数据，隐藏后清除记录绑定与无用临时对象。
 
@@ -367,7 +381,7 @@ LycheeUI 提供通用主题、控件、动效、菜单、阴影和弹窗；产�
 
 `UI.Native` 负责搜索与创建表单的原生输入租借、活动选择和表单校验；申请弹窗及申请备注由 `UI.Application` 持有。两者均交给 `LycheeUI.C.NativeInput` 接管控件，保持引擎登记的安全文本对象。共享库负责实际父级检查、布局／外观／回调归还、焦点登记和多行原生容器；创建表单也在用户重新操作时接回被移走的字段。编辑预填走引擎复制入口。提交前重新运行原生装等、PvP 装等、大秘境评分与 PvP 评分的四项校验，即使输入未变化也刷新错误；仍有有效申请时由 Listing 返回明确原因，界面经 Notice 展示。共享 Number 默认占位符为空，Create 显式提供“Any／不限”，Find 自行提供最低／最高文案；留空和数值限制由页面解释。Create 在手动装等输入和明确提交入口调用 Native 的上限读取，普通活动使用 `GetAverageItemLevel()` 第一返回值、PvP 使用第三返回值，取整后纠正超限装等；程序预填保留原值直至提交，评分仍由原生校验。申请外观采用共享 Modal 与可多选的职责集合，备注借用原生已注册的 Description；自己的确认按钮在原始硬件回调中调用 `Group:Apply`，完整传递坦克、治疗、输出三个选择，不借用原生 SignUpButton 或弹窗外壳。自动申请默认关闭，`ApplicationPrefs` 缓存当前角色的 `Core.charPrefs.autoApply` 和 `applicationRoles`；开关与明确确认的职责分别写回这两个字段，备注不保存、不调用 `SetLFGRoles`。Preview 使用 provider.prefs，与真实角色偏好隔离。自动申请关闭时，成功手动确认也更新当前角色的默认职责；开启期间的“编辑后申请”保持单次覆盖。开启请求先用 `GetAvailableRoles` 检查保存职责，非空且所选项全部可用时直接保存开关；否则在当前或新建 lease 记录 `enableOnSave`，保存配置或成功申请后开启，取消清除未确认请求；关闭时每次双击创建临时申请 lease，确认只提交当前目标，开启时直接复用已保存配置。已有角色职责时先恢复并按当前可用职责展示；尚未保存时优先当前专精可用职责，否则读取现有队列／可用职责，预选或取消本身不写存档。备注只留在原生 Description 字段，不缓存回填、不逐次调用原生 Show 清空。每次提交核对当前可用职责，提交后的状态由 Group 事件接管。此前 2026-10-16 v3 的创建字段私密发布、更新与取消曾实机推进；1.1.7 阶段已在客户端核对搜索、标题与说明正常归还，并调用已安装集合石的实际接管回调，确认接管时即归还外观与回调、保留对方布局及原生文字。该历史检查的字号回读差异小于 0.000001，属于原生浮点归一化；不代替本轮新申请流程验收，提交权限、taint 与真实邀请仍保留验证边界。
 
-普通关闭立即遮挡鼠标输入、清焦点并取消改键捕获，寻队键盘入口按关闭状态停止响应；保留当前页面、行绑定和订阅直到 420ms 退场结束；隐藏后统一 Leave、释放原生租借和业务引用，不复制控件树或列表快照。申请、招募和笔记提醒由业务所有者继续管理。快速重开使旧退场回调失效。主面板轨迹与 Logo 五段动画按设计保留，Motion 按有效缩放对齐主面板实际像素，并跳过未变化的锚点，避免最后几帧亚像素偏移。主包 [BrandMotion.lua](addon/LycheeGroup/BrandMotion.lua) 持有品牌五段曲线、原图尺寸和枢轴；`A:CreateBrandMotion(context,texture,anchor,size)` 返回 Play／Stop／SetSize／IsPlaying 控制器，主窗 `UI.brandMotion` 与浮窗 `F.brandMotion` 共用一份固定曲线，各自持有播放进度。控制器通过共享 `Motion:Start(key,job,onStop)` 驱动，并在结束、停止或替换时复位；共享 Context 不持有 Logo。品牌动作与 Reveal 在启动时建立锚点，播放时更新同一锚点。活动期驱动与共享控件控制成本，不删成单纯淡入、不默认关闭动画。
+普通关闭使用 DIALOG 层级的透明阻挡层覆盖主窗及筛选面板的鼠标输入、清焦点并取消改键捕获，寻队键盘入口按关闭状态停止响应；保留当前页面、行绑定和订阅直到 420ms 退场结束；隐藏后统一 Leave、释放原生租借和业务引用，不复制控件树或列表快照。申请、招募和笔记提醒由业务所有者继续管理。快速重开使旧退场回调失效。主面板轨迹与 Logo 五段动画按设计保留，Motion 按有效缩放对齐主面板实际像素，并跳过未变化的锚点，避免最后几帧亚像素偏移。主包 [BrandMotion.lua](addon/LycheeGroup/BrandMotion.lua) 持有品牌五段曲线、原图尺寸和枢轴；`A:CreateBrandMotion(context,texture,anchor,size)` 返回 Play／Stop／SetSize／IsPlaying 控制器，主窗 `UI.brandMotion` 与浮窗 `F.brandMotion` 共用一份固定曲线，各自持有播放进度。控制器通过共享 `Motion:Start(key,job,onStop)` 驱动，并在结束、停止或替换时复位；共享 Context 不持有 Logo。品牌动作与 Reveal 在启动时建立锚点，播放时更新同一锚点。活动期驱动与共享控件控制成本，不删成单纯淡入、不默认关闭动画。
 
 寻求组队保留左侧活动菜单、内部右侧筛选浮层、共享右键菜单与 `Applications` 顶部置顶行；标题读取全局五项额度，展示可按分类或全局切换，下方结果按申请身份去重。满额通知只持提示状态并展开全局申请，不保存目标 ID 或编辑意图；出现动画沿用 LayoutResults 已计算的位置。结果列表通过现有逐行高度解析器为被拒绝队伍增加提示空间，普通行保留基础高度；`Applications` 的真实状态释放名额后更新提示文字，玩家从结果列表重新选择目标，沿用普通申请入口。提示不提供继续按钮或自动补申；关闭提示、Leave、重新申请或切回本分类清理提示状态，不安排定时隐藏任务，也不另造申请服务。职责组合与身份过滤在弹窗和申请区复用同一组快捷控件与 Find 分类筛选状态；账号设置 showImportantFilters 默认 false，通过现有设置通知只切换呈现与重排，不调用 SetFilters、不触发搜索，也不修改分类条件。默认放在筛选面板，开启后移到申请区，首次建页创建后持续复用。筛选面板只编辑条件，结果排序由表头及其表格偏好管理；布局完成后统一更新最终裁切，只在命中范围或鼠标启用状态变化时写入，移出面板目标集合的控件才清理，避免结果刷新重置悬停；重置条件保留表头和原有基础排序。评分／装等范围和职责 AND／OR 判断由 Results 提供无额外查询的匹配函数，Preview 复用同一路径。自动申请的文字点击只编辑已开启配置，主界面轨道与弹窗复选项都通过 UI.Application 切换；页面读取确认后的角色状态。右键未申请项显示“编辑后申请”，始终先编辑，所有确认与直接提交最终统一经 `Group:Apply`。自动进组仍独立归 Applications，原生邀请弹窗保持原有业务所有权。申请者成员按原生返回的 tank／healer／damage 更新复用的 `requestedRoles` 布尔集合，`assignedRole` 与 `specID` 分别保留；Create 展示全部报名图标并据集合筛选，不以当前专精或单一 assignedRole 覆盖报名选择。笔记继续使用已有入口；菜单收起、重绑、切页清理菜单目标。密聊已使用原生入口，实机待验。
 
@@ -420,7 +434,7 @@ LycheeUI 提供通用主题、控件、动效、菜单、阴影和弹窗；产�
 | `api:IsAvailable()` | 浮窗已创建、显示与兼容设置均开启且不在独立测试中时为 true；表示可接受宿主，不表示当前无人占用。 |
 | `api:GetStatus()` | 返回独立快照：`available`、显示文字 `text`、展示人数／申请数 `count`、招募模式 `recruiting`、空闲品牌状态 `idle`、当前图形提醒 `attention`。普通订阅在不可用时其他展示字段可能保留上次值，应处理释放；明确请求后台状态的订阅者仍可消费摘要，`available` 继续只表示挂载入口是否可用。 |
 | `api:Subscribe(callback, options)` | 立即传入当前快照，以后仅在上述字段变化时通知；同一回调登记一份，返回可重复调用的取消订阅函数。可选 `{background=true}` 请求在浮窗隐藏或未创建时继续维护摘要；最后一个后台订阅取消且没有外部弹层消费时，恢复隐藏时不读申请列表。订阅不启用浮窗、不加载业务或新增轮询。 |
-| `api:Attach(owner, host, logoSize, label, onDetach)` | 借用现有宿主 Frame 与 FontString，Logo 尺寸须为正数，`owner` 为适配方持有的稳定标识，释放回调必填。成功返回 true；不可用返回 `false, "unavailable"`，另一适配方占用返回 `false, "occupied"`。相同 owner 与宿主可重复调用；更换宿主或文字控件会先释放原接入。 |
+| `api:Attach(owner, host, logoSize, label, onDetach)` | 借用现有宿主 Frame 与 FontString，Logo 尺寸须为正数，`owner` 为适配方持有的稳定标识，释放回调必填。成功返回 true；不可用返回 `false, "unavailable"`，被另一适配方或释放回调中的新挂载占用时返回 `false, "occupied"`。相同 owner 与宿主可重复调用；更换宿主或文字控件会先释放原接入。释放回调已将同一 owner 挂到本次目标时，只刷新请求尺寸并保留新挂载的释放回调。 |
 | `api:Refresh(owner, logoSize)` | 更新宿主几何与状态文字；可省略尺寸，保留当前值。相同宿主及 Logo 尺寸不重读业务列表。 |
 | `api:SetPopupBounds(owner, frames)` | 指定入口附近需要避开的 Frame 数组；复制数组引用项，nil 清除，相同数组项不重复更新。Frame 应已定位，几何须可公开读取。每次弹层布局只读取可见且与弹层横向相交的 Frame，将其与入口合为上下避让区域，并按各自实际缩放计算位置及可用高度。横向仍与入口对齐；无指定区域时沿用原定位。仅几何改变时调用 Refresh；重新展开也会重读几何。 |
 | `api:Detach(owner)` | 归还荔枝控件到独立入口，再调用 `onDetach()` 恢复宿主原显示与行为；先清除所有权，重复释放不会再次调用回调。 |

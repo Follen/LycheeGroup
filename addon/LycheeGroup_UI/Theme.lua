@@ -81,5 +81,5 @@ function UI:ScoreText(score,kind)
 end
 function UI:MemberCountText(record)
  local maximum=record.maxNumPlayers
- return tostring(record.numMembers or 0)..(maximum and maximum>0 and "/"..maximum or "")
+ return (record.numMembers==nil and "—" or tostring(record.numMembers))..(maximum and maximum>0 and "/"..maximum or "")
 end

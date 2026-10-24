@@ -893,7 +893,7 @@ function Tip:RenderGroup()
  local titleHeight=math.max(24,f.title:GetStringHeight());f.subtitle:ClearAllPoints();C.SetPoint(f.subtitle,"TOPLEFT",f.subtitle:GetParent(),"TOPLEFT","tooltipFSubtitleTopleftX",-titleHeight-4)
  local headerHeight=math.max(40,titleHeight+4+math.max(18,f.subtitle:GetStringHeight()))
  f.summary:Hide()
- local itemLevel=(record.requiredItemLevel or 0)>0 and math.floor(record.requiredItemLevel) or Say("不限","Any")
+ local itemLevel=record.requiredItemLevel==nil and "—" or record.requiredItemLevel>0 and math.floor(record.requiredItemLevel) or Say("不限","Any")
  local metricTop=headerHeight+16
  local commentTop=raid and headerHeight+12 or metricTop
  if raid then

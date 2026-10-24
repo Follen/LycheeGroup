@@ -47,12 +47,49 @@ end
 
 -- ---------------------------------------------------------------- 默认设置
 
+-- A damaged SavedVariables root retains its original scalar before the real
+-- configuration bind; the other valid root keeps both identity and settings.
+do
+ local account,character=_G.LycheeGroupDB,_G.LycheeGroupPrefsDB
+ for _,invalid in ipairs({true,false,"damaged account root",7}) do
+  local validCharacter={defaultSort="rating",rememberFilters=false}
+  _G.LycheeGroupDB=invalid;_G.LycheeGroupPrefsDB=validCharacter;A.db=nil;A.charPrefs=nil
+  A:LoadDB()
+  T.eq(A.db.uiConfigRecovery and A.db.uiConfigRecovery["$root"] and A.db.uiConfigRecovery["$root"].value,invalid,"the account root is recoverable verbatim")
+  T.eq(type(A.db.uiConfigRecovery["$root"].error),"string")
+  T.eq(A.charPrefs,validCharacter);T.eq(A:GetSetting("defaultSort"),"rating");T.eq(A:GetSetting("rememberFilters"),false)
+  A:SetSetting("notesEnabled",false);T.eq(A:GetSetting("notesEnabled"),false,"the replacement account root supports ordinary writes")
+  local replacement,recovery=A.db,A.db.uiConfigRecovery["$root"]
+  A.db=nil;A.charPrefs=nil;A:LoadDB()
+  T.eq(A.db,replacement);T.eq(A.db.uiConfigRecovery["$root"],recovery);T.eq(recovery.previous,nil)
+ end
+ for _,invalid in ipairs({true,false,"damaged character root",7}) do
+  local validAccount={notesEnabled=false}
+  _G.LycheeGroupDB=validAccount;_G.LycheeGroupPrefsDB=invalid;A.db=nil;A.charPrefs=nil
+  A:LoadDB()
+  T.eq(A.charPrefs.uiConfigRecovery and A.charPrefs.uiConfigRecovery["$root"] and A.charPrefs.uiConfigRecovery["$root"].value,invalid,"the character root is recoverable verbatim")
+  T.eq(type(A.charPrefs.uiConfigRecovery["$root"].error),"string")
+  T.eq(A.db,validAccount);T.eq(A:GetSetting("notesEnabled"),false)
+  A:SetSetting("defaultSort","members");T.eq(A:GetSetting("defaultSort"),"members","the replacement character root supports ordinary writes")
+  local replacement,recovery=A.charPrefs,A.charPrefs.uiConfigRecovery["$root"]
+  A.db=nil;A.charPrefs=nil;A:LoadDB()
+  T.eq(A.charPrefs,replacement);T.eq(A.charPrefs.uiConfigRecovery["$root"],recovery);T.eq(recovery.previous,nil)
+ end
+ _G.LycheeGroupDB=nil;_G.LycheeGroupPrefsDB=nil;A.db=nil;A.charPrefs=nil;A:LoadDB()
+ T.eq(A.db.uiConfigRecovery,nil,"nil account storage is a normal first installation")
+ T.eq(A.charPrefs.uiConfigRecovery,nil,"nil character storage is a normal first installation")
+ _G.LycheeGroupDB=account;_G.LycheeGroupPrefsDB=character;A.db=nil;A.charPrefs=nil
+end
+
 do
  _G.LycheeGroupDB={applicantSound=false,applicantTone="wood",soundVolume=25,keywordFilters={global={"carry"},dungeon={"spam"},raid={}}}
 	A:LoadDB()
  T.eq(A.db.applicantSound,nil,"retired sound toggle is removed from saved settings")
  T.eq(A.db.applicantTone,nil);T.eq(A.db.soundVolume,nil)
  T.eq(A.db.keywordFilters,nil,"removed keyword settings are discarded from existing saved data")
+ for _,key in ipairs({"applicantSound","applicantTone","soundVolume","keywordFilters"}) do
+  T.eq(A.Configuration.legacy.account[key],nil,"retired settings must not remain in the migration snapshot: "..key)
+ end
 	T.eq(A.db.notesEnabled, true, "笔记默认启用")
 	T.eq(A.db.notesHasRecords, false, "默认无记录摘要")
 	T.eq(A.db.askReason, true, "默认询问理由")
@@ -443,6 +480,24 @@ do
  T.eq(ok,false);T.eq(reason,"combat");T.eq(writes,before)
  combat=false;reject=true;ok,reason=B:SetKey("F")
  T.eq(ok,false);T.eq(reason,"failed");T.eq(assigned.M,B.action,"failed write keeps prior binding")
+ -- SavedVariables can contain a non-table at this specialized startup path.
+ -- Exercise the registered login event, including conflict preservation.
+ reject=false;scope=1;Stubs.FireEvent("PLAYER_LOGIN")
+ for _,bad in ipairs({true,"broken",17,false}) do
+  Reset({{"ALT-G",B.action}});A.db.bindingDefaultScopes=bad
+  Load.addon("LycheeGroup","Bindings.lua")
+  Stubs.FireEvent("PLAYER_LOGIN")
+  T.eq(type(A.db.bindingDefaultScopes),"table","login repairs the scope container")
+  T.eq(A.db.bindingDefaultScopes.account,true)
+  T.eq(A.db.uiConfigRecovery.bindingDefaultScopes.value,bad,"the original invalid value is retained")
+  T.eq(writes,0,"repair never replaces a player-selected binding")
+  T.eq(assigned["ALT-G"],B.action)
+  T.eq(#Stubs.FramesWithEvent("PLAYER_LOGIN"),0)
+ end
+ Reset();local scopes={account=true,["character:Player-binding-test"]=true}
+ A.db.bindingDefaultScopes=scopes;B:InitializeDefault();scope=2;B:InitializeDefault()
+ T.eq(A.db.bindingDefaultScopes,scopes,"healthy scope storage keeps its identity")
+ T.eq(writes,0,"both initialized scopes keep an intentionally empty binding")
  for _,name in ipairs(names) do _G[name]=savedGlobals[name] end
  A.db=oldDB
 end

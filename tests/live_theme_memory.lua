@@ -1,7 +1,7 @@
 -- LycheeDev Theme v2 acceptance: real existing business, normal animation, 12 page/font cycles.
 -- Button:Click is controller coverage. No hardware dispatch, forced GC, GC-policy changes or protected business actions.
 local probe=...
-local A=assert(LycheeGroup);assert(LycheeUI.version==36 and A.RuntimeTheme and not InCombatLockdown())
+local A=assert(LycheeGroup);assert(LycheeUI.version==38 and A.RuntimeTheme and not InCombatLockdown())
 assert(A.API.Theme.version==2 and A.API.Configuration.version==2,"cold_theme_api_not_loaded")
 assert(not LycheeUI.Context.SetTheme and not LycheeUI.Context.SetRecipes,"runtime_theme_writes_remain")
 assert(not LycheeUI.Context.StyleMemberIcon and not LycheeUI.Context.SetMemberIcon and not LycheeUI.Context.SetRoleIcon and not LycheeUI.Context.SetActivityIcon,'business interfaces remain in shared library')
@@ -25,7 +25,7 @@ local initialListing=A.Group and A.Group:GetListing()
 assert(not C_LFGList.HasActiveEntryInfo() or initialListing,'listing restoration missing')
 local listingActivity=initialListing and initialListing.activityID
 local floatingShown=A.Floating and A.Floating.panel and A.Floating.panel:IsShown()
-local out={themeAPI=2,revision=36,build=select(2,GetBuildInfo()),samples={},search={},cycles={},stages=0,nativeClicks=0,fontChanges=0,budget=20000000,budgetPassed=true,peakBytes=0}
+local out={themeAPI=2,revision=LycheeUI.version,build=select(2,GetBuildInfo()),samples={},search={},cycles={},stages=0,nativeClicks=0,fontChanges=0,budget=20000000,budgetPassed=true,peakBytes=0}
 local started=GetTime()
 out.mainBuiltAtStart=initial~=nil and initial.frame~=nil
 out.initialFloatingPool=A.Floating and A.Floating.rows and #A.Floating.rows or 0
@@ -68,10 +68,22 @@ assert(cfg:Set({['settings.fontScale']=100,['settings.reduceMotion']=false}))
 Memory('before_main_open')
 assert(A:Ensure('Group'));SaveFind()
 assert(A:Open(initialListing and 'create' or 'find'));U=A.UI;P=U.pages.find
+if P.filterPanel then
+ local strata={BACKGROUND=1,LOW=2,MEDIUM=3,HIGH=4,DIALOG=5,FULLSCREEN=6,FULLSCREEN_DIALOG=7,TOOLTIP=8}
+ local shield=U.blocker;local shieldStrata=strata[shield:GetFrameStrata()];local shieldLevel=shield:GetFrameLevel()
+ local targets={P.filterPanel,P.filterScrim}
+ for _,entry in ipairs(P.filterHitTargets or {}) do targets[#targets+1]=entry.target end
+ for _,target in ipairs(targets) do
+  local layer=strata[target:GetFrameStrata()]
+  assert(shieldStrata>layer or shieldStrata==layer and shieldLevel>target:GetFrameLevel(),'closing_input_shield_below_filter')
+ end
+ out.inputShield={strata=shield:GetFrameStrata(),level=shieldLevel,filterTargets=#targets}
+end
 Memory(initialListing and 'first_listing_manage' or 'first_find')
 local tick,ready,attempt,index,lastLabel,resultWait
-local sections={'general','interface','browse','memberIcons','blocks','notes','floating','about'}
+local sections={'general','interface','browse','memberIcons','blocks','notes','floating','about','credits'}
 local pages={'find','create','notes','settings'}
+out.settingsSections=#sections
 local function Click(button)button:Click();out.nativeClicks=out.nativeClicks+1 end
 tick=assert(probe:Callback(function()
  if lastLabel then
@@ -105,11 +117,11 @@ tick=assert(probe:Callback(function()
   Memory(lastLabel)
  end
  index=index+1
- if index<=8 then
+ if index<=#sections then
   Click(U.pages.settings.nav[sections[index]])
   lastLabel='settings_'..sections[index]
- elseif index<=56 then
-  local n=index-9;local cycle=math.floor(n/4)+1;local page=pages[n%4+1]
+ elseif index<=#sections+12*#pages then
+  local n=index-#sections-1;local cycle=math.floor(n/#pages)+1;local page=pages[n%#pages+1]
   if page=='settings' then Click(U.settingsButton)else Click(U.navItems[page])end
   assert(U.page==page,'native navigation failed: '..page)
   if page=='settings' then

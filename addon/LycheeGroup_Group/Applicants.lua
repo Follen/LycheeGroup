@@ -8,6 +8,13 @@ local generation,dirty=0,true
 local currentActivityID
 local retired={}
 local retirementTimer,retirementAt
+local confirmation
+local confirmationPopup="LYCHEEGROUP_INVITING_CONVERT_TO_RAID"
+local function ClearConfirmation(hide)
+ local previous=confirmation
+ confirmation=nil
+ if previous and hide then StaticPopup_Hide(confirmationPopup) end
+end
 local notifyTimer
 local races={}
 -- Race names and native race factions are static client data. Keep successful
@@ -63,7 +70,7 @@ local function Read(id,activityID)
  local record=records[id]
  local isNew=record==nil
  if not record then record={id=id,members={}};records[id]=record end
- if record.status~=status or record.pendingStatus~=pending then record.acting=nil end
+ if record.status~=status or record.pendingStatus~=pending then record.acting=nil;record.inviteSize=nil end
  record.status,record.pendingStatus=status,pending
  if finished[status] then record.removeAt=record.removeAt or GetTime()+5 else record.removeAt=nil end
  record.numMembers=G.Public(info.numMembers) or 0
@@ -142,6 +149,10 @@ function Applicants:OnApplicantUpdated(id)
  NotifyChanged()
 end
 function Applicants:OnEntryUpdate(created)
+ if confirmation then
+  local listing=G.Listing:GetListing()
+  if created or not listing or listing.activityID~=confirmation.activityID then ClearConfirmation(true) end
+ end
  if not C_LFGList.HasActiveEntryInfo() then self:Clear()
  else
   local listing=G.Listing:GetListing()
@@ -156,50 +167,118 @@ function Applicants:RequestRefresh()
  return true
 end
 function Applicants:Clear()
+ if self.autoInviting then self.autoInviteDirty=true end
+ ClearConfirmation(true)
  wipe(records);wipe(ordered);wipe(retired);ScheduleRetirement()
  currentActivityID=nil;dirty=false;G.Alerts:Stop();NotifyChanged(true)
+end
+local function Finite(value)
+ return type(value)=="number" and value==value and value>-math.huge and value<math.huge
+end
+-- One capacity snapshot per synchronous batch. A native business event can
+-- invalidate it; manual actions and confirmed actions always read a fresh one.
+local function Capacity()
+ if not C_LFGList.HasActiveEntryInfo() then return nil,L.noActiveListing end
+ local listing=G.Listing:GetListing()
+ if not listing then return nil,L.noActiveListing end
+ local native=G.Public(C_LFGList.GetActiveEntryInfo())
+ local ids=type(native)=="table" and G.Public(native.activityIDs)
+ local activityID=type(ids)=="table" and G.Public(ids[1])
+ if not activityID or activityID~=listing.activityID then return nil,L.invalidActivity end
+ local activity=G.Catalog:GetActivity(activityID)
+ local maximum=activity and G.Public(activity.maxNumPlayers)
+ if not Finite(maximum) or maximum<0 or maximum%1~=0 then return nil,L.invalidActivity end
+ if maximum==0 then maximum=activity.categoryID==9 and CONQUEST_SIZES[5] or MAX_RAID_MEMBERS end
+ maximum=math.min(maximum,MAX_RAID_MEMBERS)
+ local count=math.max(1,GetNumGroupMembers(LE_PARTY_CATEGORY_HOME))+C_LFGList.GetNumInvitedApplicantMembers()
+ for _,other in pairs(records) do if other.acting=="invite" then count=count+(other.inviteSize or other.numMembers) end end
+ return {listing=listing,activityID=activityID,maximum=maximum,count=count}
+end
+local function Validate(id,decline,capacity)
+ local allowed,reason=G:CanManageApplicants()
+ if not allowed then return nil,reason end
+ local record=records[id]
+ if not record or record.status~="applied" then return nil,L.invalidAction end
+ if record.acting or record.pendingStatus then return nil,L.actionBusy end
+ if decline then return record end
+ if not capacity then capacity,reason=Capacity() end
+ if not capacity then return nil,reason end
+ local info=G.Public(C_LFGList.GetApplicantInfo(id))
+ if type(info)~="table" or G.Public(info.applicationStatus)~="applied" then return nil,L.invalidAction end
+ if G.Public(info.pendingApplicationStatus) then return nil,L.actionBusy end
+ local size=G.Public(info.numMembers)
+ if not Finite(size) or size<1 or size%1~=0 then return nil,L.invalidAction end
+ if capacity.count+size>capacity.maximum then return nil,L.groupFull end
+ local convert=capacity.count+size>(MAX_PARTY_MEMBERS or 4)+1 and not IsInRaid(LE_PARTY_CATEGORY_HOME)
+ return record,nil,convert,capacity.activityID,size
 end
 local function InviteNative(id,convertToRaid)
  if convertToRaid then C_PartyInfo.ConfirmConvertToRaid() end
  C_LFGList.InviteApplicant(id)
 end
-local function Act(id,decline,convertToRaid)
- local allowed,reason=G:CanManageApplicants()
- if not allowed then return false,reason end
- local record=records[id]
- if not record or record.status~="applied" then return false,L.invalidAction end
- if record.acting or record.pendingStatus then return false,L.actionBusy end
+local function Act(id,decline,automatic,confirmed,capacity)
+ local record,reason,convertToRaid,activityID,size=Validate(id,decline,capacity)
+ if not record then return false,reason end
+ if confirmation and confirmation.record==record then return false,L.actionBusy end
+ if not decline and convertToRaid and not automatic and not confirmed then
+  ClearConfirmation(true)
+  local token={id=id,record=record,activityID=activityID}
+  confirmation=token
+  StaticPopupDialogs[confirmationPopup]={
+   text=LFG_LIST_CONVERT_TO_RAID_WARNING,button1=INVITE,button2=CANCEL,
+   timeout=0,whileDead=true,hideOnEscape=true,preferredIndex=3,
+   OnAccept=function(_,data)
+    if confirmation~=data then return end
+    ClearConfirmation(false)
+    local listing=G.Listing:GetListing()
+    if records[data.id]~=data.record or not listing or listing.activityID~=data.activityID then return end
+    local ok,err=Act(data.id,false,false,true)
+    if ok==false then A:Print(err);NotifyChanged(true) end
+   end,
+   OnCancel=function(_,data) if confirmation==data then ClearConfirmation(false);NotifyChanged(true) end end,
+   OnHide=function(frame) if confirmation==frame.data then ClearConfirmation(false);NotifyChanged(true) end end,
+  }
+  if not StaticPopup_Show(confirmationPopup,nil,nil,token) then ClearConfirmation(false);return false,L.inviteFailed end
+  -- An opened confirmation has not submitted an invitation yet.
+  return nil,nil
+ end
+ if automatic and not GetCVarBool("profanityFilter") then ConsoleExec("profanityFilter 1") end
+ record.inviteSize=not decline and size or nil
  record.acting=decline and "decline" or "invite"
  local ok=pcall(decline and C_LFGList.DeclineApplicant or InviteNative,id,convertToRaid)
- if not ok then record.acting=nil;return false,decline and L.declineApplicantFailed or L.inviteFailed end
+ if not ok then record.acting=nil;record.inviteSize=nil;return false,decline and L.declineApplicantFailed or L.inviteFailed end
  NotifyChanged(not Applicants.autoInviting)
- return true
+ return true,nil,size
 end
-function Applicants:Invite(id,convertToRaid) return Act(id,false,convertToRaid) end
+function Applicants:Invite(id)
+ local ok,reason=Act(id,false)
+ return ok,reason
+end
 function Applicants:Decline(id) return Act(id,true) end
--- Ordinary raids do not retain Blizzard's autoAccept flag. The listing's own
--- option also handles those applicants, using the same action/state path.
+-- Explicit auto invitation uses the same latest capacity and reservation checks.
 function Applicants:TryAutoInvite()
+ if self.autoInviting then self.autoInviteDirty=true;return end
  local listing=G.Listing:GetListing()
- if self.autoInviting or not listing or listing.autoInvite~=true or listing.autoAccept~=false or not G:CanManageListing() then return end
- local activity=G.Catalog:GetActivity(listing.activityID)
- if not activity then return end
- local maximum=activity.maxNumPlayers
- if maximum==0 then maximum=activity.categoryID==9 and CONQUEST_SIZES[5] or MAX_RAID_MEMBERS end
- local count=math.max(1,GetNumGroupMembers(LE_PARTY_CATEGORY_HOME))+C_LFGList.GetNumInvitedApplicantMembers()
- -- Locally submitted invitations reserve space until a native state event.
- for _,record in pairs(records) do if record.acting=="invite" then count=count+record.numMembers end end
- if count>=maximum then return end
- if not GetCVarBool("profanityFilter") then ConsoleExec("profanityFilter 1") end
+ if not listing or listing.autoInvite~=true or listing.autoAccept~=false or not G:CanManageListing() then return end
+ local capacity=Capacity()
+ if not capacity or capacity.count>=capacity.maximum then return end
  self.autoInviting=true
  for _,id in ipairs(self:GetApplicants()) do
+  listing=G.Listing:GetListing()
+  if not listing or listing.autoInvite~=true or listing.autoAccept~=false or not G:CanManageListing() or not C_LFGList.HasActiveEntryInfo() then break end
+  -- Synchronous native events may alter capacity, activity, or local actions.
+  -- Never carry the old batch snapshot across those changes.
+  if self.autoInviteDirty or listing~=capacity.listing then
+   self.autoInviteDirty=nil;capacity=Capacity()
+  end
+  if not capacity or capacity.count>=capacity.maximum then break end
   local record=records[id]
-  if record.status=="applied" and not record.pendingStatus and not record.acting and count+record.numMembers<=maximum then
-   local convertToRaid=count+record.numMembers>MAX_PARTY_MEMBERS+1 and not IsInRaid(LE_PARTY_CATEGORY_HOME)
-   if self:Invite(id,convertToRaid) then count=count+record.numMembers end
+  if record and record.status=="applied" and not record.pendingStatus and not record.acting then
+   local ok,_,size=Act(id,false,true,false,capacity)
+   if ok then capacity.count=capacity.count+size end
   end
  end
- self.autoInviting=nil
+ self.autoInviting=nil;self.autoInviteDirty=nil
 end
 function Applicants:GetApplicants()
  if dirty then

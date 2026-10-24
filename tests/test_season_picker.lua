@@ -152,6 +152,27 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  s:Open();s.fixture.A:Open("notes");Equal(s:Subscriptions(),0,"leaving Find releases season observation")
 end
 
+-- Rebinding and hiding a pressed checkbox cannot toggle another dungeon.
+do
+ local s=Session("enUS");local p=s.page;s:Open();p.activities.clip.mouseOver=true
+ local row=s:Row(20);local box=row.multiSelect
+ box:Fire("OnMouseDown","LeftButton");p.activities:SetPixelOffset(48,false)
+ local nextKey=row.key;Check(nextKey~=20,"the real activity list reuses the pressed checkbox row")
+ box:Fire("OnMouseUp","LeftButton");box:SetChecked(true);Click(box)
+ Equal(p.draftGroupKeys[nextKey],nil,"releasing a rebound checkbox cannot select its new dungeon")
+ Equal(box:GetValue(),false,"rejected activation restores the current checkbox value")
+ Click(box);Equal(p.draftGroupKeys[nextKey],true,"direct activation still toggles the current dungeon")
+ box:Fire("OnMouseDown","LeftButton");p:RefreshPicker();box:Fire("OnMouseUp","LeftButton");Click(box)
+ Equal(p.draftGroupKeys[nextKey],nil,"a refresh of the same binding preserves a valid mouse press")
+ box:Fire("OnMouseDown","LeftButton");p:ClosePicker();s:Open()
+ box:Fire("OnMouseUp","LeftButton");Click(box)
+ Equal(p.draftGroupKeys[row.key],nil,"closing and reopening cancels the old checkbox press")
+ box:Fire("OnMouseDown","LeftButton");box:Fire("OnMouseUp","LeftButton");Click(box)
+ Equal(p.draftGroupKeys[row.key],true,"a new press after cancellation toggles normally")
+ Click(box);Equal(p.draftGroupKeys[row.key],nil,"a consumed press does not leave a stuck cancellation")
+ p.picker:Hide();s.fixture.U:Hide(true)
+end
+
 -- Sync native completion cannot recursively request, and preview never falls back to live data.
 do
  local s=Session("enUS");local p,u=s.page,s.fixture.U;s.synchronous=true

@@ -1,0 +1,1634 @@
+{
+  "schema": "lycheegroup.release-validation.v1",
+  "version": "1.2.5",
+  "date": "2026-10-25",
+  "library": {
+    "version": "1.3.0",
+    "revision": 38,
+    "frozenFiles": 30,
+    "sourceAndEmbeddedHashesMatch": true
+  },
+  "audit": {
+    "rounds": 13,
+    "finalRound": {
+      "freshReviewers": 3,
+      "findings": 0,
+      "scope": [
+        "all product business modules and persistence",
+        "all UI pages, controllers, list reuse and lifecycle",
+        "shared-library ownership, public contracts, build metadata and obsolete code/documentation"
+      ]
+    },
+    "repairs": "Runtime, product, lifecycle, persistence and generic library defects were fixed between rounds; each new round reviewed the whole project."
+  },
+  "offline": {
+    "modules": 37,
+    "assertions": 23278,
+    "failures": 0,
+    "layoutSuites": 16,
+    "architectureChecks": 4114,
+    "luaSyntaxFiles": 167,
+    "probeLifecycleChecks": 259,
+    "libraryChecks": {
+      "main": 1245,
+      "listGeometry": 254,
+      "menuGeometry": 81,
+      "ownership": 59,
+      "nativeReacquire": 107,
+      "setPoint": 10
+    }
+  },
+  "native": {
+    "client": "12.1.5.70575",
+    "locale": "zhCN",
+    "controls": "Native Frame geometry, addon controllers and Button:Click; no hardware dispatch or protected business action.",
+    "runtimeMatchesRelease": true,
+    "postAcceptanceRuntimeChanges": [
+      "LycheeGroup/LycheeGroup.toc",
+      "LycheeGroup_Group/LycheeGroup_Group.toc",
+      "LycheeGroup_Notes/LycheeGroup_Notes.toc",
+      "LycheeGroup_UI/LycheeGroup_UI.toc"
+    ],
+    "cold": {
+      "versions": {
+        "LycheeGroup": "1.2.5",
+        "LycheeGroup_Group": "1.2.5",
+        "LycheeGroup_Notes": "1.2.5",
+        "LycheeGroup_UI": "1.2.5"
+      },
+      "libraryRevision": 38,
+      "mainBuilt": false,
+      "groupLoaded": false,
+      "naturalPackageBytes": 2167619,
+      "caseFold": {
+        "ascii": "alice-silverhand",
+        "available": true,
+        "unicode": "élène-silverhand"
+      }
+    },
+    "memory": {
+      "budgetBytes": 20000000,
+      "passed": true,
+      "peakBytes": 18300931,
+      "peakPackages": {
+        "LycheeGroup": 2871945,
+        "LycheeGroup_Group": 6646093,
+        "LycheeGroup_Notes": 103448,
+        "LycheeGroup_UI": 8679445
+      },
+      "elapsedSeconds": 51.570000000006985,
+      "samples": 73,
+      "cycles": 12,
+      "settingsSections": 9,
+      "nativeClicks": 58,
+      "fontChanges": 12,
+      "mainBuiltAtStart": false,
+      "forcedGC": false,
+      "realSearchResultRange": [
+        99,
+        100
+      ],
+      "visibleRowsRange": [
+        10,
+        10
+      ],
+      "observerRefresh": {
+        "minimumMs": 65.9142000079155,
+        "maximumMs": 85.78449994325638,
+        "totalMs": 5302.889099419117,
+        "interpretation": "Global addon-memory refresh overhead, not exclusive product CPU."
+      },
+      "restored": {
+        "account": true,
+        "character": true,
+        "session": true,
+        "listing": true
+      },
+      "finalPools": {
+        "applications": 2,
+        "find": 12,
+        "floatingBatches": 0,
+        "floatingRows": 0
+      }
+    },
+    "features": {
+      "resultCount": 76,
+      "filters": [
+        {
+          "name": "same_class_role",
+          "baseline": 76,
+          "actual": 70,
+          "expected": 70
+        },
+        {
+          "name": "bloodlust",
+          "baseline": 76,
+          "actual": 75,
+          "expected": 75
+        },
+        {
+          "name": "both",
+          "baseline": 76,
+          "actual": 69,
+          "expected": 69
+        }
+      ],
+      "seasonScoreGroups": 8,
+      "seasonScoresMatch": true,
+      "scoreSubscriptionReleased": true,
+      "inlinePlayerLink": {
+        "matchedNativeIdentity": true,
+        "focusReleased": true,
+        "identityPreserved": true
+      },
+      "restored": {
+        "filterPanel": true,
+        "filters": true,
+        "menu": true,
+        "modal": true,
+        "offset": true,
+        "page": true,
+        "picker": true,
+        "preferences": true,
+        "shown": true,
+        "tooltip": true
+      }
+    },
+    "menu": {
+      "build": "70575",
+      "closed": true,
+      "libraryRevision": 38,
+      "long": {
+        "contentHeight": 4080,
+        "lastReachable": true,
+        "pool": 12,
+        "scrollMaximum": 3680,
+        "viewport": 400
+      },
+      "mixed": {
+        "contentHeight": 200,
+        "firstHeight": 80,
+        "lastHeight": 119.9999771118164,
+        "lastY": -80,
+        "viewport": 199.99998474121094,
+        "zeroCollapsed": true
+      },
+      "scope": "isolated_native_menu_geometry",
+      "states": {
+        "checkedCollapsed": true,
+        "disabledCollapsed": true,
+        "restoredHeight": 120
+      }
+    },
+    "presence": {
+      "afterReverse": {
+        "alpha": 1,
+        "dtMs": 6.000000052154064,
+        "offsetY": -8.437500953674316,
+        "phase": 0.6394807041811175,
+        "shown": true
+      },
+      "beforeReverse": {
+        "alpha": 1,
+        "dtMs": 6.000000052154064,
+        "offsetY": -8.437500953674316,
+        "phase": 0.6394807041811175,
+        "shown": true
+      },
+      "build": "70575",
+      "closedAfter": true,
+      "closing": [
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": 0,
+          "phase": 0.9851130952482068,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 6.000000052154064,
+          "offsetY": 0,
+          "phase": 0.9708273808383161,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": 0,
+          "phase": 0.9541607136572046,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": 0,
+          "phase": 0.937494046476093,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": 0,
+          "phase": 0.9208273792949815,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 8.00000037997961,
+          "offsetY": 0,
+          "phase": 0.9017797593426491,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -1.4062501192092896,
+          "phase": 0.8851130921615376,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 6.000000052154064,
+          "offsetY": -1.4062501192092896,
+          "phase": 0.8708273777516469,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -1.4062501192092896,
+          "phase": 0.8541607105705353,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -1.4062501192092896,
+          "phase": 0.8374940433894238,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 8.00000037997961,
+          "offsetY": -2.812500238418579,
+          "phase": 0.8184464234370914,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -2.812500238418579,
+          "phase": 0.8017797562559799,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 6.000000052154064,
+          "offsetY": -2.812500238418579,
+          "phase": 0.7874940418460892,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -2.812500238418579,
+          "phase": 0.7708273746649776,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -4.218750476837158,
+          "phase": 0.7541607074838661,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -4.218750476837158,
+          "phase": 0.7374940403027546,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -5.625000476837158,
+          "phase": 0.720827373121643,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -5.625000476837158,
+          "phase": 0.7041607059405315,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 6.000000052154064,
+          "offsetY": -5.625000476837158,
+          "phase": 0.6898749915306408,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 8.00000037997961,
+          "offsetY": -7.03125,
+          "phase": 0.6708273715783084,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 6.000000052154064,
+          "offsetY": -7.03125,
+          "phase": 0.6565416571684177,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -8.437500953674316,
+          "phase": 0.6398749899873062,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -8.437500953674316,
+          "phase": 0.6232083228061946,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -9.84375,
+          "phase": 0.6065416556250831,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -11.250000953674316,
+          "phase": 0.5898749884439716,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -11.250000953674316,
+          "phase": 0.57320832126286,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -12.65625,
+          "phase": 0.5565416540817485,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -14.0625,
+          "phase": 0.539874986900637,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -14.0625,
+          "phase": 0.5232083197195254,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -15.46875,
+          "phase": 0.5065416525384139,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -16.875001907348633,
+          "phase": 0.48987498535730234,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -18.28125,
+          "phase": 0.4732083181761908,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -18.28125,
+          "phase": 0.45654165099507926,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -19.6875,
+          "phase": 0.4398749838139677,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -21.09375,
+          "phase": 0.4232083166328562,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 8.00000037997961,
+          "offsetY": -22.500001907348633,
+          "phase": 0.4041606966805238,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 6.000000052154064,
+          "offsetY": -23.90625,
+          "phase": 0.38987498227063316,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 6.000000052154064,
+          "offsetY": -25.3125,
+          "phase": 0.37558926786074254,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -26.718751907348633,
+          "phase": 0.358922600679631,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -28.125,
+          "phase": 0.34225593349851946,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 8.00000037997961,
+          "offsetY": -29.531251907348633,
+          "phase": 0.32320831354618706,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -30.9375,
+          "phase": 0.3065416463650755,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 6.000000052154064,
+          "offsetY": -32.34375,
+          "phase": 0.2922559319551849,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -33.750003814697266,
+          "phase": 0.27558926477407336,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -35.15625,
+          "phase": 0.2589225975929618,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -36.5625,
+          "phase": 0.2422559304118503,
+          "shown": true
+        },
+        {
+          "alpha": 0.9921569228172302,
+          "dtMs": 7.000000216066837,
+          "offsetY": -37.968753814697266,
+          "phase": 0.2255892632307388,
+          "shown": true
+        },
+        {
+          "alpha": 0.9529412388801575,
+          "dtMs": 8.00000037997961,
+          "offsetY": -40.781253814697266,
+          "phase": 0.2065416432784064,
+          "shown": true
+        },
+        {
+          "alpha": 0.9019608497619629,
+          "dtMs": 6.000000052154064,
+          "offsetY": -42.1875,
+          "phase": 0.19225592886851578,
+          "shown": true
+        },
+        {
+          "alpha": 0.8313726186752319,
+          "dtMs": 7.000000216066837,
+          "offsetY": -43.59375,
+          "phase": 0.17558926168740427,
+          "shown": true
+        },
+        {
+          "alpha": 0.7411764860153198,
+          "dtMs": 7.000000216066837,
+          "offsetY": -45.000003814697266,
+          "phase": 0.15892259450629276,
+          "shown": true
+        },
+        {
+          "alpha": 0.6431372761726379,
+          "dtMs": 7.000000216066837,
+          "offsetY": -46.40625,
+          "phase": 0.14225592732518125,
+          "shown": true
+        },
+        {
+          "alpha": 0.5411764979362488,
+          "dtMs": 7.000000216066837,
+          "offsetY": -49.21875,
+          "phase": 0.12558926014406974,
+          "shown": true
+        },
+        {
+          "alpha": 0.45098042488098145,
+          "dtMs": 6.000000052154064,
+          "offsetY": -50.625,
+          "phase": 0.11130354573417911,
+          "shown": true
+        },
+        {
+          "alpha": 0.3333333432674408,
+          "dtMs": 8.00000037997961,
+          "offsetY": -53.437503814697266,
+          "phase": 0.0922559257818467,
+          "shown": true
+        },
+        {
+          "alpha": 0.2392157018184662,
+          "dtMs": 7.000000216066837,
+          "offsetY": -54.84375,
+          "phase": 0.07558925860073518,
+          "shown": true
+        },
+        {
+          "alpha": 0.16470588743686676,
+          "dtMs": 6.000000052154064,
+          "offsetY": -56.25,
+          "phase": 0.06130354419084455,
+          "shown": true
+        },
+        {
+          "alpha": 0.08235294371843338,
+          "dtMs": 8.00000037997961,
+          "offsetY": -59.062503814697266,
+          "phase": 0.04225592423851214,
+          "shown": true
+        },
+        {
+          "alpha": 0.03921568766236305,
+          "dtMs": 6.000000052154064,
+          "offsetY": -60.468753814697266,
+          "phase": 0.02797020982862151,
+          "shown": true
+        },
+        {
+          "alpha": 0.003921568859368563,
+          "dtMs": 8.00000037997961,
+          "offsetY": -63.28125,
+          "phase": 0.008922589876289105,
+          "shown": true
+        },
+        {
+          "alpha": 0,
+          "dtMs": 6.000000052154064,
+          "offsetY": -64.6875,
+          "phase": 0,
+          "shown": false
+        }
+      ],
+      "finalClosed": true,
+      "finalClosedJobs": 0,
+      "gc": "natural",
+      "jobsAfter": 0,
+      "library": "1.3.0",
+      "logoAfterClose": {
+        "height": 43.00938034057617,
+        "width": 45.086734771728516,
+        "y": 0.7506788372993469
+      },
+      "logoAfterHidden": {
+        "height": 43.999935150146484,
+        "width": 44,
+        "y": 0
+      },
+      "logoAfterReverse": {
+        "height": 44.40237808227539,
+        "width": 43.71894454956055,
+        "y": 1.6406700611114502
+      },
+      "logoBeforeClose": {
+        "height": 43.00938034057617,
+        "width": 45.086734771728516,
+        "y": 0.7506788372993469
+      },
+      "logoBeforeReverse": {
+        "height": 44.40237808227539,
+        "width": 43.71894454956055,
+        "y": 1.6406700611114502
+      },
+      "normalClosedJobs": 0,
+      "opening": [
+        {
+          "alpha": 0.003921568859368563,
+          "dtMs": 12.000000104308128,
+          "offsetY": -63.28125,
+          "phase": 0.00868952386857321,
+          "shown": true
+        },
+        {
+          "alpha": 0.011764707043766975,
+          "dtMs": 3.000000026077032,
+          "offsetY": -61.875,
+          "phase": 0.015832381073518524,
+          "shown": true
+        },
+        {
+          "alpha": 0.04313725605607033,
+          "dtMs": 6.000000052154064,
+          "offsetY": -60.468753814697266,
+          "phase": 0.030118095483409154,
+          "shown": true
+        },
+        {
+          "alpha": 0.10196079313755035,
+          "dtMs": 7.000000216066837,
+          "offsetY": -57.65625,
+          "phase": 0.04678476266452067,
+          "shown": true
+        },
+        {
+          "alpha": 0.1764705926179886,
+          "dtMs": 7.000000216066837,
+          "offsetY": -56.25,
+          "phase": 0.06345142984563218,
+          "shown": true
+        },
+        {
+          "alpha": 0.26274511218070984,
+          "dtMs": 7.000000216066837,
+          "offsetY": -54.84375,
+          "phase": 0.08011809702674369,
+          "shown": true
+        },
+        {
+          "alpha": 0.3607843220233917,
+          "dtMs": 7.000000216066837,
+          "offsetY": -52.031253814697266,
+          "phase": 0.0967847642078552,
+          "shown": true
+        },
+        {
+          "alpha": 0.46666669845581055,
+          "dtMs": 7.000000216066837,
+          "offsetY": -50.625,
+          "phase": 0.11345143138896671,
+          "shown": true
+        },
+        {
+          "alpha": 0.5686274766921997,
+          "dtMs": 7.000000216066837,
+          "offsetY": -47.8125,
+          "phase": 0.13011809857007822,
+          "shown": true
+        },
+        {
+          "alpha": 0.6705882549285889,
+          "dtMs": 7.000000216066837,
+          "offsetY": -46.40625,
+          "phase": 0.14678476575118973,
+          "shown": true
+        },
+        {
+          "alpha": 0.7686275243759155,
+          "dtMs": 7.000000216066837,
+          "offsetY": -45.000003814697266,
+          "phase": 0.16345143293230124,
+          "shown": true
+        },
+        {
+          "alpha": 0.8509804606437683,
+          "dtMs": 7.000000216066837,
+          "offsetY": -43.59375,
+          "phase": 0.18011810011341275,
+          "shown": true
+        },
+        {
+          "alpha": 0.9215686917304993,
+          "dtMs": 7.000000216066837,
+          "offsetY": -40.781253814697266,
+          "phase": 0.19678476729452427,
+          "shown": true
+        },
+        {
+          "alpha": 0.9686275124549866,
+          "dtMs": 7.000000216066837,
+          "offsetY": -39.375,
+          "phase": 0.21345143447563578,
+          "shown": true
+        },
+        {
+          "alpha": 0.9960784912109375,
+          "dtMs": 7.000000216066837,
+          "offsetY": -37.968753814697266,
+          "phase": 0.2301181016567473,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 6.000000052154064,
+          "offsetY": -36.5625,
+          "phase": 0.2444038160666379,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -35.15625,
+          "phase": 0.26107048324774945,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -33.750003814697266,
+          "phase": 0.277737150428861,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -32.34375,
+          "phase": 0.29440381760997253,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -30.9375,
+          "phase": 0.31107048479108407,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 8.00000037997961,
+          "offsetY": -28.125,
+          "phase": 0.33011810474341646,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -26.718751907348633,
+          "phase": 0.346784771924528,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -25.3125,
+          "phase": 0.36345143910563954,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 6.000000052154064,
+          "offsetY": -25.3125,
+          "phase": 0.37773715351553017,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -23.90625,
+          "phase": 0.3944038206966417,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -22.500001907348633,
+          "phase": 0.41107048787775324,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -21.09375,
+          "phase": 0.4277371550588648,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -19.6875,
+          "phase": 0.4444038222399763,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -18.28125,
+          "phase": 0.46107048942108786,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -16.875001907348633,
+          "phase": 0.4777371566021994,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -16.875001907348633,
+          "phase": 0.49440382378331094,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -15.46875,
+          "phase": 0.5110704909644225,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -14.0625,
+          "phase": 0.527737158145534,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -12.65625,
+          "phase": 0.5444038253266456,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -12.65625,
+          "phase": 0.5610704925077571,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 6.000000052154064,
+          "offsetY": -11.250000953674316,
+          "phase": 0.5753562069176478,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -11.250000953674316,
+          "phase": 0.5920228740987593,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -9.84375,
+          "phase": 0.6086895412798708,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 8.00000037997961,
+          "offsetY": -8.437500953674316,
+          "phase": 0.6277371612322032,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 6.000000052154064,
+          "offsetY": -8.437500953674316,
+          "phase": 0.6420228756420939,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -7.03125,
+          "phase": 0.6586895428232055,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -7.03125,
+          "phase": 0.675356210004317,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -5.625000476837158,
+          "phase": 0.6920228771854285,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -5.625000476837158,
+          "phase": 0.7086895443665401,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -4.218750476837158,
+          "phase": 0.7253562115476516,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 16.00000075995922,
+          "offsetY": -4.218750476837158,
+          "phase": 0.7634514514523164,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 4.000000189989805,
+          "offsetY": -2.812500238418579,
+          "phase": 0.7729752614284826,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 3.000000026077032,
+          "offsetY": -2.812500238418579,
+          "phase": 0.780118118633428,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 5.000000353902578,
+          "offsetY": -2.812500238418579,
+          "phase": 0.792022881380815,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -2.812500238418579,
+          "phase": 0.8086895485619265,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -1.4062501192092896,
+          "phase": 0.8253562157430381,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -1.4062501192092896,
+          "phase": 0.8420228829241496,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 6.000000052154064,
+          "offsetY": -1.4062501192092896,
+          "phase": 0.8563085973340403,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -1.4062501192092896,
+          "phase": 0.8729752645151518,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -1.4062501192092896,
+          "phase": 0.8896419316962634,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": 0,
+          "phase": 0.9063085988773749,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 8.00000037997961,
+          "offsetY": 0,
+          "phase": 0.9253562188297073,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 6.000000052154064,
+          "offsetY": 0,
+          "phase": 0.939641933239598,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": 0,
+          "phase": 0.9563086004207095,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": 0,
+          "phase": 0.9729752676018211,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": 0,
+          "phase": 0.9896419347829326,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 8.00000037997961,
+          "offsetY": 0,
+          "phase": 1,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 6.000000052154064,
+          "offsetY": 0,
+          "phase": 1,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": 0,
+          "phase": 1,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 8.00000037997961,
+          "offsetY": 0,
+          "phase": 1,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 6.000000052154064,
+          "offsetY": 0,
+          "phase": 1,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": 0,
+          "phase": 1,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": 0,
+          "phase": 1,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": 0,
+          "phase": 1,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 6.000000052154064,
+          "offsetY": 0,
+          "phase": 1,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": 0,
+          "phase": 1,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": 0,
+          "phase": 1,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": 0,
+          "phase": 1,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": 0,
+          "phase": 1,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 8.00000037997961,
+          "offsetY": 0,
+          "phase": 1,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 6.000000052154064,
+          "offsetY": 0,
+          "phase": 1,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": 0,
+          "phase": 1,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": 0,
+          "phase": 1,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": 0,
+          "phase": 1,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": 0,
+          "phase": 1,
+          "shown": true
+        }
+      ],
+      "quickClosing": [
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -16.875001907348633,
+          "phase": 0.48602168085164454,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -18.28125,
+          "phase": 0.469355013670533,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -19.6875,
+          "phase": 0.45268834648942147,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -19.6875,
+          "phase": 0.43602167930830993,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -21.09375,
+          "phase": 0.4193550121271984,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -22.500001907348633,
+          "phase": 0.40268834494608685,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -23.90625,
+          "phase": 0.3860216777649753,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -25.3125,
+          "phase": 0.3693550105838638,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 6.000000052154064,
+          "offsetY": -26.718751907348633,
+          "phase": 0.35506929617397315,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -28.125,
+          "phase": 0.3384026289928616,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -29.531251907348633,
+          "phase": 0.32173596181175007,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -30.9375,
+          "phase": 0.30506929463063853,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -32.34375,
+          "phase": 0.288402627449527,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -33.750003814697266,
+          "phase": 0.27173596026841546,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -35.15625,
+          "phase": 0.2550692930873039,
+          "shown": true
+        },
+        {
+          "alpha": 1,
+          "dtMs": 7.000000216066837,
+          "offsetY": -36.5625,
+          "phase": 0.2384026259061924,
+          "shown": true
+        },
+        {
+          "alpha": 0.988235354423523,
+          "dtMs": 7.000000216066837,
+          "offsetY": -39.375,
+          "phase": 0.2217359587250809,
+          "shown": true
+        },
+        {
+          "alpha": 0.9490196704864502,
+          "dtMs": 7.000000216066837,
+          "offsetY": -40.781253814697266,
+          "phase": 0.20506929154396938,
+          "shown": true
+        },
+        {
+          "alpha": 0.8862745761871338,
+          "dtMs": 7.000000216066837,
+          "offsetY": -42.1875,
+          "phase": 0.18840262436285787,
+          "shown": true
+        },
+        {
+          "alpha": 0.8117647767066956,
+          "dtMs": 7.000000216066837,
+          "offsetY": -43.59375,
+          "phase": 0.17173595718174636,
+          "shown": true
+        },
+        {
+          "alpha": 0.6352941393852234,
+          "dtMs": 13.000000268220901,
+          "offsetY": -47.8125,
+          "phase": 0.14078357559074423,
+          "shown": true
+        },
+        {
+          "alpha": 0.5764706134796143,
+          "dtMs": 4.000000189989805,
+          "offsetY": -47.8125,
+          "phase": 0.13125976561457803,
+          "shown": true
+        },
+        {
+          "alpha": 0.5176470875740051,
+          "dtMs": 4.000000189989805,
+          "offsetY": -49.21875,
+          "phase": 0.12173595563841183,
+          "shown": true
+        },
+        {
+          "alpha": 0.4117647409439087,
+          "dtMs": 7.000000216066837,
+          "offsetY": -50.625,
+          "phase": 0.10506928845730032,
+          "shown": true
+        },
+        {
+          "alpha": 0.30980393290519714,
+          "dtMs": 7.000000216066837,
+          "offsetY": -53.437503814697266,
+          "phase": 0.08840262127618881,
+          "shown": true
+        },
+        {
+          "alpha": 0.23137256503105164,
+          "dtMs": 6.000000052154064,
+          "offsetY": -54.84375,
+          "phase": 0.07411690686629818,
+          "shown": true
+        },
+        {
+          "alpha": 0.13725490868091583,
+          "dtMs": 8.00000037997961,
+          "offsetY": -57.65625,
+          "phase": 0.05506928691396577,
+          "shown": true
+        },
+        {
+          "alpha": 0.0784313753247261,
+          "dtMs": 6.000000052154064,
+          "offsetY": -59.062503814697266,
+          "phase": 0.04078357250407515,
+          "shown": true
+        },
+        {
+          "alpha": 0.027450982481241226,
+          "dtMs": 7.000000216066837,
+          "offsetY": -60.468753814697266,
+          "phase": 0.02411690532296363,
+          "shown": true
+        },
+        {
+          "alpha": 0,
+          "dtMs": 8.00000037997961,
+          "offsetY": -63.28125,
+          "phase": 0.005069285370631223,
+          "shown": true
+        },
+        {
+          "alpha": 0,
+          "dtMs": 6.000000052154064,
+          "offsetY": -64.6875,
+          "phase": 0,
+          "shown": false
+        }
+      ],
+      "reopened": {
+        "alpha": 1,
+        "dtMs": 7.000000216066837,
+        "offsetY": 0,
+        "phase": 1,
+        "shown": true
+      },
+      "requestedFPSLimit": 60,
+      "warmedHere": false
+    },
+    "floating": {
+      "checks": 6,
+      "status": "荔枝组队",
+      "empty": "暂无活动",
+      "entries": 0,
+      "screenshotCompleted": true,
+      "resourcesReleased": true
+    },
+    "roster": {
+      "checks": 79,
+      "groups": [
+        {
+          "blankArea": 12.000015258789062,
+          "height": 338.9999694824219,
+          "members": 5,
+          "subgroup": 4
+        },
+        {
+          "blankArea": 12.000015258789062,
+          "height": 338.9999694824219,
+          "members": 5,
+          "subgroup": 5
+        },
+        {
+          "blankArea": 244,
+          "height": 338.9999694824219,
+          "members": 1,
+          "subgroup": 6
+        }
+      ],
+      "previousRosterTooltipRestored": false,
+      "resourcesReleased": true,
+      "scope": "synthetic records/native Frames/nohardware/nosubgroupactions",
+      "source": "11 local sample members: groups 4/5/6 contain 5/5/1; no native roster or permission success claimed",
+      "visual": {
+        "mouseOff": true,
+        "nativeMotion": true,
+        "permissionSucceeded": false,
+        "reduceMotion": false,
+        "scale": 1.0349998093117074,
+        "stableLayout": true
+      }
+    },
+    "errors": {
+      "baselineCount": 42,
+      "afterTestsCount": 42,
+      "finalCount": 42,
+      "newCurrentSessionErrors": 0,
+      "retainedCountersAndTimesUnchanged": true
+    },
+    "connection": {
+      "closed": true,
+      "bound": false,
+      "cleanup": "complete"
+    },
+    "coverageLimits": [
+      "The current character was not in a group. Team layout used 11 labeled sample members on native Frames; no server subgroup change or hardware drag was performed.",
+      "No application, invitation, rejection, cancellation or listing was submitted during this acceptance. The current floating list had no active entry.",
+      "An initial native menu assertion used exact numeric equality and failed on a 0.000023 pixel rounding difference. The measurement was corrected to 0.01 pixel tolerance; the final probe passed without a product-code change."
+    ],
+    "evidence": [
+      {
+        "file": ".lycheedev/release-1.2.5/cold-result.json",
+        "request": "release125-cold-r38",
+        "operation": "LMO-b3c3963bf852e9ec62827eaaa15a69cd",
+        "sha256": "2fd32d82bffc7c31e58d85336b46497136f29b291d44c5d7f2a285a905172b84",
+        "reportState": "verified",
+        "cleanup": "complete",
+        "ok": true
+      },
+      {
+        "file": ".lycheedev/release-1.2.5/memory-resume-1.json",
+        "request": "release125-theme-memory-r38",
+        "operation": "LMO-51cb557822e7d44b0f9d408c050d9a5b",
+        "sha256": "279779902401206f61dcfa1eb27c6503a68a54a3a20a5ffc7ae1fb0a7d5beb19",
+        "reportState": "verified",
+        "cleanup": "complete",
+        "ok": true
+      },
+      {
+        "file": ".lycheedev/release-1.2.5/presence-result.json",
+        "request": "release125-ui-presence-r38",
+        "operation": "LMO-5ff3b5f497341dfc416acd97a0e39732",
+        "sha256": "675e26e8137c1dc200384c626463c89e1f0ff22ae79d28ff769e939d08106c29",
+        "reportState": "verified",
+        "cleanup": "complete",
+        "ok": true
+      },
+      {
+        "file": ".lycheedev/release-1.2.5/menu-verified.json",
+        "request": "release125-menu-verified-r38",
+        "operation": "LMO-65d0ffe305ca2f9012bafcbd69206c72",
+        "sha256": "bb66ef0f578bccfeee62a7b85d713c743852008198093ae9e713f5e7416e60e7",
+        "reportState": "verified",
+        "cleanup": "complete",
+        "ok": true
+      },
+      {
+        "file": ".lycheedev/release-1.2.5/plus-features-result.json",
+        "request": "release125-plus-features-r38",
+        "operation": "LMO-df4c6ea164b21a67ea923de8691b836e",
+        "sha256": "a490eaeeedf8b27bb732374c607ff65fe0267bd23306f2cba6062de1f14a6cf0",
+        "reportState": "verified",
+        "cleanup": "complete",
+        "ok": true
+      },
+      {
+        "file": ".lycheedev/release-1.2.5/floating-result.json",
+        "request": "release125-floating-r38",
+        "operation": "LMO-14f510a84f97411a91c28daa79972245",
+        "sha256": "55d81c7ccbc0bc3352370fe168312fcc15d474db061b67f1e9c5bee4c4d4dbc6",
+        "reportState": "verified",
+        "cleanup": "complete",
+        "ok": true
+      },
+      {
+        "file": ".lycheedev/release-1.2.5/roster-layout-result.json",
+        "request": "release125-roster-layout-r38",
+        "operation": "LMO-a37cbbfd0d26f9b6187d32d4e58739ad",
+        "sha256": "a8e1bfe6cc52617c4d073821901351941e38bb6b7790b581e73cf1f34b68a3be",
+        "reportState": "verified",
+        "cleanup": "complete",
+        "ok": true
+      },
+      {
+        "file": ".lycheedev/release-1.2.5/final-cold-result.json",
+        "request": "release125-final-cold",
+        "operation": "LMO-9f1493888783711cb4fbdd49a0f1031b",
+        "sha256": "97e1f991777f672b57c26aa1d807825459c0114bc0a6223326425c25635ff77c",
+        "reportState": "verified",
+        "cleanup": "complete",
+        "ok": true
+      },
+      {
+        "file": ".lycheedev/release-1.2.5/bugs-before.json",
+        "request": "release125-bugs-before",
+        "operation": "LMO-ba81edcac0ecfccc4e034847982d9aed",
+        "sha256": "13292e14ef680e952b91b64bcbbbb337290356c3e4d0363501ca703f09a37b6c",
+        "reportState": "verified",
+        "cleanup": "complete",
+        "ok": true
+      },
+      {
+        "file": ".lycheedev/release-1.2.5/bugs-after-tests.json",
+        "request": "release125-bugs-after-tests",
+        "operation": "LMO-bf9c31513acce1d183c7aad093e16a2c",
+        "sha256": "9f41a2fbf73bb35d475c8f143cdaa2774831d338bc2c4da97759469597578dfb",
+        "reportState": "verified",
+        "cleanup": "complete",
+        "ok": true
+      },
+      {
+        "file": ".lycheedev/release-1.2.5/bugs-final.json",
+        "request": "release125-bugs-final",
+        "operation": "LMO-ba94dc6058b59fb315e60a045061bd54",
+        "sha256": "2b348bbb7636f86d6d71eb29c1fa95b454e6bf2bba366ed7a3c7db110e937423",
+        "reportState": "verified",
+        "cleanup": "complete",
+        "ok": true
+      }
+    ]
+  },
+  "installation": {
+    "verifiedFiles": 148,
+    "removedObsoleteAdapter": "LycheeGroup/Adapters/SEUI.lua",
+    "platformMarkersPreserved": true
+  },
+  "archive": {
+    "path": "dist/LycheeGroup-1.2.5.zip",
+    "sha256": "80d57c47498934de43ed5b016a51c25437f01637f061c37b0edc32624bbd915c",
+    "entries": 145,
+    "rootFolders": [
+      "LycheeGroup",
+      "LycheeGroup_Group",
+      "LycheeGroup_Notes",
+      "LycheeGroup_UI"
+    ],
+    "excludedMetadata": [
+      "LycheeGroup/Libs/LycheeUI/.lock",
+      "LycheeGroup/Media/Fonts/README.md",
+      "LycheeGroup_Group/Libs/README.md"
+    ]
+  }
+}

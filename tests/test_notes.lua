@@ -26,6 +26,35 @@ local Notes = A.Notes
 
 Notes:Initialize()
 
+-- Non-table roots are isolated before records bind; legitimate subsequent
+-- records and the independent character preferences remain usable.
+do
+ local previous=_G.LycheeGroupNotesDB
+ local account,character,sort=A.db,A.charPrefs,A:GetSetting("defaultSort")
+ for _,invalid in ipairs({true,false,"damaged notes root",7}) do
+  _G.LycheeGroupNotesDB=invalid;Notes.db=nil;Notes:Initialize()
+  local recovery=Notes.db.invalidRecords
+  T.eq(recovery and recovery[1] and recovery[1].key,"$root")
+  T.eq(recovery[1].value,invalid);T.eq(type(recovery[1].error),"string")
+  T.eq(A.db,account);T.eq(A.charPrefs,character);T.eq(A:GetSetting("defaultSort"),sort)
+  local ok,record=Notes:Add("恢复后玩家","晨风号角","正常写入",nil)
+  T.ok(ok);T.eq(Notes:Find("恢复后玩家-晨风号角"),record)
+  Notes.db=nil;Notes:Initialize()
+  T.eq(Notes.db.invalidRecords,recovery);T.eq(#recovery,1,"reinitialization does not append the same root damage again")
+  T.eq(Notes:Find("恢复后玩家-晨风号角"),record,"healthy records retain identity after root recovery")
+  Notes:Remove("恢复后玩家-晨风号角")
+ end
+ _G.LycheeGroupNotesDB=nil;Notes.db=nil;Notes:Initialize()
+ T.eq(Notes.db.invalidRecords,nil,"nil notes storage is a normal first installation")
+ local record={name="既有玩家",server="晨风号角",timestamp=100,reason="保留",classSpec="",type="neutral"}
+ local records={["既有玩家-晨风号角"]=record};local valid={schema=3,records=records}
+ _G.LycheeGroupNotesDB=valid;Notes.db=nil;Notes:Initialize()
+ T.eq(Notes.db,valid);T.eq(Notes.db.records,records);T.eq(Notes:Find("既有玩家-晨风号角"),record)
+ T.eq(Notes.db.invalidRecords,nil)
+ Notes:Remove("既有玩家-晨风号角")
+ _G.LycheeGroupNotesDB=previous;Notes.db=nil;Notes:Initialize()
+end
+
 -- ---------------------------------------------------------------- 基础记录
 
 T.eq(A.db.notesHasRecords, false, "初始无记录")
@@ -172,6 +201,21 @@ end
 -- ---------------------------------------------------------------- 订阅发布
 
 do
+ local calls=0
+ local function Changed() calls=calls+1 end
+ local oldStop=Notes:Subscribe(Changed)
+ oldStop()
+ local newStop=Notes:Subscribe(Changed)
+ oldStop();oldStop()
+ Notes:Add("RepeatedSubscription","Away","first")
+ T.eq(calls,1,"an old cancellation cannot remove a new Notes subscription")
+ newStop();newStop()
+ Notes:Edit("RepeatedSubscription-Away","second")
+ T.eq(calls,1,"cancellation remains safe to repeat")
+ Notes:Remove("RepeatedSubscription-Away")
+end
+
+do
 	local seen = {}
 	local unsub = Notes:Subscribe(function(kind, key)
 		seen[#seen + 1] = kind .. ":" .. tostring(key)
@@ -206,6 +250,32 @@ do
 	unsub()
 	Notes:Remove("合并甲-晨风号角")
 	Notes:Remove("合并乙-晨风号角")
+end
+
+do
+	-- JSON 合法的超大指数在 Lua 中成为 infinity，存储边界应保留未知时间语义。
+	Load.file("addon/LycheeGroup_UI/Transfer.lua")
+	local decoded = A.UI.Transfer.Decode("LN-W3sibmFtZSI6Ik90aGVyIiwic2VydmVyIjoiQXdheSIsInRpbWVzdGFtcCI6MWU5OTksInJlYXNvbiI6IngifV0=")
+	T.eq(type(decoded), "table", "超大指数文本可到达实际导入边界")
+	local changed, invalid = Notes:Merge(decoded)
+	T.eq(changed, 1);T.eq(invalid, 0)
+	T.eq(Notes:Find("Other-Away").timestamp, 0, "无穷导入时间规范为未知0")
+	changed = Notes:Merge({{name="Other",server="Away",timestamp=100,reason="正常更新"}})
+	T.eq(changed, 1, "正常后续导入可更新超大指数记录")
+	T.eq(Notes:Find("Other-Away").reason, "正常更新")
+	Notes:Remove("Other-Away")
+	for index, timestamp in ipairs({math.huge, -math.huge, 0/0, 1e100, 1e308}) do
+		local name = "异常时间" .. index
+		changed, invalid = Notes:Merge({{name=name,server="Away",timestamp=timestamp}})
+		T.eq(changed, 1);T.eq(invalid, 0)
+		T.eq(Notes:Find(name.."-Away").timestamp, 0, "NaN和正负无穷都不进入存档")
+		Notes.db.records[name.."-Away"].timestamp = timestamp
+		T.eq(Notes:Merge({{name=name,server="Away",timestamp=0}}), 0, "未知时间不会覆盖本地内容")
+		T.eq(Notes:Find(name.."-Away").timestamp, 0, "合并比较到的坏本地时间也被原位修复")
+		changed = Notes:Merge({{name=name,server="Away",timestamp=10}})
+		T.eq(changed, 1, "已存在的异常时间不能阻止正常记录合并")
+		Notes:Remove(name.."-Away")
+	end
 end
 
 -- ---------------------------------------------------------------- 入队提醒
@@ -293,6 +363,50 @@ end
 -- ---------------------------------------------------------------- 专精查询
 
 do
+	local before=RosterCount()
+	Notes:Add("重逢甲","晨风号角","甲记录",nil)
+	Notes:Add("重逢乙","晨风号角","乙记录",nil)
+	local first={name="重逢甲",realm="晨风号角",guid="P-return-A"}
+	local second={name="重逢乙",realm="晨风号角",guid="P-return-B"}
+	Stubs.SetUnit("party1",first)
+	Stubs.SetUnit("party2",{realm="晨风号角",guid="P-unresolved"})
+	Stubs.FireEvent("GROUP_JOINED")
+	T.eq(RosterCount(),before+1)
+	Stubs.SetUnit("party1",second);Stubs.FireEvent("GROUP_ROSTER_UPDATE")
+	Stubs.SetUnit("party1",first);Stubs.FireEvent("GROUP_ROSTER_UPDATE")
+	T.eq(RosterCount(),before+3,"另有未知成员时，已离队的玩家重入仍重新提醒")
+	Stubs.SetUnit("party1",{realm="晨风号角",guid="P-return-A"});Stubs.FireEvent("GROUP_ROSTER_UPDATE")
+	Stubs.SetUnit("party1",first);Stubs.FireEvent("GROUP_ROSTER_UPDATE")
+	T.eq(RosterCount(),before+3,"当前GUID的名字短暂不可读不重复提醒")
+	local secret=newproxy(true);getmetatable(secret).__tostring=function() error("受限身份不能被转换") end
+	local oldIsSecret=issecretvalue
+	issecretvalue=function(value) return rawequal(value,secret) end
+	Stubs.SetUnit("party1",{name=secret,realm="晨风号角",guid=secret});Stubs.FireEvent("GROUP_ROSTER_UPDATE")
+	Stubs.SetUnit("party1",first);Stubs.FireEvent("GROUP_ROSTER_UPDATE")
+	issecretvalue=oldIsSecret
+	T.eq(RosterCount(),before+3,"身份暂时全部受限后恢复，不重复提醒当前成员")
+	for index=1,200 do
+		Stubs.SetUnit("party1",{name="临时成员"..index,realm="晨风号角",guid="P-transient-"..index})
+		Stubs.FireEvent("GROUP_ROSTER_UPDATE")
+	end
+	Stubs.SetUnit("party1",first);Stubs.FireEvent("GROUP_ROSTER_UPDATE")
+	T.eq(RosterCount(),before+4,"连续换人后重逢仍提醒")
+	local function Upvalue(fn,wanted)
+		for index=1,30 do local name,value=debug.getupvalue(fn,index);if not name then break end;if name==wanted then return value end end
+	end
+	local onRoster=assert(Upvalue(Stubs.FramesWithEvent("GROUP_ROSTER_UPDATE")[1]:GetScript("OnEvent"),"OnRosterUpdate"))
+	local function RetainedMembers()
+		local count=0;for _ in pairs(assert(Upvalue(onRoster,"members"))) do count=count+1 end;return count
+	end
+	T.ok(RetainedMembers()<=3,"提醒缓存规模受当前三人队约束，不累积离队历史")
+	Stubs.FireEvent("GROUP_LEFT");T.eq(RetainedMembers(),0,"退组释放当前身份缓存")
+	Stubs.FireEvent("GROUP_JOINED");Notes.RosterReminder.Stop()
+	T.eq(RetainedMembers(),0,"停用释放当前身份缓存")
+	Stubs.SetUnit("party1",nil);Stubs.SetUnit("party2",nil)
+	Notes:Remove("重逢甲-晨风号角");Notes:Remove("重逢乙-晨风号角")
+end
+
+do
 	Notes:Add("邀请者", "晨风号角", "本服记录", nil, nil, {type="positive"})
 	Notes:Add("邀请者", "银松森林", "跨服记录", nil, nil, {type="caution"})
 	Stubs.SetUnit("target", {name="邀请者",realm="银松森林",guid="P-inviter"})
@@ -354,7 +468,7 @@ do
 	-- Snapshot:同步已有数据。
 	Stubs.SetUnit("party1", { name = "队友甲", realm = "晨风号角", class = "PALADIN", classID = 2, guid = "P-1" })
 	local previousGroup=A.Group
-	A.Group={Public=function(value) return value end,Notify=function() end,History={OnSpecUpdate=function() end}}
+	A.Group={Public=function(value) return value end,Notify=function() end,History={OnSpecUpdate=function() end},Game={RefreshApplicationSubscriptions=function() end}}
 	Load.addon("LycheeGroup_Group","Roster.lua")
 	A.Group.Roster:OnLibrarySpec(66,"队友甲-晨风号角")
 	Stubs.SetInspectSpec("party1",70)
@@ -580,7 +694,286 @@ end
 
 T.eq(A.db.notesHasRecords, false, "清理后摘要回到无记录")
 T.eq(#Stubs.FramesWithEvent("GROUP_ROSTER_UPDATE"), 0, "无记录没有提醒监听")
+
+-- 存档装载异常只隔离损坏项；受支持 schema 保留同一份正常记录。
+do
+	local function InitializeFixture(raw)
+		Notes.RosterReminder.Stop()
+		Notes.db = nil
+		_G.LycheeGroupNotesDB = raw
+		local ok, err = pcall(Notes.Initialize, Notes)
+		T.ok(ok, "缺失或异常存档不会让Notes装载失败: " .. tostring(err))
+		T.eq(Notes.db, raw, "保留存档根表")
+		T.eq(type(raw.records), "table", "初始化总是写回可用的records容器")
+		T.eq(raw.schema, 3)
+	end
+	for _, schema in ipairs({2, 3}) do
+		for _, container in ipairs({false, "损坏容器", 42}) do
+			local raw = {schema=schema, records=container}
+			InitializeFixture(raw)
+			T.eq(next(raw.records), nil)
+			T.eq(A.db.notesHasRecords, false)
+			T.eq(raw.invalidRecords[1].value, container, "原坏容器保留供恢复")
+		end
+		InitializeFixture({schema=schema})
+		T.eq(A.db.notesHasRecords, false, "缺失记录容器按空名单恢复")
+		local good = {name="完好",server="Away",timestamp=21,reason="  原文保留  ",classSpec="旧专精",type="positive",class="WARRIOR",specID=71}
+		local bad = {name={}, reason="坏身份原文"}
+		local records = {["完好-Away"]=good, ["损坏行"]=false, ["坏身份"]=bad}
+		local raw = {schema=schema,records=records}
+		InitializeFixture(raw)
+		T.eq(raw.records, records, "已支持schema不复制有效记录表")
+		T.eq(Notes:Find("完好-Away"), good, "有效记录保留原引用")
+		T.eq(good.timestamp, 21);T.eq(good.reason, "  原文保留  ");T.eq(good.classSpec, "旧专精")
+		T.eq(good.type, "positive");T.eq(good.class, "WARRIOR");T.eq(good.specID, 71)
+		T.eq(#Notes:List(), 1, "非表行与无效身份不进入查询服务")
+		T.eq(#raw.invalidRecords, 2, "损坏项单独隔离")
+		local preserved = {};for _, item in ipairs(raw.invalidRecords) do preserved[item.key] = item.value end
+		T.eq(preserved["损坏行"], false);T.eq(preserved["坏身份"], bad)
+	end
+	for _, schema in ipairs({1, 2, 3}) do
+		local records = {}
+		for index, timestamp in ipairs({math.huge, -math.huge, 0/0, 1e100, 1e308}) do
+			local name = "迁移时间" .. index
+			records[name.."-Away"] = {name=name,server="Away",timestamp=timestamp,reason="历史",classSpec=""}
+		end
+		records["正常-Away"] = {name="正常",server="Away",timestamp=123,reason="正常历史",classSpec="职业原文"}
+		local raw = {schema=schema,records=records}
+		InitializeFixture(raw)
+		T.eq(#Notes:List(), 6, "各schema修复时间时保留所有正常身份")
+		T.eq(Notes:Find("正常-Away").timestamp,123);T.eq(Notes:Find("正常-Away").classSpec,"职业原文")
+		for index=1,5 do
+			local name = "迁移时间" .. index
+			T.eq(Notes:Find(name.."-Away").timestamp, 0, "装载后UI只能取得规范时间")
+			T.eq(Notes:Find(name.."-Away").type, "neutral", "旧schema缺少类型时迁移为中性")
+			T.eq(Notes:Merge({{name=name,server="Away",timestamp=100,reason="恢复更新"}}), 1)
+		end
+	end
+	local legacyBad = {name="",reason="无法匹配的旧原文"}
+	local legacy = {schema=1,records={
+		["旧身份-Away"]={timestamp=7,reason="旧理由",classSpec="旧专精"},
+		alias={name="旧身份",server="Away",timestamp=math.huge,reason="不能胜过有效时间"},
+		missing={name="缺时间",server="Away",reason="历史"},
+		text={name="文本时间",server="Away",timestamp="100",reason="历史"},
+		broken=false, badIdentity=legacyBad,
+	}}
+	InitializeFixture(legacy)
+	T.eq(#Notes:List(),3,"旧schema迁移有效项，隔离非法行")
+	T.eq(Notes:Find("旧身份-Away").timestamp,7,"无穷时间不能在旧schema去重中压过正常时间")
+	T.eq(Notes:Find("旧身份-Away").reason,"旧理由")
+	T.eq(Notes:Find("旧身份-Away").classSpec,"旧专精")
+	T.eq(Notes:Find("缺时间-Away").timestamp,0)
+	T.eq(Notes:Find("文本时间-Away").timestamp,0,"非数字旧时间继续保持未知语义")
+	T.eq(#legacy.invalidRecords,2,"旧schema原坏值同样保留")
+	local migratedRecords=legacy.records
+	Notes:Initialize()
+	T.eq(legacy.records,migratedRecords,"同次会话重复初始化不重做迁移")
+	InitializeFixture({})
+	T.eq(A.db.notesHasRecords, false)
+end
 GetInspectSpecialization = oldInspectGlobal
+
+-- Finite JSON numbers can still lie outside the native date formatter's range.
+do
+	local fixture=dofile("tests/ui_fixture.lua")("enUS",nil,{reduceMotion=true})
+	local notes,ui=fixture.A.Notes,fixture.U
+	local text=assert(ui.Transfer.Encode({{name="Other",server="Away",timestamp=1e100,reason="Imported"}}))
+	local decoded=assert(ui.Transfer.Decode(text))
+	T.eq(decoded[1].timestamp,1e100,"finite oversized time reaches the real LN import boundary")
+	T.eq(notes:Merge(decoded),1)
+	local ok,err=pcall(function() fixture.A:Open("notes") end)
+	T.ok(ok,"the real notes page opens after importing oversized time: "..tostring(err))
+	T.eq(notes:Find("Other-Away").timestamp,0)
+	T.eq(notes:Merge({{name="Other",server="Away",timestamp=123,reason="Later valid record"}}),1)
+	T.eq(notes:Find("Other-Away").timestamp,123,"ordinary early timestamps remain valid")
+	ui:Hide(true)
+	for i=1,8 do notes:Merge({{name="Sorted"..i,server="Away",timestamp=100+i}}) end
+	local nativeDate,calls=date,0
+	date=function(...) calls=calls+1;return nativeDate(...) end
+	local listed=notes:List()
+	date=nativeDate
+	T.eq(#listed,9);T.eq(calls,0,"sorting validated records does not format dates")
+end
+
+-- Case-insensitive identity belongs to Notes; original Core/storage/display
+-- keys stay usable by native members, commands, LN imports and list actions.
+do
+ local f=dofile("tests/ui_fixture.lua")("enUS",nil,{askReason=false,reduceMotion=true})
+ local a,notes=f.A,f.A.Notes
+ f.base.SetUnit("player",{name="Self",realm="SilverHand",class="WARRIOR",classID=1,guid="Player-self"})
+ f.base.SetUnit("party1",{name="Alice",realm="SilverHand",class="MAGE",classID=8,guid="Player-alice"})
+ dofile("addon/LycheeGroup/Entrypoints.lua")
+ SlashCmdList.LYCHEEGROUP("note alice-SilverHand known-person")
+ local record=notes:Find("alice-SilverHand")
+ T.ok(record,"the real note command stores its requested player")
+ local nativeKey=a:UnitIdentity("party1")
+ local found,key=notes:Find(nativeKey)
+ T.eq(found,record,"a command's lowercase spelling matches the actual native member")
+ T.eq(key,"alice-SilverHand","lookup returns the stored key for follow-up actions")
+ T.eq(a:PlayerKey("Alice","SilverHand"),"Alice-SilverHand","Core preserves public identity formatting")
+ T.eq(a:RecordPlayer("self","silverhand",nil,"same player"),false,"case changes cannot record the current character")
+ T.eq(notes:Find("self-silverhand"),nil)
+ T.ok(notes:Edit(nativeKey,"edited through native identity"));T.eq(record.reason,"edited through native identity")
+ a:Open("notes",{playerKey=nativeKey});local page=f.U.pages.notes
+ T.eq(page.list.selectedKey,key,"opening native identity selects its actual stored row")
+ page.eReason.box:UserType("UI edited");page.eSave:Fire("OnClick","LeftButton")
+ T.eq(record.reason,"UI edited","the actual editor writes the resolved record")
+ notes:Edit(key,"external edit")
+ T.eq(page.eReason.box:GetText(),"external edit","stored-key notifications refresh the open editor")
+ f.G.GetHistory=function() return {{id="recorded-run",members={{name="Alice",realm="SilverHand",class="MAGE"}}}} end
+ page:SelectTab("history")
+ local runRow=page.historyList.rows[1];runRow:Fire("OnMouseDown","LeftButton");runRow:Fire("OnClick","LeftButton")
+ local memberRow=page.historyModal.list.rows[1];memberRow:Fire("OnMouseDown","LeftButton");memberRow:Fire("OnClick","LeftButton")
+ T.eq(page.list.selectedKey,key,"history member navigation selects the resolved stored note")
+ local added,updated=notes:Add("ALICE","SILVERHAND","updated spelling")
+ T.ok(added);T.eq(updated.name,"alice");T.eq(updated.server,"SilverHand")
+ T.eq(#notes:List(),1,"adding another spelling updates one logical identity")
+ T.eq(notes:Find(nativeKey),updated)
+ local events={};local unsubscribe=notes:Subscribe(function(kind,actual) events[#events+1]={kind,actual} end)
+ local decoded=assert(f.U.Transfer.Decode(f.U.Transfer.Encode({
+  {name="Alice",server="silverhand",timestamp=updated.timestamp,reason="same timestamp"},
+  {name="ALICE",server="SILVERHAND",timestamp=updated.timestamp-1,reason="older"},
+  {name="SELF",server="SilverHand",timestamp=updated.timestamp+100,reason="self import"},
+ })))
+ local changed,invalid=notes:Merge(decoded)
+ T.eq(changed,0);T.eq(invalid,1,"LN import rejects the current character independent of casing")
+ T.eq(#events,0);T.eq(#notes:List(),1)
+ decoded={{name="Alice",server="silverhand",timestamp=updated.timestamp+1,reason="newer import"}}
+ changed,invalid=notes:Merge(assert(f.U.Transfer.Decode(f.U.Transfer.Encode(decoded))))
+ T.eq(changed,1);T.eq(invalid,0);T.eq(#notes:List(),1)
+ T.eq(events[1][1],"merge");T.eq(events[1][2][1],key,"merge notifications carry the actual stored key")
+ T.eq(notes:Find(nativeKey).name,"alice","newer imports preserve the original display identity")
+ T.eq(notes:Merge(decoded),0,"reimporting another spelling is idempotent")
+ T.ok(notes:Remove(nativeKey));T.eq(events[#events][2],key);T.eq(notes:Find(key),nil)
+ unsubscribe();f.U:Hide(true)
+end
+
+do
+ local f=dofile("tests/ui_fixture.lua")("enUS",nil,{reduceMotion=true,reminders="off"})
+ local a,notes,u=f.A,f.A.Notes,f.U
+ f.base.SetUnit("player",{name="Self",realm="SilverHand",class="WARRIOR",classID=1,guid="Player-self"})
+ local function Rebind(records)
+  local raw={schema=3,records=records}
+  _G.LycheeGroupNotesDB=raw;notes.db=nil;notes:Initialize()
+  T.eq(notes.db.records,records,"case indexing preserves the original saved records table")
+  T.eq(raw.invalidRecords,nil,"legacy casing collisions remain active records")
+ end
+ local upper={name="Alice",server="SilverHand",timestamp=100,reason="upper",classSpec="",type="neutral"}
+ local lower={name="alice",server="SilverHand",timestamp=200,reason="lower",classSpec="",type="neutral"}
+ local records={["Alice-SilverHand"]=upper,["alice-SilverHand"]=lower}
+ Rebind(records)
+ T.eq(notes:Find("Alice-SilverHand"),upper,"an exact legacy key remains independently accessible")
+ T.eq(notes:Find("alice-SilverHand"),lower)
+ local preferred,stored=notes:Find("ALICE-SILVERHAND")
+ T.eq(preferred,lower,"a nonexact spelling selects the newest effective timestamp")
+ T.eq(stored,"alice-SilverHand")
+ local listed=notes:List();T.eq(#listed,2);T.eq(listed[1],"alice-SilverHand");T.eq(listed[2],"Alice-SilverHand")
+ a:Open("notes");local page=u.pages.notes
+ T.eq(#page.list.ids,2,"both legacy records remain visible in the real notes list")
+ for _,key in ipairs(listed) do
+  a:Open("notes",{playerKey=key});T.eq(page.list.selectedKey,key)
+  page.eReason.box:UserType("edited "..key);page.eSave:Fire("OnClick","LeftButton")
+  T.eq(records[key].reason,"edited "..key,"each exact list key edits only its original record")
+ end
+ local changed=notes:Merge({{name="Alice",server="SILVERHAND",timestamp=150,reason="between existing timestamps"}})
+ T.eq(changed,0,"imports compare against the logical identity's newest record")
+ local update={{name="ALICE",server="SILVERHAND",timestamp=300,reason="latest"}}
+ T.eq(notes:Merge(update),1);T.eq(notes:Merge(update),0);T.eq(#notes:List(),2,"duplicate imports never create a third casing")
+ T.eq(records["Alice-SilverHand"],upper,"updating the preferred alias preserves the other legacy record")
+ T.eq(records["alice-SilverHand"].name,"alice");T.eq(records["alice-SilverHand"].reason,"latest")
+ local added,latest=notes:Add("Alice","SilverHand","new local add")
+ T.ok(added);T.eq(records["alice-SilverHand"],latest,"Add also targets the logical identity's preferred record")
+ T.eq(latest.name,"alice");T.eq(records["Alice-SilverHand"],upper);T.eq(#notes:List(),2)
+ u:Hide(true)
+ local scans=0;local pairsOf=pairs
+ _G.pairs=function(value) if value==records then scans=scans+1 end;return pairsOf(value) end
+ for _=1,100 do notes:Find("ALICE-SILVERHAND");notes:Find("not-saved") end
+ local removed=notes:Remove("alice-SilverHand")
+ _G.pairs=pairsOf
+ T.ok(removed);T.eq(scans,0,"point queries and collision removal do not scan the stored library")
+ T.eq(records["Alice-SilverHand"],upper);T.eq(notes:Find("ALICE-SILVERHAND"),upper,"removing the preferred alias immediately exposes the surviving record")
+ a:Open("notes",{playerKey="ALICE-SILVERHAND"});T.eq(page.list.selectedKey,"Alice-SilverHand")
+ page.eDelete:Fire("OnClick","LeftButton")
+ T.eq(notes:Find("Alice-SilverHand"),nil,"the actual editor removes its resolved surviving record")
+ T.eq(#notes:List(),0)
+ -- Deterministic ties and index rebinding cannot depend on table iteration order.
+ upper.timestamp=200;lower.timestamp=200
+ Rebind({["alice-SilverHand"]=lower,["Alice-SilverHand"]=upper})
+ T.eq(notes:Find("ALICE-SILVERHAND"),upper,"equal timestamps use the actual key's ascending order")
+ Rebind({});T.eq(notes:Find("ALICE-SILVERHAND"),nil,"binding a new store releases every old identity alias")
+ notes:Add("Bob","Away","new bind");T.ok(notes:Find("BOB-AWAY"));T.eq(notes:Find("ALICE-SILVERHAND"),nil)
+ u:Hide(true)
+end
+
+-- Legacy imports can contain many case variants of the same character. Measure
+-- actual Initialize work, not only resulting data or individual helper calls.
+do
+ local f=dofile("tests/ui_fixture.lua")("enUS",nil,{reminders="off"})
+ local notes=f.A.Notes
+ local function InitializeVariants(count)
+  local records={};local newest
+  for index=0,count-1 do
+   local letters={}
+   for bit=0,6 do
+    local letter=string.char(97+bit)
+    letters[#letters+1]=math.floor(index/2^bit)%2==1 and letter:upper() or letter
+   end
+   local name=table.concat(letters)
+   local record={name=name,server="Away",timestamp=100+index,reason="original "..index,classSpec="",type="neutral"}
+   records[name.."-Away"]=record;newest=record
+  end
+  local raw={schema=3,records=records};_G.LycheeGroupNotesDB=raw;notes.db=nil
+  local nativeDate,dateCalls=date,0
+  date=function(...) dateCalls=dateCalls+1;return nativeDate(...) end
+  local oldHook,oldMask,oldCount=debug.gethook()
+  local instructions=0
+  debug.sethook(function() instructions=instructions+100 end,"",100)
+  local ok,err=pcall(notes.Initialize,notes)
+  debug.sethook(oldHook,oldMask,oldCount);date=nativeDate
+  T.ok(ok,"real initialization accepts the legacy case variants: "..tostring(err))
+  T.eq(notes.db.records,records);T.eq(#notes:List(),count,"initialization preserves every original casing variant")
+  for key,record in pairs(records) do T.eq(notes:Find(key),record,"exact legacy records remain independently addressable") end
+  T.eq(notes:Find("ABCDEFG-AWAY"),newest,"nonexact lookup still selects the greatest effective timestamp")
+  return instructions,dateCalls
+ end
+ local small,smallDates=InitializeVariants(64)
+ local large,largeDates=InitializeVariants(128)
+ T.ok(large<=small*2.3,"doubling valid legacy variants has linear initialization work: "..small.." -> "..large.." Lua instructions")
+ T.eq(smallDates,64,"the initialization boundary validates each stored timestamp once")
+ T.eq(largeDates,128,"collision indexing does not repeat date validation")
+ print(("Notes case variants: 64=%d instructions/%d date checks; 128=%d/%d"):format(small,smallDates,large,largeDates))
+ local ordered=notes:List();local second=notes:Find(ordered[2])
+ T.ok(notes:Remove("ABCDEFG-AWAY"))
+ T.eq(notes:Find("ABCDEFG-AWAY"),second,"removing a large bucket's preferred key selects its next newest record")
+ local newest=notes:Find(ordered[2])
+ local added,updated=notes:Add(newest.name,newest.server,"updated existing collision")
+ T.ok(added);T.eq(notes:Find("ABCDEFG-AWAY"),updated)
+ T.eq(#notes:List(),127,"updating an existing key cannot append it to the collision bucket again")
+ T.ok(notes:Remove("ABCDEFG-AWAY"));T.eq(notes:Find("ABCDEFG-AWAY"),notes:Find(ordered[3]),"removal after an existing-key update leaves the next original record accessible")
+ _G.LycheeGroupNotesDB={schema=3,records={}};notes.db=nil;notes:Initialize()
+ T.eq(notes:Find("ABCDEFG-AWAY"),nil,"rebinding releases the prior collision index")
+end
+
+-- Native UTF-8 folding is preferred; absent or nonreturning native APIs retain
+-- deterministic ASCII matching without changing saved/display spellings.
+for _,mode in ipairs({"absent","nil","error","utf8"}) do
+ local f=dofile("tests/ui_fixture.lua")("enUS",nil,{reminders="off"})
+ local notes=f.A.Notes;local native=C_Intl;local calls=0
+ if mode=="absent" then C_Intl=nil
+ else C_Intl={FoldCase=function(key)
+  calls=calls+1
+  if mode=="nil" then return nil end
+  if mode=="error" then error("native unavailable") end
+  return key:lower():gsub("Ä","ä")
+ end} end
+ local name=mode=="utf8" and "Älice" or "Alice"
+ local query=mode=="utf8" and "äLICE-SILVERHAND" or "ALICE-SILVERHAND"
+ local ok,record=notes:Add(name,"SilverHand","folded")
+ T.ok(ok);T.eq(notes:Find(query),record,"identity folding works with native mode "..mode)
+ T.eq(record.name,name,"folding preserves display name in mode "..mode)
+ if mode~="absent" then T.ok(calls>0,"the native fold boundary is exercised") end
+ C_Intl=native
+end
 
 _G.LycheeGroupDB = nil
 _G.LycheeGroupNotesDB = nil

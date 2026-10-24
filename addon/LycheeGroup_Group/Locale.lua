@@ -38,6 +38,7 @@ A.GroupLocale = {
 	listingPermission = choose("只有队长或团长可以发布、修改或结束招募。", "Only the group leader can list, edit or delist the group."),
 
 	-- 申请者
+	groupFull = choose("当前队伍没有足够名额邀请整批申请者。", "There is not enough room for this applicant party."),
 	inviteFailed = choose("邀请失败。", "Could not invite."),
 	declineApplicantFailed = choose("拒绝申请失败。", "Could not decline the applicant."),
 	applicantPermission = choose("只有队长、团长或团队助理可以邀请或拒绝申请者。", "Only the group leader or raid assistants can invite or decline applicants."),

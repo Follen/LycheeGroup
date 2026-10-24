@@ -289,19 +289,40 @@ function Library.AttachElements(UI)
   end
   return height,minHeight,maxHeight
  end
- function UI:ResolveListElementHeight(list,key,fallback,row)
-  if row then
+ function UI:ResolveListElementHeight(list,key,fallback,row,index)
+  if row and not list.rowElementState then
    local value=C.ElementValue(row,"root","height",fallback)
    value=math.max(C.ElementValue(row,"root","minHeight",0),math.min(C.ElementValue(row,"root","maxHeight",math.huge),value))
    return value
   end
-  local record=list._elementHeightRecord
-  if not record then record={id=list.elementTemplate};list._elementHeightRecord=record end
-  record.key=key;record.instanceRules=nil
-  local rule=Library.ResolveStyleVariant(Rules(record),list.elementVariant)
+  local current=row and UI.elements[row]
+  local elementKey=list:GetElementKey(key,index)
+  local record=current
+  if not record or record.key~=elementKey then
+   record=list._elementHeightRecord
+   if not record then record={};list._elementHeightRecord=record end
+   record.id=current and current.id or list.elementTemplate;record.template=current and current.template
+   record.key=elementKey;record.instanceRules=nil
+   record.classes=current and current.classes;record.classRules=nil
+  end
+  local controller=row and row._lycheeStyleController
+  local variant=controller and controller.options.variant or current and current.variant or list.elementVariant
+  local rule=Library.ResolveStyleVariant(Rules(record),variant)
   local height,minHeight,maxHeight=fallback,0,math.huge
   height,minHeight,maxHeight=GeometryPart(rule.base,height,minHeight,maxHeight)
-  if key==list.selectedKey then height,minHeight,maxHeight=GeometryPart(rule.states and rule.states.selected,height,minHeight,maxHeight) end
+  if list.rowElementState then
+   local active=list._elementHeightStates
+   if not active then active={};list._elementHeightStates=active end
+   for _,name in ipairs(stateOrder) do
+    local value=controller and controller.active[name]==true or false
+    if name=="selected" then value=key==list.selectedKey end
+    local supplied
+    if name=="checked" or name=="disabled" then supplied=list.rowElementState(key,index,name) end
+    active[name]=supplied==nil and value or supplied==true
+   end
+   if active.disabled then active.hover,active.pressed=false,false end
+   for _,name in ipairs(stateOrder) do if active[name] then height,minHeight,maxHeight=GeometryPart(rule.states and rule.states[name],height,minHeight,maxHeight) end end
+  elseif key==list.selectedKey then height,minHeight,maxHeight=GeometryPart(rule.states and rule.states.selected,height,minHeight,maxHeight) end
   return math.max(minHeight,math.min(maxHeight,height))
  end
  local bindingOptions={}
@@ -355,7 +376,7 @@ function Library.AttachElements(UI)
  end
  function C.Element(target,id,options)
   options=options or {};local record=UI.elements[target]
-  if record and record.id==id and record.template==options.template and record.key==options.key and record.scope==options.scope and record.slots==(options.slots or target) and record.classes==options.classes and record.variant==options.variant and record.owner==options.owner and (not options.stateOwner or record.stateOwner==options.stateOwner) then return Apply(record) end
+  if record and record.id==id and record.template==options.template and record.key==options.key and record.scope==options.scope and record.slots==(options.slots or target) and record.classes==options.classes and record.variant==options.variant and record.owner==options.owner and (not options.stateOwner or record.stateOwner==options.stateOwner) and (not options.rowTemplate or target.elementTemplate==options.rowTemplate) and (not options.rowElementKey or target.rowElementKey==options.rowElementKey) and (not options.rowElementState or target.rowElementState==options.rowElementState) then return Apply(record) end
   if record then Unindex(record);if record.applied then UI:_BindFixedElement(target,nil,Slots(record)) end end
   local controller=target._lycheeStyleController
   local kind=target.GetObjectType and target:GetObjectType()
@@ -382,8 +403,14 @@ function Library.AttachElements(UI)
   end
   target._lycheeElementOwner=options.owner;Identity(record);Apply(record)
   if options.rowTemplate or target.elementTemplate then
+   local previousTemplate=target.elementTemplate
    target.elementTemplate=options.rowTemplate or target.elementTemplate;target.elementScope=options.scope;target.elementRowSlots=options.rowSlots
-   for _,row in ipairs(target.rows or empty) do C.Element(row,target.elementTemplate,{template=target.elementTemplate,key=row.key,scope=options.scope,slots=options.rowSlots or row}) end
+   target.rowElementKey=options.rowElementKey or target.rowElementKey
+   target.rowElementState=options.rowElementState or target.rowElementState
+   if previousTemplate~=target.elementTemplate then target._elementHeightRecord=nil end
+   target.elementHeights=HasListHeightRules(target);UI.elementLists[target]=true
+   if target.elementHeights then target.geometryDirty=true end
+   for _,row in ipairs(target.rows or empty) do C.Element(row,target.elementTemplate,{template=target.elementTemplate,key=target:GetElementKey(row.key,row._lycheeListIndex),scope=options.scope,slots=options.rowSlots or row});row._lycheeElementRegistered=true end
   end
   -- Reconnect explicitly registered semantic anchors only on registry mutations.
   for other in pairs(UI.elementReferences[id] or empty) do if other~=target then C.ApplyElement(other) end end

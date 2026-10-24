@@ -209,3 +209,133 @@ do
  Fire("PLAYER_LOGIN");T.eq(a.Floating.context.Theme.floatingEntryHeight,original+12)
  T.eq(a.API.Theme:GetStatus().reloadRequired,false)
 end
+
+-- Malformed persisted structures reach the startup fallback without losing raw data.
+do
+ local cases={
+  {presets={bad={schema=1,id="bad",revision=1,values={[1]="x"}}},overrides={},activePreset="bad"},
+  {presets={bad=false},overrides={},activePreset="bad"},
+  {presets={bad={schema=1,id="bad",revision=1,values=false}},overrides={},activePreset="bad"},
+  {presets={bad={schema=1,id="wrong",revision=1,values={}}},overrides={},activePreset="bad"},
+  {presets={bad={schema=1,id="bad",revision=math.huge,values={}}},overrides={},activePreset="bad"},
+  {presets={bad={schema=1,id="bad",revision=-math.huge,values={}}},overrides={},activePreset="bad"},
+  {presets={bad={schema=1,id="bad",revision=0/0,values={}}},overrides={},activePreset="bad"},
+  {presets={},overrides={[1]="x"}},
+  {presets={},overrides=false},
+  {presets=false,overrides={}},
+  {presets={},overrides={},activePreset={"bad"}},
+ }
+ local cycle={};cycle.self=cycle
+ cases[#cases+1]={presets={bad={schema=1,id="bad",revision=1,values={["utility.main.bad"]=cycle}}},overrides={},activePreset="bad"}
+ for _,theme in ipairs(cases) do
+  local rawPresets,rawOverrides,rawSelection=theme.presets,theme.overrides,theme.activePreset
+  local package;if type(rawPresets)=="table" then package=rawPresets.bad end
+  local account={uiConfig={schema=2,user={},presets={},imported={},theme=theme}}
+  local f=Fixture("enUS",nil,account);local status=f.A.API.Theme:GetStatus()
+  T.eq(status.current.id,false);T.eq(type(status.error),"string")
+  T.eq(account.uiConfig.theme,theme);T.eq(theme.activePreset,rawSelection)
+  if type(rawOverrides)~="table" then T.eq(account.uiConfigRecovery["uiConfig.theme.overrides"].value,rawOverrides)
+  else T.eq(theme.overrides,rawOverrides) end
+  if type(rawPresets)~="table" then T.eq(account.uiConfigRecovery["uiConfig.theme.presets"].value,rawPresets)
+  else T.eq(theme.presets,rawPresets);T.eq(theme.presets.bad,package) end
+  if rawSelection=="bad" then
+   T.eq(f.A.API.Theme:Export(),nil)
+   local list=f.A.API.Theme:List();T.eq(#list,1)
+   if type(package)=="table" and type(package.revision)=="number" and (package.revision~=package.revision or package.revision==math.huge or package.revision==-math.huge) then
+    T.eq(list[1].revision,nil,"invalid saved revision remains private repair data")
+   end
+   T.ok(f.A.API.Theme:Import({schema=1,id="bad",revision=2},{activate=true}))
+   T.eq(f.A.API.Theme:GetStatus().next.error,nil)
+   f=Reload(f);T.eq(f.A.API.Theme:GetStatus().current.id,"bad")
+  end
+ end
+ for _,raw in ipairs({false,"broken theme"}) do
+  local account={uiConfig={schema=2,user={},presets={},imported={},theme=raw}}
+  local f=Fixture("enUS",nil,account)
+  T.eq(type(f.A.RuntimeTheme.error),"string");T.eq(account.uiConfigRecovery["uiConfig.theme"].value,raw)
+  local record=account.uiConfigRecovery["uiConfig.theme"]
+  T.ok(f.A.API.Theme:Import({schema=1,id="repair.container",revision=1},{activate=true}))
+  f=Reload(f);T.eq(f.A.RuntimeTheme.selection.id,"repair.container")
+  T.eq(account.uiConfigRecovery["uiConfig.theme"],record)
+ end
+end
+
+-- Persisted theme packages have the same UI-only preference boundary as imports.
+do
+ local blocked={['settings.autoJoin']=true,['settings.defaultSort']='rating',['settings.notesEnabled']=false,['settings.rememberFilters']=false}
+ for key,value in pairs(blocked) do
+  local package={schema=1,id='business.preference',revision=1,values={[key]=value}}
+  local account={uiConfig={schema=2,theme={presets={[package.id]=package},overrides={},activePreset=package.id}}}
+  local f=Fixture('enUS',nil,account);local a=f.A;local status=a.API.Theme:GetStatus()
+  T.eq(status.current.id,false,'a stored theme cannot provide '..key)
+  T.eq(type(status.error),'string');T.eq(account.uiConfig.theme.presets[package.id],package)
+  T.eq(a:GetSetting(key:sub(10)),a.Configuration.definitions[key].default,'theme fallback preserves the business default')
+  T.eq(a.API.Theme:Export(package.id),nil,'explicit export rejects a stored business preference')
+  T.eq(a.API.Theme:Export(),nil,'selected export has the same preference boundary')
+  T.ok(a.API.Theme:Activate(false))
+  T.eq(a.API.Theme:Activate(package.id),false)
+ end
+ for _,storage in ipairs({'account','character'}) do
+  for key,value in pairs({['settings.autoJoin']=true,['settings.fontScale']=130,['layout.window.width']=1400,['layout.unknown']=1}) do
+   local overrides={[key]=value}
+   local root={uiConfig={schema=2,theme={presets={},overrides=overrides}}}
+   local f=Fixture('enUS',storage=='character' and root or nil,storage=='account' and root or nil)
+   T.eq(f.A.RuntimeTheme.selection.id,false)
+   T.eq(type(f.A.RuntimeTheme.error),'string',storage..' overrides reject nonvisual path '..key)
+   T.eq(root.uiConfig.theme.overrides,overrides,'invalid overrides remain available for repair')
+   T.eq(f.A:GetSetting('autoJoin'),false);T.eq(f.A:GetSetting('fontScale'),100)
+  end
+ end
+ local f=Fixture('enUS');local a=f.A;local values={['settings.fontScale']=115,['layout.window.width']=1400,['theme.main.primary']={.2,.3,.4,1}}
+ local package={schema=1,id='allowed.preferences',revision=1,values=values}
+ a.db.uiConfig.theme.presets[package.id]=package;a.db.uiConfig.theme.activePreset=package.id
+ f=Reload(f);a=f.A
+ T.eq(a.RuntimeTheme.selection.id,package.id);T.eq(a:GetSetting('fontScale'),115)
+ local exported=assert(a.API.Theme:Export());T.eq(exported.layout.window.width,1400)
+ T.ok(a.API.Theme:Import(exported),'valid UI preferences and visuals still round trip')
+end
+
+-- Startup owns the selected immutable source; queries never recompile unselected data.
+do
+ local values={["theme.main.width"]=1450};local overrides={}
+ local selected={schema=1,id="valid.references",revision=1,values=values}
+ local unused={schema=1,id="unused.corrupt",revision=1,values=false}
+ local theme={presets={[selected.id]=selected,[unused.id]=unused},overrides=overrides,activePreset=selected.id}
+ local account={uiConfig={schema=2,presets={},imported={},theme=theme}}
+ local f=Fixture("enUS",nil,account);local a=f.A;local api=a.API.Theme
+ T.eq(a.RuntimeTheme.selection.id,selected.id);T.eq(a.RuntimeTheme.source.values,values)
+ T.eq(a.RuntimeTheme.source.overrides.account,overrides);T.eq(theme.presets[unused.id],unused)
+ T.eq(account.uiConfigRecovery,nil)
+ local compile=a.Appearance.Compile;local checks=a.Configuration.CheckSerializable
+ a.Appearance.Compile=function() error("queries must not recompile themes") end
+ a.Configuration.CheckSerializable=function() error("queries must not revalidate saved tables") end
+ for index=1,3 do
+  T.eq(api:GetStatus().reloadRequired,false);T.eq(#api:List(),2)
+  T.eq(a.Configuration:Get("settings.fontScale"),100)
+ end
+ a.Appearance.Compile=compile;a.Configuration.CheckSerializable=checks
+ T.eq(api:Activate(unused.id),false);T.eq(theme.presets[unused.id],unused)
+ T.ok(api:Import({schema=1,id=unused.id,revision=2}))
+ T.eq(api:GetStatus().reloadRequired,false)
+ local committed=account.uiConfig.theme
+ f=Reload(f);T.eq(account.uiConfig.theme,committed);T.eq(committed.presets[selected.id],selected)
+ T.eq(f.A.RuntimeTheme.source.values,values);T.eq(account.uiConfigRecovery,nil)
+end
+
+-- Element structure is checked even when unknown branches contain no leaves.
+do
+ local f=Fixture("enUS");local api=f.A.API.Theme
+ local function Import(rule,id)
+  return api:Import({schema=1,id="empty.structure",revision=1,appearance={main={elements={[id or "settings.row"]=rule}}}})
+ end
+ for _,rule in ipairs({{bogus={}},{base={bogus={}}},{states={bogus={}}},{states={hover={bogus={}}}},
+  {variants={sample={bogus={}}}},{instances={sample={bogus={}}}},{base={label={bogus={}}}},
+  {variants={sample={instances={}}}}}) do
+  local ok,err=Import(rule);T.eq(ok,false);T.eq(type(err),"string")
+ end
+ T.eq(Import({instances={}},"host.settingsButton"),false)
+ T.eq(#api:List(),0);T.eq(api:GetStatus().reloadRequired,false,"rejected empty branches never register partial definitions")
+ T.ok(Import({base={},states={},variants={},instances={}}))
+ T.ok(Import({variants={sample={variants={nested={base={},states={},variants={}}}}}}))
+ T.ok(Import({base={label={}},states={hover={label={}}},variants={sample={base={},states={}}},instances={sample={base={},states={},variants={}}}}))
+end

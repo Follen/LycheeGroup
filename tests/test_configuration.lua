@@ -276,3 +276,71 @@ do
  local text=S.New("FontString",nil,parent);text:SetText("abc")
  T.near(text:GetWidth(),23.1,.001);T.near(text:GetHeight(),16.8,.001)
 end
+
+-- SavedVariables bind repairs only unusable containers and retains their raw value.
+do
+ local account={uiConfig={schema=2,presets={},imported={}}}
+ local original=account.uiConfig;local presets=original.presets
+ local a,c=Reload(account,{})
+ T.eq(c:Get(scale),100);T.eq(account.uiConfig,original);T.eq(original.presets,presets)
+ T.eq(type(original.user),"table")
+ local broken={uiConfig="raw namespace"}
+ a,c=Reload(broken,{})
+ T.eq(c:Get(scale),100);T.eq(broken.uiConfigRecovery["uiConfig"].value,"raw namespace")
+ local records=broken.uiConfigRecovery;local record=records.uiConfig
+ a,c=Reload(broken,{})
+ T.eq(broken.uiConfigRecovery,records);T.eq(records.uiConfig,record)
+ T.ok(c:Set({[scale]=110},{storage="account"}));T.eq(c:Get(scale),110)
+ local raw={user=false,presets={bad={revision=1,values=false}},imported=7,schema=2,activePreset="bad"}
+ account={uiConfig=raw};a,c=Reload(account,{})
+ T.eq(c:Get(scale),100);T.eq(account.uiConfigRecovery["uiConfig.user"].value,false)
+ T.eq(account.uiConfigRecovery["uiConfig.presets.bad"].value.values,false)
+ T.ok(c:ApplyPreset("bad",2,{[scale]=115},{storage="account"}));T.eq(c:Get(scale),115)
+end
+
+-- Bad saved leaves/packages are quarantined once; healthy stored objects stay shared.
+do
+ local package={revision=1,values={[scale]=115}}
+ local user={["settings.history"]=false,[scale]="bad saved number"}
+ local account={uiConfig={schema=2,user=user,presets={healthy=package,bad={revision=1,values={[scale]=0/0}}},imported={},activePreset="healthy"}}
+ local a,c=Reload(account,{})
+ T.eq(c:Get(scale),115);T.eq(c:Get("settings.history"),false)
+ T.eq(account.uiConfig.user,user);T.eq(account.uiConfig.presets.healthy,package)
+ T.eq(account.uiConfigRecovery["uiConfig.user."..scale].value,"bad saved number")
+ T.eq(type(account.uiConfigRecovery["uiConfig.presets.bad"].error),"string")
+ local recovery=account.uiConfigRecovery;local leaf=recovery["uiConfig.user."..scale]
+ a,c=Reload(account,{})
+ T.eq(c:Get(scale),115);T.eq(account.uiConfigRecovery,recovery)
+ T.eq(recovery["uiConfig.user."..scale],leaf);T.eq(account.uiConfig.presets.healthy,package)
+ T.eq(c.legacy.account.uiConfigRecovery,nil,"recovery data is not duplicated as legacy import state")
+ local raw={schema=99,user={[scale]=120},presets={},imported={}}
+ account={uiConfig=raw};a,c=Reload(account,{})
+ T.eq(c:Get(scale),100);T.eq(account.uiConfigRecovery.uiConfig.value,raw)
+ T.eq(raw.user[scale],120)
+end
+
+-- Real layout saves repair old mirror containers without interrupting live updates.
+do
+ local prefs={windowSize="old invalid layout",tableLayouts={findResults={widths=false}},find="old invalid find"}
+ local f=dofile("tests/ui_fixture.lua")("enUS",prefs)
+ local a,c=f.A,f.A.Configuration
+ local applied,apply=0,a.ApplyConfigurationChanges
+ a.ApplyConfigurationChanges=function(self,changes) applied=applied+1;return apply(self,changes) end
+ T.ok(a.Appearance:SaveWindowSize(1400,800))
+ T.eq(applied,1,"repairing the old mirror does not interrupt the live configuration notification")
+ T.eq(a.Appearance:GetWindowSize(),1400);T.eq(prefs.windowSize.width,1400);T.eq(prefs.windowSize.height,800)
+ T.eq(prefs.uiConfigRecovery.windowSize.value,"old invalid layout")
+ local recovery=prefs.uiConfigRecovery.windowSize
+ T.ok(a.Appearance:SaveWindowSize(1450,850));T.eq(prefs.uiConfigRecovery.windowSize,recovery)
+ local widths="layout.tables.findResults.widths.title"
+ T.ok(c:Set({[widths]=.3},{storage="character"}))
+ T.eq(prefs.tableLayouts.findResults.widths.title,.3)
+ T.eq(prefs.uiConfigRecovery["tableLayouts.findResults.widths"].value,false)
+ T.ok(c:Reset("layout.find.railCollapsed",{storage="character"}))
+ T.eq(type(prefs.find),"table");T.eq(prefs.find.railCollapsed,nil)
+ T.eq(prefs.uiConfigRecovery.find.value,"old invalid find")
+ local findRecovery=prefs.uiConfigRecovery.find
+ T.ok(c:Reset("layout.find.railCollapsed",{storage="character"}))
+ T.eq(prefs.uiConfigRecovery.find,findRecovery)
+ T.ok(a.Appearance:SaveRailCollapsed(true));T.eq(prefs.find.railCollapsed,true)
+end

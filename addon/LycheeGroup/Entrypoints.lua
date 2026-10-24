@@ -99,6 +99,7 @@ function A:OnModuleReady(module)
     if module == "Group" then
         groupReady = true
         StopGroupWake()
+        if self.UI and self.UI.OnGroupReady then self.UI:OnGroupReady() end
     elseif module == "Notes" and self.UI and self.UI.OnNotesReady then
         self.UI:OnNotesReady()
     end

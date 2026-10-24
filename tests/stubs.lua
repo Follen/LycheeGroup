@@ -344,6 +344,7 @@ function Stubs.Install(overrides)
 		GetInspectSpecialization = GetInspectSpecialization,
 		NotifyInspect = NotifyInspect,
 		time = Now,
+		date = os.date,
 		wipe = wipe,
 		IsAddOnLoaded = function() return false end,
 		LoadAddOn = function() return false end,

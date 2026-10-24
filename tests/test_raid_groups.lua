@@ -62,6 +62,15 @@ do
  s.rows[2].combat=s.secret;ok,reason=s.service:Drop("A",2,"B");Equal(ok,false);Equal(reason,"unknown")
 end
 do
+ local s=Session();s.rows[2].subgroup=1
+ for _,combat in ipairs({true,s.secret}) do
+  s.rows[2].combat=combat
+  local intent,reason=s.service:ResolveDrop("A",2,"B")
+  Equal(intent,nil);Equal(reason,"same","a current same-group target ends quietly even when its combat state is unavailable")
+  local ok;ok,reason=s.service:Drop("A",2,"B");Equal(ok,false);Equal(reason,"same");Equal(#s.calls,0)
+ end
+end
+do
  local s=Session();Equal(s.service:CanStart("A"),true)
  s.leader=false;local ok,reason=s.service:Drop("A",2,"B");Equal(ok,false);Equal(reason,"permission");Equal(#s.calls,0)
  s.leader=true;s.rows[1].guid="Replacement";ok,reason=s.service:Drop("A",2,"B");Equal(ok,false);Equal(reason,"identity")

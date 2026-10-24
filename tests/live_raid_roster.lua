@@ -36,7 +36,7 @@ assert(probe:Async(15))
 assert(probe:Guard(function()return not InCombatLockdown() and IsInRaid()end,{"PLAYER_REGEN_DISABLED","GROUP_ROSTER_UPDATE"},"raid_scene_changed"))
 assert(A:Ensure("Group"));assert(A:Ensure("UI"))
 G,U=A.Group,A.UI;Tip=U.Tooltip
-Check(LycheeUI.version==36 and G.RaidGroups and G.RaidGroups.ResolveDrop and Tip.EnsureRosterDragGhost,"new_runtime_not_loaded")
+Check(LycheeUI.version==38 and G.RaidGroups and G.RaidGroups.ResolveDrop and Tip.EnsureRosterDragGhost,"new_runtime_not_loaded")
 assert(A:Open("create"))
 local members=G:GetRoster()
 Check(#members>0 and #members<=40,"native_roster_missing")

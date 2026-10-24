@@ -341,14 +341,16 @@ do
  local group=catalog:GetGroups("seasonDungeon")[1]
  local variants=group.variants
  group.variants={catalog:GetActivity(3),catalog:GetActivity(2)}
- create.pickerEntries={{category="seasonDungeon",group=group}}
- create:SelectPickerRow(1)
+ create:TogglePicker()
+ local seasonalKey
+ for key,entry in pairs(create.pickerEntries) do if entry.category=="seasonDungeon" and entry.group==group then seasonalKey=key;break end end
+ create:SelectPickerRow(seasonalKey)
  T.eq(create:FormData().activityID,2,"new seasonal dungeons default to Mythic Keystone even when Normal sorts first")
  for _,button in ipairs(create.difficultyButtons) do if button.value==3 then button:Fire("OnClick");break end end
  create:RefreshPicker()
  T.eq(create:FormData().activityID,3,"an explicit Normal choice remains selected on refresh")
  group.variants=variants
- create:SelectPickerRow(1)
+ create:TogglePicker();create:SelectPickerRow(seasonalKey)
 end
 do
  create:TogglePicker()
@@ -363,7 +365,7 @@ do
  catalog.GetTiers=function() return {{id=1,name="First"},{id=2,name="Second"}} end
  create.pickerCategory="2";create.pickerTier=2;create:RefreshPickerRows()
  T.eq(create.tierChoice:IsShown(),true,"多个有效资料片仍保留范围选择")
- T.eq(#create.pickerEntries,1)
+ T.eq(#create.pickerResults.ids,1)
  local tiers={{id=1,name="First"},{id=2,name="Second"}}
  for i=3,11 do groups[i]={key="tier"..i,name="Tier "..i,tier=i,activity=source.activity};tiers[i]={id=i,name="Tier "..i} end
  catalog.GetTiers=function() return tiers end
@@ -377,19 +379,19 @@ do
  local choice;for _,row in ipairs(menu.list.rows) do if row.key and menu.items[row.key].value==11 then choice=row;break end end
  T.ok(choice,"the last expansion remains selectable in the scrolled submenu")
  choice:Fire("OnClick","LeftButton");menu.mouseOver=nil
- T.eq(create.pickerTier,11);T.eq(#create.pickerEntries,1)
+ T.eq(create.pickerTier,11);T.eq(#create.pickerResults.ids,1)
  for i=11,3,-1 do groups[i]=nil end
  groups[2]=nil;create:RefreshPickerRows()
  T.eq(create.tierChoice:IsShown(),false,"单一有效范围不显示只有全部和自身的下拉")
  T.eq(create.pickerTier,nil,"隐藏下拉同时清除已失效的范围条件")
- T.eq(#create.pickerEntries,1,"清除隐藏范围后唯一活动仍可浏览")
+ T.eq(#create.pickerResults.ids,1,"清除隐藏范围后唯一活动仍可浏览")
  catalog.GetGroups,catalog.GetTiers=getGroups,getTiers
  picker:Fire("OnEvent","GLOBAL_MOUSE_DOWN","LeftButton")
  T.eq(picker:IsShown(),false,"a click outside both Create's popup and its expansion submenu still closes the popup")
 end
 create:TogglePicker();create.pickerSearch.box:SetText("Dungeon")
-T.eq(#create.pickerEntries,2,"one dungeon group has distinct seasonal and original contexts")
-local original;for i,entry in ipairs(create.pickerEntries) do if entry.category=="2" then original=i end end
+T.eq(#create.pickerResults.ids,2,"one dungeon group has distinct seasonal and original contexts")
+local original;for key,entry in pairs(create.pickerEntries) do if entry.category=="2" then original=key end end
 G.Catalog:GetActivity(3).isMythicPlusActivity=false;G.Catalog:GetActivity(3).isRatedPvpActivity=false
 create:SelectPickerRow(original);T.eq(create:FormData().activityID,3,"selected original context resolves its own native activity")
 local normalActivity=G.Catalog:GetActivity(3);local normalDifficulty=normalActivity.difficultyID
@@ -401,7 +403,7 @@ normalActivity.difficultyID=normalDifficulty;create:RefreshPicker()
 T.eq(create.score:IsShown(),false,"original normal dungeon hides score")
 T.eq(create.scoreLabel:IsShown(),false,"native false rating flags hide the rating label alongside the control")
 T.eq(native.Name:GetText(),"","switching the new listing's activity does not generate a title")
-native.Name:UserType("My custom group");create:TogglePicker();create.pickerSearch.box:SetText("Dungeon");local seasonal;for i,entry in ipairs(create.pickerEntries) do if entry.category=="seasonDungeon" then seasonal=i end end;create:SelectPickerRow(seasonal);T.eq(native.Name:GetText(),"My custom group","activity change preserves a custom title")
+native.Name:UserType("My custom group");create:TogglePicker();create.pickerSearch.box:SetText("Dungeon");local seasonal;for key,entry in pairs(create.pickerEntries) do if entry.category=="seasonDungeon" then seasonal=key end end;create:SelectPickerRow(seasonal);T.eq(native.Name:GetText(),"My custom group","activity change preserves a custom title")
 create.ilvl.box:SetText("250");create.score.box:SetText("1800");create:Submit()
 T.eq(G.published.requiredDungeonScore,1800);T.eq(G.published.activityID,2)
 T.eq(G.published.isCrossFactionListing,true,"cross-faction default reaches the actual publish payload")
@@ -1556,7 +1558,11 @@ do
  G:Notify("result",r.id);U.Motion:Tick(.016)
 end
 target.membersButton:Fire("OnClick");T.eq(target.count:IsShown(),false)
-find:OnResultSelect(target.key,"LeftButton",target)
+target:Fire("OnMouseDown","LeftButton");target:Fire("OnMouseUp","LeftButton");target:Fire("OnClick","LeftButton")
+local function DoubleClickResult(row)
+ row:Fire("OnMouseDown","LeftButton");row:Fire("OnMouseUp","LeftButton");row:Fire("OnClick","LeftButton")
+ row:Fire("OnMouseDown","LeftButton");row:Fire("OnDoubleClick","LeftButton")
+end
 local firstFocusBackground
 local noteBox=LFGListApplicationDialog.Description.EditBox
 local nativeNoteFocus=noteBox:GetScript("OnEditFocusGained")
@@ -1567,7 +1573,7 @@ noteBox:SetScript("OnEditFocusGained",function(box)
  end
 end)
 find.main:Fire("OnKeyDown","ENTER");T.eq(U.Application.applicationLease,nil,"Enter leaves the selected result alone so the user can open chat")
-target:Fire("OnDoubleClick","LeftButton");T.eq(U.Application.applicationLease.id,target.key);T.eq(G.clearedApplication,nil,"opening configuration keeps the engine's current note")
+DoubleClickResult(target);T.eq(U.Application.applicationLease.id,target.key);T.eq(G.clearedApplication,nil,"opening configuration keeps the engine's current note")
 T.eq(firstFocusBackground:IsShown(),false,"native art created on first application focus stays behind the shared input surface");T.eq(firstFocusBackground:GetAlpha(),0)
 local savedApps=G.apps
 G.apps={savedApps[1]}
@@ -1670,7 +1676,7 @@ do
  T.eq(find.autoApply.value,false);T.eq(find.autoApply:GetWidth(),44,"only the actual track is a toggle target")
  T.eq(find.applicationRoles,nil,"header role shortcuts are removed")
  find.applicationSettings:Fire("OnClick");T.eq(U.activeModal,nil,"the disabled text cannot bypass enabling configuration")
- T.eq(target.key,102);target:Fire("OnDoubleClick","LeftButton");T.eq(dialog.submissions,before,"a disabled double click opens a temporary confirmation")
+ T.eq(target.key,102);DoubleClickResult(target);T.eq(dialog.submissions,before,"a disabled double click opens a temporary confirmation")
  T.eq(U.Application.applicationLease.id,102);T.eq(dialog.Description:GetParent(),U.Application.applicationModal.note)
  T.eq(U.Application.applicationLease.roles.TANK,true,"first confirmation prefers the current specialization")
  T.eq(U.Application.applicationPrefs and U.Application.applicationPrefs.roles,nil,"preselection does not confirm saved roles")
@@ -1725,13 +1731,13 @@ do
  T.eq(A.charPrefs.autoApply,true,"saving valid activation persists this character's switch")
  T.same(A.charPrefs.applicationRoles,{TANK=true,HEALER=false,DAMAGER=true})
  local activity=G.records[102].activityID;G.records[102].activityID=1
- target:Fire("OnDoubleClick","LeftButton");T.eq(dialog.submissions,before+2,"an enabled double click reuses the configured input directly")
+ DoubleClickResult(target);T.eq(dialog.submissions,before+2,"an enabled double click reuses the configured input directly")
  T.eq(dialog.submitted.tank,true);T.eq(dialog.submitted.damage,true,"quick submission retains the complete multi-role selection")
  T.eq(dialog.submitted.note,"A reusable native note");T.eq(U.activeModal,nil);T.eq(G.clearedApplication,nil)
  G.records[102].activityID=activity
  find.main:Fire("OnKeyDown","ENTER");T.eq(dialog.submissions,before+2,"Enter never submits while automatic application is on")
  T.eq(U.Application.applicationLease,nil,"Enter does not open a window while automatic application is on")
- target:Fire("OnDoubleClick","LeftButton");T.eq(dialog.submissions,before+3,"double click keeps using the configured quick path")
+ DoubleClickResult(target);T.eq(dialog.submissions,before+3,"double click keeps using the configured quick path")
  find.applicationSettings:Fire("OnEnter")
  T.same(find.applicationSettings.label.color,U.Theme.brand,"the separate settings text uses brand color on hover")
  T.eq(find.applicationSettings.hover:IsShown(),false,"the settings text has no surrounding hover surface")
@@ -4656,6 +4662,264 @@ do
  now=3;fresh.base.AdvanceClock(1)
  for _,row in ipairs(page.appList.rows) do if row.key==42 then T.eq(row.status:GetText(),"4:57") end end
  u:Hide(true);T.eq(page.countdown,nil);GetTime=clock
+end
+
+-- Closing freezes Find notifications even after the native host retakes its input.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("enUS",nil,{reduceMotion=false})
+ local a,u,g=fresh.A,fresh.U,fresh.G
+ a:Open("find");u.Motion:SetPresence(1)
+ local page=u.pages.find;local count=#page.catIDs
+ u:Hide();T.ok(u.hiding)
+ local box=LFGListFrame.SearchPanel.SearchBox
+ box:SetParent(LFGListFrame.SearchPanel);box:Fire("OnTextChanged",false)
+ T.eq(u.Native.searchLease,nil)
+ local categories=g.Catalog.GetCategories
+ g.Catalog.GetCategories=function(self,...)
+  local result={};for i,category in ipairs(categories(self,...)) do result[i]=category end
+  result[#result+1]={key="closingCategory",id=87,name="Latest category",icon="pvp"};return result
+ end
+ local changes=0
+ for _,method in ipairs({"RefreshCategories","OnApplicationCancelled","RefreshResults","RefreshSearchState"}) do
+  local original=page[method]
+  page[method]=function(self,...) changes=changes+1;return original(self,...) end
+ end
+ for _,kind in ipairs({"activities","applicationCancelled","result","relations","search","results","applications"}) do g:Notify(kind,41) end
+ T.eq(changes,0,"business updates leave the departing Find page frozen")
+ T.eq(u.Native.searchLease,nil,"an activity event cannot reacquire an input returned to its native host")
+ T.eq(box:GetParent(),LFGListFrame.SearchPanel);T.eq(#page.catIDs,count)
+ a:Open("find")
+ T.eq(u.hiding,nil);T.ok(u.Native.searchLease)
+ T.eq(box:GetParent(),page.search);T.ok(page.catMap.closingCategory)
+ T.eq(#page.catIDs,count+1,"quick reopen synchronizes the latest activity directory")
+ u:Hide(true);T.eq(page.unsub,nil);T.eq(u.Native.searchLease,nil)
+end
+
+-- External note changes freeze during exit and are consumed on a quick reopen.
+for _,removed in ipairs({false,true}) do
+ local fresh=dofile("tests/ui_fixture.lua")("enUS")
+ local a,u=fresh.A,fresh.U
+ a:SetSetting("reduceMotion",false)
+ a.Notes:Add("ClosingEdit","Away","Original reason")
+ a:Open("notes",{playerKey="ClosingEdit-Away"});u.Motion:Tick(1)
+ local page=u.pages.notes;local count=#page.list.ids
+ u:Hide();T.ok(u.hiding)
+ if removed then a.Notes:Remove("ClosingEdit-Away") else a.Notes:Edit("ClosingEdit-Away","External change") end
+ a.Notes:Add("AddedDuringExit","Away","New record")
+ T.eq(page.eReason.box:GetText(),"Original reason","external changes leave the departing editor frozen")
+ T.eq(#page.list.ids,count,"external changes leave the departing list frozen")
+ a:Open("notes")
+ if removed then T.eq(page.eStatus:GetText(),u.L.missingRecord);T.eq(page.eSave:IsShown(),false,"a removed record cannot remain editable after reopening")
+ else T.eq(page.eReason.box:GetText(),"External change","reopening synchronizes the edited record") end
+ T.eq(#page.list.ids,count+(removed and 0 or 1),"reopening reads the current record list")
+ u:Hide(true)
+end
+
+-- Closing cancels the editor's inspect request; a quick reopen keeps a saveable draft.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("enUS")
+ local a,u,base=fresh.A,fresh.U,fresh.base
+ a:SetSetting("reduceMotion",false)
+ base.SetUnit("party1",{name="ClosingNote",realm="Away",class="PALADIN",classID=2,guid="closing-note"})
+ base.SetInspectSpec("party1",0)
+ a:Open("notes",{add={name="ClosingNote",realm="Away",unit="party1"}});u.Motion:Tick(1)
+ local page=u.pages.notes
+ page.eReason.box:SetText("Keep this draft");page:Save()
+ T.eq(base.PendingTimers(),1);T.eq(page.eStatus:GetText(),u.L.busy)
+ u:Hide();T.ok(u.hiding)
+ T.eq(base.PendingTimers(),0,"closing immediately releases the editor's pending inspection")
+ base.SetInspectSpec("party1",66);base.FireEvent("INSPECT_READY","closing-note")
+ T.eq(a.Notes:Find("ClosingNote-Away"),nil,"a late inspection cannot save a closed draft")
+ a:Open("notes")
+ T.eq(page.eReason.box:GetText(),"Keep this draft");T.eq(page.eStatus:GetText(),"")
+ page:Save()
+ local record=a.Notes:Find("ClosingNote-Away")
+ T.ok(record,"a quickly reopened draft can be saved again without editing a field")
+ T.eq(record.reason,"Keep this draft");T.eq(record.specID,66)
+ u:Hide(true)
+end
+
+-- Business events do not rebuild the departing creation page or reacquire inputs.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("enUS")
+ local a,u,g=fresh.A,fresh.U,fresh.G
+ a:SetSetting("reduceMotion",false)
+ g.listing={activityID=2,name="Closing recruitment",requiredItemLevel=0}
+ a:Open("create");u.Motion:Tick(1)
+ local page=u.pages.create
+ T.ok(page.manage:IsShown());T.eq(page.formFrame:IsShown(),false)
+ local roster=page.roster;local rosterText=page.rosterCount:GetText()
+ local acquisitions,acquire=0,u.Native.AcquireCreation
+ u.Native.AcquireCreation=function(self,...) acquisitions=acquisitions+1;return acquire(self,...) end
+ u:Hide();T.ok(u.hiding);T.ok(u.frame:IsShown());T.eq(u.Native.owner,nil)
+ g.listing=nil;g.GetRoster=function() return {} end
+ for _,kind in ipairs({"listing","permissions","roster","activities","creationPresets","applicants"}) do g:Notify(kind) end
+ T.eq(acquisitions,0,"events during exit cannot reacquire the returned native creation inputs")
+ T.eq(page.manage:IsShown(),true,"the departing page keeps its last recruitment view")
+ T.eq(page.formFrame:IsShown(),false);T.eq(page.roster,roster);T.eq(page.rosterCount:GetText(),rosterText)
+ a:Open("create")
+ T.eq(u.hiding,nil);T.eq(page.formFrame:IsShown(),true);T.eq(page.manage:IsShown(),false)
+ T.eq(u.Native.owner,page,"reversing the exit acquires the current form normally")
+ T.eq(#page.roster,0,"reopening takes the latest roster after skipped presentation updates")
+ u:Hide(true);T.eq(page.unsub,nil);T.eq(u.Native.owner,nil)
+end
+
+-- A table-header repaint can precede the queued notice for in-place members.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("enUS")
+ local a,u,g=fresh.A,fresh.U,fresh.G;a:SetSetting("reduceMotion",true)
+ local function Member(name) return {name=name,nameKey=name,class="MAGE",assignedRole="DAMAGER",itemLevel=320,dungeonScore=2500} end
+ g.listing={activityID=2,name="Changing recruitment"}
+ for id=1,20 do g.applicants[id]={id=id,status="applied",displayOrderID=id,members={Member("Member"..id.."-Away")}} end
+ a:Open("create");local page=u.pages.create;local app=g.applicants[1]
+ local function Header()
+  local ok,err=pcall(page.applicantTable.Layout,page.applicantTable,page.applicantTable.layoutWidth)
+  T.ok(ok,"the real table-header callback accepts pending member changes: "..tostring(err))
+ end
+ local function Geometry()
+  for _,batch in ipairs(page.batchPool) do if batch:IsShown() then
+   local current=g.applicants[batch.appID];local layout=page.batchLayouts[batch.appID]
+   T.eq(#layout.heights,#current.members,"member geometry covers the current complete batch")
+   for index,row in ipairs(batch.people) do
+    local member=current.members[index]
+    T.eq(row:IsShown(),member~=nil)
+    if member then
+     T.eq(row.member,member);T.eq(row.title:GetText(),member.nameKey)
+     T.eq(row:GetHeight(),layout.heights[index]);T.ok(row:GetHeight()>=math.ceil(row.title:GetStringHeight()),"current names fit the rebuilt member height")
+     if index>1 then T.ok(layout.tops[index]>=layout.tops[index-1]+layout.heights[index-1],"member rows never overlap after in-place changes") end
+    end
+   end
+  end end
+ end
+ app.members[2]=Member("Two-Away")
+ Header();Geometry();T.eq(page.batchPool[1].people[2].member,app.members[2])
+ local oldHeight=page.batchLayouts[1].heights[1]
+ app.members[1].nameKey=string.rep("LongApplicant",12).."-Away";app.members[1].name=app.members[1].nameKey
+ app.comment=string.rep("The current complete recruitment note. ",15)
+ Header();Geometry();T.ok(page.batchLayouts[1].heights[1]>oldHeight,"same-count native name changes invalidate wrapped height")
+ T.eq(page.batchPool[1].comment:GetText(),app.comment,"a pre-notification repaint includes the current long note")
+ app.members[1],app.members[2]=app.members[2],app.members[1]
+ page:SetBatchOffset(1,false);Geometry();T.eq(page.batchPool[1].people[1].member,app.members[1],"scrolling within the same bound interval accepts current member ordering")
+ local tall=page.batchLayouts[1].heights[2]
+ app.members[2].isBNetFriend,app.members[2].isCharFriend,app.members[2].isGuildMate=true,true,true
+ page:SetBatchOffset(2,false);Geometry()
+ T.ok(page.batchLayouts[1].heights[2]>tall,"in-place relationship marks invalidate the available wrapped-name width")
+ Header();Geometry()
+ table.remove(app.members,2)
+ Header();Geometry();T.eq(page.batchPool[1].people[2]:IsShown(),false,"a pending member removal hides the old pooled slot")
+ g.applicants[20].members[2]=Member(string.rep("LastApplicant",10).."-Away")
+ page:SetBatchOffset(page.batchBody:GetHeight(),false);Geometry()
+ local last=page.batchPool[page.lastBatch-page.firstBatch+1]
+ T.eq(last.appID,20);T.eq(last.people[2].member,g.applicants[20].members[2],"scrolling into pending data rebuilds its geometry before binding")
+ page:SetBatchOffset(0,false)
+ local measure=page.applicantMeasure.text;local getHeight=measure.GetStringHeight;local measurements=0
+ measure.GetStringHeight=function(self,...) measurements=measurements+1;return getHeight(self,...) end
+ Header();page:SetBatchOffset(1,false);Header()
+ T.eq(measurements,0,"unchanged header layout and scrolling do not remeasure applicant names")
+ g:Notify("applicants");Geometry();T.eq(page.batchPool[1].people[1].member,app.members[1],"the final queued notification remains consistent with the earlier repaint")
+ measure.GetStringHeight=getHeight
+ u:Hide(true)
+end
+
+-- Member-count and faction child actions also reject an earlier row's press.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("enUS")
+ local a,u,g=fresh.A,fresh.U,fresh.G;a:SetSetting("reduceMotion",true)
+ g.prefs.find={category="seasonDungeon",categoryPrefs={seasonDungeon={selected=true,difficultyID=8}}}
+ for id=1,25 do g.records[id]={id=id,activityID=1,name="Raid "..id,leaderName="Leader-Away",leaderKey="Leader-Away",numMembers=10,maxNumPlayers=40,age=10} end
+ a:Open("find");local page=u.pages.find;local row=page.results.rows[1];local button=row.membersButton;local old=row.key
+ button:Fire("OnMouseDown","LeftButton");page.results:SetPixelOffset(page.results.rowHeight,false)
+ T.ok(row.key~=old);button:Fire("OnMouseUp","LeftButton");button:Fire("OnClick","LeftButton")
+ T.eq(row.membersExpanded,nil,"releasing a rebound member-count button cannot expand the new result")
+ button:Fire("OnClick","LeftButton");T.eq(row.membersExpanded,true,"direct activation expands the current result")
+ u:Hide(true)
+end
+do
+ local fresh=dofile("tests/ui_fixture.lua")("enUS")
+ local a,u,g=fresh.A,fresh.U,fresh.G;a:SetSetting("reduceMotion",true)
+ g.listing={activityID=2,name="Faction actions"}
+ for id=1,20 do g.applicants[id]={id=id,status="applied",displayOrderID=id,members={{name="Member"..id.."-Away",nameKey="Member"..id.."-Away",class="MAGE",assignedRole="DAMAGER",raceName="Human",factionGroup=1}}} end
+ a:Open("create");local page=u.pages.create;page.batchScroll.mouseOver=true
+ local row=page.batchPool[1].people[1];local button=row.factionButton;local old=row.member
+ button:Fire("OnMouseDown","LeftButton");page:SetBatchOffset(200,false)
+ T.ok(row.member~=old);button:Fire("OnMouseUp","LeftButton");button:Fire("OnClick","LeftButton")
+ T.eq(row.factionExpanded,nil,"releasing a rebound faction button cannot expand the new applicant")
+ button:Fire("OnClick","LeftButton");T.eq(row.factionExpanded,true,"direct activation expands the current applicant's race")
+ button:Fire("OnMouseDown","RightButton");page:SetBatchOffset(0,false)
+ button:Fire("OnMouseUp","RightButton");button:Fire("OnClick","RightButton")
+ T.ok(not u.context.menu or not u.context.menu:IsShown(),"releasing a rebound faction press cannot open the new applicant's menu")
+ u:Hide(true)
+end
+
+-- Favorite child actions retain the entry that owned their mouse press.
+for _,actionName in ipairs({"remove","create"}) do
+ local fresh=dofile("tests/ui_fixture.lua")("enUS")
+ local a,u,g=fresh.A,fresh.U,fresh.G;a:SetSetting("reduceMotion",true)
+ for index=1,8 do g.Presets:ToggleFavorite({activityID=2,requiredItemLevel=200+index}) end
+ a:Open("create");local page=u.pages.create;page.favoritesToggle:Fire("OnClick")
+ local list=page.favoritesList;list.clip.mouseOver=true
+ local row=list.rows[1];local old=row.key;local button=row[actionName]
+ page.ilvl.box:SetText("399")
+ button:Fire("OnMouseDown","LeftButton")
+ list:SetPixelOffset(list.favoriteLayouts[old].height,false)
+ local current=row.key;T.ok(current~=old,"scrolling reuses the pressed favorite's native row")
+ button:Fire("OnMouseUp","LeftButton");button:Fire("OnClick","LeftButton")
+ T.eq(#g.Presets:Get(),8,"releasing a rebound favorite action cannot remove the new entry")
+ T.eq(page:FormData().requiredItemLevel,399,"releasing a rebound favorite action cannot apply the new entry")
+ button:Fire("OnClick","LeftButton")
+ if actionName=="create" then T.eq(page:FormData().requiredItemLevel,current.requiredItemLevel,"direct activation applies the current favorite")
+ else T.eq(#g.Presets:Get(),7);T.eq(g.Presets:Find(current),nil,"direct activation removes the current favorite") end
+ button:Fire("OnMouseDown","LeftButton");page.favoritesToggle:Fire("OnClick")
+ for _,pooled in ipairs(list.rows) do T.eq(pooled.create.targetKey,nil);T.eq(pooled.remove.targetKey,nil,"collapsed favorites release child action identities") end
+ page.favoritesToggle:Fire("OnClick");local count=#g.Presets:Get();local itemLevel=page:FormData().requiredItemLevel
+ button:Fire("OnMouseUp","LeftButton");button:Fire("OnClick","LeftButton")
+ T.eq(#g.Presets:Get(),count);T.eq(page:FormData().requiredItemLevel,itemLevel,"hiding and reopening cannot complete an old favorite press")
+ local active=row.key;button:Fire("OnMouseDown","LeftButton");button:Fire("OnMouseUp","LeftButton");button:Fire("OnClick","LeftButton")
+ if actionName=="create" then T.eq(page:FormData().requiredItemLevel,active.requiredItemLevel,"a new mouse press applies the current entry")
+ else T.eq(#g.Presets:Get(),count-1,"a new mouse press removes the current entry") end
+ u:Hide(true)
+end
+
+-- Raw applicant right-click targets remain attached to the pressed identity.
+for _,entry in ipairs({"mapScore","row"}) do
+ local fresh=dofile("tests/ui_fixture.lua")("enUS",nil,{reduceMotion=true})
+ local a,u,g=fresh.A,fresh.U,fresh.G
+ a.Configuration:Set({["layout.tables.createApplicants.sortKey"]=false,["layout.tables.createApplicants.descending"]=false},{storage="character"})
+ local function Applicant(id,order)
+  return {id=id,status="applied",displayOrderID=order or id,members={{name="Applicant"..id.."-Home",nameKey="Applicant"..id.."-Home",class="MAGE",assignedRole="DAMAGER",itemLevel=320,dungeonScore=2500,dungeonScores={mapScore=400}}}}
+ end
+ g.listing={activityID=2,name="Right-click target"};g.applicants={[1]=Applicant(1),[2]=Applicant(2),[3]=Applicant(3)}
+ a:Open("create");local page=u.pages.create;page.batchScroll.mouseOver=true
+ local row=page.batchPool[1].people[1];local button=entry=="row" and row or row.mapScoreButton
+ local function CopyOpenedMenu()
+  local menu=u.context.menu
+  if not menu or not menu:IsShown() then return nil end
+  for index,item in ipairs(menu.items) do if item.value=="copy" then
+   local action=menu.list.rows[index];action:Fire("OnMouseDown","LeftButton");action:Fire("OnClick","LeftButton")
+   local value=u.copyDialog.value;u:CloseModal();return value
+  end end
+  error("missing applicant copy action")
+ end
+ button:Fire("OnMouseDown","RightButton");g.applicants[1]=nil;g:Notify("applicants")
+ T.eq(row.member.nameKey,"Applicant2-Home","a normal applicant notification rebinds the same visible row")
+ button:Fire("OnMouseUp","RightButton");button:Fire("OnClick","RightButton")
+ T.eq(CopyOpenedMenu(),nil,"a stale "..entry.." press cannot copy the replacement applicant")
+ button:Fire("OnClick","RightButton");T.eq(CopyOpenedMenu(),"Applicant2-Home","direct right-click copies the current applicant")
+ button:Fire("OnMouseDown","RightButton");g.applicants[4]=Applicant(4,0);g:Notify("applicants")
+ T.eq(row.member.nameKey,"Applicant4-Home","a newly sorted applicant reuses the same native target")
+ button:Fire("OnMouseUp","RightButton");button:Fire("OnClick","RightButton")
+ T.eq(CopyOpenedMenu(),nil,"insertion cannot retarget a pending "..entry.." menu")
+ button:Fire("OnMouseDown","RightButton");g:Notify("applicants");button:Fire("OnMouseUp","RightButton");button:Fire("OnClick","RightButton")
+ T.eq(CopyOpenedMenu(),"Applicant4-Home","a new press survives a same-identity refresh")
+ button:Fire("OnMouseDown","RightButton");button:Fire("OnLeave");button:Fire("OnMouseUp","RightButton");button:Fire("OnClick","RightButton")
+ T.eq(CopyOpenedMenu(),nil,"leaving cancels the pressed "..entry.." identity")
+ button:Fire("OnClick","RightButton");T.eq(CopyOpenedMenu(),"Applicant4-Home","consuming a cancelled press does not block direct activation")
+ button:Fire("OnMouseDown","RightButton");a:Open("settings");a:Open("create")
+ button:Fire("OnMouseUp","RightButton");button:Fire("OnClick","RightButton")
+ T.eq(CopyOpenedMenu(),nil,"hiding and reopening cancels the old "..entry.." press")
+ button:Fire("OnMouseDown","RightButton");button:Fire("OnMouseUp","RightButton");button:Fire("OnClick","RightButton")
+ T.eq(CopyOpenedMenu(),"Applicant4-Home","a new press after reopening targets the current member")
+ u:Hide(true)
 end
 
 -- Theme saves explain their reload boundary without applying appearance or search.

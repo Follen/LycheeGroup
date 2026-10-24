@@ -22,6 +22,56 @@ local function Member(name,rating,map,ilvl)
  return {name=name,nameKey=name,class="WARRIOR",assignedRole="DAMAGER",rating=rating,itemLevel=ilvl,dungeonScores={mapScore=map}}
 end
 
+-- Typing can replace a picker row before its current mouse press is released.
+do
+ local f=dofile("tests/ui_fixture.lua")("enUS",nil,{reduceMotion=true})
+ local a,u=f.A,f.U
+ a:Open("create");local page=u.pages.create;page:TogglePicker()
+ local row=page.pickerResults.rows[1]
+ local old=page.pickerEntries[row.key];local activity=page:FormData().activityID
+ Check(page.pickerSearch.box:HasFocus(),"picker input retains focus while its rows are pressed")
+ row:Fire("OnMouseDown","LeftButton");page.pickerSearch.box:UserType("Raid")
+ local replacement=page.pickerEntries[row.key]
+ Check(old.group.key~=replacement.group.key,"typing really replaces Dungeon with Raid in the pressed pool slot")
+ row:Fire("OnClick","LeftButton")
+ Check(page.picker:IsShown() and page:FormData().activityID==activity,"typing cancels a press when its activity identity changes")
+ row:Fire("OnMouseDown","LeftButton");row:Fire("OnClick","LeftButton")
+ Check(not page.picker:IsShown() and page:FormData().activityID==1,"a fresh press selects the displayed Raid")
+ page:TogglePicker();page.pickerSearch.box:UserType("Dungeon")
+ local keys={};for _,key in ipairs(page.pickerResults.ids) do keys[#keys+1]=key end
+ Check(#keys==2 and keys[1]~=keys[2],"seasonal and original contexts have distinct identities for the same native group")
+ local entries=page.pickerEntries
+ page.pickerSearch.box:UserType("Raid");page.pickerSearch.box:UserType("Dungeon")
+ Check(page.pickerResults.ids[1]==keys[1] and page.pickerResults.ids[2]==keys[2],"repeated searches restore the same semantic keys")
+ Check(page.pickerEntries[keys[1]]~=entries[keys[1]],"the key resolves the current rebuilt entries rather than an old record")
+ local seasonal
+ for _,candidate in ipairs(page.pickerResults.rows) do
+  local entry=page.pickerEntries[candidate.key]
+  if entry and entry.category=="seasonDungeon" then seasonal=candidate;break end
+ end
+ seasonal:Fire("OnMouseDown","LeftButton");page.pickerSearch.box:UserType("Raid");page.pickerSearch.box:UserType("Dungeon")
+ seasonal:Fire("OnClick","LeftButton")
+ Check(page.picker:IsShown() and page:FormData().activityID==1,"a replaced row cannot revive its old press when the same search returns")
+ seasonal:Fire("OnMouseDown","LeftButton");seasonal:Fire("OnClick","LeftButton")
+ Check(page:FormData().activityID==2 and not page.picker:IsShown(),"fresh seasonal selection resolves the current authoritative entry")
+ page:TogglePicker();row=page.pickerResults.rows[1]
+ row:Fire("OnMouseDown","LeftButton")
+ local original
+ for _,category in ipairs(page.pickerCategories.rows) do if category.key=="2" then original=category;break end end
+ original:Fire("OnMouseDown","LeftButton");original:Fire("OnClick","LeftButton")
+ Check(page.pickerEntries[row.key].category=="2","category navigation rebuilds the group rows in the original context")
+ row:Fire("OnClick","LeftButton")
+ Check(page.picker:IsShown() and page:FormData().activityID==2,"changing category cancels a press even when the native group number is unchanged")
+ row:Fire("OnMouseDown","LeftButton");row:Fire("OnClick","LeftButton")
+ Check(page:FormData().activityID==3 and not page.picker:IsShown(),"a new press selects the original-context group")
+ page:TogglePicker();row=page.pickerResults.rows[1];row:Fire("OnMouseDown","LeftButton")
+ page:ClosePicker();page:TogglePicker();row:Fire("OnClick","LeftButton")
+ Check(page.picker:IsShown(),"closing and reopening the picker cancels its pooled row's old press")
+ row:Fire("OnMouseDown","LeftButton");row:Fire("OnClick","LeftButton")
+ Check(not page.picker:IsShown(),"a reopened picker accepts a fresh group selection")
+ u:Hide(true)
+end
+
 -- Native removals can precede the queued UI notification. Resizing then enters
 -- the real table-header callback while the applicant display is being rebuilt.
 do

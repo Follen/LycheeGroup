@@ -94,6 +94,17 @@ local function Record(id)
  local app=UI:GetGroup():GetApplication(id)
  return UI:GetGroup():GetResult(id) or app and app.result
 end
+-- Native double-click can arrive on the second mouse-down. Keep the completed
+-- first click's identity until it is consumed or that interaction is broken.
+local clickedRow,clickedID,clickedParty,clickedRecord
+local function ClearResultClick(row)
+ if not row or clickedRow==row then clickedRow,clickedID,clickedParty,clickedRecord=nil,nil,nil,nil end
+end
+local function SameResultClick(row,id,record)
+ if clickedRow~=row or clickedID~=id or not record then return false end
+ if clickedParty~=nil then return record.partyGUID==clickedParty end
+ return record.partyGUID==nil and record==clickedRecord
+end
 local function Active(app) return UI:GetGroup().Applications:IsActive(app.id) end
 local function NameOnly(value) return value and value:match("^[^-]+") or L.unknown end
 local function Detail(record) return UI:GetGroup().Results:GetDetails(record) end
@@ -152,10 +163,14 @@ local function BuildMembers(row,x,compact)
  local partyGap=compact and 5 or 2
  row.partyWidth=18*5+partyGap*4
  row.partyScale=compact and 1 or T.findMemberBaseScale*T.findMemberScaleAdjustment
- row.membersButton=C.Button(row,"",T.findRowMembersButtonWidth,function()
-  if row.isParty or not row.key or not row._hitVisible then return end
+ row.membersButton=C.Button(row,"",T.findRowMembersButtonWidth,function(button)
+  if row.isParty or not row.key or button.targetKey~=row.key or not row._hitVisible then return end
   row.membersExpanded=not row.membersExpanded;LayoutMembers(row)
  end);row.membersButton:SetWidth(T.findRowMembersButtonWidth)
+ row:HookScript("OnHide",function()
+  if row.membersButton.pressedKey then row.membersButton.pressCancelled=true end
+  row.membersButton.targetKey=nil
+ end)
  row.membersButton:SetStyle({height=compact and 18 or 24,radius=6})
  row.roster=UI:CreateRoster(row.membersButton,18,partyGap);row.roster:SetSize(T.findRowRosterWidth,compact and 18 or 20);row.roster:SetPoint("CENTER");RosterColumns(row.roster)
  if not compact then for _,slot in ipairs(row.roster.slots) do slot.icon.memberStyle=true end end
@@ -164,6 +179,10 @@ local function BuildMembers(row,x,compact)
  LayoutMembers(row)
 end
 local function UpdateMembers(row,id,record,details,counts)
+ if row.membersButton.targetKey~=id then
+  if row.membersButton.pressedKey then row.membersButton.pressCancelled=true end
+  row.membersButton.targetKey=id
+ end
  if row.membersKey~=id then row.membersKey=id;row.membersExpanded=nil end
  row.isParty=record and record.maxNumPlayers==5
  if row.isParty then row.membersExpanded=nil end
@@ -304,7 +323,9 @@ local function LayoutResultRow(row)
  LayoutResultLeader(row);LayoutMembers(row)
 end
 local function RenderResult(row,id)
- local r=Record(id);if not r then return end
+ local r=Record(id)
+ if clickedRow==row and not SameResultClick(row,id,r) then ClearResultClick(row) end
+ if not r then return end
  row.resultContentOffset=DeclinedAt(r) and (P.resultFooterHeight or 0)/2 or 0
  UI:SetText(row.title,r.name or L.unknown)
  UI:SetText(row.description,r.comment and r.comment~="" and r.comment or "—")
@@ -332,7 +353,7 @@ local function RenderResult(row,id)
   local progress=UI:ProgressText(r,d)
   UI:SetText(row.score,progress);UI:Color(row.score,progress=="—" and "dim" or "good")
  else UI:SetScore(row.score,r.leaderRating,r.ratingKind) end
- UI:SetText(row.ilvl,(r.requiredItemLevel or 0)>0 and math.floor(r.requiredItemLevel) or Say("不限","Any"))
+ UI:SetText(row.ilvl,r.requiredItemLevel==nil and "—" or r.requiredItemLevel>0 and math.floor(r.requiredItemLevel) or Say("不限","Any"))
  UI:SetText(row.age,UI:AgeText(r.age))
  UpdateDeclineLabel(row,r,GetTime())
  row.noteDot:Hide()
@@ -515,7 +536,15 @@ function P:Build(parent)
   row.membersWidth=RESULT_COLUMNS.members.width;LayoutMembers(row)
   LayoutResultRow(row)
   row.tooltipArea:SetWidth(self.resultsHeader.columns.title.width)
-  row:SetScript("OnDoubleClick",function(b,button) if button=="LeftButton" and b.key then P:Apply(b.key) end end)
+  row:HookScript("OnMouseDown",function(b,button)
+   if button~="LeftButton" or clickedRow and not SameResultClick(b,b.key,Record(b.key)) then ClearResultClick() end
+  end)
+  row:HookScript("OnLeave",ClearResultClick);row:HookScript("OnHide",ClearResultClick)
+  row:SetScript("OnDoubleClick",function(b,button)
+   local valid=button=="LeftButton" and not UI.hiding and b:IsVisible() and b._hitVisible and SameResultClick(b,b.key,Record(b.key))
+   ClearResultClick()
+   if valid then P:Apply(b.key) end
+  end)
  end)
  self.results:SetRowHeightResolver(function(id,_,bodyHeight)
   return bodyHeight+(DeclinedAt(Record(id)) and (P.resultFooterHeight or 0) or 0)
@@ -1104,7 +1133,6 @@ function P:LayoutFilters()
   y=y+headingHeight+12
   local rangeX=labelWidth+16
   local rangeWidth=w-rangeX
-  self.filterColumns=1
   for _,label in ipairs({self.ratingLabel,self.ilvlLabel,self.membersLabel}) do
     Label(label,labelWidth);Place(label,0,y+(fieldHeight-label:GetHeight())/2)
     local top=y;local range=self.filterRanges[label]
@@ -1232,6 +1260,15 @@ function P:SyncPickerScores()
   if service then service:Begin(self.refreshPickerScores) end
  end
 end
+local function SetGroupChoiceTarget(button,key)
+ if button.targetKey==key then return end
+ if button.pressedGroupKey then button.groupPressCancelled=true end
+ button.targetKey=key
+end
+local function CancelGroupChoicePress(button)
+ if button.pressedGroupKey then button.groupPressCancelled=true end
+ button.targetKey=nil
+end
 function P:BuildPicker()
  local f=CreateFrame("Frame",nil,self.frame);C.Box(f,{width="findFWidth2",height="findFHeight2"});f:SetPoint("TOPLEFT",self.rail,"TOPRIGHT",T.findPickerGap,0);f:SetFrameLevel(self.frame:GetFrameLevel()+35);f:EnableMouse(true);C.Panel(f,"surface","findPanelRadius3");self.picker=f
  f.title=C.Text(f,"",14,"text",T.findFTitleWidth);f.title:SetWidth(T.findFTitleWidth);C.SetLineHeight(f.title,21,true);C.SetPoint(f.title,"TOPLEFT",f.title:GetParent(),"TOPLEFT","findFTitleTopleftX","findFTitleTopleftY")
@@ -1260,7 +1297,23 @@ function P:BuildPicker()
  self.activityIDs={};self.activityMap={}
  self.activities:SetRowInitializer(function(row)
   row.icon=C.Icon(row,T.findRowIconWidth);C.Box(row.icon,{width="findRowIconWidth",height="findRowIconHeight"});C.SetPoint(row.icon,"LEFT",row.icon:GetParent(),"LEFT","findRowIconLeftX",0)
-  row.multiSelect=C.Checkbox(row,function() P:ToggleGroupChoice(row.key) end);C.SetPoint(row.multiSelect,"RIGHT",row.multiSelect:GetParent(),"RIGHT","findRowMultiSelectRightX",0)
+  row.multiSelect=C.Checkbox(row,function(_,button)
+   local pressed,cancelled=button.pressedGroupKey,button.groupPressCancelled
+   button.pressedGroupKey,button.groupPressCancelled=nil,nil
+   local key,selected=row.key,P.draftGroupKeys
+   local current=key and button.targetKey==key and row._hitVisible and button:IsVisible() and selected
+   if not current or cancelled or pressed and (pressed~=key or not P.activities.clip:IsMouseOver()) then
+    button:SetValue(selected and selected[key] or false);return
+   end
+   P:ToggleGroupChoice(key)
+  end);C.SetPoint(row.multiSelect,"RIGHT",row.multiSelect:GetParent(),"RIGHT","findRowMultiSelectRightX",0)
+  row.multiSelect:HookScript("OnMouseDown",function(button,mouse)
+   button.pressedGroupKey=row.key
+   button.groupPressCancelled=mouse~="LeftButton" or not row._hitVisible or not P.activities.clip:IsMouseOver()
+  end)
+  row.multiSelect:HookScript("OnLeave",function(button) if button.pressedGroupKey then button.groupPressCancelled=true end end)
+  row.multiSelect:HookScript("OnHide",CancelGroupChoicePress)
+  row:HookScript("OnHide",function() CancelGroupChoicePress(row.multiSelect) end)
   row.seasonLevel=C.Text(row,"",12,"good");C.SetLineHeight(row.seasonLevel,12,true)
   row.seasonScore=C.Text(row,"",10,"dim");C.SetLineHeight(row.seasonScore,10,true)
   for _,label in ipairs({row.seasonLevel,row.seasonScore}) do label:SetWordWrap(false);label:SetJustifyH("RIGHT");label:Hide() end
@@ -1277,7 +1330,10 @@ function P:BuildPicker()
  end)
  self.refreshPickerScores=function() P:RefreshPicker() end
  f:HookScript("OnShow",function() P:RefreshPicker() end)
- f:HookScript("OnHide",function() P:StopPickerScores() end)
+ f:HookScript("OnHide",function()
+  P:StopPickerScores()
+  for _,row in ipairs(P.activities.rows) do CancelGroupChoicePress(row.multiSelect) end
+ end)
  f:Hide()
 self:RegisterBuildPickerElements()
  end
@@ -1402,6 +1458,7 @@ function P:RefreshPicker()
  self.activities:SetItems(self.activityIDs,function(row,key)
   local group=self.activityMap[key];UI:SetText(row.title,ActivityLabel(group and group.name or AllActivitiesLabel(cat)));row.icon:Show();if group then UI:SetActivityIcon(row.icon,group.activity) else row.icon:SetTexture(UI:CategoryIcon(cat.icon));row.icon:SetTexCoord(0,1,0,1) end
   local selectable=multiGroups and multiGroups[key]
+  SetGroupChoiceTarget(row.multiSelect,selectable and key or nil)
   row.multiSelect:SetShown(selectable or false)
   local checked=self.draftGroupKeys or state.groupKeys
   row.multiSelect:SetValue(checked and checked[key] or false)
@@ -1422,25 +1479,37 @@ function P:RefreshPicker()
 UI:ApplyElementScope("find")
  self.refreshingPicker=nil
  end
+local function AvailableCategory(key)
+ local first,season
+ for _,cat in ipairs(UI:GetGroup().Catalog:GetCategories()) do
+  if cat.key==key then return key end
+  first=first or cat.key;if cat.season then season=season or cat.key end
+ end
+ return season or first
+end
+local ChangeCategory
 function P:RefreshCategories()
  wipe(self.catIDs);wipe(self.seasonIDs);wipe(self.catMap)
  for _,cat in ipairs(UI:GetGroup().Catalog:GetCategories()) do
   local ids=cat.season and self.seasonIDs or self.catIDs;ids[#ids+1]=cat.key;self.catMap[cat.key]=cat
  end
- if not self.catMap[state.category] then state.category=self.seasonIDs[1] or self.catIDs[1] end
+ if not self.catMap[state.category] then ChangeCategory(self,self.seasonIDs[1] or self.catIDs[1]) end
  local function RenderCategory(row,key)
   local cat=self.catMap[key];UI:SetText(row.title,cat.name);if row.kind~=cat.icon then row.kind=cat.icon;row.symbol:SetTexture(UI:CategoryIcon(cat.icon)) end
  end
  self.seasonCategories.selectedKey=state.category;self.categories.selectedKey=state.category
  self.seasonCategories:SetItems(self.seasonIDs,RenderCategory);self.categories:SetItems(self.catIDs,RenderCategory)
 end
-function P:SelectCategory(key,row)
+ChangeCategory=function(self,key)
  local changed=state.category~=key
  if changed then
-  self:RememberCategory()
+  -- An unavailable category still owns its saved preferences. Its stale
+  -- controls must not overwrite them while the catalog selects a fallback.
+  if Category() then self:RememberCategory() end
   self.draftGroupKeys=nil
+  state.category=key;state.searchMode="group"
   state.browseReady=false;UI:GetGroup().Search:EndBrowse()
-  state.category=key;state.searchMode="group";local prefs=A:GetSetting("rememberFilters") and state.categoryPrefs[key]
+  local prefs=A:GetSetting("rememberFilters") and state.categoryPrefs[key]
   state.groupKey=prefs and prefs.groupKey or nil;state.tier=prefs and prefs.tier;state.difficultyID=prefs and prefs.difficultyID
   self:RestoreCategory(prefs or {})
   self.loading=true;state.personKey=nil
@@ -1450,6 +1519,10 @@ function P:SelectCategory(key,row)
   end
   self.loading=nil
  end
+ return changed
+end
+function P:SelectCategory(key,row)
+ local changed=ChangeCategory(self,key)
  self.seasonCategories.selectedKey=state.category;self.categories.selectedKey=state.category
  self.seasonCategories:Refresh();self.categories:Refresh()
  if not self.picker then self:BuildPicker() end
@@ -1871,6 +1944,11 @@ UI:ApplyElementScope("find")
  end
 function P:OnResultSelect(id,button,row)
  state.selected=id;self:ClosePicker()
+ ClearResultClick()
+ if button=="LeftButton" and row and row.key==id and row:IsVisible() and row._hitVisible and not UI.hiding then
+  local record=Record(id)
+  if record then clickedRow,clickedID,clickedParty,clickedRecord=row,id,record.partyGUID,not record.partyGUID and record or nil end
+ end
  if button=="RightButton" then self:OpenResultMenu(row or self.results,id) end
 end
 function P:OpenResultMenu(anchor,id,cursor)
@@ -1900,6 +1978,7 @@ function P:EnsureSearchInput()
  return self:SyncSearchInputMode()
 end
 function P:Enter(context)
+ ClearResultClick()
  UI:GetGroup():Attach(self,"search")
  if UI.preview then
   self.search.box=self.previewSearchBox;self.previewSearchBox:Show();self.searchAvailable=true;self.searchError=nil
@@ -1909,12 +1988,15 @@ function P:Enter(context)
  if not self.loaded then
   self.loaded=true;self.loading=true
   local stored=UI:GetGroup().prefs.find or {};state.railCollapsed=UI.preview and stored.railCollapsed==true or not UI.preview and A.Appearance:GetRailCollapsed()
-  local prefs=A:GetSetting("rememberFilters") and stored or {};local filters=prefs.filters or {}
-  state.category=prefs.category or "seasonDungeon";state.categoryPrefs=prefs.categoryPrefs or {};state.filters.sort=filters.sort or A:GetSetting("defaultSort");state.social=prefs.social
+  local prefs=A:GetSetting("rememberFilters") and stored or {}
+  local requestedCategory=prefs.category or "seasonDungeon"
+  state.category=AvailableCategory(requestedCategory)
+  local filters=state.category==requestedCategory and prefs.filters or {}
+  state.categoryPrefs=prefs.categoryPrefs or {};state.filters.sort=filters.sort or A:GetSetting("defaultSort");state.social=state.category==requestedCategory and prefs.social or nil
   if UI.preview then self.previewSearchBox:SetText(filters.text or "") end
   local saved=state.categoryPrefs[state.category] or filters
   state.groupKey=saved.groupKey;state.difficultyID=saved.difficultyID;state.tier=saved.tier
-  self:RestoreCategory(state.categoryPrefs[state.category] or {groupKey=filters.groupKey,groupKeys=filters.groupKeys,difficultyID=filters.difficultyID,tier=filters.tier,selected=filters.selected,minMembers=filters.minMembers,maxMembers=filters.maxMembers,neededRole=filters.neededRole,tankPresence=filters.tankPresence,healerPresence=filters.healerPresence,damagePresence=filters.damagePresence,hideZeroScore=filters.hideZeroScore,hideSameSpec=filters.hideSameSpec,hideSameClass=filters.hideSameClass,hideSameClassRole=filters.hideSameClassRole,requireBloodlust=filters.requireBloodlust,roleMatchAny=filters.roleMatchAny,minRating=filters.minRating,maxRating=filters.maxRating,minItemLevel=filters.minItemLevel,maxItemLevel=filters.maxItemLevel,needsDamage=filters.needsDamage,sort=filters.sort,social=prefs.social})
+  self:RestoreCategory(state.categoryPrefs[state.category] or {groupKey=filters.groupKey,groupKeys=filters.groupKeys,difficultyID=filters.difficultyID,tier=filters.tier,selected=filters.selected,minMembers=filters.minMembers,maxMembers=filters.maxMembers,neededRole=filters.neededRole,tankPresence=filters.tankPresence,healerPresence=filters.healerPresence,damagePresence=filters.damagePresence,hideZeroScore=filters.hideZeroScore,hideSameSpec=filters.hideSameSpec,hideSameClass=filters.hideSameClass,hideSameClassRole=filters.hideSameClassRole,requireBloodlust=filters.requireBloodlust,roleMatchAny=filters.roleMatchAny,minRating=filters.minRating,maxRating=filters.maxRating,minItemLevel=filters.minItemLevel,maxItemLevel=filters.maxItemLevel,needsDamage=filters.needsDamage,sort=filters.sort,social=state.social})
   self.loading=nil
  end
  if not UI.preview then state.railCollapsed=A.Appearance:GetRailCollapsed() end
@@ -1927,7 +2009,15 @@ function P:Enter(context)
  end
  if context and context.applicationID then
   local app=UI:GetGroup():GetApplication(context.applicationID)
-  if app then state.category=app.categoryID==2 and "seasonDungeon" or app.categoryID==3 and "seasonRaid" or tostring(app.categoryID) end
+  if app then
+   local catalog=UI:GetGroup().Catalog;local result=app.result
+   local activityID=result and (result.activityID or result.activity and result.activity.id)
+   local key=activityID and catalog:GetContextForActivity(activityID,state.category)
+   local categoryKey=app.categoryID and tostring(app.categoryID)
+   if not key and catalog:GetCategory(categoryKey) then key=categoryKey end
+   if key then ChangeCategory(self,key) else state.showGlobal=true end
+   self:ClosePicker()
+  end
  end
  if context and context.leaderKey then
   self.loading=true
@@ -1935,6 +2025,7 @@ function P:Enter(context)
   self.loading=nil;state.personKey=context.leaderKey
  end
  if not self.unsub then self.unsub=UI:GetGroup():Subscribe(function(kind,id)
+  if UI.hiding then return end
   if kind=="activities" then P:RefreshCategories();P:RefreshPicker();P:UpdateFilters()
   elseif kind=="applicationCancelled" then P:OnApplicationCancelled(id)
   elseif kind=="result" or kind=="results" and type(id)=="table" then
@@ -1960,6 +2051,7 @@ function P:Enter(context)
  end
 end
 function P:Leave()
+ ClearResultClick()
  self.resultsHeader:StopDrag(false);self.applicationHeader:StopDrag(false)
  self:FinishSidebar()
  M:Stop(self);self.pendingTooltipResultID=nil

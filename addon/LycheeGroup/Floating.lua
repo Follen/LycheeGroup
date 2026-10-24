@@ -54,13 +54,27 @@ local function ColorScore(t,score,kind)
  elseif kind=="pvp" then t:SetTextColor(unpack(T.text))
  else local c=C_ChallengeMode.GetDungeonScoreRarityColor(score);t:SetTextColor(c.r,c.g,c.b) end
 end
+local function SetActionTarget(button,key)
+ if button.targetKey==key then return end
+ if button.pressedKey then button.pressCancelled=true end
+ button.targetKey=key
+end
+local function CaptureTarget(button)
+ button.pressedKey=button.targetKey or true;button.pressCancelled=nil
+end
+local function ConsumeTarget(button)
+ local key=button.targetKey
+ local valid=key~=nil and not button.pressCancelled and (not button.pressedKey or button.pressedKey==key)
+ button.pressedKey,button.pressCancelled=nil,nil
+ return valid and key or nil
+end
 local function ClearRowBinding(row)
- row.application=nil;row.applicantID=nil;row.applicationID=nil;row.batch=nil;row.pressedTarget=nil
+ row.application=nil;row.applicantID=nil;row.applicationID=nil;row.batch=nil;SetActionTarget(row,nil)
  C.RekeyElement(row,nil)
  if row.kind=="member" then row.faction:Hide();row.faction:SetTexture(nil)
  elseif row.kind=="footer" then
-  row.invite:Hide();row.decline:Hide();row.invite.applicantID=nil;row.decline.applicantID=nil;row.invite.pressedTarget=nil;row.decline.pressedTarget=nil
- else row.cancel:Hide();row.cancel.applicationID=nil;row.cancel.pressedTarget=nil end
+  SetActionTarget(row.invite,nil);SetActionTarget(row.decline,nil);row.invite:Hide();row.decline:Hide();row.invite.applicantID=nil;row.decline.applicantID=nil
+ else SetActionTarget(row.cancel,nil);row.cancel:Hide();row.cancel.applicationID=nil end
 end
 function F:HoverRow(row,inside)
  if row.exit then return end
@@ -120,17 +134,17 @@ function F:Build()
    row.exit=nil;row.exitAlpha=nil;row.exitTop=nil;row:EnableMouse(true)
    ClearRowBinding(row)
   end
-  for _,batch in ipairs(F.batches) do batch.exit=nil;batch.exitAlpha=nil;batch.exitTop=nil;batch:EnableMouse(true);batch.applicantID=nil;C.RekeyElement(batch,nil);batch.background:Hide();batch:Hide() end
+  SetActionTarget(F.cancel,nil)
+  for _,batch in ipairs(F.batches) do batch.exit=nil;batch.exitAlpha=nil;batch.exitTop=nil;batch:EnableMouse(true);batch.applicantID=nil;SetActionTarget(batch,nil);C.RekeyElement(batch,nil);batch.background:Hide();batch:Hide() end
   F:ClearPopupAnchor()
  end)
- local cancel=C.Button(panel,"",160,nil,{variant="text",height=24});C.SetPoint(cancel,"TOPRIGHT",cancel:GetParent(),"TOPRIGHT","floatingCancelToprightX","floatingCancelToprightY");cancel.label:ClearAllPoints();cancel.label:SetPoint("RIGHT");self.cancel=cancel
- cancel:HookScript("OnEnter",function() F:CancelHide() end)
- cancel:HookScript("OnLeave",function() F:ScheduleHide() end)
- cancel:SetScript("OnClick",function()
+ local cancel=C.Button(panel,"",160,function()
   local g=A.Group;if not g then return end
   if F.recruiting then local ok,err=g:RemoveListing();if not ok then A:Print(err) end
   else wipe(cancelIDs);for _,app in ipairs(g:GetApplications()) do if Waiting(app) then cancelIDs[#cancelIDs+1]=app.id end end;for _,id in ipairs(cancelIDs) do local ok,err=g:Cancel(id);if not ok then A:Print(err) end end;wipe(cancelIDs) end
- end)
+ end,{variant="text",height=24});C.SetPoint(cancel,"TOPRIGHT",cancel:GetParent(),"TOPRIGHT","floatingCancelToprightX","floatingCancelToprightY");cancel.label:ClearAllPoints();cancel.label:SetPoint("RIGHT");self.cancel=cancel
+ cancel:HookScript("OnEnter",function() F:CancelHide() end)
+ cancel:HookScript("OnLeave",function() F:ScheduleHide() end)
  self.scroll=CreateFrame("ScrollFrame",nil,panel);self.scroll:SetSize(T.floatingRowWidth,252);C.SetPoint(self.scroll,"TOPLEFT",self.scroll:GetParent(),"TOPLEFT","floatingPanelPaddingX",-48)
  self.body=CreateFrame("Frame",nil,self.scroll);self.body:SetSize(T.floatingRowWidth,1);self.scroll:SetScrollChild(self.body)
  self.scroll:EnableMouseWheel(true);self.scroll:SetScript("OnMouseWheel",function(s,d) F:SetOffset(math.max(0,math.min(s:GetVerticalScrollRange(),(F.scrollTween and F.scrollTween.to or s:GetVerticalScroll())-d*44)),true) end)
@@ -140,8 +154,10 @@ function F:Build()
  self.batches={};self.CreateBatch=function(self)
   local i=#self.batches+1;local batch=CreateFrame("Button",nil,self.body);batch:SetWidth(T.floatingRowWidth);batch.background=C.Surface(batch,{color="floatingCardSurface",hoverColor="floatingCardHover",radius="floatingCardRadius"});batch.background:Hide()
   batch:SetScript("OnEnter",function() if batch.exit then return end;F:CancelHide();batch.background:SetHovered(true) end)
-  batch:SetScript("OnLeave",function() batch.background:SetHovered(batch:IsMouseOver());F:ScheduleHide() end)
-  batch:SetScript("OnClick",function() if batch.applicantID and not batch.exit then A:Open("create",{applicantID=batch.applicantID}) end end)
+  batch:SetScript("OnLeave",function() if batch.pressedKey then batch.pressCancelled=true end;batch.background:SetHovered(batch:IsMouseOver());F:ScheduleHide() end)
+  batch:SetScript("OnMouseDown",CaptureTarget)
+  batch:SetScript("OnClick",function() local key=ConsumeTarget(batch);if key and not batch.exit then A:Open("create",{applicantID=batch.applicantID}) end end)
+  batch:SetScript("OnHide",function() SetActionTarget(batch,nil) end)
   Element(batch,"floating.batch",batch,"floating.batch");batch:Hide();self.batches[i]=batch;return batch
  end
  self.rows={};self.CreateRow=function(self,kind)
@@ -160,46 +176,41 @@ function F:Build()
    row.background=C.Surface(row,{color="floatingCardSurface",hoverColor="floatingCardHover",radius="floatingCardRadius"});row.background:Hide()
    row.leader=Text(row,14,196);C.SetLineHeight(row.leader,20);C.SetPoint(row.leader,"TOPLEFT",row.leader:GetParent(),"TOPLEFT",40,-49);row.leader:SetWordWrap(false)
    row.timer=Text(row,T.floatingTimerFont,T.floatingTimerMinWidth);C.SetLineHeight(row.timer,T.floatingTimerLine,true);row.timer:SetJustifyH("RIGHT");row.timer:SetTextColor(unpack(T.warning))
-  row.cancel=C.Button(row,"",T.floatingRowCancelWidth,nil,{height=T.floatingCancelButtonHeight,hoverColor="negativeHover",pressedColor="negativePressed"});row.cancel:SetWidth(T.floatingRowCancelWidth);row.cancel.label:Hide();C.SetPoint(row.cancel,"TOPRIGHT",row.cancel:GetParent(),"TOPRIGHT","floatingRowCancelToprightX","floatingRowCancelToprightY");row.cancel:Hide()
+  row.cancel=C.Button(row,"",T.floatingRowCancelWidth,function(self)
+   local id=self.targetKey;local app=id and A.Group:GetApplication(id)
+   if not app or not Waiting(app) or app.pendingStatus then return end
+   local ok,err=A.Group:Cancel(id);if ok then self:SetEnabled(false) else A:Print(err) end
+  end,{height=T.floatingCancelButtonHeight,hoverColor="negativeHover",pressedColor="negativePressed"});row.cancel:SetWidth(T.floatingRowCancelWidth);row.cancel.label:Hide();C.SetPoint(row.cancel,"TOPRIGHT",row.cancel:GetParent(),"TOPRIGHT","floatingRowCancelToprightX","floatingRowCancelToprightY");row.cancel:Hide()
   local cross=C.Glyph(row.cancel,"close",T.floatingCrossWidth);row.cancel.elementIcon=cross;C.Box(cross,{width="floatingCrossWidth",height="floatingCrossHeight"});cross:SetPoint("CENTER");cross:SetColor(T.dim)
   row.cancelGlyphStyle=C.Style(row,{recipe="glyphAction",slots={root=row,icon=cross},immediate=true});row.cancelGlyphStyle:Bind(row.cancel,{hover=true})
   row.cancel:HookScript("OnEnter",function() F:CancelHide();F:HoverRow(row,true) end)
   row.cancel:HookScript("OnLeave",function() F:HoverRow(row,false);F:ScheduleHide() end)
-  row.cancel:HookScript("OnMouseDown",function(self) self.pressedTarget=self.applicationID end)
-  row.cancel:SetScript("OnClick",function(self)
-   if self.pressedTarget and self.pressedTarget~=self.applicationID then self.pressedTarget=nil;return end;self.pressedTarget=nil
-   local id=self.applicationID;local app=id and A.Group:GetApplication(id)
-   if not app or not Waiting(app) or app.pendingStatus then return end
-   local ok,err=A.Group:Cancel(id);if ok then self:SetEnabled(false) else A:Print(err) end
-  end)
   else
   local function DecisionButton(x,method)
-   local button=C.IconButton(row,nil,32,nil,{iconSize=18,hoverColor=method=="Invite" and "positiveHover" or "negativeHover",pressedColor=method=="Invite" and "positivePressed" or "negativePressed"});C.SetPoint(button,"TOPRIGHT",button:GetParent(),"TOPRIGHT",x,-1)
-   button.glyph=button.icon;button.glyph:SetTexture((method=="Invite" and T.productMedia.."invite.tga" or T.media.."decline.tga"))
-   button:HookScript("OnEnter",function() F:CancelHide();F:HoverRow(row,true) end);button:HookScript("OnLeave",function() F:HoverRow(row,false);F:ScheduleHide() end)
-   button:HookScript("OnMouseDown",function(self) self.pressedTarget=self.applicantID end)
-   button:SetScript("OnClick",function(self)
-    if not self:IsEnabled() or row.exit then return end
-    if self.pressedTarget and self.pressedTarget~=self.applicantID then self.pressedTarget=nil;return end;self.pressedTarget=nil
-    local id=self.applicantID;local app=id and A.Group:GetApplicant(id)
+   local button=C.IconButton(row,nil,32,function(self)
+    if row.exit then return end
+    local id=self.targetKey;local app=id and A.Group:GetApplicant(id)
     if not app or not Operable(app) or not A.Group:CanManageApplicants() then return end
     -- Freeze the current binding before Act's synchronous notification. The
     -- native operation stays in this hardware callback, never in the animation.
     F:BeginDecision(id)
     local ok,err=A.Group[method](A.Group,id)
-    if not ok then F:FinishDecision(id,false);A:Print(err)
+    if not ok then F:FinishDecision(id,false);if err then A:Print(err) end
     elseif A:GetSetting("reduceMotion") then F:FinishDecision(id,true)
     else F:UpdateDriver() end
-   end)
+   end,{iconSize=18,hoverColor=method=="Invite" and "positiveHover" or "negativeHover",pressedColor=method=="Invite" and "positivePressed" or "negativePressed"});C.SetPoint(button,"TOPRIGHT",button:GetParent(),"TOPRIGHT",x,-1)
+   button.glyph=button.icon;button.glyph:SetTexture((method=="Invite" and T.productMedia.."invite.tga" or T.media.."decline.tga"))
+   button:HookScript("OnEnter",function() F:CancelHide();F:HoverRow(row,true) end);button:HookScript("OnLeave",function() F:HoverRow(row,false);F:ScheduleHide() end)
    return button
   end
   row.invite=DecisionButton(-29,"Invite");row.invite:Hide()
   row.decline=DecisionButton(-7,"Decline");row.decline:Hide()
    row.footerOptions={anchor="BOTTOMRIGHT",width="content",height="floatingRowInviteHeight"};row.footerLayout=C.Row(row,{{frame=row.invite},{frame=row.decline}},row.footerOptions)
   end
-  row:SetScript("OnMouseDown",function(r) r.pressedTarget=r.applicantID or r.applicationID end)
-  row:SetScript("OnClick",function(r) if r.exit then return end;if r.pressedTarget and r.pressedTarget~=(r.applicantID or r.applicationID) then r.pressedTarget=nil;return end;r.pressedTarget=nil;if r.applicantID then A:Open("create",{applicantID=r.applicantID}) elseif r.applicationID then A:Open("find",{applicationID=r.applicationID}) end end)
-  row:SetScript("OnEnter",function() F:CancelHide();F:HoverRow(row,true) end);row:SetScript("OnLeave",function() F:HoverRow(row,false);F:ScheduleHide() end);Element(row,"floating.row",row,"floating."..kind);row:Hide();self.rows[i]=row;return row
+  row:SetScript("OnMouseDown",CaptureTarget)
+  row:SetScript("OnClick",function(r) local key=ConsumeTarget(r);if not key or r.exit then return end;if r.applicantID then A:Open("create",{applicantID=r.applicantID}) elseif r.applicationID then A:Open("find",{applicationID=r.applicationID}) end end)
+  row:SetScript("OnHide",function(r) SetActionTarget(r,nil) end)
+  row:SetScript("OnEnter",function() F:CancelHide();F:HoverRow(row,true) end);row:SetScript("OnLeave",function() if row.pressedKey then row.pressCancelled=true end;F:HoverRow(row,false);F:ScheduleHide() end);Element(row,"floating.row",row,"floating."..kind);row:Hide();self.rows[i]=row;return row
  end
  -- Reuse a native row of the same kind; positional scrolling never grows a
  -- member row into an application and action-footer widget union.
@@ -544,6 +555,7 @@ function F:ShowPanel()
  self.empty:ClearAllPoints();self.empty:SetPoint("CENTER",self.emptyCard,"CENTER",self.waitIcon:IsShown() and (T.floatingWaitIconSize+T.floatingWaitIconGap)/2 or 0,0);self.waitIcon:ClearAllPoints();self.waitIcon:SetPoint("RIGHT",self.empty,"LEFT",-T.floatingWaitIconGap,0)
  if not self.recruiting and #entries>0 then heading=(zh and "我的申请 %d/5" or "Applications %d/5"):format(group.Applications:GetActiveCount()) end
  self.heading:SetText(heading);self.heading:SetShown(heading~="");self.headingDot:SetShown(heading~="");self.headingDot:SetVertexColor(unpack(self.recruiting and T.good or T.warning))
+ SetActionTarget(self.cancel,canCancel and (self.recruiting and group:GetListing() or "applications") or nil)
  self.cancel.label:SetText(self.recruiting and (zh and "取消招募" or "End listing") or (zh and "取消全部" or "Cancel all"));self.cancel:SetAvailable(canCancel and (self.recruiting or #entries>0));self.cancel:SetShown(canCancel)
  self.cancel:SetWidth(self.cancel.label:GetStringWidth()+T.floatingCancelTextInset)
  self:LayoutPanel()
@@ -621,7 +633,6 @@ function F:Render()
  if self.boundVersion==self.entriesVersion and self.visibleFirst==first and self.visibleLast==last then return end
  self.boundVersion,self.visibleFirst,self.visibleLast=self.entriesVersion,first,last
  local batchCount=0;wipe(boundBatches)
- for _,batch in ipairs(self.batches) do batch.applicantID=nil;batch.background:Hide();batch:Hide() end
  for index=first or 1,last or 0 do
   local entry=self.entries[index]
   local top=self.entryTops[index]
@@ -629,21 +640,23 @@ function F:Render()
    bound=bound+1;local row=self:AcquireRow(bound,kind)
    row:SetWidth(T.floatingRowWidth);row.baseTop=top;row.cardOrder=entry.batch and batchCount+1 or bound;row:ClearAllPoints();row:SetPoint("TOPLEFT",0,-top);row:SetHeight(entry.height-(entry.gap or 0));row:Show();row.applicationID=nil;row.applicantID=entry.applicantID;row.application=nil;row.batch=nil
    local elementKey=entry.application and entry.application.id or entry.member and (tostring(entry.applicantID)..":"..tostring(entry.member.guid or entry.member.nameKey or entry.member.name)) or entry.applicantID
+   SetActionTarget(row,elementKey)
    C.RekeyElement(row,elementKey,entry.application and "floating.application" or entry.member and "floating.member" or "floating.footer")
    if entry.batch then
     local batch=boundBatches[entry.batch]
     if not batch then
      batchCount=batchCount+1;batch=self.batches[batchCount] or self:CreateBatch();boundBatches[entry.batch]=batch
-     batch:ClearAllPoints();batch:SetPoint("TOPLEFT",0,-entry.batch.top);batch:SetWidth(T.floatingRowWidth);batch:SetHeight(entry.batch.height);C.RekeyElement(batch,entry.applicantID);batch.applicantID=entry.applicantID;batch.baseTop=entry.batch.top;batch.cardOrder=batchCount;batch.background:SetHovered(batch:IsMouseOver());batch.background:Show();batch:Show()
+     batch:ClearAllPoints();batch:SetPoint("TOPLEFT",0,-entry.batch.top);batch:SetWidth(T.floatingRowWidth);batch:SetHeight(entry.batch.height);C.RekeyElement(batch,entry.applicantID);SetActionTarget(batch,entry.applicantID);batch.applicantID=entry.applicantID;batch.baseTop=entry.batch.top;batch.cardOrder=batchCount;batch.background:SetHovered(batch:IsMouseOver());batch.background:Show();batch:Show()
     end
     row.batch=batch;row.cardOrder=batch.cardOrder
    end
    row.name:ClearAllPoints();row.name:SetHeight(0);row.name:SetWordWrap(true)
    if kind=="member" then
     row.score:SetShown(not entry.hideRating);row.faction:Hide();row.faction:SetTexture(nil)
-   elseif kind=="footer" then row.invite:Hide();row.decline:Hide();row.invite.applicantID=nil;row.decline.applicantID=nil
+   elseif kind=="footer" then
+    if not entry.actions then SetActionTarget(row.invite,nil);SetActionTarget(row.decline,nil);row.invite:Hide();row.decline:Hide();row.invite.applicantID=nil;row.decline.applicantID=nil end
    else
-    row.background:ClearAllPoints();row.background:SetAllPoints();row.background:Hide();row.cancel:Hide();row.cancel.applicationID=nil
+    row.background:ClearAllPoints();row.background:SetAllPoints();row.background:Hide()
    end
    row.name:SetTextColor(unpack(T.text));C.SetFont(row.name,entry.comment and T.floatingCommentFont or entry.member and T.floatingMemberNameFont or T.floatingActivityFont)
    C.SetLineHeight(row.name,entry.member and T.floatingMemberNameLine or entry.comment and T.floatingCommentLine or T.floatingActivityLine)
@@ -656,7 +669,7 @@ function F:Render()
     if entry.actions then
      row.invite:SetSize(T.floatingRowInviteWidth,T.floatingRowInviteHeight);row.decline:SetSize(T.floatingRowDeclineWidth,T.floatingRowDeclineHeight)
      row.invite:ClearAllPoints();C.SetPoint(row.invite,"BOTTOMRIGHT",row.invite:GetParent(),"BOTTOMRIGHT","floatingRowInviteBottomrightX","floatingRowInviteBottomrightY");row.decline:ClearAllPoints();C.SetPoint(row.decline,"BOTTOMRIGHT",row.decline:GetParent(),"BOTTOMRIGHT","floatingRowDeclineBottomrightX","floatingRowDeclineBottomrightY")
-     row.invite.applicantID=entry.applicantID;row.decline.applicantID=entry.applicantID;row.invite:Show();row.decline:Show()
+     SetActionTarget(row.invite,entry.applicantID);SetActionTarget(row.decline,entry.applicantID);row.invite.applicantID=entry.applicantID;row.decline.applicantID=entry.applicantID;row.invite:Show();row.decline:Show()
      row.invite:SetEnabled(true);row.decline:SetEnabled(true)
     end
    elseif entry.member then
@@ -681,7 +694,7 @@ function F:Render()
     row.score:Show();C.SetFont(row.score,T.floatingActivityDetailFont);row.score:SetHeight(0);row.score:SetWordWrap(true);C.SetLineHeight(row.score,T.floatingActivityLine);row.score:ClearAllPoints();row.score:SetWidth(entry.detailWidth);row.score:SetTextColor(unpack(T.text));row.score:SetText(entry.detailText);row.score:SetJustifyH("LEFT")
     row.name:SetWidth(entry.activityWidth);local nameWidth=math.min(entry.activityWidth,row.name:GetStringWidth());row.name:SetWidth(nameWidth);C.SetPoint(row.score,"TOPLEFT",row.score:GetParent(),"TOPLEFT",T.floatingRowNameTopleftX2+nameWidth+T.floatingActivityDetailGap,-T.floatingApplicationPaddingY)
     row.meta:SetWidth(T.floatingRowWidth-T.floatingRowMetaTopleftX2-T.floatingFooterRightInset);C.SetPoint(row.meta,"TOPLEFT",row.meta:GetParent(),"TOPLEFT","floatingRowMetaTopleftX2",-T.floatingApplicationPaddingY-T.floatingApplicationTextGap-entry.activityHeight);row.meta:SetText(app.name or "")
-    row.cancel:ClearAllPoints();C.SetPoint(row.cancel,"TOPRIGHT",row.cancel:GetParent(),"TOPRIGHT","floatingRowCancelToprightX","floatingRowCancelToprightY");row.cancel.applicationID=app.id;row.cancel:Show();row.cancel:SetEnabled(not app.pendingStatus)
+    row.cancel:ClearAllPoints();C.SetPoint(row.cancel,"TOPRIGHT",row.cancel:GetParent(),"TOPRIGHT","floatingRowCancelToprightX","floatingRowCancelToprightY");SetActionTarget(row.cancel,app.id);row.cancel.applicationID=app.id;row.cancel:Show();row.cancel:SetEnabled(not app.pendingStatus)
     row.leader:ClearAllPoints();row.leader:SetWidth(T.floatingRowLeaderWidth);C.SetPoint(row.leader,"TOPLEFT",row.leader:GetParent(),"TOPLEFT","floatingRowLeaderTopleftX2",-T.floatingApplicationPaddingY-T.floatingApplicationTextGap*2-entry.activityHeight-entry.titleHeight);row.timer:ClearAllPoints();C.SetPoint(row.timer,"TOPRIGHT",row.timer:GetParent(),"TOPRIGHT","floatingRowTimerToprightX2",-T.floatingApplicationPaddingY-T.floatingApplicationTextGap*2-entry.activityHeight-entry.titleHeight);row.leader:SetText(app.leaderName or (zh and "队长身份未知" or "Leader unknown"))
     local color=app.leaderClass and RAID_CLASS_COLORS[app.leaderClass];if color then row.leader:SetTextColor(color.r,color.g,color.b) else row.leader:SetTextColor(unpack(T.muted)) end
    end
@@ -693,6 +706,7 @@ function F:Render()
    if entry.member then C.SetFont(row.score,T.floatingMemberMetricFont);row.score:SetWordWrap(false);C.SetLineHeight(row.score,T.floatingMemberNameLine,true);row.score:ClearAllPoints();C.SetPoint(row.score,"TOPRIGHT",row.score:GetParent(),"TOPRIGHT",T.floatingRowScoreToprightX-entry.itemLevelWidth-T.floatingMemberMetricGap,-entry.padTop);row.score:SetWidth(entry.scoreWidth);row.score:SetJustifyH("RIGHT") end
  end
  for i=bound+1,#self.rows do local row=self.rows[i];row:Hide();ClearRowBinding(row) end
+ for i=batchCount+1,#self.batches do local batch=self.batches[i];batch.applicantID=nil;SetActionTarget(batch,nil);batch.background:Hide();batch:Hide() end
  self:ApplyCardMotion(self.cardElapsed)
  self:RefreshClock();ApplyElements()
 end

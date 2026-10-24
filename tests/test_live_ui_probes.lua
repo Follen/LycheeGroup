@@ -80,4 +80,39 @@ for _,script in ipairs({"live_ui_presence","live_ui_motion_profile","live_ui_tra
   end
  end
 end
+for _,mode in ipairs({"complete","open_error","old_revision","combat"}) do
+ local f=dofile("tests/live_probe_fixture.lua")()
+ local library=LycheeUI;local create=library.CreateContext
+ local ctx,parent
+ library.CreateContext=function(self,options)
+  parent=options.parent;ctx=create(self,options)
+  if mode=="open_error" then
+   local open=ctx.OpenMenu
+   ctx.OpenMenu=function(self,...) open(self,...);error("simulated menu open failure") end
+  end
+  return ctx
+ end
+ if mode=="old_revision" then library.version=37 end
+ if mode=="combat" then InCombatLockdown=function() return true end end
+ local before=#f.S.nodes
+ local probe={cleanup={}}
+ function probe:OnCleanup(fn) self.cleanup[#self.cleanup+1]=fn;return true end
+ function probe:Fail(reason) self.error=reason end
+ function probe:Log(message) self.lastLog=message end
+ local ok,result=pcall(assert(loadfile("tests/live_menu_geometry.lua")),probe)
+ library.CreateContext=create
+ for index=#probe.cleanup,1,-1 do probe.cleanup[index]() end
+ if mode=="complete" then
+  Check(ok and result and result.closed,"native menu probe completes against the real shared controllers")
+  Check(result.mixed.contentHeight==200 and result.mixed.zeroCollapsed and result.long.lastReachable,"menu probe checks mixed and distant row geometry")
+  Check(result.states.checkedCollapsed and result.states.disabledCollapsed and result.states.restoredHeight==120,"menu probe checks stable states and reopen restoration")
+ elseif mode=="open_error" then
+  Check(not ok and result:find("simulated menu open failure",1,true),"menu failure remains a failed result")
+ else Check(ok and probe.error=="requires_r38_out_of_combat" and #f.S.nodes==before,"menu prerequisites fail before creating native objects") end
+ if ctx then
+  local menu=ctx:GetMenu()
+  Check(not parent:IsShown() and not menu:IsShown() and not menu.catcher:IsShown() and not ctx:GetMenuAnchor(),mode.." menu ownership and frames released")
+  Check(ctx.Motion:Count()==0,mode.." menu motion released")
+ end
+end
 print("UI probe lifecycle and routing: "..checks.." checks passed")

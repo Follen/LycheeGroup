@@ -74,25 +74,30 @@ function A:LoadDB()
 	if self.db then return end
 	local raw = _G.LycheeGroupDB
 	if type(raw) ~= "table" then
+		local original = raw
 		raw = {}
 		_G.LycheeGroupDB = raw
+		if original ~= nil then self.Configuration:RetainInvalid(raw,"$root",original,"LycheeGroupDB must be a table") end
 	end
 	self.db = raw
 	local prefs = _G.LycheeGroupPrefsDB
 	if type(prefs) ~= "table" then
+		local original = prefs
 		prefs = {}
 		_G.LycheeGroupPrefsDB = prefs
+		if original ~= nil then self.Configuration:RetainInvalid(prefs,"$root",original,"LycheeGroupPrefsDB must be a table") end
 	end
 	self.charPrefs = prefs
+	-- Removed settings have no migration consumer and must not enter the snapshot.
+	raw.applicantSound, raw.applicantTone, raw.soundVolume = nil, nil, nil
+	raw.keywordFilters = nil
 	-- Bind captures real legacy presence before the compatibility fields are filled.
 	self.Configuration:Bind(raw,prefs)
  if self.InitializeRuntimeTheme then self:InitializeRuntimeTheme() end
 	for key, value in pairs(DEFAULTS) do
 		if raw[key] == nil then raw[key] = value end
 	end
-	raw.applicantSound, raw.applicantTone, raw.soundVolume = nil, nil, nil
 	raw.schema = DEFAULTS.schema
-	raw.keywordFilters = nil
 	raw.fontScale = FontScale(raw.fontScale)
 	self:InitializeLocale()
  if self.RuntimeTheme and self.RuntimeTheme.error then self:Print("Theme: "..self.RuntimeTheme.error) end
