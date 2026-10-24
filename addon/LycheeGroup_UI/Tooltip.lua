@@ -550,7 +550,7 @@ function Tip:BuildInteractive()
   elseif Tip.sourceApp then Tip:ShowApplicants(Tip.owner,Tip.sourceApp,true)
   elseif Tip.sourceRoster then Tip:ShowRoster(Tip.owner,Tip.sourceRoster,true,Tip.rosterContext) end
  end);f.back:SetWidth(T.tooltipFBackWidth)
- f.back:SetHeight(T.tooltipFBackHeight);C.SetFont(f.back.label,14);C.SetLineHeight(f.back.label,20,true);f.back.label:ClearAllPoints();C.SetPoint(f.back.label,"LEFT",f.back.label:GetParent(),"LEFT","tooltipFBackLabelLeftX",0);UI:Color(f.back.label,"muted");f.back.elementIcon=C.Glyph(f.back,"arrow",T.tooltipGlyphWidth);f.back.elementIcon:SetPoint("LEFT",0,0)
+ f.back:SetHeight(T.tooltipFBackHeight);C.SetFont(f.back.label,14);C.SetLineHeight(f.back.label,20,true);f.back.label:ClearAllPoints();C.SetPoint(f.back.label,"LEFT",f.back.label:GetParent(),"LEFT","tooltipFBackLabelLeftX",0);UI:Color(f.back.label,"muted");f.back.elementIcon=C.Glyph(f.back,"arrow",T.tooltipGlyphWidth);f.back.elementIcon:SetPoint("LEFT",12,0)
  f.wcl=C.Button(canvas,Say("复制 WCL 链接","Copy WCL link"),T.tooltipFWclWidth,function()
   if UI.preview then return end
   local _,name,realm=Links.Identity(Tip.member)
@@ -1086,8 +1086,9 @@ function Tip:RenderPlayer(member,fromGroup,adjustPoint)
  if not self.interactive then self:BuildInteractive() end
  UI:SetText(self.interactive.note.label,note and Say("编辑笔记","Edit note") or L.record)
  local f=self:ResetInteractive(nil,(scores or showMapScore) and 512 or 440,"CENTER");f:UnregisterEvent("MODIFIER_STATE_CHANGED")
- local top=fromGroup and 48 or 0
- f.back:SetShown(fromGroup==true);f.back:ClearAllPoints();f.back:SetPoint("TOPLEFT");f.back:SetWidth(f.back.label:GetStringWidth()+22)
+ f.back:SetShown(fromGroup==true);f.back:ClearAllPoints();f.back:SetPoint("TOPLEFT")
+ f.back:SetSize(math.ceil(f.back.label:GetStringWidth())+T.tooltipFBackLabelLeftX+12,math.max(T.tooltipFBackHeight,f.back.label:GetHeight()+12))
+ local top=fromGroup and f.back:GetHeight()+16 or 0
  UI:SetFactionIcon(f.playerFaction,member);UI:SetRoleIcon(f.playerRole,member.assignedRole)
  local displayName=name or member.name or L.unknown
  UI:SetText(f.title,realm and realm~="" and displayName.."-"..realm or displayName);f.title:SetTextColor(UI:ClassColor(member.class));f.title._color=nil
