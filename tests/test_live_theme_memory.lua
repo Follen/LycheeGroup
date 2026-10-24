@@ -53,7 +53,8 @@ for _,mode in ipairs({"complete","cancel","observer_error","search_timeout","sea
  Check(not probe.active,mode.." bounded completion")
  if mode=="complete" or mode=="search_complete" or mode=="warm_complete" then
   Check(probe.result~=nil,tostring(probe.error))
-  Check(probe.result.fontChanges==12 and probe.result.nativeClicks==57,"full operation sequence")
+  Check(probe.result.fontChanges==12 and probe.result.nativeClicks==58,"full operation sequence")
+  Check(probe.result.settingsSections==9 and #U.pages.settings.credits==2,"credits first build is included in the measured sequence")
   Check(probe.result.accountUnchanged and probe.result.characterUnchanged and probe.result.sessionRestored,"stores restored")
   Check(probe.result.resourcesReleased and probe.result.listingUnchanged,"resources and business preserved")
   if searching then Check(#probe.result.cycles==12 and probe.result.cycles[12].visible>0,"all twelve cycles include rendered search results") end

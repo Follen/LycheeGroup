@@ -24,6 +24,17 @@ local function NewProvider(scenario)
  if not activity then return nil,S("当前客户端活动目录尚未就绪，请稍后再打开预览。","The client activity catalog is not ready. Open preview again shortly.") end
  local p={isPreview=true,Catalog=catalog,L=A.Group.L,category=category,activity=activity,db={},prefs={find={category=category}},settings={autoJoin=false},applicationPrefs={},subs={},views={},records={},apps={},applicants={},roster={},filters={},state="done"}
  p.Results={};p.Applications={};p.Search={categoryKey=category};p.Relations={};p.declinedParties={}
+ p.SeasonScores={records={},unknown={}}
+ function p.SeasonScores:Begin(callback) self.active=true;self.callback=callback end
+ function p.SeasonScores:End() self.active=nil;self.callback=nil;wipe(self.records) end
+ function p.SeasonScores:GetRecord(group)
+  if not self.active or not group then return self.unknown end
+  local key=group.key or group.id
+  if not key then return self.unknown end
+  local record=self.records[key]
+  if not record then record={level=18,score=360};self.records[key]=record end
+  return record
+ end
  function p.Relations:Apply(member) return member end
  function p:Subscribe(callback) self.subs[callback]=true;return function() self.subs[callback]=nil end end
  function p:Notify(kind,id) for fn in pairs(self.subs) do fn(kind,id) end end
@@ -123,6 +134,16 @@ local function NewProvider(scenario)
   local ids={};local f=self.filters
   local playerSpecID=f.hideSameSpec and A.Specializations:Player() or nil
   local playerClass=f.hideSameClass and select(2,UnitClass("player")) or nil
+  local partyClass,partyRole,needBloodlust
+  if f.category=="seasonDungeon" and (f.hideSameClassRole or f.requireBloodlust) then
+   partyClass=A.Group.Public(select(2,UnitClass("player")))
+   if f.hideSameClassRole then
+    local spec=A.Group.Public(C_SpecializationInfo.GetSpecialization())
+    if spec then partyRole=A.Group.Public(select(5,C_SpecializationInfo.GetSpecializationInfo(spec))) end
+    if partyRole=="NONE" then partyRole=nil end
+   end
+   needBloodlust=f.requireBloodlust and partyClass and partyClass~="SHAMAN" and partyClass~="MAGE" and partyClass~="HUNTER" and partyClass~="EVOKER"
+  end
   local text=(f.searchMode=="leader" and f.leaderText or f.searchMode=="group" and f.text or ""):lower()
   local minLevel,maxLevel
   if f.searchMode=="group" then minLevel,maxLevel=text:match("^%s*(%d+)%s*%-%s*(%d+)%s*$") end
@@ -153,6 +174,7 @@ local function NewProvider(scenario)
    if pass and (f.notes and f.notes~="noCaution" or f.personKey and f.personKey~=r.leaderKey) then pass=false end
    if pass and playerSpecID then pass=not self.Results:HasMemberSpec(r,playerSpecID) end
    if pass and playerClass then pass=not A.Group.Results:HasMemberClass(r,playerClass) end
+   if pass and (partyRole or needBloodlust) then pass=A.Group.Results:MatchesPartyFilters(r,partyClass,partyRole,needBloodlust) end
    if pass then ids[#ids+1]=id end
   end
   table.sort(ids,function(a,b)

@@ -158,7 +158,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
   g.records[77].activity=g.Catalog:GetActivity(2);g.records[77].activityID=2;g.records[77].activityName=g.records[77].activity.name
   g.records[77].maxNumPlayers=5;g.records[77].numMembers=3;g.records[77].categoryID=2;g.records[77].details.counts={TANK=1,HEALER=1,DAMAGER=1};g:Notify("result",77);u.Motion:Tick(.016)
   if percent==100 then
-   check(near(row:GetHeight(),u.Theme.findResultRowHeight) and near(row:GetHeight(),58.88),"100% results use the eight-percent-shorter single-row baseline")
+   check(near(row:GetHeight(),u.Theme.findResultRowHeight) and near(row:GetHeight(),53),"100% results use the tighter single-row baseline")
    check(find.appList.rowHeight>=u.Theme.findApplicationRowHeight,"application stride preserves its base minimum")
    check(u.Theme.findApplicationRowHeight==44,"applications keep the enlarged forty-four-unit row baseline")
   end
@@ -346,6 +346,24 @@ for _,locale in ipairs({"zhCN","enUS"}) do
   check(crown.layer=="OVERLAY" and crown.sublevel==1,"the portrait cannot cover its leader crown")
   check(top(leader.icon)-1-crown:GetHeight()>=-.001,"the crown fits inside its row at every supported font size")
   check(top(leader.icon)+leader.icon:GetHeight()<=leader:GetHeight()+.001,"crown spacing keeps the portrait inside its row")
+  leader:Fire("OnClick","LeftButton")
+  local back=u.Tooltip.interactive.back
+  check(back:IsShown(),"opening a roster member offers the group return action")
+  back:Fire("OnEnter")
+  local iconX=position(back.elementIcon,back);local labelX=position(back.label,back)
+  local rightInset=back:GetWidth()-labelX-back.label:GetStringWidth()
+  check(iconX>=11.999 and rightInset>=11.999,
+   ("return-button hover encloses the arrow and full label with padding (%s/%d: left %.3f, right %.3f)"):format(locale,percent,iconX,rightInset))
+  check(labelX>=iconX+back.elementIcon:GetWidth()+7.999,"return-button label leaves a gap after its arrow")
+  check(centered(back.elementIcon,back) and centered(back.label,back),"return-button content shares the hover background's vertical center")
+  check(back:GetHeight()+.001>=back.label:GetHeight()+12,"return-button hover leaves vertical padding at larger font sizes")
+  check(back.hover:IsShown() and back.hover:GetAlpha()>0,"return-button pointer entry shows its existing hover background")
+  local width,height=back:GetWidth(),back:GetHeight()
+  back:Fire("OnMouseDown","LeftButton");back:Fire("OnMouseUp","LeftButton");back:Fire("OnLeave")
+  check(near(back:GetWidth(),width) and near(back:GetHeight(),height),"hover and press do not change the return-button hit area")
+  check(not back.hover:IsShown() or back.hover:GetAlpha()==0,"leaving the return action clears its hover")
+  back:Fire("OnEnter");back:Fire("OnMouseDown","LeftButton");back:Fire("OnMouseUp","LeftButton");back:Fire("OnClick","LeftButton")
+  check(u.Tooltip.member==nil and u.Tooltip.sourceRoster~=nil,"the padded return action still opens the source roster")
   u.Tooltip:Hide()
   a.Notes:Merge({{name="Example",server="Home",timestamp=1,reason="A sample note",type="positive"}})
   g.GetHistory=function() return {{mapName="Test dungeon",level=12,startedAt=1,completedAt=100,members={{name="Example",realm="Home",class="WARRIOR"}}}} end
@@ -354,7 +372,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
   check(not item.meta:IsShown() and item.meta:GetText()=="","note rows omit class and specialization text")
   check(separated(item.title,item.reason),"note title and reason overlap")
   check(top(item.reason)+item.reason:GetHeight()<=item:GetHeight(),"note reason exceeds its row")
-  notes:SelectTab("history");notes:OpenRun(1)
+  notes:SelectTab("history");notes:OpenRun(notes.historyList.ids[1])
   local historyRow=notes.historyList.rows[1]
   check(top(historyRow.title)+historyRow.title:GetHeight()<=historyRow:GetHeight(),"the history activity title exceeds its row")
   for _,entry in ipairs({{"level",historyRow.level},{"duration",historyRow.duration},{"completed",historyRow.date}}) do
@@ -373,7 +391,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
    end
   end
   a:SetSetting("fontScale",100)
-  check(near(find.results.rowHeight,u.Theme.findResultRowHeight) and near(find.results.rowHeight,58.88) and notes.list.rowHeight==92,"returning to 100% restores the compact result and unchanged note row geometry")
+  check(near(find.results.rowHeight,u.Theme.findResultRowHeight) and near(find.results.rowHeight,53) and notes.list.rowHeight==92,"returning to 100% restores the compact result and unchanged note row geometry")
   check(top(create.titleLabel)==92 and top(create.titleShell)==116,"returning to 100% retains enlarged form geometry")
   a:SetSetting("fontScale",percent);a:Open("settings",{section="interface"})
   local settings=u.pages.settings

@@ -11,10 +11,15 @@ local A,U,G=f.A,f.U,f.G
 local checks=0
 local function Check(value,message) checks=checks+1;assert(value,message) end
 A:SetSetting("reduceMotion",true)
-for _,name in ipairs({"SetMemberIcon","SetRoleIcon","SetActivityIcon","StyleMemberIcon"}) do
- Check(LycheeUI.Context[name]==nil,"shared Context has no product API: "..name)
- Check(rawget(U.context,name)==nil,"product does not patch a business resolver onto Context: "..name)
+local function CheckBoundary(stage)
+ for _,name in ipairs({"SetMemberIcon","SetRoleIcon","SetActivityIcon","StyleMemberIcon","ActivityLabels","SeasonScores","PlayerLinks","RealmSlugs","RaidGroups","MatchesPartyFilters","ApplicantCard","Roster","RoleButton"}) do
+  Check(LycheeUI[name]==nil,stage..": shared library has no product owner: "..name)
+  Check(LycheeUI.Context[name]==nil,stage..": shared Context has no product API: "..name)
+  Check(rawget(U.context,name)==nil,stage..": product does not patch a business resolver onto Context: "..name)
+  Check(U.C[name]==nil,stage..": shared constructors contain no product API: "..name)
+ end
 end
+CheckBoundary("fixture constructed")
 Check(U.C.Roster==nil and U.C.RoleButton==nil,"shared constructors contain no roster or role widget")
 local markDefinition,orphanMark
 for _,entry in ipairs(A.API.Appearance:ListElementDefinitions("main","members")) do
@@ -117,5 +122,25 @@ U.Members:BindGroupMarks(groupMarks,{id=778,guildMates=1})
 Check(not groupFriend:IsShown() and groupMarks.icons.guild:IsShown(),"reused group marks show only the new result's guild relationship")
 U.Members:BindGroupMarks(groupMarks,{id=779,charFriends=1})
 Check(groupFriend:IsShown() and not groupMarks.icons.guild:IsShown(),"group marks restore default friend visibility when it is needed again")
+CheckBoundary("Create and member components constructed")
+U:Show("find")
+local find=U.pages.find
+local function OpenPicker()
+ find:SelectCategory("seasonDungeon")
+ for _,button in ipairs(find.difficultyButtons) do if button:IsShown() and button.value==8 then button:Fire("OnClick","LeftButton");return end end
+ error("fixture keystone difficulty not found")
+end
+OpenPicker();CheckBoundary("Find picker constructed")
+U.Tooltip:ShowPlayer(U.frame,marked)
+CheckBoundary("player tooltip constructed")
+U.Tooltip:Hide();find:ClosePicker()
+CheckBoundary("picker and tooltip closed")
+Check(U:StartPreview("applications"),"preview provider opens through the real route")
+OpenPicker();CheckBoundary("Preview picker constructed")
+U.Tooltip:ShowPlayer(U.frame,U.preview.provider.roster[1])
+CheckBoundary("Preview player tooltip constructed")
+U:StopPreview(true)
+CheckBoundary("Preview exited")
 U:Hide(true)
+CheckBoundary("UI hidden")
 print("Product component checks passed: "..checks)

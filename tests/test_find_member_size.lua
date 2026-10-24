@@ -151,4 +151,42 @@ for _,percent in ipairs({70,100,130}) do
  Check(-point[#point]+last.frame:GetHeight()<=panel:GetHeight()+.001,"member settings remain readable within the page at every supported font size")
 end
 RAID_CLASS_COLORS,CUSTOM_CLASS_COLORS=oldColors,oldCustom
+
+-- Every five-slot search category distinguishes vacancies from occupied roles.
+for _,locale in ipairs({"zhCN","enUS"}) do
+ local fresh=dofile("tests/ui_fixture.lua")(locale)
+ local a,u,g=fresh.A,fresh.U,fresh.G
+ local activityInfo,categoryInfo=C_LFGList.GetActivityInfoTable,C_LFGList.GetLfgCategoryInfo
+ local groups,activities=C_LFGList.GetAvailableActivityGroups,C_LFGList.GetAvailableActivities
+ local extras={
+  [501]={id=501,categoryID=121,fullName="Delve",shortName="Delve",groupFinderActivityGroupID=501,maxNumPlayers=5},
+  [601]={id=601,categoryID=6,fullName="Custom party",shortName="Custom",groupFinderActivityGroupID=601,maxNumPlayers=5},
+ }
+ C_LFGList.GetAvailableCategories=function()return {2,3,121,6}end
+ C_LFGList.GetActivityInfoTable=function(id)return extras[id] or activityInfo(id)end
+ C_LFGList.GetLfgCategoryInfo=function(id)if id==121 or id==6 then return {name=id==121 and "Delves" or "Custom",allowCrossFaction=true}end;return categoryInfo(id)end
+ C_LFGList.GetAvailableActivityGroups=function(id)if id==121 then return {501}elseif id==6 then return {601}end;return groups(id)end
+ C_LFGList.GetAvailableActivities=function(id,group,flags)if id==121 then return {501}elseif id==6 then return {601}end;return activities(id,group,flags)end
+ local people={{name="Tank",class="WARRIOR",assignedRole="TANK",specID=73},{name="Healer",class="PRIEST",assignedRole="HEALER",specID=257}}
+ local r={id=941,name="Two members",maxNumPlayers=5,numMembers=2,details={members=people,counts={TANK=1,HEALER=1,DAMAGER=0},encounters={}}}
+ g.records[941]=r
+ a:Open("find");local p=u.pages.find
+ for _,selection in ipairs({{"seasonDungeon",2},{"2",3},{"121",501},{"6",601}}) do
+  r.activityID=selection[2];r.activity=g.Catalog:GetActivity(r.activityID);r.categoryID=r.activity.categoryID
+  r.maxNumPlayers=5;r.numMembers=2;r.details.members={people[1],people[2]}
+  p:SelectCategory(selection[1]);p:CommitChoice();p:DoSearch();u.Motion:Tick(.25)
+  local current=p.results.rows[1];Check(current.key==941,"the selected category renders its real result row")
+  for i,slot in ipairs(current.roster.slots) do
+   Check(slot.role.desaturated==(i>2),selection[1].." vacancies must be gray while occupied badges remain colored")
+   Near(slot.role.vertex[1],i>2 and .7 or 1,"vacancy brightness follows the existing missing-role shade")
+  end
+  for i=3,5 do r.details.members[i]={name="Damage"..i,class="MAGE",assignedRole="DAMAGER",specID=63}end
+  r.numMembers=5;g:Notify("result",941);u.Motion:Tick(.016)
+  for _,slot in ipairs(current.roster.slots) do
+   Check(slot.icon:IsShown() and slot.role.desaturated==false,"a newly occupied slot restores its colored badge")
+   Near(slot.role.vertex[1],1,"recycled occupied slots restore normal brightness")
+  end
+ end
+ u:Hide(true)
+end
 print(("[PASS] find member size: %d geometry checks"):format(checks))

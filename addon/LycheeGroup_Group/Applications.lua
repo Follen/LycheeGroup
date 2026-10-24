@@ -8,6 +8,12 @@ local sequence,generation=0,0
 local dirty=true
 local accepting,joined
 local retired={}
+local function PruneRetired()
+ if not next(retired) then return end
+ local present={}
+ for _,id in ipairs(C_LFGList.GetApplications() or {}) do present[id]=true end
+ for id in pairs(retired) do if not present[id] then retired[id]=nil end end
+end
 -- Rejection belongs to the party, not a search result ID or title ticket.
 -- Keep only its timestamp for this session after the application retires.
 local declinedParties={}
@@ -187,7 +193,11 @@ function Applications:TryAutoJoin()
  end
 end
 function Applications:OnStatusUpdated(id,status,oldStatus,groupName)
- local infoID,_,pending,remaining=C_LFGList.GetApplicationInfo(id)
+ local infoID,nativeStatus,pending,remaining=C_LFGList.GetApplicationInfo(id)
+ if not records[id] and (not infoID or nativeStatus=="none" and not pending) then
+  PruneRetired()
+  return
+ end
  Update(id,status,infoID and pending or nil,infoID and remaining or nil,groupName)
  if accepting==id and status~="invited" then
   accepting=nil
@@ -196,6 +206,7 @@ function Applications:OnStatusUpdated(id,status,oldStatus,groupName)
  self:TryAutoJoin()
  G.Game:RefreshApplicationSubscriptions()
  G.Results:InvalidateView();G:Notify("applications");self:ReleaseFinished()
+ PruneRetired()
 end
 function Applications:Restore()
  self:SyncAll();self:TryAutoJoin();self:ReleaseFinished();G:Notify("applications")

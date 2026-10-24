@@ -27,6 +27,44 @@ local function Copy(value,parents)
  parents[value]=nil
  return result
 end
+-- Startup validation reads saved values without cloning whole namespaces.
+local function Serializable(value,parents)
+ local kind=type(value)
+ if kind=="nil" or kind=="string" or kind=="boolean" then return true end
+ if kind=="number" then return value==value and value~=math.huge and value~=-math.huge,"numbers must be finite" end
+ if kind~="table" then return false,"configuration values must be serializable" end
+ parents=parents or {}
+ if parents[value] then return false,"configuration values cannot contain cycles" end
+ parents[value]=true
+ for key,item in pairs(value) do
+  local keyType=type(key)
+  if keyType~="string" and keyType~="number" and keyType~="boolean" then parents[value]=nil;return false,"configuration table keys must be serializable scalars" end
+  local ok,err=Serializable(key,parents)
+  if ok then ok,err=Serializable(item,parents) end
+  if not ok then parents[value]=nil;return false,err end
+ end
+ parents[value]=nil;return true
+end
+function C:CheckSerializable(value) return Serializable(value) end
+-- Recovery records retain the original object; repeated binds do not append copies.
+function C:RetainInvalid(root,path,value,reason)
+ local recovery=root.uiConfigRecovery
+ if type(recovery)~="table" then
+  root.uiConfigRecovery={}
+  if recovery~=nil then root.uiConfigRecovery.previous={value=recovery,error="uiConfigRecovery must be a table"} end
+  recovery=root.uiConfigRecovery
+ end
+ local previous=recovery[path]
+ recovery[path]={value=value,error=reason,previous=previous}
+ return reason
+end
+function C:BindTable(root,owner,key,path)
+ local value=owner[key]
+ if type(value)=="table" then return value end
+ local err
+ if value~=nil then err=self:RetainInvalid(root,path,value,path.." must be a table") end
+ owner[key]={};return owner[key],err
+end
 local function Equal(a,b)
  if a==b then return true end
  if type(a)~="table" or type(b)~="table" then return false end
@@ -172,10 +210,15 @@ function C:MirrorLegacy(key,value,storage)
  local owner,path=LegacyPath(def)
  if owner~=storage then return end
  local root=storage=="account" and A.db or A.charPrefs
+ local savedRoot=root
  for i=1,#path-1 do
   local name=path[i]
-  if root[name]==nil then
-   if value==nil then return end
+  if type(root[name])~="table" then
+   if root[name]==nil and value==nil then return end
+   if root[name]~=nil then
+    local legacyPath=table.concat(path,".",1,i)
+    self:RetainInvalid(savedRoot,legacyPath,root[name],legacyPath.." must be a table")
+   end
    root[name]={}
   end
   root=root[name]
@@ -229,17 +272,54 @@ end
 local function LegacySnapshot(root)
  local result={}
  for key,value in pairs(root) do
-  if key~="uiConfig" then local ok,copy=pcall(Copy,value);if ok then result[key]=copy end end
+  if key~="uiConfig" and key~="uiConfigRecovery" then local ok,copy=pcall(Copy,value);if ok then result[key]=copy end end
  end
  return result
+end
+local function StoredValues(self,values)
+ if type(values)~="table" then return false,"preset values must be a flat key/value table" end
+ local ok,err=Serializable(values);if not ok then return false,err end
+ for key,value in pairs(values) do
+  if type(key)~="string" then return false,"configuration values require named keys" end
+  local def=self.definitions[key]
+  if def then local valid,reason=Validate(def,value);if not valid then return false,key..": "..reason end end
+ end
+ return true
+end
+function C:BindNamespace(root)
+ local store,err=self:BindTable(root,root,"uiConfig","uiConfig")
+ if store.schema~=nil and store.schema~=1 and store.schema~=2 then
+  err=self:RetainInvalid(root,"uiConfig",store,"uiConfig requires schema=1 or schema=2")
+  store=Namespace();root.uiConfig=store
+ end
+ self.namespaceErrors[root]=err
+ for _,key in ipairs({"user","presets","imported"}) do self:BindTable(root,store,key,"uiConfig."..key) end
+ for key,value in pairs(store.user) do
+  local def=self.definitions[key]
+  if def then
+   local ok,err=Serializable(value)
+   if ok then ok,err=Validate(def,value) end
+   if not ok then self:RetainInvalid(root,"uiConfig.user."..key,value,key..": "..err);store.user[key]=nil end
+  end
+ end
+ for id,package in pairs(store.presets) do
+  local ok,err=Identity(id,type(package)=="table" and package.revision or nil)
+  if ok and (type(package)~="table" or package.revision==nil) then ok,err=false,"preset requires a revision and values table" end
+  if ok then ok,err=StoredValues(self,package.values) end
+  if not ok then self:RetainInvalid(root,"uiConfig.presets."..tostring(id),package,tostring(err));store.presets[id]=nil end
+ end
+ if store.activePreset~=nil and store.activePreset~=false then
+  local ok,err=Identity(store.activePreset)
+  if not ok then self:RetainInvalid(root,"uiConfig.activePreset",store.activePreset,err);store.activePreset=nil end
+ end
+ return store
 end
 function C:Bind(account,character)
  -- Capture before Core materializes legacy defaults, including nested UI leaves.
  self.legacy={account=LegacySnapshot(account),character=LegacySnapshot(character)}
- for _,root in ipairs({account,character}) do
-  if root.uiConfig==nil then root.uiConfig=Namespace() end
- end
- self.stores={account=account.uiConfig,character=character.uiConfig,session=Namespace()}
+ self.roots={account=account,character=character};self.namespaceErrors={}
+ self.stores={account=self:BindNamespace(account),character=self:BindNamespace(character),session=Namespace()}
+ for _,store in pairs(self.stores) do if store.schema==nil then store.schema=2 end end
  local keys={};for key in pairs(self.definitions) do keys[#keys+1]=key end
  self:ImportDefinitions(keys)
 end

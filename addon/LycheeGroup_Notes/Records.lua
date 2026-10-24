@@ -13,14 +13,80 @@ Records.SPEC_PENDING = ""
 
 local DB -- 由 Notes:Initialize 经 Bind 注入的存档表
 local subscribers = {}
+-- One stored key per folded identity; only legacy collisions need a key array.
+-- Records and their display names stay in the original saved table.
+local identities = {}
 
 local function Trim(value)
 	if type(value) ~= "string" then return "" end
 	return (value:gsub("^%s+", ""):gsub("%s+$", ""))
 end
 
+local function FiniteTimestampOf(record)
+	local value = type(record) == "table" and record.timestamp
+	if type(value) == "number" and value == value and value > -math.huge and value < math.huge then return value end
+	return 0
+end
 local function TimestampOf(record)
-	return type(record) == "table" and type(record.timestamp) == "number" and record.timestamp or 0
+	local value = FiniteTimestampOf(record)
+	if value > 0 then
+		local ok, text = pcall(date, "%y/%m/%d", value)
+		if not ok or type(text) ~= "string" then return 0 end
+	end
+	return value
+end
+-- 初始化迁移与合并共用时间边界；非数字、非有限或无法显示的时间记为未知。
+Records.TimestampOf = TimestampOf
+
+local function Identity(key)
+	if type(key) ~= "string" or issecretvalue and issecretvalue(key) then return nil end
+	if C_Intl and C_Intl.FoldCase then
+		local ok, folded = pcall(C_Intl.FoldCase, key)
+		if ok and type(folded) == "string" and folded ~= "" then return folded end
+	end
+	return key:lower()
+end
+
+local function Precedes(key, other)
+	local timestamp, previous = FiniteTimestampOf(DB.records[key]), FiniteTimestampOf(DB.records[other])
+	return timestamp > previous or timestamp == previous and key < other
+end
+
+local function Preferred(keys)
+	local best = keys[1]
+	for index = 2, #keys do if Precedes(keys[index], best) then best = keys[index] end end
+	return best
+end
+
+local function Index(key, isNew)
+	local identity = Identity(key)
+	local current = identities[identity]
+	if not current then identities[identity] = key
+	elseif type(current) == "string" then
+		if current ~= key then
+			local keys = {current, key}
+			keys.preferred = Precedes(key, current) and key or current
+			identities[identity] = keys
+		end
+	else
+		if isNew then
+			current[#current + 1] = key
+			if Precedes(key, current.preferred) then current.preferred = key end
+		else current.preferred = Preferred(current) end
+	end
+end
+
+local function DefaultKey(key)
+	local identity = Identity(key)
+	local indexed = identity and identities[identity]
+	return type(indexed) == "table" and indexed.preferred or indexed
+end
+
+-- Exact keys keep every legacy collision independently editable/removable.
+local function StoredKey(key)
+	if type(key) ~= "string" or issecretvalue and issecretvalue(key) then return nil end
+	if DB.records[key] then return key end
+	return DefaultKey(key)
 end
 
 local function Publish(kind, key)
@@ -40,6 +106,8 @@ end
 -- 存档注入(Initialize 专用;此前本服务不可用)。
 function Records.Bind(db)
 	DB = db
+	identities = {}
+	for key in pairs(DB.records) do Index(key, true) end
 end
 
 -- Subscribe(fn(kind, keyOrKeys)):add/edit/remove 携带单个 key;
@@ -48,7 +116,10 @@ end
 function Records.Subscribe(callback)
 	if type(callback) ~= "function" then return function() end end
 	subscribers[#subscribers + 1] = callback
+	local active=true
 	return function()
+		if not active then return end
+		active=false
 		for index, fn in ipairs(subscribers) do
 			if fn == callback then
 				table.remove(subscribers, index)
@@ -58,10 +129,10 @@ function Records.Subscribe(callback)
 	end
 end
 
--- Find(playerKey) -> record | nil:精确键点查,不遍历记录表。
+-- Find(playerKey) -> record | nil, storedKey:精确键优先,别名经身份索引点查。
 function Records.Find(playerKey)
-	if type(playerKey) ~= "string" then return nil end
-	return DB.records[playerKey]
+	local key = StoredKey(playerKey)
+	return key and DB.records[key] or nil, key
 end
 
 -- List(query) -> playerKey[]:时间倒序,同时间按键升序保持稳定。
@@ -81,7 +152,7 @@ function Records.List(query)
 		end
 	end
 	table.sort(keys, function(a, b)
-		local ta, tb = TimestampOf(DB.records[a]), TimestampOf(DB.records[b])
+		local ta, tb = FiniteTimestampOf(DB.records[a]), FiniteTimestampOf(DB.records[b])
 		if ta ~= tb then return ta > tb end
 		return a < b
 	end)
@@ -97,11 +168,14 @@ function Records.Add(name, realm, reason, unit, preClassSpec, details)
 		return false, NL.badIdentity
 	end
 	local selfKey = A:UnitIdentity("player")
-	if selfKey == key then
+	if selfKey and Identity(selfKey) == Identity(key) then
 		return false, NL.selfRecord
 	end
 	-- 名字与 token 可能在等待检视期间分离;写入边界只允许匹配身份的同步快照。
-	if unit and A:UnitIdentity(unit) ~= key then unit = nil end
+	if unit and Identity(A:UnitIdentity(unit)) ~= Identity(key) then unit = nil end
+	key = DefaultKey(key) or key
+	local existing = DB.records[key]
+	if existing then cleanName, server = existing.name, existing.server end
 	local cleanReason = Trim(reason)
 	local classSpec = Trim(preClassSpec)
 	local captured
@@ -125,6 +199,7 @@ function Records.Add(name, realm, reason, unit, preClassSpec, details)
 		specID = playerInfo.specID,
 	}
 	DB.records[key] = record
+	Index(key, existing == nil)
 	Publish("add", key)
 	SyncSummary()
 	return true, record
@@ -132,6 +207,7 @@ end
 
 -- Edit(playerKey, reason) -> true | false:改写理由,空理由存语义空串;不改动记录时间。
 function Records.Edit(playerKey, reason, details)
+	playerKey = StoredKey(playerKey)
 	local record = DB.records[playerKey]
 	if not record then return false end
 	local cleanReason = Trim(reason)
@@ -146,9 +222,17 @@ end
 
 -- Remove(playerKey) -> true | false。
 function Records.Remove(playerKey)
+	playerKey = StoredKey(playerKey)
 	local record = DB.records[playerKey]
 	if not record then return false end
 	DB.records[playerKey] = nil
+	local identity = Identity(playerKey)
+	local indexed = identities[identity]
+	if type(indexed) == "table" then
+		for index, key in ipairs(indexed) do if key == playerKey then table.remove(indexed, index); break end end
+		if #indexed == 1 then identities[identity] = indexed[1]
+		else indexed.preferred = Preferred(indexed) end
+	else identities[identity] = nil end
 	Publish("remove", playerKey)
 	SyncSummary()
 	return true
@@ -156,24 +240,29 @@ end
 
 -- Merge(records) -> changed, invalid:LN- 合并语义(与 LycheeNote 互通)。
 -- 本地无 → 新增;导入 timestamp 更晚 → 覆盖;相同或更早 → 保留本地(重复导入同一有效记录写入 0);
--- 无效条目(非表/无 name/名字清洗失败)计入 invalid;不静默截断任何合法条目。
+-- 无效身份与当前角色条目计入 invalid;不静默截断其他合法条目。
 function Records.Merge(records)
 	if type(records) ~= "table" then return 0, 0 end
 	local changed, invalid = 0, 0
 	local changedKeys, changedSet = {}, {}
+	local selfIdentity = Identity(A:UnitIdentity("player"))
 	for _, item in ipairs(records) do
 		if type(item) ~= "table" then
 			invalid = invalid + 1
 		else
 			local key, cleanName, cleanServer = A:PlayerKey(item.name, item.server)
-			if not key then
+			if not key or selfIdentity and Identity(key) == selfIdentity then
 				invalid = invalid + 1
 			else
+				key = DefaultKey(key) or key
 				local timestamp = TimestampOf(item)
 				-- 旧文本没有时间时保留未知值;每次重导不能把旧记录变成新记录。
 				if timestamp <= 0 then timestamp = 0 end
 				local current = DB.records[key]
-				if not current or timestamp > TimestampOf(current) then
+				if current then cleanName, cleanServer = current.name, current.server end
+				local currentTimestamp = TimestampOf(current)
+				if current then current.timestamp = currentTimestamp end
+				if not current or timestamp > currentTimestamp then
 					DB.records[key] = {
 						name = cleanName,
 						server = cleanServer,
@@ -184,6 +273,7 @@ function Records.Merge(records)
 						class = type(item.class) == "string" and item.class or nil,
 						specID = type(item.specID) == "number" and item.specID or nil,
 					}
+					Index(key, current == nil)
 					changed = changed + 1
 					if not changedSet[key] then
 						changedSet[key] = true

@@ -1,6 +1,8 @@
 # LycheeGroup 配置与主题 API
 
-本页维护 1.2.4 引入的 API v2。验证方法见 [tests/theme_reload.md](tests/theme_reload.md)，当前结果见 [perfermance.md](perfermance.md)，开发约束见 [Development.md](Development.md)。插件发布版本为 1.2.4；浮窗接入继续使用独立的 `API.Floating` v1，见[架构文档](Architecture.md#92-浮窗公开接口)。
+本页维护 1.2.4 引入的 API v2。验证方法见 [tests/theme_reload.md](tests/theme_reload.md)，当前结果见 [perfermance.md](perfermance.md)，开发约束见 [Development.md](Development.md)。插件发布版本为 1.2.5；浮窗接入继续使用独立的 `API.Floating` v1，见[架构文档](Architecture.md#92-浮窗公开接口)。
+
+DataBroker 等独立状态展示可使用 `API.Floating:Subscribe(callback, {background=true})`，在独立浮窗关闭时继续取得申请摘要；取消订阅同时释放后台状态需求。悬停可调用 `API.Floating:ShowPopup(owner, anchor)` 临时展开共用列表，移出用 `HidePopup(owner)`，宿主隐藏用 `HidePopup(owner, true)`；这不搬移入口图标，独立浮窗关闭时仍可使用。其余挂载与状态合同继续见上述浮窗接口文档。
 
 ## 入口与生效时间
 
@@ -81,6 +83,8 @@ Theme 写操作只接收 `account` 或 `character`，省略为 `account`。`stor
 相同 ID、revision 和内容重复导入是幂等操作。更新未选主题不会产生当前主题的重载请求；更新当前选中主题不会改变正在显示的界面。字号、窗口尺寸等实时偏好的变更不计入 `reloadRequired`。
 
 输入在写入前整批验证。未知字段、非法类型、循环表、不可保存对象或无效最终组合返回 `false, error`，不提交部分定义。启动时还会验证选中主题与旧覆盖的最终组合；失败时本次启动回到内置主题，保留原定义、覆盖及选择，并报告具体错误。导入通过替换表保存待生效数据，不原地修改本次启动来源。
+
+存档装载时补齐缺失容器；类型错误的容器、非法实时偏好和偏好包保存在对应账号或角色根的 `uiConfigRecovery[完整路径]`，记录原值及错误。账号或角色存档根本身异常时，用 `$root` 路径保留原值；首次安装的缺失根不记录错误。无效主题包和覆盖保留原位，修正或重新导入后可恢复使用。未知元素分支即使为空表也拒绝导入。导入、启动与导出采用相同的主题偏好范围：只接受内置主题声明的界面设置与已登记布局，自动进组等业务设置仍归 Configuration；静态覆盖层只接受视觉字段。
 
 ```lua
 -- paths 使用带前缀和 scope 的完整旧视觉键；nil 清除该 scope 的全部旧覆盖。

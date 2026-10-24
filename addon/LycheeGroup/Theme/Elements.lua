@@ -16,7 +16,7 @@ local kinds={
  historyMember={root="box",title="text",meta="text",icon="texture",action="text",hover="surface",selected="surface",alternate="surface"},
  relationship={root="box",icon="texture",names="text"},boss={root="box",name="text",status="text"},
  dungeon={root="box",label="text",keyLevel="text",name="text",status="text"},
- rich={root="box",surface="surface",scroll="box",canvas="box",scrollbar="box",icon="texture",title="text",subtitle="text",summary="text",pvpRatings="text",composition="box",raidLeader="text",raidLeaderIcon="texture",comment="text",footer="text",bossTitle="text",bossCount="text",bossText="text",dungeonTitle="text",dungeonEmpty="text",playerRole="texture",playerFaction="texture",noteHeading="text",noteGlyph="texture",noteDate="text",noteDivider="texture",back="roundedBox",wcl="roundedBox",note="roundedBox"},
+ rich={root="box",surface="surface",scroll="box",canvas="box",scrollbar="box",icon="texture",title="text",subtitle="text",summary="text",pvpRatings="text",composition="box",raidLeader="text",raidLeaderIcon="texture",comment="text",footer="text",bossTitle="text",bossCount="text",bossText="text",dungeonTitle="text",dungeonEmpty="text",playerRole="texture",playerFaction="texture",noteHeading="text",noteGlyph="texture",noteDate="text",noteDivider="texture",back="roundedBox",wcl="roundedBox",io="roundedBox",note="roundedBox"},
  floatingRow={root="box",background="box",["background/fill"]="surface",icon="texture",name="text",faction="texture",meta="text",score="text",itemLevel="text",leader="text",timer="text",invite="roundedBox",decline="roundedBox",cancel="roundedBox"},
 }
 local main,floating={},{}
@@ -46,12 +46,13 @@ Add(main,"notes","text","notes.classLabel notes.eDate notes.eIdentity notes.eNam
 Add(main,"notes","texture","notes.eAvatar")
 Add(main,"settings","aboutAddon","settings.about.addon")
 Add(main,"settings","aboutHeader","settings.aboutHeader")
+main["settings.credits.person"]={scope="settings",template=true,slotKinds={root="box",portrait="texture",name="text"}}
 Add(main,"settings","box","settings.panel")
 Add(main,"settings","component","settings.about.link settings.aboutBrand settings.bindingNotice settings.block settings.blocksClear settings.blocksHeader settings.blocksList settings.cancelBinding settings.dedicationToast settings.frame settings.main settings.navigation settings.overwriteBinding settings.rail settings.reloadLanguage")
 Add(main,"settings","settingRow","settings.row")
 Add(main,"settings","text","settings.blocksCount settings.blocksEmpty settings.heading settings.otherAddonsHeading settings.themeReloadHint")
 Add(main,"tooltip","boss","tooltip.boss")
-Add(main,"tooltip","component","tooltip.back tooltip.canvas tooltip.composition tooltip.copyText.close tooltip.copyText.field tooltip.note tooltip.outside tooltip.plain tooltip.scroll tooltip.scrollbar tooltip.wcl")
+Add(main,"tooltip","component","tooltip.back tooltip.canvas tooltip.composition tooltip.copyText.close tooltip.copyText.field tooltip.note tooltip.outside tooltip.plain tooltip.scroll tooltip.scrollbar tooltip.wcl tooltip.io")
 Add(main,"tooltip","dungeon","tooltip.dungeon")
 Add(main,"tooltip","relationship","tooltip.relationship")
 Add(main,"tooltip","rich","tooltip.rich")
@@ -61,7 +62,8 @@ Add(floating,"floating","batch","floating.batch")
 Add(floating,"floating","box","floating.body floating.logoAnchor floating.panel floating.scroll floating.window")
 Add(floating,"floating","component","floating.button floating.cancel floating.emptyCard floating.scrollBar")
 Add(floating,"floating","floatingRow","floating.application floating.footer floating.member floating.row")
-Add(floating,"floating","text","floating.count floating.empty")
+Add(floating,"floating","text","floating.count floating.empty floating.heading")
+Add(floating,"floating","texture","floating.waitIcon floating.headingDot")
 Add(floating,"floating","texture","floating.logo")
 -- Shared maps describe real compositions, rather than a union of every widget's
 -- possible child names. Only template rows legitimately share optional parts.
@@ -72,8 +74,16 @@ end
 kinds.panel={root="box",surface="surface"}
 kinds.button={root="roundedBox",label="text",surface="surface",fill="surface",hover="surface"}
 kinds.iconButton=Map(kinds.button,{icon="texture"})
+main["settings.credits.link"]={scope="settings",template=true,slotKinds=kinds.iconButton}
 kinds.choice=Map(kinds.button,{focus="surface",focusInner="surface",["arrows/1"]="texture",["arrows/2"]="texture"})
 kinds.edit=Map(kinds.fieldShell,{box="text",input="text"})
+main["settings.linkCopy"]={scope="settings",template=true,slotKinds={root="box",canvas="box"}}
+main["settings.linkCopy.field"]={scope="settings",template=true,slotKinds=kinds.edit}
+main["settings.linkCopy.hint"]={scope="settings",template=true,slotKinds=kinds.text}
+main["settings.linkCopy.close"]={scope="settings",template=true,slotKinds=kinds.iconButton}
+main["tooltip.copyField"]={scope="tooltip",slotKinds=kinds.edit}
+main["tooltip.copyHint"]={scope="tooltip",slotKinds=kinds.text}
+kinds.rich.copyField="box";kinds.rich.copyHint="text"
 kinds.multiline=Map(kinds.edit,{scroll="box"})
 kinds.number=Map(kinds.edit,{placeholder="text"})
 kinds.check={root="box",label="text",track="box",knob="box",surface="surface",knobSurface="surface",["track/bg"]="surface",["knob/bg"]="surface"}
@@ -81,6 +91,12 @@ kinds.scrollbar={root="box",thumb="texture"}
 kinds.list={root="box",clip="box",canvas="box",slider="box",["slider/thumb"]="texture",indicator="box",["indicator/fill"]="surface"}
 kinds.row={root="box",title="text",label="text",meta="text",surface="surface",alternate="surface",hover="surface",selected="surface",mark="texture",noteDot="texture"}
 kinds.notice={root="box",surface="surface",fill="surface",text="text",close="roundedBox",["close/icon"]="texture",["close/label"]="text",["close/fill"]="surface",["close/hover"]="surface"}
+main["tooltip.rosterNotice"]={scope="tooltip",slotKinds=kinds.notice}
+main["tooltip.rosterDrop"]={scope="tooltip",template=true,slotKinds={root="box",surface="surface"}}
+main["tooltip.rosterDragGhost"]={scope="tooltip",slotKinds={root="box",surface="surface",card="box",status="text"}}
+main["tooltip.rosterDropHighlight"]={scope="tooltip",slotKinds={root="box",surface="surface"}}
+main["tooltip.emptyRosterGroups"]={scope="tooltip",slotKinds={root="box",surface="surface"}}
+main["tooltip.emptyRosterGroup"]={scope="tooltip",template=true,slotKinds=kinds.button}
 kinds.selection={root="box",fill="surface",surface="surface"}
 kinds.header={root="box"}
 local function Assign(target,kind,names)
@@ -88,7 +104,7 @@ local function Assign(target,kind,names)
 end
 Assign(main,kinds.button,"application.cancel application.submit host.navigation.item host.previewExit notes.addButton notes.eCancel notes.eDelete notes.eSave notes.exportButton notes.importButton notes.tExport notes.tImport notes.tSelect settings.about.link settings.blocksClear settings.cancelBinding settings.overwriteBinding settings.reloadLanguage create.cancelListing create.editListing create.formCancel create.publish create.difficulty create.roleFilter")
 Assign(main,kinds.iconButton,"host.closeButton host.settingsButton create.favorite create.listingFavorite")
-Assign(main,kinds.button,"tooltip.back tooltip.note tooltip.wcl tooltip.copyText.close")
+Assign(main,kinds.button,"tooltip.back tooltip.note tooltip.wcl tooltip.io tooltip.copyText.close")
 Assign(main,kinds.choice,"create.pickerTrigger create.difficultyChoice create.playstyle create.sortChoice create.tierChoice notes.classChoice notes.specChoice")
 Assign(main,kinds.check,"create.autoAccept create.crossFaction create.private")
 Assign(main,kinds.number,"create.ilvl create.score")
@@ -103,6 +119,7 @@ Assign(main,kinds.texture,"create.favoritesChevron")
 Assign(main,kinds.text,"create.pickerSearchHint")
 Assign(main,kinds.row,"create.favoriteRow create.pickerCategory create.pickerActivity create.buff settings.block")
 Assign(floating,kinds.button,"floating.cancel")
+Assign(floating,{root="box",background="box",["background/fill"]="surface"},"floating.panel")
 Assign(floating,kinds.scrollbar,"floating.scrollBar")
 Assign(floating,{root="box",background="box",["background/fill"]="surface"},"floating.batch floating.emptyCard")
 for _,id in ipairs({"create.titleShell","create.descriptionShell","application.note"}) do main[id].slotKinds=kinds.fieldShell end

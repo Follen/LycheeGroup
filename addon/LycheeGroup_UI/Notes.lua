@@ -117,6 +117,7 @@ end
 
 local function CancelPending()
 	state.revision = state.revision + 1
+	state.refreshEditor = nil
 	local cancel = state.cancel
 	state.cancel = nil
 	if cancel then cancel() end
@@ -126,11 +127,29 @@ local function DraftChanged()
  CancelPending()
  P:SetEditorStatus("")
 end
+function P:CancelPendingSave()
+ if not state.cancel then return end
+ CancelPending()
+ self:SetEditorStatus("")
+end
+local function RefreshEditedRecord()
+ state.refreshEditor=nil
+ if not state.editKey then return end
+ if A.Notes:Find(state.editKey) then P:OpenEdit(state.editKey) else P:CloseEditor() end
+end
 
 local function Subscribe()
 	if state.unsub or not (A.Notes and A.Notes.Subscribe) then return end
 	state.unsub = A.Notes:Subscribe(function(kind, key)
 		if not P.frame or not P.frame:IsVisible() then return end
+		local currentChanged = state.editKey ~= nil and key == state.editKey
+		if kind == "merge" and state.editKey then
+			for _, changed in ipairs(key) do if changed == state.editKey then currentChanged = true; break end end
+		end
+		if UI.hiding then
+			if currentChanged then state.refreshEditor=true end
+			return
+		end
 		P:RefreshCounts()
 		if state.tab~="history" then
 			if kind == "edit" and state.search == "" and (state.tab==nil or state.tab=="all") then
@@ -139,19 +158,24 @@ local function Subscribe()
 				P:RefreshList()
 			end
 		end
-		local currentChanged = key == state.editKey
-		if kind == "merge" then
-			for _, changed in ipairs(key) do if changed == state.editKey then currentChanged = true; break end end
-		end
-		if state.editKey ~= nil and currentChanged then
-			-- 当前编辑的记录被外部编辑或删除:编辑区跟随真实状态。
-			if A.Notes:Find(state.editKey) then
-				P:OpenEdit(state.editKey)
-			else
-				P:CloseEditor()
-			end
-		end
+		if currentChanged then RefreshEditedRecord() end
 	end)
+end
+
+function P:WatchHistory()
+ if state.historyUnsub or UI.preview or UI.hiding or not self.frame or not self.frame:IsVisible() then return false end
+ local group=A.Group
+ if not (group and group.charDB and group.charDB.runs and group.Subscribe) then return false end
+ state.historyUnsub=group:Subscribe(function(kind)
+  if kind=="history" then P:OnHistoryChanged() end
+ end)
+ return true
+end
+
+function P:OnHistoryChanged()
+ if UI.hiding or not self.frame or not self.frame:IsVisible() then return end
+ self:RefreshCounts()
+ if state.tab=="history" then self:RefreshHistory() end
 end
 
 local function RenderNote(row,key)
@@ -258,7 +282,7 @@ function P:Build(parent)
   {key="completed",label=S("完成时间","Completed"),width="notesColumnCompletedWidth172",min="notesColumnCompletedMin144",sortable=true},
  },{onLayout=function(header) P:LayoutHistoryColumns(header) end,onSort=function() P:RefreshHistory() end})
  C.SetPoint(self.historyHeader,"TOPLEFT",self.historyHeader:GetParent(),"TOPLEFT",0,"notesHistoryHeaderTopleftY")
- self.historyList=C.List(self.historyFrame,BODY_WIDTH,0,80,function(index) P:OpenRun(index) end);C.SetPoint(self.historyList,"TOPLEFT",self.historyList:GetParent(),"TOPLEFT",0,"notesHistoryListTopleftY")
+ self.historyList=C.List(self.historyFrame,BODY_WIDTH,0,80,function(run) P:OpenRun(run) end);C.SetPoint(self.historyList,"TOPLEFT",self.historyList:GetParent(),"TOPLEFT",0,"notesHistoryListTopleftY")
  self.historyList:SetRowInitializer(function(row)
   row.icon=C.Icon(row,T.notesRowIconWidth2);C.Box(row.icon,{width="notesRowIconWidth2",height="notesRowIconHeight2"});C.SetPoint(row.icon,"LEFT",row.icon:GetParent(),"LEFT","notesRowIconLeftX",0)
   row.title:ClearAllPoints();C.SetPoint(row.title,"TOPLEFT",row.title:GetParent(),"TOPLEFT","notesRowTitleTopleftX2","notesRowTitleTopleftY2");C.SetFont(row.title,T.listTitleSize);C.SetLineHeight(row.title,T.listTitleLineHeight,true)
@@ -322,13 +346,14 @@ function P:SelectTab(tab,skipDefault)
  UI.Motion:FinishPlacement(history and self.left or self.historyFrame)
  self.toolbar:SetShown(not history);self.actions:SetShown(not history);self.left:SetShown(not history);self.historyFrame:SetShown(history);self.editorEmpty:SetShown(not history and state.panel==nil)
  UI:SetText(self.pageTitle,history and L.history or L.notes)
- self:RefreshCounts()
  if history then self:RefreshHistory() else self:RefreshList();local keys=self.list.ids;if not skipDefault and keys and keys[1] and state.panel==nil then self:OpenEdit(keys[1]) end end
+ self:RefreshCounts()
  if changed then UI.Motion:Reveal(history and self.historyFrame or self.left,"TOPLEFT",self.main,"TOPLEFT",T.notesContentInset,history and -76 or -T.notesWorkTop,direction*32,0,.18) end
 UI:ApplyElementScope("notes")
  end
 function P:RefreshHistory()
  local group,err=A:Ensure("Group");if not group then A:NoteMessage(err);return end
+ self:WatchHistory()
  self.runs=group:GetHistory();local indices={};for i in ipairs(self.runs) do indices[#indices+1]=i end
  local sorting=self.historyTableState
  if sorting and sorting.sortKey then
@@ -339,8 +364,8 @@ function P:RefreshHistory()
    local completed=run.completedAt or run.startedAt;return completed and completed>0 and completed or nil
   end,sorting.descending)
  end
- self.historyList:SetItems(indices,function(row,index)
-  local run=P.runs[index]
+ for index,source in ipairs(indices) do indices[index]=self.runs[source] end
+ self.historyList:SetItems(indices,function(row,run)
   local texture=run.mapChallengeModeID and select(4,C_ChallengeMode.GetMapUIInfo(run.mapChallengeModeID))
   if texture then UI:SetGameTexture(row.icon,texture) else UI:SetActivityIcon(row.icon,run.activity or run) end
   UI:SetText(row.title,run.mapName or L.unknown)
@@ -351,8 +376,7 @@ function P:RefreshHistory()
  end);LayoutHistoryRows(self.historyList,self.historyHeader.columns.activity.x+60);self.historyEmpty:SetShown(#indices==0)
 UI:ApplyElementScope("notes")
  end
-function P:OpenRun(index)
- local run=self.runs[index];if not run then return end
+function P:OpenRun(run)
  local modal=UI:OpenModal("history",L.history,560,576);self.historyModal=modal
  if not modal.built then
   modal.caption=C.Text(modal.content,"",14,"muted",T.notesModalCaptionWidth);modal.caption:SetWidth(T.notesModalCaptionWidth);modal.caption:SetPoint("TOPLEFT");C.SetLineHeight(modal.caption,22,true)
@@ -364,7 +388,7 @@ function P:OpenRun(index)
   modal.list=C.List(modal.content,T.notesModalListWidth,T.notesModalListHeight,80,function(memberIndex)
    local member=P.historyRun.members[memberIndex];local key=A:PlayerKey(member.name,member.realm)
    modal:Close();P:SelectTab("all")
-   if A.Notes:Find(key) then P:OpenEdit(key);P.list:Select(key,true) else P:OpenAdd({name=member.name,realm=member.realm,class=member.class,specID=member.specID}) end
+   if A.Notes:Find(key) then P:OpenEdit(key);P.list:Select(state.editKey,true) else P:OpenAdd({name=member.name,realm=member.realm,class=member.class,specID=member.specID}) end
   end);C.Box(modal.list,{width="notesModalListWidth",height="notesModalListHeight"});C.SetPoint(modal.list,"TOPLEFT",modal.list:GetParent(),"TOPLEFT",0,"notesModalListTopleftY")
   for _,row in ipairs(modal.list.rows) do
    row.icon=C.Icon(row,T.notesRowIconWidth3);C.Box(row.icon,{width="notesRowIconWidth3",height="notesRowIconHeight3"});C.SetPoint(row.icon,"LEFT",row.icon:GetParent(),"LEFT","notesRowIconLeftX",0)
@@ -586,14 +610,16 @@ local function ShowEditorChrome(mode,reveal)
 end
 
 function P:OpenEdit(key)
-	local changed=state.panel~="edit" or state.editKey~=key
 	self:CloseTransfer()
 	CancelPending()
-	local r = A.Notes and A.Notes:Find(key)
+	local r, storedKey
+	if A.Notes then r, storedKey = A.Notes:Find(key) end
 	if not r then
 		P:ShowMissing()
 		return
 	end
+	key = storedKey
+	local changed=state.panel~="edit" or state.editKey~=key
 	state.editKey = key
  local identity=A.Notes.PlayerInfo.ResolveRecord(r)
  state.identityEdited=nil;state.identityKey=key;state.legacyClassSpec=r.classSpec
@@ -825,19 +851,22 @@ end
 function P:Enter(context)
  self:BindTableStates()
 	Subscribe()
+ self:WatchHistory()
  self:SelectTab(context and "all" or state.tab or "all",context~=nil)
 	self.searchHint:SetShown(state.search == "" and not self.search.box:HasFocus())
 	if context then
 		if context.playerKey then
 			if A.Notes and A.Notes:Find(context.playerKey) then
 				self:OpenEdit(context.playerKey)
-				self.list:Select(context.playerKey, true)
+				self.list:Select(state.editKey, true)
 			else
 				self:ShowMissing()
 			end
 		elseif context.add then
 			self:OpenAdd(context.add)
 		end
+	elseif state.refreshEditor then
+		RefreshEditedRecord()
 	end
 end
 
@@ -847,6 +876,7 @@ function P:Leave()
  UI.Motion:FinishPlacement(self.left);UI.Motion:FinishPlacement(self.historyFrame)
  self.tabSelection:Clear()
 	if state.unsub then state.unsub(); state.unsub = nil end
+ if state.historyUnsub then state.historyUnsub();state.historyUnsub=nil end
 	self:CloseTransfer()
 	self:CloseEditor(true)
 	self.list:Clear();self.historyList:Clear();self.runs=nil

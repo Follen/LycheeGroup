@@ -1,5 +1,6 @@
 -- Exercise the real entrypoint with the stock eye's branch contract from
 -- wow-ui-source 15881d5, QueueStatusFrame.lua:283-318. No game actions are sent.
+TestStubs.Install({locale="zhCN"})
 for _,late in ipairs({false,true}) do
  local listing,apps,battlefield,lfdBattlefield=false,{},false,false
  local opened,menus,scoreboards,nativeOpens,restored=0,0,0,0,0

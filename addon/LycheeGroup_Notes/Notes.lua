@@ -15,7 +15,7 @@ end
 
 -- 旧记录清洗(语义对齐 LycheeNote NormalizeRecord):
 -- 名字/服务器拆分经统一身份入口;空理由存语义空串;classSpec 保留原值不猜测(空串=尚未获取);
--- 无法解析身份的条目丢弃,不静默改写。时间戳缺失记 0,由迁移按时间合并同键。
+-- 无法解析身份的条目隔离。缺失、非有限或无法显示的时间记 0,由迁移按时间合并同键。
 local function NormalizeRecord(key, data)
 	if type(data) ~= "table" then return nil end
 	local name = type(data.name) == "string" and data.name or tostring(key)
@@ -27,7 +27,7 @@ local function NormalizeRecord(key, data)
 	return {
 		name = cleanName,
 		server = cleanServer,
-		timestamp = type(data.timestamp) == "number" and data.timestamp or 0,
+		timestamp = Notes.Records.TimestampOf(data),
 		reason = reason,
 		classSpec = classSpec,
 		type = data.type == "positive" and "positive" or data.type == "caution" and "caution" or "neutral",
@@ -36,20 +36,53 @@ local function NormalizeRecord(key, data)
 	}
 end
 
+-- 损坏项移出活动名单，保留原值和来源键供恢复；正常记录不复制。
+local function Quarantine(raw, key, value, reason)
+	if type(raw.invalidRecords) ~= "table" then raw.invalidRecords = { previous = raw.invalidRecords } end
+	local invalid = raw.invalidRecords
+	invalid[#invalid + 1] = { key = key, value = value, error = reason }
+end
+
+local function IsStoredRecord(key, record)
+	if type(key) ~= "string" or type(record) ~= "table"
+		or type(record.name) ~= "string" or type(record.server) ~= "string"
+		or (record.reason ~= nil and type(record.reason) ~= "string")
+		or (record.classSpec ~= nil and type(record.classSpec) ~= "string") then return false end
+	return A:PlayerKey(record.name, record.server) == key
+end
+
 -- Initialize():装载 LycheeGroupNotesDB,旧结构迁移到 schema=3,核对 Core 摘要并启动提醒。
 function Notes:Initialize()
 	if self.db then return end
 	A:LoadDB()
 	local raw = _G.LycheeGroupNotesDB
 	if type(raw) ~= "table" then
+		local original = raw
 		raw = {}
 		_G.LycheeGroupNotesDB = raw
+		if original ~= nil then Quarantine(raw,"$root",original,"LycheeGroupNotesDB must be a table") end
 	end
-	local source = type(raw.records) == "table" and raw.records or {}
-	if raw.schema == 2 then
-		for _, record in pairs(source) do record.type = record.type or "neutral" end
+	local source = raw.records
+	if type(source) ~= "table" then
+		if source ~= nil then Quarantine(raw, "records", source) end
+		source = {}
+		raw.records = source
+	end
+	if raw.schema == 2 or raw.schema == SCHEMA then
+		-- 仅装载时扫描一次；schema=3 也需修复旧版本已存入的异常时间。
+		for key, record in pairs(source) do
+			if IsStoredRecord(key, record) then
+				record.timestamp = self.Records.TimestampOf(record)
+				record.type = record.type or "neutral"
+				record.reason = record.reason or ""
+				record.classSpec = record.classSpec or ""
+			else
+				Quarantine(raw, key, record)
+				source[key] = nil
+			end
+		end
 		raw.schema = SCHEMA
-	elseif raw.schema ~= SCHEMA then
+	else
 		local migrated = {}
 		for key, data in pairs(source) do
 			local record = NormalizeRecord(key, data)
@@ -59,6 +92,8 @@ function Notes:Initialize()
 				if not existing or record.timestamp >= (existing.timestamp or 0) then
 					migrated[newKey] = record
 				end
+			else
+				Quarantine(raw, key, data)
 			end
 		end
 		raw.records = migrated

@@ -22,6 +22,95 @@ local function Member(name,rating,map,ilvl)
  return {name=name,nameKey=name,class="WARRIOR",assignedRole="DAMAGER",rating=rating,itemLevel=ilvl,dungeonScores={mapScore=map}}
 end
 
+-- Typing can replace a picker row before its current mouse press is released.
+do
+ local f=dofile("tests/ui_fixture.lua")("enUS",nil,{reduceMotion=true})
+ local a,u=f.A,f.U
+ a:Open("create");local page=u.pages.create;page:TogglePicker()
+ local row=page.pickerResults.rows[1]
+ local old=page.pickerEntries[row.key];local activity=page:FormData().activityID
+ Check(page.pickerSearch.box:HasFocus(),"picker input retains focus while its rows are pressed")
+ row:Fire("OnMouseDown","LeftButton");page.pickerSearch.box:UserType("Raid")
+ local replacement=page.pickerEntries[row.key]
+ Check(old.group.key~=replacement.group.key,"typing really replaces Dungeon with Raid in the pressed pool slot")
+ row:Fire("OnClick","LeftButton")
+ Check(page.picker:IsShown() and page:FormData().activityID==activity,"typing cancels a press when its activity identity changes")
+ row:Fire("OnMouseDown","LeftButton");row:Fire("OnClick","LeftButton")
+ Check(not page.picker:IsShown() and page:FormData().activityID==1,"a fresh press selects the displayed Raid")
+ page:TogglePicker();page.pickerSearch.box:UserType("Dungeon")
+ local keys={};for _,key in ipairs(page.pickerResults.ids) do keys[#keys+1]=key end
+ Check(#keys==2 and keys[1]~=keys[2],"seasonal and original contexts have distinct identities for the same native group")
+ local entries=page.pickerEntries
+ page.pickerSearch.box:UserType("Raid");page.pickerSearch.box:UserType("Dungeon")
+ Check(page.pickerResults.ids[1]==keys[1] and page.pickerResults.ids[2]==keys[2],"repeated searches restore the same semantic keys")
+ Check(page.pickerEntries[keys[1]]~=entries[keys[1]],"the key resolves the current rebuilt entries rather than an old record")
+ local seasonal
+ for _,candidate in ipairs(page.pickerResults.rows) do
+  local entry=page.pickerEntries[candidate.key]
+  if entry and entry.category=="seasonDungeon" then seasonal=candidate;break end
+ end
+ seasonal:Fire("OnMouseDown","LeftButton");page.pickerSearch.box:UserType("Raid");page.pickerSearch.box:UserType("Dungeon")
+ seasonal:Fire("OnClick","LeftButton")
+ Check(page.picker:IsShown() and page:FormData().activityID==1,"a replaced row cannot revive its old press when the same search returns")
+ seasonal:Fire("OnMouseDown","LeftButton");seasonal:Fire("OnClick","LeftButton")
+ Check(page:FormData().activityID==2 and not page.picker:IsShown(),"fresh seasonal selection resolves the current authoritative entry")
+ page:TogglePicker();row=page.pickerResults.rows[1]
+ row:Fire("OnMouseDown","LeftButton")
+ local original
+ for _,category in ipairs(page.pickerCategories.rows) do if category.key=="2" then original=category;break end end
+ original:Fire("OnMouseDown","LeftButton");original:Fire("OnClick","LeftButton")
+ Check(page.pickerEntries[row.key].category=="2","category navigation rebuilds the group rows in the original context")
+ row:Fire("OnClick","LeftButton")
+ Check(page.picker:IsShown() and page:FormData().activityID==2,"changing category cancels a press even when the native group number is unchanged")
+ row:Fire("OnMouseDown","LeftButton");row:Fire("OnClick","LeftButton")
+ Check(page:FormData().activityID==3 and not page.picker:IsShown(),"a new press selects the original-context group")
+ page:TogglePicker();row=page.pickerResults.rows[1];row:Fire("OnMouseDown","LeftButton")
+ page:ClosePicker();page:TogglePicker();row:Fire("OnClick","LeftButton")
+ Check(page.picker:IsShown(),"closing and reopening the picker cancels its pooled row's old press")
+ row:Fire("OnMouseDown","LeftButton");row:Fire("OnClick","LeftButton")
+ Check(not page.picker:IsShown(),"a reopened picker accepts a fresh group selection")
+ u:Hide(true)
+end
+
+-- Native removals can precede the queued UI notification. Resizing then enters
+-- the real table-header callback while the applicant display is being rebuilt.
+do
+ local f=dofile("tests/ui_fixture.lua")("enUS",nil,{reduceMotion=true})
+ local a,u,g=f.A,f.U,f.G
+ g.listing={activityID=2,name="Keystone listing"}
+ g.applicants={[1]={id=1,status="applied",displayOrderID=1,members={Member("First-Away",100,100,250)}}}
+ a:Open("create");local page=u.pages.create
+ Order(page,{1},"first native applicant")
+ Check(page.batchTops[2]>page.batchTops[1] and page.batchLayouts[1]~=nil,"the first applicant publishes complete row geometry")
+ g.applicants={};g.listing=nil -- The backend has changed; the queued notice has not run.
+ u:SetWindowSize(u.windowWidth+100,u.windowHeight)
+ Order(page,{},"resize accepts a removal before the queued applicant notification")
+ Check(page.batchTops[1]==0 and page.batchTops[2]==nil,"native removal publishes a complete empty geometry")
+ for _,batch in ipairs(page.batchPool) do Check(not batch:IsShown(),"removed native applicants leave no visible pooled batch") end
+ g:Notify("listing");Order(page,{},"the later queued notice remains idempotent")
+ u:Navigate("find")
+ Check(page.appIDs==nil and page.batchTops==nil and page.batchLayouts==nil,"leaving creation releases the published applicant layout")
+ g.listing={activityID=2,name="Next listing"}
+ g.applicants={[2]={id=2,status="applied",displayOrderID=2,members={Member("Next-Away",200,200,260)}}}
+ g:Notify("applicants")
+ Check(page.appIDs==nil,"hidden creation does not rebuild applicant geometry")
+ u:Navigate("create");Order(page,{2},"reentering displays the latest native applicant")
+ u:SetWindowSize(u.windowWidth+40,u.windowHeight)
+ Check(page.batchTops[2]>0 and Batch(page,2).people[1].member==g.applicants[2].members[1],"resize after reentry retains the current applicant and geometry")
+ u:Hide(true)
+end
+do
+ local f=dofile("tests/ui_fixture.lua")("enUS",nil,{reduceMotion=true})
+ f.A:Open("create");local page=f.U.pages.create
+ Order(page,{},"native empty creation state")
+ Check(page.batchTops[1]==0,"an empty applicant layout has a complete zero-height sentinel")
+ f.G.listing={activityID=2,name="First listing"}
+ f.G.applicants={[3]={id=3,status="applied",displayOrderID=3,members={Member("First-Away",100,100,250)}}}
+ f.G:Notify("listing");Order(page,{3},"an initially empty page receives its first applicant")
+ Check(page.batchTops[2]>page.batchTops[1],"the first applicant replaces empty geometry with a complete layout")
+ f.U:Hide(true)
+end
+
 for _,locale in ipairs({"zhCN","enUS"}) do
  local f=dofile("tests/ui_fixture.lua")(locale)
  local a,u,g,s=f.A,f.U,f.G,f.S;a:SetSetting("reduceMotion",true)

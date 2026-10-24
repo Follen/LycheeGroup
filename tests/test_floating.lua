@@ -1,3 +1,23 @@
+local function WithNativeFrameColors(action)
+ local createFrame=CreateFrame
+ CreateFrame=function(kind,...)
+  local frame=createFrame(kind,...)
+  if kind=="Frame" then
+   local previous=getmetatable(frame);local index=previous.__index
+   local metatable={};for key,value in pairs(previous) do metatable[key]=value end
+   metatable.__index=function(object,key)
+    if key=="GetTextColor" or key=="SetTextColor" or key=="GetVertexColor" or key=="SetVertexColor" then return nil end
+    if type(index)=="function" then return index(object,key) end
+    return index[key]
+   end
+   setmetatable(frame,metatable)
+  end
+  return frame
+ end
+ local ok,err=pcall(action)
+ CreateFrame=createFrame
+ return ok,err
+end
 -- Entry clicks toggle the actual UI, including Presence reversal and delayed hide.
 for _,integrated in ipairs({false,true}) do
  local fixture=dofile("tests/ui_fixture.lua")("zhCN",nil,{reduceMotion=false})
@@ -54,7 +74,7 @@ _G.LycheeUI=nil
 local libraryPrivate={}
 for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Styles.lua","Components.lua","Layouts.lua","Elements.lua","Native.lua","Menu.lua"}) do assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/"..file))("LycheeGroup",libraryPrivate) end
 _G.LycheeGroup=nil;_G.LycheeGroupDB=nil
-for _,file in ipairs({"Locale.lua","Theme/Defaults.lua","Theme/Elements.lua","Core.lua","Configuration.lua","Appearance.lua","Theme/Import.lua","Specializations.lua","Fonts.lua","BrandMotion.lua","Floating.lua","API.lua"}) do dofile("addon/LycheeGroup/"..file) end
+for _,file in ipairs({"Locale.lua","Theme/Defaults.lua","Theme/Elements.lua","Core.lua","Configuration.lua","Appearance.lua","Theme/Import.lua","Specializations.lua","Fonts.lua","BrandMotion.lua","ActivityLabels.lua","Floating.lua","API.lua"}) do dofile("addon/LycheeGroup/"..file) end
 local A=LycheeGroup;local API=A.API.Floating
 local startupNotifications=0
 local stopStartup=API:Subscribe(function(status)
@@ -91,8 +111,23 @@ _G.GetTime=function() return 0 end
 local F=A.Floating;F:Bind(G);F:UpdateSettings()
 T.eq(#F.rows,0,"a collapsed entry does not construct unused application rows")
 T.eq(#F.batches,0,"a collapsed entry does not construct unused applicant batch cards")
-F:ShowPanel()
+-- Only this lazy-construction scope models the native Frame/Texture boundary.
+-- Native Frames have neither font-string color methods nor vertex-color methods.
+local panelOK,panelError=WithNativeFrameColors(function() F:ShowPanel() end)
+T.ok(panelOK,"application row constructs with native Frame color capabilities: "..tostring(panelError))
 T.eq(#F.rows,1,"the first hover constructs only the visible application row")
+local cancelGlyph=F.rows[1].cancel.elementIcon
+T.eq(cancelGlyph:GetObjectType(),"Frame","the public glyph slot retains its original geometry frame")
+T.eq(cancelGlyph.GetTextColor,nil);T.eq(cancelGlyph.GetVertexColor,nil,"a glyph frame exposes no native color getter")
+T.eq(cancelGlyph:GetWidth(),F.context.Theme.floatingCrossWidth);T.eq(cancelGlyph:GetHeight(),F.context.Theme.floatingCrossHeight)
+T.eq((cancelGlyph:GetPoint()),"CENTER","the cancel glyph keeps its original center anchor")
+local function CancelGlyphColor(expected)
+ local color={cancelGlyph.texture:GetVertexColor()}
+ for i=1,4 do T.near(color[i],expected[i] or 1,.000001,"cancel glyph texture uses the current state color") end
+end
+CancelGlyphColor(F.context.Theme.dim)
+F.rows[1].cancel:Fire("OnEnter");CancelGlyphColor(F.context.Theme.brand)
+F.rows[1].cancel:Fire("OnLeave");CancelGlyphColor(F.context.Theme.dim)
 T.eq(#F.batches,0,"outbound applications need no applicant batch cards")
 T.eq(startupNotifications,1,"disposing a subscription before startup prevents later delivery")
 local function Position(frame)
@@ -100,15 +135,20 @@ local function Position(frame)
 end
 T.eq(A.UI,nil,"hover does not load the UI addon")
 T.eq(F.context.Theme.fontSizeDelta,0,"the floating context does not inherit the main-window font increase")
-T.eq(select(2,F.rows[1].name:GetFont()),16);T.eq(select(2,F.rows[1].meta:GetFont()),18,"floating activity and group titles retain their existing sizes")
+T.eq(select(2,F.rows[1].name:GetFont()),20);T.eq(select(2,F.rows[1].meta:GetFont()),15,"the dungeon heading is larger than the group title")
 T.eq(F.panel.events.GLOBAL_MOUSE_DOWN,true,"the expanded popup observes global clicks without a full-screen input catcher")
 local entryButtons=0;for _,child in ipairs({F.frame:GetChildren()}) do if child:GetObjectType()=="Button" then entryButtons=entryButtons+1 end end
 T.eq(entryButtons,1,"the collapsed icon and number share one actual button")
-T.eq(F.frame:GetWidth(),115);T.eq(F.frame:GetHeight(),44);T.eq(F.panel:GetWidth(),348);T.eq(F.scroll:GetWidth(),324)
+T.eq(F.frame:GetWidth(),115);T.eq(F.frame:GetHeight(),44);T.eq(F.panel:GetWidth(),360);T.eq(F.scroll:GetWidth(),348)
 T.eq(F.count:GetText(),"申请1个");T.eq(F.rows[1].name:GetText(),"A dungeon");T.eq(F.rows[1].meta:GetText(),"A group");T.eq(F.rows[1].leader:GetText(),"Leader-Away");T.eq(F.rows[1].timer:GetText(),"2:10")
 T.eq(F.rows[1].background:IsShown(),true,"each resting application keeps its own card")
 T.eq(F.rows[1].faction,nil,"outbound application cards allocate no applicant faction marker")
-T.eq(F.panel.background,nil,"the space around application cards has no outer backdrop")
+T.ok(F.panel.background,"application cards share a rounded outer backdrop")
+T.ok(F.context.Theme.floatingPanelSurface[4]>0 and F.context.Theme.floatingPanelSurface[4]<1,"the outer backdrop is translucent")
+T.same(F.panel.background.fill.color,F.context.Theme.floatingPanelSurface,"the actual outer fill uses the floating theme token")
+T.same(F.rows[1].background.fill.color,F.context.Theme.floatingCardSurface,"the actual application fill uses the floating card token")
+T.eq(F.heading:GetText(),"我的申请 2/5");T.eq(F.cancel.label:GetText(),"取消全部")
+T.eq(select(2,F.rows[1].icon:GetPoint()),F.rows[1].leader,"the leader portrait shares the last information row")
 T.eq(F.frame:IsMouseEnabled(),false,"the outer container adds no second mouse target")
 T.eq(F.count:GetParent(),F.button);T.eq(F.logoTexture:GetParent(),F.logoAnchor);T.eq(F.logoAnchor:GetParent(),F.button)
 T.eq(F.button.fill,nil,"the entry has no backdrop at rest")
@@ -153,39 +193,39 @@ local applicationRow=F.rows[1];local detailX,detailY=Position(applicationRow.sco
 T.ok(applicationRow.score:GetStringHeight()>22,"long activity details wrap instead of losing text")
 T.ok(-detailY+applicationRow.score:GetStringHeight()<=-titleY,"the complete activity heading fits above the group title")
 local cancelX=Position(applicationRow.cancel)
-T.ok(detailX+applicationRow.score:GetWidth()+8<=324+cancelX-applicationRow.cancel:GetWidth(),"the activity heading leaves a real gap before cancel")
-T.ok(Position(applicationRow.leader)+applicationRow.leader:GetWidth()+12<=324-12-applicationRow.timer:GetWidth(),"leader and countdown have independent columns")
+T.ok(detailX+applicationRow.score:GetWidth()+8<=348+cancelX-applicationRow.cancel:GetWidth(),"the activity heading leaves a real gap before cancel")
+T.ok(Position(applicationRow.leader)+applicationRow.leader:GetWidth()+12<=348-12-applicationRow.timer:GetWidth(),"leader and countdown have independent columns")
 do
  local previous=apps[1].leaderName
  apps[1].leaderName=string.rep("LongLeader",8).."-Away";callback("applications")
  local _,leaderTop=Position(applicationRow.leader)
  T.eq(applicationRow.leader.wrap,true,"outbound application leaders retain wrapping after typed-row construction")
  T.ok(applicationRow.leader:GetStringHeight()>applicationRow.leader:GetLineHeight()+applicationRow.leader:GetSpacing(),"long leader identities wrap onto additional lines")
- T.ok(-leaderTop+applicationRow.leader:GetStringHeight()+12<=applicationRow:GetHeight()+.001,"the complete wrapped leader fits above the card's bottom padding")
+ T.ok(-leaderTop+applicationRow.leader:GetStringHeight()+F.context.Theme.floatingApplicationPaddingY<=applicationRow:GetHeight()+.001,"the complete wrapped leader fits above the card's bottom padding")
  apps[1].leaderName=previous;callback("applications")
 end
 apps[1].activityLabel=nil;apps[1].activityDetail=nil;callback("applications")
 GameTooltip:Hide();F.cancel:Fire("OnEnter");T.eq(F.cancel.hover:IsShown(),false,"the top cancellation action uses text feedback only")
 T.eq(GameTooltip:IsShown(),false,"cancel-all does not open a redundant tooltip");F.cancel:Fire("OnLeave");T.eq(F.cancel.hover:IsShown(),false)
 apps[1].status="invited";callback("applications")
-T.eq(F.panel:IsShown(),false,"removing the last waiting application closes the popup instead of replacing it with a stuck empty card")
-T.eq(F.countdown,nil,"automatic empty closure stops its countdown")
-T.eq(F.panel.events.GLOBAL_MOUSE_DOWN,nil,"closing releases the outside-click listener")
+T.eq(F.panel:IsShown(),true,"the last invitation leaves the already expanded popup in its idle state")
+T.eq(F.countdown,nil,"the invitation removes the final waiting countdown")
+T.eq(F.panel.events.GLOBAL_MOUSE_DOWN,true,"the open idle popup keeps outside-click observation until it closes")
 F:ShowPanel()
 T.eq(F.cancel:IsShown(),false,"an empty waiting list hides cancel-all instead of leaving a disabled header")
-T.eq(F.panel:GetHeight(),60,"an empty application popup drops the unused header")
+T.eq(F.panel:GetHeight(),58,"an empty application popup drops the unused header")
 T.eq(F.emptyCard:IsShown(),true);T.eq(F.emptyCard:GetHeight(),44)
-T.ok(F.emptyCard:GetWidth()<324,"an empty popup uses a compact card instead of a full application row")
-T.eq(F.panel:GetWidth(),F.emptyCard:GetWidth()+24);T.eq(F.scroll:GetWidth(),F.emptyCard:GetWidth())
-T.eq(F.empty:GetText(),"暂无申请","an active invitation keeps the waiting-list empty message")
+T.ok(F.emptyCard:GetWidth()<348,"an idle popup uses a compact card instead of a full application row")
+T.eq(F.panel:GetWidth(),F.emptyCard:GetWidth()+12);T.eq(F.scroll:GetWidth(),F.emptyCard:GetWidth())
+T.eq(F.empty:GetText(),"暂无活动","native invitations do not remain in the waiting list")
 T.eq(F.empty.justify,"CENTER","empty text is centered within its complete width")
 T.eq(F.empty:GetPoint(),"CENTER");T.eq(select(2,Position(F.emptyCard)),-8,"empty content keeps equal top and bottom padding")
 apps[1].status="applied";callback("applications")
 T.eq(F.cancel:IsShown(),true);T.eq(F.emptyCard:IsShown(),false)
-T.eq(select(2,Position(F.scroll)),-32,"restored applications regain the action header")
-T.eq(F.rows[1]:GetHeight(),98,"restoring applications keeps the card's twelve-pixel vertical padding")
+T.eq(select(2,Position(F.scroll)),-38,"restored applications regain the heading and action row")
+T.eq(F.rows[1]:GetHeight(),96,"restoring applications keeps both title lines and ten-pixel vertical padding")
 local _,headingY=Position(F.rows[1].name);local _,leaderY=Position(F.rows[1].leader)
-T.eq(-headingY,12);T.ok(F.rows[1]:GetHeight()+leaderY-F.rows[1].leader:GetStringHeight()>=12,"the caption leader retains the full bottom padding inside its minimum-height line")
+T.eq(-headingY,10);T.ok(F.rows[1]:GetHeight()+leaderY-F.rows[1].leader:GetStringHeight()>=10,"the caption leader retains the full bottom padding inside its minimum-height line")
 local workingEntries,workingTops,firstEntry=F.entries,F.entryTops,F.entries[1]
 local fadeState=F.fade
 F:Tick(.23);F:Fade(false);F:Tick(.04)
@@ -203,16 +243,18 @@ T.ok(F.countdown,"countdown exists only during an expanded waiting list");F.pane
 apps[2].status="applied";F:ShowPanel();F:Tick(.01)
 T.ok(F.rows[1]:GetAlpha()>F.rows[2]:GetAlpha(),"separate application cards enter with a short stagger")
 local entrance=F.fade;callback("applications");T.eq(F.fade,entrance,"native application refresh does not replay card entrance")
-F.rows[1].cancel:Fire("OnEnter");T.eq(F.rows[1].background:IsShown(),true);T.eq(F.rows[2].background.fill.color[4],.60,"cancel hover leaves the other card unchanged")
-T.eq(F.rows[1].background.fill.color[4],F.context.Theme.floatingHover[4],"row hover keeps the individual card translucent")
+F.rows[1].cancel:Fire("OnEnter");T.eq(F.rows[1].background:IsShown(),true);T.eq(F.rows[2].background.fill.color[4],.16,"cancel hover leaves the other card unchanged")
+T.eq(F.rows[1].background.fill.color[4],F.context.Theme.floatingCardHover[4],"row hover keeps the individual card translucent")
+T.same(F.rows[1].background.fill.color,F.context.Theme.floatingCardHover,"the complete hover fill honors the card token")
 T.ok(F.rows[1].cancel.hover:IsShown(),"the icon retains its local red feedback");T.eq(GameTooltip:IsShown(),false,"single cancellation also omits a tooltip")
-F.rows[1].cancel:Fire("OnLeave");T.eq(F.rows[1].background.fill.color[4],.60);T.eq(F.rows[1].cancel.hover:IsShown(),false)
+F.rows[1].cancel:Fire("OnLeave");T.eq(F.rows[1].background.fill.color[4],.16);T.eq(F.rows[1].cancel.hover:IsShown(),false)
+T.same(F.rows[1].background.fill.color,F.context.Theme.floatingCardSurface,"leaving restores the complete card color")
 apps[2].status="applied";for i=3,5 do apps[i]={id=i,name="Another group",status="applied",activityID=1} end
-F:ShowPanel();T.eq(F.scroll:GetHeight(),522,"five padded application cards remain fully visible");T.eq(F.rows[1]:GetHeight(),98);T.eq(F.scrollBar:IsShown(),false,"floating wheel scrolling has no visible track");T.eq(F.rows[5]:IsShown(),true)
+F:ShowPanel();T.eq(F.scroll:GetHeight(),500,"five padded application cards remain fully visible");T.eq(F.rows[1]:GetHeight(),96);T.eq(F.scrollBar:IsShown(),false,"floating wheel scrolling has no visible track");T.eq(F.rows[5]:IsShown(),true)
 for i=5,3,-1 do apps[i]=nil end;apps[2].status="invited";F.panel:Hide()
 F:ShowPanel()
 members[1].factionGroup=1;members[1].raceName="光铸德莱尼";members[2].factionGroup=0;members[2].raceName="赞达拉巨魔"
-listing={name="My listing",activityID=1};callback("listing");T.eq(F.count:GetText(),"30人申请","recruitment counts individual people");T.eq(F.scroll:GetHeight(),UIParent:GetHeight()/F.frame:GetScale()-F.frame:GetHeight()-48)
+listing={name="My listing",activityID=1};callback("listing");T.eq(F.count:GetText(),"30人申请","recruitment counts individual people");T.eq(F.scroll:GetHeight(),UIParent:GetHeight()/F.frame:GetScale()-F.frame:GetHeight()-F.context.Theme.floatingHeaderHeight-F.context.Theme.floatingPanelBottomInset-F.context.Theme.floatingScreenInset)
 T.eq(G.applicantViews[F],true,"an expanded recruitment popup reports that applicants are being viewed")
 F:Dismiss();T.eq(G.applicantViews[F],nil,"dismissing the popup releases applicant-view ownership")
 F:ShowPanel();T.eq(G.applicantViews[F],true,"reopening the popup acknowledges applicants again")
@@ -236,8 +278,9 @@ T.eq(F.brandMotion.texture,F.logoTexture,"the product reminder animates its orig
 T.eq(F.entries,workingEntries);T.eq(F.entries[1],firstEntry);T.eq(firstEntry.application,nil,"recruitment reuse clears the previous application reference")
 local batchEntry=F.entries[1].batch
 local comments=0;for _,entry in ipairs(F.entries) do if entry.comment then comments=comments+1 end end;T.eq(comments,1,"one shared comment is displayed at the bottom of its application batch")
-T.eq(F.rows[1].name:GetText(),"Player1-Away","recruitment shows players directly without group-size headings");T.eq(F.rows[1].meta:GetText(),"光铸德莱尼 · 战士 · Specialization");T.eq(F.rows[1].score:GetText(),"2001")
-T.eq(F.rows[1].itemLevel:GetText(),"装等 501","native item level has its own right-aligned second line")
+T.eq(F.rows[1].name:GetText(),"Player1-Away","recruitment preserves the complete player identity");T.eq(F.rows[1].meta:GetText(),"光铸德莱尼 · Specialization");T.eq(F.rows[1].score:GetText(),"2001")
+T.eq(F.rows[1].itemLevel:GetText(),"装等 501","native item level has its own right-aligned heading column")
+T.eq(F.rows[2].name:GetText(),"Player2-Away");T.eq(F.rows[2].score:GetText(),"2002");T.eq(F.rows[2].itemLevel:GetText(),"装等 502","each member of the same batch keeps their own metrics")
 do
  local row=F.rows[1];local faction=row.faction
  T.eq(faction:GetTexture(),"Interface\\AddOns\\LycheeGroup_UI\\Media\\faction-alliance.tga");T.eq(faction:IsShown(),true)
@@ -248,23 +291,25 @@ do
  local metaX,metaY=Position(row.meta)
  T.eq(metaX,x+faction:GetWidth()+6);T.eq(y,metaY,"faction and race share the metadata line")
  T.ok(metaY<nameY-row.name:GetLineHeight())
- T.eq(row.name:GetWidth(),168,"the faction and race leave the full identity width for the name")
- T.ok(F.entries[1].height>=12+row.name:GetStringHeight()+2+row.meta:GetStringHeight(),"wrapped race and specialization text fits the measured row")
- T.ok(x+faction:GetWidth()+12<=324-12-row.score:GetWidth(),"identity and faction retain the metric-column gap")
+ T.eq(row.name:GetWidth(),166,"the name leaves independent score and item-level columns")
+ T.ok(F.entries[1].height>=8+row.name:GetStringHeight()+2+row.meta:GetStringHeight(),"wrapped race and specialization text fits the measured row")
+ T.ok(x+faction:GetWidth()+12<=348-12-row.score:GetWidth(),"identity and faction retain the metric-column gap")
  T.eq(F.rows[3].faction:IsShown(),false);T.eq(F.rows[3].faction:GetTexture(),nil,"unknown members do not inherit another member's faction")
  members[1].factionGroup=0;callback("applicants")
  T.eq(row.faction,faction,"member refreshes reuse the same marker");T.eq(faction:GetTexture(),"Interface\\AddOns\\LycheeGroup_UI\\Media\\faction-horde.tga")
  members[1].factionGroup=nil;members[1].raceName=nil;callback("applicants")
  T.eq(faction:IsShown(),false);T.eq(faction:GetTexture(),nil,"losing known faction clears the old texture")
- T.eq(row.name:GetWidth(),168,"unknown faction restores the full name width")
- T.eq(row.meta:GetText(),"— · 战士 · Specialization","unknown race clears the previous race name")
+ T.eq(row.name:GetWidth(),166,"unknown faction preserves the metric columns")
+ T.eq(row.meta:GetText(),"— · Specialization","unknown race clears the previous race name")
  members[1].factionGroup=1;callback("applicants")
  T.eq(A.UI,nil,"faction textures do not load the UI addon")
 end
 T.eq(F.rows[1].batch,F.rows[2].batch,"member rows belong to one continuous batch hover area")
 F.rows[1]:Fire("OnEnter");T.eq(F.rows[1].batch.background:IsShown(),true);T.eq(F.rows[1].background,nil,"members allocate no separate hover surface")
-T.eq(F.rows[1].batch.line,nil,"a party card has no grouping line");T.eq(F.rows[1].batch.background.fill.color[4],F.context.Theme.floatingHover[4],"hover highlights the complete application card")
-F.rows[1]:Fire("OnLeave");T.eq(F.rows[1].batch.background.fill.color[4],.60,"leaving the batch restores its resting card")
+T.eq(F.rows[1].batch.line,nil,"a party card has no grouping line");T.eq(F.rows[1].batch.background.fill.color[4],F.context.Theme.floatingCardHover[4],"hover highlights the complete application card")
+T.same(F.rows[1].batch.background.fill.color,F.context.Theme.floatingCardHover,"batch hover honors the same floating card token")
+F.rows[1]:Fire("OnLeave");T.eq(F.rows[1].batch.background.fill.color[4],.16,"leaving the batch restores its resting card")
+T.same(F.rows[1].batch.background.fill.color,F.context.Theme.floatingCardSurface,"batch leave restores the same floating card token")
 F.scroll:SetVerticalScroll(F.entryTops[30]);F:Render()
 T.eq(F.rows[1].faction:IsShown(),false);T.eq(F.rows[1].faction:GetTexture(),nil,"a row rebound to an unknown member clears the previous faction")
 local lastMember;for _,row in ipairs(F.rows) do if row:IsShown() and row.name:GetText()=="Player30-Away" then lastMember=row end end
@@ -274,12 +319,12 @@ F.scroll:SetVerticalScroll(F.body:GetHeight()-F.scroll:GetHeight());F:Render()
 local actionRow,commentRow;for _,row in ipairs(F.rows) do if row.kind=="footer" and row.invite:IsVisible() then actionRow=row end;if row.name:GetText()==applicant.comment then commentRow=row end end
 T.ok(actionRow,"the shared footer keeps one action pair");T.eq(commentRow,actionRow,"the shared comment and the one action pair occupy a single footer")
 T.eq(commentRow.faction,nil,"a shared footer allocates no applicant marker")
-T.ok(Position(commentRow.name)+commentRow.name:GetWidth()+12<=Position(actionRow.invite),"the comment leaves a real gap before the invite hit area")
+T.ok(Position(commentRow.name)+commentRow.name:GetWidth()+8<=Position(actionRow.invite),"the comment leaves an eight-pixel gap before the invite hit area")
 T.eq(F.rows[1].invite,nil,"member rows allocate no duplicate footer actions")
 T.eq(Position(commentRow.name),Position(F.rows[1].name),"the shared note aligns with the member text column")
-T.ok(actionRow:GetHeight()>=40,"the footer keeps room for the note and twelve-pixel bottom inset")
-local actionX,actionY=Position(actionRow.invite);T.eq(select(2,actionRow.invite:GetPoint()),actionRow);T.eq(actionRow:GetWidth()-actionX-actionRow.invite:GetWidth(),48);T.eq(actionRow:GetHeight()+actionY-actionRow.invite:GetHeight(),12,"the invite hit area clears the card bottom by twelve pixels")
-local declineX,declineY=Position(actionRow.decline);T.eq(select(2,actionRow.decline:GetPoint()),actionRow);T.eq(actionRow:GetWidth()-declineX-actionRow.decline:GetWidth(),12);T.eq(actionRow:GetHeight()+declineY-actionRow.decline:GetHeight(),12,"the decline hit area shares the same outer inset")
+T.ok(actionRow:GetHeight()>=40,"the footer keeps room for the note and action padding")
+local actionX,actionY=Position(actionRow.invite);T.eq(select(2,actionRow.invite:GetPoint()),actionRow);T.eq(actionRow:GetWidth()-actionX-actionRow.invite:GetWidth(),48);T.eq(actionRow:GetHeight()+actionY-actionRow.invite:GetHeight(),6,"the invite hit area clears the card bottom")
+local declineX,declineY=Position(actionRow.decline);T.eq(select(2,actionRow.decline:GetPoint()),actionRow);T.eq(actionRow:GetWidth()-declineX-actionRow.decline:GetWidth(),12);T.eq(actionRow:GetHeight()+declineY-actionRow.decline:GetHeight(),6,"the decline hit area shares the same bottom inset")
 T.eq(actionRow.invite:GetHeight(),28);T.eq(actionRow.invite.glyph:GetWidth(),18);T.eq(actionRow.decline.glyph:GetWidth(),18)
 actionRow.invite:Fire("OnEnter");T.ok(actionRow.invite.hover:IsShown(),"invite hover preserves the shared button surface")
 T.eq(actionRow.invite.hover.color[4],.14);T.eq(GameTooltip:IsShown(),false,"invite keeps local feedback without a redundant tooltip")
@@ -297,12 +342,14 @@ F:Tick(.07);T.ok(exitingMember:GetAlpha()>0 and exitingMember:GetAlpha()<1,"memb
 T.near(commentRow:GetAlpha(),exitingMember:GetAlpha(),.001,"the shared note exits with its members")
 T.near(actionRow:GetAlpha(),exitingMember:GetAlpha(),.001,"the actions exit with their members")
 T.near(exitingBatch:GetAlpha(),exitingMember:GetAlpha(),.001,"the hover surface exits with the batch")
-F:Tick(.08);T.eq(F.entries,nil,"finishing the last batch exit releases the popup bindings")
-T.eq(F.panel:IsShown(),false,"the last applicant exits without replacing the batch with an empty popup")
-T.eq(F.frame:GetScript("OnUpdate"),nil,"the exit leaves no persistent driver")
-applicant.acting=nil;applicant.pendingStatus="invited";callback("applicants");T.eq(F.entries,nil,"native pending status remains hidden")
+F:Tick(.08);T.eq(#F.entries,0,"finishing the last batch exit leaves no applicant bindings in the displayed empty state")
+T.eq(exitingMember.applicantID,nil);T.eq(exitingMember.batch,nil,"the retired member row releases its batch binding")
+T.eq(F.panel:IsShown(),true,"the last applicant leaves the open listing in its waiting state")
+T.eq(F.empty:GetText(),"等待玩家申请");T.ok(F.waitIcon:IsShown())
+T.eq(F.panel:GetScript("OnUpdate"),nil,"the exit leaves no persistent driver")
+applicant.acting=nil;applicant.pendingStatus="invited";callback("applicants");T.eq(#F.entries,0,"native pending status remains absent from the waiting list")
 applicant.pendingStatus=nil;callback("applicants");F:Tick(.2)
-T.eq(F.panel:IsShown(),false,"a later native refresh cannot reopen the automatically closed popup")
+T.eq(F.panel:IsShown(),true,"the still-open popup updates when applicants become operable again")
 F:ShowPanel();F:SetOffset(0,false)
 T.eq(#F.entries,2,"explicit hover can restore a native return to operable applied")
 F:Tick(.23)
@@ -314,15 +361,23 @@ T.eq(failure,"Decline failed","immediate action failures are reported")
 T.eq(#F.entries,2);T.eq(actionRow.decline:IsEnabled(),true,"a failed call restores the available action")
 T.eq(actionRow.exit,nil,"failed calls do not leave an exit state")
 T.ok(F.attention and F.attentionTimer,"the operable applicant keeps its independent logo reminder after a failed action")
+local inviteBeforeConfirm=G.Invite;local printed=0
+G.Invite=function() return nil,nil end
+A.Print=function() printed=printed+1 end
+actionRow.invite:Fire("OnClick")
+T.eq(printed,0,"opening a conversion confirmation is not reported as an action error")
+T.eq(actionRow.exit,nil,"an unconfirmed invitation keeps the applicant visible")
+T.eq(#F.entries,2);T.eq(actionRow.invite:IsEnabled(),true)
+G.Invite=inviteBeforeConfirm
 A.Print=printMessage;G.failDecline=nil
-actionRow.decline:Fire("OnClick");T.eq(G.declined,77,"decline also submits in the click callback");F:Tick(.15);T.eq(F.panel:IsShown(),false)
+actionRow.decline:Fire("OnClick");T.eq(G.declined,77,"decline also submits in the click callback");F:Tick(.15);T.eq(F.panel:IsShown(),true);T.eq(#F.entries,0)
 applicant.acting=nil;callback("applicants");F:ShowPanel();F:SetOffset(0,false)
 batchEntry=F.entries[1].batch;commentRow=F.rows[2]
 T.eq(#F.entries,2,"a smaller roster drops old member containers instead of retaining the past roster size")
 T.eq(F.entries[1].batch,batchEntry,"current batch metadata is reused while its members change")
 T.eq(F.rows[1].batch.line,nil,"a solo application uses the same borderless card")
 T.eq(F.rows[1].batch.background:IsShown(),true,"a resting applicant batch retains one shared card")
-T.eq(F.rows[1].batch.background.fill.color[4],.60,"the resting batch shares the lighter translucent background")
+T.eq(F.rows[1].batch.background.fill.color[4],.16,"the resting batch shares the lighter translucent background")
 local staleInvite=F.rows[2].invite;local callsBefore=G.inviteCalls
 manageApplicants,manageListing=false,false;callback("permissions")
 T.eq(F.count:GetText(),"1人申请","ordinary members retain the applicant count")
@@ -348,33 +403,33 @@ T.eq(metricRow.faction:IsShown(),true);T.eq(metricRow.faction:GetTexture(),"Inte
 T.eq(rarityCalls,0,"hidden raid ratings do not calculate dungeon score colors")
 listing.activityID=3;members[1].ratingKind="pvp";members[1].rating=1820;callback("listing")
 T.eq(F.rows[1],metricRow);T.eq(metricRow.score:IsShown(),true,"a reused PvP row restores its rating")
-T.eq(select(2,Position(metricRow.itemLevel)),select(2,Position(metricRow.meta)),"PvP item level returns to the second line")
-T.eq(select(2,metricRow.itemLevel:GetFont()),12)
+T.eq(select(2,Position(metricRow.itemLevel)),select(2,Position(metricRow.name)),"PvP item level shares the member heading")
+T.eq(select(2,metricRow.itemLevel:GetFont()),14)
 T.eq(F.rows[1].score:GetText(),"1820","floating uses the listing's normalized PvP rating instead of its dungeon score")
 T.same(F.rows[1].score.color,F.context.Theme.text,"PvP rating uses neutral text")
-members[1].rating=0;callback("applicants");T.eq(F.rows[1].score:GetText(),"暂无分数","known zero is distinct from missing PvP data")
+members[1].rating=0;callback("applicants");T.eq(F.rows[1].score:GetText(),"暂无","known zero is distinct from missing PvP data")
 members[1].rating=nil;callback("applicants");T.eq(F.rows[1].score:GetText(),"未知分数","missing PvP rating does not fall back to a dungeon score")
 T.eq(rarityCalls,0,"PvP does not request dungeon score rarity colors")
 listing.activityID=2;callback("listing");T.eq(metricRow.score:IsShown(),false,"returning from PvP to raid hides the reused score again")
 listing.activityID=1;members[1].ratingKind="dungeon";members[1].rating=members[1].dungeonScore;callback("listing")
-T.eq(F.rows[1],metricRow);T.eq(metricRow.score:IsShown(),true);T.eq(select(2,Position(metricRow.itemLevel)),select(2,Position(metricRow.meta)),"dungeon row reuse keeps item level on its second line")
+T.eq(F.rows[1],metricRow);T.eq(metricRow.score:IsShown(),true);T.eq(select(2,Position(metricRow.itemLevel)),select(2,Position(metricRow.name)),"dungeon row reuse keeps item level beside its own name")
 T.eq(F.rows[1].score:GetText(),"2001");T.eq(rarityCalls,1,"dungeon ratings keep their rarity colors")
 C_ChallengeMode.GetDungeonScoreRarityColor=rarity
 T.eq(select(2,F.rows[1].name:GetFont()),16,"floating applicant names use the compact 16/22 typography")
 T.eq(select(2,F.rows[1].score:GetFont()),14)
-T.eq(select(2,F.rows[1].meta:GetFont()),12);T.eq(select(2,F.rows[1].itemLevel:GetFont()),12)
+T.eq(select(2,F.rows[1].meta:GetFont()),12);T.eq(select(2,F.rows[1].itemLevel:GetFont()),14)
 T.eq(F.rows[1].leader,nil);T.eq(F.rows[1].timer,nil,"member rows allocate no application leader or countdown text")
-T.eq(select(2,commentRow.name:GetFont()),12,"shared comments use the compact footer typography")
-T.ok(56+F.rows[1].name:GetWidth()+12<=324-12-F.rows[1].itemLevel:GetWidth(),"the name and metric columns retain a twelve-pixel gap")
+T.eq(select(2,commentRow.name:GetFont()),14,"shared comments use the readable footer typography")
+T.ok(Position(F.rows[1].name)+F.rows[1].name:GetWidth()+6<=F.rows[1]:GetWidth()+Position(F.rows[1].score)-F.rows[1].score:GetWidth(),"the name leaves a separate score column")
 T.eq(F.rows[1].icon:GetWidth(),32,"the applicant avatar spans the name and specialization block")
 local iconX,iconY=Position(F.rows[1].icon)
 local nameX,nameY=Position(F.rows[1].name)
 local metaX,metaY=Position(F.rows[1].meta)
-T.eq(iconX,12);T.eq(nameX,56);T.eq(metaX,78)
-T.eq(iconY,-12,"the avatar has a twelve-pixel inset from the card top")
-T.eq(nameY,-12,"the player name aligns with the avatar and has a twelve-pixel top inset")
+T.eq(iconX,12);T.eq(nameX,50);T.eq(metaX,72)
+T.eq(iconY,-8,"the avatar has an eight-pixel inset from the card top")
+T.eq(nameY,-8,"the player name aligns with the avatar")
 local scorePoint=select(1,F.rows[1].score:GetPoint());local scoreX,scoreY=Position(F.rows[1].score)
-T.eq(scorePoint,"TOPRIGHT");T.eq(scoreX,-12,"the score keeps a twelve-pixel right inset");T.eq(scoreY,-12,"the score aligns with the member heading")
+T.eq(scorePoint,"TOPRIGHT");T.eq(scoreX,-82,"the score leaves a separate item-level column and gap");T.eq(scoreY,-8,"the score aligns with the padded member heading")
 T.eq(select(2,F.count:GetFont()),16,"the collapsed indicator count retains its size")
 T.eq(select(2,F.cancel.label:GetFont()),14,"the top action uses the readable control size")
 T.eq(A.UI,nil,"PvP rendering still leaves the UI addon unloaded")
@@ -382,23 +437,24 @@ local originalKey=members[1].nameKey;members[1].nameKey="A-very-long-player-iden
 local _,nameY=Position(F.rows[1].name);local _,scoreY=Position(F.rows[1].score);local _,metaY=Position(F.rows[1].meta);local _,itemY=Position(F.rows[1].itemLevel)
 T.ok(F.entries[1].nameHeight>22,"long identities still expand the complete member row")
 T.eq(nameY,scoreY,"rating follows the name's first baseline even after wrapping")
-T.eq(metaY,itemY,"item level follows the specialization baseline after the wrapped name")
+T.eq(nameY,itemY,"item level keeps the name's first baseline after the identity wraps")
 local _,wrappedIconY=Position(F.rows[1].icon)
 T.eq(wrappedIconY,nameY,"a wrapped identity keeps the avatar aligned with the first name line")
 local factionX,factionY=Position(F.rows[1].faction)
 T.eq(factionY,metaY,"a wrapped name keeps faction beside the race below the complete identity")
-T.eq(factionX,56,"long identities preserve the metadata inset")
+T.eq(factionX,50,"long identities preserve the metadata inset")
 members[1].nameKey=originalKey;callback("applicants")
 local comment=applicant.comment
 applicant.comment="熟练";callback("applicants");T.eq(F.body:GetHeight(),F.entries[1].height+40,"the card fits the full identity and race metadata plus its compact note footer")
 local commentTop=select(2,Position(F.rows[2].name))
-T.eq(commentTop,-6,"a single-line note sits lower beside the action controls")
-T.eq(-commentTop+F.rows[2].name:GetHeight()/2,40-(12+14),"a single-line note and action controls share a centerline")
+T.ok(-commentTop>=6,"a single-line note retains its top padding")
+local _,noteActionY=Position(F.rows[2].invite)
+T.eq(-commentTop+F.rows[2].name:GetHeight()/2,F.rows[2]:GetHeight()+noteActionY-F.rows[2].invite:GetHeight()/2,"a single-line note and action controls share a centerline")
 local shortHeight=F.body:GetHeight()
 applicant.comment=nil;callback("applicants");T.eq(#F.entries,2,"a batch without a note has no empty note row");T.eq(F.body:GetHeight(),shortHeight,"an empty note and one short line use the same compact footer")
 applicant.comment=string.rep("A long shared note ",12);callback("applicants")
 T.ok(F.body:GetHeight()>shortHeight,"a long shared note expands instead of truncating its content")
-T.eq(select(2,Position(F.rows[2].name)),-12,"a multi-line note keeps its top inset as it grows")
+T.eq(select(2,Position(F.rows[2].name)),-6,"a multi-line note keeps its top inset as it grows")
 T.eq(F.rows[2].name:GetText(),applicant.comment);T.eq(F.rows[2].invite:IsShown(),true)
 applicant.comment=comment;callback("applicants")
 F:Tick(.23);F.rows[2].invite:Fire("OnClick")
@@ -413,14 +469,14 @@ T.eq(F.panel:IsShown(),false,"an outside click immediately closes an active batc
 T.eq(closingRow.exit,nil,"closing clears the row's exit state");T.eq(closingRow.applicantID,nil)
 T.eq(closingRow.faction:IsShown(),false);T.eq(closingRow.faction:GetTexture(),nil,"closing clears the pooled applicant marker")
 T.eq(F.panel.events.GLOBAL_MOUSE_DOWN,nil);T.eq(F.hideTask,nil)
-T.eq(F.frame:GetScript("OnUpdate"),nil,"closing stops an active batch exit")
+T.eq(F.panel:GetScript("OnUpdate"),nil,"closing stops an active batch exit")
 F.panel.mouseOver=true;base.AdvanceClock(.2);F:Tick(.5);callback("applicants")
 T.eq(F.panel:IsShown(),false,"a cancelled hide timer, completed exit and native refresh cannot reopen the popup")
 F.panel.mouseOver=false
-F:ShowPanel();T.eq(#F.entries,0,"reopening never revives an acting applicant");T.eq(F.count:GetText(),"暂无申请","the collapsed count uses the same operable filter as the list")
+F:ShowPanel();T.eq(#F.entries,0,"reopening never revives an acting applicant");T.eq(F.count:GetText(),"招募中","the collapsed count uses the same operable filter as the list")
 T.eq(F.emptyCard:IsShown(),true);T.eq(F.emptyCard:GetHeight(),44)
 T.eq(F.cancel:IsShown(),true,"the owner can still end an empty listing")
-T.eq(F.panel:GetHeight(),84,"the empty recruitment view reserves only its meaningful listing action and centered content")
+T.eq(F.panel:GetHeight(),88,"the empty recruitment view reserves its listing heading and waiting content")
 F.panel:Fire("OnEvent","GLOBAL_MOUSE_DOWN","RightButton")
 T.eq(F.panel:IsShown(),false,"an explicitly hovered empty listing can also be closed by an outside click")
 applicant.acting=nil;callback("applicants");T.eq(F.panel:IsShown(),false,"a closed empty listing stays closed when applicants return")
@@ -440,15 +496,15 @@ do
  F.Render=function(self,...) renders=renders+1;return render(self,...) end
  for _=1,10 do
   F.scroll:Fire("OnMouseWheel",1)
-  for _=1,15 do if F.frame:GetScript("OnUpdate") then F.frame:Fire("OnUpdate",.01) end end
+  for _=1,15 do if F.panel:GetScript("OnUpdate") then F.panel:Fire("OnUpdate",.01) end end
  end
  F.Render=render
  T.eq(renders,0,"wheel input at the upper boundary does not render motion with no displacement")
- T.eq(F.scroll:GetVerticalScroll(),0);T.eq(F.frame:GetScript("OnUpdate"),nil)
+ T.eq(F.scroll:GetVerticalScroll(),0);T.eq(F.panel:GetScript("OnUpdate"),nil)
 end
 F:SetOffset(11,true);T.ok(F.scrollTween);local scrollState=F.scrollTween;F:Tick(.03);T.ok(F.scroll:GetVerticalScroll()>0 and F.scroll:GetVerticalScroll()<11,"a real scroll retains its intermediate position");F:SetOffset(22,true);T.eq(F.scrollTween,scrollState,"a new scroll target reuses the finite tween state");F:Tick(.2);T.eq(F.scroll:GetVerticalScroll(),22);T.eq(F.scrollTween,nil,"completed scrolling removes its tween");F:SetOffset(0,true);F:Tick(.2);T.eq(F.scroll:GetVerticalScroll(),0)
 F:Fade(false);T.ok(F.fade);T.eq(F.fade,fadeState,"fade direction changes reuse the finite fade state");F:Tick(.2);T.eq(F.panel:IsShown(),false);T.ok(F.attention and F.attentionTimer,"closing only the popup preserves the pending-applicant reminder")
-T.eq(F.frame:GetScript("OnUpdate"),nil,"collapsed attention does not keep the panel driver running")
+T.eq(F.panel:GetScript("OnUpdate"),nil,"collapsed attention does not keep the panel driver running")
 T.eq(next(firstEntry),nil,"closing clears every business field from retained entry shells")
 T.eq(next(batchEntry),nil,"closing clears retained batch metadata")
 T.eq(#workingTops,0);T.ok(#workingEntries<=#F.rows,"closed entry shells are bounded by the visible row pool")
@@ -468,9 +524,9 @@ do
  F.ApplyCardMotion,row.ClearAllPoints=apply,clear
 end
 A:SetSetting("reduceMotion",true)
-T.eq(F.panel:IsShown(),false);T.eq(F.frame:GetScript("OnUpdate"),nil,"reduced motion finishes the entrance and last batch exit immediately");T.eq(F.entries,nil)
+T.eq(F.panel:IsShown(),true);T.eq(F.panel:GetScript("OnUpdate"),nil,"reduced motion finishes the last batch exit immediately");T.eq(#F.entries,0)
 applicant.acting=nil;callback("applicants");F:ShowPanel();T.eq(#F.entries,2)
-F.rows[2].decline:Fire("OnClick");T.eq(F.entries,nil,"reduced motion closes the last accepted batch without a display task");T.eq(F.frame:GetScript("OnUpdate"),nil)
+F.rows[2].decline:Fire("OnClick");T.eq(#F.entries,0,"reduced motion removes the last accepted batch without a display task");T.eq(F.panel:GetScript("OnUpdate"),nil)
 applicant.acting=nil;callback("applicants");F:ShowPanel()
 F:SetOffset(22,true);T.eq(F.scrollTween,nil);T.eq(F.scroll:GetVerticalScroll(),22)
 local highWater=#stub.nodes
@@ -507,13 +563,16 @@ do
  local reads=0
  F.entryTops=setmetatable({},{__index=function(_,index) reads=reads+1;return tops[index] end})
  F:Render()
- T.ok(reads<30,"a stable scroll frame locates visible entries without scanning the complete applicant list")
+ local visible=F.visibleLast-F.visibleFirst+1
+ local searchBound=math.ceil(math.log(#F.entries)/math.log(2))+visible+3
+ T.ok(reads<=searchBound,"visible-range lookup remains bounded by binary search plus the visible rows: "..reads.."/"..searchBound)
+ T.ok(reads<#F.entries,"a stable scroll frame does not scan the complete applicant list")
  F.entryTops=tops;F:Dismiss()
  applicant.members=originalMembers;callback("applicants");T.eq(F.frame:GetWidth(),115)
 end
 A:SetSetting("reduceMotion",false)
 T.ok(F.attention and F.brandMotion:IsPlaying(),"restoring motion starts the actual product Brand job")
-T.eq(F.frame:GetScript("OnUpdate"),nil,"the collapsed reminder does not install the panel driver")
+T.eq(F.panel:GetScript("OnUpdate"),nil,"the collapsed reminder does not install the panel driver")
 local countPoint={F.count:GetPoint()};local framePoint={F.frame:GetPoint()};local beforeAttentionNodes=#stub.nodes
 F.context.Motion:Tick(.168)
 T.near(F.logoTexture:GetWidth(),38*1.075,.001,"the first original Bezier segment stretches the logo horizontally")
@@ -527,14 +586,14 @@ local getApplicants=G.GetApplicants;local queries=0;G.GetApplicants=function(sel
 F.context.Motion:Tick(1.22)
 T.eq(F.logoTexture:GetWidth(),38);T.eq(F.logoTexture:GetHeight(),38)
 T.eq(F.context.Motion.driver:GetScript("OnUpdate"),nil,"the shared driver is idle between the 1.386s animation and the next reminder")
-T.eq(F.frame:GetScript("OnUpdate"),nil);T.eq(base.PendingTimers(),1,"only one cancellable replay timer owns the quiet interval")
+T.eq(F.panel:GetScript("OnUpdate"),nil);T.eq(base.PendingTimers(),1,"only one cancellable replay timer owns the quiet interval")
 F:ShowPanel()
 do
  local clock=GetTimePreciseSec;local reads=0
  _G.GetTimePreciseSec=function() reads=reads+1;return clock() end
- for i=1,24 do stub.preciseNow=i*.01;F.frame:Fire("OnUpdate",.01) end
+ for i=1,24 do stub.preciseNow=i*.01;F.panel:Fire("OnUpdate",.01) end
  T.eq(reads,1,"floating reads the native clock only for the first frame of a busy interval")
- T.eq(F.frame:GetScript("OnUpdate"),nil,"floating stops its driver after its entrance finishes")
+ T.eq(F.panel:GetScript("OnUpdate"),nil,"floating stops its driver after its entrance finishes")
  _G.GetTimePreciseSec=clock;stub.preciseNow=0
 end
 F:Dismiss()
@@ -548,7 +607,7 @@ G.GetApplicants=getApplicants
 T.eq(#stub.nodes,beforeAttentionNodes,"the repeated reminder reuses its texture and existing driver")
 A:SetSetting("reduceMotion",true)
 T.eq(F.attention,false);T.eq(F.attentionTimer,nil);T.eq(F.logoTexture:GetWidth(),38);T.eq(select(2,Position(F.logoTexture)),0)
-T.eq(F.frame:GetScript("OnUpdate"),nil,"reduced motion stops and settles the collapsed reminder")
+T.eq(F.panel:GetScript("OnUpdate"),nil,"reduced motion stops and settles the collapsed reminder")
 A:SetSetting("reduceMotion",false);F.context.Motion:Tick(.1)
 local visibleAttention
 local stopAttention=API:Subscribe(function(status) visibleAttention=status.attention end)
@@ -558,12 +617,12 @@ T.eq(visibleAttention,false,"hiding the entry publishes the stopped attention st
 stopAttention()
 T.eq(F.attention,false);T.eq(F.attentionTimer,nil);T.eq(F.logoTexture:GetWidth(),38);T.eq(F.brandMotion:IsPlaying(),false,"hiding the entire entry cancels Brand and the replay timer")
 F.frame:Show();T.ok(F.attention,"showing the entry derives attention again from the pending snapshot")
-listing=nil;callback("listing");T.eq(F.attention,false);T.eq(F.attentionTimer,nil);T.eq(F.logoTexture:GetWidth(),38);T.eq(F.frame:GetScript("OnUpdate"),nil,"ending recruitment stops attention even if outbound applications remain")
+listing=nil;callback("listing");T.eq(F.attention,false);T.eq(F.attentionTimer,nil);T.eq(F.logoTexture:GetWidth(),38);T.eq(F.panel:GetScript("OnUpdate"),nil,"ending recruitment stops attention even if outbound applications remain")
 listing={name="My listing",activityID=1};callback("listing");T.ok(F.attention)
 applicant.pendingStatus="invited";callback("applicants");T.eq(F.attention,false,"only operable applied applicants trigger attention")
 applicant.pendingStatus=nil;callback("applicants");T.ok(F.attention)
 applicant.status="declined";callback("applicants");T.eq(F.attention,false);T.eq(F.attentionTimer,nil);T.eq(select(2,Position(F.logoTexture)),0,"clearing the final pending applicant restores the original logo anchor")
-A:SetSetting("floating",false);T.eq(F.frame:IsShown(),false);T.eq(F.entries,nil,"disabled floating releases its list");T.eq(F.frame:GetScript("OnUpdate"),nil)
+A:SetSetting("floating",false);T.eq(F.frame:IsShown(),false);T.eq(F.entries,nil,"disabled floating releases its list");T.eq(F.panel:GetScript("OnUpdate"),nil)
 T.eq(F.context.Motion:Count(),0);T.eq(F.context.Motion.driver:GetScript("OnUpdate"),nil,"hidden floating releases its button hover driver")
 T.eq(base.PendingTimers(),0,"idle floating has no periodic task")
 do
@@ -597,7 +656,7 @@ do
  now=12;F:ShowPanel();T.eq(F.countdown,nil,"opening an already elapsed application does not start a ticker")
  row.timer.SetText=setText
  local savedApps=apps;apps={{id=91,status="invited"}};callback("applications")
- T.eq(F.count:GetText(),"暂无申请","an active invitation is not an idle entry")
+T.eq(F.count:GetText(),"荔枝组队","an invitation is handled by native UI and leaves no waiting application")
  apps={};callback("applications")
  T.eq(F.count:GetText(),"荔枝组队","ending the last application shows the brand even when the waiting count stays zero")
  F:ShowPanel();T.eq(F.empty:GetText(),"暂无活动","the idle popup distinguishes no activity from an active empty waiting list")
@@ -678,6 +737,22 @@ do
  T.eq(released,2);T.eq(F.frame:IsShown(),false);T.eq(base.PendingTimers(),0)
  local previous=notifications;unsubscribe()
  A:SetSetting("floating",true);T.eq(notifications,previous,"unsubscribe stops later availability notifications")
+ local resubscribeCalls=0
+ local function Resubscribed() resubscribeCalls=resubscribeCalls+1 end
+ local baseline=F.backgroundStatusSubscribers or 0
+ local oldStop=API:Subscribe(Resubscribed,{background=true})
+ T.eq(F.backgroundStatusSubscribers,baseline+1)
+ oldStop();T.eq(F.backgroundStatusSubscribers,baseline)
+ local newStop=API:Subscribe(Resubscribed,{background=true})
+ oldStop();oldStop()
+ T.eq(F.backgroundStatusSubscribers,baseline+1,"a retired cancellation cannot remove a later background subscription")
+ local beforeResubscribe=resubscribeCalls
+ A:SetSetting("floatingCompatibility",false)
+ T.eq(resubscribeCalls,beforeResubscribe+1,"the new subscription still receives status changes")
+ local newestStop=API:Subscribe(Resubscribed,{background=true})
+ newStop();T.eq(F.backgroundStatusSubscribers,baseline+1,"re-registering the same callback replaces its cancellation handle")
+ newestStop();newestStop();T.eq(F.backgroundStatusSubscribers,baseline,"repeated cancellation removes exactly one background demand")
+ A:SetSetting("floatingCompatibility",true)
  -- Public callbacks may re-enter Attach or fail. Keep external failures at
  -- the API boundary so the remaining notifications and cleanup still run.
  local errors={};local oldErrorHandler=geterrorhandler
@@ -711,11 +786,81 @@ do
  T.eq(reason,"occupied");T.eq(F.host,host2)
  T.eq(API:Detach(ownerB),true)
 
+ -- A release callback can also remount its own owner. The outer host change
+ -- must not overwrite the newer mount or replace its cleanup callback.
+ local host3=CreateFrame("Button",nil,UIParent);host3:SetSize(120,24)
+ local label2=host2:CreateFontString(nil,"OVERLAY")
+ local nestedReleased,outerReleased,initialReleased=0,0,0
+ local function NestedRelease() nestedReleased=nestedReleased+1 end
+ local function OuterRelease() outerReleased=outerReleased+1 end
+ local function RemountSameOwner(target)
+  return function()
+   initialReleased=initialReleased+1
+   T.eq(API:Attach(owner,target,28,label,NestedRelease),true)
+  end
+ end
+ T.eq(API:Attach(owner,host,24,label,RemountSameOwner(host3)),true)
+ ok,reason=API:Attach(owner,host2,24,label,OuterRelease)
+ T.eq(ok,false,"a newer mount by the same owner keeps its host")
+ T.eq(reason,"occupied");T.eq(F.host,host3)
+ T.eq(initialReleased,1);T.eq(nestedReleased,0);T.eq(outerReleased,0)
+ T.eq(API:Refresh(owner,30),true);T.eq(F.host,host3)
+ T.eq(API:Detach(owner),true);T.eq(nestedReleased,1)
+ T.eq(API:Detach(owner),false);T.eq(nestedReleased,1,"the nested release runs exactly once")
+ T.eq(outerReleased,0,"a rejected outer mount never owns a release callback")
+
+ T.eq(API:Attach(owner,host,24,label,RemountSameOwner(host2)),true)
+ ok,reason=API:Attach(owner,host2,24,label,OuterRelease)
+ T.eq(ok,true,"a release callback that already mounted the requested target satisfies Attach")
+ T.eq(reason,nil);T.eq(F.host,host2)
+ T.eq(F.logoAnchor:GetWidth(),24,"an already satisfied attach still applies the requested logo size")
+ T.eq(API:Detach(owner),true);T.eq(nestedReleased,2)
+ T.eq(outerReleased,0,"an already satisfied outer attach retains the nested release callback")
+
+ T.eq(API:Attach(owner,host,24,label,function()
+  API:Attach(owner,host2,28,label2,NestedRelease)
+ end),true)
+ ok,reason=API:Attach(owner,host2,24,label,OuterRelease)
+ T.eq(ok,false,"a newer label on the requested host remains a different mount")
+ T.eq(reason,"occupied");T.eq(F.host,host2);T.eq(F.count,label2)
+ T.eq(API:Detach(owner),true);T.eq(nestedReleased,3)
+
+ T.eq(API:Attach(owner,host,24,label,function()
+  T.eq(API:Attach(owner,host3,28,label,NestedRelease),true)
+  T.eq(API:Detach(owner),true)
+ end),true)
+ T.eq(API:Attach(owner,host2,24,label,OuterRelease),true,"a nested mount that was released leaves the slot available")
+ T.eq(F.host,host2);T.eq(nestedReleased,4)
+ T.eq(API:Detach(owner),true);T.eq(outerReleased,1)
+
+ local normalReleased=0
+ local function NormalRelease() normalReleased=normalReleased+1 end
+ T.eq(API:Attach(owner,host,24,label,NormalRelease),true)
+ T.eq(API:Attach(owner,host,28,label,NormalRelease),true,"same-target Attach remains idempotent")
+ T.eq(normalReleased,0);T.eq(F.host,host)
+ T.eq(API:Attach(owner,host2,24,label,NormalRelease),true,"a normal host change still succeeds")
+ T.eq(normalReleased,1);T.eq(F.host,host2)
+ T.eq(API:Attach(owner,host2,24,label2,NormalRelease),true,"a normal label change still succeeds")
+ T.eq(normalReleased,2);T.eq(F.count,label2)
+ T.eq(API:Detach(owner),true);T.eq(normalReleased,3)
+
  releaseMode="disable"
  T.eq(API:Attach(owner,host,24,label,ReentrantRelease),true)
  ok,reason=API:Attach(owner,host2,24,label,function() end)
  T.eq(ok,false,"a release callback that disables compatibility blocks the outer attach")
  T.eq(reason,"unavailable");T.eq(F.host,nil)
+ A:SetSetting("floatingCompatibility",true)
+
+ local disabledReleased,disabledAttached,disabledReason=0
+ T.eq(API:Attach(owner,host,24,label,function()
+  disabledReleased=disabledReleased+1
+  disabledAttached,disabledReason=API:Attach(owner,host3,24,label,NestedRelease)
+ end),true)
+ A:SetSetting("floatingCompatibility",false)
+ T.eq(disabledReleased,1);T.eq(F.host,nil)
+ T.eq(disabledAttached,false,"a release callback cannot remount while compatibility is disabled")
+ T.eq(disabledReason,"unavailable")
+ T.eq(API:Detach(owner),false,"the failed disabled remount leaves no owner")
  A:SetSetting("floatingCompatibility",true)
 
  releaseMode="error"
@@ -880,7 +1025,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  _G.LycheeUI=nil;_G.LycheeGroup=nil;_G.LycheeGroupDB=nil
  local private={}
  for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Styles.lua","Components.lua","Layouts.lua","Elements.lua","Native.lua","Menu.lua"}) do assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/"..file))("LycheeGroup",private) end
- for _,file in ipairs({"Locale.lua","Theme/Defaults.lua","Theme/Elements.lua","Core.lua","Configuration.lua","Appearance.lua","Theme/Import.lua","Specializations.lua","Fonts.lua","BrandMotion.lua","Floating.lua","API.lua","Presentation.lua"}) do dofile("addon/LycheeGroup/"..file) end
+ for _,file in ipairs({"Locale.lua","Theme/Defaults.lua","Theme/Elements.lua","Core.lua","Configuration.lua","Appearance.lua","Theme/Import.lua","Specializations.lua","Fonts.lua","BrandMotion.lua","ActivityLabels.lua","Floating.lua","API.lua","Presentation.lua"}) do dofile("addon/LycheeGroup/"..file) end
  local addon=LycheeGroup;addon:LoadDB();addon:SetSetting("reduceMotion",true)
  local applications,activeListing,notify={},nil,nil
  local group={Applications={GetActiveCount=function() return #applications end,IsActive=function() return true end},
@@ -896,7 +1041,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  local floating,api=addon.Floating,addon.API.Floating
  floating:Bind(group);floating:UpdateSettings()
  local idleText=locale=="zhCN" and "暂无活动" or "No activity"
- local waitingText=locale=="zhCN" and "暂无申请" or "No applications"
+ local waitingText=locale=="zhCN" and "等待玩家申请" or "Waiting for applicants"
  local brand=locale=="zhCN" and "荔枝组队" or "Lychee LFG"
  local card=floating.emptyCard
  for _,integrated in ipairs({false,true}) do
@@ -912,40 +1057,42 @@ for _,locale in ipairs({"zhCN","enUS"}) do
   local function Empty(message,height)
    Open()
    T.eq(floating.empty:GetText(),message);T.eq(floating.emptyCard,card,"all empty states reuse one card")
-   T.ok(card:IsShown());T.ok(card:GetWidth()<324,"short localized empty content remains compact")
+   T.ok(card:IsShown())
+   if floating.heading:IsShown() then T.eq(card:GetWidth(),348,"an empty listing keeps its full-width heading and waiting state")else T.ok(card:GetWidth()<348,"short idle content remains compact")end
    T.ok(card:GetWidth()-floating.empty:GetUnboundedStringWidth()>=32,"the complete empty label retains its horizontal padding")
-   T.eq(floating.panel:GetWidth(),card:GetWidth()+24);T.eq(floating.scroll:GetWidth(),card:GetWidth())
+   T.eq(floating.panel:GetWidth(),card:GetWidth()+12);T.eq(floating.scroll:GetWidth(),card:GetWidth())
    T.eq(floating.panel:GetHeight(),height);T.eq(floating.scroll:GetHeight(),44)
-   T.eq(floating.body:GetWidth(),324,"empty viewport resizing leaves the content canvas width stable")
+   T.eq(floating.body:GetWidth(),348,"empty viewport resizing leaves the content canvas width stable")
    T.eq(select(2,floating.panel:GetPoint()),floating:GetAnchor())
    T.near(floating.panel:GetEffectiveScale(),addon.db.floatingScale/100,.001)
   end
   applications={};activeListing=nil;notify("applications")
-  Empty(idleText,60);T.eq(floating.count:GetText(),brand,"the folded idle entry retains the product name")
+  Empty(idleText,58);T.eq(floating.count:GetText(),brand,"the folded idle entry retains the product name")
   applications={{id=1,status="invited"}};notify("applications")
-  Empty(waitingText,60)
+  Empty(idleText,58);T.eq(floating.count:GetText(),brand,"native invitations do not keep a pending application status")
   activeListing={activityID=1};notify("listing")
-  Empty(waitingText,84);T.ok(floating.cancel:IsShown(),"an empty listing retains its end-listing action")
+  Empty(waitingText,88);T.ok(floating.cancel:IsShown(),"an empty listing retains its end-listing action")
   T.ok(floating.panel:GetWidth()>=floating.cancel:GetWidth()+48,"a compact recruitment header still fits its complete action")
   activeListing=nil;applications={{id=1,status="applied",name="Group",activityName="Dungeon",leaderName="Leader-Away"}};notify("listing")
-  T.eq(floating.panel:GetWidth(),348);T.eq(floating.scroll:GetWidth(),324)
-  T.eq(floating.emptyCard:IsShown(),false);T.eq(floating.rows[1]:GetWidth(),324,"real application rows recover their original full width")
+  T.eq(floating.panel:GetWidth(),360);T.eq(floating.scroll:GetWidth(),348)
+  T.eq(floating.emptyCard:IsShown(),false);T.eq(floating.rows[1]:GetWidth(),348,"real application rows recover their full width")
   applications={};notify("applications")
-  T.eq(floating.panel:IsShown(),false,"the last waiting application still closes the popup")
-  Empty(idleText,60)
+  T.eq(floating.panel:IsShown(),true,"the last waiting application leaves an expanded idle popup")
+  T.eq(floating.countdown,nil);T.eq(floating.panel.events.GLOBAL_MOUSE_DOWN,true,"the idle popup remains closable until it actually hides")
+  Empty(idleText,58)
   local measure=floating.empty.GetUnboundedStringWidth
   floating.empty.GetUnboundedStringWidth=function() return 323.7 end
   floating:LayoutPanel()
   T.ok(card:GetWidth()>=323.7+32,"wider font metrics can expand an empty card without clipping")
-  T.eq(floating.rows[1]:GetWidth(),324,"a widened empty viewport never resizes the fixed row pool")
-  T.eq(floating.body:GetWidth(),324)
+  T.eq(floating.rows[1]:GetWidth(),348,"a widened empty viewport never resizes the fixed row pool")
+  T.eq(floating.body:GetWidth(),348)
   floating.empty.GetUnboundedStringWidth=measure;floating:LayoutPanel()
-  T.ok(card:GetWidth()<324,"restoring short text metrics returns to the compact width")
+  T.ok(card:GetWidth()<348,"restoring short text metrics returns to the compact width")
   if integrated then
    host.GetTop=function() return 1200 end;host.GetLeft=function() return 1700 end
    host:SetSize(110,24);host:SetScale(.9);api:Refresh(owner)
    T.eq(floating.panel:GetPoint(),"TOPRIGHT","a resized host retains the popup's screen-edge anchoring")
-   T.eq(card:GetWidth(),floating.scroll:GetWidth());T.eq(floating.rows[1]:GetWidth(),324)
+   T.eq(card:GetWidth(),floating.scroll:GetWidth());T.eq(floating.rows[1]:GetWidth(),348)
    T.near(floating.panel:GetEffectiveScale(),addon.db.floatingScale/100,.001)
    api:Detach(owner)
   else floating:Dismiss() end
@@ -953,4 +1100,175 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  addon:SetSetting("floating",false)
  T.eq(clock.PendingTimers(),0)
 end
+-- Fixed startup rules preserve Glyph Frame geometry and texture-backed color.
+do
+ local color={.17,.38,.61,1}
+ local theme={schema=1,id="floating.native-texture",revision=1,appearance={floating={elements={
+  ["floating.application"]={base={["cancel/elementIcon"]={color=color,width=19,height=15,points={{"CENTER","$parent","CENTER",3,-2}}}}},
+ }}}}
+ local f=dofile("tests/ui_fixture.lua")("enUS",nil,{reduceMotion=true},theme)
+ local a,g=f.A,f.G
+ g.apps={{id=18,status="applied",name="Group",activityName="Dungeon",leaderName="Leader-Away"}}
+ dofile("addon/LycheeGroup/Floating.lua");dofile("addon/LycheeGroup/API.lua")
+ local floating=a.Floating;floating:Bind(g)
+ local ok,err=WithNativeFrameColors(function() floating:UpdateSettings();floating:ShowPanel() end)
+ T.ok(ok,"startup cancel texture rules use native Texture color methods: "..tostring(err))
+ local glyph=floating.rows[1].cancel.elementIcon
+ T.eq(glyph:GetObjectType(),"Frame","the public icon slot retains the glyph geometry frame")
+ T.eq(glyph.GetTextColor,nil);T.eq(glyph.GetVertexColor,nil,"the glyph has no native color getter")
+ T.eq(glyph:GetWidth(),19);T.eq(glyph:GetHeight(),15)
+ local point,relative,relativePoint,x,y=glyph:GetPoint()
+ T.eq(point,"CENTER");T.eq(relative,glyph:GetParent(),"$parent still means the cancel button");T.eq(relativePoint,"CENTER");T.eq(x,3);T.eq(y,-2)
+ local texture=glyph.texture
+ for _,event in ipairs({"OnLeave","OnEnter","OnLeave"}) do
+  floating.rows[1].cancel:Fire(event)
+  local actual={texture:GetVertexColor()};for i=1,4 do T.near(actual[i],color[i],.000001,"startup element color retains ownership during hover") end
+ end
+ floating:Dismiss();a:SetSetting("floating",false)
+end
+-- Token overrides must survive the legacy Surface recipe and both hover paths.
+do
+ local colors={floatingPanelSurface={.13,.21,.31,.47},floatingCardSurface={.32,.24,.16,.29},floatingCardHover={.41,.35,.27,.39}}
+ local theme={schema=1,id="floating.surface.tokens",revision=1,appearance={floating={tokens=colors}}}
+ local f=dofile("tests/ui_fixture.lua")("enUS",nil,{reduceMotion=true},theme)
+ local a,g=f.A,f.G
+ RAID_CLASS_COLORS={WARRIOR={r=.8,g=.6,b=.4},MAGE={r=.2,g=.6,b=.9}}
+ g.apps={{id=1,status="applied",activityName="Dungeon",name="Group",leaderName="Leader-Away"}}
+ dofile("addon/LycheeGroup/Floating.lua");dofile("addon/LycheeGroup/API.lua")
+ local floating=a.Floating;floating:Bind(g);floating:UpdateSettings();floating:ShowPanel()
+ T.same(floating.panel.background.fill.color,colors.floatingPanelSurface,"the outer panel paints a configured floating token")
+ T.same(floating.rows[1].background.fill.color,colors.floatingCardSurface)
+ floating.rows[1]:Fire("OnEnter");T.same(floating.rows[1].background.fill.color,colors.floatingCardHover)
+ floating.rows[1]:Fire("OnLeave");T.same(floating.rows[1].background.fill.color,colors.floatingCardSurface)
+ g.listing={activityID=2,name="My listing"}
+ g.applicants={[7]={id=7,status="applied",members={
+  {name="Alpha-Away",nameKey="Alpha-Away",class="WARRIOR",raceName="Human",specName="Arms",dungeonScore=3001,itemLevel=641},
+  {name="Beta-Away",nameKey="Beta-Away",class="MAGE",raceName="Gnome",specName="Fire",dungeonScore=2802,itemLevel=632},
+ }}}
+ g:Notify("listing");g:Notify("applicants")
+ T.eq(floating.panel:GetWidth(),360);T.eq(floating.body:GetWidth(),348)
+ T.eq(floating.heading:GetText(),"Dungeon · Difficulty 8","the listing heading includes its native activity and difficulty")
+ local first,second=floating.rows[1],floating.rows[2]
+ T.eq(first.name:GetText(),"Alpha-Away");T.eq(first.score:GetText(),"3001");T.eq(first.itemLevel:GetText(),"ilvl 641")
+ T.eq(second.name:GetText(),"Beta-Away");T.eq(second.score:GetText(),"2802");T.eq(second.itemLevel:GetText(),"ilvl 632")
+ T.eq(first.meta:GetText(),"Human · Arms");T.eq(second.meta:GetText(),"Gnome · Fire")
+ T.eq(first.batch,second.batch)
+ T.same(first.batch.background.fill.color,colors.floatingCardSurface)
+ first:Fire("OnEnter");T.same(first.batch.background.fill.color,colors.floatingCardHover)
+ first:Fire("OnLeave");T.same(first.batch.background.fill.color,colors.floatingCardSurface)
+ T.same(floating.panel.background.fill.color,colors.floatingPanelSurface,"member hover does not recolor the outer panel")
+ local function MetricColumns(row)
+  local width=row:GetWidth();local gap=floating.context.Theme.floatingMemberMetricGap
+  local scoreLeft=width+Position(row.score)-row.score:GetWidth()
+  local itemLeft=width+Position(row.itemLevel)-row.itemLevel:GetWidth()
+  T.ok(row.name:GetWidth()>0 and Position(row.name)+row.name:GetWidth()+gap<=scoreLeft+.001,"the full identity width leaves room before its score")
+  T.ok(scoreLeft+row.score:GetWidth()+gap<=itemLeft+.001,"score and item level retain separate columns")
+  T.eq(select(2,Position(row.name)),select(2,Position(row.score)))
+  T.eq(select(2,Position(row.name)),select(2,Position(row.itemLevel)),"name and both metrics share their heading baseline")
+ end
+ for _,percent in ipairs({70,100,130})do
+  a:SetSetting("fontScale",percent)
+  for _,row in ipairs({floating.rows[1],floating.rows[2]})do
+   T.ok(row.score:GetUnboundedStringWidth()<=row.score:GetWidth()+.001,"member score remains complete at "..percent.." percent")
+   T.ok(row.itemLevel:GetUnboundedStringWidth()<=row.itemLevel:GetWidth()+.001,("member item level remains on its heading line at %d percent (%.2f/%.2f)"):format(percent,row.itemLevel:GetUnboundedStringWidth(),row.itemLevel:GetWidth()))
+   MetricColumns(row)
+  end
+ end
+ for _,case in ipairs({{score=0,text="Unrated"},{text="Unknown"}})do
+  g.applicants[7].members[1].dungeonScore=case.score;g:Notify("applicants")
+  local row=floating.rows[1]
+  T.eq(row.score:GetText(),case.text,"zero and missing scores retain their distinct labels")
+  T.ok(row.score:GetUnboundedStringWidth()<=row.score:GetWidth()+.001,"the complete "..case.text.." score label fits its metric column")
+  MetricColumns(row)
+ end
+ floating:Dismiss();a:SetSetting("floating",false)
+end
+-- Clearing a pooled floating action keeps its earlier press cancelled on reuse.
+do
+ local function Session(recruiting)
+  local f=dofile("tests/ui_fixture.lua")("enUS",nil,{reduceMotion=true})
+  local a,g=f.A,f.G
+  local function Applicant(id) return {id=id,status="applied",displayOrderID=id,members={{name="Member"..id.."-Away",nameKey="Member"..id.."-Away",class="MAGE",assignedRole="DAMAGER",itemLevel=320,dungeonScore=2500}}} end
+  local function Application(id) return {id=id,status="applied",name="Group "..id,activityName="Dungeon",activityID=2,leaderName="Leader-Away"} end
+  if recruiting then g.listing={activityID=2,name="Current listing"};g.applicants={[1]=Applicant(1),[2]=Applicant(2)}
+  else g.apps={Application(1),Application(2)} end
+  dofile("addon/LycheeGroup/Floating.lua");dofile("addon/LycheeGroup/API.lua")
+  local floating=a.Floating;floating:Bind(g);floating:UpdateSettings();floating:ShowPanel()
+  return f,floating,Applicant,Application
+ end
+ local function Row(floating,id,kind)
+  for _,row in ipairs(floating.rows) do if row:IsShown() and row.kind==kind and (row.applicantID or row.applicationID)==id then return row end end
+  error("missing floating row "..id.."/"..kind)
+ end
+ for _,method in ipairs({"invite","decline"}) do
+  local f,floating,Applicant=Session(true);local g=f.G
+  local footer=Row(floating,2,"footer");local button=footer[method]
+  button:Fire("OnMouseDown","LeftButton")
+  g.applicants[2]=nil;g:Notify("applicants")
+  g.applicants[3]=Applicant(3);g:Notify("applicants")
+  T.eq(footer.applicantID,3,"the cleared native footer is reused for the next applicant")
+  button:Fire("OnMouseUp","LeftButton");button:Fire("OnClick","LeftButton")
+  T.eq(g.invitedApplicant,nil);T.eq(g.declinedApplicant,nil,"release after reuse cannot decide the new applicant")
+  button:Fire("OnClick","LeftButton")
+  T.eq(method=="invite" and g.invitedApplicant or g.declinedApplicant,3,"direct activation still decides the current applicant")
+  T.eq(footer.exit,nil,"reduced motion completes the synchronous decision exit")
+  floating:Dismiss();f.A:SetSetting("floating",false)
+ end
+ for _,action in ipairs({"cancel","row"}) do
+  local f,floating,_,Application=Session(false);local g=f.G
+  local row=Row(floating,2,"application");local button=action=="row" and row or row.cancel
+  local opened;f.A.Open=function(_,page,context) opened={page,context} end
+  button:Fire("OnMouseDown","LeftButton")
+  table.remove(g.apps,2);g:Notify("applications")
+  g.apps[2]=Application(3);g:Notify("applications")
+  T.eq(row.applicationID,3)
+  button:Fire("OnMouseUp","LeftButton");button:Fire("OnClick","LeftButton")
+  T.eq(g.cancelled,nil);T.eq(opened,nil,"release after reuse cannot open the new application")
+  button:Fire("OnMouseDown","LeftButton");button:Fire("OnMouseUp","LeftButton");button:Fire("OnClick","LeftButton")
+  if action=="cancel" then T.eq(g.cancelled,3,"a new press cancels the current application")
+  else T.eq(opened[1],"find");T.eq(opened[2].applicationID,3,"a new press opens the current application") end
+  floating:Dismiss();f.A:SetSetting("floating",false)
+ end
+ for _,kind in ipairs({"member","batch"}) do
+  local f,floating,Applicant=Session(true);local g=f.G
+  local row=Row(floating,2,"member");local button=kind=="batch" and row.batch or row
+  local opened;f.A.Open=function(_,page,context) opened={page,context} end
+  button:Fire("OnMouseDown","LeftButton")
+  g.applicants[2]=nil;g:Notify("applicants")
+  g.applicants[3]=Applicant(3);g:Notify("applicants")
+  T.eq(button.applicantID,3)
+  button:Fire("OnMouseUp","LeftButton");button:Fire("OnClick","LeftButton")
+  T.eq(opened,nil,"release after reuse cannot open the new applicant through "..kind)
+  button:Fire("OnClick","LeftButton");T.eq(opened[1],"create");T.eq(opened[2].applicantID,3)
+  floating:Dismiss();f.A:SetSetting("floating",false)
+ end
+ for _,action in ipairs({"invite","decline","cancel","row","member","batch","header"}) do
+  local recruiting=action=="invite" or action=="decline" or action=="member" or action=="batch"
+  local f,floating=Session(recruiting);local g=f.G
+  local row=Row(floating,2,recruiting and (action=="member" or action=="batch") and "member" or recruiting and "footer" or "application")
+  local button=action=="header" and floating.cancel or action=="batch" and row.batch or (action=="row" or action=="member") and row or row[action]
+  local opened;f.A.Open=function(_,page,context) opened={page,context} end
+  button:Fire("OnMouseDown","LeftButton");floating:Dismiss();floating:ShowPanel()
+  button:Fire("OnMouseUp","LeftButton");button:Fire("OnClick","LeftButton")
+  T.eq(g.invitedApplicant,nil);T.eq(g.declinedApplicant,nil);T.eq(g.cancelled,nil);T.eq(opened,nil,"hiding cancels the old "..action.." press even when the same target returns")
+  button:Fire("OnMouseDown","LeftButton");g:Notify(recruiting and "applicants" or "applications")
+  button:Fire("OnMouseUp","LeftButton");button:Fire("OnClick","LeftButton")
+  if action=="invite" then T.eq(g.invitedApplicant,2)
+  elseif action=="decline" then T.eq(g.declinedApplicant,2)
+  elseif action=="cancel" or action=="header" then T.eq(g.cancelled,2)
+  elseif recruiting then T.eq(opened[1],"create");T.eq(opened[2].applicantID,2)
+  else T.eq(opened[1],"find");T.eq(opened[2].applicationID,2) end
+  floating:Dismiss();f.A:SetSetting("floating",false)
+ end
+ do
+  local f,floating=Session(false);local g=f.G
+  floating.cancel:Fire("OnMouseDown","LeftButton")
+  g.listing={activityID=2,name="New recruitment"};g:Notify("listing")
+  floating.cancel:Fire("OnMouseUp","LeftButton");floating.cancel:Fire("OnClick","LeftButton")
+  T.ok(g.listing,"a Cancel all press cannot become an End listing action after a mode change")
+  floating.cancel:Fire("OnClick","LeftButton");T.eq(g.listing,nil,"direct activation still ends the current listing")
+  floating:Dismiss();f.A:SetSetting("floating",false)
+ end
+end
+
 _G.LycheeGroup=nil;_G.LycheeGroupDB=nil

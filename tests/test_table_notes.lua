@@ -41,13 +41,13 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  Check(X(notes.list.rows[1].reason)+notes.list.rows[1].reason:GetWidth()<=notes.noteHeader.columns.timestamp.x,"note reason stays clear of the date column")
  notes:SelectTab("history")
  Check(notes.countText==nil and notes.tabs.all.count:GetText()~="","the page total is removed while sidebar category counts remain")
- Order(notes.historyList,{1,3,2,4},"history default completed time")
- Click(notes.historyHeader,"level");Order(notes.historyList,{2,3,1,4},"history level ascending")
- Click(notes.historyHeader,"level");Order(notes.historyList,{1,2,3,4},"history level descending")
- Click(notes.historyHeader,"duration");Order(notes.historyList,{2,3,1,4},"history duration ascending")
- Click(notes.historyHeader,"duration");Order(notes.historyList,{1,2,3,4},"history duration descending")
- Click(notes.historyHeader,"completed");Order(notes.historyList,{2,3,1,4},"history completed ascending")
- Click(notes.historyHeader,"completed");Order(notes.historyList,{1,3,2,4},"history completed descending")
+ Order(notes.historyList,{runs[1],runs[3],runs[2],runs[4]},"history default completed time")
+ Click(notes.historyHeader,"level");Order(notes.historyList,{runs[2],runs[3],runs[1],runs[4]},"history level ascending")
+ Click(notes.historyHeader,"level");Order(notes.historyList,{runs[1],runs[2],runs[3],runs[4]},"history level descending")
+ Click(notes.historyHeader,"duration");Order(notes.historyList,{runs[2],runs[3],runs[1],runs[4]},"history duration ascending")
+ Click(notes.historyHeader,"duration");Order(notes.historyList,{runs[1],runs[2],runs[3],runs[4]},"history duration descending")
+ Click(notes.historyHeader,"completed");Order(notes.historyList,{runs[2],runs[3],runs[1],runs[4]},"history completed ascending")
+ Click(notes.historyHeader,"completed");Order(notes.historyList,{runs[1],runs[3],runs[2],runs[4]},"history completed descending")
  for i,run in ipairs(runs) do Check(run.id==i,"sorting never mutates the history source array") end
  Check(notes.historyList.rows[1].level:GetText()=="+12","history has a distinct numeric level cell")
  Check(notes.historyList.rows[1].duration:GetText()=="1:00","history has a distinct duration cell")
@@ -95,7 +95,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
   local columns=notes.historyHeader.columns
   Check(columns.teammates.width>=147-.001,"five teammate icons retain their required column width")
   Check(columns.completed.x+columns.completed.width<=notes.historyList.rows[1]:GetWidth()-32+.001,"history columns leave the detail affordance clear")
-  notes:OpenRun(1);modal=notes.historyModal
+  notes:OpenRun(notes.historyList.ids[1]);modal=notes.historyModal
   Check(X(modal.list.rows[1].action)>=modal.header.columns.actions.x,"member actions remain in their column after font changes")
   modal:Close()
  end

@@ -6,7 +6,7 @@ local empty={}
 local function Profile(kind,rosterMode,showRating,dungeons,requirement)
  return {kind=kind,rosterMode=rosterMode,groupMetric=kind=="raid" and "progress" or "rating",
   requirementRatingKind=requirement,
-  applicant={source="applicant",canOpenDetails=true,showRating=showRating,showDungeonRecords=dungeons,menu="applicant"}}
+  applicant={source="applicant",canOpenDetails=true,showRating=showRating,showDungeonRecords=dungeons}}
 end
 local raid=Profile("raid","groups",false,false)
 local dungeon=Profile("dungeon","list",true,false)
@@ -18,9 +18,8 @@ local largePvp=Profile("pvp","groups",true,false)
 local ratedPvp=Profile("pvp","list",true,false,"pvp")
 local largeRatedPvp=Profile("pvp","groups",true,false,"pvp")
 local sources={
- roster={source="roster",canOpenDetails=true,showRating=true,showDungeonRecords=false,menu="roster"},
+ roster={source="roster",canOpenDetails=true,showRating=true,showDungeonRecords=false},
  search={source="search",canOpenDetails=false,showRating=false,showDungeonRecords=false},
- note={source="note",canOpenDetails=true,showRating=true,showDungeonRecords=false},
 }
 local function Resolve(category,capacity,isMythic,isPvp,isRated)
  if category==3 then return raid end

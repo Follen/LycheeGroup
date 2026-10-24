@@ -38,9 +38,8 @@ function Native:AcquireSearch(owner,shell)
   scripts={
    OnTextChanged=function(input,userInput)
     lease.revision=lease.revision+1
-    -- Activity tokens belong to this browser's selected category. Other group
-    -- browsers may write their previous activity after an availability event.
-    if not userInput and input:GetText()~="" then C_LFGList.ClearSearchTextFields();return end
+    -- Native refreshes can report non-user changes for the text being edited.
+    -- The lease handles ownership loss; a text notification is not a handoff.
     owner:OnSearchTextChanged(input,userInput==true)
    end,
    OnEnterPressed=function(input) input:ClearFocus();owner:DoSearch() end,

@@ -157,7 +157,7 @@ function Members:Create(parent,onClick)
  UI:Element(button,"member.identity","members",button,"member.identity")
  return button
 end
-local function Bind(self,button,member,key,width,isLeader,interactive,inset,padding,title,search)
+local function Bind(self,button,member,key,width,isLeader,interactive,inset,padding,title,search,showItemLevel)
  C.RekeyElement(button,key or self:ID(member));button.member=member;button.targetKey=self:ID(member) or member.name;button:SetWidth(width)
  button:SetEnabled(interactive==true)
  UI:SetMemberIcon(button.icon,member);UI:SetRoleIcon(button.role,member.assignedRole)
@@ -165,7 +165,13 @@ local function Bind(self,button,member,key,width,isLeader,interactive,inset,padd
  button.leaderIcon:SetShown(isLeader==true)
  local r,g,b=UI:ClassColor(member.class)
  UI:SetText(button.name,title);button.name:SetTextColor(r,g,b)
- UI:SetText(button.realm,MemberMeta(member))
+ local meta=MemberMeta(member)
+ if showItemLevel then
+  local itemLevel=member.itemLevel
+  local known=not (issecretvalue and issecretvalue(itemLevel)) and type(itemLevel)=="number" and itemLevel>0 and itemLevel<math.huge
+  meta=meta.." · "..Say("装等 ","iLvl ")..(known and math.floor(itemLevel) or "—")
+ end
+ UI:SetText(button.realm,meta)
  self:ClearMarks(button.marks)
  button.marks.elementKey=key or self:ID(member);C.RekeyElement(button.marks,button.marks.elementKey)
  if search then
@@ -182,9 +188,9 @@ function Members:Bind(button,member,width,isLeader,interactive,inset,padding)
  local title=(name or member.name or L.unknown)..(realm and UI:Hex(T.muted).."-"..realm.."|r" or "")
  return Bind(self,button,member,key,width,isLeader,interactive,inset,padding,title)
 end
-function Members:BindRoster(button,member,width,isLeader,interactive,inset,padding)
+function Members:BindRoster(button,member,width,isLeader,interactive,inset,padding,showItemLevel)
  local key,name=self:Identity(member)
- return Bind(self,button,member,key,width,isLeader,interactive,inset,padding,name or member.name or L.unknown)
+ return Bind(self,button,member,key,width,isLeader,interactive,inset,padding,name or member.name or L.unknown,nil,showItemLevel)
 end
 function Members:BindSearch(button,member,width,isLeader,interactive,inset,padding)
  local key,name=self:Identity(member)

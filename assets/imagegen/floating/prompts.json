@@ -1,0 +1,17 @@
+{
+  "tool": "built-in image_gen",
+  "transparent_background": true,
+  "assets": [
+    {
+      "name": "floating-waiting",
+      "source": "exec-c268a6a6-f711-4578-8252-7cddea7c8c7d.png",
+      "prompt": "Edit only the stroke weight of this UI glyph. Preserve the exact recognizable shape, pure white color, centered composition and transparent background. Make every line about twice as thick with consistent weight and smooth rounded joins. It must remain crisp and legible when displayed at 28 pixels. Make the icon occupy 88% of the canvas. Flat solid graphic, completely empty transparent negative space, no texture, no shadows, no grain, no speckles, no text."
+    },
+    {
+      "name": "floating-dot",
+      "source": "exec-8d5e0e17-a198-4be3-a1d8-488c43f1089c.png",
+      "prompt": "Edit target: the attached circular icon. Fill the entire central hole with exactly the same opaque white as the outer white ring. Remove the gray inner shadow completely. The result must be one completely filled flat white disk, from center to edge, with alpha 255 throughout the disk. Only the area OUTSIDE the disk is transparent. This is a solid dot, not a ring or donut. No hole, no shadow, no gradient, no texture. Preserve the centered circle and smooth outside edge."
+    }
+  ],
+  "runtime": "1024×1024 RGBA TGA; preserve the source alpha while adapting to the game power-of-two texture size. The game renders the configured display dimensions using TRILINEAR filtering."
+}

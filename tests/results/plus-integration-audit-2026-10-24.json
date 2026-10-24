@@ -1,0 +1,736 @@
+{
+  "schema": 1,
+  "date": "2026-10-24",
+  "productVersion": "1.2.4",
+  "status": "implemented; scoped audit clear; offline and available native checks passed",
+  "baselineCommit": "2c08fe7acdfbed5c2abce3b993fb1fdf3dda0a03",
+  "branch": "codex/integrate-plus-features",
+  "scope": [
+    "Plus: matching class/role and Bloodlust filters, Raider.IO copy, seasonal key level and dungeon score",
+    "M+ display aliases without mutating source data; 53-unit rows, 112-unit minimum leader column, relationship and block title colors",
+    "Applicant time colors and explicit Player Notes context action",
+    "Current roster item levels; stable roster drag with pickup card, empty/join/swap target feedback, full-row group drop regions, quiet same-group cancellation and wider spacing",
+    "Favorite listing hint removal; applicant layout reentry repair; generic Glyph Frame color repair"
+  ],
+  "audit": {
+    "scope": "Changes from baselineCommit to this working tree: architecture boundaries, ownership, lifecycle, performance paths, dead code and affected documents",
+    "unresolvedSourceFindings": 0,
+    "resolvedFindings": [
+      {
+        "issue": "Malformed complete player identities fell back to the home realm",
+        "resolution": "Reject empty name/realm components and inconsistent identity resolution",
+        "validation": "Independent repeated review plus player_links regression"
+      },
+      {
+        "issue": "Relationship and note preferences did not refresh visible title colors",
+        "resolution": "Route preference changes to the active page note refresh",
+        "validation": "find_enhancements preference and note-change cases"
+      },
+      {
+        "issue": "Glyph color read called GetVertexColor on a native Frame",
+        "resolution": "Read the internal texture while keeping Frame geometry, slots and parent anchors",
+        "validation": "Strict Frame regression, independent library regression and r36 native Preview"
+      },
+      {
+        "issue": "Applicant removal and resize could publish incomplete batch geometry during reentry",
+        "resolution": "Build IDs and geometry locally, then publish them together",
+        "validation": "test_table_create removal and listing-change regressions"
+      },
+      {
+        "issue": "A missing member target identity could turn a swap into a background move",
+        "resolution": "Preserve member hit identity and reject unavailable GUID targets",
+        "validation": "raid_groups and roster_drag nil/empty/secret target regressions"
+      },
+      {
+        "issue": "Changing reduced motion or effective UI scale during a drag left active visual state",
+        "resolution": "Cancel the drag and rebuild the roster before stopping motion or applying changed scale",
+        "validation": "Real A:SetSetting fixture entry and independent review"
+      },
+      {
+        "issue": "Dragging expanded the original tooltip and moved source cards",
+        "resolution": "Keep the roster geometry stable and show empty subgroups in a separate panel",
+        "validation": "roster_drag geometry regression and final native sample"
+      },
+      {
+        "issue": "The visible blank area beneath a short subgroup was not a drop target",
+        "resolution": "Use the maximum group height for every subgroup in the same visual row",
+        "validation": "Failing 5/5/1 geometry hit-test reproduced first; fixed fixture and native sample passed"
+      },
+      {
+        "issue": "Same-subgroup drops showed a failure notice",
+        "resolution": "Cancel silently without a native move or swap call",
+        "validation": "roster_drag same-member, same-group and click suppression cases"
+      }
+    ],
+    "userRequestedPresentation": [
+      "Single raised gray rounded drag card with shared Shadow, no outline",
+      "12-unit subgroup title padding, 12-unit title/member and column gaps, 16-unit row gaps",
+      "Distinct empty-group, available-group and member-swap intent labels"
+    ],
+    "finalIndependentReview": "No remaining source finding in the assigned final service, Tooltip, probe and whole-diff reviews",
+    "sharedLibrary": {
+      "version": "1.3.0",
+      "revision": 36,
+      "frozenFiles": 30,
+      "sourceAndEmbeddedHashesMatch": true,
+      "lockSha256": "6f24be32e33ee5d8a2be02aed9e83bd5cff7c8aca2fc01d2dcb490375085aaa8",
+      "change": "Generic Glyph texture color read and revision only; no product business in LycheeUI"
+    },
+    "fixedBlizzardSource": "wow-ui-source retail 15881d522c44cd106d3d8660106ec9f9d2f44167"
+  },
+  "offline": {
+    "runner": {
+      "command": "lua tests/runner.lua",
+      "modules": 31,
+      "assertions": 19611,
+      "failedModules": 0,
+      "outputSha256": "a65edf5bd2fcdce695cd6977ba3ee3dda84c57cf6094d0f7b17e045474281155"
+    },
+    "layout": {
+      "command": "lua tests/run_layout_checks.lua",
+      "scripts": 16,
+      "failures": 0,
+      "productBoundaryChecks": 521,
+      "outputSha256": "110a438daad0b90f880e1c320b5d1cffc979acca959ee2081441433c7b4d14dc"
+    },
+    "architecture": {
+      "command": "node tests/check_architecture.cjs ../LycheeUI",
+      "checks": 4036,
+      "failures": 0,
+      "frozenFiles": 30
+    },
+    "syntax": {
+      "runtimeLuaFiles": 73,
+      "passed": true,
+      "nativeProbeFilesPassed": [
+        "tests/live_plus_features.lua",
+        "tests/live_plus_preview.lua",
+        "tests/live_raid_roster.lua",
+        "tests/live_roster_layout.lua",
+        "tests/live_theme_memory.lua"
+      ]
+    },
+    "sharedLibrary": {
+      "command": "lua tests/run.lua",
+      "directory": "../LycheeUI",
+      "assertions": 1245,
+      "passed": true
+    },
+    "memoryProbeLifecycle": {
+      "command": "lua tests/test_live_theme_memory.lua",
+      "checks": 123,
+      "passed": true
+    }
+  },
+  "native": {
+    "client": "retail 12.1.5.70575",
+    "locale": "zhCN",
+    "toolRelease": "3.2.5",
+    "transport": "Lycheedev mailbox protocol v1",
+    "method": "LycheeDev native controller calls, Button:Click, actual Frames and OnUpdate; no computer-use or hardware drag/click dispatch",
+    "featureData": {
+      "request": "plus-real-features-r35-20261024",
+      "phase": "r35 before the generic Glyph correction and later roster additions",
+      "resultCount": 38,
+      "filters": [
+        {
+          "name": "same_class_role",
+          "baseline": 38,
+          "expected": 30,
+          "actual": 30
+        },
+        {
+          "name": "bloodlust",
+          "baseline": 38,
+          "expected": 38,
+          "actual": 38
+        },
+        {
+          "name": "both",
+          "baseline": 38,
+          "expected": 30,
+          "actual": 30
+        }
+      ],
+      "display": {
+        "actualStride": 53,
+        "baseHeight": 53,
+        "leaderBaseMinimum": 112,
+        "leaderMinimum": 112,
+        "visible": 12
+      },
+      "scores": {
+        "maps": 8,
+        "allMatch": true,
+        "menuClosed": true,
+        "eventOwnersBeforeClose": 1,
+        "rows": [
+          {
+            "ambiguous": false,
+            "challengeID": 250,
+            "group": 139,
+            "level": 18,
+            "mapID": 1877,
+            "match": true,
+            "nativeLevel": 18,
+            "nativeScore": 455,
+            "score": 455
+          },
+          {
+            "ambiguous": false,
+            "challengeID": 249,
+            "group": 141,
+            "level": 18,
+            "mapID": 1762,
+            "match": true,
+            "nativeLevel": 18,
+            "nativeScore": 459,
+            "score": 459
+          },
+          {
+            "ambiguous": false,
+            "challengeID": 399,
+            "group": 306,
+            "level": 18,
+            "mapID": 2521,
+            "match": true,
+            "nativeLevel": 18,
+            "nativeScore": 456,
+            "score": 456
+          },
+          {
+            "ambiguous": false,
+            "challengeID": 584,
+            "group": 382,
+            "level": 18,
+            "mapID": 2859,
+            "match": true,
+            "nativeLevel": 18,
+            "nativeScore": 457,
+            "score": 457
+          },
+          {
+            "ambiguous": false,
+            "challengeID": 586,
+            "group": 392,
+            "level": 18,
+            "mapID": 2825,
+            "match": true,
+            "nativeLevel": 18,
+            "nativeScore": 461,
+            "score": 461
+          },
+          {
+            "ambiguous": false,
+            "challengeID": 587,
+            "group": 396,
+            "level": 18,
+            "mapID": 2813,
+            "match": true,
+            "nativeLevel": 18,
+            "nativeScore": 458,
+            "score": 458
+          },
+          {
+            "ambiguous": false,
+            "challengeID": 585,
+            "group": 398,
+            "level": 18,
+            "mapID": 2923,
+            "match": true,
+            "nativeLevel": 18,
+            "nativeScore": 458,
+            "score": 458
+          },
+          {
+            "ambiguous": false,
+            "challengeID": 588,
+            "group": 420,
+            "level": 18,
+            "mapID": 2993,
+            "match": true,
+            "nativeLevel": 18,
+            "nativeScore": 457,
+            "score": 457
+          }
+        ]
+      },
+      "playerLink": {
+        "source": "current native player",
+        "identityVerified": true,
+        "urlVerified": true,
+        "returnedToSameMember": true
+      },
+      "restored": {
+        "filterPanel": true,
+        "filters": true,
+        "menu": true,
+        "modal": true,
+        "offset": true,
+        "page": true,
+        "picker": true,
+        "preferences": true,
+        "shown": true,
+        "tooltip": true
+      }
+    },
+    "activityLabels": {
+      "request": "plus-live-activity-label-confirm",
+      "realResults": 98,
+      "visibleRows": 12,
+      "rawPreserved": true,
+      "allRowsHeight53": true,
+      "allRowsDisplayMPlus": true
+    },
+    "glyphAndTimePreview": {
+      "request": "plus-r36-preview-refresh-bindings-20261024",
+      "phase": "r36",
+      "source": "synthetic applicant records on native Frames",
+      "checks": 36,
+      "glyph": {
+        "frameSlot": true,
+        "height": 15.000045776367188,
+        "offsetX": 3.00006103515625,
+        "offsetY": -2.00006103515625,
+        "width": 19.000009536743164
+      },
+      "times": [
+        {
+          "text": "|cff7cd99b29:07|r/30:00",
+          "textWidth": 92.24999237060547,
+          "token": "dungeonTimeGreen",
+          "width": 100.00003051757812
+        },
+        {
+          "text": "|cff68b7ff29:06|r/30:00",
+          "textWidth": 92.24999237060547,
+          "token": "dungeonTimeBlue",
+          "width": 100.00003051757812
+        },
+        {
+          "text": "|cffc08aff28:30|r/30:00",
+          "textWidth": 92.24999237060547,
+          "token": "dungeonTimePurple",
+          "width": 100.00003051757812
+        },
+        {
+          "text": "|cffffae6327:00|r/30:00",
+          "textWidth": 92.24999237060547,
+          "token": "dungeonTimeOrange",
+          "width": 100.00003051757812
+        },
+        {
+          "text": "|cff9d9d9d30:01|r/30:00",
+          "textWidth": 92.24999237060547,
+          "token": "dungeonTimeOvertime",
+          "width": 100.00003051757812
+        }
+      ],
+      "bestRun": "|cff9d9d9d31:40|r/30:00",
+      "resourcesReleased": true
+    },
+    "rosterLayout": {
+      "request": "plus-native-roster-layout-sample-20261024",
+      "source": "11 local sample members: groups 4/5/6 contain 5/5/1; no native roster or permission success claimed",
+      "checks": 79,
+      "groups": [
+        {
+          "blankArea": 12.000091552734375,
+          "height": 339.0001525878906,
+          "members": 5,
+          "subgroup": 4
+        },
+        {
+          "blankArea": 12.000091552734375,
+          "height": 339.0001525878906,
+          "members": 5,
+          "subgroup": 5
+        },
+        {
+          "blankArea": 244.00018310546875,
+          "height": 339.0001525878906,
+          "members": 1,
+          "subgroup": 6
+        }
+      ],
+      "visual": {
+        "mouseOff": true,
+        "nativeMotion": true,
+        "permissionSucceeded": false,
+        "reduceMotion": false,
+        "scale": 1.0349999769497669,
+        "stableLayout": true
+      },
+      "previousRosterTooltipRestored": false,
+      "resourcesReleased": true,
+      "realRaidPermissionsValidated": false,
+      "subgroupActionSubmitted": false
+    },
+    "naturalMemory": {
+      "request": "plus-final-natural-memory-20261024",
+      "libraryRevision": 36,
+      "mainBuiltAtStart": false,
+      "settingsSections": 8,
+      "cycles": 12,
+      "fontChanges": 12,
+      "nativeButtonClicks": 57,
+      "elapsedSeconds": 85.266,
+      "samples": 133,
+      "realSearchResults": {
+        "minimum": 96,
+        "maximum": 100,
+        "visibleRows": [
+          11
+        ]
+      },
+      "peakBytes": 18058215,
+      "budgetBytes": 20000000,
+      "budgetPassed": true,
+      "peakPackages": {
+        "LycheeGroup": 2829217,
+        "LycheeGroup_Group": 6658249,
+        "LycheeGroup_Notes": 80254,
+        "LycheeGroup_UI": 8490495
+      },
+      "observerRefreshMilliseconds": {
+        "minimum": 69.052,
+        "maximum": 89.186,
+        "total": 9945.864
+      },
+      "finalPools": {
+        "applications": 2,
+        "find": 13,
+        "floatingBatches": 0,
+        "floatingRows": 0
+      },
+      "forcedGC": false,
+      "restored": {
+        "account": true,
+        "character": true,
+        "session": true,
+        "listing": true,
+        "resources": true
+      }
+    },
+    "errorSnapshot": {
+      "request": "plus-final-bugs-20261024",
+      "provider": "!BugGrabber",
+      "providerVersion": "v12.1.1",
+      "session": 448,
+      "requested": 100,
+      "available": 43,
+      "returned": 43,
+      "currentSessionErrors": 0,
+      "complete": false,
+      "incompleteReasons": [
+        "error[18].stack",
+        "error[18].locals"
+      ],
+      "rowMessagesCountersAndTimesUnchangedSinceR36Preview": true,
+      "originalGlyphError": {
+        "session": 435,
+        "counter": 4,
+        "time": 1792817333,
+        "unchanged": true
+      }
+    },
+    "cleanup": {
+      "currentConnectionClosed": true,
+      "currentConnectionBound": false,
+      "complete": true,
+      "method": "released",
+      "oldConnectionClosed": true,
+      "oldConnectionBound": false
+    },
+    "limits": [
+      "Final real-raid probe stopped at real_raid_required after the player left the raid; native roster item-level, permission and combat scenes were not completed in that probe.",
+      "Final native roster checks use explicit 5/5/1 local sample records and visual controllers. They do not establish hardware hit testing, successful native permissions or a server subgroup move/swap.",
+      "No application, invitation, cancellation, listing mutation or subgroup action was submitted for these tests.",
+      "Memory is one bounded natural search/page/font scenario, not all workloads; observer refresh cost is separate.",
+      "One early opaque roster probe has no verified result and remains execution_unknown after its connection was closed."
+    ]
+  },
+  "deployment": {
+    "date": "2026-10-24T08:30:10.1641042Z",
+    "runtimeFiles": 136,
+    "exactMatches": 114,
+    "equalAfterLFNormalization": 22,
+    "nativeValidationManifestSha256": "7260ae6234896067f09738382e991c3bb75e7e91d868e20ea7d5258d972754f1",
+    "finalManifestSha256": "089dadc7e7394f8e2e1d48554bf2d295c42a505d207d4c810804617734d3a145",
+    "installedInventoryDigest": "c6f1f9720d8aa95c2855fceb1fa2e3c4f351513061bbb31760a0e002a7fea8d8",
+    "currentRuntimeFilesVerifiedAgainstManifest": true,
+    "postValidationFormattingOnly": "Removed one blank line at EOF; all preceding bytes unchanged, no runtime behavior change or reload",
+    "savedVariablesFilesWritten": false
+  },
+  "evidence": {
+    "privacy": "Only validation summaries and artifact digests are committed. Native player names, GUIDs, character URLs, saved state and raw provider stacks/locals remain local.",
+    "reports": [
+      {
+        "request": "plus-live-state-before-final-mapping",
+        "operation": "LMO-799f610dd3e13636b93c6fb250011ea4",
+        "sourceSha256": "e6442ebc7a1a60a8a35a6aaea2ba4c2cd60ec283f44c80c4b32a9a05165d2c5d",
+        "resultSha256": "b381b0cb3f9cff7bbb0962d6b34db505a48620d73860e33a4357546e26f78826",
+        "ok": true,
+        "resourcesReleased": true,
+        "error": null
+      },
+      {
+        "request": "plus-live-activity-label-confirm",
+        "operation": "LMO-2c5334b08aed9d756416c9569b184358",
+        "sourceSha256": "3f42160a1bd4078a7dcda7ef07230ef73079100b6c89224167c3849e3db4c2cf",
+        "resultSha256": "e7af59bfe60ceb304e68d4497eea2395076b3ee1fd29382ae4370d863a460018",
+        "ok": true,
+        "resourcesReleased": true,
+        "error": null
+      },
+      {
+        "request": "plus-live-bugs-before-feature-checks",
+        "operation": "LMO-1ea2fda508e14452e862b45a7c4d5c12",
+        "sourceSha256": "fcfd2c6b11a605c44902aad926da9231b89ddd00fb38e9d7a17ddc90427f893e",
+        "resultSha256": "ac543f4755c0cb41e9973dc40b6466abaec2c5ec1862ada1af125e3f735745ba",
+        "ok": true,
+        "resourcesReleased": true,
+        "error": null
+      },
+      {
+        "request": "plus-native-glyph-geometry-contract",
+        "operation": "LMO-71a04d3c844635c98ff63c6d72d5ec08",
+        "sourceSha256": "d1eb7e1b95c3bdde26fba91c8069088d7844049faaaeba9b950e94c9e77adc4d",
+        "resultSha256": "81edddfef54b110762ea187e541b450e0cbd2c378e0114e01a1df9d2ce4c0c1b",
+        "ok": true,
+        "resourcesReleased": true,
+        "error": null
+      },
+      {
+        "request": "plus-real-features-r35-20261024",
+        "operation": "LMO-7dbf55401f619e4395db0b2dfeb1234c",
+        "sourceSha256": "6b97808d306944bd453c68c53e886ccf21b6071d9207d912cc62a55df0de54de",
+        "resultSha256": "d8d7ef30acf97dfccce37b7f0669ec29f092dc1f251a75fc973a1e0c709e73b6",
+        "ok": true,
+        "resourcesReleased": true,
+        "error": null
+      },
+      {
+        "request": "plus-final-r36-preview-20261024",
+        "operation": "LMO-20f21cb79dc93ec1088d3709a9a3d6f2",
+        "sourceSha256": "4087edbe9b1173d72a8d829d6e9f412105b10d8db684024584fc57ded84c38d4",
+        "resultSha256": "87936d5e79cebe08ef0b9bd1adeb917be2a7c88b9a01245f1197517588bddae0",
+        "ok": false,
+        "resourcesReleased": true,
+        "error": "LycheeMemoryProbe:13: active_business_requires_read_only_scene"
+      },
+      {
+        "request": "plus-r36-scene-after-preview-guard",
+        "operation": "LMO-0afc3ac2035ba27f181776981c79a5a2",
+        "sourceSha256": "e6442ebc7a1a60a8a35a6aaea2ba4c2cd60ec283f44c80c4b32a9a05165d2c5d",
+        "resultSha256": "5920453cacecfd9f03a88b13e51a337f84ba6b46115a2066364a3dedb75d00cc",
+        "ok": true,
+        "resourcesReleased": true,
+        "error": null
+      },
+      {
+        "request": "plus-r36-preview-after-scene-change-20261024",
+        "operation": "LMO-8ec139124b101b3375f2bd071ceaa4c4",
+        "sourceSha256": "4087edbe9b1173d72a8d829d6e9f412105b10d8db684024584fc57ded84c38d4",
+        "resultSha256": "6c43f4fa42b677aeb37ba598dc8aa3592bda940a0110397610273a2526b5fb09",
+        "ok": false,
+        "resourcesReleased": true,
+        "error": "LycheeMemoryProbe:13: preview_time_mode"
+      },
+      {
+        "request": "plus-r36-preview-refresh-bindings-20261024",
+        "operation": "LMO-545185d564074bf9882a54345ef470c7",
+        "sourceSha256": "ac4f89709c2249eca7671710492c3c9c92e94ccd153c455008913387d04b16f0",
+        "resultSha256": "14d83ca1bb30a32b13d65dec2bf11149417fdf3dbae7d0703ef9048d8c2fd1c0",
+        "ok": true,
+        "resourcesReleased": true,
+        "error": null
+      },
+      {
+        "request": "plus-r36-bugs-after-glyph-preview-20261024",
+        "operation": "LMO-b4dc6e8aa3e987b9bbbe1ac869527ef5",
+        "sourceSha256": "9abb47e32fac827c8a0b1188a108c11b5f8cf6a5971279213e15c1f0e4880de1",
+        "resultSha256": "fa07df93280d7d6a389e3ec2d69bb72ff78065127dc237a12034559ef4b49deb",
+        "ok": true,
+        "resourcesReleased": true,
+        "error": null
+      },
+      {
+        "request": "plus-native-roster-layout-sample-20261024",
+        "operation": "LMO-c009cd3eb99a8330e39b9607c8088ed8",
+        "sourceSha256": "19c60ad39bac68640426325b0310fb51ae64b094845691c3e97568b5ba6bb451",
+        "resultSha256": "414440b09c817529b5e2643c585e4e5329c0b9e0e60d8bd00f444297ab928386",
+        "ok": true,
+        "resourcesReleased": true,
+        "error": null
+      },
+      {
+        "request": "plus-native-drag-feedback-favorites-20261024",
+        "operation": "LMO-7525630bcca291605f50bf1110052b72",
+        "sourceSha256": "c5b5a25c8d21f8570ebd32029b1300773d2624095d141c8251f1c487843ec0fb",
+        "resultSha256": "f70a4bbfe3f23c578d68add62b36cadda93bcfbc354c24fe1e6ece1ab3f855fa",
+        "ok": false,
+        "resourcesReleased": true,
+        "error": "LycheeMemoryProbe:9: existing_tooltip"
+      },
+      {
+        "request": "plus-final-natural-memory-20261024",
+        "operation": "LMO-5f7f63c026e07b5c9efe7ce23896153c",
+        "sourceSha256": "923da13ff3e0a67c3d2e8fc45691d3668f29a3d635a5be9ec9d53375f6303bc3",
+        "resultSha256": "fa02d4df6e296cae40720d41a0bacdaaa0ee39708bf61b318cbe07d5eafcf36b",
+        "ok": true,
+        "resourcesReleased": true,
+        "error": null
+      },
+      {
+        "request": "plus-final-bugs-20261024",
+        "operation": "LMO-331ccb9c311ff72d2f46c558f8568b74",
+        "sourceSha256": "9abb47e32fac827c8a0b1188a108c11b5f8cf6a5971279213e15c1f0e4880de1",
+        "resultSha256": "183e08206077b78b92e428df55acc25a812a08011424c1cc22f3e77761b4a9c1",
+        "ok": true,
+        "resourcesReleased": true,
+        "error": null
+      },
+      {
+        "request": "plus-native-final-roster-spacing-20261024",
+        "operation": "LMO-1aacd78bb5cc1e9516be3f44df10bdca",
+        "sourceSha256": "aadfc16f5b0a19b10022ea34dc4524eef4836d6121f88b73adb225d45aee926e",
+        "resultSha256": "2a1d502f95fde8e03b5dd3c7608bc57dc071e146d76baca4154eae02c7185d80",
+        "ok": false,
+        "resourcesReleased": true,
+        "error": "LycheeMemoryProbe:6: real_raid_required"
+      }
+    ],
+    "interrupted": {
+      "request": "plus-native-raid-roster-20261024",
+      "operation": "LMO-bde072643f839cb69589bd2c4d8fe3f8",
+      "sourceSha256": "34d2751358351d93fb1d4e5eb5992d4dc2117595dba6842e53e6bcf1c6e0cd54",
+      "result": "unavailable",
+      "state": "execution_unknown",
+      "replayed": false,
+      "closed": true,
+      "bound": false,
+      "scope": "Read-only roster data and temporary UI probe; no subgroup action"
+    },
+    "currentProbeHashes": [
+      {
+        "file": "tests/live_plus_features.lua",
+        "sha256": "6b97808d306944bd453c68c53e886ccf21b6071d9207d912cc62a55df0de54de"
+      },
+      {
+        "file": "tests/live_plus_preview.lua",
+        "sha256": "ac4f89709c2249eca7671710492c3c9c92e94ccd153c455008913387d04b16f0"
+      },
+      {
+        "file": "tests/live_raid_roster.lua",
+        "sha256": "aadfc16f5b0a19b10022ea34dc4524eef4836d6121f88b73adb225d45aee926e"
+      },
+      {
+        "file": "tests/live_roster_layout.lua",
+        "sha256": "19c60ad39bac68640426325b0310fb51ae64b094845691c3e97568b5ba6bb451"
+      },
+      {
+        "file": "tests/live_theme_memory.lua",
+        "sha256": "923da13ff3e0a67c3d2e8fc45691d3668f29a3d635a5be9ec9d53375f6303bc3"
+      }
+    ],
+    "changedRuntimeHashes": [
+      {
+        "file": "addon/LycheeGroup/ActivityLabels.lua",
+        "sha256": "d4f833f570f9cae4f306ac04bae96d0a63b574475992cdb1889c9922c6c3ae95"
+      },
+      {
+        "file": "addon/LycheeGroup/Floating.lua",
+        "sha256": "5f0b231c54a29f56827fa38696843ec3843fd9de13e0fc8450adc6d5cf3fa907"
+      },
+      {
+        "file": "addon/LycheeGroup/Libs/LycheeUI/.lock",
+        "sha256": "6f24be32e33ee5d8a2be02aed9e83bd5cff7c8aca2fc01d2dcb490375085aaa8"
+      },
+      {
+        "file": "addon/LycheeGroup/Libs/LycheeUI/Core.lua",
+        "sha256": "cf5a054037e09e3e54ac1f1b0b8d9a88bf0c1e22f324917f0a1a50fbdcd2bf03"
+      },
+      {
+        "file": "addon/LycheeGroup/Libs/LycheeUI/Styles.lua",
+        "sha256": "8658b793dd7a5e2f0404383d0e68d54b16658332df8e1a4bfd226d4ea47a91c8"
+      },
+      {
+        "file": "addon/LycheeGroup/LycheeGroup.toc",
+        "sha256": "bdc0e787018e77302945f094f097ba8eb04ffaaf2aab868582b254da8462c9a2"
+      },
+      {
+        "file": "addon/LycheeGroup/Theme/Defaults.lua",
+        "sha256": "24ae65ad0e6767c9f61e00eb1498fad2b661ae469a74ecdf94c08569953dbc52"
+      },
+      {
+        "file": "addon/LycheeGroup/Theme/Elements.lua",
+        "sha256": "5eefc6a9e05f74ec4550827e3c4affb6369f81efbec8d7cd65decccfbc9fcd4c"
+      },
+      {
+        "file": "addon/LycheeGroup/Theme/FindElements.lua",
+        "sha256": "bdfbdf46ed02831c6de7b72ba4dd7b380be5b9fbca08c0cf789743693d06b72b"
+      },
+      {
+        "file": "addon/LycheeGroup_Group/Group.lua",
+        "sha256": "c9cf751544deb2b37d58dd5516ff03c313632c3fb531c4ce70a9fa2f37b43962"
+      },
+      {
+        "file": "addon/LycheeGroup_Group/LycheeGroup_Group.toc",
+        "sha256": "8a0dfd2ebd1cb581e89f9bbccafa01094a25b0851ddba50857702f30728ec345"
+      },
+      {
+        "file": "addon/LycheeGroup_Group/RaidGroups.lua",
+        "sha256": "c4b176848d369c41233ccd8f016ce1eba539d6fdfa2652cd247563649483c5ed"
+      },
+      {
+        "file": "addon/LycheeGroup_Group/Results.lua",
+        "sha256": "9967d05f341dfed09f622736744cab50ee0a5ad834a20281594d00915bed883f"
+      },
+      {
+        "file": "addon/LycheeGroup_Group/Roster.lua",
+        "sha256": "56c8bec69071eed306bf9304374a1a1b2df6d7196a0837f6d5f2b1698b05e33f"
+      },
+      {
+        "file": "addon/LycheeGroup_Group/SeasonScores.lua",
+        "sha256": "6352acb3dcd0eef5f2ae0be09da9217054958864e67b1ce31fc6c3b759a56b3c"
+      },
+      {
+        "file": "addon/LycheeGroup_UI/Create.lua",
+        "sha256": "7719d73ed2d87e488f9ad6d5c5ee89e6893d606a66bea16c2093089dc558cae6"
+      },
+      {
+        "file": "addon/LycheeGroup_UI/Find.lua",
+        "sha256": "2062507191f36b484617f3dedde7474aacd39f33b207cec1f1995553ae0b4cd4"
+      },
+      {
+        "file": "addon/LycheeGroup_UI/Host.lua",
+        "sha256": "645506002a711041ae3d37477d98ae6b08de15e4015ec2e73f077d4eca97bebf"
+      },
+      {
+        "file": "addon/LycheeGroup_UI/LycheeGroup_UI.toc",
+        "sha256": "bab476abc1bff74fcc0566ecb7799eec226fbc571a4cecc52916f2c06296a39c"
+      },
+      {
+        "file": "addon/LycheeGroup_UI/Members.lua",
+        "sha256": "d493485f0ed415a8fd3f24d959338b2a4e906511bce8ff4d1a6df167b15d5bac"
+      },
+      {
+        "file": "addon/LycheeGroup_UI/PlayerLinks.lua",
+        "sha256": "cd1e97c7a902a7de6201a031b168e3d1d94f412bb8768b518292a66b0c447848"
+      },
+      {
+        "file": "addon/LycheeGroup_UI/Preview.lua",
+        "sha256": "45a9891b032d83455720bef10c5a85e768727f007ef85c558032ac2018a17358"
+      },
+      {
+        "file": "addon/LycheeGroup_UI/RealmSlugs.lua",
+        "sha256": "6696e9873a90f9bace716cb4c976002cb01bef398ef76dbe8364c5a25434df4d"
+      },
+      {
+        "file": "addon/LycheeGroup_UI/Tooltip.lua",
+        "sha256": "0f80c8efa9c77ca624c47b3df1bda8c590248dc2f7a726853e6b498114527891"
+      }
+    ]
+  }
+}

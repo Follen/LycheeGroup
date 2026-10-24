@@ -38,23 +38,43 @@ local function Text(parent,size,width)
 end
 local function MemberIcon(texture,member,icon)
  if icon then F.context:SetGameTexture(texture,icon);return end
- local coords=member.class and CLASS_ICON_TCOORDS[member.class]
+ local class=member.class or member.leaderClass
+ local coords=class and CLASS_ICON_TCOORDS[class]
  if coords then F.context:SetGameTexture(texture,"Interface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES",unpack(coords))
  else F.context:SetGameTexture(texture,"Interface\\Icons\\INV_Misc_QuestionMark") end
 end
+local function ScoreText(score)
+ if type(score)~="number" or score<0 then return zh and "未知分数" or "Unknown" end
+ if score==0 then return zh and "暂无" or "Unrated" end
+ return math.floor(score)
+end
 local function ColorScore(t,score,kind)
- if type(score)~="number" or score<0 then t:SetText(zh and "未知分数" or "Unknown");t:SetTextColor(unpack(T.muted))
- elseif score==0 then t:SetText(zh and "暂无分数" or "Unrated");t:SetTextColor(unpack(T.muted))
- elseif kind=="pvp" then t:SetText(math.floor(score));t:SetTextColor(unpack(T.text))
- else t:SetText(math.floor(score));local c=C_ChallengeMode.GetDungeonScoreRarityColor(score);t:SetTextColor(c.r,c.g,c.b) end
+ t:SetText(ScoreText(score))
+ if type(score)~="number" or score<=0 then t:SetTextColor(unpack(T.muted))
+ elseif kind=="pvp" then t:SetTextColor(unpack(T.text))
+ else local c=C_ChallengeMode.GetDungeonScoreRarityColor(score);t:SetTextColor(c.r,c.g,c.b) end
+end
+local function SetActionTarget(button,key)
+ if button.targetKey==key then return end
+ if button.pressedKey then button.pressCancelled=true end
+ button.targetKey=key
+end
+local function CaptureTarget(button)
+ button.pressedKey=button.targetKey or true;button.pressCancelled=nil
+end
+local function ConsumeTarget(button)
+ local key=button.targetKey
+ local valid=key~=nil and not button.pressCancelled and (not button.pressedKey or button.pressedKey==key)
+ button.pressedKey,button.pressCancelled=nil,nil
+ return valid and key or nil
 end
 local function ClearRowBinding(row)
- row.application=nil;row.applicantID=nil;row.applicationID=nil;row.batch=nil;row.pressedTarget=nil
+ row.application=nil;row.applicantID=nil;row.applicationID=nil;row.batch=nil;SetActionTarget(row,nil)
  C.RekeyElement(row,nil)
  if row.kind=="member" then row.faction:Hide();row.faction:SetTexture(nil)
  elseif row.kind=="footer" then
-  row.invite:Hide();row.decline:Hide();row.invite.applicantID=nil;row.decline.applicantID=nil;row.invite.pressedTarget=nil;row.decline.pressedTarget=nil
- else row.cancel:Hide();row.cancel.applicationID=nil;row.cancel.pressedTarget=nil end
+  SetActionTarget(row.invite,nil);SetActionTarget(row.decline,nil);row.invite:Hide();row.decline:Hide();row.invite.applicantID=nil;row.decline.applicantID=nil
+ else SetActionTarget(row.cancel,nil);row.cancel:Hide();row.cancel.applicationID=nil end
 end
 function F:HoverRow(row,inside)
  if row.exit then return end
@@ -71,7 +91,7 @@ function F:Build()
   elementDefaults=A.ThemeDefaults.appearance.floating.elements,
   elements=A.Appearance:GetElements("floating"),
   utilities=A.Appearance:GetUtilities("floating"),
-  ownsText=function(region) return A.Fonts:IsOwned(region,F.frame,F.context and F.context:GetMenu()) end,
+  ownsText=function(region) return A.Fonts:IsOwned(region,F.frame,F.context and F.context:GetMenu(),F.panel) end,
   reducedMotion=function() return A:GetSetting("reduceMotion") end})
  C,T=self.context.C,self.context.Theme
  local f=CreateFrame("Frame","LycheeGroupFloating",UIParent);C.Box(f,{width="floatingEntryWidth",height="floatingEntryHeight"});f:SetFrameStrata("MEDIUM");f:SetClampedToScreen(true);f:SetMovable(true);f:EnableMouse(false);self.frame=f
@@ -96,6 +116,9 @@ function F:Build()
   if not F.standaloneTest then local point,_,relativePoint,x,y=F.frame:GetPoint();A.Appearance:SaveFloatingPosition({point=point,relativePoint=relativePoint,x=x,y=y}) end
  end)
  local panel=CreateFrame("Frame",nil,f);panel:SetSize(T.floatingRowWidth+T.floatingPanelPaddingX*2,220);C.SetPoint(panel,"BOTTOMLEFT",f,"TOPLEFT",0,"floatingAnchorGap");panel:SetFrameStrata("DIALOG");panel:EnableMouse(true);panel:Hide();self.panel=panel
+ panel.background=C.Surface(panel,{color="floatingPanelSurface",hoverColor="floatingPanelSurface",radius="floatingPanelRadius"})
+ self.heading=Text(panel,T.floatingHeaderFont,T.floatingRowWidth);C.SetLineHeight(self.heading,T.floatingHeaderLine);self.heading:SetWordWrap(true)
+ self.headingDot=C.Icon(panel,T.floatingHeaderDotSize);self.headingDot:SetTexture(T.productMedia.."floating-dot.tga",nil,nil,T.floatingIconFilter)
  panel:SetScript("OnShow",function(self) self:RegisterEvent("GLOBAL_MOUSE_DOWN") end)
  panel:SetScript("OnEvent",function()
   if not F:GetAnchor():IsMouseOver() and not F.panel:IsMouseOver() then F:Dismiss() end
@@ -111,16 +134,17 @@ function F:Build()
    row.exit=nil;row.exitAlpha=nil;row.exitTop=nil;row:EnableMouse(true)
    ClearRowBinding(row)
   end
-  for _,batch in ipairs(F.batches) do batch.exit=nil;batch.exitAlpha=nil;batch.exitTop=nil;batch:EnableMouse(true);batch.applicantID=nil;C.RekeyElement(batch,nil);batch.background:Hide();batch:Hide() end
+  SetActionTarget(F.cancel,nil)
+  for _,batch in ipairs(F.batches) do batch.exit=nil;batch.exitAlpha=nil;batch.exitTop=nil;batch:EnableMouse(true);batch.applicantID=nil;SetActionTarget(batch,nil);C.RekeyElement(batch,nil);batch.background:Hide();batch:Hide() end
+  F:ClearPopupAnchor()
  end)
- local cancel=C.Button(panel,"",160,nil,{variant="text",height=24});C.SetPoint(cancel,"TOPRIGHT",cancel:GetParent(),"TOPRIGHT","floatingCancelToprightX","floatingCancelToprightY");cancel.label:ClearAllPoints();cancel.label:SetPoint("RIGHT");self.cancel=cancel
- cancel:HookScript("OnEnter",function() F:CancelHide() end)
- cancel:HookScript("OnLeave",function() F:ScheduleHide() end)
- cancel:SetScript("OnClick",function()
+ local cancel=C.Button(panel,"",160,function()
   local g=A.Group;if not g then return end
   if F.recruiting then local ok,err=g:RemoveListing();if not ok then A:Print(err) end
   else wipe(cancelIDs);for _,app in ipairs(g:GetApplications()) do if Waiting(app) then cancelIDs[#cancelIDs+1]=app.id end end;for _,id in ipairs(cancelIDs) do local ok,err=g:Cancel(id);if not ok then A:Print(err) end end;wipe(cancelIDs) end
- end)
+ end,{variant="text",height=24});C.SetPoint(cancel,"TOPRIGHT",cancel:GetParent(),"TOPRIGHT","floatingCancelToprightX","floatingCancelToprightY");cancel.label:ClearAllPoints();cancel.label:SetPoint("RIGHT");self.cancel=cancel
+ cancel:HookScript("OnEnter",function() F:CancelHide() end)
+ cancel:HookScript("OnLeave",function() F:ScheduleHide() end)
  self.scroll=CreateFrame("ScrollFrame",nil,panel);self.scroll:SetSize(T.floatingRowWidth,252);C.SetPoint(self.scroll,"TOPLEFT",self.scroll:GetParent(),"TOPLEFT","floatingPanelPaddingX",-48)
  self.body=CreateFrame("Frame",nil,self.scroll);self.body:SetSize(T.floatingRowWidth,1);self.scroll:SetScrollChild(self.body)
  self.scroll:EnableMouseWheel(true);self.scroll:SetScript("OnMouseWheel",function(s,d) F:SetOffset(math.max(0,math.min(s:GetVerticalScrollRange(),(F.scrollTween and F.scrollTween.to or s:GetVerticalScroll())-d*44)),true) end)
@@ -128,10 +152,12 @@ function F:Build()
  self.thumb=self.scrollBar.thumb
  self.scrollBar:SetScript("OnValueChanged",function(_,value) if not F.syncScroll then F:SetOffset(value,false) end end)
  self.batches={};self.CreateBatch=function(self)
-  local i=#self.batches+1;local batch=CreateFrame("Button",nil,self.body);batch:SetWidth(T.floatingRowWidth);batch.background=C.Surface(batch,{variant="floating"});batch.background:Hide()
+  local i=#self.batches+1;local batch=CreateFrame("Button",nil,self.body);batch:SetWidth(T.floatingRowWidth);batch.background=C.Surface(batch,{color="floatingCardSurface",hoverColor="floatingCardHover",radius="floatingCardRadius"});batch.background:Hide()
   batch:SetScript("OnEnter",function() if batch.exit then return end;F:CancelHide();batch.background:SetHovered(true) end)
-  batch:SetScript("OnLeave",function() batch.background:SetHovered(batch:IsMouseOver());F:ScheduleHide() end)
-  batch:SetScript("OnClick",function() if batch.applicantID and not batch.exit then A:Open("create",{applicantID=batch.applicantID}) end end)
+  batch:SetScript("OnLeave",function() if batch.pressedKey then batch.pressCancelled=true end;batch.background:SetHovered(batch:IsMouseOver());F:ScheduleHide() end)
+  batch:SetScript("OnMouseDown",CaptureTarget)
+  batch:SetScript("OnClick",function() local key=ConsumeTarget(batch);if key and not batch.exit then A:Open("create",{applicantID=batch.applicantID}) end end)
+  batch:SetScript("OnHide",function() SetActionTarget(batch,nil) end)
   Element(batch,"floating.batch",batch,"floating.batch");batch:Hide();self.batches[i]=batch;return batch
  end
  self.rows={};self.CreateRow=function(self,kind)
@@ -146,54 +172,45 @@ function F:Build()
   if kind=="member" then
    row.faction=C.Icon(row,T.floatingMemberFactionSize);row.faction:Hide()
    row.itemLevel=Text(row,14,76);C.SetLineHeight(row.itemLevel,20,true);C.SetPoint(row.itemLevel,"TOPRIGHT",row.itemLevel:GetParent(),"TOPRIGHT",-8,-28);row.itemLevel:SetJustifyH("RIGHT");row.itemLevel:SetTextColor(unpack(T.muted))
-   row.memberItems={{frame=row.name},{frame=row.meta,align="end"}}
-   row.memberOptions={width="floatingMemberTextWidth",height="content",gap="floatingMemberTextGap"};row.memberLayout=C.Column(row,row.memberItems,row.memberOptions)
   elseif kind=="application" then
-   row.background=C.Surface(row,{variant="floating"});row.background:Hide()
+   row.background=C.Surface(row,{color="floatingCardSurface",hoverColor="floatingCardHover",radius="floatingCardRadius"});row.background:Hide()
    row.leader=Text(row,14,196);C.SetLineHeight(row.leader,20);C.SetPoint(row.leader,"TOPLEFT",row.leader:GetParent(),"TOPLEFT",40,-49);row.leader:SetWordWrap(false)
-   row.timer=Text(row,14,56);C.SetLineHeight(row.timer,20,true);C.SetPoint(row.timer,"TOPRIGHT",row.timer:GetParent(),"TOPRIGHT",-4,-53);row.timer:SetJustifyH("RIGHT");row.timer:SetTextColor(unpack(T.muted))
-  row.cancel=C.Button(row,"",T.floatingRowCancelWidth,nil,{height=T.floatingCancelButtonHeight,hoverColor="negativeHover",pressedColor="negativePressed"});row.cancel:SetWidth(T.floatingRowCancelWidth);row.cancel.label:Hide();C.SetPoint(row.cancel,"TOPRIGHT",row.cancel:GetParent(),"TOPRIGHT","floatingRowCancelToprightX","floatingRowCancelToprightY");row.cancel:Hide()
+   row.timer=Text(row,T.floatingTimerFont,T.floatingTimerMinWidth);C.SetLineHeight(row.timer,T.floatingTimerLine,true);row.timer:SetJustifyH("RIGHT");row.timer:SetTextColor(unpack(T.warning))
+  row.cancel=C.Button(row,"",T.floatingRowCancelWidth,function(self)
+   local id=self.targetKey;local app=id and A.Group:GetApplication(id)
+   if not app or not Waiting(app) or app.pendingStatus then return end
+   local ok,err=A.Group:Cancel(id);if ok then self:SetEnabled(false) else A:Print(err) end
+  end,{height=T.floatingCancelButtonHeight,hoverColor="negativeHover",pressedColor="negativePressed"});row.cancel:SetWidth(T.floatingRowCancelWidth);row.cancel.label:Hide();C.SetPoint(row.cancel,"TOPRIGHT",row.cancel:GetParent(),"TOPRIGHT","floatingRowCancelToprightX","floatingRowCancelToprightY");row.cancel:Hide()
   local cross=C.Glyph(row.cancel,"close",T.floatingCrossWidth);row.cancel.elementIcon=cross;C.Box(cross,{width="floatingCrossWidth",height="floatingCrossHeight"});cross:SetPoint("CENTER");cross:SetColor(T.dim)
   row.cancelGlyphStyle=C.Style(row,{recipe="glyphAction",slots={root=row,icon=cross},immediate=true});row.cancelGlyphStyle:Bind(row.cancel,{hover=true})
   row.cancel:HookScript("OnEnter",function() F:CancelHide();F:HoverRow(row,true) end)
   row.cancel:HookScript("OnLeave",function() F:HoverRow(row,false);F:ScheduleHide() end)
-  row.cancel:HookScript("OnMouseDown",function(self) self.pressedTarget=self.applicationID end)
-  row.cancel:SetScript("OnClick",function(self)
-   if self.pressedTarget and self.pressedTarget~=self.applicationID then self.pressedTarget=nil;return end;self.pressedTarget=nil
-   local id=self.applicationID;local app=id and A.Group:GetApplication(id)
-   if not app or not Waiting(app) or app.pendingStatus then return end
-   local ok,err=A.Group:Cancel(id);if ok then self:SetEnabled(false) else A:Print(err) end
-  end)
-   row.applicationItems={{frame=row.name},{frame=row.meta},{frame=row.leader}}
-   row.applicationOptions={width="content",height="content",gap="floatingApplicationTextGap"};row.applicationLayout=C.Column(row,row.applicationItems,row.applicationOptions)
   else
   local function DecisionButton(x,method)
-   local button=C.IconButton(row,nil,32,nil,{iconSize=18,hoverColor=method=="Invite" and "positiveHover" or "negativeHover",pressedColor=method=="Invite" and "positivePressed" or "negativePressed"});C.SetPoint(button,"TOPRIGHT",button:GetParent(),"TOPRIGHT",x,-1)
-   button.glyph=button.icon;button.glyph:SetTexture((method=="Invite" and T.productMedia.."invite.tga" or T.media.."decline.tga"))
-   button:HookScript("OnEnter",function() F:CancelHide();F:HoverRow(row,true) end);button:HookScript("OnLeave",function() F:HoverRow(row,false);F:ScheduleHide() end)
-   button:HookScript("OnMouseDown",function(self) self.pressedTarget=self.applicantID end)
-   button:SetScript("OnClick",function(self)
-    if not self:IsEnabled() or row.exit then return end
-    if self.pressedTarget and self.pressedTarget~=self.applicantID then self.pressedTarget=nil;return end;self.pressedTarget=nil
-    local id=self.applicantID;local app=id and A.Group:GetApplicant(id)
+   local button=C.IconButton(row,nil,32,function(self)
+    if row.exit then return end
+    local id=self.targetKey;local app=id and A.Group:GetApplicant(id)
     if not app or not Operable(app) or not A.Group:CanManageApplicants() then return end
     -- Freeze the current binding before Act's synchronous notification. The
     -- native operation stays in this hardware callback, never in the animation.
     F:BeginDecision(id)
     local ok,err=A.Group[method](A.Group,id)
-    if not ok then F:FinishDecision(id,false);A:Print(err)
+    if not ok then F:FinishDecision(id,false);if err then A:Print(err) end
     elseif A:GetSetting("reduceMotion") then F:FinishDecision(id,true)
     else F:UpdateDriver() end
-   end)
+   end,{iconSize=18,hoverColor=method=="Invite" and "positiveHover" or "negativeHover",pressedColor=method=="Invite" and "positivePressed" or "negativePressed"});C.SetPoint(button,"TOPRIGHT",button:GetParent(),"TOPRIGHT",x,-1)
+   button.glyph=button.icon;button.glyph:SetTexture((method=="Invite" and T.productMedia.."invite.tga" or T.media.."decline.tga"))
+   button:HookScript("OnEnter",function() F:CancelHide();F:HoverRow(row,true) end);button:HookScript("OnLeave",function() F:HoverRow(row,false);F:ScheduleHide() end)
    return button
   end
   row.invite=DecisionButton(-29,"Invite");row.invite:Hide()
   row.decline=DecisionButton(-7,"Decline");row.decline:Hide()
    row.footerOptions={anchor="BOTTOMRIGHT",width="content",height="floatingRowInviteHeight"};row.footerLayout=C.Row(row,{{frame=row.invite},{frame=row.decline}},row.footerOptions)
   end
-  row:SetScript("OnMouseDown",function(r) r.pressedTarget=r.applicantID or r.applicationID end)
-  row:SetScript("OnClick",function(r) if r.exit then return end;if r.pressedTarget and r.pressedTarget~=(r.applicantID or r.applicationID) then r.pressedTarget=nil;return end;r.pressedTarget=nil;if r.applicantID then A:Open("create",{applicantID=r.applicantID}) elseif r.applicationID then A:Open("find",{applicationID=r.applicationID}) end end)
-  row:SetScript("OnEnter",function() F:CancelHide();F:HoverRow(row,true) end);row:SetScript("OnLeave",function() F:HoverRow(row,false);F:ScheduleHide() end);Element(row,"floating.row",row,"floating."..kind);row:Hide();self.rows[i]=row;return row
+  row:SetScript("OnMouseDown",CaptureTarget)
+  row:SetScript("OnClick",function(r) local key=ConsumeTarget(r);if not key or r.exit then return end;if r.applicantID then A:Open("create",{applicantID=r.applicantID}) elseif r.applicationID then A:Open("find",{applicationID=r.applicationID}) end end)
+  row:SetScript("OnHide",function(r) SetActionTarget(r,nil) end)
+  row:SetScript("OnEnter",function() F:CancelHide();F:HoverRow(row,true) end);row:SetScript("OnLeave",function() if row.pressedKey then row.pressCancelled=true end;F:HoverRow(row,false);F:ScheduleHide() end);Element(row,"floating.row",row,"floating."..kind);row:Hide();self.rows[i]=row;return row
  end
  -- Reuse a native row of the same kind; positional scrolling never grows a
  -- member row into an application and action-footer widget union.
@@ -205,19 +222,21 @@ function F:Build()
   return self.rows[index]
  end
  self.emptyCard=CreateFrame("Frame",nil,panel);C.Box(self.emptyCard,{width="floatingRowWidth",height="floatingEmptyCardHeight"});C.SetPoint(self.emptyCard,"TOPLEFT",self.emptyCard:GetParent(),"TOPLEFT","floatingPanelPaddingX",-48)
- self.emptyCard.background=C.Surface(self.emptyCard,{variant="floating"})
+ self.waitIcon=C.Icon(self.emptyCard,T.floatingWaitIconSize);self.waitIcon:SetTexture(T.productMedia.."floating-waiting.tga",nil,nil,T.floatingIconFilter);self.waitIcon:SetVertexColor(unpack(T.muted));self.waitIcon:Hide()
  self.empty=Text(self.emptyCard,14,292);self.empty:SetPoint("CENTER");self.empty:SetJustifyH("CENTER");self.empty:SetWordWrap(false);C.SetLineHeight(self.empty,20,true);self.empty:SetTextColor(unpack(T.muted))
  self.measure=Text(panel,14,300);self.measure:SetWordWrap(true);self.measure:Hide();self.empty:SetText(zh and "暂无申请" or "No applications")
- button:HookScript("OnEnter",function() F:ShowPanel() end);button:HookScript("OnLeave",function() F:ScheduleHide() end)
+ button:HookScript("OnEnter",function() if F.popupAnchor then F:Dismiss() end;F:ShowPanel() end);button:HookScript("OnLeave",function() F:ScheduleHide() end)
  f:SetScript("OnShow",function() F:Update() end)
  f:SetScript("OnHide",function()
   if F.dragging then F.frame:StopMovingOrSizing();F.dragging=nil end
-  F.dragClick=nil;F:SetAttention(false);F:Dismiss();F.context.Motion:StopAll();F:PublishStatus()
+  F.dragClick=nil;F:SetAttention(false)
+  if not F.popupAnchor then F:Dismiss();F.context.Motion:StopAll() end
+  F:PublishStatus()
  end)
  panel:SetScript("OnEnter",function() F:CancelHide() end);panel:SetScript("OnLeave",function() F:ScheduleHide() end)
  f:RegisterEvent("DISPLAY_SIZE_CHANGED");f:RegisterEvent("UI_SCALE_CHANGED");f:SetScript("OnEvent",function() F:UpdateSettings() end)
  Element(f,"floating.window");Element(button,"floating.button");Element(logoAnchor,"floating.logoAnchor");Element(art,"floating.logo");Element(self.ownCount,"floating.count")
- for _,field in ipairs({"panel","cancel","scroll","body","scrollBar","emptyCard","empty"}) do Element(self[field],"floating."..field) end
+ for _,field in ipairs({"panel","heading","headingDot","cancel","scroll","body","scrollBar","emptyCard","empty","waitIcon"}) do Element(self[field],"floating."..field) end
  self:ResetPosition(true);ApplyElements()
 end
 function F:PlayAttention()
@@ -244,7 +263,7 @@ function F:UpdateDriver()
  if self.running==running then return end
  self.running=running
  self.startedAt=running and GetTimePreciseSec() or nil
- self.frame:SetScript("OnUpdate",running and Drive or nil)
+ self.panel:SetScript("OnUpdate",running and Drive or nil)
 end
 local function PositionCard(card,elapsed)
  local exit=card.exit
@@ -332,7 +351,24 @@ function F:ScheduleHide()
  if not self.panel:IsShown() then return end
  self:CancelHide();self.hideTask=C_Timer.NewTimer(.06,function() F.hideTask=nil;if not F:GetAnchor():IsMouseOver() and not F.panel:IsMouseOver() then F:Fade(false) end end)
 end
-function F:GetAnchor() return self.host or self.frame end
+function F:GetAnchor() return self.popupAnchor or self.host or self.frame end
+function F:ClearPopupAnchor()
+ if not self.popupAnchor then return end
+ self.popupOwner,self.popupAnchor=nil,nil
+ self.panel:ClearAllPoints();self.panel:SetParent(self.frame);self:LayoutEntry()
+end
+function F:ShowExternalPanel(owner,anchor)
+ if not anchor:IsVisible() or self.dragging then return false end
+ if not self.frame then self:Build();self:UpdateSettings() end
+ if self.popupOwner~=owner or self.popupAnchor~=anchor then self:Dismiss() end
+ self.popupOwner,self.popupAnchor=owner,anchor
+ if self.panel:GetParent()~=UIParent then self.panel:SetParent(UIParent) end
+ self:LayoutEntry()
+ local shown=self.panel:IsShown()
+ self:Update();if not shown then self:ShowPanel() end
+ if not self.panel:IsShown() then self:ClearPopupAnchor();return false end
+ return true
+end
 function F:LayoutEntry()
  if self.host then
   self.entryItems[1].hidden,self.entryItems[2].hidden=true,true;self.entryLayout:Layout()
@@ -348,7 +384,7 @@ function F:LayoutEntry()
   self.entryItems[2].width=countWidth
   self.entryOptions.x,self.entryOptions.gap=T.floatingLogoAnchorLeftX,T.floatingCountLeftX;self.entryLayout:Layout()
  end
- self.panel:SetScale(A:GetSetting("floatingScale")/100*UIParent:GetEffectiveScale()/self.frame:GetEffectiveScale());ApplyElements()
+ self.panel:SetScale(A:GetSetting("floatingScale")/100*UIParent:GetEffectiveScale()/self.panel:GetParent():GetEffectiveScale());ApplyElements()
 end
 -- The public API supplies an existing mouse target; the same logo and list
 -- move with it. The adapter keeps ownership of that target's clicks.
@@ -359,7 +395,8 @@ function F:SetHost(host,logoSize,count)
  local resized=T.logoSize~=logoSize
  if changed or resized then self:SetAttention(false) end
  if changed then
-  self:Dismiss();self.host=host;self.count=count;self.lastCount=nil;self.popupBounds=nil
+  if not self.popupAnchor then self:Dismiss() end
+  self.host=host;self.count=count;self.lastCount=nil;self.popupBounds=nil
   self.frame:ClearAllPoints();self.frame:SetParent(host or UIParent)
   self.frame:SetClampedToScreen(host==nil)
   self.logoAnchor:ClearAllPoints();self.logoAnchor:SetParent(host and self.frame or self.button)
@@ -388,9 +425,9 @@ function F:Bind(group)
 end
 function F:UpdateSettings()
  local enabled=A:GetSetting("floating") or self.standaloneTest
- if not self.frame then if not enabled then self:PublishStatus();return end;self:Build();if not self.frame then return end end
+ if not self.frame then if not enabled then self:Update();return end;self:Build();if not self.frame then return end end
  self.frame:SetScale(self.host and 1 or A:GetSetting("floatingScale")/100);self:LayoutEntry();self.frame:SetShown(enabled==true)
- if not enabled then self.panel:Hide();self.entries=nil;self:CancelHide() end
+ if not enabled and not self.popupAnchor then self.panel:Hide();self.entries=nil;self:CancelHide() end
  self:Update()
 end
 function F:ToggleStandaloneTest()
@@ -406,33 +443,44 @@ function F:ApplyFont(path,scale)
 end
 
 function F:Update()
- if not self.frame or not (A:GetSetting("floating") or self.standaloneTest) then self:PublishStatus();return end
+ local enabled=self.frame and (A:GetSetting("floating") or self.standaloneTest)
+ if not enabled and not self.popupAnchor and (self.backgroundStatusSubscribers or 0)==0 then self:PublishStatus();return end
  local group=A.Group;self.recruiting=group and group:GetListing()~=nil
  local count=0
  if group then
   if self.recruiting then for _,id in ipairs(group:GetApplicants()) do local app=group:GetApplicant(id);if Operable(app) then count=count+#app.members end end else for _,app in ipairs(group:GetApplications()) do if Waiting(app) then count=count+1 end end end
  end
- local idle=not self.recruiting and (not group or group.Applications:GetActiveCount()==0)
- if self.lastCount~=count or self.lastRecruiting~=self.recruiting or self.lastIdle~=idle then
-  self.statusText=idle and (zh and "荔枝组队" or "Lychee LFG") or count==0 and (zh and "暂无申请" or "No applications") or (self.recruiting and (zh and "%d人申请" or "%d applicants") or (zh and "申请%d个" or "Applied: %d")):format(count)
-  self.count:SetText(self.statusText)
-  self:LayoutEntry();self.lastCount,self.lastRecruiting,self.lastIdle=count,self.recruiting,idle
+ local idle=not self.recruiting and count==0
+ local changed=self.lastCount~=count or self.lastRecruiting~=self.recruiting or self.lastIdle~=idle
+ if changed then
+  local chinese=A:GetLocale()=="zhCN"
+  self.statusText=idle and (chinese and "荔枝组队" or "Lychee LFG") or count==0 and (chinese and "招募中" or "Recruiting") or (self.recruiting and (chinese and "%d人申请" or "%d applicants") or (chinese and "申请%d个" or "Applied: %d")):format(count)
+  self.lastCount,self.lastRecruiting,self.lastIdle=count,self.recruiting,idle
  end
+ if not enabled then
+  if self.popupAnchor and self.panel:IsShown() then self:ShowPanel() end
+  self:PublishStatus();return
+ end
+ if changed or self.count:GetText()~=self.statusText then self.count:SetText(self.statusText);self:LayoutEntry() end
  self:SetAttention(self.recruiting and count>0)
  if self.panel:IsShown() then self:ShowPanel() end
  self:PublishStatus()
 end
 function F:ShowPanel()
- if self.dragging or not (A:GetSetting("floating") or self.standaloneTest) or not self:GetAnchor():IsVisible() or next(exits) then return end
- local hadEntries=self.entries and #self.entries>0
+ if self.dragging or not (self.popupAnchor or A:GetSetting("floating") or self.standaloneTest) or not self:GetAnchor():IsVisible() or next(exits) then return end
  self:CancelHide();entryCount=0;self.entries,self.entryTops=entries,tops
  self.entriesVersion=(self.entriesVersion or 0)+1
  local group=A.Group;local total=0;local pending=false;local batchCount=0;local now=GetTime()
  local canManage=group and group:CanManageApplicants()
  local canCancel=not self.recruiting or group:CanManageListing()
+ local heading=""
  if group then
   if self.recruiting then
-   local activity=group.Catalog:GetActivity(group:GetListing().activityID)
+   local listing=group:GetListing();local activity=group.Catalog:GetActivity(listing.activityID)
+   local activityName=activity and activity.groupID and activity.groupID>0 and C_LFGList.GetActivityGroupInfo(activity.groupID) or activity and (activity.shortName or activity.name) or listing.activityName
+   local difficulty=activity and activity.difficultyID and activity.difficultyID>0 and A.ActivityLabels.Display(GetDifficultyInfo(activity.difficultyID))
+   heading=A.ActivityLabels.Display(activityName) or (zh and "当前招募" or "Current listing")
+   if difficulty and difficulty~="" then heading=heading.." · "..difficulty end
    local hideRating=not A.GroupPresentation.Member("applicant",activity).showRating
    for _,id in ipairs(group:GetApplicants()) do
     local app=group:GetApplicant(id)
@@ -444,22 +492,31 @@ function F:ShowPanel()
      for index,member in ipairs(app.members) do
       local faction=member.factionGroup and PLAYER_FACTION_GROUP[member.factionGroup]
       local factionTexture=factionTextures[faction]
-      local nameWidth=T.floatingMemberTextWidth
+      local itemLevelText=(zh and "装等 " or "ilvl ")..(member.itemLevel and math.floor(member.itemLevel) or "—")
+      C.SetFont(self.measure,T.floatingMemberMetricFont);C.SetLineHeight(self.measure,T.floatingMemberNameLine);self.measure:SetText(itemLevelText)
+      local itemLevelWidth=math.max(T.floatingMemberItemLevelWidth,math.ceil(self.measure:GetUnboundedStringWidth()))
+      local scoreWidth=T.floatingMemberScoreWidth
+      if not hideRating then
+       local score=member.dungeonScore;if member.ratingKind=="pvp" then score=member.rating end
+       self.measure:SetText(ScoreText(score));scoreWidth=math.max(scoreWidth,math.ceil(self.measure:GetUnboundedStringWidth()))
+      end
+      local nameWidth=math.max(1,T.floatingMemberTextWidth+(hideRating and T.floatingMemberScoreWidth+T.floatingMemberMetricGap or 0)-(itemLevelWidth-T.floatingMemberItemLevelWidth)-(scoreWidth-T.floatingMemberScoreWidth))
       C.SetFont(self.measure,T.floatingMemberNameFont);C.SetLineHeight(self.measure,T.floatingMemberNameLine);self.measure:SetWidth(nameWidth);self.measure:SetText(member.nameKey or member.name or A.L.invalidName)
       local nameHeight=math.max(self.context:GetLineHeight("floatingMemberNameLine"),self.measure:GetStringHeight())
       local _,spec,icon,class=group:ResolveMemberSpec(member)
-      local meta=(member.raceName or "—").." · "..(class or (zh and "未知职业" or "Unknown class")).." · "..(spec or member.specName or (zh and "未知专精" or "Unknown specialization"))
-      local metaWidth=T.floatingMemberTextWidth-(factionTexture and T.floatingMemberFactionSize+T.floatingMemberFactionGap or 0)
+      local meta=(member.raceName or "—").." · "..(spec or member.specName or class or (zh and "未知专精" or "Unknown specialization"))
+      local metaWidth=T.floatingRowWidth-T.floatingMemberTextX-T.floatingFooterRightInset-(factionTexture and T.floatingMemberFactionSize+T.floatingMemberFactionGap or 0)
       C.SetFont(self.measure,T.floatingMemberMetaFont);C.SetLineHeight(self.measure,T.floatingMemberMetaLine);self.measure:SetWidth(metaWidth);self.measure:SetText(meta)
       local metaHeight=math.max(self.context:GetLineHeight("floatingMemberMetaLine"),self.measure:GetStringHeight());local pad=index==1 and T.floatingFirstMemberPadding or T.floatingNextMemberPadding
       local contentHeight=nameHeight+T.floatingMemberTextGap+metaHeight
       local height=math.max(T.floatingMemberMinHeight,pad+contentHeight);local entry=AddEntry(total,height);total=total+height
       entry.member,entry.applicantID,entry.padTop,entry.batch,entry.nameHeight,entry.metaText,entry.memberIcon=member,id,pad,batch,nameHeight,meta,icon
       entry.nameWidth,entry.factionTexture,entry.metaWidth,entry.hideRating=nameWidth,factionTexture,metaWidth,hideRating
+      entry.itemLevelText,entry.itemLevelWidth,entry.scoreWidth=itemLevelText,itemLevelWidth,scoreWidth
      end
      if canManage or comment then
       local textWidth=canManage and T.floatingActionFooterTextWidth or T.floatingRowWidth-T.floatingMemberTextX-T.floatingFooterRightInset;local textHeight=0
-      if comment then C.SetFont(self.measure,T.floatingMemberMetaFont);C.SetLineHeight(self.measure,T.floatingMemberMetaLine);self.measure:SetWidth(textWidth);self.measure:SetText(comment);textHeight=math.max(self.context:GetLineHeight("floatingMemberMetaLine"),self.measure:GetStringHeight()) end
+      if comment then C.SetFont(self.measure,T.floatingCommentFont);C.SetLineHeight(self.measure,T.floatingCommentLine);self.measure:SetWidth(textWidth);self.measure:SetText(comment);textHeight=math.max(self.context:GetLineHeight("floatingCommentLine"),self.measure:GetStringHeight()) end
       local height=math.max(canManage and T.floatingActionFooterMinHeight or 0,textHeight+T.floatingFooterPaddingY*2)
       local footer=AddEntry(total,height);total=total+height
       footer.footer,footer.actions,footer.comment,footer.applicantID,footer.batch,footer.textHeight,footer.textWidth=true,canManage,comment,id,batch,textHeight,textWidth
@@ -471,15 +528,16 @@ function F:ShowPanel()
    end
   else
    for _,app in ipairs(group:GetApplications()) do if Waiting(app) then
-    local detailText=app.activityDetail and app.activityDetail~="" and ("· "..app.activityDetail) or ""
-    C.SetFont(self.measure,14);C.SetLineHeight(self.measure,20);self.measure:SetWidth(T.floatingMeasureWidth);self.measure:SetText(detailText)
+    local activityDetail=A.ActivityLabels.Display(app.activityDetail)
+    local detailText=activityDetail and activityDetail~="" and ("· "..activityDetail) or ""
+    C.SetFont(self.measure,T.floatingActivityDetailFont);C.SetLineHeight(self.measure,T.floatingActivityLine);self.measure:SetWidth(T.floatingMeasureWidth);self.measure:SetText(detailText)
     local detailWidth=math.min(T.floatingMeasureWidth,self.measure:GetStringWidth())
     local detailHeight=detailWidth>0 and self.measure:GetStringHeight() or 0
     local activityWidth=T.floatingRowMetaWidth-detailWidth-(detailWidth>0 and T.floatingActivityDetailGap or 0)
-    C.SetFont(self.measure,16);C.SetLineHeight(self.measure,22);self.measure:SetWidth(activityWidth);self.measure:SetText(app.activityLabel or app.activityName or app.result and app.result.activityName or "")
+    C.SetFont(self.measure,T.floatingActivityFont);C.SetLineHeight(self.measure,T.floatingActivityLine);self.measure:SetWidth(activityWidth);self.measure:SetText(A.ActivityLabels.Display(app.activityLabel or app.activityName or app.result and app.result.activityName) or "")
     local activityHeight=math.max(T.floatingActivityMinHeight,self.measure:GetStringHeight(),detailHeight)
-    C.SetFont(self.measure,T.listTitleSize);C.SetLineHeight(self.measure,T.listTitleLineHeight);self.measure:SetWidth(T.floatingRowMetaWidth);self.measure:SetText(app.name or "")
-    local titleHeight=math.max(self.context:GetLineHeight(T.listTitleLineHeight),self.measure:GetStringHeight())
+    C.SetFont(self.measure,T.floatingApplicationTitleFont);C.SetLineHeight(self.measure,T.floatingApplicationTitleLine);self.measure:SetWidth(T.floatingRowWidth-T.floatingRowMetaTopleftX2-T.floatingFooterRightInset);self.measure:SetText(app.name or "")
+    local titleHeight=math.max(self.context:GetLineHeight(T.floatingApplicationTitleLine),self.measure:GetStringHeight())
     C.SetFont(self.measure,14);C.SetLineHeight(self.measure,20);self.measure:SetWidth(T.floatingRowLeaderWidth);self.measure:SetText(app.leaderName or (zh and "队长身份未知" or "Leader unknown"))
     local leaderHeight=math.max(T.floatingLeaderMinHeight,self.measure:GetStringHeight())
     local height=math.max(T.floatingApplicationMinHeight,T.floatingApplicationPaddingY*2+activityHeight+T.floatingApplicationTextGap*2+titleHeight+leaderHeight)+T.floatingApplicationGap;local entry=AddEntry(total,height);total=total+height
@@ -489,12 +547,16 @@ function F:ShowPanel()
   end
  end
  TrimEntries(entryCount,batchCount)
- if hadEntries and entryCount==0 then self:Dismiss();return end
  if entries[#entries] and entries[#entries].gap then local last=entries[#entries];local gap=last.gap;last.gap=0;last.height=last.height-gap;total=total-gap end
  canCancel=canCancel and (self.recruiting or #entries>0)
  self.body:SetHeight(math.max(1,total));self.empty:SetShown(#entries==0);self.emptyCard:SetShown(#entries==0)
- if #entries==0 then self.empty:SetText(self.lastIdle and (zh and "暂无活动" or "No activity") or (zh and "暂无申请" or "No applications")) end
- self.cancel.label:SetText(self.recruiting and (zh and "取消招募" or "End listing") or (zh and "取消全部申请" or "Cancel all applications"));self.cancel:SetAvailable(canCancel and (self.recruiting or #entries>0));self.cancel:SetShown(canCancel)
+ if #entries==0 then self.empty:SetText(self.recruiting and (zh and "等待玩家申请" or "Waiting for applicants") or (zh and "暂无活动" or "No activity")) end
+ self.waitIcon:SetShown(self.recruiting and #entries==0)
+ self.empty:ClearAllPoints();self.empty:SetPoint("CENTER",self.emptyCard,"CENTER",self.waitIcon:IsShown() and (T.floatingWaitIconSize+T.floatingWaitIconGap)/2 or 0,0);self.waitIcon:ClearAllPoints();self.waitIcon:SetPoint("RIGHT",self.empty,"LEFT",-T.floatingWaitIconGap,0)
+ if not self.recruiting and #entries>0 then heading=(zh and "我的申请 %d/5" or "Applications %d/5"):format(group.Applications:GetActiveCount()) end
+ self.heading:SetText(heading);self.heading:SetShown(heading~="");self.headingDot:SetShown(heading~="");self.headingDot:SetVertexColor(unpack(self.recruiting and T.good or T.warning))
+ SetActionTarget(self.cancel,canCancel and (self.recruiting and group:GetListing() or "applications") or nil)
+ self.cancel.label:SetText(self.recruiting and (zh and "取消招募" or "End listing") or (zh and "取消全部" or "Cancel all"));self.cancel:SetAvailable(canCancel and (self.recruiting or #entries>0));self.cancel:SetShown(canCancel)
  self.cancel:SetWidth(self.cancel.label:GetStringWidth()+T.floatingCancelTextInset)
  self:LayoutPanel()
  self:Render();self:Fade(true)
@@ -504,17 +566,19 @@ function F:ShowPanel()
 end
 -- Host movement changes viewport geometry without invalidating measured entries.
 function F:LayoutPanel()
- local total=self.body:GetHeight();local canCancel=self.cancel:IsShown()
+ local total=self.body:GetHeight();local canCancel=self.cancel:IsShown();local hasHeading=self.heading:IsShown()
  local width=T.floatingRowWidth
- if self.emptyCard:IsShown() then width=math.max(T.floatingEmptyMinWidth,math.ceil(self.empty:GetUnboundedStringWidth())+T.floatingEmptyTextInset*2,canCancel and self.cancel:GetWidth()+T.floatingPanelPaddingX*2 or 0) end
- self.panel:SetWidth(width+T.floatingPanelPaddingX*2);self.scroll:SetWidth(width);self.body:SetWidth(T.floatingRowWidth);self.emptyCard:SetWidth(width);self.empty:SetWidth(width-T.floatingEmptyTextInset*2)
+ if self.emptyCard:IsShown() and not hasHeading then width=math.max(T.floatingEmptyMinWidth,math.ceil(self.empty:GetUnboundedStringWidth())+T.floatingEmptyTextInset*2) end
+ self.panel:SetWidth(width+T.floatingPanelPaddingX*2);self.scroll:SetWidth(width);self.body:SetWidth(T.floatingRowWidth);self.emptyCard:SetWidth(width);self.empty:SetWidth(self.waitIcon:IsShown() and math.ceil(self.empty:GetUnboundedStringWidth()) or width-T.floatingEmptyTextInset*2)
+ self.heading:SetWidth(math.max(T.floatingHeaderMinWidth,self.panel:GetWidth()-T.floatingHeaderInset*2-T.floatingHeaderGap-(canCancel and self.cancel:GetWidth()+T.floatingHeaderCancelGap or 0)))
+ self.heading:ClearAllPoints();self.heading:SetPoint("TOPLEFT",T.floatingHeaderInset+T.floatingHeaderGap,-T.floatingHeaderPaddingY);self.headingDot:ClearAllPoints();self.headingDot:SetPoint("TOPLEFT",T.floatingHeaderInset,-T.floatingHeaderPaddingY-(self.context:GetLineHeight(T.floatingHeaderLine)-T.floatingHeaderDotSize)/2+T.floatingHeaderDotOffsetY)
  local anchor=self:GetAnchor();local panelScale=self.panel:GetEffectiveScale();local scale=anchor:GetEffectiveScale()/panelScale
  local screenHeight=UIParent:GetHeight()*UIParent:GetEffectiveScale()/panelScale
  local anchorTop=anchor:GetTop()*scale;local anchorBottom=anchorTop-anchor:GetHeight()*scale
  local top,bottom=anchorTop,anchorBottom
  local right=anchor:GetLeft()*anchor:GetEffectiveScale()>UIParent:GetWidth()*UIParent:GetEffectiveScale()*.6
  local left=anchor:GetLeft()*scale+(right and anchor:GetWidth()*scale-self.panel:GetWidth() or 0)
- if self.popupBounds then
+ if self.popupBounds and not self.popupAnchor then
   for _,frame in ipairs(self.popupBounds) do
    if frame:IsVisible() then
     local frameScale=frame:GetEffectiveScale()/panelScale;local frameLeft=frame:GetLeft()*frameScale
@@ -526,7 +590,7 @@ function F:LayoutPanel()
   end
  end
  local downRoom=bottom-T.floatingScreenInset;local upRoom=screenHeight-top-T.floatingScreenInset;local down=downRoom>upRoom
- local header=canCancel and T.floatingHeaderHeight or T.floatingPanelTopInset;local padding=header+T.floatingPanelBottomInset
+ local header=(hasHeading or canCancel) and math.max(T.floatingHeaderHeight,self.heading:GetStringHeight()+T.floatingHeaderPaddingY*2) or T.floatingPanelTopInset;local padding=header+T.floatingPanelBottomInset
  C.SetPoint(self.scroll,"TOPLEFT",self.scroll:GetParent(),"TOPLEFT","floatingPanelPaddingX",-header);C.SetPoint(self.emptyCard,"TOPLEFT",self.emptyCard:GetParent(),"TOPLEFT","floatingPanelPaddingX",-header)
  local minimum=self.emptyCard:IsShown() and T.floatingEmptyCardHeight or T.floatingViewportMinHeight
  local height=math.min(math.max(minimum,math.max(downRoom,upRoom)-padding),total);self.panel:SetHeight(math.max(minimum,height)+padding);self.scroll:SetHeight(math.max(minimum,height));self.syncScroll=true;self.scrollBar:SetHeight(self.scroll:GetHeight());self.scrollBar:SetMinMaxValues(0,math.max(0,total-self.scroll:GetHeight()));self.scrollBar:SetValue(self.scroll:GetVerticalScroll());self.thumb:SetHeight(math.max(T.floatingThumbMinHeight,self.scroll:GetHeight()*self.scroll:GetHeight()/math.max(1,total)));self.scrollBar:Hide();self.syncScroll=nil
@@ -547,6 +611,7 @@ function F:RefreshClock()
   if app and row:IsShown() then
    local remaining=app.expiresAt and math.max(0,math.ceil(app.expiresAt-now))
    row.timer:SetText(remaining and ("%d:%02d"):format(math.floor(remaining/60),remaining%60) or "—")
+   row.timer:SetWidth(math.max(T.floatingTimerMinWidth,math.ceil(row.timer:GetUnboundedStringWidth())))
   end
  end
  if not pending and self.countdown then self.countdown:Cancel();self.countdown=nil end
@@ -568,7 +633,6 @@ function F:Render()
  if self.boundVersion==self.entriesVersion and self.visibleFirst==first and self.visibleLast==last then return end
  self.boundVersion,self.visibleFirst,self.visibleLast=self.entriesVersion,first,last
  local batchCount=0;wipe(boundBatches)
- for _,batch in ipairs(self.batches) do batch.applicantID=nil;batch.background:Hide();batch:Hide() end
  for index=first or 1,last or 0 do
   local entry=self.entries[index]
   local top=self.entryTops[index]
@@ -576,34 +640,36 @@ function F:Render()
    bound=bound+1;local row=self:AcquireRow(bound,kind)
    row:SetWidth(T.floatingRowWidth);row.baseTop=top;row.cardOrder=entry.batch and batchCount+1 or bound;row:ClearAllPoints();row:SetPoint("TOPLEFT",0,-top);row:SetHeight(entry.height-(entry.gap or 0));row:Show();row.applicationID=nil;row.applicantID=entry.applicantID;row.application=nil;row.batch=nil
    local elementKey=entry.application and entry.application.id or entry.member and (tostring(entry.applicantID)..":"..tostring(entry.member.guid or entry.member.nameKey or entry.member.name)) or entry.applicantID
+   SetActionTarget(row,elementKey)
    C.RekeyElement(row,elementKey,entry.application and "floating.application" or entry.member and "floating.member" or "floating.footer")
    if entry.batch then
     local batch=boundBatches[entry.batch]
     if not batch then
      batchCount=batchCount+1;batch=self.batches[batchCount] or self:CreateBatch();boundBatches[entry.batch]=batch
-     batch:ClearAllPoints();batch:SetPoint("TOPLEFT",0,-entry.batch.top);batch:SetWidth(T.floatingRowWidth);batch:SetHeight(entry.batch.height);C.RekeyElement(batch,entry.applicantID);batch.applicantID=entry.applicantID;batch.baseTop=entry.batch.top;batch.cardOrder=batchCount;batch.background:SetHovered(batch:IsMouseOver());batch.background:Show();batch:Show()
+     batch:ClearAllPoints();batch:SetPoint("TOPLEFT",0,-entry.batch.top);batch:SetWidth(T.floatingRowWidth);batch:SetHeight(entry.batch.height);C.RekeyElement(batch,entry.applicantID);SetActionTarget(batch,entry.applicantID);batch.applicantID=entry.applicantID;batch.baseTop=entry.batch.top;batch.cardOrder=batchCount;batch.background:SetHovered(batch:IsMouseOver());batch.background:Show();batch:Show()
     end
     row.batch=batch;row.cardOrder=batch.cardOrder
    end
    row.name:ClearAllPoints();row.name:SetHeight(0);row.name:SetWordWrap(true)
    if kind=="member" then
     row.score:SetShown(not entry.hideRating);row.faction:Hide();row.faction:SetTexture(nil)
-   elseif kind=="footer" then row.invite:Hide();row.decline:Hide();row.invite.applicantID=nil;row.decline.applicantID=nil
+   elseif kind=="footer" then
+    if not entry.actions then SetActionTarget(row.invite,nil);SetActionTarget(row.decline,nil);row.invite:Hide();row.decline:Hide();row.invite.applicantID=nil;row.decline.applicantID=nil end
    else
-    row.background:ClearAllPoints();row.background:SetAllPoints();row.background:Hide();row.cancel:Hide();row.cancel.applicationID=nil
+    row.background:ClearAllPoints();row.background:SetAllPoints();row.background:Hide()
    end
-   row.name:SetTextColor(unpack(T.text));C.SetFont(row.name,entry.comment and T.floatingMemberMetaFont or entry.member and T.floatingMemberNameFont or 16)
-   C.SetLineHeight(row.name,entry.member and T.floatingMemberNameLine or entry.comment and T.floatingMemberMetaLine or 22)
+   row.name:SetTextColor(unpack(T.text));C.SetFont(row.name,entry.comment and T.floatingCommentFont or entry.member and T.floatingMemberNameFont or T.floatingActivityFont)
+   C.SetLineHeight(row.name,entry.member and T.floatingMemberNameLine or entry.comment and T.floatingCommentLine or T.floatingActivityLine)
    if kind~="footer" then
-    row.meta:ClearAllPoints();row.meta:SetWordWrap(true);C.SetFont(row.meta,entry.application and T.listTitleSize or T.floatingMemberMetaFont);C.SetLineHeight(row.meta,entry.application and T.listTitleLineHeight or T.floatingMemberMetaLine)
+    row.meta:ClearAllPoints();row.meta:SetWordWrap(true);C.SetFont(row.meta,entry.application and T.floatingApplicationTitleFont or T.floatingMemberMetaFont);C.SetLineHeight(row.meta,entry.application and T.floatingApplicationTitleLine or T.floatingMemberMetaLine)
    end
    if entry.footer then
-     local commentTop=entry.actions and entry.comment and entry.textHeight<=self.context:GetLineHeight("floatingMemberMetaLine") and T.floatingCompactFooterTop or T.floatingFooterPaddingY
+     local commentTop=math.max(T.floatingFooterPaddingY,(row:GetHeight()-entry.textHeight)/2)
      row.name:SetWidth(entry.textWidth);row.name:SetPoint("TOPLEFT",T.floatingMemberTextX,-commentTop);row.name:SetHeight(entry.textHeight);row.name:SetTextColor(unpack(T.muted));row.name:SetText(entry.comment or "")
     if entry.actions then
      row.invite:SetSize(T.floatingRowInviteWidth,T.floatingRowInviteHeight);row.decline:SetSize(T.floatingRowDeclineWidth,T.floatingRowDeclineHeight)
      row.invite:ClearAllPoints();C.SetPoint(row.invite,"BOTTOMRIGHT",row.invite:GetParent(),"BOTTOMRIGHT","floatingRowInviteBottomrightX","floatingRowInviteBottomrightY");row.decline:ClearAllPoints();C.SetPoint(row.decline,"BOTTOMRIGHT",row.decline:GetParent(),"BOTTOMRIGHT","floatingRowDeclineBottomrightX","floatingRowDeclineBottomrightY")
-     row.invite.applicantID=entry.applicantID;row.decline.applicantID=entry.applicantID;row.invite:Show();row.decline:Show()
+     SetActionTarget(row.invite,entry.applicantID);SetActionTarget(row.decline,entry.applicantID);row.invite.applicantID=entry.applicantID;row.decline.applicantID=entry.applicantID;row.invite:Show();row.decline:Show()
      row.invite:SetEnabled(true);row.decline:SetEnabled(true)
     end
    elseif entry.member then
@@ -613,43 +679,34 @@ function F:Render()
     row.name:SetWidth(entry.nameWidth);row.name:SetPoint("TOPLEFT",T.floatingMemberTextX,-pad);row.name:SetText(name or A.L.invalidName)
     local metaTop=-pad-entry.nameHeight-T.floatingMemberTextGap
     if entry.factionTexture then row.faction:SetTexture(entry.factionTexture);row.faction:ClearAllPoints();row.faction:SetPoint("TOPLEFT",T.floatingMemberTextX,metaTop-(self.context:GetLineHeight("floatingMemberMetaLine")-T.floatingMemberFactionSize)/2);row.faction:Show() end
-    row.meta:SetWidth(entry.metaWidth);row.meta:SetPoint("TOPLEFT",T.floatingMemberTextX+T.floatingMemberTextWidth-entry.metaWidth,metaTop);row.meta:SetText(entry.metaText)
+    row.meta:SetWidth(entry.metaWidth);row.meta:SetPoint("TOPLEFT",T.floatingMemberTextX+(entry.factionTexture and T.floatingMemberFactionSize+T.floatingMemberFactionGap or 0),metaTop);row.meta:SetText(entry.metaText)
     local color=m.class and RAID_CLASS_COLORS[m.class];if color then row.name:SetTextColor(color.r,color.g,color.b) end
     MemberIcon(row.icon,m,entry.memberIcon)
     if entry.hideRating then row.score:SetText("") elseif m.ratingKind=="pvp" then ColorScore(row.score,m.rating,"pvp") else ColorScore(row.score,m.dungeonScore) end
-    C.SetFont(row.itemLevel,entry.hideRating and 14 or T.floatingMemberMetaFont);C.SetLineHeight(row.itemLevel,entry.hideRating and T.floatingMemberNameLine or T.floatingMemberMetaLine,true)
-    row.itemLevel:ClearAllPoints();row.itemLevel:SetWidth(T.floatingMemberMetricWidth);C.SetPoint(row.itemLevel,"TOPRIGHT",row.itemLevel:GetParent(),"TOPRIGHT","floatingRowItemLevelToprightX2",entry.hideRating and -pad or -pad-entry.nameHeight-T.floatingMemberTextGap);row.itemLevel:SetText((zh and "装等 " or "ilvl ")..(m.itemLevel and math.floor(m.itemLevel) or "—"))
+    C.SetFont(row.itemLevel,T.floatingMemberMetricFont);C.SetLineHeight(row.itemLevel,T.floatingMemberNameLine,true)
+    row.itemLevel:ClearAllPoints();row.itemLevel:SetWidth(entry.itemLevelWidth);C.SetPoint(row.itemLevel,"TOPRIGHT",row.itemLevel:GetParent(),"TOPRIGHT","floatingRowItemLevelToprightX2",-pad);row.itemLevel:SetText(entry.itemLevelText)
 
    else
     local app=entry.application;row.applicationID=app.id;row.application=app;row.background:SetHovered(row:IsMouseOver());row.background:Show()
     row.leader:SetWordWrap(true)
-    row.icon:SetSize(T.floatingRowIconWidth2,T.floatingRowIconHeight2);row.icon:ClearAllPoints();C.SetPoint(row.icon,"TOPLEFT",row.icon:GetParent(),"TOPLEFT","floatingRowIconTopleftX","floatingRowIconTopleftY2");F.context:SetGameTexture(row.icon,app.activityArt or "Interface\\Icons\\INV_Misc_GroupLooking")
-    C.SetPoint(row.name,"TOPLEFT",row.name:GetParent(),"TOPLEFT","floatingRowNameTopleftX2",-T.floatingApplicationPaddingY);row.name:SetText(app.activityLabel or app.activityName or app.result and app.result.activityName or "")
-    row.score:Show();C.SetFont(row.score,14);row.score:SetHeight(0);row.score:SetWordWrap(true);C.SetLineHeight(row.score,20);row.score:ClearAllPoints();row.score:SetWidth(entry.detailWidth);row.score:SetTextColor(unpack(T.muted));row.score:SetText(entry.detailText);row.score:SetJustifyH("LEFT")
+    row.icon:SetSize(T.floatingRowIconWidth2,T.floatingRowIconHeight2);row.icon:ClearAllPoints();row.icon:SetPoint("LEFT",row.leader,"LEFT",T.floatingRowIconTopleftX-T.floatingRowLeaderTopleftX2,0);MemberIcon(row.icon,app)
+    C.SetPoint(row.name,"TOPLEFT",row.name:GetParent(),"TOPLEFT","floatingRowNameTopleftX2",-T.floatingApplicationPaddingY);row.name:SetText(A.ActivityLabels.Display(app.activityLabel or app.activityName or app.result and app.result.activityName) or "")
+    row.score:Show();C.SetFont(row.score,T.floatingActivityDetailFont);row.score:SetHeight(0);row.score:SetWordWrap(true);C.SetLineHeight(row.score,T.floatingActivityLine);row.score:ClearAllPoints();row.score:SetWidth(entry.detailWidth);row.score:SetTextColor(unpack(T.text));row.score:SetText(entry.detailText);row.score:SetJustifyH("LEFT")
     row.name:SetWidth(entry.activityWidth);local nameWidth=math.min(entry.activityWidth,row.name:GetStringWidth());row.name:SetWidth(nameWidth);C.SetPoint(row.score,"TOPLEFT",row.score:GetParent(),"TOPLEFT",T.floatingRowNameTopleftX2+nameWidth+T.floatingActivityDetailGap,-T.floatingApplicationPaddingY)
-    row.meta:SetWidth(T.floatingRowMetaWidth);C.SetPoint(row.meta,"TOPLEFT",row.meta:GetParent(),"TOPLEFT","floatingRowMetaTopleftX2",-T.floatingApplicationPaddingY-T.floatingApplicationTextGap-entry.activityHeight);row.meta:SetText(app.name or "")
-    row.cancel:ClearAllPoints();C.SetPoint(row.cancel,"TOPRIGHT",row.cancel:GetParent(),"TOPRIGHT","floatingRowCancelToprightX","floatingRowCancelToprightY");row.cancel.applicationID=app.id;row.cancel:Show();row.cancel:SetEnabled(not app.pendingStatus)
+    row.meta:SetWidth(T.floatingRowWidth-T.floatingRowMetaTopleftX2-T.floatingFooterRightInset);C.SetPoint(row.meta,"TOPLEFT",row.meta:GetParent(),"TOPLEFT","floatingRowMetaTopleftX2",-T.floatingApplicationPaddingY-T.floatingApplicationTextGap-entry.activityHeight);row.meta:SetText(app.name or "")
+    row.cancel:ClearAllPoints();C.SetPoint(row.cancel,"TOPRIGHT",row.cancel:GetParent(),"TOPRIGHT","floatingRowCancelToprightX","floatingRowCancelToprightY");SetActionTarget(row.cancel,app.id);row.cancel.applicationID=app.id;row.cancel:Show();row.cancel:SetEnabled(not app.pendingStatus)
     row.leader:ClearAllPoints();row.leader:SetWidth(T.floatingRowLeaderWidth);C.SetPoint(row.leader,"TOPLEFT",row.leader:GetParent(),"TOPLEFT","floatingRowLeaderTopleftX2",-T.floatingApplicationPaddingY-T.floatingApplicationTextGap*2-entry.activityHeight-entry.titleHeight);row.timer:ClearAllPoints();C.SetPoint(row.timer,"TOPRIGHT",row.timer:GetParent(),"TOPRIGHT","floatingRowTimerToprightX2",-T.floatingApplicationPaddingY-T.floatingApplicationTextGap*2-entry.activityHeight-entry.titleHeight);row.leader:SetText(app.leaderName or (zh and "队长身份未知" or "Leader unknown"))
     local color=app.leaderClass and RAID_CLASS_COLORS[app.leaderClass];if color then row.leader:SetTextColor(color.r,color.g,color.b) else row.leader:SetTextColor(unpack(T.muted)) end
-   end
-   if entry.application then
-    row.applicationItems[1].width,row.applicationItems[1].height=row.name:GetWidth(),entry.activityHeight
-    row.applicationItems[2].width,row.applicationItems[2].height=T.floatingRowMetaWidth,entry.titleHeight
-    row.applicationItems[3].width,row.applicationItems[3].height=T.floatingRowLeaderWidth,"content"
-    row.applicationOptions.x,row.applicationOptions.y=T.floatingRowNameTopleftX2,-T.floatingApplicationPaddingY;row.applicationLayout:Layout()
-   elseif entry.member then
-    row.memberItems[1].width,row.memberItems[1].height=entry.nameWidth,entry.nameHeight
-    row.memberItems[2].width,row.memberItems[2].height=entry.metaWidth,"content"
-    row.memberOptions.x,row.memberOptions.y=T.floatingMemberTextX,-entry.padTop;row.memberLayout:Layout()
    end
    if kind=="footer" then
     row.footerOptions.x,row.footerOptions.y=T.floatingRowDeclineBottomrightX,T.floatingRowDeclineBottomrightY
     row.footerOptions.gap=T.floatingRowDeclineBottomrightX-T.floatingRowInviteBottomrightX-T.floatingRowInviteWidth;row.footerLayout:Layout()
    end
    if row:IsMouseOver() then self:HoverRow(row,true) end
-   if entry.member then C.SetFont(row.score,14);row.score:SetWordWrap(false);C.SetLineHeight(row.score,T.floatingMemberNameLine,true);row.score:ClearAllPoints();C.SetPoint(row.score,"TOPRIGHT",row.score:GetParent(),"TOPRIGHT","floatingRowScoreToprightX",-entry.padTop);row.score:SetWidth(T.floatingMemberMetricWidth);row.score:SetJustifyH("RIGHT") end
+   if entry.member then C.SetFont(row.score,T.floatingMemberMetricFont);row.score:SetWordWrap(false);C.SetLineHeight(row.score,T.floatingMemberNameLine,true);row.score:ClearAllPoints();C.SetPoint(row.score,"TOPRIGHT",row.score:GetParent(),"TOPRIGHT",T.floatingRowScoreToprightX-entry.itemLevelWidth-T.floatingMemberMetricGap,-entry.padTop);row.score:SetWidth(entry.scoreWidth);row.score:SetJustifyH("RIGHT") end
  end
  for i=bound+1,#self.rows do local row=self.rows[i];row:Hide();ClearRowBinding(row) end
+ for i=batchCount+1,#self.batches do local batch=self.batches[i];batch.applicantID=nil;SetActionTarget(batch,nil);batch.background:Hide();batch:Hide() end
  self:ApplyCardMotion(self.cardElapsed)
  self:RefreshClock();ApplyElements()
 end

@@ -7,6 +7,94 @@ G.History = History
 
 local pending -- 指向 charDB.activeRun,不另留一份可丢失的内存基线。
 
+local function Number(value)
+ return type(value)=="number" and value==value and value>=0 and value<math.huge
+end
+local function Integer(value) return Number(value) and value<=2147483647 and value%1==0 end
+local function Timestamp(value)
+ if not Number(value) then return false end
+ if value==0 then return true end
+ local ok,text=pcall(date,"%y/%m/%d",value)
+ return ok and type(text)=="string"
+end
+local function Optional(source,key,check)
+ return source[key]==nil or check(source[key])
+end
+local function Text(value) return type(value)=="string" end
+local function Boolean(value) return type(value)=="boolean" end
+local function Array(source,check)
+ if type(source)~="table" then return false end
+ local count=0
+ for key,value in pairs(source) do
+  if not Integer(key) or key<1 or not check(value) then return false end
+  count=count+1
+ end
+ for index=1,count do if source[index]==nil then return false end end
+ return true
+end
+local memberTextFields={"key","nameKey","guid","class","specName","assignedRole"}
+local function Member(member)
+ if type(member)~="table" or not Text(member.name) or member.name=="" or not Text(member.realm) then return false end
+ for _,key in ipairs(memberTextFields) do if not Optional(member,key,Text) then return false end end
+ return Optional(member,"specID",Integer) and Optional(member,"isSelf",Boolean) and Optional(member,"isLeader",Boolean)
+end
+local function Activity(activity)
+ return type(activity)=="table" and Optional(activity,"mapID",Integer) and Optional(activity,"categoryID",Integer)
+end
+local function Run(run,active)
+ if type(run)~="table" then return false end
+ if not Optional(run,"id",function(value) return Text(value) or Number(value) end)
+  or not Optional(run,"startedAt",Timestamp) or not Optional(run,"completedAt",Timestamp)
+  or not Optional(run,"mapChallengeModeID",Integer) or not Optional(run,"mapName",Text)
+  or not Optional(run,"level",Integer) or not Activity(run)
+  or run.activity~=nil and run.activity~=false and not Activity(run.activity) then return false end
+ if not active then return Array(run.members,Member) end
+ if not run.mapChallengeModeID or run.mapChallengeModeID<=0 or type(run.members)~="table" then return false end
+ local memberCount=0
+ for key,member in pairs(run.members) do
+  if type(key)~="string" or not Member(member) or A:PlayerKey(member.name,member.realm)~=key or member.key~=nil and member.key~=key then return false end
+  memberCount=memberCount+1
+ end
+ local seen={}
+ local valid=Array(run.order,function(key)
+  if type(key)~="string" or not run.members[key] or seen[key] then return false end
+  seen[key]=true;return true
+ end)
+ return valid and #run.order==memberCount
+end
+-- Saved history is validated once at the package's real initialization boundary.
+-- Completed valid objects and their member arrays keep their original identities.
+function History:InitializeStorage(db)
+ pending=nil
+ if G.Game.runTracking then G.Game:DisableRunTracking() end
+ local runs=db.runs
+ if type(runs)~="table" then
+  if runs~=nil then G:RetainInvalidStorage(db,"runs",runs,"expected a completed-run array") end
+  db.runs={}
+ else
+  local count,maximum=0,0
+  for key,run in pairs(runs) do
+   if Integer(key) and key>=1 and Run(run,false) then count=count+1;maximum=math.max(maximum,key)
+   else
+    G:RetainInvalidStorage(db,"runs["..type(key)..":"..tostring(key).."]",run,"invalid completed run")
+    runs[key]=nil
+   end
+  end
+  -- Healthy append-only history needs no second index or sort. Compact only
+  -- holes left by malformed records, retaining every valid original object.
+  if maximum~=count then
+   local keys={};for key in pairs(runs) do keys[#keys+1]=key end
+   table.sort(keys)
+   local ordered={};for _,key in ipairs(keys) do ordered[#ordered+1]=runs[key];runs[key]=nil end
+   for index,run in ipairs(ordered) do runs[index]=run end
+  end
+ end
+ if db.activeRun~=nil and not Run(db.activeRun,true) then
+  G:RetainInvalidStorage(db,"activeRun",db.activeRun,"invalid active-run baseline")
+  db.activeRun=nil
+ end
+end
+
 local UNITS = { "player", "party1", "party2", "party3", "party4" }
 
 local function Specialization(unit)

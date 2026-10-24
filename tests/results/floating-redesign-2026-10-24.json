@@ -1,0 +1,246 @@
+{
+  "date": "2026-10-24",
+  "branch": "codex/integrate-plus-features",
+  "baseCommit": "ecb0a4d",
+  "scope": "Floating panel redesign and final removal of the decorative countdown clock",
+  "environment": {
+    "client": "12.1.5.70575",
+    "locale": "zhCN",
+    "toolkit": "3.2.5"
+  },
+  "offline": {
+    "unit": {
+      "command": "lua tests/runner.lua",
+      "modules": 31,
+      "assertions": 19819,
+      "failedModules": 0
+    },
+    "layout": {
+      "command": "lua tests/run_layout_checks.lua",
+      "scripts": 16,
+      "failedScripts": 0
+    },
+    "architecture": {
+      "command": "node tests/check_architecture.cjs",
+      "checks": 4005,
+      "failures": 0,
+      "frozenFiles": 30
+    }
+  },
+  "native": [
+    {
+      "phase": "recruitment before clock removal",
+      "request": "floating-smooth-native-final-01",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "result": {
+        "checks": 11,
+        "currentSessionErrors": {},
+        "entries": 4,
+        "heading": "塞塔里斯神庙 · M+",
+        "icons": {
+          "dot": -10474,
+          "dotSize": 8.000030517578125,
+          "waiting": -10473,
+          "waitingSize": 28.00003433227539
+        },
+        "panel": {
+          "bottom": 568.4999389648438,
+          "height": 225,
+          "left": 1126.6666259765625,
+          "scale": 0.6399999856948853,
+          "width": 360.0000305175781
+        },
+        "recruiting": true,
+        "resourcesReleased": true,
+        "rows": [
+          {
+            "height": 47.99996566772461,
+            "itemLevel": "装等 330",
+            "kind": "member",
+            "meta": "熊猫人 · 奥术",
+            "name": "轻舞小肥羊-埃德萨拉",
+            "score": "3874"
+          },
+          {
+            "height": 40.00000762939453,
+            "kind": "footer"
+          },
+          {
+            "height": 47.99996566772461,
+            "itemLevel": "装等 331",
+            "kind": "member",
+            "meta": "矮人 · 防护",
+            "name": "拉格納-影之哀伤",
+            "score": "3785"
+          },
+          {
+            "height": 40.00000762939453,
+            "kind": "footer"
+          }
+        ],
+        "scope": "current real application/listing data, native Frame geometry and generated textures; public popup controller only",
+        "screen": {
+          "height": 767.9999828338623,
+          "width": 1365.3334069824195
+        },
+        "screenshotTime": "102426_233027",
+        "status": "2人申请"
+      }
+    },
+    {
+      "phase": "outbound applications before clock removal",
+      "request": "floating-clock-refine-native-01",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "result": {
+        "checks": 13,
+        "currentSessionErrors": {},
+        "entries": 2,
+        "heading": "我的申请 2/5",
+        "icons": {
+          "dot": -10474,
+          "dotSize": 7.999998569488525,
+          "waiting": -10473,
+          "waitingSize": 27.999998092651367
+        },
+        "panel": {
+          "bottom": 829.9999389648438,
+          "height": 241.00001525878906,
+          "left": 40.000003814697266,
+          "scale": 0.6399999856948853,
+          "width": 360.0000305175781
+        },
+        "recruiting": false,
+        "resourcesReleased": true,
+        "rows": [
+          {
+            "activityFont": 20,
+            "clockGap": 4.999969482421875,
+            "height": 96.00000762939453,
+            "kind": "application",
+            "name": "基希克斯破封",
+            "timer": "4:51",
+            "title": "|Kt6110|k",
+            "titleFont": 15
+          },
+          {
+            "activityFont": 20,
+            "clockGap": 4.999969482421875,
+            "height": 96.00000762939453,
+            "kind": "application",
+            "name": "基希克斯破封",
+            "timer": "4:51",
+            "title": "|Kt6121|k",
+            "titleFont": 15
+          }
+        ],
+        "scope": "current real application/listing data, native Frame geometry and generated textures; public popup controller only",
+        "screen": {
+          "height": 767.9999828338623,
+          "width": 1365.3334069824195
+        },
+        "screenshotCompleted": true,
+        "screenshotTime": "102426_234225",
+        "status": "申请2个"
+      }
+    },
+    {
+      "phase": "final build, idle",
+      "request": "floating-remove-clock-native-01",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "result": {
+        "checks": 6,
+        "currentSessionErrors": {},
+        "empty": "暂无活动",
+        "entries": 0,
+        "icons": {
+          "dot": -10474,
+          "dotSize": 7.999998569488525,
+          "waiting": -10473,
+          "waitingSize": 27.999998092651367
+        },
+        "panel": {
+          "bottom": 1013,
+          "height": 57.999969482421875,
+          "left": 40.000003814697266,
+          "scale": 0.6399999856948853,
+          "width": 132
+        },
+        "recruiting": false,
+        "resourcesReleased": true,
+        "rows": {},
+        "scope": "current real application/listing data, native Frame geometry and generated textures; public popup controller only",
+        "screen": {
+          "height": 767.9999828338623,
+          "width": 1365.3334069824195
+        },
+        "screenshotCompleted": true,
+        "screenshotTime": "102426_234611",
+        "status": "荔枝组队"
+      }
+    }
+  ],
+  "finalNativeScope": "The final runtime was idle after real applications ended. Recruitment and outbound geometry were observed earlier in this same session; removal of the clock and the wider leader column passed the final offline suite.",
+  "visualEvidence": {
+    "filterComparison": "WoWScrnShot_102426_232612.jpg",
+    "userConfirmedSmooth": true,
+    "finalClockDecision": "Removed at user request; only countdown text remains.",
+    "finalIdleScreenshot": "WoWScrnShot_102426_234611.jpg"
+  },
+  "textures": {
+    "retained": [
+      "floating-dot.tga",
+      "floating-waiting.tga"
+    ],
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "format": "RGBA TGA",
+    "filter": "TRILINEAR",
+    "memoryMeasurement": null,
+    "generation": "built-in image_gen; source images and prompts are in assets/imagegen/floating"
+  },
+  "installedVerified": [
+    {
+      "path": "LycheeGroup/Floating.lua",
+      "sha256": "89bf2225e00ff606774c696b812cee06c5c4870fa3d540e6fc6c1a79dd8ddb82",
+      "bytes": 56954
+    },
+    {
+      "path": "LycheeGroup/Theme/Defaults.lua",
+      "sha256": "ed1a35cccb116fef4c4180d77330b468af47fe19d40b94ed80541198108c7666",
+      "bytes": 35804
+    },
+    {
+      "path": "LycheeGroup/Theme/Elements.lua",
+      "sha256": "58d4a38039c35a1217de583f4f866696ba3a303c54284d6dbdac9aeb3060cbb8",
+      "bytes": 22887
+    },
+    {
+      "path": "LycheeGroup/Media/floating-dot.tga",
+      "sha256": "3710b344f6814034037faa5d34f404a07d571dd5988a7d5155304eb82e96381b",
+      "bytes": 4194348
+    },
+    {
+      "path": "LycheeGroup/Media/floating-waiting.tga",
+      "sha256": "1ce35b39f68ebace67caaf0efca4e9502d6140bd4b0d03a21e74106ea7cfaaf3",
+      "bytes": 4194348
+    }
+  ],
+  "cleanup": {
+    "closed": true,
+    "cleanup": "complete",
+    "method": "released"
+  },
+  "limits": [
+    "Native geometry uses the public popup controller, not hardware mouse dispatch.",
+    "No CPU or memory benchmark was performed for this redesign."
+  ],
+  "recovery": {
+    "earlierFixtureRequest": "floating-redesign-native-preview-01",
+    "outcome": "execution_unknown; old runtime retired and connection closed; the uncertain request was not replayed"
+  }
+}

@@ -236,7 +236,7 @@ function Library.AttachStyles(UI,C)
   if key=="width" then return target:GetWidth() elseif key=="height" then return target:GetHeight()
   elseif key=="alpha" then return target:GetAlpha() elseif key=="shown" then return target:IsShown()
   elseif key=="radius" then return target.radius or 0
-  elseif key=="color" then return target.color or (text.GetTextColor and {text:GetTextColor()} or {target:GetVertexColor()})
+  elseif key=="color" then return target.color or (text.GetTextColor and {text:GetTextColor()} or {(target._lycheeTexture or target):GetVertexColor()})
   elseif key=="fontSize" then return font and font.size or select(2,text:GetFont())/UI.fontScale-UI.Theme.fontSizeDelta
   elseif key=="lineHeight" then return font and font.lineHeight or (text.GetLineHeight and text:GetLineHeight() or select(2,text:GetFont()))/UI.fontScale-UI.Theme.lineHeightDelta
   elseif key=="flags" then return select(3,text:GetFont()) or ""

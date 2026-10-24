@@ -10,6 +10,7 @@ end
 function Results:MatchesNumericFilters(record,filters)
  return InRange(record.requiredItemLevel,filters.minItemLevel,filters.maxItemLevel)
   and InRange(record.leaderRating,filters.minRating,filters.maxRating)
+  and InRange(record.numMembers,filters.minMembers,filters.maxMembers)
 end
 local ROLE_FILTERS={{"tankPresence","TANK",1},{"healerPresence","HEALER",1},{"damagePresence","DAMAGER",3}}
 function Results:MatchesRolePresence(counts,filters,maximum)
@@ -94,9 +95,9 @@ local function Normalize(id,record,invalidateDetails,expectedScan,metadataDirty)
  record.leaderKey=G:RemotePlayerKey(record.leaderName)
  RememberBlockedLeader(record)
  record.leaderFactionGroup=Public(info.leaderFactionGroup)
- record.numMembers=Public(info.numMembers) or 0
- record.age=Public(info.age) or 0
- record.requiredItemLevel=Public(info.requiredItemLevel) or 0
+ record.numMembers=Public(info.numMembers)
+ record.age=Public(info.age)
+ record.requiredItemLevel=Public(info.requiredItemLevel)
  record.requiredDungeonScore=Public(info.requiredDungeonScore)
  record.leaderOverallDungeonScore=Public(info.leaderOverallDungeonScore)
  record.ratingKind=activity and (activity.isPvpActivity or activity.isRatedPvpActivity) and "pvp" or "dungeon"
@@ -142,6 +143,8 @@ local function Normalize(id,record,invalidateDetails,expectedScan,metadataDirty)
   record.progressKnown,record.progressCount=nil,nil
   record.checkedSpecID,record.hasMemberSpec=nil,nil
   record.checkedClass,record.hasMemberClass=nil,nil
+  record.checkedRoleClass,record.checkedRole,record.hasMemberClassRole=nil,nil,nil
+  record.bloodlustKnown,record.hasBloodlust=nil,nil
   record.leaderClassKnown,record.leaderClass=nil,nil
  end
  return record
@@ -168,7 +171,7 @@ function Results:GetLeaderClass(record)
   end
  else
   local getter=C_LFGList.GetSearchResultLeaderInfo
-  local leader=record.numMembers>0 and getter and Public(getter(record.id))
+  local leader=(record.numMembers or 0)>0 and getter and Public(getter(record.id))
   if type(leader)=="table" and Public(leader.isLeader)==true then
    local class=Public(leader.classFilename)
    if type(class)=="string" and class~="" then
@@ -176,7 +179,7 @@ function Results:GetLeaderClass(record)
     return class
    end
   end
-  for index=1,record.numMembers do
+  for index=1,record.numMembers or 0 do
    local member=Public(C_LFGList.GetSearchResultPlayerInfo(record.id,index))
    if type(member)=="table" and (Public(member.isLeader)==true or record.leaderKey and G:RemotePlayerKey(Public(member.name))==record.leaderKey) then
     record.leaderClass=Public(member.classFilename);break
@@ -195,7 +198,7 @@ function Results:HasMemberSpec(record,playerSpecID)
    if G:ResolveMemberSpec(member)==playerSpecID then found=true;break end
   end
  else
-  for index=1,record.numMembers do
+  for index=1,record.numMembers or 0 do
    local member=Public(C_LFGList.GetSearchResultPlayerInfo(record.id,index))
    if type(member)=="table" and G:ResolveMemberSpec(member)==playerSpecID then found=true;break end
   end
@@ -211,13 +214,47 @@ function Results:HasMemberClass(record,playerClass)
    if member.class==playerClass then found=true;break end
   end
  else
-  for index=1,record.numMembers do
+  for index=1,record.numMembers or 0 do
    local member=Public(C_LFGList.GetSearchResultPlayerInfo(record.id,index))
    if type(member)=="table" and Public(member.classFilename)==playerClass then found=true;break end
   end
  end
  record.checkedClass,record.hasMemberClass=playerClass,found
  return found
+end
+local BLOODLUST_CLASSES={SHAMAN=true,MAGE=true,HUNTER=true,EVOKER=true}
+-- Both optional checks share one roster pass and retain only small answers.
+-- An incomplete or restricted roster cannot prove that Bloodlust is missing.
+function Results:MatchesPartyFilters(record,playerClass,playerRole,needBloodlust)
+ local checkRole=playerRole and not (record.checkedRoleClass==playerClass and record.checkedRole==playerRole)
+ if playerRole and not checkRole and record.hasMemberClassRole then return false end
+ local checkBloodlust=needBloodlust and (record.numMembers or 0)>=4
+ if checkBloodlust and record.bloodlustKnown then
+  if not record.hasBloodlust then return false end
+  checkBloodlust=false
+ end
+ if not checkRole and not checkBloodlust then return true end
+ local lustOK=false
+ local details=record.details
+ local members=details and not record.detailsDirty and details.members
+ for index=1,record.numMembers or 0 do
+  local member
+  if members then member=Public(members[index])
+  else member=Public(C_LFGList.GetSearchResultPlayerInfo(record.id,index)) end
+  if type(member)=="table" and (not canaccesstable or canaccesstable(member)) then
+   local class=Public(member.class) or Public(member.classFilename)
+   if checkRole and class==playerClass and Public(member.assignedRole)==playerRole then
+    record.checkedRoleClass,record.checkedRole,record.hasMemberClassRole=playerClass,playerRole,true
+    if checkBloodlust and lustOK then record.bloodlustKnown,record.hasBloodlust=true,true end
+    return false
+   end
+   if checkBloodlust and (type(class)~="string" or class=="" or BLOODLUST_CLASSES[class]) then lustOK=true end
+  elseif checkBloodlust then lustOK=true end
+  if not checkRole and lustOK then break end
+ end
+ if checkRole then record.checkedRoleClass,record.checkedRole,record.hasMemberClassRole=playerClass,playerRole,false end
+ if checkBloodlust then record.bloodlustKnown,record.hasBloodlust=true,lustOK end
+ return not checkBloodlust or lustOK
 end
 local function RelationNames(values,excludeKey)
  values=Public(values)
@@ -258,7 +295,7 @@ function Results:GetDetails(idOrRecord)
  local memberCount=0
  local leaderClass,leaderFound
  details.counts=record.memberCounts or record.maxNumPlayers~=5 and self:GetMemberCounts(record) or nil
- for index=1,record.numMembers do
+ for index=1,record.numMembers or 0 do
   local info=Public(C_LFGList.GetSearchResultPlayerInfo(record.id,index))
   if type(info)=="table" then
    local name=Public(info.name)
@@ -323,7 +360,7 @@ local function MatchesLeaderText(record,text)
  local leader=record.leaderName
  return type(leader)=="string" and leader:lower():find(text,1,true)~=nil
 end
-local function Pass(record,filters,leaderText,playerSpecID,playerClass)
+local function Pass(record,filters,leaderText,playerSpecID,playerClass,roleClass,playerRole,needBloodlust)
  if blockedTitles[record.name] and not unblockedLeaders[record.leaderKey] or G.db.blockedLeaders[record.leaderKey] then return false end
  if not Results:MatchesNumericFilters(record,filters) then return false end
  if G.Applications:IsActive(record.id) then return false end
@@ -335,8 +372,6 @@ local function Pass(record,filters,leaderText,playerSpecID,playerClass)
   if not match then for _,member in ipairs(Results:GetDetails(record).members) do if member.nameKey==filters.personKey then match=true;break end end end
   if not match then return false end
  end
- if filters.minMembers and record.numMembers<filters.minMembers then return false end
- if filters.maxMembers and record.numMembers>filters.maxMembers then return false end
  if filters.neededRole then
   local counts=Results:GetMemberCounts(record)
   local target=filters.neededRole=="DAMAGER" and 3 or 1
@@ -357,6 +392,7 @@ local function Pass(record,filters,leaderText,playerSpecID,playerClass)
  end
  if playerSpecID and Results:HasMemberSpec(record,playerSpecID) then return false end
  if playerClass and Results:HasMemberClass(record,playerClass) then return false end
+ if (playerRole or needBloodlust) and not Results:MatchesPartyFilters(record,roleClass,playerRole,needBloodlust) then return false end
  return true
 end
 local sorting
@@ -367,11 +403,17 @@ local function Sort(a,b)
  local xf,yf=x.bnetFriends+x.charFriends+x.guildMates>0,y.bnetFriends+y.charFriends+y.guildMates>0
  if xf~=yf then return xf end
  local av,bv
- if sorting=="rating" then av,bv=x.leaderRating or -1,y.leaderRating or -1
+ if sorting=="rating" then av,bv=x.leaderRating,y.leaderRating
  elseif sorting=="members" then av,bv=x.numMembers,y.numMembers
  elseif sorting=="itemLevel" then av,bv=x.requiredItemLevel,y.requiredItemLevel end
- if av and av~=bv then return av>bv end
- if x.age~=y.age then return x.age<y.age end
+ if av~=bv then
+  if av==nil then return false elseif bv==nil then return true end
+  return av>bv
+ end
+ if x.age~=y.age then
+  if x.age==nil then return false elseif y.age==nil then return true end
+  return x.age<y.age
+ end
  return a<b
 end
 function Results:InvalidateView() dirty=true end
@@ -399,6 +441,7 @@ function Results:ClearBlockedTitles()
  return true
 end
 function Results:GetBlockedTitleCount() return blockedTitleCount end
+function Results:BindBlockedLeaders() blockedLeadersDirty=true end
 function Results:GetBlockedLeaders()
  if blockedLeadersDirty then
   wipe(blockedLeaderIDs)
@@ -536,9 +579,24 @@ function Results:GetResults()
   local filters=G.Search:GetFilters()
   local playerSpecID=filters.hideSameSpec and A.Specializations:Player() or nil
   local playerClass=filters.hideSameClass and select(2,UnitClass("player")) or nil
+  local roleClass,playerRole,needBloodlust
+  if filters.category=="seasonDungeon" and (filters.hideSameClassRole or filters.requireBloodlust) then
+   roleClass=Public(select(2,UnitClass("player")))
+   if type(roleClass)=="string" and roleClass~="" then
+    if filters.hideSameClassRole then
+     local selected=C_SpecializationInfo.GetSpecialization()
+     if selected then
+      local _,_,_,_,role=C_SpecializationInfo.GetSpecializationInfo(selected)
+      role=Public(role)
+      if role=="TANK" or role=="HEALER" or role=="DAMAGER" then playerRole=role end
+     end
+    end
+    needBloodlust=filters.requireBloodlust and not BLOODLUST_CLASSES[roleClass]
+   end
+  end
   local leaderText=type(filters.leaderText)=="string" and filters.leaderText:lower():match("^%s*(.-)%s*$") or nil
   if leaderText=="" then leaderText=nil end
-  for id,record in pairs(records) do if not record.isDelisted and Pass(record,filters,leaderText,playerSpecID,playerClass) then ids[#ids+1]=id end end
+  for id,record in pairs(records) do if not record.isDelisted and Pass(record,filters,leaderText,playerSpecID,playerClass,roleClass,playerRole,needBloodlust) then ids[#ids+1]=id end end
   sorting=filters.sort or A:GetSetting("defaultSort");table.sort(ids,Sort);dirty=false
  end
  return ids

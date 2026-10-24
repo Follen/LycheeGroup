@@ -24,33 +24,134 @@ local function CopyPreferences(source)
  return copy
 end
 
+-- Invalid saved values retain their original references outside live consumers.
+function G:RetainInvalidStorage(root,path,value,reason)
+ local recovery=root.storageRecovery
+ if type(recovery)~="table" then
+  root.storageRecovery={}
+  if recovery~=nil then root.storageRecovery.previous={value=recovery,error="storageRecovery must be a table"} end
+  recovery=root.storageRecovery
+ end
+ recovery[path]={value=value,error=reason,previous=recovery[path]}
+end
+local function Number(value)
+ return type(value)=="number" and value==value and value>=0 and value<math.huge
+end
+local function Key(value)
+ return type(value)=="string" and value~="" or Number(value) and value%1==0 and value~=0 or type(value)=="number" and value<0 and value>-math.huge and value%1==0
+end
+local function CategoryKey(value)
+ return type(value)=="string" and (value=="seasonDungeon" or value=="seasonRaid" or value:match("^%d+$") and tonumber(value)>0)
+end
+local function Retain(root,path,value,reason,character)
+ if character then A.Configuration:RetainInvalid(root,path,value,reason)
+ else G:RetainInvalidStorage(root,path,value,reason) end
+end
+local function BindTable(root,owner,key,path,character)
+ local value=owner[key]
+ if type(value)=="table" then return value end
+ if value~=nil then Retain(root,path,value,"expected a table",character) end
+ owner[key]={};return owner[key]
+end
+local filterNumbers={minRating=true,maxRating=true,minItemLevel=true,maxItemLevel=true,minMembers=true,maxMembers=true}
+local filterFlags={selected=true,needsDamage=true,hideZeroScore=true,hideSameSpec=true,hideSameClass=true,hideSameClassRole=true,requireBloodlust=true,roleMatchAny=true,friends=true,guild=true}
+local enumValues={sort={newest=true,rating=true,itemLevel=true,members=true},social={friend=true,guild=true,any=true,positive=true,noCaution=true,caution=true},neededRole={TANK=true,HEALER=true,DAMAGER=true},tankPresence={present=true,missing=true},healerPresence={present=true,missing=true},damagePresence={present=true,missing=true},searchMode={group=true,leader=true}}
+local function CheckChoice(root,choice,path,character)
+ for key,value in pairs(choice) do
+  local valid=true
+  if filterNumbers[key] then
+   valid=Number(value) and value%1==0 and value<=99999
+   if key=="minMembers" or key=="maxMembers" then valid=Number(value) and value%1==0 and value>=1 and value<=40 end
+  elseif filterFlags[key] then valid=type(value)=="boolean"
+  elseif enumValues[key] then valid=value==false or type(value)=="string" and enumValues[key][value]==true
+  elseif key=="tier" then valid=value==false or Number(value) and value%1==0 or value=="exp10" or value=="exp11"
+  elseif key=="difficultyID" then valid=value==false or Number(value) and value%1==0
+  elseif key=="groupKey" then valid=value==false or Key(value)
+  elseif key=="category" then valid=CategoryKey(value)
+  elseif key=="text" or key=="leaderText" or key=="personKey" then valid=type(value)=="string"
+  elseif key=="groupKeys" then
+   valid=value==false or type(value)=="table"
+   if type(value)=="table" then
+    for groupKey,selected in pairs(value) do
+     if not Key(groupKey) or type(selected)~="boolean" then
+      Retain(root,path..".groupKeys["..type(groupKey)..":"..tostring(groupKey).."]",selected,"expected an activity group key and boolean",character)
+      value[groupKey]=nil
+     end
+    end
+   end
+  end
+  if not valid then Retain(root,path.."."..key,value,"invalid saved search choice",character);choice[key]=nil end
+ end
+end
+local function BindFind(root,owner,path,character)
+ local find=BindTable(root,owner,"find",path,character)
+ CheckChoice(root,find,path,character)
+ if find.railCollapsed~=nil and type(find.railCollapsed)~="boolean" then Retain(root,path..".railCollapsed",find.railCollapsed,"expected a boolean",character);find.railCollapsed=nil end
+ local filters=BindTable(root,find,"filters",path..".filters",character)
+ CheckChoice(root,filters,path..".filters",character)
+ local categories=BindTable(root,find,"categoryPrefs",path..".categoryPrefs",character)
+ for key,choice in pairs(categories) do
+  local itemPath=path..".categoryPrefs["..type(key)..":"..tostring(key).."]"
+  if not CategoryKey(key) or type(choice)~="table" then Retain(root,itemPath,choice,"expected a category search choice",character);categories[key]=nil
+  else CheckChoice(root,choice,itemPath,character) end
+ end
+ return find
+end
+function G:BindSavedPreferences(db,prefs)
+ local legacy=BindTable(db,db,"prefs","prefs")
+ local seed=BindFind(db,legacy,"prefs.find")
+ -- First-use character migration clones only the already validated seed.
+ if prefs.find==nil then prefs.find=CopyPreferences(seed) end
+ BindFind(prefs,prefs,"find",true)
+ local roles=prefs.applicationRoles
+ if roles~=nil and roles~=false then
+  if type(roles)~="table" then Retain(prefs,"applicationRoles",roles,"expected role booleans",true);prefs.applicationRoles=nil
+  else
+   for key,value in pairs(roles) do
+    if (key~="TANK" and key~="HEALER" and key~="DAMAGER") or type(value)~="boolean" then
+     Retain(prefs,"applicationRoles["..type(key)..":"..tostring(key).."]",value,"expected a role boolean",true);roles[key]=nil
+    end
+   end
+  end
+ end
+ local blocked=BindTable(db,db,"blockedLeaders","blockedLeaders")
+ for key,value in pairs(blocked) do
+  if type(key)~="string" or key=="" or value~=true then
+   Retain(db,"blockedLeaders["..type(key)..":"..tostring(key).."]",value,"expected a player key and true");blocked[key]=nil
+  end
+ end
+ self.Results:BindBlockedLeaders()
+end
+
 -- Initialize 由微核心 Ensure 调用一次;LoD 包此刻两份存档必然已装载。
 function G:Initialize()
  A:LoadDB()
 	local db = _G.LycheeGroupGroupDB
 	if type(db) ~= "table" then
+  local invalid=db
 		db = {}
 		_G.LycheeGroupGroupDB = db
+  if invalid~=nil then self:RetainInvalidStorage(db,"$root",invalid,"expected an account group table") end
 	end
 	db.schema = 1
 
 	self.db = db
- db.blockedLeaders=db.blockedLeaders or {}
  self.prefs=A.charPrefs
- -- Keep the old account snapshot as the seed for characters not opened yet.
- -- Each character gets its own nested tables once; future edits never alias it.
- if not self.prefs.find then self.prefs.find=CopyPreferences(db.prefs and db.prefs.find or {}) end
- db.creationPresets=db.creationPresets or {}
+ self:BindSavedPreferences(db,self.prefs)
+ if db.creationPresets==nil then db.creationPresets={}
+ elseif type(db.creationPresets)~="table" then db.creationPresets={invalidContainer=db.creationPresets} end
  self.Presets=A.CreationPresets.New(db.creationPresets,function() G:Notify("creationPresets") end)
 
 	local charDB = _G.LycheeGroupCharacterDB
 	if type(charDB) ~= "table" then
+  local invalid=charDB
 		charDB = {}
 		_G.LycheeGroupCharacterDB = charDB
+  if invalid~=nil then self:RetainInvalidStorage(charDB,"$root",invalid,"expected a character history table") end
 	end
 	charDB.schema = 1
-	charDB.runs = charDB.runs or {}
 	self.charDB = charDB
+ self.History:InitializeStorage(charDB)
  -- One-time migration of the retired favorites list into recommended notes.
  -- Existing player notes remain authoritative; malformed legacy entries remain
  -- saved for recovery instead of being silently discarded.
@@ -59,7 +160,9 @@ function G:Initialize()
   if notes then
    local records,keys={},{}
    for key,record in pairs(db.favorites) do
-    local identity,name,realm=A:PlayerKey(record.name,record.realm)
+    local valid=type(record)=="table" and (record.note==nil or type(record.note)=="string") and (record.favAt==nil or type(record.favAt)=="number" and record.favAt==record.favAt and record.favAt>=0 and record.favAt<math.huge)
+    local identity,name,realm
+    if valid then identity,name,realm=A:PlayerKey(record.name,record.realm) end
     if identity then
      if not notes:Find(identity) then records[#records+1]={name=name,server=realm,reason=record.note or "",timestamp=record.favAt or 0,type="positive",classSpec=""} end
      keys[#keys+1]=key
@@ -129,7 +232,7 @@ local DISPATCH = {
 	LFG_LIST_APPLICANT_LIST_UPDATED = function(g) g.Applicants:RefreshList() end,
 	LFG_LIST_APPLICANT_UPDATED = function(g, applicantID) g.Applicants:OnApplicantUpdated(applicantID) end,
 	CHALLENGE_MODE_START = function(g) g.History:OnStart() end,
-	GROUP_ROSTER_UPDATE = function(g) g.History:OnRosterUpdate(); g:RefreshPermissions(); g:InvalidateRoster("group"); g.Applicants:TryAutoInvite(); g.Applications:TryAutoJoin() end,
+	GROUP_ROSTER_UPDATE = function(g) g.History:OnRosterUpdate(); g:RefreshPermissions(); g:InvalidateRoster("group"); g.Applicants:TryAutoInvite(); g.Applications:TryAutoJoin(); g.Game:RefreshApplicationSubscriptions() end,
 	PARTY_LEADER_CHANGED = function(g)
 		g.Listing:OnEntryUpdate()
 		g.Applicants:RefreshList(true)
@@ -140,10 +243,12 @@ local DISPATCH = {
 	CHALLENGE_MODE_RESET = function(g) g.History:Discard() end,
 	ACTIVE_PLAYER_SPECIALIZATION_CHANGED = function(g)
 		g:InvalidateRoster()
-		if g:HasViews("search") and g.Search:GetFilters().hideSameSpec then g.Results:InvalidateView();g:Notify("results") end
+		local filters=g.Search:GetFilters()
+		if g:HasViews("search") and (filters.hideSameSpec or filters.hideSameClassRole) then g.Results:InvalidateView();g:Notify("results") end
 	end,
 	PLAYER_SPECIALIZATION_CHANGED = function(g,unit) g:InvalidateRoster("spec",unit) end,
 	PLAYER_EQUIPMENT_CHANGED = function(g) g:InvalidateRoster() end,
+	PLAYER_ROLES_ASSIGNED = function(g) g:InvalidateRoster() end,
 	INSPECT_READY = function(g,guid) g.Roster:OnInspectReady(guid) end,
 	PLAYER_REGEN_ENABLED = function(g) g:InvalidateRoster("available") end,
 	UNIT_CONNECTION = function(g) g:InvalidateRoster("available") end,
@@ -196,9 +301,10 @@ function G:Subscribe(callback)
 	if type(callback) ~= "function" then
 		return function() end
 	end
-	subscribers[callback] = true
+	local token={}
+	subscribers[callback] = token
 	return function()
-		subscribers[callback] = nil
+		if subscribers[callback]==token then subscribers[callback] = nil end
 	end
 end
 

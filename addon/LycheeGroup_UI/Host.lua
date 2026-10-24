@@ -42,7 +42,20 @@ function UI:OnNotesReady()
  end
 end
 
+function UI:OnGroupReady()
+ if self.preview or self.hiding or not self:IsShown() then return end
+ local page=self.page and self.pages[self.page]
+ if page and page.WatchHistory and page.frame:IsVisible() then
+  if page:WatchHistory() then page:OnHistoryChanged() end
+ end
+end
+
 function UI:OnSettingChanged(key)
+	if key=="noteMarks" or key=="relations" then
+		local page=self.page and self.pages[self.page]
+		if page and page.OnNotesChanged then page:OnNotesChanged() end
+		return
+	end
 	if key=="showImportantFilters" then
 		if self.pages.find.frame then self.pages.find:RefreshFilterPlacement() end
 		return
@@ -127,12 +140,15 @@ function UI:FitToScreen(deferPage)
 	local minWidth,minHeight=self:GetWindowMinimum()
 	scale=math.min(scale,(UIParent:GetWidth()-T.windowScreenInset*2)/minWidth,(UIParent:GetHeight()-T.windowScreenInset*2)/minHeight)
 	local changed=self.frame:GetScale()~=scale
+	local tooltip = self.Tooltip
+	local cancelRosterDrag=changed and tooltip and tooltip.rosterDrag~=nil
+	if cancelRosterDrag then tooltip:CancelRosterDrag() end
 	if changed then self.frame:SetScale(scale) end
 	self:SetWindowSize(self.preferredWindowWidth,self.preferredWindowHeight,deferPage)
 	if not changed then return end
 	self:CloseMenu()
-	local tooltip = self.Tooltip
-	if tooltip.interactive and tooltip.interactive:IsShown() then tooltip:Place(tooltip.interactive.canvas:GetHeight()) end
+	if cancelRosterDrag then tooltip:RenderCurrentRoster()
+	elseif tooltip.interactive and tooltip.interactive:IsShown() then tooltip:Place(tooltip.interactive.canvas:GetHeight()) end
 end
 
 -- ---------------------------------------------------------------- 共用格式化
@@ -150,7 +166,8 @@ function UI:DateText(ts)
 end
 
 function UI:AgeText(seconds)
-	if type(seconds) ~= "number" or seconds <= 0 then return "" end
+	if type(seconds) ~= "number" then return "—" end
+	if seconds <= 0 then return "" end
 	local minutes = math.floor(seconds / 60)
 	if minutes < 1 then return L.ageNow end
 	if minutes < 60 then return L.ageMin:format(minutes) end
@@ -316,6 +333,7 @@ function UI:Build()
 	-- One transparent shield revokes all mouse input while the visible shell exits.
 	local blocker = CreateFrame("Button", nil, frame)
 	blocker:SetAllPoints(frame)
+	blocker:SetFrameStrata("DIALOG")
 	blocker:SetFrameLevel(frame:GetFrameLevel() + 100)
 	blocker:EnableMouse(true)
 	blocker:EnableMouseWheel(true)
@@ -446,6 +464,7 @@ function UI:Hide(immediate)
 	self.exitToken = token
 	local closingPage = self.page and self.pages[self.page]
 	if closingPage and closingPage.CancelBindingCapture then closingPage:CancelBindingCapture(true) end
+	if closingPage and closingPage.CancelPendingSave then closingPage:CancelPendingSave() end
 	self:CloseMenu()
 	self:CloseModal("hide")
 	UI.Tooltip:Hide()
@@ -481,6 +500,11 @@ end
 
 -- UI:SetReducedMotion(bool):停止全部动画并落终态(窗 alpha/位置、滑块位置)。
 function UI:SetReducedMotion(reduced)
+	local tip = self.Tooltip
+	if tip and tip.rosterDrag then
+		tip:CancelRosterDrag()
+		tip:RenderCurrentRoster()
+	end
 	M:StopAll()
 	self:CloseMenu()
 	local frame = self.frame

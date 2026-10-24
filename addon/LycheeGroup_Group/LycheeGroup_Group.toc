@@ -7,7 +7,7 @@
 ## IconTexture: Interface\AddOns\LycheeGroup\Media\addon-logo.tga
 ## Dependencies: LycheeGroup
 ## LoadOnDemand: 1
-## Version: 1.2.4
+## Version: 1.2.5
 ## SavedVariables: LycheeGroupGroupDB
 ## SavedVariablesPerCharacter: LycheeGroupCharacterDB
 Locale.lua
@@ -17,8 +17,10 @@ Group.lua
 RaidBuffs.lua
 Relations.lua
 Roster.lua
+RaidGroups.lua
 Game.lua
 Catalog.lua
+SeasonScores.lua
 Search.lua
 Results.lua
 Applications.lua
