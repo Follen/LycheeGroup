@@ -101,7 +101,7 @@ U.Tooltip:ShowPlayer(U.pages.create.batchPool[1].people[1],mainApplicant.members
 G.listing.activityID=2;for _,app in pairs(G.applicants) do app.activityID=2 end;G:Notify("listing")
 mainApplicant.members[1].itemLevel=326;mainApplicant.members[1].dungeonScore=3641
 mainApplicant.members[1].dungeonScores={mapScore=456,current={name="红玉新生法池",level=18,timed=true,durationMs=1952000,timeLimitSeconds=1980},best={name="毒牙洞窟",level=19,timed=false,durationMs=1900000,timeLimitSeconds=1800}}
-U.Tooltip:ShowPlayer(U.pages.create.batchPool[1].people[1],mainApplicant.members[1]);snapshot("申请者大秘境纪录");U.Tooltip:Hide()
+U.Tooltip:ShowPlayer(U.pages.create.batchPool[1].people[1],mainApplicant.members[1]);snapshot("申请者大秘境纪录");U.Tooltip.interactive.wcl:Fire("OnClick");snapshot("详情内复制 WCL");U.Tooltip:Hide()
 A:Open("notes");U.pages.notes:OpenEdit("晚风听雨-晨风号角");snapshot("荔枝笔记")
 local notes=U.pages.notes;notes.list.clip.mouseOver=true;notes.list.rows[3]:Fire("OnEnter");snapshot("笔记列表悬停");notes.list.rows[3]:Fire("OnLeave");notes.list.clip.mouseOver=nil
 notes:SelectTab("history");notes.historyList.clip.mouseOver=true;notes.historyList.rows[1]:Fire("OnEnter");snapshot("历史记录悬停");notes.historyList.rows[1]:Fire("OnLeave");notes.historyList.clip.mouseOver=nil
@@ -141,6 +141,10 @@ U.pages.find.quickIdentity:Fire("OnClick","LeftButton");U.pages.find.quickIdenti
 A:SetSetting("fontScale",130);snapshot("筛选字体130%")
 A:SetSetting("fontScale",70);snapshot("筛选字体70%")
 A:SetSetting("fontScale",100)
+A:Open("settings",{section="credits"});snapshot("鸣谢")
+A.UI.pages.settings.credits[1].links[1]:Fire("OnClick","LeftButton");snapshot("鸣谢复制链接");U.pages.settings:CloseLinkCopy(true)
+A:SetSetting("fontScale",130);snapshot("鸣谢字体130%");A:SetSetting("fontScale",100)
+A:Open("settings",{section="about"});U.pages.settings.otherAddons[1].links[1]:Fire("OnClick","LeftButton");snapshot("关于复制链接");U.pages.settings:CloseLinkCopy(true)
 A:Open("settings",{section="interface"});snapshot("字体大小设置")
 A:SetSetting("fontScale",130);snapshot("设置字体130%")
 A:SetSetting("fontScale",100)

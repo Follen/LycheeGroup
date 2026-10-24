@@ -63,7 +63,7 @@ end
 function UI:SetScore(region,score,kind)
  local mapScore=kind=="map"
  if type(score)~="number" or score<0 then self:SetText(region,mapScore and "—" or A:GetLocale()=="zhCN" and "未知分数" or "Unknown");self:Color(region,mapScore and self.Theme.muted or self.Theme.dim);return end
- if score==0 then self:SetText(region,mapScore and "0" or A:GetLocale()=="zhCN" and "暂无分数" or "Unrated");self:Color(region,self.Theme.muted);return end
+ if score==0 then self:SetText(region,mapScore and "0" or A:GetLocale()=="zhCN" and "暂无" or "Unrated");self:Color(region,self.Theme.muted);return end
  self:SetText(region,math.floor(score))
  if kind=="pvp" then self:Color(region,self.Theme.text);return end
  if region._score~=score or region._scoreKind~=kind or region._color~=nil then
@@ -75,7 +75,7 @@ function UI:SetScore(region,score,kind)
 end
 function UI:ScoreText(score,kind)
  if type(score)~="number" or score<0 then return A:GetLocale()=="zhCN" and "未知分数" or "Unknown" end
- if score==0 then return A:GetLocale()=="zhCN" and "暂无分数" or "Unrated" end
+ if score==0 then return A:GetLocale()=="zhCN" and "暂无" or "Unrated" end
  if kind=="pvp" then return tostring(math.floor(score)) end
  return self:ScoreColor(score):WrapTextInColorCode(tostring(math.floor(score)))
 end

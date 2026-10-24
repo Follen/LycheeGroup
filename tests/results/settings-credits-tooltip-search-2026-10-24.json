@@ -1,0 +1,1019 @@
+{
+  "date": "2026-10-24",
+  "scope": [
+    "Settings credits with supplied avatars and platform links",
+    "Inline WCL and Raider.IO copy fields",
+    "Expanded raid tooltip leader footer",
+    "Search refocus preserves text",
+    "Investigation of a reported listing update failure"
+  ],
+  "branch": "codex/integrate-plus-features",
+  "baseCommit": "0ff2a34c9a466dd0e70c8b0a2eaac726484d718f",
+  "automated": {
+    "behavior": {
+      "command": "lua tests/runner.lua",
+      "modules": 31,
+      "assertions": 19581,
+      "failed": 0
+    },
+    "layout": {
+      "command": "lua tests/run_layout_checks.lua",
+      "scripts": 16,
+      "failed": 0,
+      "settingsChecks": 4770,
+      "locales": [
+        "zhCN",
+        "enUS"
+      ],
+      "fontPercent": [
+        70,
+        100,
+        130
+      ]
+    },
+    "architecture": {
+      "command": "node tests/check_architecture.cjs",
+      "checks": 4005,
+      "failures": 0,
+      "frozenLibraryFiles": 30
+    }
+  },
+  "native": {
+    "build": "12.1.5.70575",
+    "connection": "CON-3d9f879c4092d743affe39815c150516",
+    "creditsAndRaid": {
+      "operation": "LMO-d9515e80a1da59e2c88fa12b902a4c14",
+      "reportOk": true,
+      "checks": 41,
+      "cleanup": "complete",
+      "details": [
+        "Two supplied avatar textures are bound and rounded",
+        "Four platform buttons open the exact requested URLs in the existing selected copy dialog",
+        "Credits rows and controls are reused",
+        "Inline WCL and IO use the current character identity and clear focus on Esc",
+        "An expanded ten-member raid UI fixture retains the first-member crown and hides the extra leader footer",
+        "Collapsed raid UI restores its leader footer"
+      ]
+    },
+    "finalFocus": {
+      "operation": "LMO-c087155deada2486afa2f0552bc68a08",
+      "runtime": "0000007c000407a79e94ad87ee1ef2bd",
+      "reportOk": true,
+      "cleanup": "complete",
+      "result": {
+        "checks": 24,
+        "inline": {
+          "escapeCleanup": true,
+          "focused": true,
+          "urlStartsVisible": true
+        },
+        "scope": "Native edit focus and product callbacks; no hardware mouse or clipboard",
+        "screenshotTime": "102426_180704",
+        "search": {
+          "focused": true,
+          "iterations": 5,
+          "retained": true,
+          "usedNativeSample": true
+        }
+      }
+    },
+    "screenshots": {
+      "credits": "D:/Game/World of Warcraft/_retail_/Screenshots/WoWScrnShot_102426_174802.jpg",
+      "expandedRaid": "D:/Game/World of Warcraft/_retail_/Screenshots/WoWScrnShot_102426_174804.jpg",
+      "inlineCopy": "D:/Game/World of Warcraft/_retail_/Screenshots/WoWScrnShot_102426_180704.jpg"
+    },
+    "coverage": "Native UI rendering and controller callbacks. No physical mouse/keyboard routing or clipboard paste was tested. Raid layout uses an in-game UI fixture, not a newly assembled real raid.",
+    "connectionClosed": true,
+    "finalCleanup": "complete"
+  },
+  "listingInvestigation": {
+    "status": "Reported update failure not reproduced; Listing implementation unchanged",
+    "baseline": {
+      "operation": "LMO-e2069135d7fbd11a63792f0919397150",
+      "actualObservations": [
+        "created active=true private=true ilvl=320 error=nil",
+        "updated active=true private=true ilvl=319 error=nil",
+        "reproduced=true serverUpdated=true"
+      ],
+      "probeVerdictValid": false,
+      "explanation": "The native update changed the private Molten Core listing from item level 320 to 319. The diagnostic script incorrectly treated FontString:GetText()==nil as a nonempty error and then concatenated nil. Its failed verdict is not an addon failure; the observed update and screenshot show success. The test listing was removed."
+    },
+    "activityChange": {
+      "operation": "LMO-2268130d451317c9af3c6f150cdb7fe9",
+      "reportOk": true,
+      "cleanup": "complete",
+      "result": {
+        "accepted": true,
+        "events": {},
+        "observed": {
+          "active": true,
+          "activityID": 9,
+          "ilvl": 310,
+          "privateGroup": true
+        },
+        "original": {
+          "activityID": 1976,
+          "generalPlaystyle": 1,
+          "isAutoAccept": false,
+          "isCrossFactionListing": true,
+          "isPrivateGroup": true,
+          "newPlayerFriendly": false,
+          "requiredItemLevel": 310
+        },
+        "privateOnly": true,
+        "restored": true,
+        "targetActivity": 9
+      }
+    },
+    "scope": "Solo private listings only. The supplied four-member scene and public visibility were not reproduced. Existing private listing activity and item-level conditions were restored."
+  },
+  "deployment": {
+    "files": [
+      {
+        "path": "addon/LycheeGroup/Theme/Elements.lua",
+        "sha256": "b3e68eb69284e3a12cf14e94d0402ae500987fc4c661ccd363e5a0786bbd32bc"
+      },
+      {
+        "path": "addon/LycheeGroup/Theme/Defaults.lua",
+        "sha256": "0fe6489c9da248b541f8604598efadcb71a2cbaf10ef650ba134d48aed89e795"
+      },
+      {
+        "path": "addon/LycheeGroup_UI/Settings.lua",
+        "sha256": "8dca6e2680b740a1dee2e6dfebf6e2b02d4842bd992d1a20526c31097aefa0a4"
+      },
+      {
+        "path": "addon/LycheeGroup_UI/Tooltip.lua",
+        "sha256": "99f7fa388df35ea7d7aa4a5ac169d377132d10e537e145cabd907664870cb61f"
+      },
+      {
+        "path": "addon/LycheeGroup_UI/Native.lua",
+        "sha256": "bfba7cfdaf1e00ec08136d68614676c485687bb86377be4eabcdd867080218c1"
+      },
+      {
+        "path": "addon/LycheeGroup_UI/Media/credits-rurutia.tga",
+        "sha256": "d65c85900cc9f86d4dafb181ee7d3e080377d0bb0c768356abe76bdb5d26f181"
+      },
+      {
+        "path": "addon/LycheeGroup_UI/Media/credits-soul-revival.tga",
+        "sha256": "b4485d854d9938628c54526ff2d7adb0ac62c7ec2cfcdef49e5d34e607375c32"
+      },
+      {
+        "path": "addon/LycheeGroup_UI/Media/credits-bilibili.tga",
+        "sha256": "24146c72c2a14bfcf773a2a4d2e85f5961cd636df234e3662d6e9fbf4df2cb24"
+      },
+      {
+        "path": "addon/LycheeGroup_UI/Media/credits-douyin.tga",
+        "sha256": "dcf8436e9d39e2587b7a731735bc645bfea1b0bdb3955f11a998eb312197078c"
+      }
+    ],
+    "allNineFilesMatchInstalled": true,
+    "reloadRequest": "credits-tooltip-final-reload-20261024"
+  },
+  "performance": "No new CPU or memory benchmark was run.",
+  "followup": {
+    "date": "2026-10-24",
+    "status": "Final implementation and verification; preceding top-level results describe the earlier phase",
+    "scope": [
+      "All five-player search categories desaturate vacant role slots",
+      "Filter panel removes sorting, groups conditions and preserves sorting when resetting",
+      "About and Credits expand animated inline copy fields for all eight links"
+    ],
+    "supersedes": "Initial About and Credits copy-dialog behavior is replaced by inline animated copy fields. Earlier WCL and IO inline behavior remains unchanged.",
+    "automated": {
+      "behavior": {
+        "command": "lua tests/runner.lua",
+        "modules": 31,
+        "assertions": 19589,
+        "failed": 0
+      },
+      "layout": {
+        "command": "lua tests/run_layout_checks.lua",
+        "scripts": 16,
+        "failed": 0,
+        "filterChecks": 7695,
+        "settingsChecks": 9236,
+        "memberSizeChecks": 379,
+        "locales": [
+          "zhCN",
+          "enUS"
+        ],
+        "fontPercent": [
+          70,
+          100,
+          130
+        ],
+        "filterStressFontPercent": 160
+      },
+      "architecture": {
+        "command": "node tests/check_architecture.cjs",
+        "checks": 4005,
+        "failures": 0,
+        "frozenLibraryFiles": 30
+      }
+    },
+    "native": {
+      "build": "12.1.5.70575",
+      "connection": "CON-65f6c656d5970813b6761cb4f4de9f92",
+      "settingsInline": {
+        "operation": "LMO-6f9363a5c647819bf1a5eabcf306e28b",
+        "request": "native-settings-inline-20261024",
+        "runtime": "0000007f0004101885cd5b1026fa3f91",
+        "reportOk": true,
+        "cleanup": "complete",
+        "result": {
+          "checks": 76,
+          "copyRows": 4,
+          "links": 8,
+          "modalCreated": false,
+          "scope": "Native Settings controls, input focus, animation completion and screenshots; no clipboard or hardware mouse",
+          "screenshots": [
+            {
+              "kind": "about-inline",
+              "time": "102426_184306"
+            },
+            {
+              "kind": "credits-inline",
+              "time": "102426_184311"
+            }
+          ]
+        }
+      },
+      "delvesAndFilters": {
+        "operation": "LMO-69a18545f7b657f0c5b754ed2a00b12f",
+        "request": "native-filter-delve-final-20261024",
+        "runtime": "000000800004117a2f45317a711b6ce8",
+        "reportOk": true,
+        "cleanup": "complete",
+        "result": {
+          "checks": 84,
+          "delves": {
+            "emptySlots": 39,
+            "occupiedSlots": 16,
+            "resultCount": 62,
+            "visibleRows": 11
+          },
+          "filters": {
+            "body": 566.9999389648438,
+            "font": 100,
+            "height": 705,
+            "important": false,
+            "scrollbar": false,
+            "viewport": 566.9999389648438,
+            "width": 560.0000610351562
+          },
+          "scope": "Actual delve search results plus native filter controls; temporary isolated category preferences",
+          "screenshots": [
+            {
+              "kind": "delves-gray",
+              "time": "102426_184818"
+            },
+            {
+              "kind": "filters",
+              "time": "102426_184820"
+            }
+          ]
+        }
+      },
+      "preliminaryFailure": {
+        "operation": "LMO-c62f759dcbca5683e8b3a4980c8ee6ff",
+        "reportOk": false,
+        "cleanup": "complete",
+        "error": "LycheeMemoryProbe:8: reset_conditions",
+        "resolution": "Native FontString:GetText() returns nil for an empty error label. Normalize nil to an empty string so Reset is disabled with no conditions and no error, and no empty footer gap is reserved. Regression and final native probe pass."
+      },
+      "screenshots": {
+        "aboutInline": "D:/Game/World of Warcraft/_retail_/Screenshots/WoWScrnShot_102426_184306.jpg",
+        "creditsInline": "D:/Game/World of Warcraft/_retail_/Screenshots/WoWScrnShot_102426_184311.jpg",
+        "delvesGray": "D:/Game/World of Warcraft/_retail_/Screenshots/WoWScrnShot_102426_184818.jpg",
+        "filters": "D:/Game/World of Warcraft/_retail_/Screenshots/WoWScrnShot_102426_184820.jpg"
+      },
+      "coverage": "Actual delve results and native UI controls, focus, geometry, animation completion and screenshots. No hardware mouse routing or clipboard paste. Temporary preferences restored; UI and connection cleaned up.",
+      "connectionClosed": true,
+      "finalCleanup": "complete"
+    },
+    "deployment": {
+      "files": [
+        {
+          "path": "addon/LycheeGroup/Theme/Elements.lua",
+          "sha256": "00205cedc33550c54edf23faecece6921dd5f1ced184d5ae6e29fa7adc5bfa8d"
+        },
+        {
+          "path": "addon/LycheeGroup/Theme/Defaults.lua",
+          "sha256": "e64af8642c59a3ceebcb524514847ab6d9d5a73dad9f3f2b6d8d0f6ea4e480b5"
+        },
+        {
+          "path": "addon/LycheeGroup_UI/Settings.lua",
+          "sha256": "e6fdc2c63defb6093011165b13c9fee163143575811efae7fb1032bafb5d2158"
+        },
+        {
+          "path": "addon/LycheeGroup_UI/Tooltip.lua",
+          "sha256": "99f7fa388df35ea7d7aa4a5ac169d377132d10e537e145cabd907664870cb61f"
+        },
+        {
+          "path": "addon/LycheeGroup_UI/Native.lua",
+          "sha256": "bfba7cfdaf1e00ec08136d68614676c485687bb86377be4eabcdd867080218c1"
+        },
+        {
+          "path": "addon/LycheeGroup_UI/Media/credits-rurutia.tga",
+          "sha256": "d65c85900cc9f86d4dafb181ee7d3e080377d0bb0c768356abe76bdb5d26f181"
+        },
+        {
+          "path": "addon/LycheeGroup_UI/Media/credits-soul-revival.tga",
+          "sha256": "b4485d854d9938628c54526ff2d7adb0ac62c7ec2cfcdef49e5d34e607375c32"
+        },
+        {
+          "path": "addon/LycheeGroup_UI/Media/credits-bilibili.tga",
+          "sha256": "24146c72c2a14bfcf773a2a4d2e85f5961cd636df234e3662d6e9fbf4df2cb24"
+        },
+        {
+          "path": "addon/LycheeGroup_UI/Media/credits-douyin.tga",
+          "sha256": "dcf8436e9d39e2587b7a731735bc645bfea1b0bdb3955f11a998eb312197078c"
+        },
+        {
+          "path": "addon/LycheeGroup/Theme/FindElements.lua",
+          "sha256": "0e6c17846a51762f3ddb737ca4cfda6ecdc70115fc037ac9351ed4cf44fba04f"
+        },
+        {
+          "path": "addon/LycheeGroup_UI/Find.lua",
+          "sha256": "f9b208714824069ef9762a4172fdf085fbab6860b3236a7a82135e889e6fe4de"
+        }
+      ],
+      "allElevenFilesMatchInstalled": true,
+      "reloadRequest": "filter-empty-feedback-reload-20261024",
+      "runtime": "000000800004117a2f45317a711b6ce8"
+    },
+    "performance": "Lazy copy rows reuse existing controls and stop animation work after completion. No new CPU or memory benchmark was run."
+  },
+  "rowPolishAndBroker": {
+    "date": "2026-10-24",
+    "scope": [
+      "Roles and class/spec selector share a row; Any stays highlighted; both redundant filter headings removed",
+      "Copy hint and close control share a header above each URL field",
+      "Chinese zero-score wording shortened to 暂无",
+      "Standard DataBroker source 荔枝组队 for Ellesmere DataBars, with cropped icon and public background status updates",
+      "Existing Ellesmere bar 3 block 24 changed from LycheeGroup to 荔枝组队 and showText enabled at the user request"
+    ],
+    "automated": {
+      "integrationBeforeFinalNameAndIcon": {
+        "command": "lua tests/runner.lua",
+        "modules": 32,
+        "assertions": 19855,
+        "failed": 0
+      },
+      "layoutIntegration": {
+        "command": "lua tests/run_layout_checks.lua",
+        "scripts": 16,
+        "failed": 0
+      },
+      "architecture": {
+        "checks": 4006,
+        "failures": 0,
+        "frozenFiles": 30
+      },
+      "finalBroker": {
+        "command": "lua tests/runner.lua data_broker",
+        "assertions": 282,
+        "failed": 0
+      },
+      "finalFilterLayout": {
+        "command": "lua tests/test_find_filter_layout.lua",
+        "checks": 7711,
+        "failed": 0
+      },
+      "finalSettingsLayout": {
+        "command": "lua tests/test_settings_sections.lua",
+        "checks": 9332,
+        "failed": 0
+      },
+      "zeroScoreWording": {
+        "modules": [
+          "ui",
+          "floating",
+          "data_broker"
+        ],
+        "assertions": 5528,
+        "failed": 0
+      },
+      "finalChangedLuaSyntax": {
+        "files": 4,
+        "failed": 0
+      }
+    },
+    "native": {
+      "build": "12.1.5.70575",
+      "runtime": "0000000300041e76d951a55698717083",
+      "toolkitVersion": "3.2.5",
+      "hostVersion": "9.6.7",
+      "connection": "CON-20b2efe498f8364697f0af43c1165101",
+      "brokerBeforeRepair": {
+        "operation": "LMO-f58d2336bfa20694dbae1906b51a7d77",
+        "request": "broker-current-read-20261024",
+        "reportState": "verified",
+        "reportOk": true,
+        "cleanup": "complete",
+        "cleanupMethod": "released",
+        "result": {
+          "blocks": [
+            {
+              "bar": 3,
+              "contentHeight": 29.999982833862305,
+              "contentScale": 1.4500000476837158,
+              "contentWidth": 27.000024795532227,
+              "id": 24,
+              "regions": [
+                {
+                  "coords": [
+                    0,
+                    0,
+                    0,
+                    1,
+                    1,
+                    0,
+                    1,
+                    1
+                  ],
+                  "height": 14.999991416931152,
+                  "kind": "Texture",
+                  "shown": true,
+                  "texture": -10379,
+                  "visible": true,
+                  "width": 14.999991416931152
+                },
+                {
+                  "font": [
+                    "Fonts\\ARKai_T.ttf",
+                    13.000000953674316,
+                    "OUTLINE"
+                  ],
+                  "height": 1.0000194311141968,
+                  "kind": "FontString",
+                  "shown": true,
+                  "stringWidth": 0,
+                  "visible": true,
+                  "width": 1.0000194311141968
+                }
+              ],
+              "scale": 145,
+              "showIcon": true,
+              "showLabel": false,
+              "showText": false,
+              "source": "LycheeGroup"
+            }
+          ],
+          "object": {
+            "icon": "Interface\\AddOns\\LycheeGroup\\Media\\lychee-logo.tga",
+            "text": "荔枝组队",
+            "type": "data source"
+          },
+          "status": {
+            "attention": false,
+            "available": true,
+            "count": 0,
+            "idle": true,
+            "recruiting": false,
+            "text": "荔枝组队"
+          }
+        },
+        "error": null
+      },
+      "brokerFinal": {
+        "operation": "LMO-12f8c3f0266bb60cecef95721f8ae383",
+        "request": "broker-polish-native-20261024",
+        "reportState": "verified",
+        "reportOk": true,
+        "cleanup": "complete",
+        "cleanupMethod": "released",
+        "result": {
+          "actualStatus": "荔枝组队",
+          "after": {
+            "scale": 145,
+            "showIcon": true,
+            "showText": true,
+            "source": "荔枝组队",
+            "text": "荔枝组队"
+          },
+          "bar": 3,
+          "before": {
+            "scale": 145,
+            "showIcon": true,
+            "showText": false,
+            "source": "LycheeGroup"
+          },
+          "block": 24,
+          "checks": 33,
+          "hostVersion": "9.6.7",
+          "scope": "Selected existing Ellesmere block: authorized source/text setting repair; actual idle status and clearly labeled temporary application display samples",
+          "screenshots": [
+            {
+              "kind": "actual-idle",
+              "time": "102426_194410"
+            },
+            {
+              "kind": "sample-no-applications",
+              "time": "102426_194412"
+            },
+            {
+              "kind": "sample-three-applications",
+              "time": "102426_194414"
+            },
+            {
+              "kind": "sample-three-applicants",
+              "time": "102426_194416"
+            }
+          ],
+          "states": [
+            {
+              "contentScale": 1.4500000476837158,
+              "coords": [
+                0.15625,
+                0.1484375,
+                0.15625,
+                0.8203125,
+                0.828125,
+                0.1484375,
+                0.828125,
+                0.8203125
+              ],
+              "iconSize": 14.999991416931152,
+              "kind": "actual-idle",
+              "text": "荔枝组队",
+              "textWidth": 57.47126007080078
+            },
+            {
+              "contentScale": 1.4500000476837158,
+              "coords": [
+                0.15625,
+                0.1484375,
+                0.15625,
+                0.8203125,
+                0.828125,
+                0.1484375,
+                0.828125,
+                0.8203125
+              ],
+              "iconSize": 14.999991416931152,
+              "kind": "sample-no-applications",
+              "text": "暂无申请",
+              "textWidth": 57.47126007080078
+            },
+            {
+              "contentScale": 1.4500000476837158,
+              "coords": [
+                0.15625,
+                0.1484375,
+                0.15625,
+                0.8203125,
+                0.828125,
+                0.1484375,
+                0.828125,
+                0.8203125
+              ],
+              "iconSize": 14.999991416931152,
+              "kind": "sample-three-applications",
+              "text": "申请3个",
+              "textWidth": 51.72413635253906
+            },
+            {
+              "contentScale": 1.4500000476837158,
+              "coords": [
+                0.15625,
+                0.1484375,
+                0.15625,
+                0.8203125,
+                0.828125,
+                0.1484375,
+                0.828125,
+                0.8203125
+              ],
+              "iconSize": 14.999991416931152,
+              "kind": "sample-three-applicants",
+              "text": "3人申请",
+              "textWidth": 51.72413635253906
+            }
+          ]
+        },
+        "error": null
+      },
+      "rowAndCopyFinal": {
+        "operation": "LMO-c39baa407f53070405d2daa2263e8f84",
+        "request": "row-copy-polish-native-20261024",
+        "reportState": "verified",
+        "reportOk": true,
+        "cleanup": "complete",
+        "cleanupMethod": "released",
+        "result": {
+          "checks": 28,
+          "filters": {
+            "body": 498.00018310546875,
+            "font": 100,
+            "height": 636.0001831054688,
+            "width": 560.0000610351562
+          },
+          "scope": "Native inline filter buttons, removed headings, Any highlight, zero-score wording and link-copy header layout; temporary isolated category preferences",
+          "screenshots": [
+            {
+              "kind": "filters-inline-no-headings",
+              "time": "102426_194503"
+            },
+            {
+              "kind": "credits-copy-header",
+              "time": "102426_194505"
+            },
+            {
+              "kind": "about-copy-header",
+              "time": "102426_194507"
+            }
+          ]
+        },
+        "error": null
+      },
+      "filterFinalRendering": {
+        "operation": "LMO-a5cc76e8331c7264f8a496e9bb800983",
+        "request": "filter-final-render-v2-20261024",
+        "reportState": "verified",
+        "reportOk": true,
+        "cleanup": "complete",
+        "cleanupMethod": "released",
+        "result": {
+          "checks": 6,
+          "scope": "Normal filter rendering after reconciling visibility left by the previous probe's direct page-field restoration",
+          "screenshotTime": "102426_194950",
+          "strata": {
+            "panel": "DIALOG",
+            "window": "HIGH"
+          }
+        },
+        "error": null
+      },
+      "preliminaryFactoryFailure": {
+        "operation": "LMO-67614166eff6752b189547ecbc9e95b5",
+        "request": "row-broker-native-20261024",
+        "reportState": "verified",
+        "reportOk": false,
+        "cleanup": "complete",
+        "cleanupMethod": "released",
+        "result": null,
+        "error": "LycheeMemoryProbe:11: broker_icon_text"
+      },
+      "factoryProbeCorrection": "GetTexture returns a native numeric file ID for the custom TGA; the preliminary path-string comparison was invalid. The final check uses the actual live Ellesmere block and validates texture presence, crop coordinates and text.",
+      "probeSceneCorrection": "The first screenshot raised only selected strata, then direct restoration of a nil UI.page left old page frames shown below the hidden parent. This was probe state, corrected by reconciling page visibility and restoring the original nil-page state with all page frames hidden. Final normal-strata rendering passed six checks and was visually reviewed.",
+      "probeCorrectionFailures": [
+        {
+          "operation": "LMO-b5b29b27eb5786c96c0ddc4952d02715",
+          "request": "filter-final-render-20261024",
+          "reportState": "verified",
+          "reportOk": false,
+          "cleanup": "complete",
+          "cleanupMethod": "released",
+          "result": null,
+          "error": "LycheeMemoryProbe:3: ui_in_use"
+        },
+        {
+          "operation": "LMO-b6b310ceee547fb39d30c57b76f9dd23",
+          "request": "ui-cleanup-read-20261024",
+          "reportState": "verified",
+          "reportOk": false,
+          "cleanup": "complete",
+          "cleanupMethod": "released",
+          "result": null,
+          "error": "LycheeMemoryProbe:2: attempt to index field 'modules' (a nil value)"
+        }
+      ],
+      "screenshots": {
+        "brokerIdle": "D:/Game/World of Warcraft/_retail_/Screenshots/WoWScrnShot_102426_194410.jpg",
+        "brokerNoApplicationsSample": "D:/Game/World of Warcraft/_retail_/Screenshots/WoWScrnShot_102426_194412.jpg",
+        "brokerThreeApplicationsSample": "D:/Game/World of Warcraft/_retail_/Screenshots/WoWScrnShot_102426_194414.jpg",
+        "brokerThreeApplicantsSample": "D:/Game/World of Warcraft/_retail_/Screenshots/WoWScrnShot_102426_194416.jpg",
+        "creditsCopyHeader": "D:/Game/World of Warcraft/_retail_/Screenshots/WoWScrnShot_102426_194505.jpg",
+        "aboutCopyHeader": "D:/Game/World of Warcraft/_retail_/Screenshots/WoWScrnShot_102426_194507.jpg",
+        "filters": "D:/Game/World of Warcraft/_retail_/Screenshots/WoWScrnShot_102426_194950.jpg"
+      },
+      "coverage": "Actual selected Ellesmere idle block and native controls; application variants used clearly labeled temporary text samples, with real public status restored. No server applications or invitations were submitted.",
+      "currentConnectionClosed": true,
+      "cleanupConnection": "CON-6d8f6178b002186d5560bf9cfd01bcf1",
+      "cleanupConnectionClosed": true,
+      "finalProbeCleanup": "complete",
+      "previousProcessConnection": {
+        "connection": "CON-a371cdbc1a7e2c5896764890a8714a64",
+        "pid": 61636,
+        "closed": false,
+        "lastOfficialDisconnectError": {
+          "code": "journal.resource_busy",
+          "message": "journal.resource_busy",
+          "stage": "dispatch",
+          "retryable": false,
+          "resumeOperationId": ""
+        },
+        "note": "Belongs to the game process replaced earlier by the user. The supported disconnect command still reports journal.resource_busy. Its journal is retained without edits; closure is not claimed."
+      }
+    },
+    "deployment": {
+      "restoredPackages": [
+        "LycheeGroup",
+        "LycheeGroup_Group",
+        "LycheeGroup_Notes",
+        "LycheeGroup_UI"
+      ],
+      "verifiedInstalledFileCount": 147,
+      "allInstalledFilesMatch": true,
+      "changedRuntimeFiles": [
+        {
+          "path": "addon/LycheeGroup/API.lua",
+          "sha256": "4279eb2cc0ee8d4632d15a3817ca9d559502c461a0fec16b4b32c2a8b32b31be"
+        },
+        {
+          "path": "addon/LycheeGroup/Floating.lua",
+          "sha256": "810b59b0455a48f76d7e14b9518189bd8dc003823f0f59f69eaf1a7f15d7fbd2"
+        },
+        {
+          "path": "addon/LycheeGroup/LycheeGroup.toc",
+          "sha256": "04e2b3d6e5de3dcb31f76a926f755bb4a7ad1426c7ade87da8eca97b9856a8e9"
+        },
+        {
+          "path": "addon/LycheeGroup/Adapters/DataBroker.lua",
+          "sha256": "fac8b1dfa966d24013fd695631f32541420636579f98b7a644d84d608009c4a3"
+        },
+        {
+          "path": "addon/LycheeGroup/Theme/Defaults.lua",
+          "sha256": "e64af8642c59a3ceebcb524514847ab6d9d5a73dad9f3f2b6d8d0f6ea4e480b5"
+        },
+        {
+          "path": "addon/LycheeGroup/Theme/Elements.lua",
+          "sha256": "00205cedc33550c54edf23faecece6921dd5f1ced184d5ae6e29fa7adc5bfa8d"
+        },
+        {
+          "path": "addon/LycheeGroup/Theme/FindElements.lua",
+          "sha256": "2f666d25542848fa0461f51dff8828641d42c50582750ab1f2bf09952458e1ec"
+        },
+        {
+          "path": "addon/LycheeGroup_UI/Find.lua",
+          "sha256": "4dbb947b7cfbf8ba4fdc6dd2ebb6812cafed190a5e9e6f45b6552cb5bc3bf3cd"
+        },
+        {
+          "path": "addon/LycheeGroup_UI/Native.lua",
+          "sha256": "bfba7cfdaf1e00ec08136d68614676c485687bb86377be4eabcdd867080218c1"
+        },
+        {
+          "path": "addon/LycheeGroup_UI/Settings.lua",
+          "sha256": "e6fb9bafe559c9e0ad81dc28a9b88c3cc93c8c30f8f3428436365468e3bdc59d"
+        },
+        {
+          "path": "addon/LycheeGroup_UI/Theme.lua",
+          "sha256": "8c7adba1981821fd9fa12e9ad4011d954ccacfae23f951e9dd8f4ffe9a45762b"
+        },
+        {
+          "path": "addon/LycheeGroup_UI/Tooltip.lua",
+          "sha256": "99f7fa388df35ea7d7aa4a5ac169d377132d10e537e145cabd907664870cb61f"
+        },
+        {
+          "path": "addon/LycheeGroup_UI/Media/credits-bilibili.tga",
+          "sha256": "24146c72c2a14bfcf773a2a4d2e85f5961cd636df234e3662d6e9fbf4df2cb24"
+        },
+        {
+          "path": "addon/LycheeGroup_UI/Media/credits-douyin.tga",
+          "sha256": "dcf8436e9d39e2587b7a731735bc645bfea1b0bdb3955f11a998eb312197078c"
+        },
+        {
+          "path": "addon/LycheeGroup_UI/Media/credits-rurutia.tga",
+          "sha256": "d65c85900cc9f86d4dafb181ee7d3e080377d0bb0c768356abe76bdb5d26f181"
+        },
+        {
+          "path": "addon/LycheeGroup_UI/Media/credits-soul-revival.tga",
+          "sha256": "b4485d854d9938628c54526ff2d7adb0ac62c7ec2cfcdef49e5d34e607375c32"
+        }
+      ],
+      "lastDeployment": [
+        {
+          "path": "LycheeGroup/Adapters/DataBroker.lua",
+          "beforeSha256": "babf45bde50e9c2b77e460fd71661c218fb133b5756a3102183e9e092e45fe84",
+          "sourceSha256": "fac8b1dfa966d24013fd695631f32541420636579f98b7a644d84d608009c4a3",
+          "backup": "D:\\Code\\wow\\addons\\LycheeGroup\\.lycheedev\\settings-credits-2026-10-24\\LycheeGroup__Adapters__DataBroker.lua.broker-polish.before",
+          "installedSha256": "fac8b1dfa966d24013fd695631f32541420636579f98b7a644d84d608009c4a3"
+        },
+        {
+          "path": "LycheeGroup/Theme/FindElements.lua",
+          "beforeSha256": "fe66912c52b77f45495263ba17784b95c87a666fdb82d5d45933258bb236b39c",
+          "sourceSha256": "2f666d25542848fa0461f51dff8828641d42c50582750ab1f2bf09952458e1ec",
+          "backup": "D:\\Code\\wow\\addons\\LycheeGroup\\.lycheedev\\settings-credits-2026-10-24\\LycheeGroup__Theme__FindElements.lua.broker-polish.before",
+          "installedSha256": "2f666d25542848fa0461f51dff8828641d42c50582750ab1f2bf09952458e1ec"
+        },
+        {
+          "path": "LycheeGroup_UI/Find.lua",
+          "beforeSha256": "a67b1bc0e1c204b7062ac579ea2dbe1f43ec0c3316f132d86ccb80a255e89af5",
+          "sourceSha256": "4dbb947b7cfbf8ba4fdc6dd2ebb6812cafed190a5e9e6f45b6552cb5bc3bf3cd",
+          "backup": "D:\\Code\\wow\\addons\\LycheeGroup\\.lycheedev\\settings-credits-2026-10-24\\LycheeGroup_UI__Find.lua.broker-polish.before",
+          "installedSha256": "4dbb947b7cfbf8ba4fdc6dd2ebb6812cafed190a5e9e6f45b6552cb5bc3bf3cd"
+        },
+        {
+          "path": "LycheeGroup_UI/Settings.lua",
+          "beforeSha256": "1513484d213bf6d721c794fc16eb55da87e889e594497ef338a7465e3eb606f1",
+          "sourceSha256": "e6fb9bafe559c9e0ad81dc28a9b88c3cc93c8c30f8f3428436365468e3bdc59d",
+          "backup": "D:\\Code\\wow\\addons\\LycheeGroup\\.lycheedev\\settings-credits-2026-10-24\\LycheeGroup_UI__Settings.lua.broker-polish.before",
+          "installedSha256": "e6fb9bafe559c9e0ad81dc28a9b88c3cc93c8c30f8f3428436365468e3bdc59d"
+        }
+      ],
+      "reloadRequest": "broker-polish-reload-20261024"
+    },
+    "performance": "No new CPU or memory benchmark. The broker adds one loading-event frame and one background public-status subscription; it creates no display widget, business subscription or periodic timer. Original Group notifications update the summary."
+  },
+  "brokerHoverAndFilter": {
+    "scope": [
+      "Remove standalone SEUI integration",
+      "Restore the shared interactive application/recruitment popup for DataBroker hosts",
+      "Merge class-and-role exclusion into identity filter",
+      "Restore original integration-help wording",
+      "Fix stationary filter-tooltip flicker",
+      "Revert every product workaround added for the global M+ translation hook at user request"
+    ],
+    "automatedBeforeTranslationRevert": {
+      "modules": 31,
+      "assertions": 19708,
+      "failed": 0,
+      "layoutScripts": 16,
+      "filterLayoutChecks": 8247,
+      "architectureChecks": 4005,
+      "frozenLibraryFiles": 30
+    },
+    "automatedAfterTranslationRevert": {
+      "command": "lua tests/runner.lua activity_labels table_create ui",
+      "assertions": 4401,
+      "failed": 0,
+      "note": "Other final fixes are unchanged from the full suite above."
+    },
+    "hostSize": {
+      "operation": "LMO-ff76037a1b8c35b14d975e0de3544b9c",
+      "runtime": "00000005000423b2782e3606ba2438ba",
+      "reportOk": true,
+      "cleanup": "complete",
+      "checks": 13,
+      "result": {
+        "bar": 3,
+        "block": 24,
+        "checks": 13,
+        "display": {
+          "contentScale": 1,
+          "effectiveScale": 0.6399999856948853,
+          "fontSize": 13.000000953674316,
+          "iconSize": 15.000040054321289,
+          "neighborFontSize": 13.000000953674316,
+          "neighborType": "travel",
+          "scale": 100,
+          "text": "荔枝组队"
+        },
+        "screenshotTime": "102426_200629",
+        "seuiEntryRemoved": true,
+        "seuiHostRetained": true,
+        "source": "荔枝组队"
+      }
+    },
+    "sharedPopup": {
+      "operation": "LMO-e891bf889ab88c640b7477f63db91540",
+      "runtime": "000000020004274823bfa933f038026f",
+      "reportOk": true,
+      "cleanup": "complete",
+      "checks": 28,
+      "result": {
+        "blockScale": 100,
+        "checks": 28,
+        "delayedLeaveVerified": true,
+        "displayDifficulty": "M+",
+        "emptyText": "暂无活动",
+        "entries": 0,
+        "leavePointerClear": true,
+        "nativeDifficulty": "史诗钥石",
+        "originalFloating": true,
+        "recruiting": false,
+        "scope": "Actual Ellesmere OnEnter/OnLeave handlers and shared native popup; standalone visibility and reduced-motion preference restored; no server actions",
+        "screenshots": [
+          {
+            "kind": "hover-shared-list",
+            "time": "102426_202207"
+          },
+          {
+            "kind": "hover-with-standalone-hidden",
+            "time": "102426_202209"
+          }
+        ]
+      }
+    },
+    "identityAndWording": {
+      "operation": "LMO-ac5a5a1ea2c51dfbde44b6a17d8c1718",
+      "runtime": "0000000400042aaf5c3461bf02d5e495",
+      "reportOk": true,
+      "cleanup": "complete",
+      "checks": 46,
+      "retainedResults": {
+        "compatibilityText": "自动接入第三方UI配置的视觉兼容",
+        "states": [
+          {
+            "count": 0,
+            "text": "不限",
+            "width": 105.00006866455078
+          },
+          {
+            "count": 1,
+            "text": "同职过滤",
+            "width": 105.00006866455078
+          },
+          {
+            "count": 1,
+            "text": "同职同责",
+            "width": 105.00006866455078
+          },
+          {
+            "count": 1,
+            "text": "专精过滤",
+            "width": 105.00006866455078
+          },
+          {
+            "count": 0,
+            "text": "不限",
+            "width": 105.00006866455078
+          }
+        ],
+        "removedSEUI": true
+      },
+      "historicalScopeNote": "The probe also checked a temporary M+ translation workaround, subsequently reverted by user request. Its queued screenshots were captured after immediate scene changes and are not used as visual evidence."
+    },
+    "stationaryTooltipBeforeFix": {
+      "operation": "LMO-d1f5d713d8ad3db769562c994c7d40ba",
+      "runtime": "0000000400042aaf5c3461bf02d5e495",
+      "reportOk": true,
+      "cleanup": "complete",
+      "checks": null,
+      "result": {
+        "refreshes": 20,
+        "phaseAEnters": 10,
+        "phaseALeaves": 10,
+        "phaseBEvents": 0,
+        "phaseBSuppressedDisables": 10,
+        "pointerStayedOver": true,
+        "scope": "Actual native hover dispatch while the product filter is temporarily placed under the existing pointer; pointer is not moved; phase B suppresses only transient mouse disabling"
+      }
+    },
+    "stationaryTooltipAfterFix": {
+      "operation": "LMO-7a8927521fc15b598ce2e1c1f96fcd09",
+      "runtime": "0000000500042e472e15cf94dd1f22bf",
+      "reportOk": true,
+      "cleanup": "complete",
+      "checks": null,
+      "result": {
+        "refreshes": 20,
+        "disabledCalls": 0,
+        "hoverResets": 0,
+        "stationaryNativeHoverVerified": true,
+        "suppressed": 0,
+        "scope": "Actual native hover dispatch while the product filter is temporarily placed under the existing pointer; pointer is not moved; unmodified installed product handles 20 refreshes without resetting native hover"
+      }
+    },
+    "translationCompatibilityReverted": {
+      "operation": "LMO-98ae42c1f50e58aa69d17cfbec3fe31e",
+      "runtime": "0000000600042f63fac456d2f5373ebc",
+      "reportOk": true,
+      "cleanup": "complete",
+      "checks": 5,
+      "result": {
+        "checks": 5,
+        "display": {
+          "Mythic Keystone": "M+",
+          "Mythic+": "Mythic+",
+          "史诗钥匙": "M+",
+          "史诗钥石": "M+",
+          "大秘境": "大秘境"
+        },
+        "floating": false,
+        "scope": "Read-only verification after reverting global-translation-hook compatibility"
+      }
+    },
+    "deployment": {
+      "verifiedFiles": 146,
+      "removed": [
+        "LycheeGroup/Adapters/SEUI.lua"
+      ],
+      "translationRevertFiles": [
+        "addon/LycheeGroup/ActivityLabels.lua",
+        "addon/LycheeGroup_UI/Create.lua",
+        "tests/test_activity_labels.lua"
+      ],
+      "revertedFilesMatchHEAD": true,
+      "reloaded": true,
+      "ledgerFiles": [
+        "deployment-broker-final.json",
+        "deployment-broker-polish.json",
+        "deployment-remove-seui.json",
+        "deployment-broker-hover.json",
+        "deployment-identity-final.json",
+        "deployment-filter-hover.json",
+        "deployment-translation-revert.json"
+      ]
+    },
+    "connection": {
+      "session": "CON-b2b4cad27762ff438c6a940288b75c0d",
+      "closed": true,
+      "oldSizeConnection": "CON-e6456d1e2de199d3706c86c6a3fbe5b3",
+      "oldSizeConnectionRetired": true,
+      "olderBusyJournal": "Previous process connection remains separately documented in rowPolishAndBroker; this stage does not claim it closed."
+    },
+    "performance": "No new CPU or memory measurements. Hover and clipping reuse existing controls and bounded target tables."
+  }
+}

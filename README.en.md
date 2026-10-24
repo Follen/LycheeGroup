@@ -17,7 +17,7 @@ The current version is **1.2.4**, targeting retail **12.1.5** (Interface `120105
 - **Player profiles:** copy WCL and Raider.IO character links from player details.
 - **Player notes:** share positive, neutral, or blocked-player records across characters on the account, with reminders when you group again. Import and export your notes.
 - **Mythic+ history:** keep a per-character history of runs, key levels, dates, and teammates, then add notes from past runs.
-- **Interface settings:** change the main-window key binding, overall scale, and font size; the floating window has its own scale setting. Clicking Settings again returns to the page you came from. Automatically integrate with the RurutiaSuite top bar or place the entry to the left of the skull in SEUI's marker bar when both the floating window and compatibility settings are enabled.
+- **Interface settings:** change the main-window key binding, overall scale, and font size; the floating window has its own scale setting. Clicking Settings again returns to the page you came from. Automatically integrate with the RurutiaSuite top bar when both the floating window and compatibility settings are enabled. In Ellesmere DataBars, add the `荔枝组队` broker plugin to show the Lychee icon, name, and application status.
 
 The interface uses native Lua with bundled LycheeUI. Feature modules load on demand; no separate UI library installation is needed.
 
@@ -59,7 +59,7 @@ The default main-window key is the English semicolon `;`. It is assigned only wh
 
 ## Development
 
-Version 1.1.5 exposes `LycheeGroup.API.Floating` for existing top bars and other entry points. It supports status subscriptions, attachment, refresh, release, and the shared popup. See the [interface contract](Architecture.md#92-浮窗公开接口). The bundled [RurutiaSuite adapter](addon/LycheeGroup/Adapters/Rurutia.lua) and [SEUI adapter](addon/LycheeGroup/Adapters/SEUI.lua) live in `Adapters/` and demonstrate the public interface.
+Version 1.1.5 exposes `LycheeGroup.API.Floating` for existing top bars and other entry points. It supports status subscriptions, attachment, refresh, release, and the shared popup. See the [interface contract](Architecture.md#92-浮窗公开接口). The bundled [RurutiaSuite adapter](addon/LycheeGroup/Adapters/Rurutia.lua) and [DataBroker adapter](addon/LycheeGroup/Adapters/DataBroker.lua) live in `Adapters/` and demonstrate the public interface.
 
 Run the offline tests from the repository root with Lua 5.1:
 

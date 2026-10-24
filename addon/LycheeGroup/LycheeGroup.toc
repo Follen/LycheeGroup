@@ -8,7 +8,7 @@
 ## Version: 1.2.4
 ## SavedVariables: LycheeGroupDB
 ## SavedVariablesPerCharacter: LycheeGroupPrefsDB
-## OptionalDeps: SeUI
+## OptionalDeps: EllesmereUI, EllesmereUIDataBars
 Libs\LycheeUI\embeds.xml
 Locale.lua
 Theme\Defaults.lua
@@ -27,7 +27,7 @@ BrandMotion.lua
 Floating.lua
 API.lua
 Adapters\Rurutia.lua
-Adapters\SEUI.lua
+Adapters\DataBroker.lua
 Minimap.lua
 PartyRoleCheck.lua
 Entrypoints.lua

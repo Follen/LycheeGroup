@@ -5,6 +5,7 @@ local API={version=1}
 A.API=A.API or {}
 A.API.Floating=API
 local subscribers={}
+local backgroundSubscribers={}
 local owner,host,logoSize,label,onDetach
 local lastAvailable,lastText,lastCount,lastRecruiting,lastIdle,lastAttention
 
@@ -20,10 +21,20 @@ function API:GetStatus()
  return {available=self:IsAvailable(),text=F.statusText or "",count=F.lastCount or 0,
   recruiting=F.recruiting==true,idle=F.lastIdle==true,attention=F.attention==true}
 end
-function API:Subscribe(callback)
+function API:Subscribe(callback,options)
+ if options and options.background==true and not backgroundSubscribers[callback] then
+  backgroundSubscribers[callback]=true
+  F.backgroundStatusSubscribers=(F.backgroundStatusSubscribers or 0)+1
+  F:Update()
+ end
  subscribers[callback]=true
  CallExternal(callback,self:GetStatus())
- return function() subscribers[callback]=nil end
+ return function()
+  subscribers[callback]=nil
+  if backgroundSubscribers[callback] then
+   backgroundSubscribers[callback]=nil;F.backgroundStatusSubscribers=F.backgroundStatusSubscribers-1
+  end
+ end
 end
 function API:Attach(newOwner,newHost,newLogoSize,newLabel,release)
  assert(newOwner and newHost and newLabel and type(newLogoSize)=="number" and newLogoSize>0 and type(release)=="function","Attach requires an owner, host, positive logo size, label and release callback")
@@ -64,14 +75,22 @@ end
 function API:Open()
  return A:Open(A:GetDefaultPage())
 end
-function API:ShowPopup(currentOwner)
+function API:ShowPopup(currentOwner,anchor)
+ if anchor then
+  assert(currentOwner and anchor.IsVisible,"ShowPopup requires an owner and a positioned frame")
+  if not A.db or F.standaloneTest then return false end
+  return F:ShowExternalPanel(currentOwner,anchor)
+ end
  if owner~=currentOwner or not owner then return false end
+ if F.popupAnchor then F:Dismiss() end
  F:ShowPanel()
  return true
 end
-function API:HidePopup(currentOwner)
- if owner~=currentOwner or not owner then return false end
- F:ScheduleHide()
+function API:HidePopup(currentOwner,immediate)
+ if F.popupOwner then
+  if F.popupOwner~=currentOwner then return false end
+ elseif owner~=currentOwner or not owner then return false end
+ if immediate then F:Dismiss() else F:ScheduleHide() end
  return true
 end
 

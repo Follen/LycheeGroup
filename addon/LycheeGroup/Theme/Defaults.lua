@@ -436,7 +436,7 @@ local definition={
   findFilterPadding=20,
   findFilterWideWidth=560,
   findFilterCompactWidth=460,
-  findFilterColumnGap=20,
+  findFilterGroupGap=24,
   findFilterControlHeight=44,
   findFilterSectionGap=16,
   findFilterScrollGutter=18,
@@ -570,7 +570,6 @@ local definition={
   findSlotRoleHeight=10,
   findSlotRoleWidth=10,
   findSocialChoiceWidth=328,
-  findSortChoiceWidth=328,
   findStartTopY=-24,
   findStartWidth=140,
   findTierChoiceHeight=44,
@@ -937,7 +936,6 @@ local definition={
   productMedia="Interface\\AddOns\\LycheeGroup\\Media\\",
   roleButtonIconSize=20,roleButtonInset=16,roleButtonGap=8,roleButtonReserve=60,
   rosterSize=23,rosterGap=5,rosterRoleSize=10,rosterCountIconSize=18,rosterCountStride=44,rosterCountTextWidth=22,rosterCountGap=3,
-  seuiEntryLogoSize=34,seuiEntryFontSize=18,seuiEntryGap=8,
   floatingActionFooterMinHeight=40,
   floatingActionFooterTextWidth=180,
   floatingActivityDetailGap=6,
@@ -1046,6 +1044,7 @@ definition.appearance.main.components={
  labelAction={base={label={color="muted"}},states={hover={label={color="text"}}}},
  iconButton={
   variants={
+   creditsLink={base={icon={color="muted"}},states={hover={icon={color="text"}},pressed={icon={color="accent"}}}},
    applicantInvite={base={hover={shown=false,alpha=0}},states={hover={hover={color="good",alpha="createActionHoverAlpha",shown=true}},pressed={hover={color="good",alpha="createActionPressedAlpha",shown=true}}}},
    applicantDecline={base={hover={shown=false,alpha=0}},states={hover={hover={color="accent",alpha="createActionHoverAlpha",shown=true}},pressed={hover={color="accent",alpha="createActionPressedAlpha",shown=true}}}},
   },

@@ -93,7 +93,7 @@ do
  C_ChallengeMode.GetDungeonScoreRarityColor=function(score) reads=reads+1;return native(score) end
  local one=U.C.Text(UIParent,"",12);local two=U.C.Text(UIParent,"",12)
  U:SetScore(one,nil);T.eq(one:GetText(),"未知分数");T.eq(U:ScoreText(nil),"未知分数")
- U:SetScore(one,0);T.eq(one:GetText(),"暂无分数");T.eq(U:ScoreText(0,"pvp"),"暂无分数")
+ U:SetScore(one,0);T.eq(one:GetText(),"暂无");T.eq(U:ScoreText(0,"pvp"),"暂无")
  U:SetScore(one,2765);U:SetScore(two,2765);U:ScoreText(2765)
  T.eq(reads,1,"recycled rows and tooltip text share one native rating color")
  U:SetScore(one,2801);U:SetScore(one,2765)
@@ -141,15 +141,14 @@ do
   {"https://www.wclbox.com/share/AJKkdJtw8gt","https://url.cc.163.com/HoH0Od"},
   {"https://www.wclbox.com/share/AJu72Mjcmed","https://url.cc.163.com/w64q1s"},
  }
- local copyDialog
  for index,row in ipairs(settings.otherAddons) do
   T.eq(#row.links,#expectedLinks[index]);T.ok(row.summary:GetText()~="")
   for i,button in ipairs(row.links) do
    button:Fire("OnClick","LeftButton")
-   T.eq(U.copyDialog.field.box:GetText(),expectedLinks[index][i],"addon links open the existing Ctrl+C modal with the verified URL")
-   T.eq(U.copyDialog.fieldLabel:GetText(),U.L.downloadLink)
-   if copyDialog then T.eq(U.copyDialog,copyDialog,"all addon links reuse the common copy dialog") else copyDialog=U.copyDialog end
-   U.copyDialog.close:Fire("OnClick");T.eq(U.copyDialog.field.box:HasFocus(),false)
+   local copy=row.linkCopy
+   T.eq(copy.field.box:GetText(),expectedLinks[index][i],"addon links expand their own copy field with the verified URL")
+   T.eq(U.activeModal,nil);T.eq(copy.clip:GetParent(),row.frame);T.ok(copy.field.box:HasFocus())
+   copy.close:Fire("OnClick");T.eq(copy.field.box:HasFocus(),false)
   end
  end
  local last=settings.otherAddons[2];local point={last.frame:GetPoint()}
@@ -572,7 +571,7 @@ do
  T.eq(U.Tooltip.interactive.metrics[2].value:GetText(),"未知分数","申请者详情使用同一PvP缺值语义")
  two.rating=0;two.pvpRatingInfo={bracket=2,rating=0,activityName="3v3"}
  G:Notify("applicants")
- T.eq(U.Tooltip.interactive.metrics[2].title:GetText(),"3v3");T.eq(U.Tooltip.interactive.metrics[2].value:GetText(),"暂无分数","真实零分与未知评分明确区分")
+ T.eq(U.Tooltip.interactive.metrics[2].title:GetText(),"3v3");T.eq(U.Tooltip.interactive.metrics[2].value:GetText(),"暂无","真实零分与未知评分明确区分")
  U.Tooltip:Hide();G.applicants[71]=saved;G.applicants[72]=nil;Pick(create.sortChoice,"newest");G:Notify("applicants")
 end
 do
@@ -932,6 +931,10 @@ do
  T.eq(G.prefs.find.filters.text,nil,"protected search text is not saved for a forbidden SetText restore")
  box:SetFocus();T.eq(page.search.focused,true);box:Fire("OnEnterPressed")
  T.eq(G.searchText,"12-15","Enter submits the text already owned by the native input")
+ page.search:Fire("OnMouseDown","LeftButton");box:Fire("OnTextChanged",false)
+ T.eq(box:GetText(),"12-15","refocusing and native refresh notifications retain the submitted query")
+ box:UserType("12-16");box:Fire("OnEnterPressed");T.eq(G.searchText,"12-16","the existing query can be edited and searched again")
+ box:UserType("12-15")
  page:SelectCategory("seasonDungeon");T.eq(box:GetText(),"12-15","searches within the category preserve the player's native query")
  page.fMembers.box:SetText("5")
  page.hideZeroScore:Fire("OnClick");T.eq(G.prefs.find.categoryPrefs.seasonDungeon.hideZeroScore,true)
@@ -961,8 +964,8 @@ do
  T.eq(box:GetText(),"12-15","closing returns the native input without clearing the player's text")
  A:Open("find");T.eq(page.search.box,box);T.eq(box:GetText(),"12-15");T.eq(G.searchClears,clears,"reopening reuses the native text instead of writing SavedVariables into it")
  local bound=0;for _,input in ipairs(U.inputs) do if input==box then bound=bound+1 end end;T.eq(bound,1,"the leased input has one focus-registry entry")
- box.text="Other browser activity";box:Fire("OnTextChanged",false)
- T.eq(box:GetText(),"","an external activity token cannot refill the active Lychee query after an availability update")
+ box:Fire("OnTextChanged",false)
+ T.eq(box:GetText(),"12-15","a non-user notification does not erase text while the lease still owns the input")
  -- MeetingStone moves this same registered box on show. Our lease record alone
  -- is not proof that the input is still in the Lychee search field.
  local foreign=CreateFrame("Frame",nil,UIParent)
@@ -1119,10 +1122,14 @@ find:SelectCategory("seasonRaid");T.eq(G.filters.minMembers,3);T.eq(G.filters.ma
 find:ClearFilters();T.eq(G.filters.minMembers,nil);T.eq(G.filters.maxMembers,nil)
 do
  local wasOpen=find.filtersOpen;find:SetFiltersOpen(true)
- Pick(find.sortChoice,"members")
- T.eq(find.filterCount,0);T.ok(find.filterStatus:GetText():find("0 项条件 · ",1,true));T.eq(find.clearFilters:IsEnabled(),true,"sorting alone enables reset without inflating the filter count")
+ local sortKey,descending=find.resultsHeader.state.sortKey,find.resultsHeader.state.descending
+ find.resultsHeader:SetSort("members",true);find:OnHeaderSort()
+ T.eq(find.sortChoice,nil);T.eq(find.filterCount,0);T.ok(find.filterStatus:GetText():find("0 项条件 · ",1,true));T.eq(find.clearFilters:IsEnabled(),false,"sorting alone is independent of filter reset")
+ find.fMinMembers.box:UserType("2");T.eq(find.clearFilters:IsEnabled(),true)
  find.clearFilters:Fire("OnClick")
- T.eq(G.filters.sort,A:GetSetting("defaultSort"));T.eq(find.clearFilters:IsEnabled(),false,"reset restores the configured default sort")
+ T.eq(G.filters.minMembers,nil);T.eq(find.resultsHeader.state.sortKey,"members");T.eq(find.resultsHeader.state.descending,true,"reset preserves header sorting")
+ T.eq(find.clearFilters:IsEnabled(),false,"reset clears only local filters")
+ find.resultsHeader:SetSort(sortKey,descending,true);find:OnHeaderSort()
  find:SetFiltersOpen(wasOpen)
 end
 do
@@ -1361,6 +1368,8 @@ do
  T.eq(calls,1,"cancelling outside the current result set does not refresh an unrelated browse")
  G.Search.Search=search;G.apps[1].status=status;G:Notify("applications")
 end
+-- Keep the geometry fixture on a stable row while its sort values change.
+find.resultsHeader:SetSort(nil,false,true)
 find:DoSearch();T.eq(G.state,"done")
 local target=find.results.rows[1]
 do
@@ -1434,7 +1443,7 @@ do
   T.eq(slot.role:IsShown(),true,"empty party slots retain a role placeholder")
   T.eq(slot.role:GetTexture(),U.Theme.productMedia..({TANK="role-tank",HEALER="role-healer",DAMAGER="role-dps"})[role]..".tga")
   T.eq(slot.icon:IsShown(),i==1,"only the occupied slot shows a specialization")
-  T.eq(slot.role.desaturated,i~=1,"only empty seasonal dungeon roles use grayscale")
+  T.eq(slot.role.desaturated,i~=1,"only empty party roles use grayscale")
   T.same(slot.role.vertex,i==1 and {1,1,1,1} or {.7,.7,.7,1},"missing roles are darker while occupied roles retain their colors")
  end
  T.eq(count.width,138);T.near(age.width,cells.age.width-20,.001)
@@ -1506,7 +1515,7 @@ do
  target.membersButton:Fire("OnClick")
  r.categoryID=4;r.ratingKind="pvp";r.leaderRating=0;Render()
  T.eq(find.resultHeadings.rating:GetText(),"评分","PvP uses the shared score column")
- T.eq(target.score:GetText(),"暂无分数");T.ok(target.score:GetStringWidth()<=target.score:GetWidth())
+ T.eq(target.score:GetText(),"暂无");T.ok(target.score:GetStringWidth()<=target.score:GetWidth())
  _G.GetSpecializationInfoByID=getSpecInfo
  for _,key in ipairs(fields) do r[key]=saved[key] end;Render()
 end
@@ -1532,7 +1541,7 @@ do
  T.eq(target.count:GetText(),"1","未提供人数上限不显示1/0")
  U.Tooltip:ShowGroup(target,r);T.eq(U.Tooltip.interactive.metrics[1].value:GetText(),"1620");T.eq(U.Tooltip.interactive.metrics[3].value:GetText(),"1800")
  T.eq(U.Tooltip.interactive.pvpRatings:GetText(),"2v2  1800\n3v3  1750\n5v5  1500","提示列出API额外提供的各赛制，不猜活动对应或丢弃旧赛制")
- r.leaderRating=0;U.Tooltip:RenderGroup();T.eq(U.Tooltip.interactive.metrics[1].value:GetText(),"暂无分数","明确零分不套大秘境评分颜色")
+ r.leaderRating=0;U.Tooltip:RenderGroup();T.eq(U.Tooltip.interactive.metrics[1].value:GetText(),"暂无","明确零分不套大秘境评分颜色")
  r.leaderRating=nil;U.Tooltip:RenderGroup();T.eq(U.Tooltip.interactive.metrics[1].value:GetText(),"未知分数","缺少PvP分不回退大秘境分")
  local over=find.results.clip.IsMouseOver;find.results.clip.IsMouseOver=function() return true end
  U.Tooltip:Hide();target:Fire("OnEnter");T.eq(U.Tooltip.owner,nil,"结果行右侧不触发提示")
@@ -1815,9 +1824,9 @@ do
  T.eq(select(2,view.title:GetFont()),19);T.eq(view.icon:GetWidth(),36,"personal details keep their larger portrait")
  T.eq(view.playerRole:GetWidth(),16);T.eq(view.playerFaction:GetWidth(),16,"personal detail markers keep their original size")
  T.ok(view.back:IsShown());T.ok(view.comment:GetText():find("A different experience",1,true))
- view.wcl:Fire("OnClick");T.ok(U.copyDialog.field.box:GetText():find("/Away/Guest",1,true),"WCL link uses the complete known identity")
- T.eq(U.copyDialog.fieldLabel:GetText(),"角色链接","WCL restores its default field label after copying other addon links")
- U.copyDialog:Hide();view.back:Fire("OnClick");T.eq(tip.member,nil);T.eq(tip.sourceApp,app)
+ view.wcl:Fire("OnClick");T.ok(view.copyField.box:GetText():find("/Away/Guest",1,true),"WCL link uses the complete known identity")
+ T.eq(U.activeModal,nil,"WCL stays inside the member detail")
+ view.back:Fire("OnClick");T.eq(tip.member,nil);T.eq(tip.sourceApp,app)
  T.eq(member:IsEnabled(),true,"returning to applicants keeps member details available")
  tip:Hide()
 end
@@ -1838,6 +1847,11 @@ do
 end
 local raidMembers={}
 local function CheckRaidLeaderFooter(view,name,ui,class)
+ if ui.Tooltip.expanded then
+  T.eq(view.raidLeader:IsShown(),false);T.eq(view.raidLeaderIcon:IsShown(),false,"expanded raids omit the duplicate leader footer")
+  T.ok(view.memberButtons[1].leaderIcon:IsShown(),"the actual leader keeps the crown in the full roster")
+  return
+ end
  T.ok(view.raidLeader:IsShown());T.ok(view.raidLeaderIcon:IsShown())
  T.eq(view.raidLeader:GetText(),name,"the raid-only footer shows the complete current leader identity")
  local r,g,b=view.raidLeader:GetTextColor();local cr,cg,cb=ui:ClassColor(class)
@@ -1977,6 +1991,7 @@ U.Tooltip.interactive:Fire("OnEnter")
 U.Tooltip.interactive:Fire("OnEvent","MODIFIER_STATE_CHANGED","RSHIFT",1)
 T.eq(U.Tooltip.interactive:GetWidth(),624,"another Shift press collapses even while the pointer is inside the tooltip")
 T.eq(U.Tooltip.interactive.memberButtons[30]:IsShown(),false,"collapsing hides the expanded roster")
+CheckRaidLeaderFooter(U.Tooltip.interactive,raid.leaderName,U,"WARRIOR")
 U.Tooltip.interactive:Fire("OnEvent","MODIFIER_STATE_CHANGED","RSHIFT",0)
 T.eq(U.Tooltip.interactive:GetWidth(),624,"releasing Shift keeps the summary state")
 U.Tooltip.interactive:Fire("OnEvent","MODIFIER_STATE_CHANGED","LSHIFT",1)
@@ -2503,24 +2518,24 @@ do
   tip.interactive.memberButtons[1]:Fire("OnClick")
   local x,y=tip.positionX,tip.positionY
   tip.interactive.wcl:Fire("OnClick")
-  T.eq(tip.member,nil);T.ok(u.copyDialog:IsShown())
+  T.ok(tip.member);T.ok(tip.interactive.copyField:IsShown());T.eq(u.activeModal,nil)
   return x,y
  end
  app.members={Member("Original",3200)};g:Notify("applicants")
  local x,y=OpenCopy()
  app={id=71,status="applied",activityID=1,members={Member("Other",1000),Member("Original",3300)}}
- g.applicants[71]=app;g:Notify("applicants");u.copyDialog:Hide()
- T.eq(tip.member,app.members[2],"copy restore reacquires both the applicant record and the member identity")
+ g.applicants[71]=app;g:Notify("applicants")
+ T.eq(tip.member,app.members[2],"copying follows the current applicant record and member identity")
  T.ok(tip.pinned);T.ok(tip.interactive.back:IsShown())
- T.eq(tip.positionX,x);T.eq(tip.positionY,y,"copy restore keeps the pinned position")
+ T.eq(tip.positionX,x);T.eq(tip.positionY,y,"inline copying keeps the pinned position")
  T.eq(tip.interactive.metrics[2].value:IsShown(),false,"restored detail uses the current recruitment activity")
  tip.interactive.back:Fire("OnClick");T.eq(tip.sourceApp,app);T.eq(tip.member,nil)
- OpenCopy();g.applicants[71]=nil;g:Notify("applicants");u.copyDialog:Hide()
- T.eq(tip.member,nil);T.eq(tip.interactive:IsShown(),false,"a removed application is not revived by closing copy")
+ OpenCopy();g.applicants[71]=nil;g:Notify("applicants")
+ T.eq(tip.member,nil);T.eq(tip.interactive:IsShown(),false,"a removed application closes the inline copy")
  g.applicants[71]=app;g:Notify("applicants");OpenCopy()
  app.members[1].name,app.members[1].nameKey="NewOccupant-Away","NewOccupant-Away"
- g:Notify("applicants");u.copyDialog:Hide()
- T.eq(tip.member,nil);T.eq(tip.interactive:IsShown(),false,"copy snapshots retain the original identity even when the saved table is rewritten")
+ g:Notify("applicants")
+ T.eq(tip.member,nil);T.eq(tip.interactive:IsShown(),false,"inline copy retains the original identity even when the saved table is rewritten")
  u:Hide(true)
 end
 -- Applicant detail scope follows its recruitment activity, and personal markers
@@ -2575,7 +2590,7 @@ do
  T.eq(dungeonReads,0);T.ok(view.back:IsShown());view.back:Fire("OnClick");T.eq(tip.sourceApp,app)
  person.applicantID=81;app.activityID=2
  tip:Hide();tip:ShowPlayer(row,person)
- T.ok(view.metrics[3].value:IsShown());T.eq(view.metrics[3].value:GetText(),"暂无分数","dungeon zero rating stays visible even while the global listing is a raid")
+ T.ok(view.metrics[3].value:IsShown());T.eq(view.metrics[3].value:GetText(),"暂无","dungeon zero rating stays visible even while the global listing is a raid")
  T.eq(view.metrics[2].value:GetText(),"—","an unavailable current-map score keeps its own placeholder")
  T.eq(dungeonReads,1);T.ok(view.dungeonTitle:IsShown())
  app.activityID=1;tip:Hide();tip:ShowPlayer(row,person)
@@ -2891,9 +2906,9 @@ do
  members[3]={guid="Roster-1",name="Player1-Away",nameKey="Player1-Away",class="PRIEST",assignedRole="HEALER",subgroup=1,dungeonScore=3200}
  g:Notify("roster");T.eq(tip.member,members[3],"reused roster slots retain the selected player by GUID")
  T.eq(view.metrics[2].value:GetText(),"3200")
- view.wcl:Fire("OnClick");T.eq(tip.owner,nil)
- members[3].dungeonScore=3300;g:Notify("roster");u.copyDialog:Hide()
- T.eq(tip.member,members[3]);T.eq(view.metrics[2].value:GetText(),"3300","WCL copy closes onto the latest member snapshot")
+ view.wcl:Fire("OnClick");T.ok(tip.owner);T.ok(view.copyField:IsShown())
+ members[3].dungeonScore=3300;g:Notify("roster")
+ T.eq(tip.member,members[3]);T.eq(view.metrics[2].value:GetText(),"3300","WCL copying retains the latest member snapshot")
  table.remove(members,3);g:Notify("roster")
  T.eq(tip.member,nil);T.eq(tip.sourceRoster,members,"a departed selected player returns to the current list")
  do
@@ -3054,7 +3069,7 @@ do
  T.eq(tip.member,one);T.ok(tip.directPlayer);T.eq(tip.interactive.back:IsShown(),false)
  members={two,one};one.dungeonScore=2600;g:Notify("roster")
  T.eq(tip.member,one);T.eq(tip.owner,list.rows[2]);T.eq(tip.interactive.metrics[2].value:GetText(),"2600","inline details retain the same player when roster positions move")
- tip.interactive.wcl:Fire("OnClick");members={one,two};one.dungeonScore=2700;g:Notify("roster");u.copyDialog:Hide()
+ tip.interactive.wcl:Fire("OnClick");members={one,two};one.dungeonScore=2700;g:Notify("roster")
  T.eq(tip.member,one);T.eq(tip.owner,list.rows[1]);T.eq(tip.interactive.metrics[2].value:GetText(),"2700")
  members={two};g:Notify("roster");T.eq(tip.owner,nil,"a departing inline player closes their details")
  list.rows[1]:Fire("OnClick","RightButton");T.eq(#u.context.menu.items,3,"inline members use the same roster action menu")
@@ -3740,13 +3755,13 @@ do
  a:Open("find")
  local page=u.pages.find;local application=u.Application;local dialog=LFGListApplicationDialog
  T.eq(g.prefs,a.charPrefs);T.eq(page.fMinMembers.box:GetText(),"2");T.eq(page.fMembers.box:GetText(),"4")
- T.eq(page.sortChoice.value,"rating","the category restores this character's saved sorting")
+ T.eq(g.filters.sort,"rating","the category preserves this character's saved fallback sorting")
  T.eq(page.results.rows[1].roster.slots[1].icon:GetTexture(),"Interface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES","removing unused counts preserves the actual player's class icon")
  T.ok(page.results.rows[1].roster.slots[2].icon:IsShown());T.eq(page.results.rows[1].roster.slots[3].icon:IsShown(),false,"only the two actual members have portraits")
  T.eq(application:IsAutoApplyEnabled(),false,"saved roles alone do not enable automatic application")
  T.same(application.applicationPrefs.roles,{TANK=true,HEALER=true})
- page:ClearFilters();T.eq(page.sortChoice.value,"members","clearing filters uses the character default, not the legacy account value")
- T.eq(a.charPrefs.find.categoryPrefs.seasonDungeon.sort,"members");T.eq(g.db.prefs.find,nil,"Find never writes the account migration seed")
+ page:ClearFilters();T.eq(g.filters.sort,"rating","clearing conditions preserves existing sorting")
+ T.eq(a.charPrefs.find.categoryPrefs.seasonDungeon.sort,"rating");T.eq(g.db.prefs.find,nil,"Find never writes the account migration seed")
  application:Apply(901)
  T.eq(application.applicationLease.roles.TANK,true);T.eq(application.applicationLease.roles.HEALER,nil,"unavailable remembered roles are filtered before confirmation")
  local modal=application.applicationModal
@@ -4420,8 +4435,8 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  T.eq(page.quickFilters:IsShown(),false);T.eq(g.filters.hideSameSpec,nil)
  page:SelectCategory("seasonDungeon")
  T.eq(page.quickIdentity.active,true);T.eq(g.filters.hideSameSpec,true,"returning restores the seasonal specialization preference")
- page:ClearFilters();T.eq(page.quickIdentity.active,false);T.eq(g.filters.hideSameSpec,nil);T.eq(page.filterCount,0)
- page.quickIdentity:Fire("OnClick","LeftButton");page.quickIdentity:Fire("OnClick","LeftButton");T.eq(g.prefs.find.categoryPrefs.seasonDungeon.hideSameSpec,true)
+ page:ClearFilters();T.eq(page.quickIdentity.active,false,"Any uses the same idle state as unrestricted role filters");T.eq(g.filters.hideSameSpec,nil);T.eq(page.filterCount,0)
+ page.quickIdentity:Fire("OnClick","LeftButton");page.quickIdentity:Fire("OnClick","LeftButton");page.quickIdentity:Fire("OnClick","LeftButton");T.eq(g.prefs.find.categoryPrefs.seasonDungeon.hideSameSpec,true)
  page.quickChoices.tankPresence.button:Fire("OnClick","LeftButton")
  page.quickChoices.tankPresence.button:Fire("OnClick","RightButton")
  T.eq(g.filters.tankPresence,nil);T.eq(page.quickChoices.tankPresence.button.active,false,"right click explicitly clears one role")

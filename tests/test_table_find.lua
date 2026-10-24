@@ -300,7 +300,7 @@ end
 -- Activity ordering follows the actual activity-menu group order, not names,
 -- IDs, difficulty variants or the current numeric filter sort.
 do
- local ordered=fixture("enUS");local a,u,g=ordered.A,ordered.U,ordered.G
+ local ordered=fixture("enUS",{defaultSort="members"});local a,u,g=ordered.A,ordered.U,ordered.G
  local journalDifficulty,journalInstance,journalEncounter=EJ_GetDifficulty,EJ_SelectInstance,EJ_GetEncounterInfoByIndex
  local native=C_LFGList;local getInfo,getActivities,getGroupName=native.GetActivityInfoTable,native.GetAvailableActivities,native.GetActivityGroupInfo
  local activities={
@@ -333,7 +333,7 @@ do
  end
  g.records[8].charFriends=1;g.records[9].bnetFriends=1;g.records[10].guildMates=1;g.records[11].guildMates=4
  g.records[7].guildMates=1;g.declinedParties[g.records[7].partyGUID]=1
- p:CommitChoice();p:DoSearch();p:SetFiltersOpen(true);ordered.Pick(p.sortChoice,"members");p:SetFiltersOpen(false)
+ p:CommitChoice();p:DoSearch();h:SetSort(nil,false,true);p:OnHeaderSort()
  local groups=g.Catalog:GetGroups("seasonDungeon")
  T.eq(groups[1].key,20);T.eq(groups[2].key,10);T.eq(groups[3].key,30)
  T.eq(#groups[1].variants,2,"the activity menu keeps both difficulty variants in the same group")

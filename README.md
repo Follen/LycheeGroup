@@ -17,7 +17,7 @@
 - **玩家详情**：可复制 WCL 与 Raider.IO 角色链接。
 - **玩家笔记**：账号内各角色共享推荐、中性或拉黑记录，再次组队时提醒；支持导入与导出。
 - **大秘境历史**：按角色保存副本、层数、时间和队友，方便回顾与补充笔记。
-- **界面设置**：修改主窗口快捷键、整体缩放和字体大小，悬浮窗使用独立的缩放设置；再次点击设置按钮返回来源页。自动适配 RurutiaSuite 顶栏入口或 SEUI 标记栏骷髅左侧，需同时开启“显示悬浮窗”和“悬浮窗兼容”。
+- **界面设置**：修改主窗口快捷键、整体缩放和字体大小，悬浮窗使用独立的缩放设置；再次点击设置按钮返回来源页。自动适配 RurutiaSuite 顶栏入口，需同时开启“显示悬浮窗”和“悬浮窗兼容”。Ellesmere DataBars 可添加 `荔枝组队` 插件块，显示荔枝图标、名称及申请状态。
 
 界面采用原生 Lua，内置 LycheeUI，业务模块按需加载。安装时无需另外安装 UI 库。
 
@@ -59,7 +59,7 @@
 
 ## 开发
 
-1.1.5 提供 `LycheeGroup.API.Floating`，用于接入现有顶栏或其他入口。接口支持状态订阅、挂载、刷新、归还和展开同一份悬浮列表；接入合同见[架构文档](Architecture.md#92-浮窗公开接口)。[`RurutiaSuite 适配`](addon/LycheeGroup/Adapters/Rurutia.lua)与 [`SEUI 适配`](addon/LycheeGroup/Adapters/SEUI.lua)独立放在 `Adapters/`，随主包分发，也作为接口使用示例。
+1.1.5 提供 `LycheeGroup.API.Floating`，用于接入现有顶栏或其他入口。接口支持状态订阅、挂载、刷新、归还和展开同一份悬浮列表；接入合同见[架构文档](Architecture.md#92-浮窗公开接口)。[`RurutiaSuite 适配`](addon/LycheeGroup/Adapters/Rurutia.lua)与 [`DataBroker 适配`](addon/LycheeGroup/Adapters/DataBroker.lua)独立放在 `Adapters/`，随主包分发，也作为接口使用示例。
 
 使用 Lua 5.1 在仓库根目录运行离线测试：
 

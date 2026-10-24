@@ -334,7 +334,7 @@ T.near(actionRow:GetAlpha(),exitingMember:GetAlpha(),.001,"the actions exit with
 T.near(exitingBatch:GetAlpha(),exitingMember:GetAlpha(),.001,"the hover surface exits with the batch")
 F:Tick(.08);T.eq(F.entries,nil,"finishing the last batch exit releases the popup bindings")
 T.eq(F.panel:IsShown(),false,"the last applicant exits without replacing the batch with an empty popup")
-T.eq(F.frame:GetScript("OnUpdate"),nil,"the exit leaves no persistent driver")
+T.eq(F.panel:GetScript("OnUpdate"),nil,"the exit leaves no persistent driver")
 applicant.acting=nil;applicant.pendingStatus="invited";callback("applicants");T.eq(F.entries,nil,"native pending status remains hidden")
 applicant.pendingStatus=nil;callback("applicants");F:Tick(.2)
 T.eq(F.panel:IsShown(),false,"a later native refresh cannot reopen the automatically closed popup")
@@ -387,7 +387,7 @@ T.eq(select(2,Position(metricRow.itemLevel)),select(2,Position(metricRow.meta)),
 T.eq(select(2,metricRow.itemLevel:GetFont()),12)
 T.eq(F.rows[1].score:GetText(),"1820","floating uses the listing's normalized PvP rating instead of its dungeon score")
 T.same(F.rows[1].score.color,F.context.Theme.text,"PvP rating uses neutral text")
-members[1].rating=0;callback("applicants");T.eq(F.rows[1].score:GetText(),"暂无分数","known zero is distinct from missing PvP data")
+members[1].rating=0;callback("applicants");T.eq(F.rows[1].score:GetText(),"暂无","known zero is distinct from missing PvP data")
 members[1].rating=nil;callback("applicants");T.eq(F.rows[1].score:GetText(),"未知分数","missing PvP rating does not fall back to a dungeon score")
 T.eq(rarityCalls,0,"PvP does not request dungeon score rarity colors")
 listing.activityID=2;callback("listing");T.eq(metricRow.score:IsShown(),false,"returning from PvP to raid hides the reused score again")
@@ -448,7 +448,7 @@ T.eq(F.panel:IsShown(),false,"an outside click immediately closes an active batc
 T.eq(closingRow.exit,nil,"closing clears the row's exit state");T.eq(closingRow.applicantID,nil)
 T.eq(closingRow.faction:IsShown(),false);T.eq(closingRow.faction:GetTexture(),nil,"closing clears the pooled applicant marker")
 T.eq(F.panel.events.GLOBAL_MOUSE_DOWN,nil);T.eq(F.hideTask,nil)
-T.eq(F.frame:GetScript("OnUpdate"),nil,"closing stops an active batch exit")
+T.eq(F.panel:GetScript("OnUpdate"),nil,"closing stops an active batch exit")
 F.panel.mouseOver=true;base.AdvanceClock(.2);F:Tick(.5);callback("applicants")
 T.eq(F.panel:IsShown(),false,"a cancelled hide timer, completed exit and native refresh cannot reopen the popup")
 F.panel.mouseOver=false
@@ -475,15 +475,15 @@ do
  F.Render=function(self,...) renders=renders+1;return render(self,...) end
  for _=1,10 do
   F.scroll:Fire("OnMouseWheel",1)
-  for _=1,15 do if F.frame:GetScript("OnUpdate") then F.frame:Fire("OnUpdate",.01) end end
+  for _=1,15 do if F.panel:GetScript("OnUpdate") then F.panel:Fire("OnUpdate",.01) end end
  end
  F.Render=render
  T.eq(renders,0,"wheel input at the upper boundary does not render motion with no displacement")
- T.eq(F.scroll:GetVerticalScroll(),0);T.eq(F.frame:GetScript("OnUpdate"),nil)
+ T.eq(F.scroll:GetVerticalScroll(),0);T.eq(F.panel:GetScript("OnUpdate"),nil)
 end
 F:SetOffset(11,true);T.ok(F.scrollTween);local scrollState=F.scrollTween;F:Tick(.03);T.ok(F.scroll:GetVerticalScroll()>0 and F.scroll:GetVerticalScroll()<11,"a real scroll retains its intermediate position");F:SetOffset(22,true);T.eq(F.scrollTween,scrollState,"a new scroll target reuses the finite tween state");F:Tick(.2);T.eq(F.scroll:GetVerticalScroll(),22);T.eq(F.scrollTween,nil,"completed scrolling removes its tween");F:SetOffset(0,true);F:Tick(.2);T.eq(F.scroll:GetVerticalScroll(),0)
 F:Fade(false);T.ok(F.fade);T.eq(F.fade,fadeState,"fade direction changes reuse the finite fade state");F:Tick(.2);T.eq(F.panel:IsShown(),false);T.ok(F.attention and F.attentionTimer,"closing only the popup preserves the pending-applicant reminder")
-T.eq(F.frame:GetScript("OnUpdate"),nil,"collapsed attention does not keep the panel driver running")
+T.eq(F.panel:GetScript("OnUpdate"),nil,"collapsed attention does not keep the panel driver running")
 T.eq(next(firstEntry),nil,"closing clears every business field from retained entry shells")
 T.eq(next(batchEntry),nil,"closing clears retained batch metadata")
 T.eq(#workingTops,0);T.ok(#workingEntries<=#F.rows,"closed entry shells are bounded by the visible row pool")
@@ -503,9 +503,9 @@ do
  F.ApplyCardMotion,row.ClearAllPoints=apply,clear
 end
 A:SetSetting("reduceMotion",true)
-T.eq(F.panel:IsShown(),false);T.eq(F.frame:GetScript("OnUpdate"),nil,"reduced motion finishes the entrance and last batch exit immediately");T.eq(F.entries,nil)
+T.eq(F.panel:IsShown(),false);T.eq(F.panel:GetScript("OnUpdate"),nil,"reduced motion finishes the entrance and last batch exit immediately");T.eq(F.entries,nil)
 applicant.acting=nil;callback("applicants");F:ShowPanel();T.eq(#F.entries,2)
-F.rows[2].decline:Fire("OnClick");T.eq(F.entries,nil,"reduced motion closes the last accepted batch without a display task");T.eq(F.frame:GetScript("OnUpdate"),nil)
+F.rows[2].decline:Fire("OnClick");T.eq(F.entries,nil,"reduced motion closes the last accepted batch without a display task");T.eq(F.panel:GetScript("OnUpdate"),nil)
 applicant.acting=nil;callback("applicants");F:ShowPanel()
 F:SetOffset(22,true);T.eq(F.scrollTween,nil);T.eq(F.scroll:GetVerticalScroll(),22)
 local highWater=#stub.nodes
@@ -548,7 +548,7 @@ do
 end
 A:SetSetting("reduceMotion",false)
 T.ok(F.attention and F.brandMotion:IsPlaying(),"restoring motion starts the actual product Brand job")
-T.eq(F.frame:GetScript("OnUpdate"),nil,"the collapsed reminder does not install the panel driver")
+T.eq(F.panel:GetScript("OnUpdate"),nil,"the collapsed reminder does not install the panel driver")
 local countPoint={F.count:GetPoint()};local framePoint={F.frame:GetPoint()};local beforeAttentionNodes=#stub.nodes
 F.context.Motion:Tick(.168)
 T.near(F.logoTexture:GetWidth(),38*1.075,.001,"the first original Bezier segment stretches the logo horizontally")
@@ -562,14 +562,14 @@ local getApplicants=G.GetApplicants;local queries=0;G.GetApplicants=function(sel
 F.context.Motion:Tick(1.22)
 T.eq(F.logoTexture:GetWidth(),38);T.eq(F.logoTexture:GetHeight(),38)
 T.eq(F.context.Motion.driver:GetScript("OnUpdate"),nil,"the shared driver is idle between the 1.386s animation and the next reminder")
-T.eq(F.frame:GetScript("OnUpdate"),nil);T.eq(base.PendingTimers(),1,"only one cancellable replay timer owns the quiet interval")
+T.eq(F.panel:GetScript("OnUpdate"),nil);T.eq(base.PendingTimers(),1,"only one cancellable replay timer owns the quiet interval")
 F:ShowPanel()
 do
  local clock=GetTimePreciseSec;local reads=0
  _G.GetTimePreciseSec=function() reads=reads+1;return clock() end
- for i=1,24 do stub.preciseNow=i*.01;F.frame:Fire("OnUpdate",.01) end
+ for i=1,24 do stub.preciseNow=i*.01;F.panel:Fire("OnUpdate",.01) end
  T.eq(reads,1,"floating reads the native clock only for the first frame of a busy interval")
- T.eq(F.frame:GetScript("OnUpdate"),nil,"floating stops its driver after its entrance finishes")
+ T.eq(F.panel:GetScript("OnUpdate"),nil,"floating stops its driver after its entrance finishes")
  _G.GetTimePreciseSec=clock;stub.preciseNow=0
 end
 F:Dismiss()
@@ -583,7 +583,7 @@ G.GetApplicants=getApplicants
 T.eq(#stub.nodes,beforeAttentionNodes,"the repeated reminder reuses its texture and existing driver")
 A:SetSetting("reduceMotion",true)
 T.eq(F.attention,false);T.eq(F.attentionTimer,nil);T.eq(F.logoTexture:GetWidth(),38);T.eq(select(2,Position(F.logoTexture)),0)
-T.eq(F.frame:GetScript("OnUpdate"),nil,"reduced motion stops and settles the collapsed reminder")
+T.eq(F.panel:GetScript("OnUpdate"),nil,"reduced motion stops and settles the collapsed reminder")
 A:SetSetting("reduceMotion",false);F.context.Motion:Tick(.1)
 local visibleAttention
 local stopAttention=API:Subscribe(function(status) visibleAttention=status.attention end)
@@ -593,12 +593,12 @@ T.eq(visibleAttention,false,"hiding the entry publishes the stopped attention st
 stopAttention()
 T.eq(F.attention,false);T.eq(F.attentionTimer,nil);T.eq(F.logoTexture:GetWidth(),38);T.eq(F.brandMotion:IsPlaying(),false,"hiding the entire entry cancels Brand and the replay timer")
 F.frame:Show();T.ok(F.attention,"showing the entry derives attention again from the pending snapshot")
-listing=nil;callback("listing");T.eq(F.attention,false);T.eq(F.attentionTimer,nil);T.eq(F.logoTexture:GetWidth(),38);T.eq(F.frame:GetScript("OnUpdate"),nil,"ending recruitment stops attention even if outbound applications remain")
+listing=nil;callback("listing");T.eq(F.attention,false);T.eq(F.attentionTimer,nil);T.eq(F.logoTexture:GetWidth(),38);T.eq(F.panel:GetScript("OnUpdate"),nil,"ending recruitment stops attention even if outbound applications remain")
 listing={name="My listing",activityID=1};callback("listing");T.ok(F.attention)
 applicant.pendingStatus="invited";callback("applicants");T.eq(F.attention,false,"only operable applied applicants trigger attention")
 applicant.pendingStatus=nil;callback("applicants");T.ok(F.attention)
 applicant.status="declined";callback("applicants");T.eq(F.attention,false);T.eq(F.attentionTimer,nil);T.eq(select(2,Position(F.logoTexture)),0,"clearing the final pending applicant restores the original logo anchor")
-A:SetSetting("floating",false);T.eq(F.frame:IsShown(),false);T.eq(F.entries,nil,"disabled floating releases its list");T.eq(F.frame:GetScript("OnUpdate"),nil)
+A:SetSetting("floating",false);T.eq(F.frame:IsShown(),false);T.eq(F.entries,nil,"disabled floating releases its list");T.eq(F.panel:GetScript("OnUpdate"),nil)
 T.eq(F.context.Motion:Count(),0);T.eq(F.context.Motion.driver:GetScript("OnUpdate"),nil,"hidden floating releases its button hover driver")
 T.eq(base.PendingTimers(),0,"idle floating has no periodic task")
 do

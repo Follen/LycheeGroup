@@ -46,6 +46,7 @@ Add(main,"notes","text","notes.classLabel notes.eDate notes.eIdentity notes.eNam
 Add(main,"notes","texture","notes.eAvatar")
 Add(main,"settings","aboutAddon","settings.about.addon")
 Add(main,"settings","aboutHeader","settings.aboutHeader")
+main["settings.credits.person"]={scope="settings",template=true,slotKinds={root="box",portrait="texture",name="text"}}
 Add(main,"settings","box","settings.panel")
 Add(main,"settings","component","settings.about.link settings.aboutBrand settings.bindingNotice settings.block settings.blocksClear settings.blocksHeader settings.blocksList settings.cancelBinding settings.dedicationToast settings.frame settings.main settings.navigation settings.overwriteBinding settings.rail settings.reloadLanguage")
 Add(main,"settings","settingRow","settings.row")
@@ -72,8 +73,16 @@ end
 kinds.panel={root="box",surface="surface"}
 kinds.button={root="roundedBox",label="text",surface="surface",fill="surface",hover="surface"}
 kinds.iconButton=Map(kinds.button,{icon="texture"})
+main["settings.credits.link"]={scope="settings",template=true,slotKinds=kinds.iconButton}
 kinds.choice=Map(kinds.button,{focus="surface",focusInner="surface",["arrows/1"]="texture",["arrows/2"]="texture"})
 kinds.edit=Map(kinds.fieldShell,{box="text",input="text"})
+main["settings.linkCopy"]={scope="settings",template=true,slotKinds={root="box",canvas="box"}}
+main["settings.linkCopy.field"]={scope="settings",template=true,slotKinds=kinds.edit}
+main["settings.linkCopy.hint"]={scope="settings",template=true,slotKinds=kinds.text}
+main["settings.linkCopy.close"]={scope="settings",template=true,slotKinds=kinds.iconButton}
+main["tooltip.copyField"]={scope="tooltip",slotKinds=kinds.edit}
+main["tooltip.copyHint"]={scope="tooltip",slotKinds=kinds.text}
+kinds.rich.copyField="box";kinds.rich.copyHint="text"
 kinds.multiline=Map(kinds.edit,{scroll="box"})
 kinds.number=Map(kinds.edit,{placeholder="text"})
 kinds.check={root="box",label="text",track="box",knob="box",surface="surface",knobSurface="surface",["track/bg"]="surface",["knob/bg"]="surface"}

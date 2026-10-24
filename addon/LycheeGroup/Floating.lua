@@ -44,7 +44,7 @@ local function MemberIcon(texture,member,icon)
 end
 local function ColorScore(t,score,kind)
  if type(score)~="number" or score<0 then t:SetText(zh and "未知分数" or "Unknown");t:SetTextColor(unpack(T.muted))
- elseif score==0 then t:SetText(zh and "暂无分数" or "Unrated");t:SetTextColor(unpack(T.muted))
+ elseif score==0 then t:SetText(zh and "暂无" or "Unrated");t:SetTextColor(unpack(T.muted))
  elseif kind=="pvp" then t:SetText(math.floor(score));t:SetTextColor(unpack(T.text))
  else t:SetText(math.floor(score));local c=C_ChallengeMode.GetDungeonScoreRarityColor(score);t:SetTextColor(c.r,c.g,c.b) end
 end
@@ -71,7 +71,7 @@ function F:Build()
   elementDefaults=A.ThemeDefaults.appearance.floating.elements,
   elements=A.Appearance:GetElements("floating"),
   utilities=A.Appearance:GetUtilities("floating"),
-  ownsText=function(region) return A.Fonts:IsOwned(region,F.frame,F.context and F.context:GetMenu()) end,
+  ownsText=function(region) return A.Fonts:IsOwned(region,F.frame,F.context and F.context:GetMenu(),F.panel) end,
   reducedMotion=function() return A:GetSetting("reduceMotion") end})
  C,T=self.context.C,self.context.Theme
  local f=CreateFrame("Frame","LycheeGroupFloating",UIParent);C.Box(f,{width="floatingEntryWidth",height="floatingEntryHeight"});f:SetFrameStrata("MEDIUM");f:SetClampedToScreen(true);f:SetMovable(true);f:EnableMouse(false);self.frame=f
@@ -112,6 +112,7 @@ function F:Build()
    ClearRowBinding(row)
   end
   for _,batch in ipairs(F.batches) do batch.exit=nil;batch.exitAlpha=nil;batch.exitTop=nil;batch:EnableMouse(true);batch.applicantID=nil;C.RekeyElement(batch,nil);batch.background:Hide();batch:Hide() end
+  F:ClearPopupAnchor()
  end)
  local cancel=C.Button(panel,"",160,nil,{variant="text",height=24});C.SetPoint(cancel,"TOPRIGHT",cancel:GetParent(),"TOPRIGHT","floatingCancelToprightX","floatingCancelToprightY");cancel.label:ClearAllPoints();cancel.label:SetPoint("RIGHT");self.cancel=cancel
  cancel:HookScript("OnEnter",function() F:CancelHide() end)
@@ -208,11 +209,13 @@ function F:Build()
  self.emptyCard.background=C.Surface(self.emptyCard,{variant="floating"})
  self.empty=Text(self.emptyCard,14,292);self.empty:SetPoint("CENTER");self.empty:SetJustifyH("CENTER");self.empty:SetWordWrap(false);C.SetLineHeight(self.empty,20,true);self.empty:SetTextColor(unpack(T.muted))
  self.measure=Text(panel,14,300);self.measure:SetWordWrap(true);self.measure:Hide();self.empty:SetText(zh and "暂无申请" or "No applications")
- button:HookScript("OnEnter",function() F:ShowPanel() end);button:HookScript("OnLeave",function() F:ScheduleHide() end)
+ button:HookScript("OnEnter",function() if F.popupAnchor then F:Dismiss() end;F:ShowPanel() end);button:HookScript("OnLeave",function() F:ScheduleHide() end)
  f:SetScript("OnShow",function() F:Update() end)
  f:SetScript("OnHide",function()
   if F.dragging then F.frame:StopMovingOrSizing();F.dragging=nil end
-  F.dragClick=nil;F:SetAttention(false);F:Dismiss();F.context.Motion:StopAll();F:PublishStatus()
+  F.dragClick=nil;F:SetAttention(false)
+  if not F.popupAnchor then F:Dismiss();F.context.Motion:StopAll() end
+  F:PublishStatus()
  end)
  panel:SetScript("OnEnter",function() F:CancelHide() end);panel:SetScript("OnLeave",function() F:ScheduleHide() end)
  f:RegisterEvent("DISPLAY_SIZE_CHANGED");f:RegisterEvent("UI_SCALE_CHANGED");f:SetScript("OnEvent",function() F:UpdateSettings() end)
@@ -244,7 +247,7 @@ function F:UpdateDriver()
  if self.running==running then return end
  self.running=running
  self.startedAt=running and GetTimePreciseSec() or nil
- self.frame:SetScript("OnUpdate",running and Drive or nil)
+ self.panel:SetScript("OnUpdate",running and Drive or nil)
 end
 local function PositionCard(card,elapsed)
  local exit=card.exit
@@ -332,7 +335,24 @@ function F:ScheduleHide()
  if not self.panel:IsShown() then return end
  self:CancelHide();self.hideTask=C_Timer.NewTimer(.06,function() F.hideTask=nil;if not F:GetAnchor():IsMouseOver() and not F.panel:IsMouseOver() then F:Fade(false) end end)
 end
-function F:GetAnchor() return self.host or self.frame end
+function F:GetAnchor() return self.popupAnchor or self.host or self.frame end
+function F:ClearPopupAnchor()
+ if not self.popupAnchor then return end
+ self.popupOwner,self.popupAnchor=nil,nil
+ self.panel:ClearAllPoints();self.panel:SetParent(self.frame);self:LayoutEntry()
+end
+function F:ShowExternalPanel(owner,anchor)
+ if not anchor:IsVisible() or self.dragging then return false end
+ if not self.frame then self:Build();self:UpdateSettings() end
+ if self.popupOwner~=owner or self.popupAnchor~=anchor then self:Dismiss() end
+ self.popupOwner,self.popupAnchor=owner,anchor
+ if self.panel:GetParent()~=UIParent then self.panel:SetParent(UIParent) end
+ self:LayoutEntry()
+ local shown=self.panel:IsShown()
+ self:Update();if not shown then self:ShowPanel() end
+ if not self.panel:IsShown() then self:ClearPopupAnchor();return false end
+ return true
+end
 function F:LayoutEntry()
  if self.host then
   self.entryItems[1].hidden,self.entryItems[2].hidden=true,true;self.entryLayout:Layout()
@@ -348,7 +368,7 @@ function F:LayoutEntry()
   self.entryItems[2].width=countWidth
   self.entryOptions.x,self.entryOptions.gap=T.floatingLogoAnchorLeftX,T.floatingCountLeftX;self.entryLayout:Layout()
  end
- self.panel:SetScale(A:GetSetting("floatingScale")/100*UIParent:GetEffectiveScale()/self.frame:GetEffectiveScale());ApplyElements()
+ self.panel:SetScale(A:GetSetting("floatingScale")/100*UIParent:GetEffectiveScale()/self.panel:GetParent():GetEffectiveScale());ApplyElements()
 end
 -- The public API supplies an existing mouse target; the same logo and list
 -- move with it. The adapter keeps ownership of that target's clicks.
@@ -359,7 +379,8 @@ function F:SetHost(host,logoSize,count)
  local resized=T.logoSize~=logoSize
  if changed or resized then self:SetAttention(false) end
  if changed then
-  self:Dismiss();self.host=host;self.count=count;self.lastCount=nil;self.popupBounds=nil
+  if not self.popupAnchor then self:Dismiss() end
+  self.host=host;self.count=count;self.lastCount=nil;self.popupBounds=nil
   self.frame:ClearAllPoints();self.frame:SetParent(host or UIParent)
   self.frame:SetClampedToScreen(host==nil)
   self.logoAnchor:ClearAllPoints();self.logoAnchor:SetParent(host and self.frame or self.button)
@@ -388,9 +409,9 @@ function F:Bind(group)
 end
 function F:UpdateSettings()
  local enabled=A:GetSetting("floating") or self.standaloneTest
- if not self.frame then if not enabled then self:PublishStatus();return end;self:Build();if not self.frame then return end end
+ if not self.frame then if not enabled then self:Update();return end;self:Build();if not self.frame then return end end
  self.frame:SetScale(self.host and 1 or A:GetSetting("floatingScale")/100);self:LayoutEntry();self.frame:SetShown(enabled==true)
- if not enabled then self.panel:Hide();self.entries=nil;self:CancelHide() end
+ if not enabled and not self.popupAnchor then self.panel:Hide();self.entries=nil;self:CancelHide() end
  self:Update()
 end
 function F:ToggleStandaloneTest()
@@ -406,24 +427,31 @@ function F:ApplyFont(path,scale)
 end
 
 function F:Update()
- if not self.frame or not (A:GetSetting("floating") or self.standaloneTest) then self:PublishStatus();return end
+ local enabled=self.frame and (A:GetSetting("floating") or self.standaloneTest)
+ if not enabled and not self.popupAnchor and (self.backgroundStatusSubscribers or 0)==0 then self:PublishStatus();return end
  local group=A.Group;self.recruiting=group and group:GetListing()~=nil
  local count=0
  if group then
   if self.recruiting then for _,id in ipairs(group:GetApplicants()) do local app=group:GetApplicant(id);if Operable(app) then count=count+#app.members end end else for _,app in ipairs(group:GetApplications()) do if Waiting(app) then count=count+1 end end end
  end
  local idle=not self.recruiting and (not group or group.Applications:GetActiveCount()==0)
- if self.lastCount~=count or self.lastRecruiting~=self.recruiting or self.lastIdle~=idle then
-  self.statusText=idle and (zh and "荔枝组队" or "Lychee LFG") or count==0 and (zh and "暂无申请" or "No applications") or (self.recruiting and (zh and "%d人申请" or "%d applicants") or (zh and "申请%d个" or "Applied: %d")):format(count)
-  self.count:SetText(self.statusText)
-  self:LayoutEntry();self.lastCount,self.lastRecruiting,self.lastIdle=count,self.recruiting,idle
+ local changed=self.lastCount~=count or self.lastRecruiting~=self.recruiting or self.lastIdle~=idle
+ if changed then
+  local chinese=A:GetLocale()=="zhCN"
+  self.statusText=idle and (chinese and "荔枝组队" or "Lychee LFG") or count==0 and (chinese and "暂无申请" or "No applications") or (self.recruiting and (chinese and "%d人申请" or "%d applicants") or (chinese and "申请%d个" or "Applied: %d")):format(count)
+  self.lastCount,self.lastRecruiting,self.lastIdle=count,self.recruiting,idle
  end
+ if not enabled then
+  if self.popupAnchor and self.panel:IsShown() then self:ShowPanel() end
+  self:PublishStatus();return
+ end
+ if changed or self.count:GetText()~=self.statusText then self.count:SetText(self.statusText);self:LayoutEntry() end
  self:SetAttention(self.recruiting and count>0)
  if self.panel:IsShown() then self:ShowPanel() end
  self:PublishStatus()
 end
 function F:ShowPanel()
- if self.dragging or not (A:GetSetting("floating") or self.standaloneTest) or not self:GetAnchor():IsVisible() or next(exits) then return end
+ if self.dragging or not (self.popupAnchor or A:GetSetting("floating") or self.standaloneTest) or not self:GetAnchor():IsVisible() or next(exits) then return end
  local hadEntries=self.entries and #self.entries>0
  self:CancelHide();entryCount=0;self.entries,self.entryTops=entries,tops
  self.entriesVersion=(self.entriesVersion or 0)+1
@@ -515,7 +543,7 @@ function F:LayoutPanel()
  local top,bottom=anchorTop,anchorBottom
  local right=anchor:GetLeft()*anchor:GetEffectiveScale()>UIParent:GetWidth()*UIParent:GetEffectiveScale()*.6
  local left=anchor:GetLeft()*scale+(right and anchor:GetWidth()*scale-self.panel:GetWidth() or 0)
- if self.popupBounds then
+ if self.popupBounds and not self.popupAnchor then
   for _,frame in ipairs(self.popupBounds) do
    if frame:IsVisible() then
     local frameScale=frame:GetEffectiveScale()/panelScale;local frameLeft=frame:GetLeft()*frameScale

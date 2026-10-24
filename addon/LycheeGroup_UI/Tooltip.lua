@@ -59,9 +59,17 @@ function Tip:IsResult(id)
  return self.record~=nil and self.record.id==id and self.interactive~=nil and self.interactive:IsShown()
 end
 function Tip:ClearSource(keepRosterState)
+ self:ClearPlayerCopy()
  if not keepRosterState then self:CancelRosterDrag();self:ClearRosterNotice() end
  self.record,self.member,self.details,self.sourceApp,self.sourceRoster=nil,nil,nil,nil,nil
  self.memberContext,self.rosterContext,self.directPlayer,self.selectedMemberID,self.applicantID,self.noteKey=nil,nil,nil,nil,nil,nil
+end
+function Tip:ClearPlayerCopy()
+ self.copyKind,self.copyValue,self.playerHeight=nil,nil,nil
+ local f=self.interactive
+ if f and f.copyField then
+  f.copyField.box:ClearFocus();f.copyField.box:SetText("");f.copyField:Hide();f.copyHint:Hide()
+ end
 end
 local resumeFields={"owner","record","details","sourceApp","sourceRoster","selectedMemberID","applicantID","member","memberContext","rosterContext","directPlayer","pinned","pointX","pointY","positionX","positionY","expanded"}
 function Tip:Capture()
@@ -510,7 +518,7 @@ function Tip:BuildInteractive()
   end)
  end)
  f.scroll,f.canvas=scroll,canvas
- f:SetScript("OnHide",function() Tip:CancelRosterDrag();Tip:ClearRosterNotice();outside:Hide();UI.Motion:Stop(scroll);scroll.scrollTarget=nil end)
+ f:SetScript("OnHide",function() Tip:CancelRosterDrag();Tip:ClearRosterNotice();Tip:ClearPlayerCopy();outside:Hide();UI.Motion:Stop(scroll);scroll.scrollTarget=nil end)
  f.icon=C.Icon(canvas,T.tooltipFIconWidth2);C.Box(f.icon,{width="tooltipFIconWidth2",height="tooltipFIconHeight2"});f.icon:SetPoint("TOPLEFT")
  f.title=C.Text(canvas,"",18,"text");C.SetPoint(f.title,"TOPLEFT",f.title:GetParent(),"TOPLEFT","tooltipFTitleTopleftX",0);f.title:SetWordWrap(true)
  f.subtitle=C.Text(canvas,"",14,"muted");C.SetPoint(f.subtitle,"TOPLEFT",f.subtitle:GetParent(),"TOPLEFT","tooltipFSubtitleTopleftX","tooltipFSubtitleTopleftY");C.SetLineHeight(f.subtitle,20)
@@ -552,19 +560,11 @@ function Tip:BuildInteractive()
  end);f.back:SetWidth(T.tooltipFBackWidth)
  f.back:SetHeight(T.tooltipFBackHeight);C.SetFont(f.back.label,14);C.SetLineHeight(f.back.label,20,true);f.back.label:ClearAllPoints();C.SetPoint(f.back.label,"LEFT",f.back.label:GetParent(),"LEFT","tooltipFBackLabelLeftX",0);UI:Color(f.back.label,"muted");f.back.elementIcon=C.Glyph(f.back,"arrow",T.tooltipGlyphWidth);f.back.elementIcon:SetPoint("LEFT",12,0)
  f.wcl=C.Button(canvas,Say("复制 WCL 链接","Copy WCL link"),T.tooltipFWclWidth,function()
-  if UI.preview then return end
-  local _,name,realm=Links.Identity(Tip.member)
-  local url=Links.GetWCLURL(name,realm,GetCurrentRegion());if not url then return end
-  local restore=(Tip.pinned or Tip.directPlayer) and Tip:Capture() or nil
-  UI:CopyText(Say("复制 WCL 链接","Copy WCL link"),url,restore,name.."-"..realm)
+  Tip:CopyPlayerLink("wcl")
  end);f.wcl:SetWidth(T.tooltipFWclWidth)
  f.wcl:SetSurfaceColors("secondaryContainer","refreshHover","surfaceHighest")
  f.io=C.Button(canvas,Say("复制 IO 链接","Copy IO link"),T.tooltipFWclWidth,function()
-  if UI.preview then return end
-  local _,name,realm=Links.Identity(Tip.member)
-  local url=Links.GetRaiderIOURL(name,realm,GetCurrentRegion(),A:GetLocale());if not url then return end
-  local restore=(Tip.pinned or Tip.directPlayer) and Tip:Capture() or nil
-  UI:CopyText(Say("复制 IO 链接","Copy IO link"),url,restore,name.."-"..realm)
+  Tip:CopyPlayerLink("io")
  end);f.io:SetSurfaceColors("secondaryContainer","refreshHover","surfaceHighest")
  f.note=C.Button(canvas,L.record,T.tooltipFNoteWidth,function()
   if UI.preview then return end
@@ -574,6 +574,10 @@ function Tip:BuildInteractive()
  f.note:SetSurfaceColors("secondaryContainer","refreshHover","surfaceHighest")
  f.actionItems={{frame=f.wcl,width="fill",height="tooltipFWclHeight"},{frame=f.io,width="fill",height="tooltipFWclHeight"},{frame=f.note,width="fill",height="tooltipFNoteHeight"}}
  f.actionOptions={width=1,height=40,gap=8};f.actionLayout=C.Row(canvas,f.actionItems,f.actionOptions)
+ f.copyField=C.Edit(canvas,1,40,false,false,"modal");f.copyField:Hide()
+ f.copyField.box:SetScript("OnTextChanged",function(box,user) if user then box:SetText(Tip.copyValue or "");box:HighlightText() end end)
+ f.copyField.box:HookScript("OnEscapePressed",function() Tip:Hide() end)
+ f.copyHint=C.Text(canvas,Say("链接已选中，按 Ctrl+C 复制。","The link is selected. Press Ctrl+C to copy."),14,"dim");C.SetLineHeight(f.copyHint,20);f.copyHint:SetWordWrap(true);f.copyHint:Hide()
  self.interactive=f;f:Hide()
 self:RegisterBuildInteractiveElements()
  end
@@ -603,6 +607,7 @@ function Tip:EnsureMemberButtons(count)
  end
 end
 function Tip:ResetInteractive(owner,width,metricAlignment)
+ if metricAlignment~="CENTER" then self:ClearPlayerCopy() end
  if self.text then self.text:Hide() end
  metricAlignment=metricAlignment or "LEFT"
  local metricVertical=metricAlignment=="CENTER" and "TOP" or "MIDDLE"
@@ -973,13 +978,15 @@ function Tip:RenderGroup()
    f.bossText:ClearAllPoints();C.SetPoint(f.bossText,"TOPLEFT",f.bossText:GetParent(),"TOPLEFT",mainWidth+T.tooltipBossGap,"tooltipFBossTextTopleftY");f.bossText:SetWidth(T.tooltipBossWidth);UI:SetText(f.bossText,missing);f.bossText:Show()
    bossTop=30+f.bossText:GetStringHeight()
   end
-  UI:SetText(f.raidLeader,record.leaderName or L.unknown);f.raidLeader:SetWidth(mainWidth-20);f.raidLeader:SetHeight(0)
-  if leader then f.raidLeader:SetTextColor(UI:ClassColor(leader.class)) else UI:Color(f.raidLeader,"muted") end
-  local leaderHeight=math.max(f.raidLeader:GetLineHeight(),f.raidLeader:GetStringHeight())
   local hintHeight=hasHint and f.footer:GetStringHeight() or 0;local hintGap=hasHint and 10 or 0
-  top=math.max(top+12+leaderHeight+hintGap+hintHeight,bossTop+4)
-  f.raidLeader:ClearAllPoints();C.SetPoint(f.raidLeader,"BOTTOMLEFT",f.canvas,"BOTTOMLEFT","tooltipFRaidLeaderBottomleftX",hintHeight+hintGap);f.raidLeader:Show()
-  f.raidLeaderIcon:ClearAllPoints();C.SetPoint(f.raidLeaderIcon,"CENTER",f.raidLeader,"TOPLEFT","tooltipFRaidLeaderIconCenterX",-f.raidLeader:GetLineHeight()/2);f.raidLeaderIcon:Show()
+  if not expanded then
+   UI:SetText(f.raidLeader,record.leaderName or L.unknown);f.raidLeader:SetWidth(mainWidth-20);f.raidLeader:SetHeight(0)
+   if leader then f.raidLeader:SetTextColor(UI:ClassColor(leader.class)) else UI:Color(f.raidLeader,"muted") end
+   local leaderHeight=math.max(f.raidLeader:GetLineHeight(),f.raidLeader:GetStringHeight())
+   top=math.max(top+12+leaderHeight+hintGap+hintHeight,bossTop+4)
+   f.raidLeader:ClearAllPoints();C.SetPoint(f.raidLeader,"BOTTOMLEFT",f.canvas,"BOTTOMLEFT","tooltipFRaidLeaderBottomleftX",hintHeight+hintGap);f.raidLeader:Show()
+   f.raidLeaderIcon:ClearAllPoints();C.SetPoint(f.raidLeaderIcon,"CENTER",f.raidLeader,"TOPLEFT","tooltipFRaidLeaderIconCenterX",-f.raidLeader:GetLineHeight()/2);f.raidLeaderIcon:Show()
+  else top=math.max(top+(hasHint and 12+hintHeight or 0),bossTop+4) end
   if hasHint then f.footer:ClearAllPoints();f.footer:SetPoint("BOTTOMLEFT",f.canvas,"BOTTOMLEFT",0,0) end
  end
  self:Place(top)
@@ -1071,9 +1078,10 @@ function Tip:RenderPlayer(member,fromGroup,adjustPoint)
   if applicant then context=ApplicantContext(applicant) end
  end
  if context.canOpenDetails==false then return end
+ if self.selectedMemberID~=Members:ID(member) then self:ClearPlayerCopy() end
  self.memberContext=context
  fromGroup=fromGroup==true and not self.directPlayer
- self.member=member;self.pinned=fromGroup==true;self.adjustPoint=adjustPoint==true
+ self.member=member;self.pinned=fromGroup==true or self.copyKind~=nil;self.adjustPoint=adjustPoint==true
  self.selectedMemberID=Members:ID(member)
  self.applicantID=context.source=="applicant" and (self.sourceApp and self.sourceApp.id or member.applicantID) or nil
  local scores
@@ -1151,9 +1159,35 @@ function Tip:RenderPlayer(member,fromGroup,adjustPoint)
  f.io:SetShown(showWCL);f.io:SetAvailable(not UI.preview and Links.GetRaiderIOURL(name,realm,region,A:GetLocale())~=nil)
  f.note:SetShown(showNote)
  f.actionOptions.width,f.actionOptions.y=f.canvas:GetWidth(),-top;f.actionLayout:Layout()
- UI:SetText(f.footer,"");self:Place(top+((showWCL or showNote) and 40 or 0))
+ UI:SetText(f.footer,"");self.playerHeight=top+((showWCL or showNote) and 40 or 0);self:Place(self:LayoutPlayerCopy())
 UI:ApplyElementScope("tooltip")
  end
+
+function Tip:PlayerLink(kind)
+ if UI.preview or not self.member then return end
+ local _,name,realm=Links.Identity(self.member)
+ if kind=="wcl" then return Links.GetWCLURL(name,realm,GetCurrentRegion()) end
+ if kind=="io" then return Links.GetRaiderIOURL(name,realm,GetCurrentRegion(),A:GetLocale()) end
+end
+function Tip:LayoutPlayerCopy()
+ local f=self.interactive;local height=self.playerHeight or 0
+ if not self.copyKind then return height end
+ local value=self:PlayerLink(self.copyKind)
+ if not value then self:ClearPlayerCopy();return height end
+ if self.copyValue~=value then self.copyValue=value;f.copyField.box:SetText(value) end
+ local fieldHeight=math.max(40,select(2,f.copyField.box:GetFont())+20)
+ f.copyField:SetSize(f.canvas:GetWidth(),fieldHeight);f.copyField:ClearAllPoints();f.copyField:SetPoint("TOPLEFT",0,-height-12);f.copyField:Show()
+ f.copyHint:SetWidth(f.canvas:GetWidth());f.copyHint:SetHeight(0);f.copyHint:ClearAllPoints();f.copyHint:SetPoint("TOPLEFT",0,-height-12-fieldHeight-8);f.copyHint:Show()
+ return height+12+fieldHeight+8+math.max(f.copyHint:GetLineHeight(),f.copyHint:GetStringHeight())
+end
+function Tip:CopyPlayerLink(kind)
+ if not self.playerHeight or not self:PlayerLink(kind) then return end
+ UI.Motion:Stop(self);self.copyKind=kind;self.pinned=true
+ self:Place(self:LayoutPlayerCopy())
+ local f=self.interactive
+ f.scrollbar:SetValue(ScrollMaximum(f.scroll,f.canvas))
+ f.copyField.box:SetFocus();f.copyField.box:SetCursorPosition(0);f.copyField.box:HighlightText()
+end
 
 
 function Tip:LeaveOwner(owner)
@@ -1177,7 +1211,7 @@ end
 function Tip:RegisterBuildInteractiveElements()
 local f=self.interactive
  UI:Element(f,"tooltip.rich","tooltip",f)
- UI:ElementFields(f,"tooltip","scroll canvas scrollbar icon title subtitle summary pvpRatings composition raidLeader raidLeaderIcon comment footer bossTitle bossCount bossText dungeonTitle dungeonEmpty playerRole playerFaction noteHeading noteGlyph noteDate noteDivider back wcl io note","tooltip",f)
+ UI:ElementFields(f,"tooltip","scroll canvas scrollbar icon title subtitle summary pvpRatings composition raidLeader raidLeaderIcon comment footer bossTitle bossCount bossText dungeonTitle dungeonEmpty playerRole playerFaction noteHeading noteGlyph noteDate noteDivider back wcl io note copyField copyHint","tooltip",f)
  UI:Element(self.outsideClicks,"tooltip.outside","tooltip")
  for index,metric in ipairs(f.metrics) do UI:Element(metric.title,"tooltip.metric.title","tooltip",nil,"tooltip.metric.title",index,f);UI:Element(metric.value,"tooltip.metric.value","tooltip",nil,"tooltip.metric.value",index,f) end
 end

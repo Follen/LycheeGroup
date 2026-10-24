@@ -100,34 +100,67 @@ for _,locale in ipairs({"zhCN","enUS"}) do
   Check.near(x,view.canvas:GetWidth(),.001,"actions span available width")
  end
  local view=tip.interactive
- view.io:Fire("OnClick")
  local language=locale=="zhCN" and "/cn" or ""
- Check.eq(u.copyDialog.field.box:GetText(),"https://raider.io"..language.."/characters/us/illidan/First")
- Check.eq(u.copyDialog.help:GetText(),"First-Illidan")
+ local box=view.copyField.box;local selections=0
+ box.HighlightText=function() selections=selections+1 end
+ for _,scale in ipairs({70,100,130}) do
+  tip:Hide();a:SetSetting("fontScale",scale);tip:ShowPlayer(u.frame,first,a.GroupPresentation.Member("roster"))
+  local height=view.canvas:GetHeight();local before=selections
+  view.io:Fire("OnClick")
+  Check.eq(u.activeModal,nil,"player links remain inside the detail tooltip")
+  Check.eq(view:IsShown(),true);Check.eq(tip.member,first);Check.eq(tip.pinned,true)
+  Check.eq(box:GetText(),"https://raider.io"..language.."/characters/us/illidan/First")
+  Check.eq(box:HasFocus(),true);Check.eq(selections,before+1,"opening a link selects its entire text")
+  Check.ok(view.canvas:GetHeight()>height,"the copy area extends the existing tooltip")
+  local fieldPoint={view.copyField:GetPoint()}
+  Check.near(-fieldPoint[#fieldPoint],height+12,.001,"copy field follows the existing actions")
+  Check.eq(view.copyField:GetWidth(),view.canvas:GetWidth())
+  Check.ok(view.scroll:GetVerticalScroll()+view.scroll:GetHeight()+.01>=view.canvas:GetHeight(),"the copy field remains visible when the tooltip must scroll")
+  box:UserType("replacement");Check.ok(box:GetText():find("/First",1,true),"link text is read-only")
+  view.wcl:Fire("OnClick")
+  Check.eq(view.copyField.box,box,"platform switches reuse the same input")
+  Check.eq(box:GetText(),"https://www.warcraftlogs.com/character/us/Illidan/First")
+  local sameHeight=view.canvas:GetHeight();view.wcl:Fire("OnClick")
+  Check.eq(view.canvas:GetHeight(),sameHeight,"repeated clicks do not add rows")
+  local count=#f.S.nodes
+  for i=1,8 do view.io:Fire("OnClick");view.wcl:Fire("OnClick") end
+  Check.eq(#f.S.nodes,count,"warm platform switching creates no UI objects")
+ end
  local fresh={guid=first.guid,name=first.name,nameKey=first.nameKey,class="MAGE",assignedRole="DAMAGER",itemLevel=333}
- members={second,fresh};u.copyDialog:Hide()
- Check.eq(tip.member,fresh,"copy close resolves current roster identity")
- Check.eq(tip.interactive.metrics[1].value:GetText(),"333")
- view.io:Fire("OnClick");members={second};u.copyDialog:Hide()
- Check.eq(tip.member,nil,"a departed member cannot be restored")
- members={second};tip:ShowRoster(u.frame,members)
+ members={second,fresh};tip:RefreshRoster(u.frame,members)
+ Check.eq(tip.member,fresh,"refresh resolves the selected roster identity while copying")
+ Check.eq(view.metrics[1].value:GetText(),"333");Check.eq(box:HasFocus(),true)
+ Check.eq(box:GetText(),"https://www.warcraftlogs.com/character/us/Illidan/First")
+ members={second};tip:RefreshRoster(u.frame,members)
+ Check.eq(tip.member,nil,"a departed inline member closes the detail")
+ Check.eq(box:HasFocus(),false);Check.eq(box:GetText(),"");Check.eq(view.copyField:IsShown(),false)
+ tip:ShowRoster(u.frame,members)
  view.memberButtons[1]:Fire("OnClick")
  Check.eq(tip.pinned,true,"selecting a roster member pins the detail")
- view.io:Fire("OnClick");u.copyDialog:Hide()
- Check.eq(tip.member,second);Check.eq(tip.pinned,true);Check.eq(view.back:IsShown(),true,"copy close restores the pinned group navigation")
- tip:Hide()
- tip:ShowPlayer(u.frame,second,a.GroupPresentation.Member("roster"));view.io:Fire("OnClick")
- Check.eq(u.copyDialog.field.box:GetText(),"https://raider.io"..language.."/characters/us/illidan/Second","a reused button targets the current member")
- u.copyDialog:Hide();tip:Hide()
+ view.io:Fire("OnClick")
+ Check.eq(tip.member,second);Check.eq(view.back:IsShown(),true,"copy preserves group navigation")
+ Check.eq(box:GetText(),"https://raider.io"..language.."/characters/us/illidan/Second","a reused button targets the current member")
+ view.back:Fire("OnClick")
+ Check.eq(tip.member,nil);Check.eq(box:HasFocus(),false);Check.eq(box:GetText(),"")
+ Check.eq(view.copyField:IsShown(),false,"returning to the roster collapses the copy area")
+ tip:Hide();tip:ShowPlayer(u.frame,second,a.GroupPresentation.Member("roster"));view.io:Fire("OnClick")
+ box:Fire("OnEscapePressed");Check.eq(view:IsShown(),false);Check.eq(box:HasFocus(),false)
+ second.dungeonScores={current={name=string.rep("Long dungeon name ",100),level=18,timed=true}}
+ tip:ShowPlayer(u.frame,second,a.GroupPresentation.Member("roster"));view.wcl:Fire("OnClick")
+ Check.ok(view.scroll:GetVerticalScroll()>0,"long details scroll down to the copy area")
+ Check.near(view.scroll:GetVerticalScroll()+view.scroll:GetHeight(),view.canvas:GetHeight(),.01,"the complete copy area is reachable")
+ tip:Hide();second.dungeonScores=nil
  tip:ShowPlayer(u.frame,{name="Unknown-not-a-real-server-lhfs",nameKey="Unknown-not-a-real-server-lhfs",class="MAGE"})
  Check.eq(view.io:IsShown(),true);Check.eq(view.io:IsEnabled(),false)
- view.io:Fire("OnClick");Check.eq(u.copyDialog:IsShown(),false,"unknown realm cannot open a copy dialog")
+ view.io:Fire("OnClick");Check.eq(view.copyField:IsShown(),false,"unknown realm cannot expose a copy field")
  tip:Hide();u.preview=true;local before=regionReads
  tip:ShowPlayer(u.frame,second);view.io:Fire("OnClick");view.wcl:Fire("OnClick")
  Check.eq(regionReads,before,"preview links never read native region")
- Check.eq(u.copyDialog:IsShown(),false,"preview cannot open a copy dialog")
+ Check.eq(view.copyField:IsShown(),false,"preview cannot expose a copy field")
  Check.eq(view.io:IsEnabled(),false)
  u.preview=nil;tip:Hide();tip:ResetInteractive(u.frame,512)
  Check.eq(view.io:IsShown(),false,"group/reset discards player actions")
+ tip:ShowPlayer(u.frame,second,a.GroupPresentation.Member("roster"));view.wcl:Fire("OnClick");u:Hide(true)
+ Check.eq(box:HasFocus(),false);Check.eq(box:GetText(),"");Check.eq(tip.copyKind,nil,"closing the window clears the inline copy")
  GetCurrentRegion=oldRegion;u:Hide(true)
 end

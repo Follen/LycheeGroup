@@ -5,7 +5,7 @@ local C,T,L=UI.C,UI.Theme,UI.L
 local P={section="general"};UI.pages.settings=P
 local zh=A:GetLocale()=="zhCN"
 local function S(cn,en) return zh and cn or en end
-local sections={{"general",S("常规","General")},{"interface",S("界面显示","Appearance")},{"browse",S("寻求组队","Find groups")},{"memberIcons",S("成员显示","Member display")},{"notes",S("笔记与提醒","Notes & reminders")},{"blocks",S("屏蔽名单","Blocked leaders")},{"floating",S("悬浮窗","Floating window")},{"about",L.about}}
+local sections={{"general",S("常规","General")},{"interface",S("界面显示","Appearance")},{"browse",S("寻求组队","Find groups")},{"memberIcons",S("成员显示","Member display")},{"notes",S("笔记与提醒","Notes & reminders")},{"blocks",S("屏蔽名单","Blocked leaders")},{"floating",S("悬浮窗","Floating window")},{"about",L.about},{"credits",S("鸣谢","Credits"),true}}
 local types={{value="positive",label=S("推荐","Positive")},{value="neutral",label=S("中性","Neutral")},{value="caution",label=S("拉黑","Blocked")}}
 local definitions={
  general={{"language",S("界面语言","Interface language"),S("仅改变插件文字，重载界面后生效。","Change addon text. Reload the UI to apply."),{{value="auto",label=S("跟随游戏","Game language")},{value="zhCN",label="简体中文"},{value="enUS",label="English"}}},
@@ -44,7 +44,7 @@ function P:Build(parent)
    P:CancelBindingCapture(true);P:ShowBindingNotice(A.L.bindingCombat);P:Sync()
   end
  end)
- root:HookScript("OnHide",function() P:CancelBindingCapture(true) end)
+ root:HookScript("OnHide",function() P:CancelBindingCapture(true);P:CloseLinkCopy(true) end)
  local rail=CreateFrame("Frame",nil,root);rail:SetSize(T.settingsSidebarWidth,T.contentHeight);rail:SetPoint("TOPLEFT");self.rail=rail
  self.nav={};for i,entry in ipairs(sections) do
   local b=C.Navigation(rail,entry[2],T.settingsSidebarWidth,function() P:SelectSection(entry[1]) end,nil,{radius=8,fontSize=14});b:SetPoint("TOPLEFT",0,-12-(i-1)*52);b.label:SetWidth(T.settingsBLabelWidth)
@@ -161,6 +161,88 @@ function P:EnterBlocks()
   if group then self.blocksUnsub=group:Subscribe(function(kind) if kind=="results" then P:RefreshBlocks() end end) end
  end
 end
+function P:LayoutLinkCopy(row,baseHeight,left)
+ local copy=row.linkCopy;if not copy then return baseHeight end
+ local width=math.max(1,BODY_WIDTH-left-16)
+ local fieldHeight=math.max(40,select(2,copy.field.box:GetFont())+20)
+ copy.field:SetSize(width,fieldHeight)
+ copy.hint:SetWidth(math.max(1,width-copy.close:GetWidth()-12));copy.hint:SetHeight(0)
+ local hintHeight=math.max(copy.hint:GetLineHeight(),math.ceil(copy.hint:GetStringHeight()))
+ local headerHeight=math.max(hintHeight,copy.close:GetHeight())
+ copy.hint:SetHeight(hintHeight);copy.hint:ClearAllPoints();copy.hint:SetPoint("TOPLEFT",0,-(headerHeight-hintHeight)/2)
+ copy.close:ClearAllPoints();copy.close:SetPoint("TOPRIGHT",0,-(headerHeight-copy.close:GetHeight())/2)
+ copy.field:ClearAllPoints();copy.field:SetPoint("TOPLEFT",0,-headerHeight-8)
+ local height=headerHeight+8+fieldHeight
+ local progress=copy.progress or 0
+ copy.canvas:SetSize(width,height);copy.clip:SetSize(width,math.max(1,height*progress))
+ copy.clip:ClearAllPoints();copy.clip:SetPoint("TOPLEFT",left,-baseHeight+4)
+ copy.clip:SetAlpha(progress);copy.clip:SetShown(progress>0)
+ copy.field.box:EnableMouse(progress>=1);copy.close:SetEnabled(progress>=1)
+ return baseHeight+(12+height)*progress
+end
+function P:LayoutLinkRows()
+ if self.section=="about" then self:LayoutAbout()
+ elseif self.section=="credits" then self:LayoutCredits() end
+end
+local function FinishLinkCopies(self)
+ for _,copy in ipairs(self.linkCopies) do
+  copy.progress=copy.target
+  if copy.target==0 then copy.field.box:ClearFocus();copy.field.box:SetText("");copy.value=nil end
+ end
+ self:LayoutLinkRows()
+end
+function P:AnimateLinkCopies(immediate)
+ local motion=self.linkMotion
+ self.retargetingLinks=true;UI.Motion:Stop(motion);self.retargetingLinks=nil
+ local moving=false
+ for _,copy in ipairs(self.linkCopies) do copy.from=copy.progress or 0;if copy.from~=copy.target then moving=true end end
+ if immediate or not moving or UI.context:IsReducedMotion() then FinishLinkCopies(self);return end
+ local elapsed=0
+ UI.Motion:Start(motion,function(dt)
+  elapsed=math.min(.18,elapsed+dt)
+  local p=elapsed/.18;p=p*(2-p)
+  for _,copy in ipairs(P.linkCopies) do copy.progress=copy.from+(copy.target-copy.from)*p end
+  P:LayoutLinkRows()
+  return elapsed>=.18
+ end,function() if not P.retargetingLinks then FinishLinkCopies(P) end end)
+end
+function P:CloseLinkCopy(immediate)
+ if not self.linkCopies then return false end
+ local active=self.activeLinkCopy
+ self.activeLinkCopy=nil
+ for _,copy in ipairs(self.linkCopies) do
+  copy.target=0;copy.field.box:ClearFocus()
+  if copy.button then copy.button:SetActive(false);copy.button=nil end
+ end
+ self:AnimateLinkCopies(immediate)
+ return active~=nil
+end
+function P:ShowLinkCopy(row,button,value,label)
+ if not row.linkCopy then
+  local clip=CreateFrame("ScrollFrame",nil,row.frame or row);clip:Hide()
+  local canvas=CreateFrame("Frame",nil,clip);clip:SetScrollChild(canvas)
+  local copy={clip=clip,canvas=canvas,progress=0,target=0};row.linkCopy=copy
+  copy.field=C.Edit(canvas,1,40,false,false,"modal");copy.field:SetPoint("TOPLEFT")
+  copy.field.box:SetScript("OnTextChanged",function(box,user) if user then box:SetText(copy.value or "");box:SetCursorPosition(0);box:HighlightText() end end)
+  copy.field.box:HookScript("OnEscapePressed",function() P:CloseLinkCopy() end)
+  copy.hint=C.Text(canvas,"",13,"dim");C.SetLineHeight(copy.hint,20,true);copy.hint:SetWordWrap(true)
+  copy.close=C.IconButton(canvas,"close",24,function() P:CloseLinkCopy() end,{iconSize=14})
+  self.linkCopies=self.linkCopies or {};self.linkCopies[#self.linkCopies+1]=copy;self.linkMotion=self.linkMotion or {}
+  UI:Element(clip,"settings.linkCopy","settings",copy,"settings.linkCopy",row.linkKey)
+  for _,part in ipairs({"field","hint","close"}) do UI:Element(copy[part],"settings.linkCopy."..part,"settings",copy[part],"settings.linkCopy."..part,row.linkKey) end
+ end
+ local copy=row.linkCopy
+ for _,other in ipairs(self.linkCopies) do
+  other.target=other==copy and 1 or 0
+  other.field.box:ClearFocus()
+  if other.button then other.button:SetActive(false);other.button=nil end
+ end
+ self.activeLinkCopy=copy;copy.value=value;copy.button=button;button:SetActive(true)
+ copy.field.box:SetText(value)
+ UI:SetText(copy.hint,label..S(" · 按 Ctrl+C 复制链接。"," · Press Ctrl+C to copy."))
+ UI.Tooltip:Hide();self:AnimateLinkCopies();self:LayoutLinkRows()
+ copy.clip:Show();copy.field.box:SetFocus();copy.field.box:SetCursorPosition(0);copy.field.box:HighlightText()
+end
 function P:BuildAbout(parent)
  local header=CreateFrame("Frame",nil,parent);header:SetWidth(BODY_WIDTH);header:SetHeight(T.settingsHeaderHeight);header:SetPoint("TOPLEFT");UI.drag:AddHandle(header);self.aboutHeader=header
  local logo=C.Icon(header,T.settingsLogoWidth);header.icon=logo;C.Box(logo,{width="settingsLogoWidth",height="settingsLogoHeight"});UI:SetMediaTexture(logo,"lychee-logo.tga");C.SetPoint(logo,"TOPLEFT",logo:GetParent(),"TOPLEFT","settingsLogoTopleftX","settingsLogoTopleftY")
@@ -189,15 +271,50 @@ function P:BuildAbout(parent)
   local icon=C.Icon(holder,T.settingsIconWidth);C.Box(icon,{width="settingsIconWidth",height="settingsIconHeight"});icon:SetTexture(entry.icon);C.SetPoint(icon,"TOPLEFT",icon:GetParent(),"TOPLEFT","settingsIconTopleftX","settingsIconTopleftY")
   local title=C.Text(holder,entry.name,18,"text",BODY_WIDTH-84);C.SetLineHeight(title,24,true);C.SetPoint(title,"TOPLEFT",title:GetParent(),"TOPLEFT","settingsTitleTopleftX","settingsTitleTopleftY")
   local summary=C.Text(holder,entry.summary,14,"muted",BODY_WIDTH-96);C.SetLineHeight(summary,20);summary:SetWordWrap(true);C.SetPoint(summary,"TOPLEFT",summary:GetParent(),"TOPLEFT","settingsSummaryTopleftX","settingsSummaryTopleftY")
-  local row={frame=holder,icon=icon,title=title,summary=summary,links={}}
+  local row={frame=holder,icon=icon,title=title,summary=summary,links={},linkKey=index==1 and "about:launcher" or "about:talent"}
   for i,link in ipairs(entry.links) do
-   local url,identity=link[2],entry.name.." · "..link[1]
-   local button=C.Button(holder,link[1],nil,function() UI:CopyText(L.copyDownloadLink,url,nil,identity,L.downloadLink) end);button:SetHeight(T.settingsButtonHeight);C.SetPoint(button,"BOTTOMLEFT",button:GetParent(),"BOTTOMLEFT",72+(i-1)*132,"settingsButtonBottomleftY");button:SetSurfaceColors("surfaceContainer","surfaceHighest")
+   local url,label=link[2],link[1]
+   local button=C.Button(holder,label,nil,function(button) P:ShowLinkCopy(row,button,url,label) end);button:SetHeight(T.settingsButtonHeight);C.SetPoint(button,"BOTTOMLEFT",button:GetParent(),"BOTTOMLEFT",72+(i-1)*132,"settingsButtonBottomleftY");button:SetSurfaceColors("surfaceContainer","surfaceHighest")
    row.links[i]=button
   end
   UI:Element(holder,"settings.about.addon","settings",row,"settings.about.addon",index==1 and "launcher" or "talent")
   for i,button in ipairs(row.links) do UI:Element(button,"settings.about.link","settings",button,"settings.about.link",(index==1 and "launcher" or "talent")..":"..i) end
   self.otherAddons[index]=row
+ end
+end
+function P:BuildCredits()
+ local parent=self.panels.credits
+ local media="Interface\\AddOns\\LycheeGroup_UI\\Media\\"
+ self.credits={}
+ for index,entry in ipairs({
+  {"rurutia","@露露缇雅","credits-rurutia.tga","https://space.bilibili.com/455259","https://v.douyin.com/U6Jk7GPitmk/"},
+  {"soul-revival","@灵魂复苏","credits-soul-revival.tga","https://space.bilibili.com/10420749?","https://v.douyin.com/UD4dIzYrhao/"},
+ }) do
+  local row=CreateFrame("Frame",nil,parent)
+  local portrait=C.GameIcon(row,64);portrait:SetPoint("LEFT",16,0);portrait:SetTexture(media..entry[3])
+  local name=C.Text(row,entry[2],20,"text");C.SetLineHeight(name,28,true);name:SetWordWrap(true)
+  row.portrait,row.name,row.links,row.linkKey=portrait,name,{},"credits:"..entry[1];self.credits[index]=row
+  for linkIndex,platform in ipairs({{"bilibili","Bilibili",entry[4]},{"douyin",S("抖音","Douyin"),entry[5]}}) do
+   local url,label=platform[3],platform[2]
+   local button=C.IconButton(row,nil,40,function(button) P:ShowLinkCopy(row,button,url,label) end,{iconSize=24,variant="creditsLink"})
+   button.icon:SetTexture(media.."credits-"..platform[1]..".tga")
+   row.links[linkIndex]=button
+   UI:Element(button,"settings.credits.link","settings",button,"settings.credits.link",entry[1]..":"..platform[1])
+  end
+  UI:Element(row,"settings.credits.person","settings",row,"settings.credits.person",entry[1])
+ end
+end
+function P:LayoutCredits()
+ if not self.credits then return end
+ local top=8
+ for _,row in ipairs(self.credits) do
+  row:SetWidth(BODY_WIDTH);row.name:SetWidth(math.max(1,BODY_WIDTH-120));row.name:SetHeight(0)
+  local nameHeight=math.ceil(row.name:GetStringHeight());row.name:SetHeight(nameHeight)
+  local contentHeight=math.max(64,nameHeight+8+40);row:SetHeight(self:LayoutLinkCopy(row,contentHeight+32,104))
+  row.portrait:ClearAllPoints();row.portrait:SetPoint("TOPLEFT",16,-16-(contentHeight-64)/2)
+  row.name:ClearAllPoints();row.name:SetPoint("TOPLEFT",104,-16-(contentHeight-nameHeight-8-40)/2)
+  for index,button in ipairs(row.links) do button:ClearAllPoints();button:SetPoint("TOPLEFT",row.name,"BOTTOMLEFT",(index-1)*48,-8) end
+  row:ClearAllPoints();row:SetPoint("TOPLEFT",0,-top);top=top+row:GetHeight()+16
  end
 end
 function P:HideDedicationToast()
@@ -221,14 +338,17 @@ function P:RefreshAbout()
   UI:SetText(self.aboutValues[key],text and text~="" and text or key=="name" and L.reminder or L.metadataMissing)
  end
  self.aboutBrand:SetWidth(math.max(T.settingsBrandMinWidth,math.ceil(self.aboutValues.name:GetStringWidth())+84))
+ self:LayoutAbout()
+end
+function P:LayoutAbout()
  local top=140
  for _,row in ipairs(self.otherAddons) do
   local height=math.max(T.settingsHolderHeight,row.summary:GetStringHeight()+104)
-  row.frame:ClearAllPoints();row.frame:SetPoint("TOPLEFT",0,-top);row.frame:SetHeight(height);top=top+height+12
+  row.frame:ClearAllPoints();row.frame:SetPoint("TOPLEFT",0,-top);row.frame:SetHeight(self:LayoutLinkCopy(row,height,72));top=top+row.frame:GetHeight()+12
   local left=72
   for _,button in ipairs(row.links) do
    local width=math.max(T.settingsButtonMinWidth,math.ceil(button.label:GetStringWidth())+T.settingsActionTextPadding)
-   button:SetWidth(width);button:ClearAllPoints();C.SetPoint(button,"BOTTOMLEFT",button:GetParent(),"BOTTOMLEFT",left,"settingsButtonBottomleftY");left=left+width+12
+   button:SetWidth(width);button:ClearAllPoints();button:SetPoint("TOPLEFT",left,-height+button:GetHeight()+T.settingsButtonBottomleftY);left=left+width+12
   end
  end
 end
@@ -370,8 +490,9 @@ function P:LayoutRows()
   button.label:SetHeight(0)
   local labelHeight=math.ceil(button.label:GetStringHeight())
   button.label:SetHeight(labelHeight);button:SetHeight(math.max(48,labelHeight+16))
-  button:ClearAllPoints();button:SetPoint("TOPLEFT",0,-navTop)
-  navTop=navTop+button:GetHeight()+4
+  button:ClearAllPoints()
+  if entry[3] then button:SetPoint("BOTTOMLEFT",0,12)
+  else button:SetPoint("TOPLEFT",0,-navTop);navTop=navTop+button:GetHeight()+4 end
  end
  local offset=self.bindingNotice and self.bindingNotice:IsShown() and self.bindingNotice:GetHeight()+12 or 0
  for key,panel in pairs(self.panels) do
@@ -401,6 +522,7 @@ function P:LayoutRows()
   self.themeReloadHint:SetWidth(math.max(1,BODY_WIDTH-self.reloadLanguage:GetWidth()-24))
   self.themeReloadHint:ClearAllPoints();self.themeReloadHint:SetPoint("TOPLEFT",0,-self.panels.interface.nextRowY-16)
  end
+ self:LayoutCredits()
 end
 local function SizePage(self,width,height)
  self.layoutHeight=height;BODY_WIDTH=width-T.settingsMainX-T.settingsContentInset*2-12
@@ -438,11 +560,12 @@ UI:ApplyElementScope("settings")
  end
 function P:SelectSection(key)
  local changed=self.section~=key
- if changed then self:CancelBindingCapture(true);self:StopBlocks() end
+ if changed then self:CancelBindingCapture(true);self:StopBlocks();self:CloseLinkCopy(true) end
  for _,panel in pairs(self.panels) do UI.Motion:FinishPlacement(panel) end
  self.section=key;for id,panel in pairs(self.panels) do panel:SetShown(id==key);self.nav[id]:SetActive(id==key);UI:Color(self.nav[id].label,id==key and "text" or "muted") end
  for _,entry in ipairs(sections) do if entry[1]==key then UI:SetText(self.heading,entry[2]);break end end
  if key=="blocks" then self:EnterBlocks() end
+ if key=="credits" and not self.credits then self:BuildCredits() end
  self:Sync()
  if changed then UI.Motion:Reveal(self.panels[key],"TOPLEFT",self.main,"TOPLEFT",T.settingsContentInset,-self.panels[key].layoutTop,4,0,.14) end
 UI:ApplyElementScope("settings")
@@ -498,6 +621,7 @@ UI:ApplyElementScope("settings")
  end
 function P:Enter(context) self.frame:RegisterEvent("UPDATE_BINDINGS");self:SelectSection(context and context.section or self.section) end
 function P:Leave()
+ self:CloseLinkCopy(true)
  self:StopBlocks()
  self.frame:UnregisterEvent("UPDATE_BINDINGS")
  self.aboutClicks=0;self:HideDedicationToast()

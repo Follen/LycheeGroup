@@ -2,7 +2,7 @@
 
 本说明维护 Theme／Configuration／Appearance API v2 的验证方法；该接口已随 1.2.4 发布。产品合同见 [API.md](../API.md)，开发边界见 [Development.md](../Development.md)。当前结果、实机数据与预算结论写入 [perfermance.md](../perfermance.md)。
 
-Plus 功能整合的专项入口为 `lua tests/runner.lua group season_scores season_picker player_links find_enhancements activity_labels applicant_time floating`。覆盖同职业同职责／嗜血筛选、未知数据与缓存失效、角色分类偏好、成绩服务的事件与关闭清理、选择器滚动复用和双语多字号、URL 编码与未知服务器、当前成员复制和返回、标题语义色与实时刷新、活动显示别名与原始数据隔离、列宽及各类行高。全部模块已纳入完整 runner。原始贡献包用于行为参考，正式实现归现有业务所有者；客户端实际成绩与复制交互另行实机核对。
+Plus 功能整合的专项入口为 `lua tests/runner.lua group season_scores season_picker player_links find_enhancements activity_labels applicant_time floating`。覆盖身份四态循环、右键清除、旧组合保留、同职业同职责／嗜血筛选、未知数据与缓存失效、角色分类偏好、成绩服务的事件与关闭清理、选择器滚动复用和双语多字号、URL 编码与未知服务器、当前成员复制和返回、标题语义色与实时刷新、活动显示别名与原始数据隔离、列宽及各类行高。全部模块已纳入完整 runner。原始贡献包用于行为参考，正式实现归现有业务所有者；客户端实际成绩与复制交互另行实机核对。
 
 `tests/live_plus_features.lua` 是已连接客户端的真实数据探针，使用 `opaque` 策略、执行预算 120 秒，探针自身异步上限 105 秒。前提是非战斗、真实 Find 已打开并已有稳定的赛季钥石结果，且没有 Preview、模态窗口或已打开的菜单／Tooltip。它检查活动显示名与原始字段隔离、基础行高／标题颜色／最小队长列宽，以原生成员信息独立核对两个新筛选，再逐地图比较赛季成绩的两个原生 API 返回值、检查关菜单退订，并从真实当前玩家详情调用 IO 复制与关闭返回。原生值缺失如实记录，前提不足或断言失败明确报告未覆盖／失败。仅使用控制器与 `Button:Click`，不代表硬件操作；不改 Blizzard API、设置或笔记，不发送申请、邀请、取消和招募动作。结束、失败和取消时恢复原 Find 偏好引用、运行态筛选、列表位置、页面显隐及关闭的菜单／Tooltip 状态。
 
@@ -57,12 +57,9 @@ lua tests/measure_creation.lua
 
 产品专项测量留在本目录，默认使用内置 LycheeUI：`measure_font_cost.lua` 检查字体切换成本，`measure_element_values.lua` 检查元素值读取，`measure_theme_context.lua` 检查新 Context 解析成本，`measure_static_allocations.lua` 分开首次建页与预热后的切页／字号成本。后者的 `stable`、`native` 模式减少 Lua 替身实现产生的额外开销，`native cow` 只在诊断虚拟机内比较静态规则共享方案，不修改运行文件。历史调查见 [static-allocation-2026-10-23.md](results/static-allocation-2026-10-23.md)。
 
-2026-10-24 的界面调整另由 `test_find_filter_layout.lua` 和 `test_notes_layout.lua` 验证，均已加入布局 runner。前者覆盖中英文、70%–130% 公开字号与 160% 压力场景、最小窗口、同组快捷控件在主界面与弹窗间迁移、分类切换、完整文字、滚动裁切与命中恢复、值保留及对象复用；后者覆盖页头工具栏、两行记录、类型与日期留白、编辑区反馈避让和历史图标居中。浮窗主入口的打开、关闭和动画中反向归 `test_floating.lua`。产品 runner 的 `test_applicant_time.lua` 覆盖分数／实际用时切换、默认无提示、单行时间提示、数值排序、裸名刷新、池行迁移、申请和成员复用、离页清理、裁切和对象复用；原生用时读取、活动地图匹配、限时缓存及未知值在 `test_group.lua` 验证。客户端可用内置申请者预览检查文案与字体，模拟成绩不能记作真实申请者数据证据。
-
-SEUI 适配由产品 runner 的 `test_seui.lua` 覆盖，可单独运行 `lua tests/runner.lua seui floating`。检查 SEUI 加载、浮窗显示与兼容开关的全部组合，宿主延迟创建、隐藏与恢复、骷髅定位、缩放、计数字体、主窗开关、原按钮保持及重复操作的对象复用；测试使用真实荔枝控制器与 SEUI 控件替身。游戏内仍需核对实际锚点、受保护状态、鼠标命中和悬停列表，不将替身结果计为实机通过。
+2026-10-24 的界面调整另由 `test_find_filter_layout.lua` 和 `test_notes_layout.lua` 验证，均已加入布局 runner。前者覆盖中英文、70%–130% 公开字号与 160% 压力场景、最小窗口、同组快捷控件在主界面与弹窗间迁移、分类切换、完整文字、滚动裁切与命中恢复、值保留及对象复用；另通过真实结果通知检查固定鼠标命中资格，覆盖溢出二次测量、空结果集和分类迁移，不允许普通刷新临时禁用鼠标；后者覆盖页头工具栏、两行记录、类型与日期留白、编辑区反馈避让和历史图标居中。浮窗主入口的打开、关闭和动画中反向归 `test_floating.lua`。产品 runner 的 `test_applicant_time.lua` 覆盖分数／实际用时切换、默认无提示、单行时间提示、数值排序、裸名刷新、池行迁移、申请和成员复用、离页清理、裁切和对象复用；原生用时读取、活动地图匹配、限时缓存及未知值在 `test_group.lua` 验证。客户端可用内置申请者预览检查文案与字体，模拟成绩不能记作真实申请者数据证据。
 
 寻队单行活动列由 `test_table_find.lua`、`test_ui.lua`、`test_font_layout.lua` 和 `test_find_pool.lua` 覆盖：12 条目录路由、活动列图标与表头起点、队长姓名后的关系／笔记标记、正文 19 号字及 53／44 基础行高、活动显示名与原始目录的隔离、结果和申请的池行复用、旧列宽拆分及保存重载，以及团队职责／总人数原位替换且不重排列表。活动表头的三态、目录顺序、未知活动、目录失效与排序保存由 `test_table_find.lua` 验证；默认与各表头排序中的好友／公会优先结合 `test_group.lua` 验证。申请名额提示与行高由 `test_application_notice_layout.lua` 沿真实 Applications 状态通知验证：五项满额、取消／拒绝释放名额、绿色提示、关闭、样式重应用与字号变化；普通行保持基础高度，被拒绝行的提示完整，出现位置与最终布局一致。设置分类由 `test_settings_sections.lua` 检查八组内容、保存范围、切页清理、语言／主题重载、双语 70%／100%／130% 和最小窗口，已加入布局 runner。屏蔽页由 `test_blocked_layout.lua` 检查标题／数量／清空同行、表头与正文对齐、双语多字号、窄窗口及名单池复用；业务移除和清空继续由 `test_ui.lua` 覆盖。字体专项检查中英文 70%／100%／130%、未知评分、分钟／小时／天数、两位职责数、拒绝提示底行、主区左右边界及外侧滚动槽；离线布局不代替游戏中的文字裁切和图标呈现检查。
-
 
 以下入口补充分配来源与读取时机的离线诊断：
 
@@ -129,3 +126,5 @@ lycheedev live execute --project . --session <CON-id> --file tests/live_theme_me
 沿用 [live_memory.md](live_memory.md) 的 LycheeDev 连接、返回验证和清理方法。主题改造的自然场景必须计入登录、首开、四页、正常动画、字号与缩放往返、浮窗、原生输入，以及实际存在的搜索、招募和申请者；已有玩家业务不为测试前提而取消。
 
 Theme 的 pending 测试先保存账号／角色主题与偏好，对导入、迟建对象、字号隔离及重载分别采样；完成后通过明确恢复数据和重载还原。保留固定请求、实际客户端与角色身份、每包同一时刻的字节数、采样规模、业务结果和 cleanup。四包预算按性能文档执行，不通过强制 GC、清空存档、删结果、缩小池容量或关闭正常动画达标。
+
+DataBroker 适配由产品 runner 的 `test_data_broker.lua` 覆盖，可单独运行 `lua tests/runner.lua data_broker floating`。检查双语状态、可选库延迟加载、独立浮窗关闭后的摘要及悬停列表更新、点击入口、动画结束、多个 Broker 按钮与原宿主的所有权切换，以及后台订阅释放；使用真实荔枝控制器和标准库替身。Ellesmere 的字体、图标裁切及实际栏位显示在游戏内检查。

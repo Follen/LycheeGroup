@@ -11,7 +11,7 @@ local KEY_SEARCH_HINT=Say("队伍标题或钥石范围，如 12-15","Group title
 local LEADER_SEARCH_HINT=Say("队长名字，可带服务器","Leader name, realm optional")
 local PRESENCE_KEYS={"tankPresence","healerPresence","damagePresence"}
 local ROLE_LABELS={Say("不限","Any"),Say("缺少","Lacks"),Say("已有","Has"),Say("已齐","Full")}
-local IDENTITY_LABELS={Say("专精过滤","Same spec"),Say("同职过滤","Same class"),Say("不限","Any")}
+local IDENTITY_LABELS={Say("专精过滤","Same spec"),Say("同职过滤","Same class"),Say("同职同责","Class + role"),Say("专精+职责","Spec + role"),Say("不限","Any")}
 local LOGIC_LABELS={Say("全部","All"),Say("或","OR")}
 local APPLICATION_LABELS={Say("全部申请","All applications"),Say("本分类申请","This category")}
 -- Measure unconstrained text: recycled labels may still carry the previous row width.
@@ -59,6 +59,17 @@ local applicationDefinitions={
  {key="actions",label=Say("操作","Actions"),width="findApplicationActionsWidth",min="findApplicationActionsMin",align="CENTER"},
 }
 local state={category="seasonDungeon",searchMode="group",apps={},appIDs={},categoryPrefs={},filters={sort="newest"}}
+-- A class exclusion covers both narrower predicates. Spec and class/role are
+-- independent when a remote member's role is unavailable, so preserve that
+-- legacy combination and make it visible until the user selects a new mode.
+local function NormalizeIdentity(filters)
+ if filters.hideSameClass then filters.hideSameSpec,filters.hideSameClassRole=nil,nil end
+end
+local function IdentityMode(filters)
+ if filters.hideSameClass then return "class" end
+ if filters.hideSameClassRole then return filters.hideSameSpec and "specRole" or "classRole" end
+ return filters.hideSameSpec and "spec" or "any"
+end
 local function Category() return UI:GetGroup().Catalog:GetCategory(state.category) end
 local function AllActivitiesLabel(cat)
  if cat.id==2 or cat.id==3 then return Say("全部副本","All instances") end
@@ -215,12 +226,7 @@ function P:SortResultIDs(ids)
  end)
  return sorted
 end
-function P:OnHeaderSort(key,descending)
- local values={members="members",ilvl="itemLevel",rating="rating",age="newest"}
- if values[key] then
-  state.filters.sort=values[key]
-  self.sortChoice:SetValue(values[key],self.resultsHeader.labels[key]:GetText())
- end
+function P:OnHeaderSort()
  self:RefreshResults()
 end
 function P:CycleActivitySort()
@@ -310,10 +316,10 @@ local function RenderResult(row,id)
  local d,counts
  if r.maxNumPlayers==5 then d=Detail(r) else counts=results:GetMemberCounts(r) end
  UpdateMembers(row,id,r,d,counts)
- -- Only seasonal dungeon result rows dim empty role slots; occupied members
- -- and every other use of the shared roster retain their original colors.
+ -- Empty slots use the same vacancy treatment in every five-player category.
+ -- Occupied members retain their original role colors when rows are reused.
  for _,slot in ipairs(row.roster.slots) do
-  local missing=state.category=="seasonDungeon" and row.isParty and not slot.icon:IsShown()
+  local missing=row.isParty and not slot.icon:IsShown()
   local shade=missing and T.findMissingRoleShade or 1
   slot.role:SetDesaturated(missing);slot.role:SetVertexColor(shade,shade,shade)
  end
@@ -538,7 +544,7 @@ function P:Build(parent)
   main:RegisterEvent("PLAYER_REGEN_ENABLED");main:SetScript("OnEvent",EnableShortcuts)
  else EnableShortcuts() end
  self:BuildFilters();self:BuildQuickFilters()
- for _,label in ipairs({self.ratingLabel,self.ilvlLabel,self.membersLabel,self.roleLabel,self.socialLabel,self.sortLabel}) do C.SetLineHeight(label,20,true) end
+ for _,label in ipairs({self.ratingLabel,self.ilvlLabel,self.membersLabel,self.roleLabel}) do C.SetLineHeight(label,20,true) end
  self:BuildSidebarToggle()
  self:LayoutListRows()
 self:RegisterBuildElements()
@@ -714,23 +720,19 @@ function P:BuildQuickFilters()
  end,{height=32,radius=8});self.quickLogic:SetWidth(T.findQuickLogicWidth);C.SetFont(self.quickLogic.label,13)
  UI.Tooltip:BindText(self.quickLogic,Say("筛选切换：全部/任意条件符合","Filter matching: all/any conditions."))
  self.quickIdentity=C.Button(self.quickFilters,"",T.findQuickIdentityWidth,function(_,mouse)
-  local mode=state.filters.hideSameClass and "class" or state.filters.hideSameSpec and "spec" or "any"
+  local mode=IdentityMode(state.filters)
   if mouse=="RightButton" then mode="any"
-  else mode=mode=="any" and "class" or mode=="class" and "spec" or "any" end
+  else mode=mode=="any" and "class" or mode=="class" and "classRole" or mode=="classRole" and "spec" or "any" end
   P:SetIdentityFilter(mode)
  end,{height=32,radius=8});self.quickIdentity:SetWidth(T.findQuickIdentityWidth)
  self.quickIdentity:RegisterForClicks("LeftButtonUp","RightButtonUp")
  C.SetFont(self.quickIdentity.label,13);self.quickIdentity.label:ClearAllPoints();C.SetPoint(self.quickIdentity.label,"LEFT",self.quickIdentity.label:GetParent(),"LEFT","findQuickIdentityLabelLeftX",0)
  self.quickIdentityIcon=C.GameIcon(self.quickIdentity,T.findQuickIdentityIconWidth);C.Box(self.quickIdentityIcon,{width="findQuickIdentityIconWidth",height="findQuickIdentityIconHeight"});C.SetPoint(self.quickIdentityIcon,"LEFT",self.quickIdentityIcon:GetParent(),"LEFT","findQuickIdentityIconLeftX",0)
  self.quickIdentityFunnel=C.Icon(self.quickIdentity,T.findQuickIdentityFunnelWidth);C.Box(self.quickIdentityFunnel,{width="findQuickIdentityFunnelWidth",height="findQuickIdentityFunnelHeight"});self.quickIdentityFunnel:SetTexture("Interface\\AddOns\\LycheeGroup_UI\\Media\\filter-any.tga");C.SetPoint(self.quickIdentityFunnel,"LEFT",self.quickIdentityFunnel:GetParent(),"LEFT","findQuickIdentityFunnelLeftX",0)
- UI.Tooltip:BindText(self.quickIdentity,Say("同职过滤/同专精过滤","Same class/spec filter"))
+ UI.Tooltip:BindText(self.quickIdentity,Say("依次排除同职业、同职业同职责、同专精；右键恢复不限。","Cycle exclusions: same class, same class and role, same spec. Right-click to reset."))
  self.quickFilterItems={{frame=self.quickChoices.tankPresence.button},{frame=self.quickChoices.healerPresence.button},{frame=self.quickChoices.damagePresence.button},{frame=self.quickIdentity},{frame=self.quickLogic}}
  self.quickFilterOptions={width="content",gap=6,align="stretch"}
  self.quickFilterLayout=C.Row(self.quickFilters,self.quickFilterItems,self.quickFilterOptions)
- self.quickRoleItems={self.quickFilterItems[1],self.quickFilterItems[2],self.quickFilterItems[3]}
- self.quickModeItems={self.quickFilterItems[4],self.quickFilterItems[5]}
- self.quickModeOptions={width="content",gap=6,align="stretch"}
- self.quickModeLayout=C.Row(self.quickFilters,{},self.quickModeOptions)
  self.quickFilters:Hide()
 self:RegisterBuildQuickFiltersElements()
  end
@@ -742,6 +744,7 @@ end
 function P:SetIdentityFilter(mode)
  state.filters.hideSameClass=mode=="class" or nil
  state.filters.hideSameSpec=mode=="spec" or nil
+ state.filters.hideSameClassRole=mode=="classRole" or nil
  self:UpdateFilters()
 end
 local function SyncQuickFilterValues(self,seasonDungeon)
@@ -761,8 +764,9 @@ local function SyncQuickFilterValues(self,seasonDungeon)
  end
  UI:SetText(self.quickLogic.label,state.filters.roleMatchAny and Say("或","OR") or Say("全部","All"))
  self.quickLogic:SetActive(state.filters.roleMatchAny==true)
- local enabled=state.filters.hideSameClass==true or state.filters.hideSameSpec==true
- UI:SetText(self.quickIdentity.label,state.filters.hideSameClass and Say("同职过滤","Same class") or state.filters.hideSameSpec and Say("专精过滤","Same spec") or Say("不限","Any"))
+ local mode=IdentityMode(state.filters)
+ local enabled=mode~="any"
+ UI:SetText(self.quickIdentity.label,mode=="class" and Say("同职过滤","Same class") or mode=="classRole" and Say("同职同责","Class + role") or mode=="specRole" and Say("专精+职责","Spec + role") or mode=="spec" and Say("专精过滤","Same spec") or Say("不限","Any"))
  self.quickIdentity:SetActive(enabled)
  self.quickIdentityIcon:SetShown(enabled);self.quickIdentityFunnel:SetShown(not enabled)
  if enabled then
@@ -845,7 +849,6 @@ function P:LayoutQuickFilters()
  for _,item in ipairs(self.quickFilterItems) do rowX=rowX+item.width end
  rowX=rowX+6*(#self.quickFilterItems-1)
  if self.quickPlacement=="header" then
-  self.quickModeLayout:SetItems({}):Layout()
   self.quickFilterLayout:SetItems(self.quickFilterItems)
   rowX=self.quickFilterLayout:Layout();self.quickFilters:SetSize(rowX,height)
   self.quickFilters:ClearAllPoints();C.SetPoint(self.quickFilters,"RIGHT",self.applicationSettings,"LEFT","findQuickFiltersRightX",0)
@@ -961,7 +964,10 @@ function P:ClipFilterBody()
   local entry=self.filterHitTargets[index];local target=entry.target
   local top=math.min(entry.height,math.max(0,offset-entry.top))
   local bottom=math.min(entry.height-top,math.max(0,entry.top+entry.height-offset-height))
-  target:SetHitRectInsets(0,0,top,bottom);target:EnableMouse(top+bottom<entry.height)
+  local left,right,oldTop,oldBottom=target:GetHitRectInsets()
+  if left~=0 or right~=0 or oldTop~=top or oldBottom~=bottom then target:SetHitRectInsets(0,0,top,bottom) end
+  local enabled=top+bottom<entry.height
+  if target:IsMouseEnabled()~=enabled then target:EnableMouse(enabled) end
  end
 end
 function P:BuildFilters()
@@ -989,7 +995,10 @@ function P:BuildFilters()
  self.filterStatus=C.Text(f,"",14,"dim",T.findFilterStatusWidth);self.filterStatus:SetWidth(T.findFilterStatusWidth);C.SetLineHeight(self.filterStatus,20,true)
  self.clearFilters=C.Button(f,Say("重置","Reset"),T.findClearFiltersWidth,function() P:ClearFilters() end,{variant="text",height=32});self.clearFilters:SetWidth(T.findClearFiltersWidth)
  local important=CreateFrame("Frame",nil,body);important:SetWidth(T.findFilterWideWidth-T.findFilterPadding*2);self.importantFilters=important
+ self.filterRolesLabel=C.Text(important,Say("队伍职责","Group roles"),16);C.SetLineHeight(self.filterRolesLabel,22,true)
  important:Hide()
+ self.filterRangeTitle=C.Text(body,Say("数值范围","Numeric ranges"),16);C.SetLineHeight(self.filterRangeTitle,22,true)
+ self.filterRangeHint=C.Text(body,Say("留空不限","Blank means any"),13,"dim");C.SetLineHeight(self.filterRangeHint,20,true)
  self.filterFields={}
  for _,key in ipairs(numericFilterKeys) do
   local field=C.Number(body,T.findFieldWidth,T.findFieldHeight,function() P:ApplyFilterFields() end);C.Box(field,{width="findFieldWidth",height="findFieldHeight"});field.box:SetMaxLetters(5)
@@ -1006,7 +1015,6 @@ function P:BuildFilters()
  self.hideZeroScore.label:ClearAllPoints();self.hideZeroScore.label:SetPoint("LEFT");self.hideZeroScore.label:SetWidth(T.findHideZeroScoreLabelWidth)
  self.hideZeroScore.track:ClearAllPoints();self.hideZeroScore.track:SetPoint("RIGHT")
  for _,entry in ipairs({
-  {"hideSameClassRole",Say("排除同职业同职责","Exclude same class and role"),Say("排除已有同职业、同职责成员的队伍。例如输出战士保留有防战的队伍。","Hide groups with a member of your class and role. A damage warrior can still join a group with a protection warrior.")},
   {"requireBloodlust",Say("嗜血来源","Bloodlust source"),Say("队伍至少四人时，排除你加入后仍无嗜血来源的队伍。按萨满、法师、猎人和唤魔师职业判断，不检查宠物或技能冷却；成员资料未知时保留。","For groups of four or more, hide those without a Bloodlust source after you join. Checks shaman, mage, hunter and evoker classes, not pets or cooldowns; unknown member data is kept.")},
  }) do
   local key=entry[1]
@@ -1016,12 +1024,7 @@ function P:BuildFilters()
   toggle.track:ClearAllPoints();toggle.track:SetPoint("RIGHT")
   UI.Tooltip:BindText(toggle,entry[3])
  end
- self.socialLabel=C.Text(body,Say("关系与笔记","Relations and notes"),14,"muted")
  self.socialChoice=C.Choice(body,T.findSocialChoiceWidth,{{value=false,label=Say("全部关系","All relations")},{value="friend",label=Say("好友在队","Friends in group")},{value="guild",label=Say("同公会成员","Guildmates")},{value="any",label=Say("含笔记记录","With player notes")},{value="positive",label=Say("含推荐玩家","Recommended players")},{value="noCaution",label=Say("不含拉黑记录","Without blocked players")}},function(value) state.social=value or nil;P:UpdateFilters() end);self.socialChoice:SetWidth(T.findSocialChoiceWidth)
- self.sortLabel=C.Text(body,L.sort,14,"muted")
- self.sortChoice=C.Choice(body,T.findSortChoiceWidth,{{value="newest",label=L.newest},{value="rating",label=Say("队长评分","Leader rating")},{value="itemLevel",label=Say("要求装等","Required item level")},{value="members",label=L.members}},function(value)
-  state.filters.sort=value;P.resultsHeader:SetSort(nil,false,true);P:UpdateFilters()
- end);self.sortChoice:SetWidth(T.findSortChoiceWidth)
  self.filterError=C.Text(f,"",13,"warning",T.findFilterErrorWidth);self.filterError:SetWidth(T.findFilterErrorWidth);C.SetLineHeight(self.filterError,20,true)
  self.filterDone=C.Button(f,Say("完成","Done"),T.findFilterDoneWidth,function() if P:ApplyFilterFields() then P:SetFiltersOpen(false) end end,{height=34});self.filterDone:SetWidth(T.findFilterDoneWidth);self.filterDone:SetPrimary(true)
  self.filterRanges={}
@@ -1036,15 +1039,20 @@ self:RegisterBuildFiltersElements()
  end
 function P:LayoutFilters()
  if not self.filterPanel then return end
+ -- Keep old targets interactive until the final (possibly overflow-adjusted)
+ -- layout is known. A temporary disable would reset native stationary hover.
+ local previous=self.filterPreviousTargets or {};self.filterPreviousTargets=previous;wipe(previous)
+ for index=1,self.filterClipCount or 0 do previous[self.filterHitTargets[index].target]=true end
  local function Place(frame,x,y) frame:ClearAllPoints();frame:SetPoint("TOPLEFT",x,-y) end
  local expanded=self.importantFilters:IsShown()
- local padding,gap=T.findFilterPadding,T.findFilterColumnGap
+ local padding=T.findFilterPadding
  local labelWidth,minimum=0,0
  for _,label in ipairs({self.ratingLabel,self.ilvlLabel,self.membersLabel}) do labelWidth=math.max(labelWidth,math.ceil(C.MeasureTextWidth(label))) end
  for _,field in pairs(self.filterFields) do minimum=math.max(minimum,C.MeasureTextWidth(field.placeholder)) end
  local gridWidth=labelWidth+16+(minimum+T.editInset*2)*2+8
  local quickHeight=MeasureQuickFilters(self)
- local quickWidth=24;for _,item in ipairs(self.quickFilterItems) do quickWidth=quickWidth+item.width end
+ local quickWidth=self.quickFilterItems[1].width*3+self.quickFilterItems[4].width+24
+ quickWidth=math.max(quickWidth,C.MeasureTextWidth(self.filterRolesLabel)+16+self.quickFilterItems[5].width)+T.findFilterScrollGutter
  local desired=math.max(expanded and math.max(T.findFilterWideWidth,quickWidth+padding*2) or T.findFilterCompactWidth,gridWidth+padding*2)
  local width=math.min(UI.frame:GetWidth()-T.findFilterWindowInset*2,C.ElementValue(self.filterPanel,"root","width",desired))
  local inner=width-padding*2
@@ -1057,10 +1065,6 @@ function P:LayoutFilters()
  local function LayoutBody(w)
   self.filterBody:SetWidth(w)
   self.filterHitTargets=self.filterHitTargets or {}
-  for _,entry in ipairs(self.filterHitTargets) do
-   if entry.target:GetParent()==self.quickFilters and self.quickPlacement=="header" then entry.target:SetHitRectInsets(0,0,0,0);entry.target:EnableMouse(true)
-   else entry.target:EnableMouse(false) end
-  end
   self.filterClipCount=0
   local function Hit(target,top,height)
    local index=self.filterClipCount+1;self.filterClipCount=index
@@ -1070,23 +1074,34 @@ function P:LayoutFilters()
   local y=0
   if expanded then
    Place(self.importantFilters,0,y);self.importantFilters:SetWidth(w)
-   self.quickFilters:ClearAllPoints();Place(self.quickFilters,0,0)
-   self.quickFilterOptions.height=quickHeight
-   local wrapped=quickWidth>w
-   self.quickModeLayout:SetItems({}):Layout()
-   self.quickFilterLayout:SetItems(wrapped and self.quickRoleItems or self.quickFilterItems):Layout()
-   local top=0
-   if wrapped then
-    top=quickHeight+8;self.quickModeOptions.y=-top;self.quickModeOptions.height=quickHeight
-    self.quickModeLayout:SetItems(self.quickModeItems):Layout()
+   Place(self.quickFilters,0,0)
+   local controlHeight=math.max(36,quickHeight)
+   local logicWidth=self.quickFilterItems[5].width
+   Label(self.filterRolesLabel,w-logicWidth-16)
+   local headingHeight=math.max(controlHeight,self.filterRolesLabel:GetHeight())
+   Place(self.filterRolesLabel,0,(headingHeight-self.filterRolesLabel:GetHeight())/2)
+   self.quickLogic:SetSize(logicWidth,controlHeight);Place(self.quickLogic,w-logicWidth,(headingHeight-controlHeight)/2)
+   Hit(self.quickLogic,(headingHeight-controlHeight)/2,controlHeight)
+   local roleTop=headingHeight+8;local identityWidth=self.quickFilterItems[4].width;local roleWidth=(w-identityWidth-24)/3
+   for index,key in ipairs(PRESENCE_KEYS) do
+    local button=self.quickChoices[key].button;button:SetSize(roleWidth,controlHeight)
+    Place(button,(index-1)*(roleWidth+8),roleTop);Hit(button,roleTop,controlHeight)
    end
-   self.quickFilters:SetSize(w,top+quickHeight);self.importantFilters:SetHeight(top+quickHeight)
-   for index,item in ipairs(self.quickFilterItems) do Hit(item.frame,index>3 and top or 0,quickHeight) end
-   y=y+top+quickHeight+T.findFilterSectionGap
+   self.quickIdentity:SetSize(identityWidth,controlHeight);Place(self.quickIdentity,w-identityWidth,roleTop)
+   Hit(self.quickIdentity,roleTop,controlHeight)
+   self.quickFilters:SetSize(w,roleTop+controlHeight);self.importantFilters:SetHeight(roleTop+controlHeight)
+   y=y+roleTop+controlHeight+T.findFilterGroupGap
   elseif self.filterLayout=="needed" then
    Label(self.roleLabel,w);Place(self.roleLabel,0,y);y=y+self.roleLabel:GetHeight()+6
-   self.roleChoice:SetSize(w,fieldHeight);Place(self.roleChoice,0,y);Hit(self.roleChoice,y,fieldHeight);y=y+fieldHeight+T.findFilterSectionGap
+   self.roleChoice:SetSize(w,fieldHeight);Place(self.roleChoice,0,y);Hit(self.roleChoice,y,fieldHeight);y=y+fieldHeight+T.findFilterGroupGap
   end
+  local hintWidth=math.ceil(C.MeasureTextWidth(self.filterRangeHint))
+  Label(self.filterRangeHint,hintWidth)
+  Label(self.filterRangeTitle,w-hintWidth-16)
+  local headingHeight=math.max(self.filterRangeTitle:GetHeight(),self.filterRangeHint:GetHeight())
+  Place(self.filterRangeTitle,0,y+(headingHeight-self.filterRangeTitle:GetHeight())/2)
+  Place(self.filterRangeHint,w-hintWidth,y+(headingHeight-self.filterRangeHint:GetHeight())/2)
+  y=y+headingHeight+12
   local rangeX=labelWidth+16
   local rangeWidth=w-rangeX
   self.filterColumns=1
@@ -1104,30 +1119,18 @@ function P:LayoutFilters()
     y=y+fieldHeight+12
   end
   if self.filterLayout=="presence" then
-   for _,toggle in ipairs({self.hideZeroScore,self.hideSameClassRole,self.requireBloodlust}) do
+   y=y+4
+   for _,toggle in ipairs({self.hideZeroScore,self.requireBloodlust}) do
     Label(toggle.label,w-toggle.track:GetWidth()-16)
     local height=math.max(32,toggle.label:GetHeight(),toggle.track:GetHeight())
-    toggle:SetSize(w,height);Place(toggle,0,y+4);Hit(toggle,y+4,height)
+    toggle:SetSize(w,height);Place(toggle,0,y);Hit(toggle,y,height)
     y=y+height+12
    end
-   y=y+T.findFilterSectionGap-12
   end
-  y=y+4
-  -- These choices use a full line in a narrow panel; the wide composition can
-  -- put them side by side only when their complete translated values fit.
-  local choiceMinimum=math.max(C.MeasureTextWidth(self.socialChoice.label,Say("不含拉黑记录","Without blocked players")),C.MeasureTextWidth(self.sortChoice.label,Say("要求装等","Required item level")))+T.choiceReserve
-  local paired=w>=choiceMinimum*2+gap
-  local choiceWidth=paired and (w-gap)/2 or w
-  local bottom=y
-  for slot,entry in ipairs({{self.socialLabel,self.socialChoice},{self.sortLabel,self.sortChoice}}) do
-   local x=paired and (slot-1)*(choiceWidth+gap) or 0
-   local top=not paired and slot==2 and bottom+12 or y
-   Label(entry[1],choiceWidth);Place(entry[1],x,top);top=top+entry[1]:GetHeight()+6
-   entry[2]:SetSize(choiceWidth,fieldHeight);entry[2].label:SetWidth(choiceWidth-T.choiceReserve);Place(entry[2],x,top)
-   Hit(entry[2],top,fieldHeight)
-   bottom=math.max(bottom,top+fieldHeight)
-  end
-  local height=bottom+2;self.filterBody:SetHeight(height);return height
+  y=y+T.findFilterGroupGap-12
+  self.socialChoice:SetSize(w,fieldHeight);self.socialChoice.label:SetWidth(w-T.choiceReserve);Place(self.socialChoice,0,y)
+  Hit(self.socialChoice,y,fieldHeight)
+  local height=y+fieldHeight+2;self.filterBody:SetHeight(height);return height
  end
  local natural=LayoutBody(inner)
  self.filterDone:SetSize(math.max(T.findFilterDoneWidth,FitText(self.filterDone.label)+28),math.max(38,self.filterDone.label:GetHeight()+14))
@@ -1136,7 +1139,8 @@ function P:LayoutFilters()
  self.filterStatus:SetWordWrap(true);self.filterStatus:SetWidth(math.max(1,inner-actions-16))
  self.filterStatus:SetHeight(math.ceil(self.filterStatus:GetStringHeight()))
  local footerHeight=math.max(self.filterStatus:GetHeight(),self.clearFilters:GetHeight(),self.filterDone:GetHeight())
- local errorHeight=0;local hasError=self.filterError:GetText()~=""
+ local errorHeight=0;local hasError=(self.filterError:GetText() or "")~=""
+ self.clearFilters:SetAvailable((self.filterCount or 0)>0 or hasError)
  self.filterError:SetWordWrap(true);self.filterError:SetWidth(inner);self.filterError:SetShown(hasError)
  if hasError then self.filterError:SetHeight(math.ceil(self.filterError:GetStringHeight()));Place(self.filterError,0,0);errorHeight=self.filterError:GetHeight()+12 end
  footerHeight=footerHeight+errorHeight
@@ -1153,6 +1157,16 @@ function P:LayoutFilters()
  self.syncingFilterScroll=true;self.filterScrollBar:SetMinMaxValues(0,scrollMax)
  local offset=math.min(self.filterViewport:GetVerticalScroll(),scrollMax);self.filterViewport:SetVerticalScroll(offset);self.filterScrollBar:SetValue(offset);self.syncingFilterScroll=nil
  self.filterScrollBar:SetShown(overflow)
+ for index=1,self.filterClipCount or 0 do previous[self.filterHitTargets[index].target]=nil end
+ for target in pairs(previous) do
+  local header=target:GetParent()==self.quickFilters and self.quickPlacement=="header"
+  if header then
+   local left,right,top,bottom=target:GetHitRectInsets()
+   if left~=0 or right~=0 or top~=0 or bottom~=0 then target:SetHitRectInsets(0,0,0,0) end
+  end
+  if target:IsMouseEnabled()~=header then target:EnableMouse(header) end
+ end
+ wipe(previous)
  self:ClipFilterBody()
  local footerTop=height-padding-footerHeight
  self.filterFooter:SetSize(inner,footerHeight);Place(self.filterFooter,padding,footerTop)
@@ -1167,11 +1181,10 @@ function P:UpdateFilterSummary()
  if filters.minItemLevel or filters.maxItemLevel then count=count+1 end
  for _,key in ipairs({"neededRole","tankPresence","healerPresence","damagePresence","hideZeroScore","hideSameSpec","hideSameClass","hideSameClassRole","requireBloodlust"}) do if filters[key] then count=count+1 end end
  if state.social then count=count+1 end
- local sortChanged=filters.sort~=A:GetSetting("defaultSort")
  self.filterCount=count
  UI:SetText(self.filterToggle.label,count>0 and Say("筛选 ","Filters ")..count or Say("筛选","Filters"))
  self.filterToggle:SetTextColors(count>0 and "brand" or "muted","text","onSecondaryContainer")
- self.clearFilters:SetAvailable(count>0 or sortChanged)
+ self.clearFilters:SetAvailable(count>0)
  self:UpdateFilterResultSummary()
 end
 function P:UpdateFilterResultSummary()
@@ -1468,7 +1481,7 @@ function P:RememberCategory()
  prefs.social=state.social;prefs.sort=state.filters.sort
 end
 function P:RestoreCategory(prefs)
- if prefs.hideSameClass then prefs.hideSameSpec=nil end
+ NormalizeIdentity(prefs)
  self.loading=true
  state.groupKeys=CopyGroupKeys(prefs.groupKeys)
  state.confirmedChoice=ChoiceSnapshot(prefs);self.restoringChoice=true
@@ -1496,7 +1509,7 @@ function P:RestoreCategory(prefs)
  self:SyncFilterFields()
  self.roleChoice:SetValue(role or false,role and ({TANK=L.tank,HEALER=L.healer,DAMAGER=L.damage})[role] or L.anyRole)
  state.social=prefs.social=="caution" and "noCaution" or prefs.social;self.socialChoice:SetValue(state.social or false,state.social and ({friend=L.friendChar,guild=L.friendGuild,any=L.notes,positive=Say("含推荐玩家","Recommended players"),noCaution=Say("不含拉黑记录","Without blocked players")})[state.social] or Say("全部关系","All relations"))
- state.filters.sort=prefs.sort or A:GetSetting("defaultSort");self.sortChoice:SetValue(state.filters.sort,L[state.filters.sort] or L.newest)
+ state.filters.sort=prefs.sort or A:GetSetting("defaultSort")
  self.loading=nil
 end
 local function SyncSearchInputMode(self)
@@ -1562,9 +1575,8 @@ function P:UpdateFilters(reset)
  filters.personKey=state.personKey
  filters.neededRole=not seasonDungeon and keys and self.roleChoice.value or nil
  if not seasonDungeon then filters.tankPresence,filters.healerPresence,filters.damagePresence,filters.hideZeroScore,filters.hideSameSpec,filters.hideSameClass,filters.roleMatchAny=nil,nil,nil,nil,nil,nil,nil;filters.hideSameClassRole,filters.requireBloodlust=nil,nil end
- if filters.hideSameClass then filters.hideSameSpec=nil end
+ NormalizeIdentity(filters)
  self.hideZeroScore:SetShown(seasonDungeon);self.hideZeroScore:SetValue(filters.hideZeroScore)
- self.hideSameClassRole:SetShown(seasonDungeon);self.hideSameClassRole:SetValue(filters.hideSameClassRole)
  self.requireBloodlust:SetShown(seasonDungeon);self.requireBloodlust:SetValue(filters.requireBloodlust)
  filters.friends=state.social=="friend";filters.guild=state.social=="guild";filters.notes=(state.social=="any" or state.social=="positive" or state.social=="noCaution") and state.social or nil
  self.roleChoice:SetShown(keys and not seasonDungeon);self.roleLabel:SetShown(keys and not seasonDungeon)
@@ -1601,10 +1613,9 @@ function P:SavePrefs()
  prefs.filters.selected=choice.selected==true
 end
 function P:ClearFilters()
- self.resultsHeader:SetSort(nil,false,true)
  state.filters.hideZeroScore,state.filters.hideSameSpec,state.filters.hideSameClass=nil,nil,nil
  state.filters.hideSameClassRole,state.filters.requireBloodlust=nil,nil
- self.loading=true;self.fMinMembers.box:SetText("");self.fMembers.box:SetText("");self.roleChoice:SetValue(false,L.anyRole);state.filters.tankPresence,state.filters.healerPresence,state.filters.damagePresence=nil,nil,nil;state.filters.roleMatchAny=nil;for _,key in ipairs(numericFilterKeys) do state.filters[key]=nil end;self:SyncFilterFields();state.social=nil;self.socialChoice:SetValue(false,Say("全部关系","All relations"));state.filters.sort=A:GetSetting("defaultSort");self.sortChoice:SetValue(state.filters.sort,L[state.filters.sort] or L.newest);self.loading=nil;self:UpdateFilters()
+ self.loading=true;self.fMinMembers.box:SetText("");self.fMembers.box:SetText("");self.roleChoice:SetValue(false,L.anyRole);state.filters.tankPresence,state.filters.healerPresence,state.filters.damagePresence=nil,nil,nil;state.filters.roleMatchAny=nil;for _,key in ipairs(numericFilterKeys) do state.filters[key]=nil end;self:SyncFilterFields();state.social=nil;self.socialChoice:SetValue(false,Say("全部关系","All relations"));self.loading=nil;self:UpdateFilters()
 end
 function P:OnSearchTextChanged(box,changed)
  local empty=box:GetText()==""
@@ -2009,7 +2020,7 @@ UI:ElementFields(self,"find","quickFilters quickLogic quickIdentity quickIdentit
 end
 
 function P:RegisterBuildFiltersElements()
-UI:ElementFields(self,"find","filterPanel filterScrim filterTitle filterClose filterStatus clearFilters importantFilters ratingLabel ilvlLabel membersLabel roleLabel roleChoice hideZeroScore hideSameClassRole requireBloodlust socialLabel socialChoice sortLabel sortChoice filterError filterDone filterViewport filterBody filterFooter filterScrollBar","find")
+UI:ElementFields(self,"find","filterPanel filterScrim filterTitle filterClose filterStatus clearFilters importantFilters filterRolesLabel filterRangeTitle filterRangeHint ratingLabel ilvlLabel membersLabel roleLabel roleChoice hideZeroScore requireBloodlust socialChoice filterError filterDone filterViewport filterBody filterFooter filterScrollBar","find")
  for _,range in pairs(self.filterRanges) do UI:Element(range.frame,"find.filterRange","find",range.frame,"find.filterRange",range.id) end
  for key,field in pairs(self.filterFields) do UI:Element(field,"find.filterField","find",field,"find.filterField",key) end
 end

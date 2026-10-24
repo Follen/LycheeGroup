@@ -16,15 +16,20 @@ local function Open(locale,prefs,settings)
  f.A:SetSetting("reduceMotion",true);f.A:Open("find")
  return f,f.U.pages.find
 end
+local function ExcludeClassRole(page)
+ page.quickIdentity:Fire("OnClick","RightButton")
+ page.quickIdentity:Fire("OnClick","LeftButton");page.quickIdentity:Fire("OnClick","LeftButton")
+end
 for _,locale in ipairs({"zhCN","enUS"}) do
  local preferences={rememberFilters=true,find=SavedChoice()}
  local f,page=Open(locale,preferences);local a,u,g=f.A,f.U,f.G
  page.filterToggle:Fire("OnClick","LeftButton")
  Check.eq(page.filterPanel:IsShown(),true)
- Check.eq(page.hideSameClassRole.label:GetText(),locale=="zhCN" and "排除同职业同职责" or "Exclude same class and role")
+ Check.eq(page.hideSameClassRole,nil,"the independent class/role switch is removed")
  Check.eq(page.requireBloodlust.label:GetText(),locale=="zhCN" and "嗜血来源" or "Bloodlust source")
  Check.eq(page.filterCount,0)
- page.hideSameClassRole:Fire("OnClick","LeftButton")
+ ExcludeClassRole(page)
+ Check.eq(page.quickIdentity.label:GetText(),locale=="zhCN" and "同职同责" or "Class + role")
  Check.eq(g.filters.hideSameClassRole,true);Check.eq(page.filterCount,1)
  page.requireBloodlust:Fire("OnClick","LeftButton")
  Check.eq(g.filters.requireBloodlust,true);Check.eq(page.filterCount,2)
@@ -32,17 +37,17 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  Check.eq(a.charPrefs.find.categoryPrefs.seasonDungeon.hideSameClassRole,true)
  Check.eq(a.charPrefs.find.categoryPrefs.seasonDungeon.requireBloodlust,true)
  page:SelectCategory("seasonRaid")
- Check.eq(page.hideSameClassRole:IsShown(),false);Check.eq(page.requireBloodlust:IsShown(),false)
+ Check.eq(page.quickFilters:IsShown(),false);Check.eq(page.requireBloodlust:IsShown(),false)
  Check.eq(g.filters.hideSameClassRole,nil);Check.eq(g.filters.requireBloodlust,nil);Check.eq(page.filterCount,0)
  page:SelectCategory("seasonDungeon")
- Check.eq(page.hideSameClassRole.value,true);Check.eq(page.requireBloodlust.value,true)
+ Check.eq(page.quickIdentity.label:GetText(),locale=="zhCN" and "同职同责" or "Class + role");Check.eq(page.requireBloodlust.value,true)
  Check.eq(g.filters.hideSameClassRole,true);Check.eq(g.filters.requireBloodlust,true);Check.eq(page.filterCount,2)
  page:ClosePicker();page:SetFiltersOpen(true);page.clearFilters:Fire("OnClick","LeftButton")
  Check.eq(g.filters.hideSameClassRole,nil);Check.eq(g.filters.requireBloodlust,nil);Check.eq(page.filterCount,0)
  Check.eq(page.clearFilters:IsEnabled(),false)
  page:SelectCategory("seasonRaid");page:SelectCategory("seasonDungeon")
  Check.eq(g.filters.hideSameClassRole,nil);Check.eq(g.filters.requireBloodlust,nil,"cleared category filters stay cleared")
- page.hideSameClassRole:Fire("OnClick","LeftButton");page.requireBloodlust:Fire("OnClick","LeftButton")
+ ExcludeClassRole(page);page.requireBloodlust:Fire("OnClick","LeftButton")
  a:SetSetting("rememberFilters",false)
  page:SelectCategory("seasonRaid");page:SelectCategory("seasonDungeon")
  Check.eq(g.filters.hideSameClassRole,nil);Check.eq(g.filters.requireBloodlust,nil,"disabled memory does not restore a previous category")
@@ -66,6 +71,31 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  otherPage:SetFiltersOpen(true);otherPage.requireBloodlust:Fire("OnClick","LeftButton")
  Check.eq(other.G.filters.requireBloodlust,true);Check.eq(character.find.categoryPrefs.seasonDungeon.requireBloodlust,nil,"a second character cannot edit the first character's filters")
  other.U:Hide(true)
+end
+
+-- Saved combinations retain their actual predicates. A known spec can match
+-- even when assignedRole is missing; a same-role member may have another spec.
+for _,locale in ipairs({"zhCN","enUS"}) do
+ for mask=0,7 do
+  local class=mask%2==1;local spec=math.floor(mask/2)%2==1;local role=math.floor(mask/4)%2==1
+  local f,page=Open(locale,{rememberFilters=true,find=SavedChoice({hideSameClass=class,hideSameSpec=spec,hideSameClassRole=role})})
+  local expected=class and "class" or spec and role and "specRole" or role and "classRole" or spec and "spec" or "any"
+  Check.eq(f.G.filters.hideSameClass,class and true or nil)
+  Check.eq(f.G.filters.hideSameSpec,not class and spec and true or nil)
+  Check.eq(f.G.filters.hideSameClassRole,not class and role and true or nil)
+  Check.eq(page.filterCount,class and 1 or (spec and 1 or 0)+(role and 1 or 0))
+  if expected=="specRole" then
+   Check.eq(page.quickIdentity.label:GetText(),locale=="zhCN" and "专精+职责" or "Spec + role")
+   page:SelectCategory("seasonRaid");page:SelectCategory("seasonDungeon")
+   Check.eq(f.G.filters.hideSameSpec,true);Check.eq(f.G.filters.hideSameClassRole,true,"category restore retains both distinct predicates")
+   page.quickIdentity:Fire("OnClick","LeftButton")
+   Check.eq(f.G.filters.hideSameSpec,nil);Check.eq(f.G.filters.hideSameClassRole,nil,"the legacy combined state returns to Any")
+  end
+  page.quickIdentity:Fire("OnClick","RightButton")
+  Check.eq(f.G.filters.hideSameClass,nil);Check.eq(f.G.filters.hideSameSpec,nil);Check.eq(f.G.filters.hideSameClassRole,nil)
+  Check.eq(page.filterCount,0)
+  f.U:Hide(true)
+ end
 end
 
 do
