@@ -11,6 +11,7 @@
 ## OptionalDeps: SeUI
 Libs\LycheeUI\embeds.xml
 Locale.lua
+ApplicantAudio.lua
 Theme\Defaults.lua
 Theme\Elements.lua
 Theme\FindElements.lua

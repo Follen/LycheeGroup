@@ -1,0 +1,122 @@
+{
+  "speech_source": "Microsoft online neural speech via edge-tts 7.3.1, original Chinese prompts",
+  "tone_source": "Original mathematical synthesis; notes and envelopes in tools/audio/catalog.json",
+  "format": "Ogg Vorbis, mono, 44100 Hz",
+  "assets": [
+    {
+      "file": "lychee-new-applicant.ogg",
+      "label": "新申请·自然女声",
+      "text": "有新的申请，请看一下。",
+      "voice": "zh-CN-XiaoxiaoNeural",
+      "rate": "-2%",
+      "duration_seconds": 2.177,
+      "peak_dbfs": -5.15,
+      "sha256": "d43060b0e49e66f3177e68a6623f74aaa2a33919727b1160fcfb18087dfc1044",
+      "bytes": 21061
+    },
+    {
+      "file": "lychee-reminder.ogg",
+      "label": "荔枝提醒·温柔女声",
+      "text": "荔枝提醒，有人申请加入。",
+      "voice": "zh-CN-XiaoxiaoNeural",
+      "rate": "-4%",
+      "duration_seconds": 2.505,
+      "peak_dbfs": -7.16,
+      "sha256": "c2e2fabb95455dd8222ca5504e575ce96abdeaadb3cf16a6804368d0ef398537",
+      "bytes": 23479
+    },
+    {
+      "file": "lychee-teammate.ogg",
+      "label": "队友申请·沉稳男声",
+      "text": "有新的组队申请。",
+      "voice": "zh-CN-YunxiNeural",
+      "rate": "-2%",
+      "duration_seconds": 1.458,
+      "peak_dbfs": -5.18,
+      "sha256": "00b07559aaf6e50e76f5bfa78caf361c99e2f4276483bd8a73a9917dbb8494c8",
+      "bytes": 15342
+    },
+    {
+      "file": "lychee-captain.ogg",
+      "label": "新队友·活泼女声",
+      "text": "有新队友来啦。",
+      "voice": "zh-CN-XiaoyiNeural",
+      "rate": "+2%",
+      "duration_seconds": 1.138,
+      "peak_dbfs": -7.94,
+      "sha256": "2ef3eca01f41faafb785ac87c9aa83de619953e770b759f63fd0c3ca060e9526",
+      "bytes": 12686
+    },
+    {
+      "file": "lychee-soft-chime.ogg",
+      "label": "轻柔双音",
+      "notes": [
+        [
+          0.0,
+          783.9909,
+          0.45
+        ],
+        [
+          0.16,
+          1046.5023,
+          0.56
+        ]
+      ],
+      "harmonics": [
+        [
+          1,
+          1.0
+        ],
+        [
+          2,
+          0.12
+        ]
+      ],
+      "duration": 0.86,
+      "duration_seconds": 0.857,
+      "peak_dbfs": -7.69,
+      "sha256": "6da1588b2ba222eb7891ccd1ad6cd78fccd863f82b9921fc825f6094a300574b",
+      "bytes": 5966
+    },
+    {
+      "file": "lychee-bright-chime.ogg",
+      "label": "明亮三音",
+      "notes": [
+        [
+          0.0,
+          659.2551,
+          0.38
+        ],
+        [
+          0.13,
+          880.0,
+          0.4
+        ],
+        [
+          0.26,
+          1318.5102,
+          0.48
+        ]
+      ],
+      "harmonics": [
+        [
+          1,
+          1.0
+        ],
+        [
+          2,
+          0.18
+        ],
+        [
+          3,
+          0.04
+        ]
+      ],
+      "duration": 0.9,
+      "duration_seconds": 0.897,
+      "peak_dbfs": -9.1,
+      "sha256": "e41700844cf9ee734c0c7f5dd8bd2e71dfa827f051e37663a7ca197ad2ab00b6",
+      "bytes": 6330
+    }
+  ]
+}

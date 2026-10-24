@@ -10,6 +10,8 @@ local WAKE_EVENTS = {
 	"CHALLENGE_MODE_START",
 	-- Keep the session catalog current even while all browser windows are closed.
 	"LFG_LIST_AVAILABILITY_UPDATE",
+	"PLAYER_ENTERING_WORLD",
+	"ZONE_CHANGED_NEW_AREA",
 }
 
 local SEARCH_EVENTS = {
@@ -35,20 +37,59 @@ local ROSTER_EVENTS = { "ACTIVE_PLAYER_SPECIALIZATION_CHANGED", "PLAYER_SPECIALI
 local RUN_EVENTS = {
 	"CHALLENGE_MODE_COMPLETED",
 	"CHALLENGE_MODE_RESET",
-	"PLAYER_ENTERING_WORLD",
 }
 
 local function SetEvents(frame, events, enabled)
 	local update = enabled and frame.RegisterEvent or frame.UnregisterEvent
 	for _, event in ipairs(events) do update(frame, event) end
 end
+local function HasListing()
+ local ok,active=pcall(C_LFGList.HasActiveEntryInfo)
+ if ok then active=G.Public(active) else active=nil end
+ if type(active)=="boolean" then return active end
+ return G.Listing:GetListing()~=nil
+end
 
+local function RestrictionState(state)
+ state=G.Public(state)
+ local states=Enum and Enum.AddOnRestrictionState
+ if not states then return nil end
+ if states.Inactive~=nil and state==states.Inactive then return false end
+ if states.Activating~=nil and state==states.Activating or states.Active~=nil and state==states.Active then return true end
+end
+function Game:IsLfgPaused()
+ if self.chatRestricted~=nil then return self.chatRestricted end
+ local chat=Enum and Enum.AddOnRestrictionType and Enum.AddOnRestrictionType.Chat
+ local reader=C_RestrictedActions and C_RestrictedActions.GetAddOnRestrictionState
+ if chat~=nil and reader then
+  local ok,state=pcall(reader,chat)
+  if ok then
+   local restricted=RestrictionState(state)
+   if restricted~=nil then return restricted end
+  end
+ end
+ reader=C_ChatInfo and C_ChatInfo.InChatMessagingLockdown
+ if not reader then return false end
+ local ok,locked=pcall(reader)
+ return not ok or G.Public(locked)~=false
+end
+function Game:OnRestrictionChanged(kind,state)
+ local chat=Enum and Enum.AddOnRestrictionType and Enum.AddOnRestrictionType.Chat
+ if chat==nil or G.Public(kind)~=chat then return end
+ local restricted=RestrictionState(state)
+ if restricted==nil then return end
+ self.chatRestricted=restricted
+ G.Alerts:Sync()
+end
 function Game:Init()
 	if self.frame then return end
 	local frame = CreateFrame("Frame")
 	self.frame = frame
 	frame:SetScript("OnEvent", function(_, event, ...) G:OnEvent(event, ...) end)
 	SetEvents(frame, WAKE_EVENTS, true)
+	-- Older clients may not expose this event; their LFG/world edges still read
+	-- the chat gate directly. Ordinary combat is not a speech restriction.
+	pcall(frame.RegisterEvent,frame,"ADDON_RESTRICTION_STATE_CHANGED")
 end
 
 function Game:RefreshApplicationSubscriptions()
@@ -57,7 +98,7 @@ function Game:RefreshApplicationSubscriptions()
 	if G:HasViews("search") or G.Search:GetState()=="searching" or applications then
 		frame:RegisterEvent("LFG_LIST_SEARCH_RESULT_UPDATED")
 	else frame:UnregisterEvent("LFG_LIST_SEARCH_RESULT_UPDATED") end
-	local listing = C_LFGList.HasActiveEntryInfo()
+	local listing = HasListing()
 	local autoJoin = A:GetSetting("autoJoin") and applications
 	SetEvents(frame, PERMISSION_EVENTS, listing or G:HasViews("create") or autoJoin)
 	if self.runTracking or G:HasViews() or listing or autoJoin then frame:RegisterEvent("GROUP_ROSTER_UPDATE") else frame:UnregisterEvent("GROUP_ROSTER_UPDATE") end
@@ -69,7 +110,7 @@ function Game:RefreshSubscriptions()
 	local browsing = G:HasViews("search") or G.Search:GetState()=="searching"
 	SetEvents(frame, SEARCH_EVENTS, browsing)
 	self:RefreshApplicationSubscriptions()
-	local listing = C_LFGList.HasActiveEntryInfo()
+	local listing = HasListing()
 	self:RefreshRelations()
 	SetEvents(frame, APPLICANT_EVENTS, listing)
 	SetEvents(frame, ROSTER_EVENTS, G:HasViews("create"))
@@ -78,7 +119,7 @@ function Game:RefreshSubscriptions()
 end
 
 function Game:RefreshRelations()
- local active=G:HasViews("create") or C_LFGList.HasActiveEntryInfo()
+ local active=G:HasViews("create") or HasListing()
  if G.Relations.active==active then return end
  SetEvents(self.frame,RELATION_EVENTS,active)
  G.Relations:SetActive(active)

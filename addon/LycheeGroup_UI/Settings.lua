@@ -17,6 +17,7 @@ local definitions={
  {"uiScale",S("主窗口缩放","Main window scale"),S("等比调整整个主窗口。","Scale the entire main window proportionally."),"range",75,125},
  {"reduceMotion",L.reduceMotion,S("关闭开窗位移、Logo 动作和局部过渡。","Disable window movement, logo animation and local transitions.")}},
  browse={
+ {"applicantAlertSound",S("申请人提示音","Applicant alert sound"),S("选择荔枝语音或提示音，有新申请人时播放，间隔至少 10 秒。选择后可试听。","Choose a Lychee voice or chime for new applicants, at least 10 seconds apart. Select a sound to preview it."),function() return A.ApplicantAudio:Choices() end},
  {"defaultSort",S("默认排序","Default sorting"),S("各分类未单独设置排序时使用。","Used when a category has no saved sorting preference."),{{value="newest",label=L.newest},{value="rating",label=L.leaderRating},{value="itemLevel",label=L.requiredItemLevel},{value="members",label=L.members}}},
  {"rememberFilters",S("记住本角色的筛选","Remember character filters"),S("本角色独立保存各分类筛选。","Save category filters for this character.")},
  {"showImportantFilters",S("主界面重要筛选","Key filters on main page"),S("开启后在“我的申请”内显示；关闭时在筛选弹窗内调整。","Show them in My applications, or keep them in the filter panel when off.")}},
@@ -286,7 +287,9 @@ function P:BuildRow(parent,row,index)
  elseif row[4]=="action" then
   control=C.Button(holder,S("重置位置","Reset position"),controlWidth,function() A.Appearance:SaveFloatingPosition(false) end);C.SetPoint(control,"RIGHT",control:GetParent(),"RIGHT","settingsControlRightX",0)
  elseif row[4] then
-  control=C.Choice(holder,controlWidth,function() return type(row[4])=="function" and row[4]() or row[4] end,function(value) A:SetSetting(row[1],value) end);control:SetHeight(T.settingsControlHeight);C.SetPoint(control,"RIGHT",control:GetParent(),"RIGHT","settingsControlRightX",0)
+  control=C.Choice(holder,controlWidth,function() return type(row[4])=="function" and row[4]() or row[4] end,function(value)
+   if A:SetSetting(row[1],value) and row[1]=="applicantAlertSound" then A.ApplicantAudio:Play(true) end
+  end);control:SetHeight(T.settingsControlHeight);C.SetPoint(control,"RIGHT",control:GetParent(),"RIGHT","settingsControlRightX",0)
  else
   control=C.Check(holder,"",function(value)
    A:SetSetting(row[1],value)
@@ -437,6 +440,7 @@ function P:LayoutFont(width,height)
 UI:ApplyElementScope("settings")
  end
 function P:SelectSection(key)
+ if self.section~=key then A.ApplicantAudio:Stop(true) end
  local changed=self.section~=key
  if changed then self:CancelBindingCapture(true);self:StopBlocks() end
  for _,panel in pairs(self.panels) do UI.Motion:FinishPlacement(panel) end
@@ -498,6 +502,7 @@ UI:ApplyElementScope("settings")
  end
 function P:Enter(context) self.frame:RegisterEvent("UPDATE_BINDINGS");self:SelectSection(context and context.section or self.section) end
 function P:Leave()
+ A.ApplicantAudio:Stop(true)
  self:StopBlocks()
  self.frame:UnregisterEvent("UPDATE_BINDINGS")
  self.aboutClicks=0;self:HideDedicationToast()

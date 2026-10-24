@@ -6,6 +6,26 @@ local L = A.GroupLocale
 local Listing = {}
 G.Listing = Listing
 local snapshot
+local function ReadActive()
+ local ok,active=pcall(C_LFGList.HasActiveEntryInfo)
+ if ok then return G.Public(active) end
+end
+function Listing:IsRemovalPending() return self.removalPending~=nil end
+local function EndRemoval()
+ if not Listing.removalPending then return end
+ Listing.removalPending=nil
+ local timer=Listing.removalTimer;Listing.removalTimer=nil
+ if timer then timer:Cancel() end
+ G.Alerts:Baseline()
+end
+local function BeginRemoval()
+ if Listing.removalTimer then Listing.removalTimer:Cancel() end
+ local request={};Listing.removalPending=request
+ Listing.removalTimer=C_Timer.NewTimer(8,function()
+  if Listing.removalPending==request then EndRemoval() end
+ end)
+ G.Alerts:Sync()
+end
 
 local function SaveAutoInvite(enabled)
 	G.prefs.listingAutoInvite = enabled == true
@@ -13,8 +33,11 @@ local function SaveAutoInvite(enabled)
 end
 
 local function NormalizeEntry()
-	if not C_LFGList.HasActiveEntryInfo() then return nil end
-	local data = G.Public(C_LFGList.GetActiveEntryInfo())
+	local active=ReadActive()
+	if active==false then return nil end
+	if active~=true then return snapshot end
+	local ok,data=pcall(C_LFGList.GetActiveEntryInfo)
+	data=ok and G.Public(data) or nil
 	-- An active entry can be waiting for its refreshed details; only native
 	-- inactive state ends the last confirmed listing.
 	if type(data) ~= "table" then return snapshot end
@@ -137,14 +160,17 @@ end
 function Listing:RemoveListing()
 	local allowed, reason = G:CanManageListing()
 	if not allowed then return false, reason end
-	if not C_LFGList.HasActiveEntryInfo() then
+	if ReadActive()~=true then
 		return false, L.noActiveListing
 	end
+	BeginRemoval()
 	local ok = pcall(C_LFGList.RemoveListing)
 	if not ok then
+		EndRemoval()
 		return false, L.removeFailed
 	end
 	snapshot = NormalizeEntry()
+	if ReadActive()==false then EndRemoval() end
 	if not snapshot then G.prefs.listingAutoInvite = nil end
 	G.Game:RefreshSubscriptions()
 	G:Notify("listing")
@@ -152,8 +178,9 @@ function Listing:RemoveListing()
 end
 
 -- LFG_LIST_ACTIVE_ENTRY_UPDATE also confirms asynchronous listing edits.
-function Listing:OnEntryUpdate()
+function Listing:OnEntryUpdate(created)
 	snapshot = NormalizeEntry()
+	if G.Public(created)==true or ReadActive()==false then EndRemoval() end
 	if not snapshot then G.prefs.listingAutoInvite = nil end
 	G.Game:RefreshSubscriptions()
 	G:Notify("listing")

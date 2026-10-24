@@ -54,17 +54,26 @@ local function ScheduleRetirement()
   if changed then NotifyChanged(true) end
  end)
 end
-local function Read(id,activityID)
- local info=G.Public(C_LFGList.GetApplicantInfo(id))
- if type(info)~="table" then return nil end
+local function Read(id,activityID,arrival)
+ local ok,info=pcall(C_LFGList.GetApplicantInfo,id)
+ info=ok and G.Public(info) or nil
+ if type(info)~="table" then
+  if arrival then G.Alerts:OnApplicant(id) end
+  return nil
+ end
  local status,pending=G.Public(info.applicationStatus),G.Public(info.pendingApplicationStatus)
  if status=="applied" or (status==nil or status=="none") and pending=="applied" then retired[id]=nil
- elseif retired[id] then return nil end
+ elseif retired[id] then
+  if arrival then G.Alerts:OnApplicant(id,status) end
+  return nil
+ end
  local record=records[id]
- local isNew=record==nil
  if not record then record={id=id,members={}};records[id]=record end
  if record.status~=status or record.pendingStatus~=pending then record.acting=nil end
  record.status,record.pendingStatus=status,pending
+ -- Arrival admission only needs the public status. Member details below may
+ -- be temporarily unavailable and must not postpone or replay this alert.
+ if arrival then G.Alerts:OnApplicant(id,status) end
  if finished[status] then record.removeAt=record.removeAt or GetTime()+5 else record.removeAt=nil end
  record.numMembers=G.Public(info.numMembers) or 0
  record.comment=G.Public(info.comment)
@@ -104,7 +113,7 @@ local function Read(id,activityID)
  for i=#record.members,record.numMembers+1,-1 do record.members[i]=nil end
  record.relationsVersion=G.Relations:ApplyMembers(record.members)
  dirty=true
- return record,isNew
+ return record
 end
 local function Sort(a,b)
  local x,y=records[a],records[b]
@@ -112,52 +121,61 @@ local function Sort(a,b)
  return a<b
 end
 function Applicants:RefreshList(silent,immediate)
- if not C_LFGList.HasActiveEntryInfo() then self:Clear();return end
+ local ok,active=pcall(C_LFGList.HasActiveEntryInfo)
+ if ok and G.Public(active)==false then self:Clear();return end
+ if silent then G.Alerts:Baseline() end
+ if not G.Alerts:Sync() then return end
+ local listOK,ids=pcall(C_LFGList.GetApplicants)
+ ids=listOK and G.Public(ids)
+ if type(ids)~="table" then return end
  local listing=G.Listing:GetListing()
  currentActivityID=listing and listing.activityID
  generation=generation+1
- local newBatch=false
- for _,id in ipairs(C_LFGList.GetApplicants() or {}) do
+ for _,id in ipairs(ids) do
+  id=G.Public(id)
+  if type(id)=="number" or type(id)=="string" then
   if retired[id] then retired[id]=generation end
-  local record,isNew=Read(id,currentActivityID)
+  local record=Read(id,currentActivityID)
   if record then
    record.generation=generation
-   if isNew and record.status=="applied" then newBatch=true end
+  end
   end
  end
  for id,record in pairs(records) do if record.generation~=generation then records[id]=nil;dirty=true end end
  for id,seen in pairs(retired) do if seen~=generation then retired[id]=nil end end
  ScheduleRetirement()
  self:TryAutoInvite()
- G.Alerts:Update(newBatch and not silent)
+ G.Alerts:Sync()
  NotifyChanged(immediate)
 end
 function Applicants:OnApplicantUpdated(id)
+ local ok,active=pcall(C_LFGList.HasActiveEntryInfo)
+ if ok and G.Public(active)==false then self:Clear();return end
+ if not G.Alerts:Sync() then return end
+ id=G.Public(id)
+ if id==nil then G.Alerts:OnApplicant();self:RefreshList();return end
+ if type(id)~="number" and type(id)~="string" then return end
  local listing=G.Listing:GetListing()
- local record,isNew=Read(id,listing and listing.activityID)
+ local record=Read(id,listing and listing.activityID,true)
  if not record then records[id]=nil;dirty=true end
  ScheduleRetirement()
  self:TryAutoInvite()
- G.Alerts:Update(isNew and record.status=="applied")
  NotifyChanged()
 end
 function Applicants:OnEntryUpdate(created)
- if not C_LFGList.HasActiveEntryInfo() then self:Clear()
- else
-  local listing=G.Listing:GetListing()
-  if created or listing and listing.activityID~=currentActivityID then self:RefreshList() else self:TryAutoInvite() end
- end
+ G.Alerts:Baseline(G.Public(created)==true)
+ self:RefreshList()
 end
-function Applicants:Restore() if C_LFGList.HasActiveEntryInfo() then self:RefreshList(true,true) end end
+function Applicants:Restore() self:RefreshList(true,true) end
 function Applicants:RequestRefresh()
- if not C_LFGList.HasActiveEntryInfo() then self:Clear();return false end
+ if not G.Alerts:Sync() then return false end
  C_LFGList.RefreshApplicants()
  self:RefreshList(true,true)
  return true
 end
 function Applicants:Clear()
  wipe(records);wipe(ordered);wipe(retired);ScheduleRetirement()
- currentActivityID=nil;dirty=false;G.Alerts:Stop();NotifyChanged(true)
+ currentActivityID=nil;dirty=false;G.Alerts:Reset();NotifyChanged(true)
 end
 local function InviteNative(id,convertToRaid)
  if convertToRaid then C_PartyInfo.ConfirmConvertToRaid() end

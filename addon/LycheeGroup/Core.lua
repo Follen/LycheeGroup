@@ -31,6 +31,7 @@ local DEFAULTS = {
 	defaultNote = "neutral",
 	reminders = "all",
 	history = true,
+	applicantAlertSound = A.ApplicantAudio.default,
 }
 for key,value in pairs(A.ThemeDefaults.settings) do DEFAULTS[key]=value end
 
@@ -47,6 +48,7 @@ function A:RegisterConfigurationSettings()
  local definitions={}
  local choices={language={"auto","zhCN","enUS"},defaultNote={"positive","neutral","caution"},reminders={"all","positive","caution","off"},raidMembers={"shift","alt","ctrl","always"},memberIconShape={"circle","square"},defaultSort={"newest","rating","itemLevel","members"}}
  local ranges={fontScale={70,130},uiScale={75,125},floatingScale={50,150},memberIconScale={75,175},minimapAngle={0,360}}
+ choices.applicantAlertSound=self.ApplicantAudio:Values()
  local function Add(key,value,storage)
   local definition={default=value,storage=storage,type=type(value),legacy={storage=storage,key=key},enum=choices[key]}
   local range=ranges[key];if range then definition.min,definition.max=range[1],range[2];definition.integer=key~="minimapAngle" end
@@ -84,6 +86,8 @@ function A:LoadDB()
 		_G.LycheeGroupPrefsDB = prefs
 	end
 	self.charPrefs = prefs
+	self.ApplicantAudio:MigrateSettings(raw)
+	self.ApplicantAudio:MigrateSettings(prefs)
 	-- Bind captures real legacy presence before the compatibility fields are filled.
 	self.Configuration:Bind(raw,prefs)
  if self.InitializeRuntimeTheme then self:InitializeRuntimeTheme() end
@@ -95,6 +99,7 @@ function A:LoadDB()
 	raw.keywordFilters = nil
 	raw.fontScale = FontScale(raw.fontScale)
 	self:InitializeLocale()
+ self.ApplicantAudio:ApplySetting()
  if self.RuntimeTheme and self.RuntimeTheme.error then self:Print("Theme: "..self.RuntimeTheme.error) end
 	for key, default in pairs(CHARACTER_DEFAULTS) do
 		if prefs[key] == nil then
@@ -273,6 +278,7 @@ function A:ApplyConfigurationChanges(changes)
 	local function Changed(key) return changes["settings."..key]~=nil end
 	local function Value(key) return self:GetSetting(key) end
 	if Changed("nativeLFGEntry") and self.SyncNativeLFGEntry then self:SyncNativeLFGEntry() end
+ if Changed("applicantAlertSound") then self.ApplicantAudio:ApplySetting() end
 	if (Changed("minimap") or Changed("minimapAngle")) and self.Minimap then self.Minimap:UpdateSettings() end
 	if (Changed("font") or Changed("fontScale")) and self.Fonts then self.Fonts:Apply() end
 	for _,key in ipairs({"history","autoJoin"}) do

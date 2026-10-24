@@ -118,7 +118,9 @@ local DISPATCH = {
 	LFG_LIST_SEARCH_RESULT_UPDATED = function(g, resultID) g.Results:QueueUpdate(resultID) end,
 	LFG_LIST_UPDATE_SEARCH_RESULTS = function(g) g.Search:OnResultsUpdated() end,
 	LFG_LIST_SEARCH_FAILED = function(g, reason) g.Search:OnSearchFailed(reason) end,
-	LFG_LIST_AVAILABILITY_UPDATE = function(g) g.Search:OnAvailabilityUpdated() end,
+	LFG_LIST_AVAILABILITY_UPDATE = function(g) g.Search:OnAvailabilityUpdated();g.Alerts:Sync() end,
+	ADDON_RESTRICTION_STATE_CHANGED = function(g,kind,state) g.Game:OnRestrictionChanged(kind,state) end,
+	ZONE_CHANGED_NEW_AREA = function(g) g.Alerts:Sync() end,
 	LFG_LIST_APPLICATION_STATUS_UPDATED = function(g, resultID, newStatus, oldStatus, groupName)
 		g.Applications:OnStatusUpdated(resultID, newStatus, oldStatus, groupName)
 	end,
@@ -147,7 +149,7 @@ local DISPATCH = {
 	INSPECT_READY = function(g,guid) g.Roster:OnInspectReady(guid) end,
 	PLAYER_REGEN_ENABLED = function(g) g:InvalidateRoster("available") end,
 	UNIT_CONNECTION = function(g) g:InvalidateRoster("available") end,
-	PLAYER_ENTERING_WORLD = function(g) g.History:OnWorldEntered() end,
+	PLAYER_ENTERING_WORLD = function(g) g.History:OnWorldEntered();g.Alerts:Sync() end,
 }
 
 function G:OnEvent(event, ...)
@@ -229,7 +231,9 @@ end
 function G:RefreshPermissions()
 	local applicants, listing = self:CanManageApplicants(), self:CanManageListing()
 	if applicantPermission == applicants and listingPermission == listing then return end
+	local gainedApplicants=applicants and applicantPermission==false
 	applicantPermission, listingPermission = applicants, listing
+	if gainedApplicants then self.Applicants:Restore() end
 	self.Alerts:Sync()
 	self:Notify("permissions")
 end
