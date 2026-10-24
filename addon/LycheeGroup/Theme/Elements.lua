@@ -62,7 +62,8 @@ Add(floating,"floating","batch","floating.batch")
 Add(floating,"floating","box","floating.body floating.logoAnchor floating.panel floating.scroll floating.window")
 Add(floating,"floating","component","floating.button floating.cancel floating.emptyCard floating.scrollBar")
 Add(floating,"floating","floatingRow","floating.application floating.footer floating.member floating.row")
-Add(floating,"floating","text","floating.count floating.empty")
+Add(floating,"floating","text","floating.count floating.empty floating.heading")
+Add(floating,"floating","texture","floating.waitIcon floating.headingDot")
 Add(floating,"floating","texture","floating.logo")
 -- Shared maps describe real compositions, rather than a union of every widget's
 -- possible child names. Only template rows legitimately share optional parts.
@@ -118,6 +119,7 @@ Assign(main,kinds.texture,"create.favoritesChevron")
 Assign(main,kinds.text,"create.pickerSearchHint")
 Assign(main,kinds.row,"create.favoriteRow create.pickerCategory create.pickerActivity create.buff settings.block")
 Assign(floating,kinds.button,"floating.cancel")
+Assign(floating,{root="box",background="box",["background/fill"]="surface"},"floating.panel")
 Assign(floating,kinds.scrollbar,"floating.scrollBar")
 Assign(floating,{root="box",background="box",["background/fill"]="surface"},"floating.batch floating.emptyCard")
 for _,id in ipairs({"create.titleShell","create.descriptionShell","application.note"}) do main[id].slotKinds=kinds.fieldShell end
