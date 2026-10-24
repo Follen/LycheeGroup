@@ -9,6 +9,23 @@ local currentActivityID
 local retired={}
 local retirementTimer,retirementAt
 local notifyTimer
+local races={}
+-- Race names and native race factions are static client data. Keep successful
+-- metadata only; neutral members still use their latest applicant faction.
+local function Race(raceID)
+ if not raceID then return end
+ local cached=races[raceID]
+ if cached then return cached.name,cached.faction end
+ local race=C_CreatureInfo.GetRaceInfo(raceID)
+ local faction=C_CreatureInfo.GetFactionInfo(raceID)
+ local name=race and G.Public(race.raceName)
+ local tag=faction and G.Public(faction.groupTag)
+ local group=tag and PLAYER_FACTION_GROUP[tag]
+ if type(name)=="string" and name~="" and (group~=nil or tag=="Neutral") then
+  races[raceID]={name=name,faction=group}
+ end
+ return name,group
+end
 -- 原生状态同步读取；下一次调度合并展示，并在原生事件回调结束后同步提醒。
 local function NotifyChanged(immediate)
  if immediate then
@@ -77,10 +94,9 @@ local function Read(id,activityID)
   else member.itemLevel,member.rating=G.Public(itemLevel),member.dungeonScore end
   member.assignedRole,member.specID,member.relationship=G.Public(role),G.Public(specID),G.Public(relationship)
   member.raceID=G.Public(raceID)
-  local race=member.raceID and C_CreatureInfo.GetRaceInfo(member.raceID)
-  local raceFaction=member.raceID and C_CreatureInfo.GetFactionInfo(member.raceID)
-  member.raceName=race and race.raceName
-  member.factionGroup=raceFaction and PLAYER_FACTION_GROUP[raceFaction.groupTag] or G.Public(factionGroup)
+  local raceName,raceFaction=Race(member.raceID)
+  member.raceName=raceName
+  member.factionGroup=raceFaction or G.Public(factionGroup)
   local requested=member.requestedRoles or {};member.requestedRoles=requested
   requested.TANK,requested.HEALER,requested.DAMAGER=G.Public(tank)==true,G.Public(healer)==true,G.Public(damage)==true
   member.isLeaver=G.Public(isLeaver)==true
@@ -212,6 +228,33 @@ local function DungeonRun(info,activityID)
  if type(duration)~="number" or duration<=0 or duration~=duration or duration==math.huge then duration=nil end
  return {activityID=activityID,name=name,level=level,timed=G.Public(info.finishedSuccess)==true,durationMs=duration}
 end
+-- Keep the latest successful listing-map and best-run-name lookups. The best
+-- summary has no map ID, so only an exact native name with one limit is usable.
+local limitMapID,limitSeconds,bestLimitName,bestLimitSeconds
+local function ResolveTimeLimit(run)
+ if not run or not run.durationMs or run.timeLimitSeconds then return end
+ local activity=run.activityID and G.Catalog:GetActivity(run.activityID)
+ local mapID=activity and G.Public(activity.mapID)
+ if run.activityID then
+  if type(mapID)~="number" or mapID<=0 then return end
+  if limitMapID==mapID then run.timeLimitSeconds=limitSeconds;return end
+ elseif bestLimitName==run.name then run.timeLimitSeconds=bestLimitSeconds;return end
+ local found
+ for _,challengeID in ipairs(G.Public(C_ChallengeMode.GetMapTable()) or {}) do
+  local name,_,seconds,_,_,gameMapID=C_ChallengeMode.GetMapUIInfo(challengeID)
+  name,seconds,gameMapID=G.Public(name),G.Public(seconds),G.Public(gameMapID)
+  local matches=run.activityID and gameMapID==mapID or not run.activityID and name==run.name
+  if matches and type(seconds)=="number" and seconds>0 and seconds<math.huge then
+   if found and found~=seconds then return end
+   found=seconds
+   if run.activityID then break end
+  end
+ end
+ if not found then return end
+ run.timeLimitSeconds=found
+ if run.activityID then limitMapID,limitSeconds=mapID,found
+ else bestLimitName,bestLimitSeconds=run.name,found end
+end
 function Applicants:GetDungeonScores(member,currentOnly)
  local record=records[member.applicantID]
  if not record or record.members[member.applicantIndex]~=member then return nil end
@@ -228,33 +271,17 @@ function Applicants:GetDungeonScores(member,currentOnly)
   scores.best=DungeonRun(G.Public(C_LFGList.GetApplicantBestDungeonScore(id,index)))
   scores.bestLoaded=true
  end
+ if not currentOnly then ResolveTimeLimit(scores.current);ResolveTimeLimit(scores.best) end
  return scores
 end
--- One successful map lookup is enough for this listing; missing map data is
--- retried on the next explicit consumer request, without polling.
-local limitMapID,limitSeconds
+-- Missing limits retry only on the next explicit consumer request.
 function Applicants:GetTimeMargin(member)
  local scores=self:GetDungeonScores(member,true)
  if not scores then return nil,"unknown" end
  local run=scores.current
  if not run then return nil,scores.mapScore==0 and "none" or "unknown" end
  if not run.timed or not run.durationMs then return nil,"unavailable",run end
- if not run.timeLimitSeconds then
-  local activity=G.Catalog:GetActivity(run.activityID)
-  local mapID=activity and G.Public(activity.mapID)
-  if type(mapID)=="number" and mapID>0 then
-   if limitMapID~=mapID then
-    for _,challengeID in ipairs(G.Public(C_ChallengeMode.GetMapTable()) or {}) do
-     local _,_,seconds,_,_,gameMapID=C_ChallengeMode.GetMapUIInfo(challengeID)
-     seconds,gameMapID=G.Public(seconds),G.Public(gameMapID)
-     if gameMapID==mapID and type(seconds)=="number" and seconds>0 and seconds<math.huge then
-      limitMapID,limitSeconds=mapID,seconds;break
-     end
-    end
-   end
-   if limitMapID==mapID then run.timeLimitSeconds=limitSeconds end
-  end
- end
+ ResolveTimeLimit(run)
  if not run.timeLimitSeconds then return nil,"unknown",run end
  return run.timeLimitSeconds-run.durationMs/1000,"known",run
 end

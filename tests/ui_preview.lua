@@ -100,7 +100,7 @@ G.listing.activityID=1;for _,app in pairs(G.applicants) do app.activityID=1 end;
 U.Tooltip:ShowPlayer(U.pages.create.batchPool[1].people[1],mainApplicant.members[1]);snapshot("团队申请者个人详情");U.Tooltip:Hide()
 G.listing.activityID=2;for _,app in pairs(G.applicants) do app.activityID=2 end;G:Notify("listing")
 mainApplicant.members[1].itemLevel=326;mainApplicant.members[1].dungeonScore=3641
-mainApplicant.members[1].dungeonScores={mapScore=456,current={name="红玉新生法池",level=18,timed=true},best={name="毒牙洞窟",level=19,timed=false}}
+mainApplicant.members[1].dungeonScores={mapScore=456,current={name="红玉新生法池",level=18,timed=true,durationMs=1952000,timeLimitSeconds=1980},best={name="毒牙洞窟",level=19,timed=false,durationMs=1900000,timeLimitSeconds=1800}}
 U.Tooltip:ShowPlayer(U.pages.create.batchPool[1].people[1],mainApplicant.members[1]);snapshot("申请者大秘境纪录");U.Tooltip:Hide()
 A:Open("notes");U.pages.notes:OpenEdit("晚风听雨-晨风号角");snapshot("荔枝笔记")
 local notes=U.pages.notes;notes.list.clip.mouseOver=true;notes.list.rows[3]:Fire("OnEnter");snapshot("笔记列表悬停");notes.list.rows[3]:Fire("OnLeave");notes.list.clip.mouseOver=nil

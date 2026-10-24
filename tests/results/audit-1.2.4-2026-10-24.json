@@ -1,0 +1,2300 @@
+{
+  "schema": "lycheegroup.audit.v1",
+  "date": "2026-10-24",
+  "baseline": "23bbdb24b5ad475534bb786a339c1874264d13a0",
+  "candidate": "Uncommitted audit fixes on codex/lycheeui-style-api; exact deployed files below",
+  "scope": {
+    "runtimeLuaFiles": 68,
+    "runtimeLuaPaths": [
+      "addon/LycheeGroup/Adapters/Rurutia.lua",
+      "addon/LycheeGroup/Adapters/SEUI.lua",
+      "addon/LycheeGroup/API.lua",
+      "addon/LycheeGroup/Appearance.lua",
+      "addon/LycheeGroup/Bindings.lua",
+      "addon/LycheeGroup/BrandMotion.lua",
+      "addon/LycheeGroup/Configuration.lua",
+      "addon/LycheeGroup/Core.lua",
+      "addon/LycheeGroup/Entrypoints.lua",
+      "addon/LycheeGroup/Floating.lua",
+      "addon/LycheeGroup/Fonts.lua",
+      "addon/LycheeGroup/Libs/LycheeUI/Components.lua",
+      "addon/LycheeGroup/Libs/LycheeUI/Core.lua",
+      "addon/LycheeGroup/Libs/LycheeUI/Elements.lua",
+      "addon/LycheeGroup/Libs/LycheeUI/Layouts.lua",
+      "addon/LycheeGroup/Libs/LycheeUI/Menu.lua",
+      "addon/LycheeGroup/Libs/LycheeUI/Motion.lua",
+      "addon/LycheeGroup/Libs/LycheeUI/Native.lua",
+      "addon/LycheeGroup/Libs/LycheeUI/Styles.lua",
+      "addon/LycheeGroup/Libs/LycheeUI/Theme.lua",
+      "addon/LycheeGroup/Locale.lua",
+      "addon/LycheeGroup/Minimap.lua",
+      "addon/LycheeGroup/PartyRoleCheck.lua",
+      "addon/LycheeGroup/Presentation.lua",
+      "addon/LycheeGroup/Specializations.lua",
+      "addon/LycheeGroup/Theme/Defaults.lua",
+      "addon/LycheeGroup/Theme/Elements.lua",
+      "addon/LycheeGroup/Theme/FindElements.lua",
+      "addon/LycheeGroup/Theme/Import.lua",
+      "addon/LycheeGroup_Group/Alerts.lua",
+      "addon/LycheeGroup_Group/Applicants.lua",
+      "addon/LycheeGroup_Group/Applications.lua",
+      "addon/LycheeGroup_Group/Catalog.lua",
+      "addon/LycheeGroup_Group/CreationPresets.lua",
+      "addon/LycheeGroup_Group/Game.lua",
+      "addon/LycheeGroup_Group/Group.lua",
+      "addon/LycheeGroup_Group/History.lua",
+      "addon/LycheeGroup_Group/Libs/LibSpecialization/LibSpecialization.lua",
+      "addon/LycheeGroup_Group/Libs/LibStub/LibStub.lua",
+      "addon/LycheeGroup_Group/Listing.lua",
+      "addon/LycheeGroup_Group/Locale.lua",
+      "addon/LycheeGroup_Group/RaidBuffs.lua",
+      "addon/LycheeGroup_Group/Relations.lua",
+      "addon/LycheeGroup_Group/Results.lua",
+      "addon/LycheeGroup_Group/Roster.lua",
+      "addon/LycheeGroup_Group/Search.lua",
+      "addon/LycheeGroup_Notes/Locale.lua",
+      "addon/LycheeGroup_Notes/Notes.lua",
+      "addon/LycheeGroup_Notes/PlayerInfo.lua",
+      "addon/LycheeGroup_Notes/Records.lua",
+      "addon/LycheeGroup_Notes/RosterReminder.lua",
+      "addon/LycheeGroup_UI/Application.lua",
+      "addon/LycheeGroup_UI/Components.lua",
+      "addon/LycheeGroup_UI/Create.lua",
+      "addon/LycheeGroup_UI/Elements.lua",
+      "addon/LycheeGroup_UI/Find.lua",
+      "addon/LycheeGroup_UI/Host.lua",
+      "addon/LycheeGroup_UI/Locale.lua",
+      "addon/LycheeGroup_UI/Members.lua",
+      "addon/LycheeGroup_UI/Motion.lua",
+      "addon/LycheeGroup_UI/Native.lua",
+      "addon/LycheeGroup_UI/Notes.lua",
+      "addon/LycheeGroup_UI/Preview.lua",
+      "addon/LycheeGroup_UI/Resize.lua",
+      "addon/LycheeGroup_UI/Settings.lua",
+      "addon/LycheeGroup_UI/Theme.lua",
+      "addon/LycheeGroup_UI/Tooltip.lua",
+      "addon/LycheeGroup_UI/Transfer.lua"
+    ],
+    "recentRange": "33f0e65..23bbdb2",
+    "recentChangedLuaFiles": 19,
+    "recentChangedLuaPaths": [
+      "addon/LycheeGroup/Adapters/Rurutia.lua",
+      "addon/LycheeGroup/Adapters/SEUI.lua",
+      "addon/LycheeGroup/Appearance.lua",
+      "addon/LycheeGroup/Floating.lua",
+      "addon/LycheeGroup/PartyRoleCheck.lua",
+      "addon/LycheeGroup/Theme/Defaults.lua",
+      "addon/LycheeGroup/Theme/Elements.lua",
+      "addon/LycheeGroup/Theme/FindElements.lua",
+      "addon/LycheeGroup_Group/Applicants.lua",
+      "addon/LycheeGroup_Group/Applications.lua",
+      "addon/LycheeGroup_Group/Group.lua",
+      "addon/LycheeGroup_Group/Listing.lua",
+      "addon/LycheeGroup_Group/Results.lua",
+      "addon/LycheeGroup_UI/Create.lua",
+      "addon/LycheeGroup_UI/Find.lua",
+      "addon/LycheeGroup_UI/Notes.lua",
+      "addon/LycheeGroup_UI/Preview.lua",
+      "addon/LycheeGroup_UI/Settings.lua",
+      "addon/LycheeGroup_UI/Tooltip.lua"
+    ],
+    "reviewedAreas": [
+      "四包运行代码和加载关系",
+      "共享库冻结副本与两个第三方 Lua 依赖",
+      "事件、计时、动画、缓存、池复用、搜索、招募、申请、笔记、主题和宿主适配",
+      "维护测试、构建入口、死入口与正式文档"
+    ]
+  },
+  "findings": [
+    {
+      "id": "minimap-theme-copy",
+      "origin": "legacy at 33f0e65",
+      "file": "addon/LycheeGroup/Minimap.lua",
+      "problem": "默认小地图入口重复解析并保留完整启动主题。",
+      "fix": "复用 Appearance 已解析主题；存在独立 Context 时继续使用其 Theme。",
+      "rules": [
+        "Development.md §2",
+        "Development.md §5"
+      ],
+      "evidence": "额外 ResolveTheme 从 1 次降至 0，避免重复保留 1152 字段解析表。"
+    },
+    {
+      "id": "applicant-race-query",
+      "origin": "legacy before 33f0e65",
+      "file": "addon/LycheeGroup_Group/Applicants.lua",
+      "problem": "每次申请者刷新按成员重复查询不变的种族名称和固定阵营。",
+      "fix": "仅缓存成功解析的原生种族资料；中立种族继续使用当次成员阵营，暂缺资料下次重试。",
+      "rules": [
+        "Development.md §5",
+        "perfermance.md §8"
+      ],
+      "evidence": {
+        "fixtureMembersSameRace": 250,
+        "beforeFirstCalls": [
+          250,
+          250
+        ],
+        "afterFirstCalls": [
+          1,
+          1
+        ],
+        "beforeRepeatCalls": [
+          250,
+          250
+        ],
+        "afterRepeatCalls": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "hidden-application-display",
+      "origin": "legacy before 33f0e65",
+      "file": "addon/LycheeGroup_UI/Find.lua",
+      "problem": "离页后偏好重排可重新创建申请展示和倒计时；关闭动画期间旧计时仍可写文字。",
+      "fix": "隐藏或退场时停止展示刷新；重新进入按真实状态恢复。",
+      "rules": [
+        "Development.md §6",
+        "perfermance.md §3"
+      ],
+      "evidence": "离线真实 Applications 回归和原生 Preview 的离页、退场冻结、快速重开及关闭清理通过。"
+    },
+    {
+      "id": "notes-feedback-layout",
+      "origin": "introduced in 23bbdb2 after 33f0e65",
+      "file": "addon/LycheeGroup_UI/Notes.lua",
+      "problem": "重开编辑器先按旧反馈布局；原生空 FontString 返回 nil 时还额外预留 8 像素。",
+      "fix": "清空反馈后再布局，nil 与空串均不占反馈空间。",
+      "rules": [
+        "Development.md §3",
+        "Development.md §5"
+      ],
+      "evidence": "双语 70/100/130 字号的新增、编辑、错误后重开、保存后重开和原生 nil 回归通过；原生检查确认 100/130 字号理由区恢复 8 像素。"
+    }
+  ],
+  "counts": {
+    "confirmedRuntimeProblems": 4,
+    "recentRuntimeProblems": 1,
+    "legacyRuntimeProblems": 3,
+    "testOnlyUnusedAllocationsRemoved": 1,
+    "obsoleteDocumentationCategories": 2,
+    "finalReviewNewProblems": 0,
+    "remainingConfirmedProblems": 0
+  },
+  "deadCode": {
+    "removed": "tests/measure_ui_cycles.lua 的两个局部变量初始化移除第三个无用空表。",
+    "runtimeFunctionsRemoved": 0,
+    "unloadedRuntimeLuaFound": 0,
+    "scope": "静态引用与 TOC/XML 加载链检查；公开 API、事件入口、动态方法调用按实际消费者核对。"
+  },
+  "documentation": {
+    "corrected": [
+      "tests/theme_reload.md 的 API v2 未发布状态",
+      "README.md 与 README.en.md 将旧 main 对照改为历史架构改造基准"
+    ],
+    "linkAudit": {
+      "canonicalDocuments": 16,
+      "localLinksChecked": 305,
+      "brokenCanonicalLinks": 0,
+      "externalSiblingValid": 27,
+      "localIgnoredEvidenceOnly": 17,
+      "missing": []
+    },
+    "maintained": [
+      "Architecture.md",
+      "perfermance.md",
+      "CHANGELOG.md",
+      "tests/theme_reload.md"
+    ]
+  },
+  "rejectedCandidate": {
+    "change": "按文字/字体键跳过筛选 caption 重测",
+    "reason": "原生字形可能迟到；维护的 filter-layout 测试复现裁切，候选及其计数测试已全部撤回。",
+    "countedAsFix": false
+  },
+  "offline": {
+    "runnerModules": 22,
+    "runnerAssertions": 13959,
+    "runnerFailures": 0,
+    "layoutScripts": 16,
+    "layoutFailures": 0,
+    "runtimeSyntaxFiles": 68,
+    "runtimeSyntaxFailures": 0,
+    "equivalence": {
+      "baseline": "23bbdb24b5ad475534bb786a339c1874264d13a0",
+      "count": 41,
+      "equal": 41,
+      "changed": [],
+      "extra": []
+    },
+    "sharedLibrary": {
+      "version": "1.3.0",
+      "revision": 35,
+      "frozenFilesVerified": 30,
+      "mismatches": 0
+    },
+    "objectReuseDiagnostic": {
+      "cycles": 12,
+      "nodes": 2259,
+      "fonts": 396,
+      "elements": 304,
+      "controllers": 25,
+      "records": 27,
+      "layouts": 45,
+      "inputs": 12,
+      "afterWarmupStable": true,
+      "scope": "离线替身的自然测量诊断，不作为客户端内存读数。"
+    },
+    "nilFeedbackRegression": {
+      "red": "resize: expected 160 +/- 0.001, got 135.2",
+      "green": "Included in final 13959 assertion runner"
+    }
+  },
+  "native": {
+    "connection": "CON-d9149a7c11168c2a62f1814602d0076d",
+    "build": "12.1.5.70575",
+    "memory": {
+      "operation": "LMO-8402e5eb191219ef99a2e2b71a19792c",
+      "request": "audit124-final-empty-feedback-memory",
+      "origin": {
+        "schema": "Lycheedev mailbox protocol v1",
+        "runtime": "0000000600035eae1d5758cee80cd1b5",
+        "owner": "d9149a7c11168c2a62f1814602d0076d",
+        "fence": 1,
+        "nextSlot": 2,
+        "slots": 500,
+        "inventory": 500,
+        "inputState": "Lycheedev mailbox protocol v1",
+        "character": "灵止光",
+        "realm": "死亡之翼",
+        "guid": "Player-741-066A34E3",
+        "build": "12.1.5.70575",
+        "product": "retail",
+        "release": "3.2.5"
+      },
+      "reportState": "verified",
+      "cleanup": "complete",
+      "reportChecksum": 2629804196,
+      "probeSHA256": "0c0957e7b7c9631de4e89bda05830ad5543db10bf933c18a78089f3989bbba85",
+      "report": {
+        "logs": {},
+        "ok": true,
+        "resourcesReleased": true,
+        "result": {
+          "accountUnchanged": true,
+          "budget": 20000000,
+          "budgetPassed": true,
+          "build": "70575",
+          "characterUnchanged": true,
+          "cycles": [
+            {
+              "count": 38,
+              "filtered": 38,
+              "generation": 3,
+              "label": "cycle_1_find",
+              "state": "done",
+              "visible": 10,
+              "waits": 2
+            },
+            {
+              "count": 38,
+              "filtered": 38,
+              "generation": 5,
+              "label": "cycle_2_find",
+              "state": "done",
+              "visible": 10,
+              "waits": 2
+            },
+            {
+              "count": 38,
+              "filtered": 38,
+              "generation": 7,
+              "label": "cycle_3_find",
+              "state": "done",
+              "visible": 10,
+              "waits": 2
+            },
+            {
+              "count": 38,
+              "filtered": 38,
+              "generation": 9,
+              "label": "cycle_4_find",
+              "state": "done",
+              "visible": 10,
+              "waits": 2
+            },
+            {
+              "count": 38,
+              "filtered": 38,
+              "generation": 11,
+              "label": "cycle_5_find",
+              "state": "done",
+              "visible": 10,
+              "waits": 2
+            },
+            {
+              "count": 36,
+              "filtered": 36,
+              "generation": 13,
+              "label": "cycle_6_find",
+              "state": "done",
+              "visible": 10,
+              "waits": 2
+            },
+            {
+              "count": 35,
+              "filtered": 35,
+              "generation": 15,
+              "label": "cycle_7_find",
+              "state": "done",
+              "visible": 10,
+              "waits": 2
+            },
+            {
+              "count": 35,
+              "filtered": 35,
+              "generation": 17,
+              "label": "cycle_8_find",
+              "state": "done",
+              "visible": 10,
+              "waits": 2
+            },
+            {
+              "count": 35,
+              "filtered": 35,
+              "generation": 19,
+              "label": "cycle_9_find",
+              "state": "done",
+              "visible": 10,
+              "waits": 2
+            },
+            {
+              "count": 36,
+              "filtered": 36,
+              "generation": 21,
+              "label": "cycle_10_find",
+              "state": "done",
+              "visible": 10,
+              "waits": 2
+            },
+            {
+              "count": 36,
+              "filtered": 36,
+              "generation": 23,
+              "label": "cycle_11_find",
+              "state": "done",
+              "visible": 10,
+              "waits": 2
+            },
+            {
+              "count": 37,
+              "filtered": 37,
+              "generation": 25,
+              "label": "cycle_12_find",
+              "state": "done",
+              "visible": 10,
+              "waits": 2
+            }
+          ],
+          "elapsedSeconds": 58.180999999982305,
+          "finalPools": {
+            "applications": 2,
+            "find": 12,
+            "floatingBatches": 0,
+            "floatingRows": 0
+          },
+          "fontChanges": 12,
+          "initialFloatingPool": 0,
+          "listingUnchanged": true,
+          "mainBuiltAtStart": false,
+          "nativeClicks": 57,
+          "peakBytes": 10626587,
+          "realResult": 712,
+          "resourcesReleased": true,
+          "revision": 35,
+          "samples": [
+            {
+              "bytes": 2078426,
+              "elapsedSeconds": 0,
+              "label": "before_main_open",
+              "luaHeapKiB": 501333.7119140625,
+              "observerRefreshMs": 63.03549998998642,
+              "packages": {
+                "LycheeGroup": 2035030,
+                "LycheeGroup_Group": 0,
+                "LycheeGroup_Notes": 43396,
+                "LycheeGroup_UI": 0
+              }
+            },
+            {
+              "bytes": 7493458,
+              "elapsedSeconds": 0,
+              "label": "first_find",
+              "luaHeapKiB": 507743.5888671875,
+              "observerRefreshMs": 64.14609998464584,
+              "packages": {
+                "LycheeGroup": 2035366,
+                "LycheeGroup_Group": 989754,
+                "LycheeGroup_Notes": 43420,
+                "LycheeGroup_UI": 4424918
+              }
+            },
+            {
+              "bytes": 4688093,
+              "elapsedSeconds": 2.017999999981839,
+              "label": "real_results_tooltip",
+              "luaHeapKiB": 474788.41796875,
+              "observerRefreshMs": 70.3836000263691,
+              "packages": {
+                "LycheeGroup": 2064579,
+                "LycheeGroup_Group": 552913,
+                "LycheeGroup_Notes": 43420,
+                "LycheeGroup_UI": 2027181
+              }
+            },
+            {
+              "bytes": 5620423,
+              "elapsedSeconds": 3.554999999993015,
+              "label": "settings_general",
+              "luaHeapKiB": 476079.1328125,
+              "observerRefreshMs": 61.56800001859665,
+              "packages": {
+                "LycheeGroup": 2093779,
+                "LycheeGroup_Group": 552913,
+                "LycheeGroup_Notes": 43420,
+                "LycheeGroup_UI": 2930311
+              }
+            },
+            {
+              "bytes": 5630071,
+              "elapsedSeconds": 4.324999999982538,
+              "label": "settings_interface",
+              "luaHeapKiB": 476202.4873046875,
+              "observerRefreshMs": 64.9185999929905,
+              "packages": {
+                "LycheeGroup": 2097667,
+                "LycheeGroup_Group": 552913,
+                "LycheeGroup_Notes": 43420,
+                "LycheeGroup_UI": 2936071
+              }
+            },
+            {
+              "bytes": 5637839,
+              "elapsedSeconds": 5.098999999987427,
+              "label": "settings_browse",
+              "luaHeapKiB": 476314.7529296875,
+              "observerRefreshMs": 63.82150000333786,
+              "packages": {
+                "LycheeGroup": 2101555,
+                "LycheeGroup_Group": 552913,
+                "LycheeGroup_Notes": 43420,
+                "LycheeGroup_UI": 2939951
+              }
+            },
+            {
+              "bytes": 5646703,
+              "elapsedSeconds": 5.870999999984633,
+              "label": "settings_memberIcons",
+              "luaHeapKiB": 476455.064453125,
+              "observerRefreshMs": 64.40279999375343,
+              "packages": {
+                "LycheeGroup": 2105443,
+                "LycheeGroup_Group": 552913,
+                "LycheeGroup_Notes": 43420,
+                "LycheeGroup_UI": 2944927
+              }
+            },
+            {
+              "bytes": 5783409,
+              "elapsedSeconds": 6.647999999986496,
+              "label": "settings_blocks",
+              "luaHeapKiB": 476745.75390625,
+              "observerRefreshMs": 67.27189999818802,
+              "packages": {
+                "LycheeGroup": 2110127,
+                "LycheeGroup_Group": 553137,
+                "LycheeGroup_Notes": 43420,
+                "LycheeGroup_UI": 3076725
+              }
+            },
+            {
+              "bytes": 5791009,
+              "elapsedSeconds": 7.426000000006752,
+              "label": "settings_notes",
+              "luaHeapKiB": 476808.9814453125,
+              "observerRefreshMs": 65.15049999952316,
+              "packages": {
+                "LycheeGroup": 2114015,
+                "LycheeGroup_Group": 553137,
+                "LycheeGroup_Notes": 43420,
+                "LycheeGroup_UI": 3080437
+              }
+            },
+            {
+              "bytes": 5799649,
+              "elapsedSeconds": 8.201000000000931,
+              "label": "settings_floating",
+              "luaHeapKiB": 476930.7255859375,
+              "observerRefreshMs": 63.00619998574257,
+              "packages": {
+                "LycheeGroup": 2117903,
+                "LycheeGroup_Group": 553137,
+                "LycheeGroup_Notes": 43420,
+                "LycheeGroup_UI": 3085189
+              }
+            },
+            {
+              "bytes": 5809986,
+              "elapsedSeconds": 8.972999999998137,
+              "label": "settings_about",
+              "luaHeapKiB": 477224.58203125,
+              "observerRefreshMs": 73.60809999704361,
+              "packages": {
+                "LycheeGroup": 2121791,
+                "LycheeGroup_Group": 553137,
+                "LycheeGroup_Notes": 43420,
+                "LycheeGroup_UI": 3091638
+              }
+            },
+            {
+              "bytes": 5845490,
+              "elapsedSeconds": 9.72500000000582,
+              "label": "cycle_1_find_waiting_1",
+              "luaHeapKiB": 477371.2939453125,
+              "observerRefreshMs": 61.413599997758865,
+              "packages": {
+                "LycheeGroup": 2135831,
+                "LycheeGroup_Group": 554809,
+                "LycheeGroup_Notes": 43548,
+                "LycheeGroup_UI": 3111302
+              }
+            },
+            {
+              "bytes": 5845490,
+              "elapsedSeconds": 10.22500000000582,
+              "label": "cycle_1_find_waiting_2",
+              "luaHeapKiB": 477426.3232421875,
+              "observerRefreshMs": 64.36689999699593,
+              "packages": {
+                "LycheeGroup": 2135831,
+                "LycheeGroup_Group": 554809,
+                "LycheeGroup_Notes": 43548,
+                "LycheeGroup_UI": 3111302
+              }
+            },
+            {
+              "bytes": 6000717,
+              "elapsedSeconds": 10.728000000002794,
+              "label": "cycle_1_find",
+              "luaHeapKiB": 478416.36328125,
+              "observerRefreshMs": 62.28709998726845,
+              "packages": {
+                "LycheeGroup": 2135941,
+                "LycheeGroup_Group": 699177,
+                "LycheeGroup_Notes": 43548,
+                "LycheeGroup_UI": 3122051
+              }
+            },
+            {
+              "bytes": 6643149,
+              "elapsedSeconds": 11.487999999983003,
+              "label": "cycle_1_create",
+              "luaHeapKiB": 479586.1298828125,
+              "observerRefreshMs": 63.40749999880791,
+              "packages": {
+                "LycheeGroup": 2169937,
+                "LycheeGroup_Group": 820921,
+                "LycheeGroup_Notes": 43676,
+                "LycheeGroup_UI": 3608615
+              }
+            },
+            {
+              "bytes": 7100159,
+              "elapsedSeconds": 12.269000000000233,
+              "label": "cycle_1_notes",
+              "luaHeapKiB": 480346.59765625,
+              "observerRefreshMs": 65.67710000276566,
+              "packages": {
+                "LycheeGroup": 2178767,
+                "LycheeGroup_Group": 821889,
+                "LycheeGroup_Notes": 46764,
+                "LycheeGroup_UI": 4052739
+              }
+            },
+            {
+              "bytes": 7142008,
+              "elapsedSeconds": 13.040999999997439,
+              "label": "cycle_1_settings",
+              "luaHeapKiB": 480515.6572265625,
+              "observerRefreshMs": 62.6012000143528,
+              "packages": {
+                "LycheeGroup": 2189439,
+                "LycheeGroup_Group": 822857,
+                "LycheeGroup_Notes": 46764,
+                "LycheeGroup_UI": 4082948
+              }
+            },
+            {
+              "bytes": 7181688,
+              "elapsedSeconds": 13.817999999999302,
+              "label": "cycle_2_find_waiting_1",
+              "luaHeapKiB": 480662.6689453125,
+              "observerRefreshMs": 62.47679999470711,
+              "packages": {
+                "LycheeGroup": 2203479,
+                "LycheeGroup_Group": 824529,
+                "LycheeGroup_Notes": 46892,
+                "LycheeGroup_UI": 4106788
+              }
+            },
+            {
+              "bytes": 7181688,
+              "elapsedSeconds": 14.320000000006985,
+              "label": "cycle_2_find_waiting_2",
+              "luaHeapKiB": 480677.87109375,
+              "observerRefreshMs": 65.97410002350807,
+              "packages": {
+                "LycheeGroup": 2203479,
+                "LycheeGroup_Group": 824529,
+                "LycheeGroup_Notes": 46892,
+                "LycheeGroup_UI": 4106788
+              }
+            },
+            {
+              "bytes": 7332928,
+              "elapsedSeconds": 14.824999999982538,
+              "label": "cycle_2_find",
+              "luaHeapKiB": 481659.8984375,
+              "observerRefreshMs": 69.68489998579025,
+              "packages": {
+                "LycheeGroup": 2203479,
+                "LycheeGroup_Group": 968897,
+                "LycheeGroup_Notes": 46892,
+                "LycheeGroup_UI": 4113660
+              }
+            },
+            {
+              "bytes": 7406912,
+              "elapsedSeconds": 15.606999999989057,
+              "label": "cycle_2_create",
+              "luaHeapKiB": 481884.4384765625,
+              "observerRefreshMs": 63.263300001621246,
+              "packages": {
+                "LycheeGroup": 2228647,
+                "LycheeGroup_Group": 981361,
+                "LycheeGroup_Notes": 47020,
+                "LycheeGroup_UI": 4149884
+              }
+            },
+            {
+              "bytes": 7417904,
+              "elapsedSeconds": 16.380000000004657,
+              "label": "cycle_2_notes",
+              "luaHeapKiB": 481917.5146484375,
+              "observerRefreshMs": 76.91830000281334,
+              "packages": {
+                "LycheeGroup": 2228831,
+                "LycheeGroup_Group": 982329,
+                "LycheeGroup_Notes": 50700,
+                "LycheeGroup_UI": 4156044
+              }
+            },
+            {
+              "bytes": 7458024,
+              "elapsedSeconds": 17.1589999999851,
+              "label": "cycle_2_settings",
+              "luaHeapKiB": 482066.4296875,
+              "observerRefreshMs": 66.53600001335144,
+              "packages": {
+                "LycheeGroup": 2239503,
+                "LycheeGroup_Group": 983297,
+                "LycheeGroup_Notes": 50700,
+                "LycheeGroup_UI": 4184524
+              }
+            },
+            {
+              "bytes": 7497704,
+              "elapsedSeconds": 17.940999999991618,
+              "label": "cycle_3_find_waiting_1",
+              "luaHeapKiB": 482212.37890625,
+              "observerRefreshMs": 65.87029999494553,
+              "packages": {
+                "LycheeGroup": 2253543,
+                "LycheeGroup_Group": 984969,
+                "LycheeGroup_Notes": 50828,
+                "LycheeGroup_UI": 4208364
+              }
+            },
+            {
+              "bytes": 7497704,
+              "elapsedSeconds": 18.445999999996275,
+              "label": "cycle_3_find_waiting_2",
+              "luaHeapKiB": 482227.3935546875,
+              "observerRefreshMs": 61.52480000257492,
+              "packages": {
+                "LycheeGroup": 2253543,
+                "LycheeGroup_Group": 984969,
+                "LycheeGroup_Notes": 50828,
+                "LycheeGroup_UI": 4208364
+              }
+            },
+            {
+              "bytes": 7652280,
+              "elapsedSeconds": 18.978999999992084,
+              "label": "cycle_3_find",
+              "luaHeapKiB": 483226.3427734375,
+              "observerRefreshMs": 60.59799998998642,
+              "packages": {
+                "LycheeGroup": 2253543,
+                "LycheeGroup_Group": 1132673,
+                "LycheeGroup_Notes": 50828,
+                "LycheeGroup_UI": 4215236
+              }
+            },
+            {
+              "bytes": 7726264,
+              "elapsedSeconds": 19.75,
+              "label": "cycle_3_create",
+              "luaHeapKiB": 483418.318359375,
+              "observerRefreshMs": 64.67120000720024,
+              "packages": {
+                "LycheeGroup": 2278711,
+                "LycheeGroup_Group": 1145137,
+                "LycheeGroup_Notes": 50956,
+                "LycheeGroup_UI": 4251460
+              }
+            },
+            {
+              "bytes": 7737256,
+              "elapsedSeconds": 20.52400000000489,
+              "label": "cycle_3_notes",
+              "luaHeapKiB": 483456.88671875,
+              "observerRefreshMs": 62.468100011348724,
+              "packages": {
+                "LycheeGroup": 2278895,
+                "LycheeGroup_Group": 1146105,
+                "LycheeGroup_Notes": 54636,
+                "LycheeGroup_UI": 4257620
+              }
+            },
+            {
+              "bytes": 7777376,
+              "elapsedSeconds": 21.288999999989755,
+              "label": "cycle_3_settings",
+              "luaHeapKiB": 483614.8271484375,
+              "observerRefreshMs": 62.78200000524521,
+              "packages": {
+                "LycheeGroup": 2289567,
+                "LycheeGroup_Group": 1147073,
+                "LycheeGroup_Notes": 54636,
+                "LycheeGroup_UI": 4286100
+              }
+            },
+            {
+              "bytes": 7817056,
+              "elapsedSeconds": 22.066999999980908,
+              "label": "cycle_4_find_waiting_1",
+              "luaHeapKiB": 483762.0634765625,
+              "observerRefreshMs": 69.41100001335144,
+              "packages": {
+                "LycheeGroup": 2303607,
+                "LycheeGroup_Group": 1148745,
+                "LycheeGroup_Notes": 54764,
+                "LycheeGroup_UI": 4309940
+              }
+            },
+            {
+              "bytes": 7817056,
+              "elapsedSeconds": 22.573999999993248,
+              "label": "cycle_4_find_waiting_2",
+              "luaHeapKiB": 483865.2578125,
+              "observerRefreshMs": 65.30750000476837,
+              "packages": {
+                "LycheeGroup": 2303607,
+                "LycheeGroup_Group": 1148745,
+                "LycheeGroup_Notes": 54764,
+                "LycheeGroup_UI": 4309940
+              }
+            },
+            {
+              "bytes": 7972948,
+              "elapsedSeconds": 23.081000000005588,
+              "label": "cycle_4_find",
+              "luaHeapKiB": 484764.490234375,
+              "observerRefreshMs": 65.2166000008583,
+              "packages": {
+                "LycheeGroup": 2306395,
+                "LycheeGroup_Group": 1293113,
+                "LycheeGroup_Notes": 54764,
+                "LycheeGroup_UI": 4318676
+              }
+            },
+            {
+              "bytes": 8046932,
+              "elapsedSeconds": 23.856999999989057,
+              "label": "cycle_4_create",
+              "luaHeapKiB": 484947.2705078125,
+              "observerRefreshMs": 69.5097000002861,
+              "packages": {
+                "LycheeGroup": 2331563,
+                "LycheeGroup_Group": 1305577,
+                "LycheeGroup_Notes": 54892,
+                "LycheeGroup_UI": 4354900
+              }
+            },
+            {
+              "bytes": 8057924,
+              "elapsedSeconds": 24.636999999987893,
+              "label": "cycle_4_notes",
+              "luaHeapKiB": 485069.4794921875,
+              "observerRefreshMs": 64.75,
+              "packages": {
+                "LycheeGroup": 2331747,
+                "LycheeGroup_Group": 1306545,
+                "LycheeGroup_Notes": 58572,
+                "LycheeGroup_UI": 4361060
+              }
+            },
+            {
+              "bytes": 8098044,
+              "elapsedSeconds": 25.402000000001863,
+              "label": "cycle_4_settings",
+              "luaHeapKiB": 485134.466796875,
+              "observerRefreshMs": 64.60710000991821,
+              "packages": {
+                "LycheeGroup": 2342419,
+                "LycheeGroup_Group": 1307513,
+                "LycheeGroup_Notes": 58572,
+                "LycheeGroup_UI": 4389540
+              }
+            },
+            {
+              "bytes": 8137724,
+              "elapsedSeconds": 26.180999999982305,
+              "label": "cycle_5_find_waiting_1",
+              "luaHeapKiB": 485281.666015625,
+              "observerRefreshMs": 68.1133000254631,
+              "packages": {
+                "LycheeGroup": 2356459,
+                "LycheeGroup_Group": 1309185,
+                "LycheeGroup_Notes": 58700,
+                "LycheeGroup_UI": 4413380
+              }
+            },
+            {
+              "bytes": 8137724,
+              "elapsedSeconds": 26.688999999983935,
+              "label": "cycle_5_find_waiting_2",
+              "luaHeapKiB": 485387.8759765625,
+              "observerRefreshMs": 61.668599992990494,
+              "packages": {
+                "LycheeGroup": 2356459,
+                "LycheeGroup_Group": 1309185,
+                "LycheeGroup_Notes": 58700,
+                "LycheeGroup_UI": 4413380
+              }
+            },
+            {
+              "bytes": 8288964,
+              "elapsedSeconds": 27.188999999983935,
+              "label": "cycle_5_find",
+              "luaHeapKiB": 486297.3876953125,
+              "observerRefreshMs": 65.45099997520447,
+              "packages": {
+                "LycheeGroup": 2356459,
+                "LycheeGroup_Group": 1453553,
+                "LycheeGroup_Notes": 58700,
+                "LycheeGroup_UI": 4420252
+              }
+            },
+            {
+              "bytes": 8362948,
+              "elapsedSeconds": 27.96700000000419,
+              "label": "cycle_5_create",
+              "luaHeapKiB": 486489.9453125,
+              "observerRefreshMs": 67.329499989748,
+              "packages": {
+                "LycheeGroup": 2381627,
+                "LycheeGroup_Group": 1466017,
+                "LycheeGroup_Notes": 58828,
+                "LycheeGroup_UI": 4456476
+              }
+            },
+            {
+              "bytes": 8373940,
+              "elapsedSeconds": 28.74299999998766,
+              "label": "cycle_5_notes",
+              "luaHeapKiB": 486617.193359375,
+              "observerRefreshMs": 65.24739998579025,
+              "packages": {
+                "LycheeGroup": 2381811,
+                "LycheeGroup_Group": 1466985,
+                "LycheeGroup_Notes": 62508,
+                "LycheeGroup_UI": 4462636
+              }
+            },
+            {
+              "bytes": 8414060,
+              "elapsedSeconds": 29.50999999998021,
+              "label": "cycle_5_settings",
+              "luaHeapKiB": 486675.1630859375,
+              "observerRefreshMs": 60.51929998397827,
+              "packages": {
+                "LycheeGroup": 2392483,
+                "LycheeGroup_Group": 1467953,
+                "LycheeGroup_Notes": 62508,
+                "LycheeGroup_UI": 4491116
+              }
+            },
+            {
+              "bytes": 8453740,
+              "elapsedSeconds": 30.285000000003492,
+              "label": "cycle_6_find_waiting_1",
+              "luaHeapKiB": 486821.7998046875,
+              "observerRefreshMs": 61.59839999675751,
+              "packages": {
+                "LycheeGroup": 2406523,
+                "LycheeGroup_Group": 1469625,
+                "LycheeGroup_Notes": 62636,
+                "LycheeGroup_UI": 4514956
+              }
+            },
+            {
+              "bytes": 8453740,
+              "elapsedSeconds": 30.785000000003492,
+              "label": "cycle_6_find_waiting_2",
+              "luaHeapKiB": 486929.322265625,
+              "observerRefreshMs": 60.40580001473427,
+              "packages": {
+                "LycheeGroup": 2406523,
+                "LycheeGroup_Group": 1469625,
+                "LycheeGroup_Notes": 62636,
+                "LycheeGroup_UI": 4514956
+              }
+            },
+            {
+              "bytes": 8603716,
+              "elapsedSeconds": 31.285000000003492,
+              "label": "cycle_6_find",
+              "luaHeapKiB": 487798.927734375,
+              "observerRefreshMs": 59.87899997830391,
+              "packages": {
+                "LycheeGroup": 2406560,
+                "LycheeGroup_Group": 1610633,
+                "LycheeGroup_Notes": 62636,
+                "LycheeGroup_UI": 4523887
+              }
+            },
+            {
+              "bytes": 8677700,
+              "elapsedSeconds": 32.055999999982305,
+              "label": "cycle_6_create",
+              "luaHeapKiB": 487982.5283203125,
+              "observerRefreshMs": 66.66999998688698,
+              "packages": {
+                "LycheeGroup": 2431728,
+                "LycheeGroup_Group": 1623097,
+                "LycheeGroup_Notes": 62764,
+                "LycheeGroup_UI": 4560111
+              }
+            },
+            {
+              "bytes": 8688692,
+              "elapsedSeconds": 32.83199999999488,
+              "label": "cycle_6_notes",
+              "luaHeapKiB": 488104.3623046875,
+              "observerRefreshMs": 62.92559999227524,
+              "packages": {
+                "LycheeGroup": 2431912,
+                "LycheeGroup_Group": 1624065,
+                "LycheeGroup_Notes": 66444,
+                "LycheeGroup_UI": 4566271
+              }
+            },
+            {
+              "bytes": 8728812,
+              "elapsedSeconds": 33.59799999999814,
+              "label": "cycle_6_settings",
+              "luaHeapKiB": 488240.87890625,
+              "observerRefreshMs": 61.11630001664162,
+              "packages": {
+                "LycheeGroup": 2442584,
+                "LycheeGroup_Group": 1625033,
+                "LycheeGroup_Notes": 66444,
+                "LycheeGroup_UI": 4594751
+              }
+            },
+            {
+              "bytes": 8768492,
+              "elapsedSeconds": 34.375,
+              "label": "cycle_7_find_waiting_1",
+              "luaHeapKiB": 488308.90625,
+              "observerRefreshMs": 63.872999995946884,
+              "packages": {
+                "LycheeGroup": 2456624,
+                "LycheeGroup_Group": 1626705,
+                "LycheeGroup_Notes": 66572,
+                "LycheeGroup_UI": 4618591
+              }
+            },
+            {
+              "bytes": 8768492,
+              "elapsedSeconds": 34.87799999999697,
+              "label": "cycle_7_find_waiting_2",
+              "luaHeapKiB": 488414.3662109375,
+              "observerRefreshMs": 63.847100019454956,
+              "packages": {
+                "LycheeGroup": 2456624,
+                "LycheeGroup_Group": 1626705,
+                "LycheeGroup_Notes": 66572,
+                "LycheeGroup_UI": 4618591
+              }
+            },
+            {
+              "bytes": 8923305,
+              "elapsedSeconds": 35.380999999993946,
+              "label": "cycle_7_find",
+              "luaHeapKiB": 489270.646484375,
+              "observerRefreshMs": 60.75030001997948,
+              "packages": {
+                "LycheeGroup": 2456624,
+                "LycheeGroup_Group": 1767689,
+                "LycheeGroup_Notes": 66572,
+                "LycheeGroup_UI": 4632420
+              }
+            },
+            {
+              "bytes": 8997289,
+              "elapsedSeconds": 36.15200000000186,
+              "label": "cycle_7_create",
+              "luaHeapKiB": 489455.5595703125,
+              "observerRefreshMs": 66.95730000734329,
+              "packages": {
+                "LycheeGroup": 2481792,
+                "LycheeGroup_Group": 1780153,
+                "LycheeGroup_Notes": 66700,
+                "LycheeGroup_UI": 4668644
+              }
+            },
+            {
+              "bytes": 9008281,
+              "elapsedSeconds": 36.929000000003725,
+              "label": "cycle_7_notes",
+              "luaHeapKiB": 489576.0810546875,
+              "observerRefreshMs": 62.84610000252724,
+              "packages": {
+                "LycheeGroup": 2481976,
+                "LycheeGroup_Group": 1781121,
+                "LycheeGroup_Notes": 70380,
+                "LycheeGroup_UI": 4674804
+              }
+            },
+            {
+              "bytes": 9048401,
+              "elapsedSeconds": 37.69999999998254,
+              "label": "cycle_7_settings",
+              "luaHeapKiB": 489717.30078125,
+              "observerRefreshMs": 65.19930002093315,
+              "packages": {
+                "LycheeGroup": 2492648,
+                "LycheeGroup_Group": 1782089,
+                "LycheeGroup_Notes": 70380,
+                "LycheeGroup_UI": 4703284
+              }
+            },
+            {
+              "bytes": 9088081,
+              "elapsedSeconds": 38.48299999997835,
+              "label": "cycle_8_find_waiting_1",
+              "luaHeapKiB": 489782.1875,
+              "observerRefreshMs": 62.76559999585152,
+              "packages": {
+                "LycheeGroup": 2506688,
+                "LycheeGroup_Group": 1783761,
+                "LycheeGroup_Notes": 70508,
+                "LycheeGroup_UI": 4727124
+              }
+            },
+            {
+              "bytes": 9088081,
+              "elapsedSeconds": 38.98399999999674,
+              "label": "cycle_8_find_waiting_2",
+              "luaHeapKiB": 490054.0751953125,
+              "observerRefreshMs": 64.85709998011589,
+              "packages": {
+                "LycheeGroup": 2506688,
+                "LycheeGroup_Group": 1783761,
+                "LycheeGroup_Notes": 70508,
+                "LycheeGroup_UI": 4727124
+              }
+            },
+            {
+              "bytes": 9229241,
+              "elapsedSeconds": 39.487999999983,
+              "label": "cycle_8_find",
+              "luaHeapKiB": 490881.7080078125,
+              "observerRefreshMs": 61.226199984550476,
+              "packages": {
+                "LycheeGroup": 2506688,
+                "LycheeGroup_Group": 1918049,
+                "LycheeGroup_Notes": 70508,
+                "LycheeGroup_UI": 4733996
+              }
+            },
+            {
+              "bytes": 9303225,
+              "elapsedSeconds": 40.2609999999986,
+              "label": "cycle_8_create",
+              "luaHeapKiB": 491074.91796875,
+              "observerRefreshMs": 63.94219997525215,
+              "packages": {
+                "LycheeGroup": 2531856,
+                "LycheeGroup_Group": 1930513,
+                "LycheeGroup_Notes": 70636,
+                "LycheeGroup_UI": 4770220
+              }
+            },
+            {
+              "bytes": 9314217,
+              "elapsedSeconds": 41.0339999999851,
+              "label": "cycle_8_notes",
+              "luaHeapKiB": 491206.47265625,
+              "observerRefreshMs": 67.0780000090599,
+              "packages": {
+                "LycheeGroup": 2532040,
+                "LycheeGroup_Group": 1931481,
+                "LycheeGroup_Notes": 74316,
+                "LycheeGroup_UI": 4776380
+              }
+            },
+            {
+              "bytes": 9354337,
+              "elapsedSeconds": 41.80100000000675,
+              "label": "cycle_8_settings",
+              "luaHeapKiB": 491355.3876953125,
+              "observerRefreshMs": 66.89340001344681,
+              "packages": {
+                "LycheeGroup": 2542712,
+                "LycheeGroup_Group": 1932449,
+                "LycheeGroup_Notes": 74316,
+                "LycheeGroup_UI": 4804860
+              }
+            },
+            {
+              "bytes": 9394017,
+              "elapsedSeconds": 42.58199999999488,
+              "label": "cycle_9_find_waiting_1",
+              "luaHeapKiB": 491500.1494140625,
+              "observerRefreshMs": 61.09810000658035,
+              "packages": {
+                "LycheeGroup": 2556752,
+                "LycheeGroup_Group": 1934121,
+                "LycheeGroup_Notes": 74444,
+                "LycheeGroup_UI": 4828700
+              }
+            },
+            {
+              "bytes": 9394017,
+              "elapsedSeconds": 43.08400000000256,
+              "label": "cycle_9_find_waiting_2",
+              "luaHeapKiB": 491528.875,
+              "observerRefreshMs": 64.3720999956131,
+              "packages": {
+                "LycheeGroup": 2556752,
+                "LycheeGroup_Group": 1934121,
+                "LycheeGroup_Notes": 74444,
+                "LycheeGroup_UI": 4828700
+              }
+            },
+            {
+              "bytes": 9545030,
+              "elapsedSeconds": 43.586999999999534,
+              "label": "cycle_9_find",
+              "luaHeapKiB": 492443.9638671875,
+              "observerRefreshMs": 66.14840000867844,
+              "packages": {
+                "LycheeGroup": 2556752,
+                "LycheeGroup_Group": 2071745,
+                "LycheeGroup_Notes": 74444,
+                "LycheeGroup_UI": 4842089
+              }
+            },
+            {
+              "bytes": 9619014,
+              "elapsedSeconds": 44.36499999999069,
+              "label": "cycle_9_create",
+              "luaHeapKiB": 492548.884765625,
+              "observerRefreshMs": 69.71979999542236,
+              "packages": {
+                "LycheeGroup": 2581920,
+                "LycheeGroup_Group": 2084209,
+                "LycheeGroup_Notes": 74572,
+                "LycheeGroup_UI": 4878313
+              }
+            },
+            {
+              "bytes": 9630342,
+              "elapsedSeconds": 45.14400000000023,
+              "label": "cycle_9_notes",
+              "luaHeapKiB": 492669.734375,
+              "observerRefreshMs": 67.17960000038147,
+              "packages": {
+                "LycheeGroup": 2582104,
+                "LycheeGroup_Group": 2085177,
+                "LycheeGroup_Notes": 78252,
+                "LycheeGroup_UI": 4884809
+              }
+            },
+            {
+              "bytes": 9670462,
+              "elapsedSeconds": 45.9199999999837,
+              "label": "cycle_9_settings",
+              "luaHeapKiB": 492817.9541015625,
+              "observerRefreshMs": 64.40099999308586,
+              "packages": {
+                "LycheeGroup": 2592776,
+                "LycheeGroup_Group": 2086145,
+                "LycheeGroup_Notes": 78252,
+                "LycheeGroup_UI": 4913289
+              }
+            },
+            {
+              "bytes": 9710142,
+              "elapsedSeconds": 46.69800000000396,
+              "label": "cycle_10_find_waiting_1",
+              "luaHeapKiB": 492958.2802734375,
+              "observerRefreshMs": 68.91159999370575,
+              "packages": {
+                "LycheeGroup": 2606816,
+                "LycheeGroup_Group": 2087817,
+                "LycheeGroup_Notes": 78380,
+                "LycheeGroup_UI": 4937129
+              }
+            },
+            {
+              "bytes": 9710142,
+              "elapsedSeconds": 47.20600000000559,
+              "label": "cycle_10_find_waiting_2",
+              "luaHeapKiB": 492982.6787109375,
+              "observerRefreshMs": 65.829499989748,
+              "packages": {
+                "LycheeGroup": 2606816,
+                "LycheeGroup_Group": 2087817,
+                "LycheeGroup_Notes": 78380,
+                "LycheeGroup_UI": 4937129
+              }
+            },
+            {
+              "bytes": 9872498,
+              "elapsedSeconds": 47.71099999998114,
+              "label": "cycle_10_find",
+              "luaHeapKiB": 493948.2197265625,
+              "observerRefreshMs": 63.32720002532005,
+              "packages": {
+                "LycheeGroup": 2609308,
+                "LycheeGroup_Group": 2232137,
+                "LycheeGroup_Notes": 78380,
+                "LycheeGroup_UI": 4952673
+              }
+            },
+            {
+              "bytes": 9946482,
+              "elapsedSeconds": 48.48499999998603,
+              "label": "cycle_10_create",
+              "luaHeapKiB": 494060.1748046875,
+              "observerRefreshMs": 67.01319998502731,
+              "packages": {
+                "LycheeGroup": 2634476,
+                "LycheeGroup_Group": 2244601,
+                "LycheeGroup_Notes": 78508,
+                "LycheeGroup_UI": 4988897
+              }
+            },
+            {
+              "bytes": 9957474,
+              "elapsedSeconds": 49.26199999998789,
+              "label": "cycle_10_notes",
+              "luaHeapKiB": 494192.611328125,
+              "observerRefreshMs": 61.42729997634888,
+              "packages": {
+                "LycheeGroup": 2634660,
+                "LycheeGroup_Group": 2245569,
+                "LycheeGroup_Notes": 82188,
+                "LycheeGroup_UI": 4995057
+              }
+            },
+            {
+              "bytes": 9997594,
+              "elapsedSeconds": 50.022999999986496,
+              "label": "cycle_10_settings",
+              "luaHeapKiB": 494352.48828125,
+              "observerRefreshMs": 62.123099982738495,
+              "packages": {
+                "LycheeGroup": 2645332,
+                "LycheeGroup_Group": 2246537,
+                "LycheeGroup_Notes": 82188,
+                "LycheeGroup_UI": 5023537
+              }
+            },
+            {
+              "bytes": 10037274,
+              "elapsedSeconds": 50.80100000000675,
+              "label": "cycle_11_find_waiting_1",
+              "luaHeapKiB": 494491.126953125,
+              "observerRefreshMs": 62.210299998521805,
+              "packages": {
+                "LycheeGroup": 2659372,
+                "LycheeGroup_Group": 2248209,
+                "LycheeGroup_Notes": 82316,
+                "LycheeGroup_UI": 5047377
+              }
+            },
+            {
+              "bytes": 10037274,
+              "elapsedSeconds": 51.30199999999604,
+              "label": "cycle_11_find_waiting_2",
+              "luaHeapKiB": 494515.525390625,
+              "observerRefreshMs": 64.52820000052452,
+              "packages": {
+                "LycheeGroup": 2659372,
+                "LycheeGroup_Group": 2248209,
+                "LycheeGroup_Notes": 82316,
+                "LycheeGroup_UI": 5047377
+              }
+            },
+            {
+              "bytes": 10183703,
+              "elapsedSeconds": 51.805999999982305,
+              "label": "cycle_11_find",
+              "luaHeapKiB": 495459.5712890625,
+              "observerRefreshMs": 69.8061999976635,
+              "packages": {
+                "LycheeGroup": 2659372,
+                "LycheeGroup_Group": 2385857,
+                "LycheeGroup_Notes": 82316,
+                "LycheeGroup_UI": 5056158
+              }
+            },
+            {
+              "bytes": 10257687,
+              "elapsedSeconds": 52.586999999999534,
+              "label": "cycle_11_create",
+              "luaHeapKiB": 495640.0869140625,
+              "observerRefreshMs": 75.41400000452995,
+              "packages": {
+                "LycheeGroup": 2684540,
+                "LycheeGroup_Group": 2398321,
+                "LycheeGroup_Notes": 82444,
+                "LycheeGroup_UI": 5092382
+              }
+            },
+            {
+              "bytes": 10268679,
+              "elapsedSeconds": 53.33999999999651,
+              "label": "cycle_11_notes",
+              "luaHeapKiB": 495682.4375,
+              "observerRefreshMs": 65.03260001540184,
+              "packages": {
+                "LycheeGroup": 2684724,
+                "LycheeGroup_Group": 2399289,
+                "LycheeGroup_Notes": 86124,
+                "LycheeGroup_UI": 5098542
+              }
+            },
+            {
+              "bytes": 10308799,
+              "elapsedSeconds": 54.10699999998906,
+              "label": "cycle_11_settings",
+              "luaHeapKiB": 495829.345703125,
+              "observerRefreshMs": 69.17519998550415,
+              "packages": {
+                "LycheeGroup": 2695396,
+                "LycheeGroup_Group": 2400257,
+                "LycheeGroup_Notes": 86124,
+                "LycheeGroup_UI": 5127022
+              }
+            },
+            {
+              "bytes": 10348479,
+              "elapsedSeconds": 54.85899999999674,
+              "label": "cycle_12_find_waiting_1",
+              "luaHeapKiB": 495967.2265625,
+              "observerRefreshMs": 62.90109997987747,
+              "packages": {
+                "LycheeGroup": 2709436,
+                "LycheeGroup_Group": 2401929,
+                "LycheeGroup_Notes": 86252,
+                "LycheeGroup_UI": 5150862
+              }
+            },
+            {
+              "bytes": 10348479,
+              "elapsedSeconds": 55.35999999998603,
+              "label": "cycle_12_find_waiting_2",
+              "luaHeapKiB": 495991.6953125,
+              "observerRefreshMs": 63.8154000043869,
+              "packages": {
+                "LycheeGroup": 2709436,
+                "LycheeGroup_Group": 2401929,
+                "LycheeGroup_Notes": 86252,
+                "LycheeGroup_UI": 5150862
+              }
+            },
+            {
+              "bytes": 10495883,
+              "elapsedSeconds": 55.861999999993714,
+              "label": "cycle_12_find",
+              "luaHeapKiB": 496925.310546875,
+              "observerRefreshMs": 69.91600000858307,
+              "packages": {
+                "LycheeGroup": 2709436,
+                "LycheeGroup_Group": 2542417,
+                "LycheeGroup_Notes": 86252,
+                "LycheeGroup_UI": 5157778
+              }
+            },
+            {
+              "bytes": 10569867,
+              "elapsedSeconds": 56.64299999998184,
+              "label": "cycle_12_create",
+              "luaHeapKiB": 497106.154296875,
+              "observerRefreshMs": 63.66600000858307,
+              "packages": {
+                "LycheeGroup": 2734604,
+                "LycheeGroup_Group": 2554881,
+                "LycheeGroup_Notes": 86380,
+                "LycheeGroup_UI": 5194002
+              }
+            },
+            {
+              "bytes": 10580859,
+              "elapsedSeconds": 57.41599999999744,
+              "label": "cycle_12_notes",
+              "luaHeapKiB": 497147.6220703125,
+              "observerRefreshMs": 63.81079998612404,
+              "packages": {
+                "LycheeGroup": 2734788,
+                "LycheeGroup_Group": 2555849,
+                "LycheeGroup_Notes": 90060,
+                "LycheeGroup_UI": 5200162
+              }
+            },
+            {
+              "bytes": 10620979,
+              "elapsedSeconds": 58.180999999982305,
+              "label": "cycle_12_settings",
+              "luaHeapKiB": 497294.5927734375,
+              "observerRefreshMs": 65.9341000020504,
+              "packages": {
+                "LycheeGroup": 2745460,
+                "LycheeGroup_Group": 2556817,
+                "LycheeGroup_Notes": 90060,
+                "LycheeGroup_UI": 5228642
+              }
+            },
+            {
+              "bytes": 10626587,
+              "elapsedSeconds": 58.180999999982305,
+              "label": "restored_natural",
+              "luaHeapKiB": 497302.5224609375,
+              "observerRefreshMs": 72.75839999318123,
+              "packages": {
+                "LycheeGroup": 2747380,
+                "LycheeGroup_Group": 2556817,
+                "LycheeGroup_Notes": 90060,
+                "LycheeGroup_UI": 5232330
+              }
+            }
+          ],
+          "scope": "native Button:Click navigation and public session font writes; no hardware dispatch, forced GC, GC-policy changes or protected business actions",
+          "search": [
+            {
+              "attempt": 1,
+              "count": 37,
+              "state": "done"
+            }
+          ],
+          "sessionRestored": true,
+          "stages": 56,
+          "themeAPI": 2
+        }
+      },
+      "summary": {
+        "peakBytes": 10626587,
+        "elapsedSeconds": 58.180999999982305,
+        "budget": 20000000,
+        "budgetPassed": true,
+        "mainBuiltAtStart": false,
+        "fontChanges": 12,
+        "nativeClicks": 57,
+        "accountUnchanged": true,
+        "characterUnchanged": true,
+        "sessionRestored": true,
+        "listingUnchanged": true,
+        "resourcesReleased": true,
+        "sampleCount": 84,
+        "cycleCount": 12,
+        "resultCountMin": 35,
+        "resultCountMax": 38,
+        "visibleRowsPerCycle": [
+          10
+        ],
+        "peakPackages": {
+          "LycheeGroup": 2747380,
+          "LycheeGroup_Group": 2556817,
+          "LycheeGroup_Notes": 90060,
+          "LycheeGroup_UI": 5232330
+        },
+        "observerRefreshMinMs": 59.87899997830391,
+        "observerRefreshMaxMs": 76.91830000281334,
+        "observerRefreshTotalMs": 5464.31489995122
+      }
+    },
+    "lifecycle": {
+      "operation": "LMO-dc97e4b1c5ce213c51d356eb7bd05c4c",
+      "request": "audit124-lifecycle-final",
+      "origin": {
+        "schema": "Lycheedev mailbox protocol v1",
+        "runtime": "0000000600035eae1d5758cee80cd1b5",
+        "owner": "d9149a7c11168c2a62f1814602d0076d",
+        "fence": 1,
+        "nextSlot": 6,
+        "slots": 500,
+        "inventory": 500,
+        "inputState": "Lycheedev mailbox protocol v1",
+        "character": "灵止光",
+        "realm": "死亡之翼",
+        "guid": "Player-741-066A34E3",
+        "build": "12.1.5.70575",
+        "product": "retail",
+        "release": "3.2.5"
+      },
+      "reportState": "verified",
+      "cleanup": "complete",
+      "reportChecksum": 1361896847,
+      "probeSHA256": "1d0e42f72b54ec31ff8e21cd020d1926a3db19afbd8ee0e0db8af630bc2f7068",
+      "report": {
+        "logs": [
+          "note_editor  70  nil  nil  160.00001525879  160.00001525879",
+          "note_editor  100  nil  nil  152.00012207031  152.00012207031",
+          "note_editor  130  nil  nil  123.20018005371  123.20018005371"
+        ],
+        "ok": true,
+        "resourcesReleased": true,
+        "result": {
+          "build": "70575",
+          "checks": 27,
+          "notes": [
+            {
+              "afterError": 160.00001525878906,
+              "reasonHeight": 160.00001525878906,
+              "scale": 70
+            },
+            {
+              "afterError": 152.0001220703125,
+              "reasonHeight": 152.0001220703125,
+              "scale": 100
+            },
+            {
+              "afterError": 123.20018005371094,
+              "reasonHeight": 123.20018005371094,
+              "scale": 130
+            }
+          ],
+          "notesBefore": 3,
+          "previewApplications": 3,
+          "realApplicationsBefore": 0,
+          "resourcesReleased": true,
+          "scope": "Native UI controllers and local Preview; real application submission, applicant race data and hardware input are not exercised.",
+          "version": "1.2.4"
+        }
+      }
+    },
+    "preFinalMemory": {
+      "operation": "LMO-21c76a44fa3b190f4ffd95dc3dd92313",
+      "peakBytes": 10653060,
+      "scope": "Before the native nil-feedback spacing repair; not used for final budget claim."
+    },
+    "correctedProbeAttempts": [
+      {
+        "operation": "LMO-0fb8dcf1680c3349400670cf47152638",
+        "request": "audit124-lifecycle-native",
+        "report": {
+          "error": "LycheeMemoryProbe:16: returning did not restore the application display",
+          "logs": {},
+          "ok": false,
+          "resourcesReleased": true
+        },
+        "cleanup": "complete",
+        "interpretation": "探针进入 Settings 会按产品合同退出 Preview；更正为保留 Preview 的 Create 路由。"
+      },
+      {
+        "operation": "LMO-2a508d085ed5d938d75d8fdf0f916c4b",
+        "request": "audit124-lifecycle-native-v2",
+        "report": {
+          "error": "LycheeMemoryProbe:16: new note kept old feedback space",
+          "logs": {},
+          "ok": false,
+          "resourcesReleased": true
+        },
+        "cleanup": "complete",
+        "interpretation": "探针将原生空 FontString 错判为必须返回空串；拆分文字和高度断言后确认 nil。"
+      }
+    ],
+    "nilObservationBeforeRepair": {
+      "operation": "LMO-212f55fe0e681c9e0559720156fcac91",
+      "request": "audit124-lifecycle-native-v3",
+      "origin": {
+        "schema": "Lycheedev mailbox protocol v1",
+        "runtime": "0000000500035c7c736799b63e153f79",
+        "owner": "d9149a7c11168c2a62f1814602d0076d",
+        "fence": 1,
+        "nextSlot": 14,
+        "slots": 500,
+        "inventory": 500,
+        "inputState": "Lycheedev mailbox protocol v1",
+        "character": "灵止光",
+        "realm": "死亡之翼",
+        "guid": "Player-741-066A34E3",
+        "build": "12.1.5.70575",
+        "product": "retail",
+        "release": "3.2.5"
+      },
+      "reportState": "verified",
+      "cleanup": "complete",
+      "reportChecksum": 2745624179,
+      "probeSHA256": "1d0e42f72b54ec31ff8e21cd020d1926a3db19afbd8ee0e0db8af630bc2f7068",
+      "report": {
+        "logs": [
+          "note_editor  70  nil  nil  160.00001525879  160.00001525879",
+          "note_editor  100  nil  nil  144.00009155273  144.00009155273",
+          "note_editor  130  nil  nil  115.20018768311  115.20018768311"
+        ],
+        "ok": true,
+        "resourcesReleased": true,
+        "result": {
+          "build": "70575",
+          "checks": 27,
+          "notes": [
+            {
+              "afterError": 160.00001525878906,
+              "reasonHeight": 160.00001525878906,
+              "scale": 70
+            },
+            {
+              "afterError": 144.00009155273438,
+              "reasonHeight": 144.00009155273438,
+              "scale": 100
+            },
+            {
+              "afterError": 115.20018768310547,
+              "reasonHeight": 115.20018768310547,
+              "scale": 130
+            }
+          ],
+          "notesBefore": 3,
+          "previewApplications": 3,
+          "realApplicationsBefore": 0,
+          "resourcesReleased": true,
+          "scope": "Native UI controllers and local Preview; real application submission, applicant race data and hardware input are not exercised.",
+          "version": "1.2.4"
+        }
+      }
+    },
+    "retainedErrors": {
+      "operation": "LMO-a114899aa23600e6b46c7e5f5d07feb2",
+      "availableCount": 500,
+      "requestedCount": 20,
+      "returnedCount": 20,
+      "session": 4557,
+      "complete": false,
+      "incompleteReasons": [
+        "error[5].stack",
+        "error[5].locals",
+        "error[18].stack",
+        "error[18].locals"
+      ],
+      "ordering": "provider_storage_reverse",
+      "providerVersion": "v12.1.1",
+      "scope": "provider_storage",
+      "currentSessionRowsInReturnedSlice": 0,
+      "productRowsInReturnedSlice": 0,
+      "reportOk": true,
+      "cleanup": "complete",
+      "scopeNote": "读取 provider 倒序 20/500 条历史记录，不把该切片解释为全部会话的零错误证明。"
+    },
+    "disconnect": {
+      "closed": true,
+      "bound": false,
+      "cleanup": "complete",
+      "stage": "closed"
+    },
+    "notExercised": [
+      "真实申请提交或邀请",
+      "申请者原生种族资料场景",
+      "硬件点击、拖动和焦点"
+    ]
+  },
+  "deployment": {
+    "files": [
+      {
+        "path": "LycheeGroup/API.lua",
+        "sha256": "f4d4cbd81b157938025540d2ff8de35df6b3e1b98dc4fb6dd72240eaaea94f44"
+      },
+      {
+        "path": "LycheeGroup/Appearance.lua",
+        "sha256": "3fc6629c8fb98de777863a2770caf9536d175e5481fb7e9efe4157c3358be6af"
+      },
+      {
+        "path": "LycheeGroup/Bindings.lua",
+        "sha256": "10f6f17472e4391e7066e45ef0020b06067c774c80b0289d7532d11689aeb9a3"
+      },
+      {
+        "path": "LycheeGroup/Bindings.xml",
+        "sha256": "1bbb93c40e38e81082e954cf9159d8874c274518f42f1f022b30ecf0c9b924a6"
+      },
+      {
+        "path": "LycheeGroup/BrandMotion.lua",
+        "sha256": "322ca9756fcc022b375d016f090fffd0cad0b23bb7a90880f6f2111fdaf4db92"
+      },
+      {
+        "path": "LycheeGroup/Configuration.lua",
+        "sha256": "9feec74805a187cf18be9cc4cdd6f1365bc4f1a4e9f7b713178f99e96043d6be"
+      },
+      {
+        "path": "LycheeGroup/Core.lua",
+        "sha256": "25fe3e804a42c13bdea87b7c93da7e4b525e5096d9adb66b83ff96aa44f38126"
+      },
+      {
+        "path": "LycheeGroup/Entrypoints.lua",
+        "sha256": "abf34e9d2293911205772e4fa94bae3b05c1ad58b893bce47a855961dd55d9ce"
+      },
+      {
+        "path": "LycheeGroup/Floating.lua",
+        "sha256": "fed33c6230f2f2adb44dfcb82c2948ff23f28efd4fe4a4dfff02a699c0059ab9"
+      },
+      {
+        "path": "LycheeGroup/Fonts.lua",
+        "sha256": "83b189245ea939f2eddffa3f5da2463582134aeeddfe54006edd08ed6a3a1fb2"
+      },
+      {
+        "path": "LycheeGroup/Locale.lua",
+        "sha256": "7b5954d4f8e4178c28add2cf149d7d0d00daeb75916f6b9e4f445f50c2b37e3f"
+      },
+      {
+        "path": "LycheeGroup/LycheeGroup.toc",
+        "sha256": "67b442e56105352ea54972d176c5beb162f4704ef7fd5c02e03f0ca3942b256b"
+      },
+      {
+        "path": "LycheeGroup/Minimap.lua",
+        "sha256": "8db9a49b16b39b814ec45fd5f8d281db82f5bc6f19ebbeb238a5e9d47d58fcf0"
+      },
+      {
+        "path": "LycheeGroup/PartyRoleCheck.lua",
+        "sha256": "cf03187e280fe5e4e171ddea220bb54fefbcc40c2ecace65a554c7658764df3a"
+      },
+      {
+        "path": "LycheeGroup/Presentation.lua",
+        "sha256": "0e2e1567279fea492fb4556d80ad85d33fb757729d9a1384aee293f34e0f3d93"
+      },
+      {
+        "path": "LycheeGroup/Specializations.lua",
+        "sha256": "e18e7c642200f8f3801f1cabc0fe6adc62518f466b3017f180d0d27b90a91a7d"
+      },
+      {
+        "path": "LycheeGroup/Adapters/Rurutia.lua",
+        "sha256": "c1baf7132d925b10ff3e3de3c2da7e1c71094e1bd289f234e847ab5c57948701"
+      },
+      {
+        "path": "LycheeGroup/Adapters/SEUI.lua",
+        "sha256": "0a54ac13433e4ca40ce88ef7f19fe33b0a0200c8534ae8d8243d28cad702fdf5"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/.lock",
+        "sha256": "1b34b3d78cb31c1f79cd19c6bcca7c895d8f48734098b6d74ae9f067193f031b"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Components.lua",
+        "sha256": "1a4ae7b3bca602998702cbc3dc15d2a55746378fb5f69214b38168463385b76c"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Core.lua",
+        "sha256": "0238b39a11d61ba1b752c78641287fbc34bfce9703ab43196f12f44df3cd0c36"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Elements.lua",
+        "sha256": "28dd325effe22bb20e2e92c1c101dea0064aae9f33cca674eaf8be0b28c5ce0a"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/embeds.xml",
+        "sha256": "074fd1bf12907f3d4dc64b15216d5ce9caa7171f4ab474223ba8c21e4157c603"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Layouts.lua",
+        "sha256": "4eaaff262a96d3ef8357983989a9f9a7b0e0bf1779ffbd729a3f1e0680515f1c"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Menu.lua",
+        "sha256": "624108da673f406d90a27977677e4848d4f18f1ceadb0f595af6187215124b6b"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Motion.lua",
+        "sha256": "af4360c01eca76351eb7c5f9ca031321be8cf63143829ef5364eac1cc4c56e21"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Native.lua",
+        "sha256": "1e684f5cb17201ca09ea2a747b61aede450258c0bcebe88ca5dcb97f68d0d417"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Styles.lua",
+        "sha256": "a8e0a30744cca55de5d3bd940b829bef18747449396a38bc97cd868c92b2246b"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Theme.lua",
+        "sha256": "ef3da514cd40133823f37e2d9d9d2fef84603ee7f2e0122bc22c3e0969e9d0ab"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/arrow.tga",
+        "sha256": "93786301129ed889270d2a02f5643d4416e82697785f143fa10bb7ae54998727"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/bell.tga",
+        "sha256": "d64179d1877cb926fff238a148f060f00184f2d40e140693391223211e62c8cc"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/book.tga",
+        "sha256": "ac017a1a6244bb94fb175efdb64d4c56b58c72e71a47fbc96305f618ec56c385"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/caution.tga",
+        "sha256": "6bdad242ba25891acd890ae9b4ce1e87002ec295d835bd76ec0972834820d953"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/chevron.tga",
+        "sha256": "d88346a13d505bc3aac4f58e292952f98490b5f0c03348a192e95c6fbda89780"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/circle.tga",
+        "sha256": "ee3d0ece0a31e76edc81cda3ea666c637bcf28724466222948e2ab235216b293"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/close.tga",
+        "sha256": "756dd35d3c7c393d6acc4c6109439f02ff0ba342dd82b1451d93ae3bc7a1424e"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/decline.tga",
+        "sha256": "a2b846a146af2ad86c904dad55446c7da3a01c38bf2f7217faaa18af3d00c06d"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/heart.tga",
+        "sha256": "d6be15a5e4bd895a85da6cea324d6ff8aa0a5134bbdfc645979cebe796302873"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/history.tga",
+        "sha256": "60ee8e76f8acede358987f77a5bb96d60879e21cb19b4a56ba90f8e4256900c8"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/icon-mask.tga",
+        "sha256": "3842cf0e05c57441da86894559b30b17bf97055b301cd076003b119da5f8a5b5"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/plus.tga",
+        "sha256": "07311c36e089b733d8e4dbb5ae5a2b68cc3e746e9a047be4a434e8dafa5e9fb6"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/refresh.tga",
+        "sha256": "1d4ea9510b9ee540a485dbf37b379ec6b7467707a409809ed5d012c922fec71e"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/rounded-corner.tga",
+        "sha256": "6c5203e7c6caede452ff5a34e6a356f2e7caef376cd3d1a4ac40353e340b9e5a"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/search.tga",
+        "sha256": "fc6308be9daccbc766db4942a9ddde797d57902a128c229e69f389f342d6fba7"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/settings.tga",
+        "sha256": "f326928897d118c63e16d2b3a0e15894b3064319063ae3e449125ce646b77c30"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/shadow-12.tga",
+        "sha256": "4b114a802ec77994eb266a970de8e7d1dece24883ae9cb0bfb926ae337615978"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/shadow-16.tga",
+        "sha256": "64d76fdbf085b2f28381cfdc4a2e6390b71c07c9bd6f1d911f3ab56180edc926"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/shadow-24.tga",
+        "sha256": "a7d36e795f94ce43e658898ecbcc6415fa72301104581590e318aa6e59107276"
+      },
+      {
+        "path": "LycheeGroup/Libs/LycheeUI/Media/shadow-28.tga",
+        "sha256": "356c7b119618c92d25d747992cc1aa7cb1c9187ff18166393db36a967b296e34"
+      },
+      {
+        "path": "LycheeGroup/Media/addon-logo.tga",
+        "sha256": "cb46b1017f7d04b67fbc28345a5941babe3e6568c0ccaf238845291dc11d9145"
+      },
+      {
+        "path": "LycheeGroup/Media/damage.tga",
+        "sha256": "96c8027f0e3d3c5ff1c23f97908cbfde953689718ba7c7b89560fbdabc73148c"
+      },
+      {
+        "path": "LycheeGroup/Media/delve.tga",
+        "sha256": "1c23269c110de259dde4ac0ee3664381a26f6e54f259698251867e15ea081c0a"
+      },
+      {
+        "path": "LycheeGroup/Media/flag.tga",
+        "sha256": "8b76497c797ae469666cae8ce2f55cdbb312fde25ecb0fa12cbf86c4dcf4afc7"
+      },
+      {
+        "path": "LycheeGroup/Media/friend.tga",
+        "sha256": "aa7511f387531c53c08577ea59be63f04bae800dd733d311f068de1c56d9d445"
+      },
+      {
+        "path": "LycheeGroup/Media/guild.tga",
+        "sha256": "f516322a4522b38e3e878991d0f23b548c4abd1f5343c3ddd632999daf281f46"
+      },
+      {
+        "path": "LycheeGroup/Media/healer.tga",
+        "sha256": "07e45ec90d9720ed0891d85a69f0f315d04e05f559b8186d418bb271cef28a26"
+      },
+      {
+        "path": "LycheeGroup/Media/invite.tga",
+        "sha256": "9bf21e948867e84c592c6111b6471015acfaeb1bab725cbfa53b386a290c8d1e"
+      },
+      {
+        "path": "LycheeGroup/Media/leader.tga",
+        "sha256": "a02d4d7353e6261571d048496121bf23e3e4b82c234b52a34b082bbc0d7f8fbf"
+      },
+      {
+        "path": "LycheeGroup/Media/lychee-logo.tga",
+        "sha256": "9cd1f306fe5c8092dd425401d8c2eec192a61c0e3eba1645ee37601295326f94"
+      },
+      {
+        "path": "LycheeGroup/Media/mountain.tga",
+        "sha256": "d981fe8f731cdd0558316c924fc760e23bdbd5eed249dc55988120abc8c3741e"
+      },
+      {
+        "path": "LycheeGroup/Media/pvp.tga",
+        "sha256": "134405c33a27e31baa64bb05c0d88a242455c8df8c6e98a6fccbd11d20cd1b18"
+      },
+      {
+        "path": "LycheeGroup/Media/role-dps.tga",
+        "sha256": "dac50b2f0351372df0358c74922262c959a296eafb23238a622f0e1d54de493e"
+      },
+      {
+        "path": "LycheeGroup/Media/role-healer.tga",
+        "sha256": "599ff94cb2b3776b2a4c9abd06821583e707178bab20b34aa1d0369619633a50"
+      },
+      {
+        "path": "LycheeGroup/Media/role-tank.tga",
+        "sha256": "b18db002db43b57d5546b97217f6c71180ed0f1dd0079c37616e9b175f79c5b2"
+      },
+      {
+        "path": "LycheeGroup/Media/tank.tga",
+        "sha256": "2170055981bab271ce345b40283fbd4c6e3ec36b039545793811add99c5ccaaf"
+      },
+      {
+        "path": "LycheeGroup/Media/tower.tga",
+        "sha256": "56872153a16c9276dbaaf6a40eba24ee522d67bdd4bf628b0236c1b9ef26b99b"
+      },
+      {
+        "path": "LycheeGroup/Media/Fonts/LICENSE-Inter.txt",
+        "sha256": "b3195af0fb14368d1b3b10fb9d3fe503b7163ea083859d2ee553bc74da07c320"
+      },
+      {
+        "path": "LycheeGroup/Media/Fonts/LycheeFont-enUS.ttf",
+        "sha256": "9d327cbafd239af3e014d467a6e1daf3f6c04ae74e062ff8593f39480b6b9c27"
+      },
+      {
+        "path": "LycheeGroup/Media/Fonts/LycheeFont-zhCN.ttf",
+        "sha256": "b5abe5458e1f3d32a60a71ddd289b3a64eeab311d2f6a3c0afe3f025d4ad82c2"
+      },
+      {
+        "path": "LycheeGroup/Media/Fonts/NOTICE-ChineseFont.txt",
+        "sha256": "4c3b541dc721e7ad4a2fa00f231da41b79c060849a4af7e5093a92aee7ecd411"
+      },
+      {
+        "path": "LycheeGroup/Media/Fonts/README.md",
+        "sha256": "a007add498cc1f54ee3ba019beda127edf212c3c5adafd580fcffd1298ec2bdc"
+      },
+      {
+        "path": "LycheeGroup/Theme/Defaults.lua",
+        "sha256": "ae63b69cc367ed50b64c1737de5bf195f1b894d2a99c56646f2f17a728798f24"
+      },
+      {
+        "path": "LycheeGroup/Theme/Elements.lua",
+        "sha256": "4eaf1b7a5f7758f1b03fc79320b1a6aa7e0098ba0e8db6d3db1b4a17b21bf390"
+      },
+      {
+        "path": "LycheeGroup/Theme/FindElements.lua",
+        "sha256": "f0b1fdf6f81753444cc3ddc58446fecf8672c8fcf2b90a64497e1d62bef6895c"
+      },
+      {
+        "path": "LycheeGroup/Theme/Import.lua",
+        "sha256": "b4840ab7e17bb79b4b8bbb7a574402a4337aac66843a94fd5a902a157d810533"
+      },
+      {
+        "path": "LycheeGroup_Group/Alerts.lua",
+        "sha256": "b117d307aa035e2c2f6facf6d6b0fba36a43ae029493c4f3dad1e720953172ac"
+      },
+      {
+        "path": "LycheeGroup_Group/Applicants.lua",
+        "sha256": "c1bc50afa30192c7c250a282c09789bb277bab3e6ca45d3127a1623c5db5cde2"
+      },
+      {
+        "path": "LycheeGroup_Group/Applications.lua",
+        "sha256": "36c0f24915599f6de9c0f12607cdc12d29d867e93f1e4e48e75b523e37c8f24d"
+      },
+      {
+        "path": "LycheeGroup_Group/Catalog.lua",
+        "sha256": "bb40ceda928e9c7c7d49896fc0a228ef298274e9b5cec48534b51658e97c6d36"
+      },
+      {
+        "path": "LycheeGroup_Group/CreationPresets.lua",
+        "sha256": "beff07a81a4bb8e69b95704253515dcaf76ce9c8f7a2f875afdf84669021ded9"
+      },
+      {
+        "path": "LycheeGroup_Group/Game.lua",
+        "sha256": "c6b6fb3f5d4746720b3c9d4ab0a91be557963eeeee108f7c5f898ce33b83ad0a"
+      },
+      {
+        "path": "LycheeGroup_Group/Group.lua",
+        "sha256": "c734ea65d95f27e02498693c04481968b7d7fd491027831593fd3ef10e0b1d3f"
+      },
+      {
+        "path": "LycheeGroup_Group/History.lua",
+        "sha256": "1811fa958c1abcc5813634dc5eb1145ce55de03a5c78371e9d6a05a6a3c42cd0"
+      },
+      {
+        "path": "LycheeGroup_Group/Listing.lua",
+        "sha256": "c4c7fb6897be3a56f19c7b6923353a49c9c4b07baff21e6a1b92e444172a37ac"
+      },
+      {
+        "path": "LycheeGroup_Group/Locale.lua",
+        "sha256": "1df17e259c5fec95b460cddccb3424a1755d97bc3052888527fc16fd100768a3"
+      },
+      {
+        "path": "LycheeGroup_Group/LycheeGroup_Group.toc",
+        "sha256": "93c09a39d8e6825ec0ca141d077474cf0bdb230347ce7d96314026df3c051518"
+      },
+      {
+        "path": "LycheeGroup_Group/RaidBuffs.lua",
+        "sha256": "e1eea3f887e260e74c3179adf499f48a922bc95cee7573976788f64819b94dcc"
+      },
+      {
+        "path": "LycheeGroup_Group/Relations.lua",
+        "sha256": "97bb89df41f7eb0ca98467f211c114e6c5c036703816c5b1ed956fe017023ee1"
+      },
+      {
+        "path": "LycheeGroup_Group/Results.lua",
+        "sha256": "db8d6273e2375abfa00602f5bc7746a3ac0f2fb66c1c2915a85b73c17f16c5a5"
+      },
+      {
+        "path": "LycheeGroup_Group/Roster.lua",
+        "sha256": "9bcaf55ca60dbaf7b8ccbc1d43421138da5fb45f0a13fbd39cd478b24207a046"
+      },
+      {
+        "path": "LycheeGroup_Group/Search.lua",
+        "sha256": "f6a09caef1895a2f8454c6bb9829ef10aa43fa14f8cf1f21da888609f08753f8"
+      },
+      {
+        "path": "LycheeGroup_Group/Libs/README.md",
+        "sha256": "dec5ced4189f5cf8a844b18e9de6d05f53140cd6af9d07abefa9a8f7c69c7d4a"
+      },
+      {
+        "path": "LycheeGroup_Group/Libs/LibSpecialization/LibSpecialization.lua",
+        "sha256": "6396d738c9ef626a88bf0ef28c6f52e86e0dd6505dfc36ebbf19b0d35ffac115"
+      },
+      {
+        "path": "LycheeGroup_Group/Libs/LibSpecialization/LICENSE.txt",
+        "sha256": "80364982a43ca8d6685966a5a5e0af68e34e11ad7d348e82929d00d36544bd12"
+      },
+      {
+        "path": "LycheeGroup_Group/Libs/LibStub/LibStub.lua",
+        "sha256": "6000f58d740eaa2b4a006c1dabb0366f0321fc687bab9e85d97d040a1fd42dab"
+      },
+      {
+        "path": "LycheeGroup_Notes/Locale.lua",
+        "sha256": "e1a033cb201d236d53a6e4a3f272a79c81d5b8d629d444daac70fe038fddc55c"
+      },
+      {
+        "path": "LycheeGroup_Notes/LycheeGroup_Notes.toc",
+        "sha256": "dffd856e2d1224fcf3e73b7b14c654f31ca9371f6323365d1c618f6863afe6ae"
+      },
+      {
+        "path": "LycheeGroup_Notes/Notes.lua",
+        "sha256": "bd3e78db49b0ad094e5034731a632093ce785c28fb2128ecab2c9971286223e5"
+      },
+      {
+        "path": "LycheeGroup_Notes/PlayerInfo.lua",
+        "sha256": "0df9fe2217882e07c3ef27752a389f61399e194aaa44bf8be5426ef925b85887"
+      },
+      {
+        "path": "LycheeGroup_Notes/Records.lua",
+        "sha256": "6d9b693e657ee47d17980a3e24f4a7657e7f5a08356ad5d4de74bef2ffad5083"
+      },
+      {
+        "path": "LycheeGroup_Notes/RosterReminder.lua",
+        "sha256": "7e9d75c55ea222bd997ebeecc3acc47d395109e4a3d23e99a393c17345d97906"
+      },
+      {
+        "path": "LycheeGroup_UI/Application.lua",
+        "sha256": "180f127f72f627b4fe28c88fb452c30d07816f0455719ae8d634ab56728308e0"
+      },
+      {
+        "path": "LycheeGroup_UI/Components.lua",
+        "sha256": "18d70355f8a9b9640a05bed748a9efd5592615b68a67ac85735a0da029f550b2"
+      },
+      {
+        "path": "LycheeGroup_UI/Create.lua",
+        "sha256": "8fd4b35b8f38bc509beaccfe9b79faa4c4cb01d5e58ac9bdf13a271d8deb12eb"
+      },
+      {
+        "path": "LycheeGroup_UI/Elements.lua",
+        "sha256": "c35ff678670aab1f5b79033e1a8c53479bc4514582279851a036a91e9405c95b"
+      },
+      {
+        "path": "LycheeGroup_UI/Find.lua",
+        "sha256": "5bd0007aadb85765131f2291f503bc53483c3a5bfd19a505a18dad95b0ad1921"
+      },
+      {
+        "path": "LycheeGroup_UI/Host.lua",
+        "sha256": "40e919713e836f74806c6a76bdaa6ec38f8168de9c1540a3e41d900b46981744"
+      },
+      {
+        "path": "LycheeGroup_UI/Locale.lua",
+        "sha256": "f381743ad7767d98fc9e0c29d50ea834ea6e8da95441390bfd537f54a67336e7"
+      },
+      {
+        "path": "LycheeGroup_UI/LycheeGroup_UI.toc",
+        "sha256": "454f33513186a319e5c1ef3389685039685ececdbd447f04d7547dc007078869"
+      },
+      {
+        "path": "LycheeGroup_UI/Members.lua",
+        "sha256": "5ce993bc8aac8b855d11e8c12569b7fc8b9e5c254d39b5b65ab16e59348431fd"
+      },
+      {
+        "path": "LycheeGroup_UI/Motion.lua",
+        "sha256": "81371c21bfe3737b2b32c5abafd7250ff1e749c4ea9148d5c0ae235060dd692f"
+      },
+      {
+        "path": "LycheeGroup_UI/Native.lua",
+        "sha256": "59136f10593be15b58a3ea633f19e11032d67577d5388800da5ef62b8aaaa24a"
+      },
+      {
+        "path": "LycheeGroup_UI/Notes.lua",
+        "sha256": "5637216f2e7c2eea61309800b47ca482c15aa79fae617936ebbe648eeef8380f"
+      },
+      {
+        "path": "LycheeGroup_UI/Preview.lua",
+        "sha256": "e07ed947014b59fe352260197a21cc4cb2497bc78eb7a4f88092ec66b2de4b28"
+      },
+      {
+        "path": "LycheeGroup_UI/Resize.lua",
+        "sha256": "70548118b7c0aa5d5dbef497029ca3e42ee29b1cba7c2f905c72095d42607d6e"
+      },
+      {
+        "path": "LycheeGroup_UI/Settings.lua",
+        "sha256": "9d4db3af1b69e61dffe76001abdb266667f7248c410d198045726a008c7f9fb7"
+      },
+      {
+        "path": "LycheeGroup_UI/Theme.lua",
+        "sha256": "9e0736508312f34ea1874d7853dada9b10dbdfe5f18aa64da095c02d2d3742e3"
+      },
+      {
+        "path": "LycheeGroup_UI/Tooltip.lua",
+        "sha256": "2a7810f59dc24b921c1547ac80a6bbfd55020d2613483fc8206f48cee7c58b25"
+      },
+      {
+        "path": "LycheeGroup_UI/Transfer.lua",
+        "sha256": "3d8bcd8a4d1005d3d23d897b97edf8e0c262f999757ce31ce59a98789fc153b8"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/about-launcher.tga",
+        "sha256": "0d9b3ad35f2e3140bf2164c92f18d463ba2b53d3af5693b5afb61191bc48bc8c"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/about-talent.tga",
+        "sha256": "f221e2804719435816a963db86a0745b99ed9c6e481b1775a1a5336ae0b89391"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/battlenet-friend.tga",
+        "sha256": "2b842df2ca3982b31a625cbbc6eea485d7969997060747bd031b3ca6b40daa42"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/faction-alliance.tga",
+        "sha256": "16cf900e98df8091b2809657d600d7868eaec10396842e71099a0c6a7078c021"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/faction-horde.tga",
+        "sha256": "00a031b7e61708b4d9328e24c8b50db8e4ee2eaa36ee231013eae7e07e31a652"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/favorite-off.tga",
+        "sha256": "458a460e35c2f89331b06262cbbd2476c3ffbc5add0a10eff695a8ccc6d557b0"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/favorite-on.tga",
+        "sha256": "75a4c06c0a957c6bf6da9dae657a1993f6cd9d33bf421fb564d619767732244f"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/filter-any.tga",
+        "sha256": "01942fd2f9f81de8bb776d9b4a013aada338c39c252e82105058b0389529748a"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/member-circle-border.tga",
+        "sha256": "739c3be90da951d42c5b6c82d3c602a2938f2148702fdec6f25c0b8e69534d6a"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/member-circle-mask.tga",
+        "sha256": "346a7a1d76a37fb0d724d4be5e04b9951bd60edfbd1157c63b1d62474618b870"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/pvp-arena.tga",
+        "sha256": "78f5e1aa5749044cc2cf463d46f5e771d25efe86295e6cb99a9092a9397a9202"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/pvp-battleground.tga",
+        "sha256": "82600ba02185d6e62270df560dfc85ce7c12d257a19fd0d86c82a5338de219f5"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/pvp-rated-battleground.tga",
+        "sha256": "e0e1a2d256254a9224e7500334e1846ad1b1528d85f025eb4a4d44d6358880c7"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/pvp-skirmish.tga",
+        "sha256": "9572cc435df9f0edff75e10cfe3920737c68706a7adfe170134d896cdc412eb8"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/resize-grip-lines-hover.tga",
+        "sha256": "b7f1647122177bf3490eb521f7c822382bb5ebf8f35384f049fa012fd6ecd849"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/resize-grip-lines-normal.tga",
+        "sha256": "c62047d7ed11b89955043b7ae09949b99b1f0b34e9419aeba66f6256ededbca3"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/resize-grip-lines-pressed.tga",
+        "sha256": "a9b708279e16a10c02b6d2ba6a1e63a84b1364c5edbcfbadcd457c5a56b51e03"
+      },
+      {
+        "path": "LycheeGroup_UI/Media/sidebar-toggle.tga",
+        "sha256": "44f3e34a95bf91290b6377997ea8fc74ae1864f6ba25d02cd0bf469fe69f22a3"
+      }
+    ],
+    "verifiedCount": 137,
+    "reloadRequest": "audit124-final-empty-feedback-reload",
+    "runtime": "0000000600035eae1d5758cee80cd1b5"
+  },
+  "delivery": {
+    "committed": false,
+    "pushed": false,
+    "released": false,
+    "mainCheckoutModified": false
+  }
+}

@@ -119,24 +119,20 @@ local function ApplicantTimeKey(applicantID,member,index)
   return tostring(applicantID)..":slot:"..tostring(member.applicantIndex or index)..":"..member.name
  end
 end
-local function ClockText(seconds)
- local total=math.floor(seconds+.5)
- return ("%d:%02d"):format(math.floor(total/60),total%60)
-end
 local function ApplicantTime(row)
  return UI:GetGroup():GetApplicantTimeMargin(row.member)
 end
 local function DrawApplicantMapScore(row)
  if not row.mapScoreTime then UI:SetScore(row.mapScore,UI:GetGroup():GetApplicantMapScore(row.member),"map");return end
  local seconds,status,run=ApplicantTime(row)
- local text=seconds and (ClockText(run.durationMs/1000).."/"..ClockText(run.timeLimitSeconds)) or status=="none" and S("无记录","No run") or status=="unavailable" and S("无用时","No time") or S("未知","Unknown")
+ local text=seconds and UI:DungeonRunTimeText(run) or status=="none" and S("无记录","No run") or status=="unavailable" and S("无用时","No time") or S("未知","Unknown")
  UI:SetText(row.mapScore,text);UI:Color(row.mapScore,T.muted)
 end
 local function ApplicantTimeTooltip(row)
  if not row.mapScoreTime or not row.member or not row:IsEnabled() or row._hitVisible==false or not P.batchScroll:IsMouseOver() then return nil end
  local seconds,_,run=ApplicantTime(row)
  if not seconds or not run.level then return nil end
- return S("%d 层 %s","+%d %s"):format(run.level,ClockText(run.durationMs/1000).."/"..ClockText(run.timeLimitSeconds))
+ return S("%d 层 %s","+%d %s"):format(run.level,UI:DungeonRunTimeText(run))
 end
 local function LayoutApplicantMapScore(row,layout)
  local cell=layout and layout.mapScore or row.applicantColumns and row.applicantColumns.mapScore or columns.mapScore

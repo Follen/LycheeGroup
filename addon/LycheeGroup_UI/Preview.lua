@@ -186,7 +186,7 @@ local function NewProvider(scenario)
     if profile.kind=="pvp" then member.rating=profile.requirementRatingKind and 1800+index*75 or nil
     else member.rating=member.dungeonScore end
     -- Deliberately simulated 30-minute runs for the built-in interaction preview.
-    member.dungeonScores=profile.applicant.showDungeonRecords and {mapScore=280+index*12,current={activityID=activityID,name=activity.fullName or activity.name,level=18,timed=true,durationMs=1800000-(index%3==1 and 200000 or index%3==2 and 30000 or 90000),timeLimitSeconds=1800},best={name=activity.fullName or activity.name,level=19,timed=false}} or nil
+    member.dungeonScores=profile.applicant.showDungeonRecords and {mapScore=280+index*12,current={activityID=activityID,name=activity.fullName or activity.name,level=18,timed=true,durationMs=1800000-(index%3==1 and 200000 or index%3==2 and 30000 or 90000),timeLimitSeconds=1800},best={name=activity.fullName or activity.name,level=19,timed=false,durationMs=1900000,timeLimitSeconds=1800}} or nil
    end
   end
  end

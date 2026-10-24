@@ -50,6 +50,8 @@
 
 `/lycheegroup` 与 `/lg` 等效。
 
+游戏原生组队绿眼睛：已有预组队招募时，左键打开荔枝创建页；有预组队申请时打开寻队页并定位，同时排本也如此。只有排本时左键保留游戏原有队列菜单，右键也保持原生行为。
+
 按住主窗右下角斜线拖动柄：横拖调整宽度，竖拖调整高度，斜拖同时调整宽高。窗口有最小尺寸限制，字体放大时下限随之提高；各页重新布局，当前输入和选择保留。松手保存当前角色的尺寸，关闭、重开和重载后继续使用。拖动尺寸与整体缩放、字体大小分别控制。
 
 主窗默认快捷键为英文半角分号 `;`，只在尚无本插件绑定且该键未占用时初始化。可在设置“入口与快捷键”修改快捷键，在“界面与外观”将主窗整体缩放调整为 75%–125%，并在其下方将字体大小调整为 70%–130%（当前基准为 100%，立即生效），选择跟随游戏、简体中文或 English（重载后生效），以及切换界面字体。默认内置“荔枝字体 / LycheeFont”，中文界面整套使用雅黑，英文界面使用 Inter；也可继续使用游戏或共享字体。
@@ -72,6 +74,6 @@ lua tests/runner.lua
 
 项目说明：[产品](Product.md) · [设计](Desgin.md) · [架构](Architecture.md) · [性能](perfermance.md) · [第三方配置 API](API.md) · [开发规范](Development.md) · [文档与变更记录规则](Agents.md)。当前实现与游戏内验证范围见产品文档。
 
-当前版本为 1.2.4，版本变化见 [更新日志](CHANGELOG.md)。本版采用 [主题 API v2](API.md)：导入和选择按账号或角色保存，登录或重载后统一生效；字号、缩放、窗口和表格偏好继续实时更新。默认业务和 UI 以指定 main 提交为准，开发规则见 [Development.md](Development.md)，验证方法见 [主题重载验证](tests/theme_reload.md)。共享库在源目录修改后由同步工具维护内置副本，冻结状态以 [.lock](../LycheeUI/.lock) 为准；通用接入见 [LycheeUI README](../LycheeUI/README.md)、[API](../LycheeUI/API.md) 和 [设计规范](../LycheeUI/DESIGN.md)。
+当前版本为 1.2.4，版本变化见 [更新日志](CHANGELOG.md)。本版采用 [主题 API v2](API.md)：导入和选择按账号或角色保存，登录或重载后统一生效；字号、缩放、窗口和表格偏好继续实时更新。指定 main 提交是架构改造的历史等价参照，当前业务与界面按已记录的后续产品和设计要求维护。开发规则见 [Development.md](Development.md)，验证方法见 [主题重载验证](tests/theme_reload.md)。共享库在源目录修改后由同步工具维护内置副本，冻结状态以 [.lock](../LycheeUI/.lock) 为准；通用接入见 [LycheeUI README](../LycheeUI/README.md)、[API](../LycheeUI/API.md) 和 [设计规范](../LycheeUI/DESIGN.md)。
 
 内置第三方库的来源与许可见[库说明](addon/LycheeGroup_Group/Libs/README.md)。

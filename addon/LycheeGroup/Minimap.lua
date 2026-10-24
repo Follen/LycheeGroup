@@ -66,7 +66,7 @@ function M:ApplyStartupTheme()
         C.Element(self.background,"minimap.background",{scope="minimap",stateOwner=self.button})
         C.Element(self.button.icon,"minimap.icon",{scope="minimap",stateOwner=self.button})
     end
-    local theme=self.context and self.context.Theme or LycheeUI.ResolveTheme(A.Appearance:GetTheme("main"),A.StyleDefaults.main)
+    local theme=self.context and self.context.Theme or A.Appearance:GetResolvedTheme("main")
     self.theme=theme
     self.button:SetSize(theme.minimapButtonSize,theme.minimapButtonSize)
     self.button:SetFrameLevel(Minimap:GetFrameLevel()+theme.minimapFrameLevelOffset)

@@ -323,13 +323,20 @@ for _,locale in ipairs({"zhCN","enUS"}) do
    check(left(create.playstyle)>=left(create.score)+create.score:GetWidth()+16-.001,"playstyle overlaps the score input after font layout")
    check(top(create.private)>=top(create.ilvl)+create.ilvl:GetHeight()+12-.001,"requirement options overlap the input row")
   end
-  people[1].dungeonScores={mapScore=300,current={name="Test dungeon",level=12,timed=true},best={name="Test dungeon",level=13,timed=true}}
+  people[1].dungeonScores={mapScore=300,current={name="Test dungeon with a long name",level=12,timed=true,durationMs=1952000,timeLimitSeconds=1980},best={name="Another dungeon with a long name",level=13,timed=false,durationMs=3903000,timeLimitSeconds=3600}}
   u.Tooltip:ShowPlayer(batch.people[1],people[1],batch.people[1].memberContext)
   local tip=u.Tooltip.interactive
   for _,metric in ipairs(tip.metrics) do
    if metric.value:IsShown() then check(near(metric.value:GetHeight(),metric.value:GetLineHeight()+metric.value:GetSpacing()),"player metric clips the scaled line height") end
   end
   check(separated(tip.dungeonTitle,tip.dungeonRows[1]),"dungeon records overlap their scaled heading")
+  check(tip.dungeonRows[1].status:GetText()=="|cff7cd99b32:32|r/33:00" and tip.dungeonRows[2].status:GetText()=="|cff9d9d9d65:03|r/60:00","colored elapsed times retain their complete minutes and seconds without coloring the limits")
+  for _,record in ipairs(tip.dungeonRows) do
+   check(record.status:GetUnboundedStringWidth()<=record.status:GetWidth()+.001,"the complete dungeon time fits its column")
+   local nameX=position(record.name,record);local timeX=position(record.status,record)
+   check(nameX+record.name:GetWidth()+12<=timeX+.001,"the dungeon name does not overlap its time")
+   check(record:GetHeight()+.001>=record.name:GetStringHeight(),"a long dungeon name stays within its row")
+  end
   u.Tooltip:Hide()
   u.Tooltip:ShowRoster(create.frame,{{nameKey="Test-Home",class="WARRIOR",assignedRole="TANK",isLeader=true}},false,{rosterMode="members"})
   local leader=u.Tooltip.interactive.memberButtons[1];local crown=leader.leaderIcon

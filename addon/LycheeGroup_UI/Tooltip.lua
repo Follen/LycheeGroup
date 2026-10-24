@@ -710,7 +710,9 @@ function Tip:RenderDungeons(scores,top)
   local run;if i==1 then run=scores.current else run=scores.best end
   UI:SetText(row.label,i==1 and Say("当前","Current") or Say("最佳","Best"))
   UI:SetText(row.keyLevel,run and "+"..run.level or "")
-  UI:SetText(row.status,run and (run.timed and Say("限时","In time") or Say("未限时","Overtime")) or "")
+  local timeText=UI:DungeonRunTimeText(run,true)
+  UI:SetText(row.status,run and (timeText or (run.timed and Say("限时","In time") or Say("未限时","Overtime"))) or "")
+  UI:Color(row.status,timeText and "dim" or run and run.timed and "good" or "dim")
   row.label:SetWidth(0);row.keyLevel:SetWidth(0);row.status:SetWidth(0)
   labelWidth=math.max(labelWidth,row.label:GetStringWidth());levelWidth=math.max(levelWidth,row.keyLevel:GetStringWidth());statusWidth=math.max(statusWidth,row.status:GetStringWidth())
  end
@@ -725,7 +727,7 @@ function Tip:RenderDungeons(scores,top)
    local color=C_ChallengeMode.GetKeystoneLevelRarityColor(run.level)
    row.keyLevel:SetTextColor(color.r,color.g,color.b);row.keyLevel._color=nil;row.coloredLevel=run.level
   end
-  row.status:ClearAllPoints();row.status:SetPoint("TOPRIGHT");row.status:SetWidth(statusWidth);row.status:SetShown(run~=nil);UI:Color(row.status,run and run.timed and "good" or "dim")
+  row.status:ClearAllPoints();row.status:SetPoint("TOPRIGHT");row.status:SetWidth(statusWidth);row.status:SetShown(run~=nil)
   local nameX=labelWidth+12+(run and levelWidth+12 or 0)
   row.name:ClearAllPoints();row.name:SetPoint("TOPLEFT",nameX,0);row.name:SetWidth(width-nameX-(run and statusWidth+12 or 0));row.name:SetHeight(0);UI:SetText(row.name,run and run.name or Say("未提供记录","No record available"));UI:Color(row.name,run and "text" or "dim")
   local height=math.max(row.name:GetLineHeight(),row.name:GetStringHeight());row:SetHeight(height);row:Show();top=top+height+(i==1 and 8 or 0)

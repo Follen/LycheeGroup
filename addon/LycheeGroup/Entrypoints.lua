@@ -9,7 +9,31 @@ local WAKE_EVENTS = {
 
 -- Keep the stock animation running: its OnLoop owns applicant sounds.
 local nativeLFGHooked = false
+local nativeLFGClickBound = false
 local nativeLFGState
+local function OpenNativePremadeGroup()
+    local page, applicationID
+    if C_LFGList.HasActiveEntryInfo() then
+        page = "create"
+    else
+        for _, id in ipairs(C_LFGList.GetApplications()) do
+            local _, status = C_LFGList.GetApplicationInfo(id)
+            if status == "applied" or status == "invited" then
+                page, applicationID = "find", id
+                break
+            end
+        end
+    end
+    if not page then return false end
+    local nativeShown = PVEFrame and PVEFrame:IsShown()
+    if nativeShown then HideUIPanel(PVEFrame) end
+    if A.UI and A.UI.preview then A.UI:StopPreview(false) end
+    if not A:Open(page, applicationID and {applicationID = applicationID}) and nativeShown then
+        ShowUIPanel(PVEFrame)
+    end
+    return true
+end
+
 local function ShouldConcealNativeLFGEntry()
     if not A:GetSetting("nativeLFGEntry") then return false end
     -- Match QueueStatusFrame's dungeon/raid entries, including role checks,
@@ -40,9 +64,18 @@ end
 function A:SyncNativeLFGEntry()
     local button = QueueStatusButton
     if not button then
-        if self:GetSetting("nativeLFGEntry") then events:RegisterEvent("ADDON_LOADED")
-        else events:UnregisterEvent("ADDON_LOADED") end
+        events:RegisterEvent("ADDON_LOADED")
         return
+    end
+    events:UnregisterEvent("ADDON_LOADED")
+    if not nativeLFGClickBound then
+        nativeLFGClickBound = true
+        local original = button:GetScript("OnClick")
+        button:SetScript("OnClick", function(eye, key, ...)
+            if key == "LeftButton" and OpenNativePremadeGroup() then return end
+            -- Other clicks keep the native queue menu and battlefield actions.
+            if original then return original(eye, key, ...) end
+        end)
     end
     if not nativeLFGHooked and self:GetSetting("nativeLFGEntry") then
         nativeLFGHooked = true
@@ -54,7 +87,6 @@ function A:SyncNativeLFGEntry()
             UpdateNativeLFGEntry(button)
         end)
     end
-    events:UnregisterEvent("ADDON_LOADED")
     UpdateNativeLFGEntry(button)
 end
 

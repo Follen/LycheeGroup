@@ -1,0 +1,88 @@
+{
+  "schema": "lycheegroup.applicant-tooltip-time.v1",
+  "date": "2026-10-24",
+  "change": "申请者详情当前、最佳记录显示各自实际用时/副本限时，保留原颜色与缺失回退。",
+  "source": {
+    "commit": "15881d522c44cd106d3d8660106ec9f9d2f44167",
+    "snapshot": "PIN-0186341d67e6671b73bfff1299e77f3026a027addaee76e47f1e1bdfee627d91",
+    "api": "C_LFGList.BestDungeonScoreMapInfo",
+    "capture": "CAP-e383b65c22b67811031ef7aaa32e417cee44fb1c71b03863242702bb261b5e53",
+    "durationField": "bestRunDurationMs",
+    "bestRunMapIdentity": "Only native mapName is provided; exact challenge-map name matching rejects conflicting limits."
+  },
+  "offline": {
+    "productModules": 22,
+    "productAssertions": 13993,
+    "productFailures": 0,
+    "layoutScripts": 16,
+    "layoutFailures": 0,
+    "fontGeometryChecks": 4670,
+    "changedRuntimeSyntaxFiles": 8,
+    "scope": [
+      "current and best dungeon limits differ",
+      "complete minutes/seconds, including overtime",
+      "missing limit/duration fallback",
+      "unknown best dungeon retries on explicit use",
+      "conflicting same-name limits remain unknown",
+      "two-row reuse",
+      "Chinese/English at 70%, 100%, 130% font scales",
+      "long dungeon names wrap without overlapping time"
+    ]
+  },
+  "deployed": [
+    {
+      "path": "LycheeGroup/Minimap.lua",
+      "sha256": "8db9a49b16b39b814ec45fd5f8d281db82f5bc6f19ebbeb238a5e9d47d58fcf0"
+    },
+    {
+      "path": "LycheeGroup_Group/Applicants.lua",
+      "sha256": "12cb66f136003f151f15251e2dae6ba115891b19e9715867bb7480241156fcb9"
+    },
+    {
+      "path": "LycheeGroup_UI/Components.lua",
+      "sha256": "4d4139e7bb843bf76dbfaa14435a329f2427615f7f40c2804a7e55dad94dd170"
+    },
+    {
+      "path": "LycheeGroup_UI/Create.lua",
+      "sha256": "61e085173186810c904dd59edf1089a9eed72d467c205d6b183d3c27cbc5d674"
+    },
+    {
+      "path": "LycheeGroup_UI/Find.lua",
+      "sha256": "5bd0007aadb85765131f2291f503bc53483c3a5bfd19a505a18dad95b0ad1921"
+    },
+    {
+      "path": "LycheeGroup_UI/Notes.lua",
+      "sha256": "5637216f2e7c2eea61309800b47ca482c15aa79fae617936ebbe648eeef8380f"
+    },
+    {
+      "path": "LycheeGroup_UI/Preview.lua",
+      "sha256": "c3e4d0cdbce6304d758ac56d6d9be88b033024843bac96b7875e98989dab2f1e"
+    },
+    {
+      "path": "LycheeGroup_UI/Tooltip.lua",
+      "sha256": "9b23b7118a357926c23240c4672ca77d97fef814542c23b1e5139c88d2b4775e"
+    }
+  ],
+  "native": {
+    "validated": false,
+    "reloadCompleted": false,
+    "connectionCreated": false,
+    "pid": 61636,
+    "build": "12.1.5.70575",
+    "doctorError": {
+      "code": "delivery.invalid_installation",
+      "message": "delivery.invalid_installation: unmanaged slot 1",
+      "stage": "dispatch",
+      "retryable": false,
+      "resumeOperationId": ""
+    },
+    "blocker": "Managed slot manifest is absent; doctor --fix reports unmanaged slot 1. No probe or reload was sent.",
+    "nextAction": "User /reload loads the deployed addon files."
+  },
+  "delivery": {
+    "committed": false,
+    "pushed": false,
+    "released": false
+  },
+  "priorAudit": "audit-1.2.4-2026-10-24.json retains its original, earlier source manifest and measurements."
+}

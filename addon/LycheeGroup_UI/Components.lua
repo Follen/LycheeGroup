@@ -4,6 +4,25 @@ local context = UI.context
 local T = context.Theme
 UI.C = context.C
 local C = UI.C
+local function ClockText(seconds)
+ local total=math.floor(seconds+.5)
+ return ("%d:%02d"):format(math.floor(total/60),total%60)
+end
+function UI:DungeonRunTimeText(run, colored)
+ if not run or not run.durationMs or not run.timeLimitSeconds then return end
+ local elapsed=ClockText(run.durationMs/1000)
+ if colored then
+  local ratio=run.durationMs/(run.timeLimitSeconds*1000)
+  local color
+  if not run.timed or ratio>1 then color="dungeonTimeOvertime"
+  elseif ratio<=.9 then color="dungeonTimeOrange"
+  elseif ratio<=.95 then color="dungeonTimePurple"
+  elseif ratio<=.97 then color="dungeonTimeBlue"
+  else color="dungeonTimeGreen" end
+  elapsed=self:Hex(T[color])..elapsed.."|r"
+ end
+ return elapsed.."/"..ClockText(run.timeLimitSeconds)
+end
 function UI:GetTablePrefs(id)
  if not self.preview then return _G.LycheeGroup.Appearance:GetTableState(id) end
  local prefs=self.preview.provider.prefs

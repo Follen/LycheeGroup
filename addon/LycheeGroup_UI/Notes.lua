@@ -508,7 +508,8 @@ function P:LayoutEditor()
  local labelHeight=math.max(self.classLabel:GetHeight(),self.specLabel:GetHeight())
  local choiceHeight=math.max(self.classChoice:GetHeight(),self.specChoice:GetHeight())
  local switchHeight=math.max(T.notesTypeSwitchHeight,self.typeButtons.positive.label:GetHeight()+12)
- local statusHeight=self.eStatus:GetText()~="" and self.eStatus:GetStringHeight()+8 or 0
+ local statusText=self.eStatus:GetText()
+ local statusHeight=statusText and statusText~="" and self.eStatus:GetStringHeight()+8 or 0
  local dateHeight=not add and self.eDate:GetHeight()+8 or 0
  local footerTop=EDITOR_HEIGHT-T.notesESaveBottomrightY-self.eSave:GetHeight()
  local fullReasonTop=pad+self.eTitle:GetHeight()+20+identityBlock+24+labelHeight+8+choiceHeight+24+self.typeLabel:GetHeight()+8+switchHeight+24+self.eReasonLabel:GetHeight()+8
@@ -598,10 +599,10 @@ function P:OpenEdit(key)
  state.identityEdited=nil;state.identityKey=key;state.legacyClassSpec=r.classSpec
  state.recordClass,state.recordSpec,state.recordType=identity.class,identity.specID,r.type or "neutral";self:SyncSpec()
 	state.draft = nil
+	UI:SetText(self.eStatus, "")
 	ShowEditorChrome("edit",changed)
 	UI:SetText(self.eIdentity,r.name);UI:SetText(self.eRealm,r.server);UI:SetText(self.eDate,S("记录于 ","Recorded ")..UI:DateText(r.timestamp))
 	self.eReason.box:SetText(r.reason or "")
-	UI:SetText(self.eStatus, "")
 	SelectNote(key)
 UI:ApplyElementScope("notes")
  end
@@ -618,11 +619,11 @@ function P:OpenAdd(draft)
   local _,snapshot=A.Notes.PlayerInfo.Snapshot(draft.unit);identity=snapshot or identity
  end
  state.legacyClassSpec=nil;state.recordClass,state.recordSpec,state.recordType=identity.class,identity.specID,draft and draft.type or A:GetSetting("defaultNote");self:SyncSpec()
+	UI:SetText(self.eStatus, "")
 	ShowEditorChrome("add")
 	UI:SetText(self.eIdentity,draft and draft.name or "");UI:SetText(self.eRealm,draft and draft.realm or "")
 	self.eName.box:SetText(draft and draft.name and (draft.name..(draft.realm and "-"..draft.realm or "")) or "")
 	self.eReason.box:SetText(draft and draft.reason or "")
-	UI:SetText(self.eStatus, "")
 	SelectNote(nil)
 UI:ApplyElementScope("notes")
  end

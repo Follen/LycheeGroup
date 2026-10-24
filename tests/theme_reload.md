@@ -1,6 +1,6 @@
 # 主题重载与 main 等价验证
 
-本说明对应未发布的 Theme／Configuration／Appearance API v2。产品合同见 [API.md](../API.md)，开发边界见 [Development.md](../Development.md)。当前结果、实机数据与预算结论写入 [perfermance.md](../perfermance.md)，本文维护执行方法。
+本说明维护 Theme／Configuration／Appearance API v2 的验证方法；该接口已随 1.2.4 发布。产品合同见 [API.md](../API.md)，开发边界见 [Development.md](../Development.md)。当前结果、实机数据与预算结论写入 [perfermance.md](../perfermance.md)。
 
 ## 离线入口
 
@@ -27,6 +27,12 @@ lua tests/measure_creation.lua
 `test_theme_reload.lua` 重新创建会话并复用保存数据，覆盖导入后已有和迟建对象保持当前来源、重载后统一生效、幂等导入、账号／角色选择、旧混合包迁移、静态覆盖清除、无效定义回退与错误保留。真实初始化顺序包含主包 ADDON_LOADED、第三方导入、PLAYER_LOGIN 和浮窗创建；关窗再开不作为重载。
 
 `lua tests/runner.lua group` 另覆盖明确取消前的状态核对：游戏状态已更新而本地仍是提交中时可正常取消，真实 pending、邀请、已结束和不存在的申请不误提交，重复操作不重复取消，其他申请及成员数据不被补读。回归同时走真实浮窗“取消全部申请”按钮和 Applications 服务；它证明旧状态误拦截的修复，不解释玩家现场最初提交没有反应的原因。
+
+1.2.4 发布后的审计回归可用 `lua tests/runner.lua minimap group ui resize` 单独执行：小地图复用启动解析表；申请者成功种族资料复用、缺失后恢复和中立阵营变化；Find 离页后偏好刷新、关闭动画与快速重开；笔记在错误或保存后重新新增／编辑，以及原生空文字返回 `nil` 时的反馈空间。完整入口仍包含这些模块。该轮默认界面对照使用发布提交 `23bbdb24b5ad475534bb786a339c1874264d13a0`；历史架构改造的固定 main 参照继续保留。结果见 [审计记录](results/audit-1.2.4-2026-10-24.json)。
+
+后续申请者详情的两条用时由 `group`、`ui` 和 `test_font_layout.lua` 覆盖：当前与最佳记录的独立限时、完整分秒、超时、缺失回退、最佳副本同名冲突、成功资料复用和暂缺后重试，以及双语 70%／100%／130% 字号下的时间列留位与长副本名换行。
+
+用时颜色在 `ui` 中覆盖未限时灰色、剩余 3%／5%／10% 分界的两侧、满限时与超时、复用行重新着色；只在左侧用时添加色码，右侧限时和分隔符保持次要文字色，分档依据原始时长而非四舍五入后的文字。`lua tests/runner.lua core native_queue` 验证原生绿眼睛提前／延后加载、已有招募、申请与排本并存、纯排本左键保留原生队列菜单、已结束申请、右键菜单、重复点击、模拟退出和打开失败恢复。native_queue 使用固定游戏源码的点击分支替身，不提交真实申请或排队，不代替实机受保护调用检查。
 
 `test_element_refresh.lua` 现验证固定主题及导入待生效，保留字体／尺寸实时行为。`test_element_layout.lua`、`test_find_elements.lua` 和池测试在 fixture 第四个参数预载主题，保留静态 slot、状态、锚点、实例换键与列表几何。热主题事务、逐叶 diff 刷新次数、任意撤回和方法包装器断言已随取消的接口移除。原生输入所有权及归还快照仍保留验证。
 

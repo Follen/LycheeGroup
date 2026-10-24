@@ -348,6 +348,7 @@ local function HasApplicationCountdown()
  return false
 end
 local function RefreshApplicationClock()
+ if UI.hiding or not P.frame:IsVisible() then StopCountdown();return end
  for _,row in ipairs(P.appList.rows) do
   local app=row.key and state.apps[row.key]
   if app and row._hitVisible then UpdateApplicationStatus(row,app) end
@@ -1600,6 +1601,7 @@ function P:ReadSearchState()
  self:SetStatus(message)
 end
 function P:RefreshApplications()
+ if UI.hiding or not self.frame:IsVisible() then return end
  wipe(state.apps);wipe(state.appIDs);local cat=Category();local categoryCount=0
  for _,app in ipairs(UI:GetGroup():GetApplications()) do
   local r=app.result

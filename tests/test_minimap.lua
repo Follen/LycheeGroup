@@ -24,7 +24,17 @@ _G.GetMinimapShape = function() return shape end
 local originalEnsure = A.Ensure
 A.Ensure = function() error("a minimap entry must not preload packages") end
 local M = A.Minimap
+local startupTheme=A.Appearance:GetResolvedTheme("main")
+local startupSnapshot=A.Configuration:CopyValue(startupTheme)
+local resolveTheme,extraResolutions=LycheeUI.ResolveTheme,0
+LycheeUI.ResolveTheme=function(...)
+    extraResolutions=extraResolutions+1
+    return resolveTheme(...)
+end
 M:Initialize()
+LycheeUI.ResolveTheme=resolveTheme
+T.eq(extraResolutions,0,"the default minimap reuses the already resolved startup theme")
+T.eq(M.theme,startupTheme,"the default entry retains the immutable startup source")
 T.eq(A.Group, nil); T.eq(A.Notes, nil); T.eq(A.UI, nil)
 T.eq(M.button:IsShown(), true)
 T.eq(M.button:GetScript("OnUpdate"), nil, "the idle entry has no update driver")
@@ -117,6 +127,7 @@ M:UpdatePosition()
 local _,parent,_,collectedX,collectedY=button:GetPoint()
 T.eq(parent,collector);T.eq(collectedX,12);T.eq(collectedY,18,"a minimap collector owns the collected button layout")
 _G.GetMinimapShape = nil
+T.same(startupTheme,startupSnapshot,"minimap construction and interactions do not change the shared startup theme")
 
 -- A fixed startup minimap declaration is applied at its creation boundary.
 T.eq(M.context,nil,"the default minimap entry retains no full UI Context")
@@ -127,7 +138,21 @@ local themed=dofile("tests/ui_fixture.lua")("enUS",nil,nil,{schema=1,id="fixture
 dofile("addon/LycheeGroup/Minimap.lua")
 local entry=themed.A.Minimap;entry:Initialize()
 T.ok(entry.context,"a startup minimap override creates its single fixed Context")
+T.eq(entry.theme,entry.context.Theme,"configured minimap elements use their own Context theme")
+T.ok(entry.theme~=themed.A.Appearance:GetResolvedTheme("main"))
 T.eq(entry.button:GetWidth(),46);T.eq(entry.button.icon:GetAlpha(),.5)
 entry.button:Fire("OnEnter")
 T.eq(entry.button:GetWidth(),46,"hover preserves startup entry geometry")
 T.eq(entry.button.icon:GetAlpha(),.5,"hover preserves the startup icon override")
+local pending={schema=1,id="fixture.minimap",revision=2,appearance={main={elements={
+ ["minimap.entry"]={base={root={width=52,height=52},icon={alpha=.7}}},
+}}}}
+T.ok(themed.A.API.Theme:Import(pending,{activate=true}))
+entry:ApplyStartupTheme()
+T.eq(entry.button:GetWidth(),46,"a pending import does not change the current minimap Context")
+T.eq(entry.button.icon:GetAlpha(),.5)
+local reloaded=dofile("tests/ui_fixture.lua")("enUS",nil,nil,pending)
+dofile("addon/LycheeGroup/Minimap.lua")
+reloaded.A.Minimap:Initialize()
+T.eq(reloaded.A.Minimap.button:GetWidth(),52,"the next session applies the selected minimap declaration")
+T.eq(reloaded.A.Minimap.button.icon:GetAlpha(),.7)

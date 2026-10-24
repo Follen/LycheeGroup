@@ -1,0 +1,76 @@
+{
+  "schema": "lycheegroup.native-eye-time-colors.v1",
+  "date": "2026-10-24",
+  "behavior": {
+    "listing": "Left click opens create",
+    "application": "Left click opens find and locates the first applied/invited application, including while matchmaking",
+    "matchmakingOnly": "Left click opens nothing",
+    "rightClick": "Original queue menu",
+    "activeBattlefieldWithoutPremade": "Original scoreboard",
+    "duplicateWindows": "Premade clicks do not call LFGListUtil_OpenBestWindow"
+  },
+  "timeColors": {
+    "scope": "Applicant player-detail current/best dungeon times, elapsed portion only",
+    "gray": "Not timed or duration exceeds limit",
+    "green": "0.8 < duration/limit <= 1",
+    "blue": "0.6 < duration/limit <= 0.8",
+    "purple": "0.4 < duration/limit <= 0.6",
+    "orange": "duration/limit <= 0.4",
+    "separatorAndLimit": "Theme dim",
+    "thresholdInput": "Unrounded native duration"
+  },
+  "source": {
+    "commit": "15881d522c44cd106d3d8660106ec9f9d2f44167",
+    "snapshot": "PIN-0186341d67e6671b73bfff1299e77f3026a027addaee76e47f1e1bdfee627d91",
+    "clickPath": "Interface/AddOns/Blizzard_QueueStatusFrame/Mainline/QueueStatusFrame.lua:283",
+    "clickCapture": "CAP-25e31703deace53b526ead71529d2faf58b26ef62d4d56ffa090e34c1bd782d1",
+    "buttonCapture": "CAP-e3a95cf83024d9c54cc273b5969f140503190455135eb5900b17b47d0f6ecc25",
+    "meetingStoneReference": "Installed MeetingStone/Main.lua:17, secure hook of LFGListUtil_OpenBestWindow"
+  },
+  "offline": {
+    "productModules": 23,
+    "productAssertions": 14161,
+    "productFailures": 0,
+    "layoutScripts": 16,
+    "layoutFailures": 0,
+    "fontGeometryChecks": 4670,
+    "changedRuntimeSyntaxFiles": 4,
+    "diffCheck": "passed with repository line-ending settings"
+  },
+  "deployed": [
+    {
+      "path": "LycheeGroup/Entrypoints.lua",
+      "sha256": "115efa5fc60ffd8c9e70d903d883a17be7c66fbfd9bd7883667271145c4de2d1",
+      "previousSha256": "abf34e9d2293911205772e4fa94bae3b05c1ad58b893bce47a855961dd55d9ce"
+    },
+    {
+      "path": "LycheeGroup/Theme/Defaults.lua",
+      "sha256": "64578a989214e8141e9a0d39d9d40696c9a790940bfdded46179567abf9edff3",
+      "previousSha256": "ae63b69cc367ed50b64c1737de5bf195f1b894d2a99c56646f2f17a728798f24"
+    },
+    {
+      "path": "LycheeGroup_UI/Components.lua",
+      "sha256": "0607dd041eb8145bf6047f169fc3e5dcc84b4571f2ca60275d12e9f5a7b8ffe5",
+      "previousSha256": "4d4139e7bb843bf76dbfaa14435a329f2427615f7f40c2804a7e55dad94dd170"
+    },
+    {
+      "path": "LycheeGroup_UI/Tooltip.lua",
+      "sha256": "ba0becd37fc7b8fc2107378ca0b6f6bd1b2a49c0ea038055afa2818edaaa838e",
+      "previousSha256": "9b23b7118a357926c23240c4672ca77d97fef814542c23b1e5139c88d2b4775e"
+    }
+  ],
+  "live": {
+    "checked": false,
+    "reloaded": false,
+    "doctor": "read-only",
+    "pid": 61636,
+    "processStartedAt": "134372837899651518",
+    "runtime": "000000670003a56a028787be8b7b877e",
+    "character": "灵止光",
+    "realm": "死亡之翼",
+    "build": "12.1.5.70575",
+    "blocker": "Missing AddOns/.lycheedev-slots.json, managed slot count 0",
+    "connectionCreated": false,
+    "newMemoryMeasurement": false
+  }
+}

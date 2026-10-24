@@ -186,3 +186,42 @@ U:SetWindowSize(1,1);T.eq(U.windowWidth,minimumWidth);T.eq(U.windowHeight,minimu
 UIParent:SetSize(1100,800);U.frame:Fire("OnEvent","DISPLAY_SIZE_CHANGED")
 T.ok(U.frame:GetWidth()*U.frame:GetScale()<=1060.001 and U.frame:GetHeight()*U.frame:GetScale()<=760.001,"a smaller screen fits the minimum layout by scaling it")
 U:Hide(true)
+
+-- A newly opened editor reserves space for its own feedback, not the prior note's.
+for _,locale in ipairs({"zhCN","enUS"}) do
+ for _,fontScale in ipairs({70,100,130}) do
+  local fresh=dofile("tests/ui_fixture.lua")(locale)
+  local a,u=fresh.A,fresh.U
+  a:SetSetting("reduceMotion",true);a:SetSetting("fontScale",fontScale)
+  a.Notes:Add("Existing","Home","Original note")
+  a:Open("notes")
+  local page=u.pages.notes
+  page:OpenAdd()
+  local emptyHeight=page.eReason:GetHeight()
+  local getText=page.eStatus.GetText
+  page.eStatus.GetText=function() return nil end
+  page:LayoutEditor()
+  T.near(page.eReason:GetHeight(),emptyHeight,.001,"native nil feedback text reserves no extra space")
+  page.eStatus.GetText=getText
+  for _,mode in ipairs({"add","edit"}) do
+   local function Open()
+    if mode=="add" then page:OpenAdd() else page:OpenEdit("Existing-Home") end
+   end
+   page:CloseEditor();Open()
+   local reasonHeight=page.eReason:GetHeight();local point={page.eReason:GetPoint()};local reasonY=point[#point]
+   page:OpenAdd();page:Save()
+   T.eq(page.eStatus:GetText(),u.L.nameRequired)
+   Open()
+   T.eq(page.eStatus:GetText(),"")
+   T.near(page.eReason:GetHeight(),reasonHeight,.001,"opening an editor after an error restores its full reason input")
+   point={page.eReason:GetPoint()};T.near(point[#point],reasonY,.001)
+   page:OpenEdit("Existing-Home");page.eReason.box:UserType("Updated "..mode);page:Save()
+   T.eq(page.eStatus:GetText(),u.L.saved)
+   Open()
+   T.eq(page.eStatus:GetText(),"")
+   T.near(page.eReason:GetHeight(),reasonHeight,.001,"opening an editor after a save does not reserve obsolete feedback space")
+   point={page.eReason:GetPoint()};T.near(point[#point],reasonY,.001)
+  end
+  u:Hide(true)
+ end
+end

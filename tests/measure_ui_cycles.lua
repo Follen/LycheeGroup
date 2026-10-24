@@ -15,7 +15,7 @@ local function Settle() U.Motion:Tick(2) end
 local pages={"find","create","notes","settings"}
 for _,page in ipairs(pages) do A:Open(page);Settle() end
 Stats("warm")
-local profile={};local level=0;local starts,children={},{},{}
+local profile={};local level=0;local starts,children={},{}
 local function Finish(counter,...)
  local delta=collectgarbage("count")-starts[level]
  counter.calls=counter.calls+1;counter.net=counter.net+delta-children[level]

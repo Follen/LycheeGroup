@@ -2329,6 +2329,37 @@ do
  T.eq(colorReads,2,"unchanged levels reuse each row's applied color")
  one.dungeonScores.current.level=19;u.Tooltip:ShowPlayer(batch.people[1],one)
  T.same(tip.dungeonRows[1].keyLevel.color,{1,.5,0},"a recycled level row refreshes its native color");T.eq(colorReads,3)
+ one.dungeonScores.current.durationMs=1952000;one.dungeonScores.current.timeLimitSeconds=1980;one.dungeonScores.current.timed=true
+ one.dungeonScores.best.durationMs=1900000;one.dungeonScores.best.timeLimitSeconds=1800
+ local nodes=#f.S.nodes
+ u.Tooltip:ShowPlayer(batch.people[1],one)
+ T.eq(tip.dungeonRows[1].status:GetText(),"|cff7cd99b32:32|r/33:00","only current elapsed time is green; its own limit follows the color reset")
+ T.eq(tip.dungeonRows[2].status:GetText(),"|cff9d9d9d31:40|r/30:00","an overtime best record is gray and uses its own limit")
+ T.same(tip.dungeonRows[1].status.color,u.Theme.dim);T.same(tip.dungeonRows[2].status.color,u.Theme.dim)
+ T.eq(#f.S.nodes,nodes,"time display reuses the existing two record rows")
+ one.dungeonScores.current.timeLimitSeconds=100
+ for _,case in ipairs({
+  {90000,"ffae63","1:30"},{90001,"c08aff","1:30"},
+  {95000,"c08aff","1:35"},{95001,"68b7ff","1:35"},
+  {97000,"68b7ff","1:37"},{97001,"7cd99b","1:37"},
+  {100000,"7cd99b","1:40"},{100001,"9d9d9d","1:40"},
+ }) do
+  one.dungeonScores.current.durationMs=case[1];u.Tooltip:ShowPlayer(batch.people[1],one)
+  T.eq(tip.dungeonRows[1].status:GetText(),"|cff"..case[2]..case[3].."|r/1:40","time tiers use exact duration, not rounded display seconds")
+  T.same(tip.dungeonRows[1].status.color,u.Theme.dim,"separator and limit keep their neutral base color")
+ end
+ one.dungeonScores.current.durationMs=30000;one.dungeonScores.current.timed=false;u.Tooltip:ShowPlayer(batch.people[1],one)
+ T.eq(tip.dungeonRows[1].status:GetText(),"|cff9d9d9d0:30|r/1:40","an unsuccessful attempt never receives a timed color")
+ one.dungeonScores.current.timed=true;one.dungeonScores.current.durationMs=1703000;one.dungeonScores.current.timeLimitSeconds=1920
+ one.dungeonScores.best.timed=true;one.dungeonScores.best.durationMs=1788000;one.dungeonScores.best.timeLimitSeconds=1920
+ u.Tooltip:ShowPlayer(batch.people[1],one)
+ T.eq(tip.dungeonRows[1].status:GetText(),"|cffffae6328:23|r/32:00","the reported 28:23 run has more than ten percent remaining and is orange")
+ T.eq(tip.dungeonRows[2].status:GetText(),"|cffc08aff29:48|r/32:00","the reported 29:48 run has more than five percent remaining and is purple")
+ one.dungeonScores.best.timed=false
+ one.dungeonScores.current.timeLimitSeconds=nil;u.Tooltip:ShowPlayer(batch.people[1],one)
+ T.eq(tip.dungeonRows[1].status:GetText(),"限时","missing limits keep the available completion state")
+ one.dungeonScores.best.durationMs=nil;u.Tooltip:ShowPlayer(batch.people[1],one)
+ T.eq(tip.dungeonRows[2].status:GetText(),"未限时","missing duration is never fabricated")
  C_ChallengeMode.GetKeystoneLevelRarityColor=rarity
  u.Tooltip:Hide();u.Tooltip:ShowGroup(page.frame,{name="Party",numMembers=2,maxNumPlayers=5,details={members={one,two}}})
  T.eq(select(2,tip.memberButtons[1].name:GetFont()),17);T.eq(tip.memberButtons[1].faction:IsShown(),false);T.eq(tip.memberButtons[2].faction:IsShown(),false)
@@ -4564,6 +4595,52 @@ do
  a:SetSetting("fontScale",100)
  T.eq(select(2,u.brandTitle:GetFont()),23,"font changes recalculate from the base instead of accumulating")
  u:Hide(true)
+end
+
+-- Live appearance changes must not revive a hidden application's display clock.
+do
+ local fresh=dofile("tests/ui_fixture.lua")("enUS")
+ local a,u,g=fresh.A,fresh.U,fresh.G
+ a:SetSetting("reduceMotion",true)
+ local clock,now=GetTime,0;GetTime=function() return now end
+ local result={id=42,name="Active application",activityID=2,activity=g.Catalog:GetActivity(2),activityName="Dungeon",categoryID=2,maxNumPlayers=5,numMembers=1,leaderName="Leader-Home",details={members={{name="Leader",nameKey="Leader-Home",class="WARRIOR",assignedRole="TANK"}},counts={TANK=1,HEALER=0,DAMAGER=0}}}
+ local application={id=42,name=result.name,status="applied",expiresAt=GetTime()+300,categoryID=2,result=result}
+ g.records[42]=result;g.apps={application}
+ a:Open("find")
+ local page=u.pages.find
+ T.same(page.appList.ids,{42});T.ok(page.countdown)
+ a:Open("settings",{section="interface"})
+ T.eq(page.frame:IsVisible(),false);T.eq(page.countdown,nil);T.eq(page.appList.ids,nil)
+ local reads,getApplications=0,g.GetApplications
+ g.GetApplications=function(self) reads=reads+1;return getApplications(self) end
+ a:SetSetting("fontScale",110);a:SetSetting("font","game")
+ a:SetSetting("memberIconScale",125)
+ T.eq(reads,0,"changing appearance in Settings does not fetch hidden application rows")
+ T.eq(page.countdown,nil,"a hidden Find page has no display clock after a font change")
+ T.eq(page.appList.ids,nil,"appearance changes preserve the released hidden bindings")
+ u:Hide(true)
+ a:SetSetting("fontScale",100);a:SetSetting("font","default")
+ T.eq(reads,0,"font changes while closed do not fetch application rows")
+ T.eq(page.countdown,nil);T.eq(page.appList.ids,nil)
+ T.eq(g.apps[1],application);T.eq(application.status,"applied");T.eq(g.cancelled,nil)
+ a:Open("find")
+ T.same(page.appList.ids,{42});T.ok(page.countdown,"returning to Find restores the real application's clock")
+ now=1;fresh.base.AdvanceClock(1)
+ for _,row in ipairs(page.appList.rows) do if row.key==42 then T.eq(row.status:GetText(),"4:59") end end
+ T.eq(g.Applications:GetActiveCount(),1);T.eq(g.cancelled,nil)
+ a:SetSetting("reduceMotion",false);u.Motion:Tick(.5)
+ now=1.8;fresh.base.AdvanceClock(.8)
+ u:Hide();u.Motion:Tick(.1)
+ T.eq(u.hiding,true)
+ now=2;fresh.base.AdvanceClock(.2)
+ for _,row in ipairs(page.appList.rows) do if row.key==42 then T.eq(row.status:GetText(),"4:59","closing freezes the displayed countdown") end end
+ T.eq(page.countdown,nil,"a clock callback during exit cancels its ticker")
+ a:Open("find")
+ T.eq(u.hiding,nil);T.ok(page.countdown,"quickly reopening restores the current application's ticker")
+ for _,row in ipairs(page.appList.rows) do if row.key==42 then T.eq(row.status:GetText(),"4:58") end end
+ now=3;fresh.base.AdvanceClock(1)
+ for _,row in ipairs(page.appList.rows) do if row.key==42 then T.eq(row.status:GetText(),"4:57") end end
+ u:Hide(true);T.eq(page.countdown,nil);GetTime=clock
 end
 
 -- Theme saves explain their reload boundary without applying appearance or search.

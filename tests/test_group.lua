@@ -2678,21 +2678,67 @@ do
  T.eq(G.Results:GetDetails(record).members[1].factionGroup,1,"a changed native leader faction invalidates cached member details")
  S.results[8011],S.players[8011]=nil,nil
 end
+-- Repeated applicant snapshots reuse static race metadata, while member faction
+-- and temporarily missing native data continue to follow current native values.
+do
+ local entry,applicants,members=S.activeEntry,S.applicants,S.applicantMembers
+ local raceInfo,factionInfo=C_CreatureInfo.GetRaceInfo,C_CreatureInfo.GetFactionInfo
+ local raceReads,factionReads,available=0,0,false
+ C_CreatureInfo.GetRaceInfo=function(id)
+  raceReads=raceReads+1
+  if id==9001 then return {raceID=id,raceName="Neutral test race"} end
+  if id==9002 and available then return {raceID=id,raceName="Recovered test race"} end
+ end
+ C_CreatureInfo.GetFactionInfo=function(id)
+  factionReads=factionReads+1
+  if id==9001 then return {groupTag="Neutral"} end
+  if id==9002 and available then return {groupTag="Alliance"} end
+ end
+ S.activeEntry={activityIDs={502},name="Static race metadata"};S.applicants={};S.applicantMembers={}
+ for id=8101,8150 do
+  S.applicants[id]={applicationStatus="applied",numMembers=5,displayOrderID=id}
+  S.applicantMembers[id]={}
+  for i=1,5 do S.applicantMembers[id][i]={name="Static"..id.."_"..i.."-Away",class="MAGE",raceID=9001,factionGroup=1} end
+ end
+ G.Listing:OnEntryUpdate();G.Applicants:RefreshList(true,true)
+ T.eq(raceReads,1);T.eq(factionReads,1,"250 members of one race share successful static metadata")
+ G.Applicants:RefreshList(true,true)
+ T.eq(raceReads,1);T.eq(factionReads,1,"an unchanged native applicant list does not allocate race metadata again")
+ local member=G:GetApplicant(8101).members[1]
+ S.applicantMembers[8101][1].factionGroup=0;G.Applicants:OnApplicantUpdated(8101)
+ T.eq(member.raceName,"Neutral test race");T.eq(member.factionGroup,0,"cached neutral metadata uses the member's current faction")
+ T.eq(raceReads,1);T.eq(factionReads,1)
+ S.applicantMembers[8101][1].raceID=9002;G.Applicants:OnApplicantUpdated(8101)
+ T.eq(member.raceName,nil);T.eq(member.factionGroup,0,"missing static data clears the old race and retains native faction")
+ T.eq(raceReads,2);T.eq(factionReads,2)
+ available=true;G.Applicants:OnApplicantUpdated(8101)
+ T.eq(member.raceName,"Recovered test race");T.eq(member.factionGroup,1,"a later native snapshot recovers missing race metadata")
+ T.eq(raceReads,3);T.eq(factionReads,3)
+ G.Applicants:OnApplicantUpdated(8101)
+ T.eq(raceReads,3);T.eq(factionReads,3,"recovered successful metadata is reused")
+ S.applicantMembers[8101][1].raceID=nil;S.applicantMembers[8101][1].factionGroup=nil;G.Applicants:OnApplicantUpdated(8101)
+ T.eq(member.raceName,nil);T.eq(member.factionGroup,nil,"missing race and faction clear the reused member")
+ C_CreatureInfo.GetRaceInfo,C_CreatureInfo.GetFactionInfo=raceInfo,factionInfo
+ S.activeEntry,S.applicants,S.applicantMembers=entry,applicants,members
+ G.Listing:OnEntryUpdate();G.Applicants:Clear();G.Applicants:Restore()
+end
+
 -- Native Mythic+ summaries are lazy, event-invalidated and tied to the exact applicant member.
 do
  local entry,applicants,members=S.activeEntry,S.applicants,S.applicantMembers
  local best,current=C_LFGList.GetApplicantBestDungeonScore,C_LFGList.GetApplicantDungeonScoreForListing
  local maps,mapInfo=C_ChallengeMode.GetMapTable,C_ChallengeMode.GetMapUIInfo
  local duration,success=1600000,true
+ local bestName="Best dungeon"
  local mapReads=0
  C_ChallengeMode.GetMapTable=function() return {900,901} end
  C_ChallengeMode.GetMapUIInfo=function(challengeID)
   mapReads=mapReads+1
   T.ok(challengeID~=111,"the activity's game MapID is never passed as a challenge ID")
-  return "Current dungeon",challengeID,1800,nil,nil,challengeID==901 and 111 or 222
+  return challengeID==901 and "Current dungeon" or "Best dungeon",challengeID,challengeID==901 and 1800 or 1980,nil,nil,challengeID==901 and 111 or 222
  end
  local reads=0
- C_LFGList.GetApplicantBestDungeonScore=function(id,index) reads=reads+1;T.eq(id,8001);T.eq(index,1);return {mapName="Best dungeon",bestRunLevel=19,finishedSuccess=false} end
+ C_LFGList.GetApplicantBestDungeonScore=function(id,index) reads=reads+1;T.eq(id,8001);T.eq(index,1);return {mapName=bestName,bestRunLevel=19,finishedSuccess=false,bestRunDurationMs=1952000} end
  C_LFGList.GetApplicantDungeonScoreForListing=function(id,index,activity) reads=reads+1;T.eq(id,8001);T.eq(index,1);T.eq(activity,502);return {mapScore=315.7,mapName="Current dungeon",bestRunLevel=18,finishedSuccess=success,bestRunDurationMs=duration} end
  S.activeEntry={activityIDs={502},name="Mythic listing"};S.applicants={[8001]={applicationStatus="applied",numMembers=2}};S.applicantMembers={[8001]={{name="Alliance-Away",class="MAGE",factionGroup=0,raceID=1},{name="Horde-Away",class="WARRIOR",factionGroup=0,raceID=2}}}
  G.Listing:OnEntryUpdate();G:RefreshApplicants()
@@ -2710,7 +2756,10 @@ do
  T.eq(G:GetApplicantTimeMargin(member),200);T.eq(mapReads,2,"unchanged time display reuses the listing-map limit")
  local scores=G:GetApplicantDungeonScores(member)
  T.eq(reads,2,"opening details only adds the best-run query");T.eq(scores.current.level,18);T.eq(scores.current.timed,true);T.eq(scores.best.level,19);T.eq(scores.best.timed,false)
+ T.eq(scores.best.durationMs,1952000);T.eq(scores.best.timeLimitSeconds,1980,"best run uses its own native dungeon name, not the listing map's limit")
+ T.eq(mapReads,4,"details resolve both exact-name matches before retaining the best-run limit")
  T.eq(G:GetApplicantDungeonScores(member),scores);T.eq(reads,2,"reopening unchanged details reuses the snapshot")
+ T.eq(mapReads,4,"repainting details reuses both successful run limits")
  S.applicantMembers[8001][1].raceID=24;S.applicantMembers[8001][1].factionGroup=1;G.Applicants:OnApplicantUpdated(8001)
  T.eq(member.raceName,"熊猫人");T.eq(member.factionGroup,1,"a neutral race uses the applicant's own faction")
  S.applicantMembers[8001][1].factionGroup=nil;S.applicantMembers[8001][1].raceID=nil;G.Applicants:OnApplicantUpdated(8001)
@@ -2737,6 +2786,14 @@ do
  T.eq(G:GetApplicantTimeMargin(member),200,"temporarily missing map limits retry on the next explicit request")
  activity.mapID=mapID
  T.eq(G:GetApplicantTimeMargin({applicantID=8001,applicantIndex=1}),nil,"time summaries only belong to the current authoritative member object")
+ bestName="Late dungeon";G.Applicants:OnApplicantUpdated(8001)
+ scores=G:GetApplicantDungeonScores(member)
+ T.eq(scores.best.timeLimitSeconds,nil,"a different best dungeon cannot reuse the previous name's limit")
+ C_ChallengeMode.GetMapUIInfo=function(challengeID) return "Late dungeon",challengeID,2100,nil,nil,111 end
+ T.eq(G:GetApplicantDungeonScores(member).best.timeLimitSeconds,2100,"missing best-run limits retry when details are explicitly requested again")
+ bestName="Ambiguous dungeon";G.Applicants:OnApplicantUpdated(8001)
+ C_ChallengeMode.GetMapUIInfo=function(challengeID) return bestName,challengeID,challengeID==900 and 1800 or 1980,nil,nil,111 end
+ T.eq(G:GetApplicantDungeonScores(member).best.timeLimitSeconds,nil,"conflicting native limits with the same name remain unknown")
  C_LFGList.GetApplicantBestDungeonScore=function() return nil end
  C_LFGList.GetApplicantDungeonScoreForListing=function() return {mapScore=0,bestRunLevel=0,mapName="Current dungeon"} end
  G.Applicants:OnApplicantUpdated(8001);scores=G:GetApplicantDungeonScores(member)
