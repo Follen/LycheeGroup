@@ -158,7 +158,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
   g.records[77].activity=g.Catalog:GetActivity(2);g.records[77].activityID=2;g.records[77].activityName=g.records[77].activity.name
   g.records[77].maxNumPlayers=5;g.records[77].numMembers=3;g.records[77].categoryID=2;g.records[77].details.counts={TANK=1,HEALER=1,DAMAGER=1};g:Notify("result",77);u.Motion:Tick(.016)
   if percent==100 then
-   check(near(row:GetHeight(),u.Theme.findResultRowHeight) and near(row:GetHeight(),58.88),"100% results use the eight-percent-shorter single-row baseline")
+   check(near(row:GetHeight(),u.Theme.findResultRowHeight) and near(row:GetHeight(),53),"100% results use the tighter single-row baseline")
    check(find.appList.rowHeight>=u.Theme.findApplicationRowHeight,"application stride preserves its base minimum")
    check(u.Theme.findApplicationRowHeight==44,"applications keep the enlarged forty-four-unit row baseline")
   end
@@ -373,7 +373,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
    end
   end
   a:SetSetting("fontScale",100)
-  check(near(find.results.rowHeight,u.Theme.findResultRowHeight) and near(find.results.rowHeight,58.88) and notes.list.rowHeight==92,"returning to 100% restores the compact result and unchanged note row geometry")
+  check(near(find.results.rowHeight,u.Theme.findResultRowHeight) and near(find.results.rowHeight,53) and notes.list.rowHeight==92,"returning to 100% restores the compact result and unchanged note row geometry")
   check(top(create.titleLabel)==92 and top(create.titleShell)==116,"returning to 100% retains enlarged form geometry")
   a:SetSetting("fontScale",percent);a:Open("settings",{section="interface"})
   local settings=u.pages.settings

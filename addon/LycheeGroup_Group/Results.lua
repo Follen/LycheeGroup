@@ -142,6 +142,8 @@ local function Normalize(id,record,invalidateDetails,expectedScan,metadataDirty)
   record.progressKnown,record.progressCount=nil,nil
   record.checkedSpecID,record.hasMemberSpec=nil,nil
   record.checkedClass,record.hasMemberClass=nil,nil
+  record.checkedRoleClass,record.checkedRole,record.hasMemberClassRole=nil,nil,nil
+  record.bloodlustKnown,record.hasBloodlust=nil,nil
   record.leaderClassKnown,record.leaderClass=nil,nil
  end
  return record
@@ -218,6 +220,40 @@ function Results:HasMemberClass(record,playerClass)
  end
  record.checkedClass,record.hasMemberClass=playerClass,found
  return found
+end
+local BLOODLUST_CLASSES={SHAMAN=true,MAGE=true,HUNTER=true,EVOKER=true}
+-- Both optional checks share one roster pass and retain only small answers.
+-- An incomplete or restricted roster cannot prove that Bloodlust is missing.
+function Results:MatchesPartyFilters(record,playerClass,playerRole,needBloodlust)
+ local checkRole=playerRole and not (record.checkedRoleClass==playerClass and record.checkedRole==playerRole)
+ if playerRole and not checkRole and record.hasMemberClassRole then return false end
+ local checkBloodlust=needBloodlust and record.numMembers>=4
+ if checkBloodlust and record.bloodlustKnown then
+  if not record.hasBloodlust then return false end
+  checkBloodlust=false
+ end
+ if not checkRole and not checkBloodlust then return true end
+ local lustOK=false
+ local details=record.details
+ local members=details and not record.detailsDirty and details.members
+ for index=1,record.numMembers do
+  local member
+  if members then member=Public(members[index])
+  else member=Public(C_LFGList.GetSearchResultPlayerInfo(record.id,index)) end
+  if type(member)=="table" and (not canaccesstable or canaccesstable(member)) then
+   local class=Public(member.class) or Public(member.classFilename)
+   if checkRole and class==playerClass and Public(member.assignedRole)==playerRole then
+    record.checkedRoleClass,record.checkedRole,record.hasMemberClassRole=playerClass,playerRole,true
+    if checkBloodlust and lustOK then record.bloodlustKnown,record.hasBloodlust=true,true end
+    return false
+   end
+   if checkBloodlust and (type(class)~="string" or class=="" or BLOODLUST_CLASSES[class]) then lustOK=true end
+  elseif checkBloodlust then lustOK=true end
+  if not checkRole and lustOK then break end
+ end
+ if checkRole then record.checkedRoleClass,record.checkedRole,record.hasMemberClassRole=playerClass,playerRole,false end
+ if checkBloodlust then record.bloodlustKnown,record.hasBloodlust=true,lustOK end
+ return not checkBloodlust or lustOK
 end
 local function RelationNames(values,excludeKey)
  values=Public(values)
@@ -323,7 +359,7 @@ local function MatchesLeaderText(record,text)
  local leader=record.leaderName
  return type(leader)=="string" and leader:lower():find(text,1,true)~=nil
 end
-local function Pass(record,filters,leaderText,playerSpecID,playerClass)
+local function Pass(record,filters,leaderText,playerSpecID,playerClass,roleClass,playerRole,needBloodlust)
  if blockedTitles[record.name] and not unblockedLeaders[record.leaderKey] or G.db.blockedLeaders[record.leaderKey] then return false end
  if not Results:MatchesNumericFilters(record,filters) then return false end
  if G.Applications:IsActive(record.id) then return false end
@@ -357,6 +393,7 @@ local function Pass(record,filters,leaderText,playerSpecID,playerClass)
  end
  if playerSpecID and Results:HasMemberSpec(record,playerSpecID) then return false end
  if playerClass and Results:HasMemberClass(record,playerClass) then return false end
+ if (playerRole or needBloodlust) and not Results:MatchesPartyFilters(record,roleClass,playerRole,needBloodlust) then return false end
  return true
 end
 local sorting
@@ -536,9 +573,24 @@ function Results:GetResults()
   local filters=G.Search:GetFilters()
   local playerSpecID=filters.hideSameSpec and A.Specializations:Player() or nil
   local playerClass=filters.hideSameClass and select(2,UnitClass("player")) or nil
+  local roleClass,playerRole,needBloodlust
+  if filters.category=="seasonDungeon" and (filters.hideSameClassRole or filters.requireBloodlust) then
+   roleClass=Public(select(2,UnitClass("player")))
+   if type(roleClass)=="string" and roleClass~="" then
+    if filters.hideSameClassRole then
+     local selected=C_SpecializationInfo.GetSpecialization()
+     if selected then
+      local _,_,_,_,role=C_SpecializationInfo.GetSpecializationInfo(selected)
+      role=Public(role)
+      if role=="TANK" or role=="HEALER" or role=="DAMAGER" then playerRole=role end
+     end
+    end
+    needBloodlust=filters.requireBloodlust and not BLOODLUST_CLASSES[roleClass]
+   end
+  end
   local leaderText=type(filters.leaderText)=="string" and filters.leaderText:lower():match("^%s*(.-)%s*$") or nil
   if leaderText=="" then leaderText=nil end
-  for id,record in pairs(records) do if not record.isDelisted and Pass(record,filters,leaderText,playerSpecID,playerClass) then ids[#ids+1]=id end end
+  for id,record in pairs(records) do if not record.isDelisted and Pass(record,filters,leaderText,playerSpecID,playerClass,roleClass,playerRole,needBloodlust) then ids[#ids+1]=id end end
   sorting=filters.sort or A:GetSetting("defaultSort");table.sort(ids,Sort);dirty=false
  end
  return ids

@@ -22,6 +22,45 @@ local function Member(name,rating,map,ilvl)
  return {name=name,nameKey=name,class="WARRIOR",assignedRole="DAMAGER",rating=rating,itemLevel=ilvl,dungeonScores={mapScore=map}}
 end
 
+-- Native removals can precede the queued UI notification. Resizing then enters
+-- the real table-header callback while the applicant display is being rebuilt.
+do
+ local f=dofile("tests/ui_fixture.lua")("enUS",nil,{reduceMotion=true})
+ local a,u,g=f.A,f.U,f.G
+ g.listing={activityID=2,name="Keystone listing"}
+ g.applicants={[1]={id=1,status="applied",displayOrderID=1,members={Member("First-Away",100,100,250)}}}
+ a:Open("create");local page=u.pages.create
+ Order(page,{1},"first native applicant")
+ Check(page.batchTops[2]>page.batchTops[1] and page.batchLayouts[1]~=nil,"the first applicant publishes complete row geometry")
+ g.applicants={};g.listing=nil -- The backend has changed; the queued notice has not run.
+ u:SetWindowSize(u.windowWidth+100,u.windowHeight)
+ Order(page,{},"resize accepts a removal before the queued applicant notification")
+ Check(page.batchTops[1]==0 and page.batchTops[2]==nil,"native removal publishes a complete empty geometry")
+ for _,batch in ipairs(page.batchPool) do Check(not batch:IsShown(),"removed native applicants leave no visible pooled batch") end
+ g:Notify("listing");Order(page,{},"the later queued notice remains idempotent")
+ u:Navigate("find")
+ Check(page.appIDs==nil and page.batchTops==nil and page.batchLayouts==nil,"leaving creation releases the published applicant layout")
+ g.listing={activityID=2,name="Next listing"}
+ g.applicants={[2]={id=2,status="applied",displayOrderID=2,members={Member("Next-Away",200,200,260)}}}
+ g:Notify("applicants")
+ Check(page.appIDs==nil,"hidden creation does not rebuild applicant geometry")
+ u:Navigate("create");Order(page,{2},"reentering displays the latest native applicant")
+ u:SetWindowSize(u.windowWidth+40,u.windowHeight)
+ Check(page.batchTops[2]>0 and Batch(page,2).people[1].member==g.applicants[2].members[1],"resize after reentry retains the current applicant and geometry")
+ u:Hide(true)
+end
+do
+ local f=dofile("tests/ui_fixture.lua")("enUS",nil,{reduceMotion=true})
+ f.A:Open("create");local page=f.U.pages.create
+ Order(page,{},"native empty creation state")
+ Check(page.batchTops[1]==0,"an empty applicant layout has a complete zero-height sentinel")
+ f.G.listing={activityID=2,name="First listing"}
+ f.G.applicants={[3]={id=3,status="applied",displayOrderID=3,members={Member("First-Away",100,100,250)}}}
+ f.G:Notify("listing");Order(page,{3},"an initially empty page receives its first applicant")
+ Check(page.batchTops[2]>page.batchTops[1],"the first applicant replaces empty geometry with a complete layout")
+ f.U:Hide(true)
+end
+
 for _,locale in ipairs({"zhCN","enUS"}) do
  local f=dofile("tests/ui_fixture.lua")(locale)
  local a,u,g,s=f.A,f.U,f.G,f.S;a:SetSetting("reduceMotion",true)

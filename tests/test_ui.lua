@@ -1033,7 +1033,7 @@ do
 end
 find:SetSidebarCollapsed(false,false)
 T.eq(find.rail:GetWidth(),208);T.near(find.main:GetWidth(),U.content:GetWidth()-208-U.Theme.contentGap-U.Theme.findContentInset*2,.001)
-T.eq(find.filterPanel:GetWidth(),460);T.near(find.results.rowHeight,58.88,.001)
+T.eq(find.filterPanel:GetWidth(),460);T.near(find.results.rowHeight,53,.001)
 T.eq(find.seasonCategories.rows[1]:GetHeight(),48,"the activity sidebar keeps its original compact row height")
 do
  local countPoint={find.resultCount:GetPoint()}
@@ -1605,10 +1605,10 @@ find:Apply(102);T.eq(U.Application.applicationLease.id,102,"the player selects a
 T.eq(find.limitNotice:IsShown(),false,"selecting a group again clears the quota notice")
 do
  T.eq(find.quickFilterHeight,0,"important filters do not consume a second row")
- local expectedRows=5
+ local expectedRows=6
  local row=find.results.rows[expectedRows];local point={row:GetPoint()}
  T.ok(#find.appList.ids>=3,"the density check keeps all three application rows visible")
- T.eq(math.floor(find.results:GetHeight()/find.results.rowHeight),expectedRows,"larger result rows fit below three applications")
+ T.eq(math.floor(find.results:GetHeight()/find.results.rowHeight),expectedRows,"compact result rows fit below three applications")
  T.ok(row.key and -point[#point]+row:GetHeight()<=find.results:GetHeight(),"the expected complete result rows fit below three applications")
 end
 G.apps[2].status="applied";U.Application:Apply(102)
@@ -2247,7 +2247,7 @@ do
  local activeListing=g:GetListing()
  T.eq(list.rows[1].create.label:GetText(),"应用")
  T.eq(list.rows[1].create:IsEnabled(),false)
- T.eq(list.rows[1].unavailable and list.rows[1].unavailable:GetText(),"结束招募后可应用","a disabled favorite explains the active-recruitment condition beside Apply")
+ T.eq(list.rows[1].unavailable:IsShown(),false,"a recruiting favorite keeps Apply disabled without an extra explanatory row")
  T.eq(page.listingFavorite.selected,true,"the active listing has its own favorite state")
  page.ilvl.box:SetText("399")
  page.listingFavorite:Fire("OnClick")
@@ -2259,7 +2259,7 @@ do
  T.eq(g:GetListing(),activeListing);T.eq(g.updated,nil,"favoriting never updates or ends recruitment")
  local published=g.published;page:UsePreset(saved);T.eq(g.published,published,"saved creation does not overwrite a live listing")
  g:RemoveListing()
- T.eq(list.rows[1].create:IsEnabled(),true);T.eq(list.rows[1].unavailable:IsShown(),false,"ending recruitment restores Apply and removes the obsolete reason")
+ T.eq(list.rows[1].create:IsEnabled(),true);T.eq(list.rows[1].unavailable:IsShown(),false,"ending recruitment restores Apply without adding explanatory text")
  page:UsePreset(saved)
  T.eq(g:GetListing(),nil,"reapplying unchanged settings still requires the Publish button")
  entry.Name:UserType("");entry.Description.EditBox:UserType("")
@@ -2391,7 +2391,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  g.prefs.find={category="seasonDungeon",categoryPrefs={seasonDungeon={selected=true,difficultyID=8}}}
  for id=1,3 do g.records[id]={id=id,partyGUID="Party-"..id,name="Group "..id,activityID=2,activity=g.Catalog:GetActivity(2),categoryID=2,numMembers=1,maxNumPlayers=5,age=10} end
  a:Open("find");local page=u.pages.find
- T.eq(page.declineClock,nil);T.near(page.results.rowHeight,58.88,.001,"ordinary results use the eight-percent-shorter row height")
+ T.eq(page.declineClock,nil);T.near(page.results.rowHeight,53,.001,"ordinary results use the tighter single-line row height")
  now=59;g.declinedParties["Party-2"]=0;g:Notify("applications")
  T.same(page.results.ids,{1,3,2});T.ok(page.declineClock);T.eq(page.countdown,nil,"rejection text does not need an active application")
  local function Row(id) for _,row in ipairs(page.results.rows) do if row.key==id then return row end end;error("missing result "..id) end
@@ -2447,7 +2447,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  page.results:SetPixelOffset(0,false);T.eq(reused.declined:GetText(),"");T.eq(reused.declined:IsShown(),false,"row reuse removes the old rejection label")
  T.eq(page.declineClock,nil);T.eq(timer.cancelled,true)
  local normal=g.records[1];g.records={[1]=normal};g:Notify("results")
- T.eq(page.declineClock,nil);T.eq(timer.cancelled,true);T.near(page.results.rowHeight,58.88,.001,"a view without rejected results restores the compact single-line layout")
+ T.eq(page.declineClock,nil);T.eq(timer.cancelled,true);T.near(page.results.rowHeight,53,.001,"a view without rejected results restores the compact single-line layout")
  g.records[20]=rejected;g:Notify("results");timer=page.declineClock
  u:Hide(true);T.eq(timer.cancelled,true);T.eq(page.declineClock,nil)
  for _,row in ipairs(page.results.rows) do T.eq(row.declined:GetText(),"") end
@@ -2791,7 +2791,7 @@ do
  T.eq(u.context.menu:IsShown(),false,"applicant left clicks retain their existing behavior")
  row:Fire("OnClick","RightButton")
  local menu=u.context.menu
- T.eq(#menu.items,3);T.eq(menu.items[1].label,"密聊");T.eq(menu.items[2].label,"复制名称");T.eq(menu.items[3].label,"拉黑玩家")
+ T.eq(#menu.items,3);T.eq(menu.items[1].label,"密聊");T.eq(menu.items[2].label,"复制名称");T.eq(menu.items[3].label,"荔枝笔记：拉黑玩家")
  T.eq(Item("whisper").disabled,false);T.eq(Item("copy").disabled,false);T.eq(Item("block").disabled,false)
  before=#tells;Choose("whisper");T.eq(#tells,before+1)
  row:Fire("OnClick","RightButton")
@@ -2875,7 +2875,7 @@ do
  T.eq(view.footer:GetText(),"","current-roster tooltips have no interaction instructions")
  do
   local last=view.memberButtons[40];local point={last:GetPoint()}
-  T.near(view.canvas:GetHeight(),-point[#point]+last:GetHeight(),.001,"grouped rosters end at the final member without an empty instruction area")
+  T.near(view.canvas:GetHeight(),-point[#point]+last:GetHeight()+12,.001,"grouped rosters retain 12 pixels of bottom padding without an instruction area")
  end
  T.eq(view.memberButtons[1].member,members[1],"the roster tooltip starts with the first actual member of subgroup one")
  T.eq(view.memberButtons[40].member,members[40]);T.ok(view.memberButtons[40].leaderIcon:IsShown(),"the leader crown remains on its real subgroup member")
@@ -2920,7 +2920,7 @@ do
  T.eq(view:GetWidth(),440);T.eq(view.memberButtons[2]:IsShown(),false)
  do
   local last=view.memberButtons[1];local point={last:GetPoint()}
-  T.near(view.canvas:GetHeight(),-point[#point]+last:GetHeight(),.001,"a party roster reserves no footer height")
+  T.near(view.canvas:GetHeight(),-point[#point]+last:GetHeight()+12,.001,"a one-member raid subgroup retains its bottom padding without footer height")
   T.near(view:GetHeight()-view.canvas:GetHeight(),40,.001,"the ordinary twenty-pixel top and bottom surface padding remains")
  end
  tip:Hide()
@@ -4242,7 +4242,7 @@ do
  row.tooltipArea:Fire("OnEnter")
  T.eq(resets,1,"a current-member hover resets the detail surface once")
  T.eq(hides,40,"a player hover clears the forty-member warm pool only once")
- T.same(widths,{440},"a direct roster player goes straight to the final width")
+ T.same(widths,{width},"a direct roster player goes straight to the measured final width")
  T.eq(view.title:GetText(),title);T.eq(view.summary:GetText(),summary);T.eq(view:GetWidth(),width);T.eq(view:GetHeight(),height)
  T.same({view.metrics[1].title:GetPoint()},metricPoint)
  T.eq(tip.owner,row);T.eq(tip.member,members[1]);T.eq(tip.pinned,false)

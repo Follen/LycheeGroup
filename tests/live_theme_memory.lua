@@ -1,7 +1,7 @@
 -- LycheeDev Theme v2 acceptance: real existing business, normal animation, 12 page/font cycles.
 -- Button:Click is controller coverage. No hardware dispatch, forced GC, GC-policy changes or protected business actions.
 local probe=...
-local A=assert(LycheeGroup);assert(LycheeUI.version==35 and A.RuntimeTheme and not InCombatLockdown())
+local A=assert(LycheeGroup);assert(LycheeUI.version==36 and A.RuntimeTheme and not InCombatLockdown())
 assert(A.API.Theme.version==2 and A.API.Configuration.version==2,"cold_theme_api_not_loaded")
 assert(not LycheeUI.Context.SetTheme and not LycheeUI.Context.SetRecipes,"runtime_theme_writes_remain")
 assert(not LycheeUI.Context.StyleMemberIcon and not LycheeUI.Context.SetMemberIcon and not LycheeUI.Context.SetRoleIcon and not LycheeUI.Context.SetActivityIcon,'business interfaces remain in shared library')
@@ -25,7 +25,7 @@ local initialListing=A.Group and A.Group:GetListing()
 assert(not C_LFGList.HasActiveEntryInfo() or initialListing,'listing restoration missing')
 local listingActivity=initialListing and initialListing.activityID
 local floatingShown=A.Floating and A.Floating.panel and A.Floating.panel:IsShown()
-local out={themeAPI=2,revision=35,build=select(2,GetBuildInfo()),samples={},search={},cycles={},stages=0,nativeClicks=0,fontChanges=0,budget=20000000,budgetPassed=true,peakBytes=0}
+local out={themeAPI=2,revision=36,build=select(2,GetBuildInfo()),samples={},search={},cycles={},stages=0,nativeClicks=0,fontChanges=0,budget=20000000,budgetPassed=true,peakBytes=0}
 local started=GetTime()
 out.mainBuiltAtStart=initial~=nil and initial.frame~=nil
 out.initialFloatingPool=A.Floating and A.Floating.rows and #A.Floating.rows or 0

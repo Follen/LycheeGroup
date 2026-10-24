@@ -2,6 +2,8 @@ local A = _G.LycheeGroup
 local UI = A.UI
 local T,L,C = UI.Theme,UI.L,UI.C
 local Members=UI.Members
+local Links=UI.PlayerLinks
+local ActivityLabel=A.ActivityLabels.Display
 -- A separate tooltip owned by this UI; the global GameTooltip stays untouched.
 local Tip={orderedMembers={},rosterGroupCounts={}}
 local function ScrollMaximum(scroll,canvas)
@@ -56,7 +58,8 @@ function Tip:IsOwned(owner) return self.owner==owner end
 function Tip:IsResult(id)
  return self.record~=nil and self.record.id==id and self.interactive~=nil and self.interactive:IsShown()
 end
-function Tip:ClearSource()
+function Tip:ClearSource(keepRosterState)
+ if not keepRosterState then self:CancelRosterDrag();self:ClearRosterNotice() end
  self.record,self.member,self.details,self.sourceApp,self.sourceRoster=nil,nil,nil,nil,nil
  self.memberContext,self.rosterContext,self.directPlayer,self.selectedMemberID,self.applicantID,self.noteKey=nil,nil,nil,nil,nil,nil
 end
@@ -115,6 +118,268 @@ end
 
 local zh=A:GetLocale()=="zhCN"
 local function Say(cn,en) return zh and cn or en end
+local raidDragMessages={
+ permission={"只有团长或助理可以调整小队。","Only the raid leader or an assistant can change groups."},
+ playerCombat={"你正在战斗中，无法调整小队。","You cannot change groups while you are in combat."},
+ sourceCombat={"被拖动的成员正在战斗中。","The member being dragged is in combat."},
+ targetCombat={"交换目标正在战斗中。","The member you would swap with is in combat."},
+ full={"目标小队已有 5 人。","The destination group already has 5 members."},
+ identity={"成员已离队，请重新选择。","The member has left the raid. Select a current member."},
+ notRaid={"当前不在团队中。","You are no longer in a raid."},
+ unknown={"成员状态暂不可用，无法调整小队。","Member status is unavailable. Groups cannot be changed."},
+ failed={"小队调整未提交，请稍后重试。","The group change could not be submitted. Try again later."},
+}
+function Tip:ClearRosterNotice()
+ if self.rosterNoticeTimer then self.rosterNoticeTimer:Cancel();self.rosterNoticeTimer=nil end
+ if self.interactive and self.interactive.rosterNotice then self.interactive.rosterNotice:SetMessage("") end
+end
+function Tip:CancelRosterDrag()
+ local drag=self.rosterDrag;self.rosterDrag=nil
+ self:StopRosterDragVisuals()
+ if drag then
+  drag.button:SetAlpha(drag.alpha);drag.button.suppressRosterClick=true
+  self.pinned=drag.wasPinned
+ end
+ local f=self.interactive
+ if f then
+  f:UnregisterEvent("PLAYER_REGEN_DISABLED");f:UnregisterEvent("UNIT_FLAGS")
+  for _,drop in pairs(f.rosterDrops or {}) do drop:Hide() end
+ end
+ if drag and self.outsideClicks then self.outsideClicks:SetShown(self.pinned==true) end
+end
+local function ScreenRect(frame)
+ local scale=frame:GetEffectiveScale()
+ local left,top=frame:GetLeft()*scale,frame:GetTop()*scale
+ return left,top,left+frame:GetWidth()*scale,top-frame:GetHeight()*scale
+end
+function Tip:CaptureRosterGrab(button)
+ if not self:IsRosterDragContext() or not button.member then button.rosterGrab=nil;return end
+ local x,y=GetCursorPosition();local scale=button:GetEffectiveScale()
+ button.rosterGrab={guid=A.Group.Public(button.member.guid),width=button:GetWidth(),height=button:GetHeight(),scale=scale,
+  x=math.max(0,math.min(button:GetWidth(),x/scale-button:GetLeft())),y=math.max(0,math.min(button:GetHeight(),button:GetTop()-y/scale))}
+end
+function Tip:StopRosterDragVisuals()
+ if self.rosterDragGhost then
+  local ghost=self.rosterDragGhost
+  UI.Motion:Stop(ghost);ghost:Hide();ghost.card.member=nil;ghost.card.targetKey=nil
+  UI:SetText(ghost.card.name,"");UI:SetText(ghost.card.realm,"");UI:SetText(ghost.status,"");Members:ClearMarks(ghost.card.marks);C.RekeyElement(ghost.card,nil)
+ end
+ if self.rosterDropHighlight then self.rosterDropHighlight:Hide() end
+ if self.emptyRosterPanel then self.emptyRosterPanel:Hide() end
+end
+function Tip:EnsureRosterDragGhost()
+ if self.rosterDragGhost then return self.rosterDragGhost end
+ local ghost=CreateFrame("Frame",nil,UIParent);ghost:SetFrameStrata("TOOLTIP");ghost:SetFrameLevel(self.interactive:GetFrameLevel()+30);ghost:EnableMouse(false)
+ C.Shadow(ghost,16);ghost.surface=C.Panel(ghost,"raised","tooltipPanelRadius")
+ ghost.card=Members:Create(ghost);ghost.card:SetPoint("TOPLEFT");ghost.card:EnableMouse(false)
+ ghost.status=C.Text(ghost,"",13,"muted");C.SetLineHeight(ghost.status,20);ghost.status:SetWordWrap(true)
+ UI:Element(ghost,"tooltip.rosterDragGhost","tooltip",ghost)
+ ghost:Hide();self.rosterDragGhost=ghost
+ return ghost
+end
+function Tip:PositionRosterHighlight(region,clipped,color)
+ if not region then if self.rosterDropHighlight then self.rosterDropHighlight:Hide() end;return end
+ local left,top,right,bottom=ScreenRect(region)
+ if clipped then
+  local clipLeft,clipTop,clipRight,clipBottom=ScreenRect(self.interactive.scroll)
+  left,top,right,bottom=math.max(left,clipLeft),math.min(top,clipTop),math.min(right,clipRight),math.max(bottom,clipBottom)
+ end
+ if right<=left or top<=bottom then if self.rosterDropHighlight then self.rosterDropHighlight:Hide() end;return end
+ local highlight=self.rosterDropHighlight
+ if not highlight then
+  highlight=CreateFrame("Frame",nil,UIParent);highlight:SetFrameStrata("TOOLTIP");highlight:SetFrameLevel(self.interactive:GetFrameLevel()+10);highlight:EnableMouse(false)
+  highlight.surface=C.Panel(highlight,{1,1,1,.15},8);self.rosterDropHighlight=highlight
+  UI:Element(highlight,"tooltip.rosterDropHighlight","tooltip",highlight)
+ end
+ local scale=UIParent:GetEffectiveScale()
+ if highlight.rectLeft~=left or highlight.rectTop~=top or highlight.rectRight~=right or highlight.rectBottom~=bottom or highlight.rectScale~=scale then
+  highlight.rectLeft,highlight.rectTop,highlight.rectRight,highlight.rectBottom,highlight.rectScale=left,top,right,bottom,scale
+  highlight:SetScale(1);highlight:SetSize((right-left)/scale,(top-bottom)/scale)
+  highlight:ClearAllPoints();highlight:SetPoint("TOPLEFT",UIParent,"BOTTOMLEFT",left/scale,top/scale)
+ end
+ if highlight.targetColor~=color then highlight.targetColor=color;highlight.surface:SetColor({color[1],color[2],color[3],.18}) end
+ highlight:Show()
+end
+function Tip:PrepareRosterDropTargets()
+ local f=self.interactive
+ for subgroup,bounds in pairs(self.rosterGroupBounds or {}) do
+  local drop=f.rosterDrops[subgroup]
+  if not drop then
+   drop=CreateFrame("Frame",nil,f.canvas);drop:EnableMouse(true);drop:SetFrameLevel(f.canvas:GetFrameLevel()+1)
+   drop.surface=C.Panel(drop,{1,1,1,.035},8);drop.dropKey="group:"..subgroup
+   UI:Element(drop,"tooltip.rosterDrop","tooltip",drop,"tooltip.rosterDrop",subgroup,drop);f.rosterDrops[subgroup]=drop
+  end
+  drop:ClearAllPoints();drop:SetPoint("TOPLEFT",bounds.x,-bounds.top);drop:SetSize(bounds.width,bounds.height);drop:Show()
+ end
+ local missing=0;for subgroup=1,8 do if not self.rosterGroupCounts[subgroup] then missing=missing+1 end end
+ if missing==0 then return end
+ local panel=self.emptyRosterPanel
+ if not panel then
+  panel=CreateFrame("Frame",nil,UIParent);panel:SetFrameStrata("TOOLTIP");panel:SetFrameLevel(f:GetFrameLevel()+5);panel:EnableMouse(false)
+  panel.surface=C.Panel(panel,"raised",12);C.Shadow(panel,12);panel.buttons={};self.emptyRosterPanel=panel
+  UI:Element(panel,"tooltip.emptyRosterGroups","tooltip",panel)
+ end
+ local cellWidth,cellHeight=76,32
+ for subgroup=1,8 do
+  local button=panel.buttons[subgroup]
+  if not self.rosterGroupCounts[subgroup] then
+   if not button then
+    button=C.Button(panel,"",76,nil,{height=32,radius=8});button.subgroup=subgroup;button.dropKey="empty:"..subgroup
+    UI:Element(button,"tooltip.emptyRosterGroup","tooltip",button,"tooltip.emptyRosterGroup",subgroup,button);panel.buttons[subgroup]=button
+   end
+   C.SetFont(button.label,"buttonFontSize");C.SetLineHeight(button.label,"buttonLineHeight",true)
+   UI:SetText(button.label,Say("小队 %d","Group %d"):format(subgroup));cellWidth=math.max(cellWidth,math.ceil(C.MeasureTextWidth(button.label))+24);cellHeight=math.max(cellHeight,button.label:GetHeight()+12)
+   button:Show()
+  elseif button then button:Hide() end
+ end
+ local columns=math.min(4,missing);local index=0
+ for subgroup=1,8 do local button=panel.buttons[subgroup];if button and button:IsShown() then
+  button:SetSize(cellWidth,cellHeight);button:ClearAllPoints();button:SetPoint("TOPLEFT",8+(index%columns)*(cellWidth+6),-8-math.floor(index/columns)*(cellHeight+6));index=index+1
+ end end
+ panel:SetSize(16+columns*cellWidth+(columns-1)*6,16+math.ceil(missing/columns)*cellHeight+(math.ceil(missing/columns)-1)*6)
+ panel:SetScale(f:GetEffectiveScale()/UIParent:GetEffectiveScale())
+ local left,top,right,bottom=ScreenRect(f);local scale=panel:GetEffectiveScale();local width,height=panel:GetWidth()*scale,panel:GetHeight()*scale
+ local screenLeft,screenTop,screenRight,screenBottom=ScreenRect(UIParent);local gap=8*UIParent:GetEffectiveScale()
+ local x=math.max(screenLeft+gap,math.min(left,screenRight-width-gap));local y
+ if bottom-gap-height>=screenBottom+gap then y=bottom-gap
+ elseif top+gap+height<=screenTop-gap then y=top+gap+height
+ elseif right+gap+width<=screenRight-gap then x,y=right+gap,math.min(top,screenTop-gap)
+ elseif left-gap-width>=screenLeft+gap then x,y=left-gap-width,math.min(top,screenTop-gap)
+ else y=screenTop-gap end
+ y=math.max(screenBottom+height+gap,math.min(y,screenTop-gap))
+ panel:ClearAllPoints();panel:SetPoint("TOPLEFT",UIParent,"BOTTOMLEFT",x/scale,y/scale);panel:Show()
+end
+function Tip:HitRosterDrop()
+ local drag=self.rosterDrag;if not drag then return false end
+ if self.emptyRosterPanel and self.emptyRosterPanel:IsShown() then
+  for _,button in pairs(self.emptyRosterPanel.buttons) do if button:IsVisible() and button:IsMouseOver() then return button.dropKey,button.subgroup,nil,button,nil,false end end
+ end
+ if not self.interactive.scroll:IsMouseOver() then return false end
+ for _,target in ipairs(self.interactive.memberButtons) do
+  if target:IsVisible() and target.member and target:IsMouseOver() then
+   if target==drag.button then return false end
+   local guid=A.Group.Public(target.member.guid)
+   if type(guid)~="string" or guid=="" or guid~=target.targetKey then return target.rosterUnknownDropKey,nil,nil,target,"unknown",true end
+   return target.rosterDropKey,A.Group.Public(target.member.subgroup),guid,target,nil,true
+  end
+ end
+ for subgroup,drop in pairs(self.interactive.rosterDrops) do if drop:IsVisible() and drop:IsMouseOver() then return drop.dropKey,subgroup,nil,drop,nil,true end end
+ return false
+end
+function Tip:UpdateRosterDragTarget(force)
+ local drag=self.rosterDrag;if not drag then return end
+ local key,subgroup,targetGUID,region,reason,clipped=self:HitRosterDrop()
+ if not force and drag.intentKey==key then self:PositionRosterHighlight(drag.targetRegion,drag.targetClipped,drag.targetColor or T.dim);return end
+ drag.intentKey=key;drag.targetRegion,drag.targetClipped=region,clipped
+ local intent
+ if key and not reason then intent,reason=UI:GetGroup().RaidGroups:ResolveDrop(drag.guid,subgroup,targetGUID) end
+ if reason=="same" then reason=nil;region=nil;drag.targetRegion=nil end
+ drag.intent,drag.invalidReason=intent,reason
+ local text=Say("拖至小队背景或其他成员","Drag to a group or another member")
+ local color=T.muted
+ if intent then
+  color=T.accent
+  if intent.mode=="swap" then text=Say("与 %s 交换","Swap with %s"):format(intent.target.name or Say("该成员","this member"))
+  elseif intent.mode=="empty" then text=Say("移至小队 %d","Move to group %d"):format(intent.subgroup)
+  else text=Say("加入小队 %d","Join group %d"):format(intent.subgroup) end
+ elseif reason then local message=raidDragMessages[reason] or raidDragMessages.unknown;text=Say(message[1],message[2]);color=T.dim end
+ drag.targetColor=color
+ local ghost=self.rosterDragGhost;UI:SetText(ghost.status,text);UI:Color(ghost.status,color);ghost.status:SetHeight(0)
+ ghost:SetHeight(ghost.card:GetHeight()+ghost.status:GetStringHeight()+10)
+ self:PositionRosterHighlight(region,clipped,color)
+end
+function Tip:StartRosterDragVisual(button,drag)
+ local grab=button.rosterGrab
+ if not grab or grab.guid~=drag.guid then self:CaptureRosterGrab(button);grab=button.rosterGrab end
+ button.rosterGrab=nil
+ local ghost=self:EnsureRosterDragGhost()
+ drag.grabX,drag.grabY,drag.visualScale=grab.x,grab.y,grab.scale
+ -- These reusable visuals live outside the window/scroll hierarchy. Match the
+ -- current source fonts explicitly when a later drag follows a font change.
+ ghost.card.name:SetFont(button.name:GetFont());ghost.card.name:SetSpacing(button.name:GetSpacing())
+ ghost.card.realm:SetFont(button.realm:GetFont());ghost.card.realm:SetSpacing(button.realm:GetSpacing())
+ C.SetFont(ghost.status,13);C.SetLineHeight(ghost.status,20)
+ Members:BindRoster(ghost.card,button.member,grab.width,button.member.isLeader,true,12,8,true);ghost.card:EnableMouse(false)
+ ghost:SetWidth(grab.width);ghost.status:ClearAllPoints();ghost.status:SetPoint("TOPLEFT",12,-ghost.card:GetHeight()-2);ghost.status:SetWidth(grab.width-24)
+ ghost:SetAlpha(1);ghost:Show();self:UpdateRosterDragTarget(true)
+ local elapsed=0
+ local function Follow(dt)
+  if Tip.rosterDrag~=drag then return true end
+  elapsed=math.min(.12,elapsed+dt)
+  local p=A:GetSetting("reduceMotion") and 0 or 1-(1-elapsed/.12)^3
+  local scale=drag.visualScale*(1+.035*p);local parentScale=UIParent:GetEffectiveScale()
+  local x,y=GetCursorPosition()
+  if drag.cursorX~=x or drag.cursorY~=y or drag.cursorScale~=scale or drag.cursorParentScale~=parentScale then
+   drag.cursorX,drag.cursorY,drag.cursorScale,drag.cursorParentScale=x,y,scale,parentScale
+   ghost:SetScale(scale/parentScale);ghost:ClearAllPoints();ghost:SetPoint("TOPLEFT",UIParent,"BOTTOMLEFT",x/scale-drag.grabX,y/scale+drag.grabY)
+  end
+  Tip:UpdateRosterDragTarget()
+ end
+ Follow(0);UI.Motion:Start(ghost,Follow,function() ghost:Hide() end)
+end
+function Tip:IsRosterDragContext()
+ return not UI.preview and not UI.hiding and self.sourceRoster~=nil and not self.member and self.rosterIsRaid==true
+  and A.Group.Public(IsInRaid())==true and UI:GetGroup().RaidGroups~=nil
+end
+function Tip:RenderCurrentRoster()
+ if self.rosterDrag then return end
+ if not self.sourceRoster or not self.interactive or not self.interactive:IsShown() then return end
+ self:ShowRoster(self.owner,self.sourceRoster,self.pinned,self.rosterContext,true)
+end
+function Tip:ShowRosterNotice(reason)
+ if not self.sourceRoster then return end
+ self:ClearRosterNotice()
+ local f=self.interactive
+ if not f.rosterNotice then
+  f.rosterNotice=C.Notice(f.canvas,f.canvas:GetWidth(),function() Tip:ClearRosterNotice();Tip:RenderCurrentRoster() end)
+  UI:Element(f.rosterNotice,"tooltip.rosterNotice","tooltip",nil,nil,nil,f)
+ end
+ local message=raidDragMessages[reason] or raidDragMessages.unknown
+ f.rosterNotice:SetWidth(f.canvas:GetWidth());f.rosterNotice:SetMessage(Say(message[1],message[2]))
+ self.rosterNoticeTimer=C_Timer.NewTimer(4,function() Tip.rosterNoticeTimer=nil;Tip:ClearRosterNotice();Tip:RenderCurrentRoster() end)
+ self:RenderCurrentRoster()
+end
+function Tip:StartRosterDrag(button)
+ if not self:IsRosterDragContext() or not button.member then return end
+ local guid=A.Group.Public(button.member.guid)
+ local allowed,reason=UI:GetGroup().RaidGroups:CanStart(guid)
+ button.suppressRosterClick=true
+ if not allowed then self:ShowRosterNotice(reason);return end
+ self:ClearRosterNotice();UI:CloseMenu();UI.Motion:Stop(self)
+ self.rosterDrag={guid=guid,button=button,alpha=button:GetAlpha(),wasPinned=self.pinned}
+ button:SetAlpha(.55)
+ self.interactive:RegisterEvent("PLAYER_REGEN_DISABLED");self.interactive:RegisterEvent("UNIT_FLAGS")
+ self.pinned=true;self.outsideClicks:Show()
+ self:PrepareRosterDropTargets();self:StartRosterDragVisual(button,self.rosterDrag)
+end
+function Tip:FinishRosterDrag(button)
+ local drag=self.rosterDrag
+ if not drag or drag.button~=button then return end
+ local key,subgroup,targetGUID,_,reason=self:HitRosterDrop()
+ if key and not reason and self:IsRosterDragContext() then local _;_,reason=UI:GetGroup().RaidGroups:Drop(drag.guid,subgroup,targetGUID) end
+ if reason=="same" then reason=nil end
+ self:CancelRosterDrag()
+ if self.sourceRoster then self.sourceRoster=UI:GetGroup():GetRoster() end
+ if reason then self:ShowRosterNotice(reason) else self:RenderCurrentRoster() end
+end
+function Tip:CheckRosterDrag(unit)
+ local drag=self.rosterDrag;if not drag then return end
+ local targetGUID
+ if unit then
+  local guid=A.Group.Public(UnitGUID(unit))
+  if A.Group.Public(UnitIsUnit(unit,"player"))~=true and guid~=drag.guid then
+   for _,button in ipairs(self.interactive.memberButtons) do
+    if button:IsVisible() and button.member and button:IsMouseOver() and button.member.guid==guid then targetGUID=guid;break end
+   end
+   if not targetGUID then return end
+  end
+ end
+ local allowed,reason=UI:GetGroup().RaidGroups:CanStart(drag.guid)
+ if allowed then self:UpdateRosterDragTarget(true);return end
+ self:CancelRosterDrag()
+ if reason=="identity" or reason=="notRaid" then self:ClearRosterNotice();self:RenderCurrentRoster()
+ else self:ShowRosterNotice(reason) end
+end
 function Tip:BindText(owner,text)
  owner:HookScript("OnEnter",function(button)
   if UI.hiding or self.pinned then return end
@@ -181,7 +446,7 @@ local function DefaultMemberContext(member)
  return member.applicantID and ApplicantContext(UI:GetGroup():GetApplicant(member.applicantID)) or A.GroupPresentation.Member("roster")
 end
 function UI:MemberRating(member)
- if member.ratingKind=="pvp" then return member.rating,"pvp",member.pvpRatingInfo and member.pvpRatingInfo.activityName end
+ if member.ratingKind=="pvp" then return member.rating,"pvp",ActivityLabel(member.pvpRatingInfo and member.pvpRatingInfo.activityName) end
  return member.dungeonScore or member.rating,"dungeon"
 end
 function UI:CopyText(title,value,restoreTooltip,identity,fieldLabel)
@@ -214,6 +479,7 @@ function Tip:BuildInteractive()
  outside:SetScript("OnShow",function(self) self:RegisterEvent("GLOBAL_MOUSE_DOWN") end)
  outside:SetScript("OnHide",function(self) self:UnregisterEvent("GLOBAL_MOUSE_DOWN") end)
  outside:SetScript("OnEvent",function()
+  if Tip.rosterDrag then return end
   local owner=UI.context:GetMenuAnchor()
   local ownMenu=owner and owner:GetParent()==Tip.interactive.canvas and UI.context:IsMenuHovered(owner)
   if not Tip.interactive:IsMouseOver() and not ownMenu then Tip:Hide() end
@@ -222,6 +488,7 @@ function Tip:BuildInteractive()
  f:SetScript("OnEnter",function() UI.Motion:Stop(Tip) end)
  f:SetScript("OnLeave",function() Tip:LeaveOwner() end)
  f:SetScript("OnEvent",function(_,event,key,down)
+  if event=="PLAYER_REGEN_DISABLED" or event=="UNIT_FLAGS" then Tip:CheckRosterDrag(event=="UNIT_FLAGS" and key or nil);return end
   if event=="MODIFIER_STATE_CHANGED" and down==1 and raidModifierKeys[key]==A:GetSetting("raidMembers") and Tip.record and A.GroupPresentation.Result(Tip.record).kind=="raid" and not Tip.member then
    Tip.expanded=not Tip.expanded;Tip:RenderGroup()
   end
@@ -243,7 +510,7 @@ function Tip:BuildInteractive()
   end)
  end)
  f.scroll,f.canvas=scroll,canvas
- f:SetScript("OnHide",function() outside:Hide();UI.Motion:Stop(scroll);scroll.scrollTarget=nil end)
+ f:SetScript("OnHide",function() Tip:CancelRosterDrag();Tip:ClearRosterNotice();outside:Hide();UI.Motion:Stop(scroll);scroll.scrollTarget=nil end)
  f.icon=C.Icon(canvas,T.tooltipFIconWidth2);C.Box(f.icon,{width="tooltipFIconWidth2",height="tooltipFIconHeight2"});f.icon:SetPoint("TOPLEFT")
  f.title=C.Text(canvas,"",18,"text");C.SetPoint(f.title,"TOPLEFT",f.title:GetParent(),"TOPLEFT","tooltipFTitleTopleftX",0);f.title:SetWordWrap(true)
  f.subtitle=C.Text(canvas,"",14,"muted");C.SetPoint(f.subtitle,"TOPLEFT",f.subtitle:GetParent(),"TOPLEFT","tooltipFSubtitleTopleftX","tooltipFSubtitleTopleftY");C.SetLineHeight(f.subtitle,20)
@@ -267,6 +534,7 @@ function Tip:BuildInteractive()
  f.memberButtons={}
  f.relationshipRows={}
  f.rosterGroupTitles={}
+ f.rosterDrops={}
  f.dungeonTitle=C.Text(canvas,Say("本赛季大秘境","This season's Mythic+"),14,"text");C.SetLineHeight(f.dungeonTitle,20,true);f.dungeonTitle:Hide()
  f.dungeonEmpty=C.Text(canvas,Say("未提供大秘境记录","No Mythic+ records provided"),14,"dim");C.SetLineHeight(f.dungeonEmpty,20);f.dungeonEmpty:SetWordWrap(true);f.dungeonEmpty:Hide()
  f.dungeonRows={}
@@ -284,22 +552,28 @@ function Tip:BuildInteractive()
  end);f.back:SetWidth(T.tooltipFBackWidth)
  f.back:SetHeight(T.tooltipFBackHeight);C.SetFont(f.back.label,14);C.SetLineHeight(f.back.label,20,true);f.back.label:ClearAllPoints();C.SetPoint(f.back.label,"LEFT",f.back.label:GetParent(),"LEFT","tooltipFBackLabelLeftX",0);UI:Color(f.back.label,"muted");f.back.elementIcon=C.Glyph(f.back,"arrow",T.tooltipGlyphWidth);f.back.elementIcon:SetPoint("LEFT",0,0)
  f.wcl=C.Button(canvas,Say("复制 WCL 链接","Copy WCL link"),T.tooltipFWclWidth,function()
-  local _,name,realm=Members:Identity(Tip.member)
-  if UI.preview or not name or not realm or realm=="" then return end
-  local function Encode(value) return value:gsub("([^%w%-_%.~])",function(ch) return ("%%%02X"):format(ch:byte()) end) end
-  local regions={[1]="us",[2]="kr",[3]="eu",[4]="tw",[5]="cn"};local region=regions[GetCurrentRegion()] or "us"
+  if UI.preview then return end
+  local _,name,realm=Links.Identity(Tip.member)
+  local url=Links.GetWCLURL(name,realm,GetCurrentRegion());if not url then return end
   local restore=(Tip.pinned or Tip.directPlayer) and Tip:Capture() or nil
-  UI:CopyText(Say("复制 WCL 链接","Copy WCL link"),"https://"..(region=="cn" and "cn." or "www.").."warcraftlogs.com/character/"..region.."/"..Encode(realm).."/"..Encode(name),restore,name.."-"..realm)
+  UI:CopyText(Say("复制 WCL 链接","Copy WCL link"),url,restore,name.."-"..realm)
  end);f.wcl:SetWidth(T.tooltipFWclWidth)
  f.wcl:SetSurfaceColors("secondaryContainer","refreshHover","surfaceHighest")
- f.note=C.Button(canvas,L.record,T.tooltipFNoteWidth,function()
-  local key,name,realm=Members:Identity(Tip.member)
+ f.io=C.Button(canvas,Say("复制 IO 链接","Copy IO link"),T.tooltipFWclWidth,function()
   if UI.preview then return end
+  local _,name,realm=Links.Identity(Tip.member)
+  local url=Links.GetRaiderIOURL(name,realm,GetCurrentRegion(),A:GetLocale());if not url then return end
+  local restore=(Tip.pinned or Tip.directPlayer) and Tip:Capture() or nil
+  UI:CopyText(Say("复制 IO 链接","Copy IO link"),url,restore,name.."-"..realm)
+ end);f.io:SetSurfaceColors("secondaryContainer","refreshHover","surfaceHighest")
+ f.note=C.Button(canvas,L.record,T.tooltipFNoteWidth,function()
+  if UI.preview then return end
+  local key,name,realm=Links.Identity(Tip.member)
   if name then A:Open("notes",UI:HasNote(key) and {playerKey=key} or {add={name=name,realm=realm,class=Tip.member.class,specID=Tip.member.specID}}) end
  end);f.note:SetWidth(T.tooltipFNoteWidth)
  f.note:SetSurfaceColors("secondaryContainer","refreshHover","surfaceHighest")
- f.actionItems={{frame=f.wcl,width="fill",height="tooltipFWclHeight"},{frame=f.note,width="fill",height="tooltipFNoteHeight"}}
- f.actionOptions={width=1,height=40,gap=16};f.actionLayout=C.Row(canvas,f.actionItems,f.actionOptions)
+ f.actionItems={{frame=f.wcl,width="fill",height="tooltipFWclHeight"},{frame=f.io,width="fill",height="tooltipFWclHeight"},{frame=f.note,width="fill",height="tooltipFNoteHeight"}}
+ f.actionOptions={width=1,height=40,gap=8};f.actionLayout=C.Row(canvas,f.actionItems,f.actionOptions)
  self.interactive=f;f:Hide()
 self:RegisterBuildInteractiveElements()
  end
@@ -308,8 +582,22 @@ function Tip:EnsureMemberButtons(count)
  for i=#f.memberButtons+1,count do
   local b=Members:Create(f.canvas,function(self,key)
    if not self.member then return end
-   if key=="RightButton" then if Tip.sourceRoster then Tip:OpenRosterMenu(self,self.member) end
+   if key~="RightButton" and self.suppressRosterClick then self.suppressRosterClick=nil;return end
+   if key=="RightButton" then
+    if Tip.sourceRoster then
+     local member=self.member
+     if Tip.rosterDrag then Tip:CancelRosterDrag();Tip:RenderCurrentRoster() end
+     Tip:OpenRosterMenu(self,member)
+    end
    else Tip.memberContext=self.memberContext;Tip:RenderPlayer(self.member,true,true) end
+  end)
+  b.rosterUnknownDropKey="unknown-member:"..i
+  b:HookScript("OnMouseDown",function(button,key) if key=="LeftButton" and not Tip.rosterDrag then button.suppressRosterClick=nil;Tip:CaptureRosterGrab(button) end end)
+  b:HookScript("OnDragStart",function(button) Tip:StartRosterDrag(button) end)
+  b:HookScript("OnDragStop",function(button) Tip:FinishRosterDrag(button) end)
+  b:HookScript("OnHide",function(button)
+   button.rosterGrab=nil
+   if Tip.rosterDrag and Tip.rosterDrag.button==button then Tip:CancelRosterDrag();Tip:ClearRosterNotice() end
   end)
   UI:Element(b,"tooltip.member","tooltip",b,"tooltip.member");f.memberButtons[i]=b
  end
@@ -322,6 +610,12 @@ function Tip:ResetInteractive(owner,width,metricAlignment)
  wipe(self.orderedMembers)
  if not self.interactive then self:BuildInteractive() end
  local f=self.interactive;width=C.ElementValue(f,"root","width",width);if owner then self:CaptureOwner(owner) end
+ if metricAlignment=="CENTER" then
+  -- Keep complete action labels at the user's current font size. The three
+  -- equal columns fit before identity and metric geometry is calculated.
+  local labelWidth=math.max(C.MeasureTextWidth(f.wcl.label),C.MeasureTextWidth(f.io.label),C.MeasureTextWidth(f.note.label))
+  width=math.max(width,math.ceil(labelWidth+28)*3+16+2*T.tooltipPadding+T.scrollWidth)
+ end
  f:UnregisterEvent("MODIFIER_STATE_CHANGED")
  f.icon:ClearAllPoints();f.icon:SetPoint("TOPLEFT")
  f.icon:SetSize(T.tooltipFIconWidth,T.tooltipFIconHeight)
@@ -330,8 +624,11 @@ function Tip:ResetInteractive(owner,width,metricAlignment)
  f.subtitle:ClearAllPoints();C.SetPoint(f.subtitle,"TOPLEFT",f.subtitle:GetParent(),"TOPLEFT","tooltipFSubtitleTopleftX","tooltipFSubtitleTopleftY");f.subtitle:SetHeight(0)
  f.summary:ClearAllPoints();C.SetPoint(f.summary,"TOPLEFT",f.summary:GetParent(),"TOPLEFT",0,"tooltipFSummaryTopleftY")
  f.comment:ClearAllPoints();C.SetPoint(f.comment,"TOPLEFT",f.comment:GetParent(),"TOPLEFT",0,"tooltipFCommentTopleftY")
- for _,b in ipairs(f.memberButtons) do b:Hide();b.member=nil;b.memberContext=nil;b.targetKey=nil end
+ for _,b in ipairs(f.memberButtons) do
+  if not self.rosterDrag or self.rosterDrag.button~=b then b:Hide();b.member=nil;b.memberContext=nil;b.targetKey=nil end
+ end
  for _,title in pairs(f.rosterGroupTitles) do title:Hide() end
+ for _,drop in pairs(f.rosterDrops) do drop:Hide() end
  for _,row in pairs(f.relationshipRows) do row:Hide() end
  -- Measure reused text in its final alignment; temporary alignment changes can leave stale glyph positions.
  for i,metric in ipairs(f.metrics) do
@@ -345,7 +642,7 @@ function Tip:ResetInteractive(owner,width,metricAlignment)
  end
  for i=1,#f.metrics do f.metricTitleItems[i].hidden=true;f.metricValueItems[i].hidden=true end
  f.metricTitleLayout:Layout();f.metricValueLayout:Layout()
- f.back:Hide();f.note:Hide();f.wcl:Hide();f.playerRole:Hide();f.noteHeading:Hide();f.noteGlyph:Hide();f.noteDate:Hide();f.noteDivider:Hide();f.bossTitle:Hide();f.bossCount:Hide();f.bossText:Hide();f.composition:Hide();f.pvpRatings:Hide()
+ f.back:Hide();f.note:Hide();f.wcl:Hide();f.io:Hide();f.playerRole:Hide();f.noteHeading:Hide();f.noteGlyph:Hide();f.noteDate:Hide();f.noteDivider:Hide();f.bossTitle:Hide();f.bossCount:Hide();f.bossText:Hide();f.composition:Hide();f.pvpRatings:Hide()
  f.raidLeader:Hide();f.raidLeaderIcon:Hide()
  for _,row in ipairs(f.bossRows) do row:Hide() end
  f.actionLayout:Layout()
@@ -382,8 +679,12 @@ UI:ApplyElementScope("tooltip")
 function Tip:BindMember(button,member,width,isLeader)
  local context=self.sourceRoster and A.GroupPresentation.Member("roster") or self.sourceApp and ApplicantContext(self.sourceApp) or A.GroupPresentation.Member("search",self.record and self.record.activity)
  C.RekeyElement(button,Members:ID(member));button.memberContext=context
+ local guid=A.Group.Public(member.guid);button.rosterDropKey=type(guid)=="string" and "member:"..guid or button.rosterUnknownDropKey
+ if not self.rosterDrag or self.rosterDrag.button~=button then
+  if self:IsRosterDragContext() then button:RegisterForDrag("LeftButton") else button:RegisterForDrag() end
+ end
  local bind=self.sourceRoster and Members.BindRoster or self.record and Members.BindSearch or Members.Bind
- return bind(Members,button,member,width,isLeader,context.canOpenDetails,context.canOpenDetails and 12 or 6,context.canOpenDetails and 8 or 4)
+ return bind(Members,button,member,width,isLeader,context.canOpenDetails,context.canOpenDetails and 12 or 6,context.canOpenDetails and 8 or 4,self.sourceRoster~=nil)
 end
 function Tip:LayoutMemberGrid(members,columns,width,top,leader)
  self:EnsureMemberButtons(#members)
@@ -423,31 +724,39 @@ function Tip:LayoutRelationships(relationships,width,top)
 end
 function Tip:LayoutRosterGroups(members,columns,width,top)
  self:EnsureMemberButtons(#members)
- local f=self.interactive;local cellWidth=(width-(columns-1)*8)/columns
- local groups,bound,rowTop,rowHeight=0,0,top,0
+ local f=self.interactive;local cellWidth=(width-(columns-1)*12)/columns
+ local groups,bound,rowTop,rowHeight,rowFirst=0,0,top,0,1
+ self.rosterGroupBounds={}
  for subgroup=1,8 do if self.rosterGroupCounts[subgroup] then
-  local x=(groups%columns)*(cellWidth+8)
+  local x=(groups%columns)*(cellWidth+12)
   local title=f.rosterGroupTitles[subgroup]
   if not title then title=C.Text(f.canvas,"",12,"muted");C.SetLineHeight(title,16,true);f.rosterGroupTitles[subgroup]=title;UI:Element(title,"tooltip.rosterGroup","tooltip",nil,"tooltip.rosterGroup",subgroup,f) end
-  title:ClearAllPoints();title:SetPoint("TOPLEFT",x+6,-rowTop);title:SetWidth(cellWidth-12);UI:SetText(title,Say("小队 %d","Group %d"):format(subgroup));title:Show()
-  local memberTop=rowTop+title:GetLineHeight()+8
+  title:ClearAllPoints();title:SetPoint("TOPLEFT",x+12,-rowTop-12);title:SetWidth(cellWidth-24);UI:SetText(title,Say("小队 %d","Group %d"):format(subgroup));title:Show()
+  local memberTop=rowTop+12+title:GetLineHeight()+12
   for _,member in ipairs(members) do if (member.subgroup or 1)==subgroup then
    bound=bound+1;local button=f.memberButtons[bound]
    self:BindMember(button,member,cellWidth,member.isLeader)
+   button:SetFrameLevel(f.canvas:GetFrameLevel()+2)
    button:ClearAllPoints();button:SetPoint("TOPLEFT",x,-memberTop);memberTop=memberTop+button:GetHeight()+2
   end end
-  rowHeight=math.max(rowHeight,memberTop-rowTop-2);groups=groups+1
-  if groups%columns==0 then rowTop=rowTop+rowHeight+12;rowHeight=0 end
+  self.rosterGroupBounds[subgroup]={x=x,top=rowTop,width=cellWidth,height=memberTop-rowTop-2+12}
+  rowHeight=math.max(rowHeight,memberTop-rowTop-2+12);groups=groups+1
+  if groups%columns==0 then
+   for group=rowFirst,subgroup do local bounds=self.rosterGroupBounds[group];if bounds then bounds.height=rowHeight end end
+   rowFirst=subgroup+1;rowTop=rowTop+rowHeight+16;rowHeight=0
+  end
  end end
- return rowHeight>0 and rowTop+rowHeight or rowTop-12
+ for group=rowFirst,8 do local bounds=self.rosterGroupBounds[group];if bounds then bounds.height=rowHeight end end
+ return rowHeight>0 and rowTop+rowHeight or rowTop-16
 end
-function Tip:ShowRoster(owner,members,keepPinned,activityContext)
+function Tip:ShowRoster(owner,members,keepPinned,activityContext,keepRosterState)
  if self.pinned and not keepPinned then return end
- self:ClearSource()
+ self:ClearSource(keepRosterState)
  self.pinned=keepPinned==true;self.sourceRoster=members
  self.expanded=nil;self.rosterContext=activityContext
  local raid
  if activityContext then raid=activityContext.rosterMode=="groups" else raid=not UI.preview and IsInRaid() or #members>5 end
+ self.rosterIsRaid=raid==true
  wipe(self.rosterGroupCounts)
  local groups=0
  if raid then for _,member in ipairs(members) do
@@ -462,6 +771,10 @@ function Tip:ShowRoster(owner,members,keepPinned,activityContext)
  UI:SetText(f.subtitle,L.rosterCount:format(#members));f.subtitle:ClearAllPoints();C.SetPoint(f.subtitle,"TOPRIGHT",f.subtitle:GetParent(),"TOPRIGHT",0,"tooltipFSubtitleToprightY");f.subtitle:SetWidth(0)
  local countWidth=f.subtitle:GetStringWidth();f.subtitle:SetWidth(countWidth);f.title:SetWidth(f.canvas:GetWidth()-countWidth-16)
  local top=math.max(24,f.title:GetStringHeight())+16
+ if f.rosterNotice and f.rosterNotice:IsShown() then
+  f.rosterNotice:SetWidth(f.canvas:GetWidth());f.rosterNotice:SetMessage(f.rosterNotice.text:GetText())
+  f.rosterNotice:ClearAllPoints();f.rosterNotice:SetPoint("TOPLEFT",0,-top);top=top+f.rosterNotice:GetHeight()+12
+ end
  if raid and groups>0 then top=self:LayoutRosterGroups(members,columns,f.canvas:GetWidth(),top)
  else
   local leader;for _,member in ipairs(members) do if member.isLeader then leader=member;break end end
@@ -480,6 +793,22 @@ function Tip:RefreshRoster(owner,members,activityContext)
   saved.sourceRoster=members;if activityContext then saved.rosterContext=activityContext end
  end
  if not self.sourceRoster or self.owner~=owner and not self.directPlayer then return end
+ if self.rosterDrag then
+  local allowed,reason=UI:GetGroup().RaidGroups:CanStart(self.rosterDrag.guid)
+  local current=FindMember(members,self.rosterDrag.guid)
+  if not current then allowed,reason=false,"identity" end
+  if allowed then
+   self.rosterDrag.button.member=current;self.sourceRoster=members
+   if activityContext then self.rosterContext=activityContext end
+   self:UpdateRosterDragTarget(true)
+   return
+  end
+  if not allowed then
+   self:CancelRosterDrag()
+   if reason=="identity" or reason=="notRaid" then self:ClearRosterNotice()
+   else self.sourceRoster=members;self:ShowRosterNotice(reason) end
+  end
+ end
  if activityContext then self.rosterContext=activityContext end
  local scroll=self.interactive.scroll:GetVerticalScroll()
  local selected
@@ -489,7 +818,7 @@ function Tip:RefreshRoster(owner,members,activityContext)
  self.sourceRoster=members
  if selected then self:RenderPlayer(selected,self.pinned)
  elseif self.directPlayer then self:Hide();return
- else self:ShowRoster(owner,members,self.pinned,self.rosterContext) end
+ else self:ShowRoster(owner,members,self.pinned,self.rosterContext,true) end
  local f=self.interactive
  f.scrollbar:SetValue(math.min(scroll,ScrollMaximum(f.scroll,f.canvas)))
 end
@@ -553,7 +882,7 @@ function Tip:RenderGroup()
  f.title:SetWidth(mainWidth-52);f.subtitle:SetWidth(mainWidth-52);f.summary:SetWidth(mainWidth);f.comment:SetWidth(mainWidth)
  f.icon:SetSize(T.tooltipFIconWidth,T.tooltipFIconHeight);C.SetFont(f.title,18)
  UI:SetActivityIcon(f.icon,record.activity or record);UI:SetText(f.title,record.name or L.unknown)
- UI:SetText(f.subtitle,record.activityName or L.unknown)
+ UI:SetText(f.subtitle,ActivityLabel(record.activityName) or L.unknown)
  local leader
  for _,member in ipairs(details and details.members or {}) do if member.isLeader or record.leaderKey and member.nameKey==record.leaderKey then leader=member;break end end
  local titleHeight=math.max(24,f.title:GetStringHeight());f.subtitle:ClearAllPoints();C.SetPoint(f.subtitle,"TOPLEFT",f.subtitle:GetParent(),"TOPLEFT","tooltipFSubtitleTopleftX",-titleHeight-4)
@@ -598,7 +927,7 @@ function Tip:RenderGroup()
   -- API-provided bracket without inferring a mapping from activity IDs.
   for index=2,#record.pvpRatings do
    local rating=record.pvpRatings[index]
-   lines[#lines+1]=(rating.activityName or Say("PvP 评分","PvP rating")).."  "..UI:ScoreText(rating.rating,"pvp")
+   lines[#lines+1]=(ActivityLabel(rating.activityName) or Say("PvP 评分","PvP rating")).."  "..UI:ScoreText(rating.rating,"pvp")
   end
   f.pvpRatings:SetWidth(mainWidth);f.pvpRatings:SetHeight(0);UI:SetText(f.pvpRatings,table.concat(lines,"\n"));f.pvpRatings:ClearAllPoints();f.pvpRatings:SetPoint("TOPLEFT",0,-top);f.pvpRatings:Show();top=top+f.pvpRatings:GetStringHeight()+12
  end
@@ -729,12 +1058,13 @@ function Tip:RenderDungeons(scores,top)
   end
   row.status:ClearAllPoints();row.status:SetPoint("TOPRIGHT");row.status:SetWidth(statusWidth);row.status:SetShown(run~=nil)
   local nameX=labelWidth+12+(run and levelWidth+12 or 0)
-  row.name:ClearAllPoints();row.name:SetPoint("TOPLEFT",nameX,0);row.name:SetWidth(width-nameX-(run and statusWidth+12 or 0));row.name:SetHeight(0);UI:SetText(row.name,run and run.name or Say("未提供记录","No record available"));UI:Color(row.name,run and "text" or "dim")
+  row.name:ClearAllPoints();row.name:SetPoint("TOPLEFT",nameX,0);row.name:SetWidth(width-nameX-(run and statusWidth+12 or 0));row.name:SetHeight(0);UI:SetText(row.name,run and ActivityLabel(run.name) or Say("未提供记录","No record available"));UI:Color(row.name,run and "text" or "dim")
   local height=math.max(row.name:GetLineHeight(),row.name:GetStringHeight());row:SetHeight(height);row:Show();top=top+height+(i==1 and 8 or 0)
  end
  return top
 end
 function Tip:RenderPlayer(member,fromGroup,adjustPoint)
+ self:CancelRosterDrag();self:ClearRosterNotice()
  local context=self.sourceRoster and A.GroupPresentation.Member("roster") or self.sourceApp and ApplicantContext(self.sourceApp) or self.memberContext or DefaultMemberContext(member)
  if context.source=="applicant" then
   local applicant=self.sourceApp or member.applicantID and UI:GetGroup():GetApplicant(member.applicantID)
@@ -751,8 +1081,11 @@ function Tip:RenderPlayer(member,fromGroup,adjustPoint)
   if context.showDungeonRecords then scores=UI:GetGroup():GetApplicantDungeonScores(member) end
  else scores=member.dungeonScores end
  local showMapScore=context.source=="applicant" and context.showDungeonRecords
+ local key,name,realm=Links.Identity(member)
+ local note=key and A.Notes and A.Notes:Find(key)
+ if not self.interactive then self:BuildInteractive() end
+ UI:SetText(self.interactive.note.label,note and Say("编辑笔记","Edit note") or L.record)
  local f=self:ResetInteractive(nil,(scores or showMapScore) and 512 or 440,"CENTER");f:UnregisterEvent("MODIFIER_STATE_CHANGED")
- local key,name,realm=Members:Identity(member)
  local top=fromGroup and 48 or 0
  f.back:SetShown(fromGroup==true);f.back:ClearAllPoints();f.back:SetPoint("TOPLEFT");f.back:SetWidth(f.back.label:GetStringWidth()+22)
  UI:SetFactionIcon(f.playerFaction,member);UI:SetRoleIcon(f.playerRole,member.assignedRole)
@@ -808,11 +1141,14 @@ function Tip:RenderPlayer(member,fromGroup,adjustPoint)
  f.metricTitleLayout:Layout();f.metricValueLayout:Layout()
  top=metricTop+metricHeight+4+valueHeight+20
  if scores then top=self:RenderDungeons(scores,top)+20 end
- local note=key and A.Notes and A.Notes:Find(key)
  if note then top=NoteHeader(f,note,top)+20 else f.comment:Hide() end
  local showWCL=name~=nil and realm~=nil and realm~=""
  local showNote=not UI.preview and key~=nil
- f.wcl:SetShown(showWCL);UI:SetText(f.note.label,note and Say("编辑笔记","Edit note") or L.record);f.note:SetShown(showNote)
+ -- Preview presents the action without invoking native region APIs.
+ local region=not UI.preview and GetCurrentRegion() or nil
+ f.wcl:SetShown(showWCL);f.wcl:SetAvailable(not UI.preview and Links.GetWCLURL(name,realm,region)~=nil)
+ f.io:SetShown(showWCL);f.io:SetAvailable(not UI.preview and Links.GetRaiderIOURL(name,realm,region,A:GetLocale())~=nil)
+ f.note:SetShown(showNote)
  f.actionOptions.width,f.actionOptions.y=f.canvas:GetWidth(),-top;f.actionLayout:Layout()
  UI:SetText(f.footer,"");self:Place(top+((showWCL or showNote) and 40 or 0))
 UI:ApplyElementScope("tooltip")
@@ -820,6 +1156,7 @@ UI:ApplyElementScope("tooltip")
 
 
 function Tip:LeaveOwner(owner)
+ if self.rosterDrag then return end
  if self.pinned then return end
  if owner and owner~=self.owner then return end
  if not self.interactive or not self.interactive:IsShown() then self:Hide();return end
@@ -839,7 +1176,7 @@ end
 function Tip:RegisterBuildInteractiveElements()
 local f=self.interactive
  UI:Element(f,"tooltip.rich","tooltip",f)
- UI:ElementFields(f,"tooltip","scroll canvas scrollbar icon title subtitle summary pvpRatings composition raidLeader raidLeaderIcon comment footer bossTitle bossCount bossText dungeonTitle dungeonEmpty playerRole playerFaction noteHeading noteGlyph noteDate noteDivider back wcl note","tooltip",f)
+ UI:ElementFields(f,"tooltip","scroll canvas scrollbar icon title subtitle summary pvpRatings composition raidLeader raidLeaderIcon comment footer bossTitle bossCount bossText dungeonTitle dungeonEmpty playerRole playerFaction noteHeading noteGlyph noteDate noteDivider back wcl io note","tooltip",f)
  UI:Element(self.outsideClicks,"tooltip.outside","tooltip")
  for index,metric in ipairs(f.metrics) do UI:Element(metric.title,"tooltip.metric.title","tooltip",nil,"tooltip.metric.title",index,f);UI:Element(metric.value,"tooltip.metric.value","tooltip",nil,"tooltip.metric.value",index,f) end
 end

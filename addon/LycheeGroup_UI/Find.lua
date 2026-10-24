@@ -2,6 +2,7 @@
 local A = _G.LycheeGroup
 local UI = A.UI
 local T,L,C,M = UI.Theme,UI.L,UI.C,UI.Motion
+local ActivityLabel=A.ActivityLabels.Display
 local P={};UI.pages.find=P
 local zh=A:GetLocale()=="zhCN"
 local function Say(cn,en) return zh and cn or en end
@@ -302,7 +303,7 @@ local function RenderResult(row,id)
  UI:SetText(row.title,r.name or L.unknown)
  UI:SetText(row.description,r.comment and r.comment~="" and r.comment or "—")
  UI:Color(row.description,r.comment and r.comment~="" and "muted" or "dim")
- UI:SetText(row.meta,r.activityName or L.unknown)
+ UI:SetText(row.meta,ActivityLabel(r.activityName) or L.unknown)
  UI:SetText(row.leader,NameOnly(r.leaderName))
  UI:SetActivityIcon(row.icon,r.activity or r)
  local results=UI:GetGroup().Results
@@ -317,6 +318,8 @@ local function RenderResult(row,id)
   slot.role:SetDesaturated(missing);slot.role:SetVertexColor(shade,shade,shade)
  end
  UI.Members:BindGroupMarks(row.marks,r)
+ local marks=row.marks.flags
+ UI:Color(row.title,marks.caution and "findTitleBlockedColor" or marks.bnet and "findTitleBnetColor" or marks.friend and "findTitleFriendColor" or marks.guild and "findTitleGuildColor" or "text")
  LayoutResultLeader(row)
  row.leader:SetTextColor(UI:ClassColor(results:GetLeaderClass(r)))
  if A.GroupPresentation.Result(r).groupMetric=="progress" then
@@ -358,7 +361,7 @@ end
 local function UpdateApplication(row,id)
  local app=UI:GetGroup():GetApplication(id);local r=app and app.result
  if not app then return end
- UI:SetText(row.title,app.name or L.unknown);UI:SetText(row.meta,r and r.activityName or app.activityName or L.unknown)
+ UI:SetText(row.title,app.name or L.unknown);UI:SetText(row.meta,ActivityLabel(r and r.activityName or app.activityName) or L.unknown)
  UI:Color(row.title,app.status=="invited" and "good" or "text")
  UI:SetActivityIcon(row.icon,r and (r.activity or r))
  UI:SetText(row.leader,NameOnly(app.leaderName))
@@ -1002,6 +1005,17 @@ function P:BuildFilters()
  C.Box(self.hideZeroScore,{width="findHideZeroScoreWidth",height="findHideZeroScoreHeight"});C.SetFont(self.hideZeroScore.label,14);C.SetLineHeight(self.hideZeroScore.label,20,true)
  self.hideZeroScore.label:ClearAllPoints();self.hideZeroScore.label:SetPoint("LEFT");self.hideZeroScore.label:SetWidth(T.findHideZeroScoreLabelWidth)
  self.hideZeroScore.track:ClearAllPoints();self.hideZeroScore.track:SetPoint("RIGHT")
+ for _,entry in ipairs({
+  {"hideSameClassRole",Say("排除同职业同职责","Exclude same class and role"),Say("排除已有同职业、同职责成员的队伍。例如输出战士保留有防战的队伍。","Hide groups with a member of your class and role. A damage warrior can still join a group with a protection warrior.")},
+  {"requireBloodlust",Say("嗜血来源","Bloodlust source"),Say("队伍至少四人时，排除你加入后仍无嗜血来源的队伍。按萨满、法师、猎人和唤魔师职业判断，不检查宠物或技能冷却；成员资料未知时保留。","For groups of four or more, hide those without a Bloodlust source after you join. Checks shaman, mage, hunter and evoker classes, not pets or cooldowns; unknown member data is kept.")},
+ }) do
+  local key=entry[1]
+  local toggle=C.Check(body,entry[2],function(value) state.filters[key]=value or nil;P:UpdateFilters() end)
+  self[key]=toggle;C.SetFont(toggle.label,14);C.SetLineHeight(toggle.label,20,true)
+  toggle.label:ClearAllPoints();toggle.label:SetPoint("LEFT")
+  toggle.track:ClearAllPoints();toggle.track:SetPoint("RIGHT")
+  UI.Tooltip:BindText(toggle,entry[3])
+ end
  self.socialLabel=C.Text(body,Say("关系与笔记","Relations and notes"),14,"muted")
  self.socialChoice=C.Choice(body,T.findSocialChoiceWidth,{{value=false,label=Say("全部关系","All relations")},{value="friend",label=Say("好友在队","Friends in group")},{value="guild",label=Say("同公会成员","Guildmates")},{value="any",label=Say("含笔记记录","With player notes")},{value="positive",label=Say("含推荐玩家","Recommended players")},{value="noCaution",label=Say("不含拉黑记录","Without blocked players")}},function(value) state.social=value or nil;P:UpdateFilters() end);self.socialChoice:SetWidth(T.findSocialChoiceWidth)
  self.sortLabel=C.Text(body,L.sort,14,"muted")
@@ -1090,10 +1104,13 @@ function P:LayoutFilters()
     y=y+fieldHeight+12
   end
   if self.filterLayout=="presence" then
-   Label(self.hideZeroScore.label,w-T.switchWidth-16)
-   local height=math.max(32,self.hideZeroScore.label:GetHeight())
-   self.hideZeroScore:SetSize(w,height);Place(self.hideZeroScore,0,y+4);Hit(self.hideZeroScore,y+4,height)
-   y=y+height+T.findFilterSectionGap
+   for _,toggle in ipairs({self.hideZeroScore,self.hideSameClassRole,self.requireBloodlust}) do
+    Label(toggle.label,w-toggle.track:GetWidth()-16)
+    local height=math.max(32,toggle.label:GetHeight(),toggle.track:GetHeight())
+    toggle:SetSize(w,height);Place(toggle,0,y+4);Hit(toggle,y+4,height)
+    y=y+height+12
+   end
+   y=y+T.findFilterSectionGap-12
   end
   y=y+4
   -- These choices use a full line in a narrow panel; the wide composition can
@@ -1148,7 +1165,7 @@ function P:UpdateFilterSummary()
  local count=(filters.minMembers or filters.maxMembers) and 1 or 0
  if filters.minRating or filters.maxRating then count=count+1 end
  if filters.minItemLevel or filters.maxItemLevel then count=count+1 end
- for _,key in ipairs({"neededRole","tankPresence","healerPresence","damagePresence","hideZeroScore","hideSameSpec","hideSameClass"}) do if filters[key] then count=count+1 end end
+ for _,key in ipairs({"neededRole","tankPresence","healerPresence","damagePresence","hideZeroScore","hideSameSpec","hideSameClass","hideSameClassRole","requireBloodlust"}) do if filters[key] then count=count+1 end end
  if state.social then count=count+1 end
  local sortChanged=filters.sort~=A:GetSetting("defaultSort")
  self.filterCount=count
@@ -1181,6 +1198,27 @@ function P:TierItems()
  for _,tier in ipairs(catalog:GetTiers()) do if not used or used[tier.id] then items[#items+1]={value=tier.id,label=tier.name} end end
  return items
 end
+local function SeasonRecordText(record)
+ return record.level and "+"..math.floor(record.level) or "—",record.score and math.floor(record.score)..Say(" 分"," pts") or "—"
+end
+function P:StopPickerScores()
+ local service=self.pickerScoreService;self.pickerScoreService=nil
+ if service then service:End() end
+ self.pickerScoreWidth=nil
+ if self.activities then
+  for _,row in ipairs(self.activities.rows) do
+   row.seasonLevel:Hide();row.seasonScore:Hide();UI:SetText(row.seasonLevel,"");UI:SetText(row.seasonScore,"")
+  end
+ end
+end
+function P:SyncPickerScores()
+ local service=self.picker:IsVisible() and state.category=="seasonDungeon" and self.keystoneGroups and UI:GetGroup().SeasonScores or nil
+ if service~=self.pickerScoreService then
+  self:StopPickerScores()
+  self.pickerScoreService=service
+  if service then service:Begin(self.refreshPickerScores) end
+ end
+end
 function P:BuildPicker()
  local f=CreateFrame("Frame",nil,self.frame);C.Box(f,{width="findFWidth2",height="findFHeight2"});f:SetPoint("TOPLEFT",self.rail,"TOPRIGHT",T.findPickerGap,0);f:SetFrameLevel(self.frame:GetFrameLevel()+35);f:EnableMouse(true);C.Panel(f,"surface","findPanelRadius3");self.picker=f
  f.title=C.Text(f,"",14,"text",T.findFTitleWidth);f.title:SetWidth(T.findFTitleWidth);C.SetLineHeight(f.title,21,true);C.SetPoint(f.title,"TOPLEFT",f.title:GetParent(),"TOPLEFT","findFTitleTopleftX","findFTitleTopleftY")
@@ -1207,10 +1245,15 @@ function P:BuildPicker()
  end);C.Box(self.activities,{width="findActivitiesWidth",height="findActivitiesHeight"})
  self.activities:SetStyle({alternateRows=false,rowHeight=44,radius=8,singleLine=true,titleX=48,titleWidth=200,titleSize=16,titleLineHeight=22})
  self.activityIDs={};self.activityMap={}
- for _,row in ipairs(self.activities.rows) do
+ self.activities:SetRowInitializer(function(row)
   row.icon=C.Icon(row,T.findRowIconWidth);C.Box(row.icon,{width="findRowIconWidth",height="findRowIconHeight"});C.SetPoint(row.icon,"LEFT",row.icon:GetParent(),"LEFT","findRowIconLeftX",0)
   row.multiSelect=C.Checkbox(row,function() P:ToggleGroupChoice(row.key) end);C.SetPoint(row.multiSelect,"RIGHT",row.multiSelect:GetParent(),"RIGHT","findRowMultiSelectRightX",0)
- end
+  row.seasonLevel=C.Text(row,"",12,"good");C.SetLineHeight(row.seasonLevel,12,true)
+  row.seasonScore=C.Text(row,"",10,"dim");C.SetLineHeight(row.seasonScore,10,true)
+  for _,label in ipairs({row.seasonLevel,row.seasonScore}) do label:SetWordWrap(false);label:SetJustifyH("RIGHT");label:Hide() end
+  row.seasonLevel:SetPoint("BOTTOMRIGHT",row.multiSelect,"LEFT",-8,1)
+  row.seasonScore:SetPoint("TOPRIGHT",row.multiSelect,"LEFT",-8,-1)
+ end)
  self.pickerConfirm=C.Button(f,Say("确定","Confirm"),T.findPickerConfirmWidth,function()
   state.groupKeys=CopyGroupKeys(P.draftGroupKeys);state.groupKey=nil;P:CommitChoice()
   P.results:SetPixelOffset(0,false);P:DoSearch()
@@ -1219,6 +1262,9 @@ function P:BuildPicker()
   local insideMenu=UI.context:IsMenuHovered(P.tierChoice)
   if not f:IsMouseOver() and not P.rail:IsMouseOver() and not insideMenu then P:ClosePicker() end
  end)
+ self.refreshPickerScores=function() P:RefreshPicker() end
+ f:HookScript("OnShow",function() P:RefreshPicker() end)
+ f:HookScript("OnHide",function() P:StopPickerScores() end)
  f:Hide()
 self:RegisterBuildPickerElements()
  end
@@ -1255,6 +1301,7 @@ function P:KeystoneGroups()
  return next(keys) and keys or nil
 end
 function P:RefreshPicker()
+ if self.refreshingPicker then return end
  local cat=Category()
  if state.groupKey and not UI:GetGroup().Catalog:GetGroup(state.category,state.groupKey) then state.groupKey=nil;state.browseReady=false end
  local useTiers=not cat.season and (cat.id==2 or cat.id==3 or cat.id==121)
@@ -1268,7 +1315,7 @@ function P:RefreshPicker()
  for _,activity in ipairs(UI:GetGroup().Catalog:GetActivities(state.category)) do
   if (not state.groupKey or UI:GetGroup().Catalog:GetGroupKey(state.category,activity)==state.groupKey) and (not state.tier or UI:GetGroup().Catalog:GetActivityTier(activity)==state.tier) then
    local id=activity.difficultyID
-   local name=id and id>0 and GetDifficultyInfo(id)
+   local name=id and id>0 and ActivityLabel(GetDifficultyInfo(id))
    if name and not seen[id] then seen[id]=true;diffs[#diffs+1]={id=id,name=name} end
   end
  end
@@ -1286,6 +1333,8 @@ function P:RefreshPicker()
   state.confirmedChoice=ChoiceSnapshot(state);self.restoringChoice=nil
  end
  if not self.picker then return end
+ self.refreshingPicker=true
+ self:SyncPickerScores()
  if multiGroups and not self.draftGroupKeys then
   self.draftGroupKeys=CopyGroupKeys(state.groupKeys) or {}
   if state.groupKey and multiGroups[state.groupKey] then self.draftGroupKeys[state.groupKey]=true end
@@ -1297,8 +1346,27 @@ function P:RefreshPicker()
  self.difficultySurface:ClearAllPoints();C.SetPoint(self.difficultySurface,"TOPLEFT",self.difficultySurface:GetParent(),"TOPLEFT","findDifficultySurfaceTopleftX",-top)
  local total=0
  for i,d in ipairs(diffs) do local button=self.difficultyButtons[i];if button then C.RekeyElement(button,d.id or "any");UI:SetText(button.label,d.name);button.textWidth=FitText(button.label);button.optionWidth=C.ElementValue(button,"root","width",button.textWidth+20);total=total+button.optionWidth end end
+ wipe(self.activityIDs);wipe(self.activityMap)
+ if cat.id~=9 then self.activityIDs[#self.activityIDs+1]=0 end
+ for _,group in ipairs(UI:GetGroup().Catalog:GetGroups(state.category)) do if not state.tier or group.tier==state.tier then self.activityMap[group.key]=group;self.activityIDs[#self.activityIDs+1]=group.key end end
+ local contentHeight=math.max(1,#self.activityIDs*48-4);local listHeight=C.ElementValue(self.activities,"root","height",math.min(440,contentHeight))
+ local gutter=contentHeight>listHeight and C.listRightInset or 0
+ local scoreMenuWidth=0
+ self.pickerScoreWidth=nil
+ if self.pickerScoreService then
+  local measure=self.activities.rows[1];local titleWidth,scoreWidth=0,0
+  for _,key in ipairs(self.activityIDs) do
+   if multiGroups[key] then
+    local group=self.activityMap[key];local level,score=SeasonRecordText(self.pickerScoreService:GetRecord(group))
+    titleWidth=math.max(titleWidth,C.MeasureTextWidth(measure.title,ActivityLabel(group.name)))
+    scoreWidth=math.max(scoreWidth,C.MeasureTextWidth(measure.seasonLevel,level),C.MeasureTextWidth(measure.seasonScore,score))
+   end
+  end
+  self.pickerScoreWidth=math.ceil(scoreWidth)+2
+  scoreMenuWidth=math.ceil(16+gutter+48+titleWidth+12+self.pickerScoreWidth+8+measure.multiSelect:GetWidth()+6)
+ end
  -- Difficulty names remain complete; the native menu grows to its real content width.
- local menuWidth=C.ElementValue(self.picker,"root","width",chooseDifficulty and math.max(336,total+math.max(0,#diffs-1)*4+22) or 336)
+ local menuWidth=C.ElementValue(self.picker,"root","width",math.max(scoreMenuWidth,chooseDifficulty and math.max(336,total+math.max(0,#diffs-1)*4+22) or 336))
  self.picker:SetWidth(menuWidth);self.picker.title:SetWidth(menuWidth-76);self.tierChoice:SetWidth(menuWidth-16);self.difficultySurface:SetWidth(menuWidth-16)
  self.activities:SetWidth(menuWidth-16)
  local extra=chooseDifficulty and (self.difficultySurface:GetWidth()-6-math.max(0,#diffs-1)*4-total)/#diffs or 0
@@ -1312,25 +1380,34 @@ function P:RefreshPicker()
   else C.RekeyElement(button,nil) end
  end
  if not chooseDifficulty then self.difficultySelection:Clear() end
- if chooseDifficulty then top=top+48 end;wipe(self.activityIDs);wipe(self.activityMap)
- if cat.id~=9 then self.activityIDs[#self.activityIDs+1]=0 end
- for _,group in ipairs(UI:GetGroup().Catalog:GetGroups(state.category)) do if not state.tier or group.tier==state.tier then self.activityMap[group.key]=group;self.activityIDs[#self.activityIDs+1]=group.key end end
+ if chooseDifficulty then top=top+48 end
  local confirm=multiGroups and next(self.draftGroupKeys)~=nil
- local contentHeight=math.max(1,#self.activityIDs*48-4);local listHeight=C.ElementValue(self.activities,"root","height",math.min(440,contentHeight))
- self.activities:SetGutter(contentHeight>listHeight and C.listRightInset or 0)
+ self.activities:SetGutter(gutter)
  self.activities:ClearAllPoints();C.SetPoint(self.activities,"TOPLEFT",self.activities:GetParent(),"TOPLEFT","findActivitiesTopleftX",-top);self.activities:SetViewport(listHeight);self.picker:SetHeight(top+listHeight+(confirm and 64 or 8))
  self.pickerConfirm:SetShown(confirm);self.pickerConfirm:SetWidth(menuWidth-16);self.pickerConfirm:ClearAllPoints();C.SetPoint(self.pickerConfirm,"TOPLEFT",self.pickerConfirm:GetParent(),"TOPLEFT","findPickerConfirmTopleftX",-top-listHeight-8)
  if state.groupKeys then self.activities.selectedKey=nil else self.activities.selectedKey=state.groupKey or 0 end
  self.activities:SetItems(self.activityIDs,function(row,key)
-  local group=self.activityMap[key];UI:SetText(row.title,group and group.name or AllActivitiesLabel(cat));row.icon:Show();if group then UI:SetActivityIcon(row.icon,group.activity) else row.icon:SetTexture(UI:CategoryIcon(cat.icon));row.icon:SetTexCoord(0,1,0,1) end
+  local group=self.activityMap[key];UI:SetText(row.title,ActivityLabel(group and group.name or AllActivitiesLabel(cat)));row.icon:Show();if group then UI:SetActivityIcon(row.icon,group.activity) else row.icon:SetTexture(UI:CategoryIcon(cat.icon));row.icon:SetTexCoord(0,1,0,1) end
   local selectable=multiGroups and multiGroups[key]
   row.multiSelect:SetShown(selectable or false)
   local checked=self.draftGroupKeys or state.groupKeys
   row.multiSelect:SetValue(checked and checked[key] or false)
-  row.title:SetWidth(row:GetWidth()-60-(selectable and 32 or 0))
+  local showScore=self.pickerScoreService and selectable
+  row.seasonLevel:SetShown(showScore or false);row.seasonScore:SetShown(showScore or false)
+  if showScore then
+   local record=self.pickerScoreService:GetRecord(group);local level,score=SeasonRecordText(record)
+   UI:SetText(row.seasonLevel,level);UI:Color(row.seasonLevel,record.level and "good" or "dim")
+   UI:SetScore(row.seasonScore,record.score,"map");UI:SetText(row.seasonScore,score)
+   row.seasonLevel:SetWidth(self.pickerScoreWidth);row.seasonScore:SetWidth(self.pickerScoreWidth)
+   row.title:SetWidth(math.max(1,row:GetWidth()-48-12-self.pickerScoreWidth-8-row.multiSelect:GetWidth()-6))
+  else
+   UI:SetText(row.seasonLevel,"");UI:SetText(row.seasonScore,"")
+   row.title:SetWidth(row:GetWidth()-60-(selectable and 32 or 0))
+  end
  end)
  self:PositionPicker()
 UI:ApplyElementScope("find")
+ self.refreshingPicker=nil
  end
 function P:RefreshCategories()
  wipe(self.catIDs);wipe(self.seasonIDs);wipe(self.catMap)
@@ -1384,6 +1461,8 @@ function P:RememberCategory()
  prefs.hideZeroScore=state.filters.hideZeroScore
  prefs.hideSameSpec=state.filters.hideSameSpec
  prefs.hideSameClass=state.filters.hideSameClass
+ prefs.hideSameClassRole=state.filters.hideSameClassRole
+ prefs.requireBloodlust=state.filters.requireBloodlust
  prefs.roleMatchAny=state.filters.roleMatchAny
  for _,key in ipairs(numericFilterKeys) do prefs[key]=state.filters[key] end
  prefs.social=state.social;prefs.sort=state.filters.sort
@@ -1409,6 +1488,8 @@ function P:RestoreCategory(prefs)
  state.filters.hideZeroScore=seasonDungeon and prefs.hideZeroScore or nil
  state.filters.hideSameSpec=seasonDungeon and prefs.hideSameSpec or nil
  state.filters.hideSameClass=seasonDungeon and prefs.hideSameClass or nil
+ state.filters.hideSameClassRole=seasonDungeon and prefs.hideSameClassRole or nil
+ state.filters.requireBloodlust=seasonDungeon and prefs.requireBloodlust or nil
  state.filters.roleMatchAny=seasonDungeon and prefs.roleMatchAny or nil
  for _,key in ipairs(numericFilterKeys) do state.filters[key]=prefs[key] end
  self.memberLimit=nil;self:UpdateMemberLimit()
@@ -1480,9 +1561,11 @@ function P:UpdateFilters(reset)
  filters.minLevel,filters.maxLevel=nil,nil
  filters.personKey=state.personKey
  filters.neededRole=not seasonDungeon and keys and self.roleChoice.value or nil
- if not seasonDungeon then filters.tankPresence,filters.healerPresence,filters.damagePresence,filters.hideZeroScore,filters.hideSameSpec,filters.hideSameClass,filters.roleMatchAny=nil,nil,nil,nil,nil,nil,nil end
+ if not seasonDungeon then filters.tankPresence,filters.healerPresence,filters.damagePresence,filters.hideZeroScore,filters.hideSameSpec,filters.hideSameClass,filters.roleMatchAny=nil,nil,nil,nil,nil,nil,nil;filters.hideSameClassRole,filters.requireBloodlust=nil,nil end
  if filters.hideSameClass then filters.hideSameSpec=nil end
  self.hideZeroScore:SetShown(seasonDungeon);self.hideZeroScore:SetValue(filters.hideZeroScore)
+ self.hideSameClassRole:SetShown(seasonDungeon);self.hideSameClassRole:SetValue(filters.hideSameClassRole)
+ self.requireBloodlust:SetShown(seasonDungeon);self.requireBloodlust:SetValue(filters.requireBloodlust)
  filters.friends=state.social=="friend";filters.guild=state.social=="guild";filters.notes=(state.social=="any" or state.social=="positive" or state.social=="noCaution") and state.social or nil
  self.roleChoice:SetShown(keys and not seasonDungeon);self.roleLabel:SetShown(keys and not seasonDungeon)
  self:UpdateFilterSummary()
@@ -1501,7 +1584,7 @@ function P:UpdateFilters(reset)
   if #names==1 then name=selected.name elseif #names>1 then name=table.concat(names,"·") end
  end
  if state.difficultyID then name=name.."  ·  "..(GetDifficultyInfo(state.difficultyID) or L.unknown) end
- UI:SetText(self.context,name);self.contextNaturalWidth=FitText(self.context);self.context:SetWidth(math.min(MAIN-180,self.contextNaturalWidth))
+ UI:SetText(self.context,ActivityLabel(name));self.contextNaturalWidth=FitText(self.context);self.context:SetWidth(math.min(MAIN-180,self.contextNaturalWidth))
  self:SavePrefs()
  -- The provider notifies results after all filter controls and context are ready.
  UI:GetGroup():SetFilters(filters)
@@ -1520,6 +1603,7 @@ end
 function P:ClearFilters()
  self.resultsHeader:SetSort(nil,false,true)
  state.filters.hideZeroScore,state.filters.hideSameSpec,state.filters.hideSameClass=nil,nil,nil
+ state.filters.hideSameClassRole,state.filters.requireBloodlust=nil,nil
  self.loading=true;self.fMinMembers.box:SetText("");self.fMembers.box:SetText("");self.roleChoice:SetValue(false,L.anyRole);state.filters.tankPresence,state.filters.healerPresence,state.filters.damagePresence=nil,nil,nil;state.filters.roleMatchAny=nil;for _,key in ipairs(numericFilterKeys) do state.filters[key]=nil end;self:SyncFilterFields();state.social=nil;self.socialChoice:SetValue(false,Say("全部关系","All relations"));state.filters.sort=A:GetSetting("defaultSort");self.sortChoice:SetValue(state.filters.sort,L[state.filters.sort] or L.newest);self.loading=nil;self:UpdateFilters()
 end
 function P:OnSearchTextChanged(box,changed)
@@ -1819,7 +1903,7 @@ function P:Enter(context)
   if UI.preview then self.previewSearchBox:SetText(filters.text or "") end
   local saved=state.categoryPrefs[state.category] or filters
   state.groupKey=saved.groupKey;state.difficultyID=saved.difficultyID;state.tier=saved.tier
-  self:RestoreCategory(state.categoryPrefs[state.category] or {groupKey=filters.groupKey,groupKeys=filters.groupKeys,difficultyID=filters.difficultyID,tier=filters.tier,selected=filters.selected,minMembers=filters.minMembers,maxMembers=filters.maxMembers,neededRole=filters.neededRole,tankPresence=filters.tankPresence,healerPresence=filters.healerPresence,damagePresence=filters.damagePresence,hideZeroScore=filters.hideZeroScore,hideSameSpec=filters.hideSameSpec,hideSameClass=filters.hideSameClass,roleMatchAny=filters.roleMatchAny,minRating=filters.minRating,maxRating=filters.maxRating,minItemLevel=filters.minItemLevel,maxItemLevel=filters.maxItemLevel,needsDamage=filters.needsDamage,sort=filters.sort,social=prefs.social})
+  self:RestoreCategory(state.categoryPrefs[state.category] or {groupKey=filters.groupKey,groupKeys=filters.groupKeys,difficultyID=filters.difficultyID,tier=filters.tier,selected=filters.selected,minMembers=filters.minMembers,maxMembers=filters.maxMembers,neededRole=filters.neededRole,tankPresence=filters.tankPresence,healerPresence=filters.healerPresence,damagePresence=filters.damagePresence,hideZeroScore=filters.hideZeroScore,hideSameSpec=filters.hideSameSpec,hideSameClass=filters.hideSameClass,hideSameClassRole=filters.hideSameClassRole,requireBloodlust=filters.requireBloodlust,roleMatchAny=filters.roleMatchAny,minRating=filters.minRating,maxRating=filters.maxRating,minItemLevel=filters.minItemLevel,maxItemLevel=filters.maxItemLevel,needsDamage=filters.needsDamage,sort=filters.sort,social=prefs.social})
   self.loading=nil
  end
  if not UI.preview then state.railCollapsed=A.Appearance:GetRailCollapsed() end
@@ -1925,7 +2009,7 @@ UI:ElementFields(self,"find","quickFilters quickLogic quickIdentity quickIdentit
 end
 
 function P:RegisterBuildFiltersElements()
-UI:ElementFields(self,"find","filterPanel filterScrim filterTitle filterClose filterStatus clearFilters importantFilters ratingLabel ilvlLabel membersLabel roleLabel roleChoice hideZeroScore socialLabel socialChoice sortLabel sortChoice filterError filterDone filterViewport filterBody filterFooter filterScrollBar","find")
+UI:ElementFields(self,"find","filterPanel filterScrim filterTitle filterClose filterStatus clearFilters importantFilters ratingLabel ilvlLabel membersLabel roleLabel roleChoice hideZeroScore hideSameClassRole requireBloodlust socialLabel socialChoice sortLabel sortChoice filterError filterDone filterViewport filterBody filterFooter filterScrollBar","find")
  for _,range in pairs(self.filterRanges) do UI:Element(range.frame,"find.filterRange","find",range.frame,"find.filterRange",range.id) end
  for key,field in pairs(self.filterFields) do UI:Element(field,"find.filterField","find",field,"find.filterField",key) end
 end

@@ -13,7 +13,7 @@ local function EachUnit(callback)
 end
 local function Positive(value)
  value=G.Public(value)
- return value and value>0 and value or nil
+ if type(value)=="number" and value>0 and value<math.huge then return value end
 end
 local function CancelTimer()
  if R.timer then R.timer:Cancel();R.timer=nil end
@@ -126,8 +126,9 @@ function R:OnInspectReady(guid)
   if member.guid==guid and G.Public(UnitGUID(member.unit))==guid then
    related=true
    local specID=Positive(C_SpecializationInfo.GetInspectSpecialization(member.unit))
+   self:GetUnitItemLevel(member.unit,guid,false)
    if specID then
-    self.inspected[guid]={specID=specID,itemLevel=Positive(C_PaperDollInfo.GetInspectItemLevel(member.unit))}
+    local cached=self.inspected[guid] or {};self.inspected[guid]=cached;cached.specID=specID
     self.changed[guid]=nil
     G.History:OnSpecUpdate(member.nameKey,specID)
    end
@@ -163,6 +164,19 @@ function R:GetUnitSpec(unit,guid,isSelf)
  return Positive(spec)
 end
 
+-- Read equipped item level from existing native data only. Item-level-only
+-- responses share the current-GUID inspect cache; no new request is started.
+function R:GetUnitItemLevel(unit,guid,isSelf)
+ if isSelf then return Positive(select(2,GetAverageItemLevel())) end
+ local level=Positive(C_PaperDollInfo.GetInspectItemLevel(unit))
+ local cached=guid and self.inspected[guid]
+ if level and guid then
+  if not cached then cached={};self.inspected[guid]=cached end
+  cached.itemLevel=level
+ end
+ return level or cached and Positive(cached.itemLevel)
+end
+
 function R:Get()
  if not self.dirty then
   if self.relationsVersion~=nil then
@@ -191,12 +205,7 @@ function R:Get()
   member.isLeader=G.Public(UnitIsGroupLeader(unit))==true
   member.isSelf=G.Public(UnitIsUnit(unit,"player"))==true
   if not member.isSelf then needsRelations=true end
-  if member.isSelf then
-   member.itemLevel=G.Public(select(2,GetAverageItemLevel()))
-  else
-   local cached=self.inspected[guid]
-   member.itemLevel=Positive(C_PaperDollInfo.GetInspectItemLevel(unit)) or cached and cached.itemLevel
-  end
+  member.itemLevel=self:GetUnitItemLevel(unit,guid,member.isSelf)
   member.specID=self:GetUnitSpec(unit,guid,member.isSelf)
   if member.specID and (not member.assignedRole or member.assignedRole=="NONE") then member.assignedRole=select(5,GetSpecializationInfoByID(member.specID)) end
   local summary=G.Public(C_PlayerInfo.GetPlayerMythicPlusRatingSummary(unit))

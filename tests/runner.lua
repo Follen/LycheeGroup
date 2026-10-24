@@ -3,7 +3,7 @@
 --   lua tests/runner.lua core notes (runs selected modules only)
 -- Business logic and UI controllers use offline substitutes; passing these
 -- proves nothing about in-game API permissions, rendering or event ordering.
-local ALL = { "core", "native_queue", "configuration", "appearance", "theme_reload", "notes", "group", "transfer", "ui", "resize", "table_find", "table_create", "table_notes", "filters", "auto_apply", "party_role_check", "preview", "applicant_time", "floating", "seui", "brand_motion", "minimap", "fonts" }
+local ALL = { "core", "native_queue", "configuration", "appearance", "theme_reload", "notes", "group", "raid_groups", "season_scores", "transfer", "ui", "activity_labels", "player_links", "resize", "table_find", "table_create", "table_notes", "filters", "find_enhancements", "season_picker", "auto_apply", "party_role_check", "preview", "applicant_time", "roster_drag", "floating", "glyph_slots", "seui", "brand_motion", "minimap", "fonts" }
 
 local requested = {}
 local known = {}

@@ -15,6 +15,8 @@ Components.lua
 Elements.lua
 Members.lua
 Preview.lua
+PlayerLinks.lua
+RealmSlugs.lua
 Tooltip.lua
 Native.lua
 Application.lua

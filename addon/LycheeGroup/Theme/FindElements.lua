@@ -20,7 +20,7 @@ kinds.ownIconButton=Map(kinds.button,{icon="texture",elementIcon="texture"})
 kinds.choice=Map(kinds.button,{focus="surface",focusInner="surface",["arrows/1"]="texture",["arrows/2"]="texture"})
 kinds.notice={root="box",surface="surface",fill="surface",text="text",close="roundedBox",["close/icon"]="texture",["close/label"]="text",["close/fill"]="surface",["close/hover"]="surface"}
 kinds.category=Map(kinds.row,{symbol="texture",chevron="texture"})
-kinds.activity=Map(kinds.row,{icon="texture",multiSelect="box",["multiSelect/fill"]="surface",["multiSelect/mark"]="shape",["multiSelect/mark/strokes/1"]="texture",["multiSelect/mark/strokes/2"]="texture"})
+kinds.activity=Map(kinds.row,{icon="texture",seasonLevel="text",seasonScore="text",multiSelect="box",["multiSelect/fill"]="surface",["multiSelect/mark"]="shape",["multiSelect/mark/strokes/1"]="texture",["multiSelect/mark/strokes/2"]="texture"})
 local members={icon="texture",leaderIcon="texture",leader="text",count="text",membersButton="roundedBox",["membersButton/label"]="text",["membersButton/fill"]="surface",["membersButton/hover"]="surface",roster="box",tooltipArea="box"}
 for index=1,5 do
  members["roster/slots/"..index.."/icon"]="texture"
@@ -51,7 +51,7 @@ Add("button","filterToggle searchModeToggle scopeToggle applicationSettings star
 Add("ownIconButton","searchClear")
 Add("ownIconButton","quickRole",true)
 Add("iconButton","refresh filterClose pickerClose")
-Add("check","autoJoin autoApply hideZeroScore")
+Add("check","autoJoin autoApply hideZeroScore hideSameClassRole requireBloodlust")
 Add("choice","roleChoice socialChoice sortChoice tierChoice")
 Add("number","filterField",true)
 Add("box","filterRange",true)

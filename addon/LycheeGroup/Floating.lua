@@ -471,12 +471,13 @@ function F:ShowPanel()
    end
   else
    for _,app in ipairs(group:GetApplications()) do if Waiting(app) then
-    local detailText=app.activityDetail and app.activityDetail~="" and ("· "..app.activityDetail) or ""
+    local activityDetail=A.ActivityLabels.Display(app.activityDetail)
+    local detailText=activityDetail and activityDetail~="" and ("· "..activityDetail) or ""
     C.SetFont(self.measure,14);C.SetLineHeight(self.measure,20);self.measure:SetWidth(T.floatingMeasureWidth);self.measure:SetText(detailText)
     local detailWidth=math.min(T.floatingMeasureWidth,self.measure:GetStringWidth())
     local detailHeight=detailWidth>0 and self.measure:GetStringHeight() or 0
     local activityWidth=T.floatingRowMetaWidth-detailWidth-(detailWidth>0 and T.floatingActivityDetailGap or 0)
-    C.SetFont(self.measure,16);C.SetLineHeight(self.measure,22);self.measure:SetWidth(activityWidth);self.measure:SetText(app.activityLabel or app.activityName or app.result and app.result.activityName or "")
+    C.SetFont(self.measure,16);C.SetLineHeight(self.measure,22);self.measure:SetWidth(activityWidth);self.measure:SetText(A.ActivityLabels.Display(app.activityLabel or app.activityName or app.result and app.result.activityName) or "")
     local activityHeight=math.max(T.floatingActivityMinHeight,self.measure:GetStringHeight(),detailHeight)
     C.SetFont(self.measure,T.listTitleSize);C.SetLineHeight(self.measure,T.listTitleLineHeight);self.measure:SetWidth(T.floatingRowMetaWidth);self.measure:SetText(app.name or "")
     local titleHeight=math.max(self.context:GetLineHeight(T.listTitleLineHeight),self.measure:GetStringHeight())
@@ -624,7 +625,7 @@ function F:Render()
     local app=entry.application;row.applicationID=app.id;row.application=app;row.background:SetHovered(row:IsMouseOver());row.background:Show()
     row.leader:SetWordWrap(true)
     row.icon:SetSize(T.floatingRowIconWidth2,T.floatingRowIconHeight2);row.icon:ClearAllPoints();C.SetPoint(row.icon,"TOPLEFT",row.icon:GetParent(),"TOPLEFT","floatingRowIconTopleftX","floatingRowIconTopleftY2");F.context:SetGameTexture(row.icon,app.activityArt or "Interface\\Icons\\INV_Misc_GroupLooking")
-    C.SetPoint(row.name,"TOPLEFT",row.name:GetParent(),"TOPLEFT","floatingRowNameTopleftX2",-T.floatingApplicationPaddingY);row.name:SetText(app.activityLabel or app.activityName or app.result and app.result.activityName or "")
+    C.SetPoint(row.name,"TOPLEFT",row.name:GetParent(),"TOPLEFT","floatingRowNameTopleftX2",-T.floatingApplicationPaddingY);row.name:SetText(A.ActivityLabels.Display(app.activityLabel or app.activityName or app.result and app.result.activityName) or "")
     row.score:Show();C.SetFont(row.score,14);row.score:SetHeight(0);row.score:SetWordWrap(true);C.SetLineHeight(row.score,20);row.score:ClearAllPoints();row.score:SetWidth(entry.detailWidth);row.score:SetTextColor(unpack(T.muted));row.score:SetText(entry.detailText);row.score:SetJustifyH("LEFT")
     row.name:SetWidth(entry.activityWidth);local nameWidth=math.min(entry.activityWidth,row.name:GetStringWidth());row.name:SetWidth(nameWidth);C.SetPoint(row.score,"TOPLEFT",row.score:GetParent(),"TOPLEFT",T.floatingRowNameTopleftX2+nameWidth+T.floatingActivityDetailGap,-T.floatingApplicationPaddingY)
     row.meta:SetWidth(T.floatingRowMetaWidth);C.SetPoint(row.meta,"TOPLEFT",row.meta:GetParent(),"TOPLEFT","floatingRowMetaTopleftX2",-T.floatingApplicationPaddingY-T.floatingApplicationTextGap-entry.activityHeight);row.meta:SetText(app.name or "")

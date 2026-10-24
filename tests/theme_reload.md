@@ -2,6 +2,22 @@
 
 本说明维护 Theme／Configuration／Appearance API v2 的验证方法；该接口已随 1.2.4 发布。产品合同见 [API.md](../API.md)，开发边界见 [Development.md](../Development.md)。当前结果、实机数据与预算结论写入 [perfermance.md](../perfermance.md)。
 
+Plus 功能整合的专项入口为 `lua tests/runner.lua group season_scores season_picker player_links find_enhancements activity_labels applicant_time floating`。覆盖同职业同职责／嗜血筛选、未知数据与缓存失效、角色分类偏好、成绩服务的事件与关闭清理、选择器滚动复用和双语多字号、URL 编码与未知服务器、当前成员复制和返回、标题语义色与实时刷新、活动显示别名与原始数据隔离、列宽及各类行高。全部模块已纳入完整 runner。原始贡献包用于行为参考，正式实现归现有业务所有者；客户端实际成绩与复制交互另行实机核对。
+
+`tests/live_plus_features.lua` 是已连接客户端的真实数据探针，使用 `opaque` 策略、执行预算 120 秒，探针自身异步上限 105 秒。前提是非战斗、真实 Find 已打开并已有稳定的赛季钥石结果，且没有 Preview、模态窗口或已打开的菜单／Tooltip。它检查活动显示名与原始字段隔离、基础行高／标题颜色／最小队长列宽，以原生成员信息独立核对两个新筛选，再逐地图比较赛季成绩的两个原生 API 返回值、检查关菜单退订，并从真实当前玩家详情调用 IO 复制与关闭返回。原生值缺失如实记录，前提不足或断言失败明确报告未覆盖／失败。仅使用控制器与 `Button:Click`，不代表硬件操作；不改 Blizzard API、设置或笔记，不发送申请、邀请、取消和招募动作。结束、失败和取消时恢复原 Find 偏好引用、运行态筛选、列表位置、页面显隐及关闭的菜单／Tooltip 状态。
+
+`tests/live_plus_preview.lua` 使用内置 Preview 的模拟申请者，检查原生 Frame 上的用时文字、五档颜色与 Tooltip，并用公开样式 `SetState` 核对浮窗取消图标的正常、悬停和恢复状态。另以原生 Glyph 验证颜色读取、19×15 自定义尺寸、内部纹理随 Frame 填充、`$parent` 的实际中心偏移和释放还原。使用 `opaque` 策略、执行预算 25 秒，探针异步上限 20 秒；要求非战斗且没有真实招募或活动申请，业务变化会中止。它不模拟鼠标命中，不把样例成绩记为真实申请者记录；结束后退出 Preview 并恢复原页面显隐。
+
+`lua tests/runner.lua glyph_slots floating` 使用严格的 Frame 替身检查公开图标槽：原生 Frame 不提供文字或纹理颜色 getter，颜色由内部 Texture 读写，尺寸与 `$parent` 仍以 Frame 为对象；覆盖自定义颜色、尺寸、锚点、状态和行复用。LycheeUI 源库的 `tests/glyph_style.lua` 单独验证同一通用合同，不依赖产品模块。
+
+`lua tests/runner.lua raid_groups roster_drag group` 覆盖当前成员装等缓存、团队换组原生动作边界及 Tooltip 拖动控制器：GUID 重新解析、团长／助理权限、自身和相关成员战斗、满组与交换、未知身份、成员离队、点击抑制、空小队落点与隐藏清理，并检查双语多字号提示布局。
+
+`tests/live_raid_roster.lua` 要求非战斗且当前存在真实团队，没有 Preview、模态窗口、活动拖动或其他来源的 Tooltip；已有当前队伍分组名单时保存并恢复它。使用 `opaque` 策略、执行预算 20 秒，探针异步上限 15 秒；读取真实成员与已有装等，检查原生文字高度、三种落点的只读判断、拾取前后名单与成员几何稳定、跟随卡片缩放与鼠标穿透，以及取消后的任务和事件释放。已有招募与收藏时，另核对应用保持禁用、结束招募提示及占位已移除，并恢复收藏展开状态。三种战斗原因仅用于明确的提示展示检查，验证标题下方布局、重复替换、手动关闭和 4 秒自动关闭，不表示成员实际进入了战斗。探针不调用换组动作，结束恢复原页面与原有名单浮层；真实鼠标投放与服务器换队结果仍需单独记录。
+
+`tests/live_roster_layout.lua` 用于当前没有团队时的原生布局检查，要求非战斗、主窗已创建，没有活动菜单、模态窗口或拖动。使用 `opaque` 策略、执行预算 20 秒，异步上限 15 秒；将明确标注的 11 个本地样例成员按 5／5／1 分入三个小队，核对标题内距、成员间距、同行小队背景高度、短小队空白、拾取缩放、鼠标穿透及取消清理。它仅调用 Tooltip 视觉控制器，不切换页面、不改原生 API 或真实名单，业务服务仍拒绝样例换队；结束恢复原浮层并检查页面、显隐和搜索代次未变。该结果只计为原生 Frame 与动画验证，不计为真实团队权限、鼠标投放或服务器换队通过。
+
+`node tests/check_architecture.cjs` 验证内置 LycheeUI 的冻结清单与 SHA-256，检查共享源码的产品依赖和业务文件的加载归属；传入独立 LycheeUI 目录可同时核对源库。`test_product_components.lua` 检查共享库、Context 与控件工厂没有产品方法或状态所有者，包含页面和提示的延迟构建；该脚本已纳入布局 runner。
+
 ## 离线入口
 
 在产品仓库根目录使用 Lua 5.1 和 Node.js：
@@ -9,6 +25,7 @@
 ```powershell
 lua tests/runner.lua
 lua tests/run_layout_checks.lua
+node tests/check_architecture.cjs
 lua tests/test_live_theme_memory.lua
 lua tests/test_live_refresh_memory.lua
 lua tests/test_live_heroic_memory.lua
@@ -44,7 +61,7 @@ lua tests/measure_creation.lua
 
 SEUI 适配由产品 runner 的 `test_seui.lua` 覆盖，可单独运行 `lua tests/runner.lua seui floating`。检查 SEUI 加载、浮窗显示与兼容开关的全部组合，宿主延迟创建、隐藏与恢复、骷髅定位、缩放、计数字体、主窗开关、原按钮保持及重复操作的对象复用；测试使用真实荔枝控制器与 SEUI 控件替身。游戏内仍需核对实际锚点、受保护状态、鼠标命中和悬停列表，不将替身结果计为实机通过。
 
-寻队单行活动列由 `test_table_find.lua`、`test_ui.lua`、`test_font_layout.lua` 和 `test_find_pool.lua` 覆盖：12 条目录路由、活动列图标与表头起点、队长姓名后的关系／笔记标记、正文 19 号字及 58.88／44 基础行高、原生完整活动名、结果和申请的池行复用、旧列宽拆分及保存重载，以及团队职责／总人数原位替换且不重排列表。活动表头的三态、目录顺序、未知活动、目录失效与排序保存由 `test_table_find.lua` 验证；默认与各表头排序中的好友／公会优先结合 `test_group.lua` 验证。申请名额提示与行高由 `test_application_notice_layout.lua` 沿真实 Applications 状态通知验证：五项满额、取消／拒绝释放名额、绿色提示、关闭、样式重应用与字号变化；普通行保持基础高度，被拒绝行的提示完整，出现位置与最终布局一致。设置分类由 `test_settings_sections.lua` 检查八组内容、保存范围、切页清理、语言／主题重载、双语 70%／100%／130% 和最小窗口，已加入布局 runner。屏蔽页由 `test_blocked_layout.lua` 检查标题／数量／清空同行、表头与正文对齐、双语多字号、窄窗口及名单池复用；业务移除和清空继续由 `test_ui.lua` 覆盖。字体专项检查中英文 70%／100%／130%、未知评分、分钟／小时／天数、两位职责数、拒绝提示底行、主区左右边界及外侧滚动槽；离线布局不代替游戏中的文字裁切和图标呈现检查。
+寻队单行活动列由 `test_table_find.lua`、`test_ui.lua`、`test_font_layout.lua` 和 `test_find_pool.lua` 覆盖：12 条目录路由、活动列图标与表头起点、队长姓名后的关系／笔记标记、正文 19 号字及 53／44 基础行高、活动显示名与原始目录的隔离、结果和申请的池行复用、旧列宽拆分及保存重载，以及团队职责／总人数原位替换且不重排列表。活动表头的三态、目录顺序、未知活动、目录失效与排序保存由 `test_table_find.lua` 验证；默认与各表头排序中的好友／公会优先结合 `test_group.lua` 验证。申请名额提示与行高由 `test_application_notice_layout.lua` 沿真实 Applications 状态通知验证：五项满额、取消／拒绝释放名额、绿色提示、关闭、样式重应用与字号变化；普通行保持基础高度，被拒绝行的提示完整，出现位置与最终布局一致。设置分类由 `test_settings_sections.lua` 检查八组内容、保存范围、切页清理、语言／主题重载、双语 70%／100%／130% 和最小窗口，已加入布局 runner。屏蔽页由 `test_blocked_layout.lua` 检查标题／数量／清空同行、表头与正文对齐、双语多字号、窄窗口及名单池复用；业务移除和清空继续由 `test_ui.lua` 覆盖。字体专项检查中英文 70%／100%／130%、未知评分、分钟／小时／天数、两位职责数、拒绝提示底行、主区左右边界及外侧滚动槽；离线布局不代替游戏中的文字裁切和图标呈现检查。
 
 
 以下入口补充分配来源与读取时机的离线诊断：

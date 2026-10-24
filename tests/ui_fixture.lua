@@ -3,6 +3,7 @@ return function(locale,preferences,settings,themeDefinition)
 local base=dofile("tests/stubs.lua");base.Install({locale=locale,realm="Home"})
 local S=dofile("tests/ui_stubs.lua");S.Install()
 C_SpecializationInfo.GetSpecialization=function() return nil end
+GetCurrentRegion=function() return locale=="zhCN" and 5 or 1 end
 C_AddOns.GetAddOnMetadata=function(_,field)
  return ({Title="Lychee LFG",Version="fixture",Author="Fixture"})[field]
 end
@@ -34,6 +35,7 @@ end
 dofile("addon/LycheeGroup_Group/CreationPresets.lua")
 dofile("addon/LycheeGroup_Group/RaidBuffs.lua")
 dofile("addon/LycheeGroup/Presentation.lua")
+dofile("addon/LycheeGroup/ActivityLabels.lua")
 G.db.creationPresets={};G.Presets=A.CreationPresets.New(G.db.creationPresets,function() G:Notify("creationPresets") end)
 function G:Subscribe(fn) self.subs[fn]=true;return function() self.subs[fn]=nil end end
 function G:Notify(kind,id) for fn in pairs(self.subs) do fn(kind,id) end end
@@ -185,7 +187,7 @@ C_LFGList={
 }
 dofile("tests/application_fixture.lua")(S)
 dofile("addon/LycheeGroup_Group/Locale.lua");G.L=A.GroupLocale;dofile("addon/LycheeGroup_Group/Catalog.lua")
-for _,file in ipairs({"Locale.lua","Theme.lua","Motion.lua","Components.lua","Elements.lua","Members.lua","Preview.lua","Tooltip.lua","Native.lua","Application.lua","Transfer.lua","Resize.lua","Host.lua","Find.lua","Create.lua","Notes.lua","Settings.lua"}) do dofile("addon/LycheeGroup_UI/"..file) end
+for _,file in ipairs({"Locale.lua","Theme.lua","Motion.lua","Components.lua","Elements.lua","Members.lua","Preview.lua","PlayerLinks.lua","RealmSlugs.lua","Tooltip.lua","Native.lua","Application.lua","Transfer.lua","Resize.lua","Host.lua","Find.lua","Create.lua","Notes.lua","Settings.lua"}) do dofile("addon/LycheeGroup_UI/"..file) end
 local U=A.UI;local C=U.C
 local Open=A.Open
 function A:Open(page,ctx) self.lastOpen=page;return Open(self,page,ctx) end

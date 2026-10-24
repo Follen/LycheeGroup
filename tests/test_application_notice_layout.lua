@@ -36,7 +36,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
    for _,row in ipairs(p.results.rows) do if row.key==6 then ordinary=row;break end end
    check(ordinary~=nil,tag.."/"..phase..": the ordinary result disappeared")
    if ordinary then
-    near(ordinary:GetHeight(),58.88,tag.."/"..phase..": the notice/native update stretches an ordinary result row")
+    near(ordinary:GetHeight(),53,tag.."/"..phase..": the notice/native update stretches an ordinary result row")
     near(select(2,ordinary.title:GetFont()),19*currentPercent/100,tag.."/"..phase..": result text changes size")
     near(ordinary.title:GetLineHeight()+ordinary.title:GetSpacing(),26*currentPercent/100,tag.."/"..phase..": result text changes line height")
    end
@@ -66,7 +66,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
   local rejected
   for _,row in ipairs(p.results.rows) do if row.key==1 then rejected=row;break end end
   check(rejected~=nil and rejected.declined:IsShown() and rejected.declined:GetText()~="",tag..": compact ordinary rows lose the actual rejection information")
-  if rejected then near(rejected:GetHeight(),58.88+p.resultFooterHeight,tag..": only the rejected row appends its footer to the compact body") end
+  if rejected then near(rejected:GetHeight(),53+p.resultFooterHeight,tag..": only the rejected row appends its footer to the compact body") end
   local function boundRows(phase)
    local list=p.results
    for _,row in ipairs(list.rows) do

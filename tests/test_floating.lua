@@ -1,3 +1,23 @@
+local function WithNativeFrameColors(action)
+ local createFrame=CreateFrame
+ CreateFrame=function(kind,...)
+  local frame=createFrame(kind,...)
+  if kind=="Frame" then
+   local previous=getmetatable(frame);local index=previous.__index
+   local metatable={};for key,value in pairs(previous) do metatable[key]=value end
+   metatable.__index=function(object,key)
+    if key=="GetTextColor" or key=="SetTextColor" or key=="GetVertexColor" or key=="SetVertexColor" then return nil end
+    if type(index)=="function" then return index(object,key) end
+    return index[key]
+   end
+   setmetatable(frame,metatable)
+  end
+  return frame
+ end
+ local ok,err=pcall(action)
+ CreateFrame=createFrame
+ return ok,err
+end
 -- Entry clicks toggle the actual UI, including Presence reversal and delayed hide.
 for _,integrated in ipairs({false,true}) do
  local fixture=dofile("tests/ui_fixture.lua")("zhCN",nil,{reduceMotion=false})
@@ -54,7 +74,7 @@ _G.LycheeUI=nil
 local libraryPrivate={}
 for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Styles.lua","Components.lua","Layouts.lua","Elements.lua","Native.lua","Menu.lua"}) do assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/"..file))("LycheeGroup",libraryPrivate) end
 _G.LycheeGroup=nil;_G.LycheeGroupDB=nil
-for _,file in ipairs({"Locale.lua","Theme/Defaults.lua","Theme/Elements.lua","Core.lua","Configuration.lua","Appearance.lua","Theme/Import.lua","Specializations.lua","Fonts.lua","BrandMotion.lua","Floating.lua","API.lua"}) do dofile("addon/LycheeGroup/"..file) end
+for _,file in ipairs({"Locale.lua","Theme/Defaults.lua","Theme/Elements.lua","Core.lua","Configuration.lua","Appearance.lua","Theme/Import.lua","Specializations.lua","Fonts.lua","BrandMotion.lua","ActivityLabels.lua","Floating.lua","API.lua"}) do dofile("addon/LycheeGroup/"..file) end
 local A=LycheeGroup;local API=A.API.Floating
 local startupNotifications=0
 local stopStartup=API:Subscribe(function(status)
@@ -91,8 +111,23 @@ _G.GetTime=function() return 0 end
 local F=A.Floating;F:Bind(G);F:UpdateSettings()
 T.eq(#F.rows,0,"a collapsed entry does not construct unused application rows")
 T.eq(#F.batches,0,"a collapsed entry does not construct unused applicant batch cards")
-F:ShowPanel()
+-- Only this lazy-construction scope models the native Frame/Texture boundary.
+-- Native Frames have neither font-string color methods nor vertex-color methods.
+local panelOK,panelError=WithNativeFrameColors(function() F:ShowPanel() end)
+T.ok(panelOK,"application row constructs with native Frame color capabilities: "..tostring(panelError))
 T.eq(#F.rows,1,"the first hover constructs only the visible application row")
+local cancelGlyph=F.rows[1].cancel.elementIcon
+T.eq(cancelGlyph:GetObjectType(),"Frame","the public glyph slot retains its original geometry frame")
+T.eq(cancelGlyph.GetTextColor,nil);T.eq(cancelGlyph.GetVertexColor,nil,"a glyph frame exposes no native color getter")
+T.eq(cancelGlyph:GetWidth(),F.context.Theme.floatingCrossWidth);T.eq(cancelGlyph:GetHeight(),F.context.Theme.floatingCrossHeight)
+T.eq((cancelGlyph:GetPoint()),"CENTER","the cancel glyph keeps its original center anchor")
+local function CancelGlyphColor(expected)
+ local color={cancelGlyph.texture:GetVertexColor()}
+ for i=1,4 do T.near(color[i],expected[i] or 1,.000001,"cancel glyph texture uses the current state color") end
+end
+CancelGlyphColor(F.context.Theme.dim)
+F.rows[1].cancel:Fire("OnEnter");CancelGlyphColor(F.context.Theme.brand)
+F.rows[1].cancel:Fire("OnLeave");CancelGlyphColor(F.context.Theme.dim)
 T.eq(#F.batches,0,"outbound applications need no applicant batch cards")
 T.eq(startupNotifications,1,"disposing a subscription before startup prevents later delivery")
 local function Position(frame)
@@ -880,7 +915,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  _G.LycheeUI=nil;_G.LycheeGroup=nil;_G.LycheeGroupDB=nil
  local private={}
  for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Styles.lua","Components.lua","Layouts.lua","Elements.lua","Native.lua","Menu.lua"}) do assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/"..file))("LycheeGroup",private) end
- for _,file in ipairs({"Locale.lua","Theme/Defaults.lua","Theme/Elements.lua","Core.lua","Configuration.lua","Appearance.lua","Theme/Import.lua","Specializations.lua","Fonts.lua","BrandMotion.lua","Floating.lua","API.lua","Presentation.lua"}) do dofile("addon/LycheeGroup/"..file) end
+ for _,file in ipairs({"Locale.lua","Theme/Defaults.lua","Theme/Elements.lua","Core.lua","Configuration.lua","Appearance.lua","Theme/Import.lua","Specializations.lua","Fonts.lua","BrandMotion.lua","ActivityLabels.lua","Floating.lua","API.lua","Presentation.lua"}) do dofile("addon/LycheeGroup/"..file) end
  local addon=LycheeGroup;addon:LoadDB();addon:SetSetting("reduceMotion",true)
  local applications,activeListing,notify={},nil,nil
  local group={Applications={GetActiveCount=function() return #applications end,IsActive=function() return true end},
@@ -952,5 +987,31 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  end
  addon:SetSetting("floating",false)
  T.eq(clock.PendingTimers(),0)
+end
+-- Fixed startup rules preserve Glyph Frame geometry and texture-backed color.
+do
+ local color={.17,.38,.61,1}
+ local theme={schema=1,id="floating.native-texture",revision=1,appearance={floating={elements={
+  ["floating.application"]={base={["cancel/elementIcon"]={color=color,width=19,height=15,points={{"CENTER","$parent","CENTER",3,-2}}}}},
+ }}}}
+ local f=dofile("tests/ui_fixture.lua")("enUS",nil,{reduceMotion=true},theme)
+ local a,g=f.A,f.G
+ g.apps={{id=18,status="applied",name="Group",activityName="Dungeon",leaderName="Leader-Away"}}
+ dofile("addon/LycheeGroup/Floating.lua");dofile("addon/LycheeGroup/API.lua")
+ local floating=a.Floating;floating:Bind(g)
+ local ok,err=WithNativeFrameColors(function() floating:UpdateSettings();floating:ShowPanel() end)
+ T.ok(ok,"startup cancel texture rules use native Texture color methods: "..tostring(err))
+ local glyph=floating.rows[1].cancel.elementIcon
+ T.eq(glyph:GetObjectType(),"Frame","the public icon slot retains the glyph geometry frame")
+ T.eq(glyph.GetTextColor,nil);T.eq(glyph.GetVertexColor,nil,"the glyph has no native color getter")
+ T.eq(glyph:GetWidth(),19);T.eq(glyph:GetHeight(),15)
+ local point,relative,relativePoint,x,y=glyph:GetPoint()
+ T.eq(point,"CENTER");T.eq(relative,glyph:GetParent(),"$parent still means the cancel button");T.eq(relativePoint,"CENTER");T.eq(x,3);T.eq(y,-2)
+ local texture=glyph.texture
+ for _,event in ipairs({"OnLeave","OnEnter","OnLeave"}) do
+  floating.rows[1].cancel:Fire(event)
+  local actual={texture:GetVertexColor()};for i=1,4 do T.near(actual[i],color[i],.000001,"startup element color retains ownership during hover") end
+ end
+ floating:Dismiss();a:SetSetting("floating",false)
 end
 _G.LycheeGroup=nil;_G.LycheeGroupDB=nil

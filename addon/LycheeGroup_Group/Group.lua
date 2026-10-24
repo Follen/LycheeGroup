@@ -140,7 +140,8 @@ local DISPATCH = {
 	CHALLENGE_MODE_RESET = function(g) g.History:Discard() end,
 	ACTIVE_PLAYER_SPECIALIZATION_CHANGED = function(g)
 		g:InvalidateRoster()
-		if g:HasViews("search") and g.Search:GetFilters().hideSameSpec then g.Results:InvalidateView();g:Notify("results") end
+		local filters=g.Search:GetFilters()
+		if g:HasViews("search") and (filters.hideSameSpec or filters.hideSameClassRole) then g.Results:InvalidateView();g:Notify("results") end
 	end,
 	PLAYER_SPECIALIZATION_CHANGED = function(g,unit) g:InvalidateRoster("spec",unit) end,
 	PLAYER_EQUIPMENT_CHANGED = function(g) g:InvalidateRoster() end,

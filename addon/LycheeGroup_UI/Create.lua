@@ -2,6 +2,7 @@
 local A=_G.LycheeGroup
 local UI=A.UI
 local T,L,C=UI.Theme,UI.L,UI.C
+local ActivityLabel=A.ActivityLabels.Display
 local MAIN=T.contentWidth-T.createRailWidth-T.createRailGap
 local FORM=MAIN-T.createContentInset*2
 local CONTENT=MAIN-T.createContentInset*2
@@ -125,7 +126,7 @@ end
 local function DrawApplicantMapScore(row)
  if not row.mapScoreTime then UI:SetScore(row.mapScore,UI:GetGroup():GetApplicantMapScore(row.member),"map");return end
  local seconds,status,run=ApplicantTime(row)
- local text=seconds and UI:DungeonRunTimeText(run) or status=="none" and S("无记录","No run") or status=="unavailable" and S("无用时","No time") or S("未知","Unknown")
+ local text=seconds and UI:DungeonRunTimeText(run,true) or status=="none" and S("无记录","No run") or status=="unavailable" and S("无用时","No time") or S("未知","Unknown")
  UI:SetText(row.mapScore,text);UI:Color(row.mapScore,T.muted)
 end
 local function ApplicantTimeTooltip(row)
@@ -468,14 +469,14 @@ local function RefreshFavorites(self)
     local activity=group.Catalog:GetActivity(entry.activityID)
     local context=activity and group.Catalog:GetContextForActivity(entry.activityID)
     local activityGroup=context and group.Catalog:GetGroup(context,group.Catalog:GetGroupKey(context,activity))
-    local difficulty=activity and activity.difficultyID and GetDifficultyInfo(activity.difficultyID)
+    local difficulty=activity and activity.difficultyID and ActivityLabel(GetDifficultyInfo(activity.difficultyID))
     local summary={}
     if entry.requiredItemLevel and entry.requiredItemLevel>0 then summary[#summary+1]=S("装等 ","iLvl ")..entry.requiredItemLevel end
     local ratingKind=A.GroupPresentation.Activity(activity).requirementRatingKind;local score=ratingKind=="pvp" and entry.requiredPvpRating or ratingKind=="dungeon" and entry.requiredDungeonScore
     if score and score>0 then summary[#summary+1]=S("评分 ","Rating ")..score end
     local detail=difficulty or S("无条件要求","No requirements")
     local conditions=table.concat(summary," · ")
-    local reason=recruiting and S("结束招募后可应用","End listing first") or not canManage and S("没有管理权限","No permission") or not activity and L.unavailable or ""
+    local reason=recruiting and "" or not canManage and S("没有管理权限","No permission") or not activity and L.unavailable or ""
     local metaTop=-T.createRowMetaTopleftY;local metaHeight=TextHeight(detail,metaWidth)
     local createTop=metaTop+(lineHeight-T.createRowCreateHeight)/2
     local bottom=math.max(metaTop+metaHeight,createTop+T.createRowCreateHeight)
@@ -484,7 +485,7 @@ local function RefreshFavorites(self)
     local reasonTop,reasonHeight
     if reason~="" then reasonTop=bottom+6;reasonHeight=TextHeight(reason,width-24);bottom=reasonTop+reasonHeight end
     local layout=layouts[entry] or {};layouts[entry]=layout;layout.active=true
-    layout.activity,layout.title=activity,activityGroup and activityGroup.name or activity and activity.name or L.unavailable
+    layout.activity,layout.title=activity,ActivityLabel(activityGroup and activityGroup.name or activity and activity.name) or L.unavailable
     layout.detail,layout.metaWidth,layout.metaHeight,layout.createTop=detail,metaWidth,metaHeight,createTop
     layout.conditions,layout.conditionsTop,layout.conditionsHeight=conditions,conditionsTop,conditionsHeight
     layout.reason,layout.reasonTop,layout.reasonHeight=reason,reasonTop,reasonHeight
@@ -814,7 +815,7 @@ function P:OpenApplicantMenu(row)
  UI:OpenMenu(row,{
   {value="whisper",label=S("密聊","Whisper"),disabled=UI.preview~=nil or not fullName},
   {value="copy",label=S("复制名称","Copy name"),disabled=not fullName},
-  {value="block",label=S("拉黑玩家","Block player"),disabled=UI.preview~=nil or not nameKey},
+  {value="block",label=S("荔枝笔记：拉黑玩家","Player Notes: Block player"),disabled=UI.preview~=nil or not nameKey},
  },function(action)
   if action=="whisper" and fullName and not UI.preview then ChatFrame_SendTell(fullName)
   elseif action=="copy" then UI:CopyText(S("玩家名称","Player name"),fullName,nil,nil,S("完整名称","Full name"))
@@ -881,7 +882,7 @@ function P:RefreshPickerRows()
  self.pickerResults.selectedKey=nil
  for index,entry in ipairs(entries) do if entry.category==state.category and entry.group.key==state.group then self.pickerResults.selectedKey=index;break end end
  self.pickerResults:SetItems(indices,function(row,index)
-  local entry=entries[index];UI:SetActivityIcon(row.icon,entry.group.activity);UI:SetText(row.title,entry.group.name);UI:SetText(row.meta,entry.context)
+  local entry=entries[index];UI:SetActivityIcon(row.icon,entry.group.activity);UI:SetText(row.title,ActivityLabel(entry.group.name));UI:SetText(row.meta,entry.context)
   row.title:ClearAllPoints();C.SetPoint(row.title,"LEFT",row.title:GetParent(),"LEFT","createRowTitleLeftX2",0);row.title:SetWidth(searching and 382 or 334);C.SetLineHeight(row.title,22,true)
   row.meta:ClearAllPoints();C.SetPoint(row.meta,"RIGHT",row.meta:GetParent(),"RIGHT","createRowMetaRightX",0);row.meta:SetWidth(T.createRowMetaWidth2);C.SetLineHeight(row.meta,20,true);row.meta:SetJustifyH("RIGHT");row.meta:SetShown(searching)
  end)
@@ -900,12 +901,12 @@ function P:TierItems(categoryKey)
  local items={{value=false,label=L.all}};for _,tier in ipairs(UI:GetGroup().Catalog:GetTiers()) do if used[tier.id] then items[#items+1]={value=tier.id,label=tier.name} end end;return items,scopes
 end
 function P:ActivityItems()
- local items={};for _,g in ipairs(UI:GetGroup().Catalog:GetGroups(state.category)) do if not state.tier or g.tier==state.tier then items[#items+1]={value=g.key,label=g.name} end end;return items
+ local items={};for _,g in ipairs(UI:GetGroup().Catalog:GetGroups(state.category)) do if not state.tier or g.tier==state.tier then items[#items+1]={value=g.key,label=ActivityLabel(g.name)} end end;return items
 end
 function P:DifficultyItems()
  local catalog=UI:GetGroup().Catalog;local group=catalog:GetGroup(state.category,state.group);local items={}
  if group and catalog:GetCategory(state.category).id~=121 then for _,act in ipairs(group.variants) do
-  local label=act.difficultyID and act.difficultyID>0 and GetDifficultyInfo(act.difficultyID)
+  local label=act.difficultyID and act.difficultyID>0 and ActivityLabel(GetDifficultyInfo(act.difficultyID))
   if label then items[#items+1]={value=act.id,label=label} end
  end end;return items
 end
@@ -938,7 +939,7 @@ function P:RefreshPicker()
  local cat=UI:GetGroup().Catalog:GetCategory(state.category)
  local groups=self:ActivityItems();if not state.group and groups[1] then state.group=groups[1].value end
  local group=UI:GetGroup().Catalog:GetGroup(state.category,state.group)
- UI:SetText(self.pickerName,group and group.name or L.chooseActivity)
+ UI:SetText(self.pickerName,ActivityLabel(group and group.name) or L.chooseActivity)
  local tierName;for _,tier in ipairs(UI:GetGroup().Catalog:GetTiers()) do if group and group.tier==tier.id then tierName=tier.name end end
  UI:SetText(self.pickerContext,cat and cat.season and S("本赛季","Current season") or tierName or cat and cat.name or "");UI:SetActivityIcon(self.pickerIcon,group and group.activity)
  -- Native activity selection remains independent of the optional difficulty UI.
@@ -1045,8 +1046,8 @@ local function RefreshMode(self)
   local act=UI:GetGroup().Catalog:GetActivity(listing.activityID);UI:SetActivityIcon(self.sIcon,act)
   local category=UI:GetGroup().Catalog:GetContextForActivity(listing.activityID,state.category)
   local group=category and UI:GetGroup().Catalog:GetGroup(category,UI:GetGroup().Catalog:GetGroupKey(category,act))
-  local difficulty=act.difficultyID and act.difficultyID>0 and GetDifficultyInfo(act.difficultyID)
-  UI:SetText(self.sMeta,(group and group.name or listing.activityName or "")..(difficulty and " · "..difficulty or "").." · "..L.requiredItemLevel.." "..(listing.requiredItemLevel or 0))
+  local difficulty=act.difficultyID and act.difficultyID>0 and ActivityLabel(GetDifficultyInfo(act.difficultyID))
+  UI:SetText(self.sMeta,(ActivityLabel(group and group.name or listing.activityName) or "")..(difficulty and " · "..difficulty or "").." · "..L.requiredItemLevel.." "..(listing.requiredItemLevel or 0))
  end
 end
 function P:RefreshMode()
@@ -1077,11 +1078,14 @@ function P:Submit()
   if listingChanged then self:RefreshApplicants() end
  else self:ValidateForm();state.submissionError=reason or L.failed;self:SetFormError(state.submissionError) end
 end
-function P:LayoutBatches()
- if not self.appIDs then return end
- self.batchTops={};self.batchLayouts={}
+function P:LayoutBatches(ids)
+ ids=ids or self.appIDs
+ if not ids then return end
+ -- Header layout may synchronously repaint after a missing applicant triggers
+ -- RefreshApplicants. Keep the published IDs and geometry complete until then.
+ local batchTops,batchLayouts={},{}
  local top=0
- for index,id in ipairs(self.appIDs) do
+ for index,id in ipairs(ids) do
   local app=UI:GetGroup():GetApplicant(id)
   if not app then self:RefreshApplicants();return end
   if not self.applicantMeasure then
@@ -1100,11 +1104,12 @@ function P:LayoutBatches()
    layout.tops[i],layout.heights[i]=memberTop,height
    memberTop=memberTop+height+T.createMemberStride-T.createMemberHeight
   end
-  self.batchTops[index]=top;self.batchLayouts[id]=layout
+  batchTops[index]=top;batchLayouts[id]=layout
   top=top+math.max(T.createMemberStride,memberTop)+T.createBatchPadding
  end
  if self.applicantMeasure then UI.Members:ClearMarks(self.applicantMeasure.marks);UI:SetText(self.applicantMeasure.text,"") end
- self.batchTops[#self.appIDs+1]=top
+ batchTops[#ids+1]=top
+ self.appIDs,self.batchTops,self.batchLayouts=ids,batchTops,batchLayouts
  self.batchBody:SetHeight(math.max(1,top));self:LayoutApplicantViewport()
 end
 function P:RefreshApplicants()
@@ -1154,7 +1159,7 @@ function P:RefreshApplicants()
   local x,y=group:GetApplicant(a),group:GetApplicant(b)
   return x.displayOrderID==y.displayOrderID and a>b or x.displayOrderID<y.displayOrderID
  end)
- self.appIDs=ids;self:LayoutBatches()
+ self:LayoutBatches(ids)
  self.empty:SetShown(#ids==0);UI:SetText(self.appCount,L.applicantCount:format(#ids))
  for key,b in pairs(self.roleFilters) do b:SetActive(key=="ALL" and not state.roles or state.roles and state.roles[key]==true or false) end
  UI.Tooltip:RefreshApplicant()

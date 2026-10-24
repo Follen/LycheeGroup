@@ -1501,6 +1501,62 @@ do
  G:InvalidateRoster()
 end
 
+-- Joined-roster item levels use existing native values and current-GUID
+-- snapshots. Missing item levels never create additional inspect requests.
+do
+ local average,inspectLevel,inspectSpec,secretCheck=GetAverageItemLevel,C_PaperDollInfo.GetInspectItemLevel,C_SpecializationInfo.GetInspectSpecialization,issecretvalue
+ local secret=setmetatable({},{__lt=function() error("secret comparison") end,__le=function() error("secret comparison") end})
+ issecretvalue=function(value) return rawequal(value,secret) or secretCheck and secretCheck(value) end
+ local equipped=631.5;local levels={party1=625.75,party2=0};local averageReads,levelReads=0,0
+ GetAverageItemLevel=function() averageReads=averageReads+1;return 999,equipped,1000 end
+ C_PaperDollInfo.GetInspectItemLevel=function(unit) levelReads=levelReads+1;return levels[unit] end
+ C_SpecializationInfo.GetInspectSpecialization=function() return 0 end
+ Stubs.SetUnit("party1",{name="装等队友",realm="晨风号角",class="PALADIN",classID=2,guid="ILVL-A"})
+ Stubs.SetUnit("party2",{name="未知队友",realm="晨风号角",class="DRUID",classID=11,guid="ILVL-B"})
+ local start=#Stubs.InspectRequests()
+ G:InvalidateRoster();local members=G:GetRoster()
+ T.eq(members[1].itemLevel,631.5,"self uses equipped item level, not overall or PvP item level")
+ T.eq(members[2].itemLevel,625.75,"existing native teammate item levels retain their decimal precision")
+ T.eq(members[3].itemLevel,nil,"a zero native item level remains unknown")
+ local selfReads,remoteReads=averageReads,levelReads
+ T.eq(G:GetRoster(),members);G:GetRoster()
+ T.eq(averageReads,selfReads);T.eq(levelReads,remoteReads,"unchanged consumers reuse the existing roster snapshot")
+ -- The existing INSPECT_READY route must retain item-level data even when
+ -- this response has not supplied a valid specialization.
+ G.Roster:OnInspectReady("ILVL-A")
+ levels.party1=0;G:InvalidateRoster()
+ T.eq(G:GetRoster()[2].itemLevel,625.75,"an item-level-only inspect response survives a later native cache miss")
+ T.eq(G:GetRoster()[2].specID,nil,"item-level reception does not invent a specialization")
+ levels.party2=617.5;G.Roster:OnInspectReady("ILVL-B")
+ levels.party2=0;G:InvalidateRoster()
+ T.eq(G:GetRoster()[3].itemLevel,617.5,"INSPECT_READY independently retains a newly supplied item level without a specialization")
+ Stubs.SetUnit("party2",{name="未知队友",realm="晨风号角",class="DRUID",classID=11,guid="ILVL-UNKNOWN"})
+ G:InvalidateRoster();T.eq(G:GetRoster()[3].itemLevel,nil,"a new teammate starts with unknown item level")
+ T.eq(G.Roster.inspected["ILVL-B"],nil,"the prior teammate's retained item level is released on departure")
+ levels.party1=640.25;G:InvalidateRoster();T.eq(G:GetRoster()[2].itemLevel,640.25)
+ levels.party1=nil;G:InvalidateRoster()
+ T.eq(G:GetRoster()[2].itemLevel,640.25,"a later native value updates the current GUID's retained item level")
+ for _,case in ipairs({{value=0},{value=-1},{value=math.huge},{value=0/0},{value="640"},{value=true},{value=secret},{}}) do
+  equipped,levels.party2=case.value,case.value
+  G:InvalidateRoster();members=G:GetRoster()
+  T.eq(members[1].itemLevel,nil,"invalid or secret self item level is unknown")
+  T.eq(members[3].itemLevel,nil,"invalid or secret teammate item level is unknown")
+  T.eq(members[2].itemLevel,640.25,"another GUID's unknown value cannot replace this teammate's known level")
+ end
+ G.Roster:OnInspectReady("NOT-CURRENT-GUID")
+ T.eq(G.Roster.inspected["NOT-CURRENT-GUID"],nil,"unrelated inspection responses do not create retained records")
+ Stubs.SetUnit("party1",{name="换位队友",realm="晨风号角",class="PALADIN",classID=2,guid="ILVL-REPLACEMENT"})
+ levels.party1=0
+ G.Roster:OnInspectReady("ILVL-A")
+ G:InvalidateRoster();members=G:GetRoster()
+ T.eq(members[2].guid,"ILVL-REPLACEMENT");T.eq(members[2].itemLevel,nil,"a reused unit slot never inherits the departed GUID's item level")
+ T.eq(G.Roster.inspected["ILVL-A"],nil,"departed item-level snapshots are pruned by the existing roster lifecycle")
+ T.eq(#Stubs.InspectRequests(),start,"item-level consumers never add automatic inspection requests")
+ Stubs.SetUnit("party1",nil);Stubs.SetUnit("party2",nil)
+ GetAverageItemLevel,C_PaperDollInfo.GetInspectItemLevel,C_SpecializationInfo.GetInspectSpecialization,issecretvalue=average,inspectLevel,inspectSpec,secretCheck
+ G:InvalidateRoster()
+end
+
 -- A raid's same-frame library messages publish one fresh, complete roster.
 do
  local view={}
@@ -3367,6 +3423,110 @@ do
  G.Search:SetFilters({});T.same(G:GetResults(),{94101,94102,94103,94104})
  T.eq(#S.searchCalls,searches,"class filtering does not submit another server search")
  UnitClass,S.resultIDs=unitClass,oldIDs
+end
+
+-- Optional season-dungeon roster checks share reads, retain sorting and fail open
+-- when remote class/role information is unavailable.
+do
+ local oldIDs,unitClass,getSelected,getInfo=S.resultIDs,UnitClass,C_SpecializationInfo.GetSpecialization,C_SpecializationInfo.GetSpecializationInfo
+ local wasSecret,wasAccessible=issecretvalue,canaccesstable
+ local class,role,selected="WARRIOR","DAMAGER",1
+ local secret,restricted={},setmetatable({},{__index=function() error("restricted member accessed") end})
+ _G.issecretvalue=function(value) return value==secret end
+ _G.canaccesstable=function(value) return value~=restricted end
+ UnitClass=function() return class,class end
+ C_SpecializationInfo.GetSpecialization=function() return selected end
+ C_SpecializationInfo.GetSpecializationInfo=function() return 72,"Fury",nil,1,role end
+ local nextGen=94200
+ local function Member(token,assigned,spec) return {classFilename=token,assignedRole=assigned,specName=spec} end
+ local function Party(n,source)
+  local members={};for i=1,n do members[i]=Member(i==n and source or "ROGUE","DAMAGER") end
+  return members
+ end
+ local function Rows(rows)
+  S.resultIDs={}
+  for index,members in ipairs(rows) do
+   local id=94200+index;S.resultIDs[index]=id
+   S.results[id]={activityIDs={502},name="Roster filters "..index,numMembers=members.n or #members,age=index,requiredItemLevel=600,leaderOverallDungeonScore=1500}
+   S.players[id]=members
+  end
+  nextGen=nextGen+1;G.Search:SetFilters({category="seasonDungeon"});G.Results:BeginSearch(nextGen);G.Results:CommitResults(nextGen)
+ end
+ local function Filters(values)
+  values.category=values.category or "seasonDungeon";G.Search:SetFilters(values)
+  return G:GetResults()
+ end
+ Rows({{Member("WARRIOR","DAMAGER","Arms")},{Member("WARRIOR","DAMAGER","Fury")},{Member("WARRIOR","TANK","Protection")},{Member("ROGUE","DAMAGER")}})
+ local reads=S.playerReads
+ T.same(G:GetResults(),{94201,94202,94203,94204});T.eq(S.playerReads,reads,"disabled optional filters read no members")
+ T.same(Filters({hideSameClassRole=true}),{94203,94204},"Fury excludes both warrior damage specs and keeps tanks and other classes")
+ reads=S.playerReads;Filters({hideSameClassRole=true,sort="members"});T.eq(S.playerReads,reads,"sort changes reuse class-role answers")
+ role="TANK";G.Results:InvalidateView();T.same(G:GetResults(),{94201,94202,94204},"Protection only excludes warrior tanks")
+ class,role="PALADIN","HEALER"
+ Rows({{Member("PALADIN","HEALER")},{Member("PALADIN","TANK")},{Member("PALADIN","DAMAGER")}})
+ T.same(Filters({hideSameClassRole=true}),{94202,94203},"Holy paladin keeps protection and retribution")
+ class,role="WARRIOR","DAMAGER"
+ Rows({{Member("WARRIOR","TANK")},{Member("WARRIOR","DAMAGER")}})
+ local view={};G:Attach(view,"search");Filters({hideSameClassRole=true});role="TANK";Stubs.FireEvent("ACTIVE_PLAYER_SPECIALIZATION_CHANGED")
+ T.same(G:GetResults(),{94202},"native specialization events refresh same-class-role filtering")
+ selected=nil;Stubs.FireEvent("ACTIVE_PLAYER_SPECIALIZATION_CHANGED");T.same(G:GetResults(),{94201,94202},"unknown local role does not exclude teams")
+ G:Detach(view);selected,role=1,"DAMAGER"
+ Rows({{secret,n=4},{restricted,n=4},{Member("WARRIOR",nil),n=4},{Member(nil,"DAMAGER"),n=4}})
+ T.same(Filters({hideSameClassRole=true,requireBloodlust=true}),{94201,94202,94203,94204},"unknown and restricted remote information cannot prove either exclusion")
+ Rows({Party(0),Party(1),Party(3),Party(4),Party(5)})
+ reads=S.playerReads
+ T.same(Filters({requireBloodlust=true}),{94201,94202,94203},"only source-free teams of at least four are excluded")
+ T.eq(S.playerReads-reads,9,"undersized teams need no Bloodlust roster reads")
+ Rows({Party(4,"SHAMAN"),Party(4,"MAGE"),Party(4,"HUNTER"),Party(4,"EVOKER"),Party(4)})
+ T.same(Filters({requireBloodlust=true}),{94201,94202,94203,94204},"all four source classes satisfy coverage")
+ for _,token in ipairs({"SHAMAN","MAGE","HUNTER","EVOKER"}) do
+  class=token;Rows({Party(4)});reads=S.playerReads
+  T.same(Filters({requireBloodlust=true}),{94201});T.eq(S.playerReads,reads,"the local source class needs no remote member reads")
+ end
+ class="WARRIOR"
+ Rows({{Member("MAGE","DAMAGER"),Member("WARRIOR","DAMAGER"),Member("ROGUE","DAMAGER"),Member("DRUID","HEALER")},
+  {Member("SHAMAN","HEALER"),Member("WARRIOR","TANK"),Member("ROGUE","DAMAGER"),Member("ROGUE","DAMAGER")},Party(4)})
+ T.same(Filters({hideSameClassRole=true,requireBloodlust=true}),{94202},"both new conditions intersect")
+ T.same(Filters({hideSameClass=true,hideSameClassRole=true,requireBloodlust=true}),{},"existing class exclusion still applies")
+ T.same(Filters({minRating=2000,hideSameClassRole=true,requireBloodlust=true}),{},"numeric filters remain AND-combined")
+ reads=S.playerReads;T.same(Filters({minMembers=5,hideSameClassRole=true,requireBloodlust=true}),{});T.eq(S.playerReads,reads,"cheap filters precede optional roster work")
+ Rows({{Member("MAGE","DAMAGER"),Member("DRUID","TANK"),Member("PRIEST","HEALER"),Member("ROGUE","DAMAGER")},Party(4,"MAGE"),
+  {Member("SHAMAN","HEALER"),Member("DRUID","TANK"),Member("PRIEST","HEALER"),Member("ROGUE","DAMAGER")}})
+ S.counts[94201]={TANK=1,HEALER=1,DAMAGER=2};S.counts[94202]={TANK=0,HEALER=0,DAMAGER=4};S.counts[94203]={TANK=1,HEALER=2,DAMAGER=1}
+ S.results[94203].leaderOverallDungeonScore=500;G.Results:OnResultUpdated(94203)
+ T.same(Filters({hideSameClassRole=true,requireBloodlust=true,minRating=1000,minItemLevel=600,roleMatchAny=true,tankPresence="present",healerPresence="present"}),{94201},"role-any remains AND-combined with numeric and optional roster conditions")
+ Rows({Party(4,"MAGE"),Party(4,"SHAMAN")})
+ S.results[94202].age=0;G.Results:OnResultUpdated(94202)
+ G:GetResultDetails(94201);reads=S.playerReads
+ T.same(Filters({hideSameClassRole=true,requireBloodlust=true}),{94202,94201},"native ordering is preserved")
+ T.eq(S.playerReads-reads,4,"clean details provide both answers without native member rereads")
+ T.eq(G:GetResult(94202).details,nil,"whole-result filtering keeps no display roster snapshot")
+ reads=S.playerReads
+ for _=1,10 do G.Results:InvalidateView();G:GetResults() end
+ T.eq(S.playerReads,reads,"repeated consumers and rebuilds reuse both answers")
+ S.players[94201][4]=Member("ROGUE","DAMAGER");G.Results:OnResultUpdated(94201)
+ T.same(G:GetResults(),{94202},"same-frame same-size updates invalidate clean details and Bloodlust answers")
+ T.eq(S.playerReads-reads,4,"only the changed roster is reread")
+ S.players[94201][4]=nil;S.results[94201].numMembers=3;G.Results:OnResultUpdated(94201);reads=S.playerReads
+ T.same(G:GetResults(),{94202,94201});T.eq(S.playerReads-reads,3,"class-role remains active below the Bloodlust threshold")
+ Filters({requireBloodlust=true});S.results[94202].numMembers=3;G.Results:OnResultUpdated(94202);reads=S.playerReads
+ T.same(G:GetResults(),{94202,94201});T.eq(S.playerReads,reads,"four-to-three changes restore teams without Bloodlust reads")
+ Rows({{Member("WARRIOR","DAMAGER")}});reads=S.playerReads
+ S.results[94201].activityIDs={504};G.Results:OnResultUpdated(94201)
+ T.same(Filters({category="2",hideSameClassRole=true,requireBloodlust=true}),{94201});T.eq(S.playerReads,reads,"non-season categories bypass both options")
+ local large={};for i=1,1000 do large[i]=Party(5,"MAGE") end
+ Rows(large);reads=S.playerReads;T.eq(#G:GetResults(),1000);T.eq(S.playerReads,reads,"1000 disabled teams cause zero extra roster reads")
+ T.eq(#Filters({hideSameClassRole=true,requireBloodlust=true}),1000)
+ T.eq(S.playerReads-reads,5000,"both new checks use one pass per candidate")
+ reads=S.playerReads;Filters({hideSameClassRole=true,requireBloodlust=true,sort="members"});T.eq(S.playerReads,reads,"warm full-result rebuilds reuse all 1000 answers")
+ -- Fresh searches and a leave/reopen own new records, even when IDs repeat.
+ Rows({Party(4,"MAGE")});Filters({requireBloodlust=true});local previous=G:GetResult(94201)
+ Rows({Party(4)});T.ok(G:GetResult(94201)~=previous)
+ T.same(Filters({requireBloodlust=true}),{},"new searches discard old Bloodlust answers")
+ G.Search:EndBrowse();T.eq(G.Results:GetCount(),0,"leaving browse releases result filter caches with their records")
+ UnitClass,C_SpecializationInfo.GetSpecialization,C_SpecializationInfo.GetSpecializationInfo=unitClass,getSelected,getInfo
+ _G.issecretvalue,_G.canaccesstable=wasSecret,wasAccessible
+ S.resultIDs=oldIDs;G.Search:SetFilters({})
 end
 
 -- Declines follow a native party across search IDs, title tickets and roster changes.

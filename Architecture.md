@@ -24,6 +24,8 @@ Host 通过 `Context:SetWindow(frame)` 接入主窗口并捕获动画终点锚�
 
 主包 [Presentation.lua](addon/LycheeGroup/Presentation.lua) 在 Core 后定义 `A.GroupPresentation`，通过 Activity／Result／Member 纯函数为 Find、Create、Tooltip 和 Floating 提供活动与来源视图规则：名单模式、进度或评分、评分要求、成员详情入口与菜单类型，以及申请者评分和大秘境记录的显示范围。它不持有业务状态、缓存或事件，也不读取原生数据；listing、applications、applicants 和 roster 仍由 Group 服务持有。笔记使用来源规则时不必加载 Group。
 
+主包 [ActivityLabels.lua](addon/LycheeGroup/ActivityLabels.lua) 独立维护原生活动与难度名称的显示别名，`A.ActivityLabels.Display` 由 Find、Create、Tooltip 和 Floating 共用。它只接收公开字符串并返回展示文字，不修改 Catalog、Results、原生搜索条件或玩家文本，也不持有事件、缓存和游戏 API。映射属于产品，LycheeUI 只接收处理后的文字。
+
 模块直接调用具名接口，不预建通用插件平台、全局广播总线、万能任务系统或多层兼容框架。加载、激活与清理使用明确函数与状态。
 
 Notes 首次按需加载完成后，核心通过现有模块就绪入口通知已加载的 UI。当前可见 Find／Create 补上记录订阅并刷新标记；启停笔记沿同一入口同步订阅，离页释放。隐藏、退场和 Preview 不消费这次界面通知，也不为显示空标记提前加载 Notes。
@@ -53,13 +55,13 @@ Notes 首次按需加载完成后，核心通过现有模块就绪入口通知�
 ```text
 addon/
   LycheeGroup/
-    Core、Configuration、Appearance、Theme/、Presentation、BrandMotion、Fonts、Bindings.lua／Bindings.xml、Minimap、Entrypoints、PartyRoleCheck、Floating、API、Adapters、最小 Locale
+    Core、Configuration、Appearance、Theme/、Presentation、ActivityLabels、BrandMotion、Fonts、Bindings.lua／Bindings.xml、Minimap、Entrypoints、PartyRoleCheck、Floating、API、Adapters、最小 Locale
   LycheeGroup_Group/
-    Group、Game、Catalog、Search、Results、Applications、Listing、CreationPresets、RaidBuffs、Relations、Roster、Applicants、Alerts、History、Locale
+    Group、Game、Catalog、SeasonScores、Search、Results、Applications、Listing、CreationPresets、RaidBuffs、Relations、Roster、RaidGroups、Applicants、Alerts、History、Locale
   LycheeGroup_Notes/
     Records、RosterReminder、PlayerInfo、Locale
   LycheeGroup_UI/
-    Theme、Motion、Elements、Resize、Host、Components、Members、Tooltip、Native、Application、Preview、Find、Create、Notes、Settings、Transfer、Media、Locale
+    Theme、Motion、Elements、Resize、Host、Components、Members、PlayerLinks、RealmSlugs、Tooltip、Native、Application、Preview、Find、Create、Notes、Settings、Transfer、Media、Locale
 ```
 
 品牌原始文件保留在 [Media](Media/lychee-logo.png)，离线预览直接引用此处 PNG。品牌、职责、关系、活动与申请操作等产品素材位于主包 `Media`，由产品 `productMedia` 参数提供路径，浮窗无需加载 UI 包即可使用。通用图形、箭头、按钮符号和阴影源位于 [LycheeUI/Media](../LycheeUI/Media)，运行时位于主包 `Libs/LycheeUI/Media`，由共享 `media` 参数提供路径。UI 子包 Media 保留关于页图片，以及专用阵营、收藏星标、活动图标、成员遮罩和三态尺寸拖动柄 TGA。拖动柄源图在 `assets/imagegen/resize-grip`，收藏源图在 `assets/favorites`，职责盾牌源图在 `assets/roles`，阵营源图及生成信息见 [assets/factions](assets/factions/prompts.txt)。四个产品包的 TOC `IconTexture` 统一引用主包的 `Media/addon-logo.tga`；素材设计见 [Desgin.md](Desgin.md#1-品牌与语言)。共享库源码位于 `D:/Code/wow/addons/LycheeUI`，与本产品独立。磁盘素材引用不需要加载业务 UI。
@@ -140,14 +142,15 @@ flowchart LR
 | Group.History | 当前角色大秘境历史 run 与进行中活动的成员基线 | 活动事件驱动去重记录；活动结束退订队伍监听，不周期扫描 |
 | Group.Alerts | 当前招募的未查看标记及可见申请列表的所有者集合 | Applicants 的新增申请触发；列表查看、待处理申请清空、权限丢失或招募结束清理原生申请提醒 |
 | Group.RaidBuffs | 当前活动与成员职业／小队形成的职业增益缺口 | Roster 调用独立统计模型，Preview 复用同一模型，无新轮询 |
-| Group.Roster | 当前成员快照、按 GUID 保存的库同步专精／检视结果与单个检视请求、职业／小队统计输入 | LibSpecialization 回调与游戏事件使快照失效；创建页需要且缺数据时才检视 |
+| Group.Roster | 当前成员快照、按 GUID 保存的库同步专精／检视结果与单个检视请求、职业／小队统计输入 | LibSpecialization 回调与游戏事件使快照失效；创建页需要且缺专精时才检视；装等独立接纳已有原生值，复用当前 GUID 缓存 |
+| Group.RaidGroups | 当前团队成员换小队的落点判断、动作检查与原生提交 | 预览与动作共用身份、权限、容量和战斗校验；提交时按 GUID 重新解析 raid 索引，不保存名单副本或乐观结果 |
 | Group.Relations | 当前观察者的 GUID／角色全名关系索引、实际角色短名索引及一个可取消任务 | Apply 为成员补充独立关系字段并排除自身；ApplyMembers 按同批次姓名消歧；好友／公会事件使索引失效，通知可见消费者；无消费者时释放 |
 | Notes.Records | `playerKey → record` 持久记录 | 唯一读写入口，命中后按需读取理由 |
 | Notes.RosterReminder | 当前队伍命中集合、收邀事件与一次安全出邀 hook | 成员差异及邀请触发本地提醒；离队清集合，停用退订，hook 静默 |
 | Notes.PlayerInfo | 单个待完成的单位／GUID 查询、回调和超时任务 | 先借用已加载 Roster 的专精缓存，再读取原生检视；不另存结果缓存，完成或取消后释放请求 |
 | UI.Native | 搜索及创建表单的原生输入租借、原生创建校验 | 显式绑定／释放 Search 的输入 token，原生控件失去所有权时通知页面 |
 | UI.Application | 当前角色的自动申请开关、多职责偏好、当前申请 lease 和申请弹窗 | 主界面与弹窗共用状态；有效保存职责可直接开启，否则确认后开启；原生备注仅留安全字段；配置变更通过一个回调通知 Find |
-| UI.Tooltip | 当前来源、所选成员身份、固定／展开状态、复制弹窗返回快照及复用的短说明控件 | 自行重新解析最新成员；BindText 为按钮接入共享 C.Tooltip，按当前字宽调整短说明尺寸，与详情提示统一所有权及关闭生命周期；页面不写入内部字段 |
+| UI.Tooltip | 当前来源、所选成员身份、固定／展开状态、团队拖动与落点反馈、复制弹窗返回快照及复用的短说明控件 | 自行重新解析最新成员；BindText 为按钮接入共享 C.Tooltip，按当前字宽调整短说明尺寸，与详情提示统一所有权及关闭生命周期；页面不写入内部字段 |
 | 各页面 | 活动单选／多选草稿、滚动、可见行身份 | 确认后提交搜索选择，订阅所需变更，不另建业务状态机 |
 
 Find 的非五人结果与申请行从 Results 分别读取职责人数、队长职业和进度，不构建完整成员快照。`GetLeaderClass` 优先复用干净详情，再尝试原生队长接口；只有公开的队长标志和有效职业同时存在时才采用。接口缺失或数据不完整时，按原生成员顺序读取到首个队长标记／完整队长身份命中；缓存包含暂时未知的职业。结果更新沿既有详情失效路径清除这些摘要，完整详情读取回填同一缓存。五人头像、Tooltip 和需要成员身份的过滤仍通过 `GetDetails` 取得完整名单与关系信息，摘要不能冒充完整详情。
@@ -218,7 +221,7 @@ Find 一级分类打开选择器；切回已有有效确认选择的分类时，
 
 赛季地下城的职责组合条件由 Find 持有，`tankPresence`、`healerPresence`、`damagePresence` 各取 `present`／`missing`，无筛选时为 nil。Results 读取实际职责人数，经 `MatchesRolePresence` 按 `roleMatchAny` 选择 AND／OR 合并；具体人数规则见 [Product.md](Product.md#5-主要流程)。Find 在恢复分类偏好时迁移旧 `needsDamage` 并清除该字段，清空筛选同步清除三项；普通分类的 `neededRole` 保持原路径。Preview 消费相同条件并模拟同一组合关系，不以角色当前专精决定结果。
 
-Find 的三档过滤由互斥的 `hideSameClass`／`hideSameSpec` 表示，随分类保存、恢复和清除；旧值同时为真时保留同职业。Results 的 `HasMemberClass` 优先使用干净的成员详情，否则按需读取原生成员职业；每条结果缓存当前玩家职业及匹配布尔值，原生结果变化时与专精缓存一起失效，不填充完整详情缓存。Preview 复用同一职业匹配函数。
+Find 的三档过滤由互斥的 `hideSameClass`／`hideSameSpec` 表示，随分类保存、恢复和清除；旧值同时为真时保留同职业。Results 的 `HasMemberClass` 优先使用干净的成员详情，否则按需读取原生成员职业；每条结果缓存当前玩家职业及匹配布尔值，原生结果变化时与专精缓存一起失效，不填充完整详情缓存。Preview 复用同一职业匹配函数。新增 `hideSameClassRole` 与 `requireBloodlust` 继续走原生 Results 筛选流水线：`MatchesPartyFilters` 一次遍历共用职业与职责信息，每条结果只保留当前查询身份及两个布尔摘要，规范化更新时失效；不建立第二份结果列表或完整成员数组。Find 的分类偏好、条件数与重置统一持有两个开关，Preview 复用相同判断。
 
 Find 的 `hideZeroScore` 开关仅在赛季地下城传入 Results，并随该角色的分类偏好保存、恢复和清空。Results 直接比较规范化记录已有的 `leaderOverallDungeonScore`，不请求额外评分或成员数据；Preview 使用相同字段和判定。筛选只重建待选 ID 视图，不改变 Applications。
 
@@ -286,6 +289,8 @@ Find 根据目录将已确认的 groupKey／groupKeys、difficultyID 与 tier �
 
 行、菜单与动作绑定明确目标。普通字段刷新保留交互身份；换绑清理旧提示、按下与菜单，松开不能作用于旧目标或新占位行。
 
+SeasonScores 归 Group 持有，Find 只在可见的赛季钥石选择器中通过 `Begin`／`GetRecord`／`End` 消费。服务将目录地图 ID 映射到唯一的挑战模式 ID，分别读取 `GetSeasonBestForMap` 第一返回值的限时层数和 `GetSeasonBestAffixScoreInfoForMap` 第二返回值的分数；异图变体或同图多 ID 保留未知。地图更新、挑战完成与进入世界使本次缓存失效，关闭、离页或切到其他模式解除订阅并释放数据。Preview 提供相同接口的样例服务，不访问真实成绩。API 声明核对基于 `wow-ui-source` retail 提交 `15881d522c44cd106d3d8660106ec9f9d2f44167` 的 `MythicPlusInfoDocumentation.lua` 与 `ChallengeModeInfoDocumentation.lua`。
+
 ## 7. 玩家记录的内部整合
 
 搜索队伍行只查询完整 `leaderKey` 的 `Notes.Find` 类型，笔记筛选采用同一范围；搜索成员名单也仅给队长显示该类型，不检查其他成员。申请者与已入队成员继续按自身完整身份查询推荐／中性／拉黑标记，不把理由复制到组队记录。申请者备注标记以玩家身份直接打开对应记录，不检查招募管理权。记录变化按身份刷新当前可见行及已打开提示，不扫描全部历史队伍。停用或没有记录时返回无标记，不为显示标记创建完整笔记页。
@@ -344,6 +349,8 @@ UI/Elements.lua 在实际构造末尾登记必要 slot，在业务重绘和布�
 
 Host 记录各页完成布局的内容尺寸，同尺寸重进复用几何并继续业务订阅与内容刷新。Leave、Build、Enter 同步完成后按目标页最小尺寸适配，不引入延时任务。窗口、表格、浮窗位置和侧栏由 Appearance 的专用偏好适配器读写；只有明确用户交互写保存层，布局不会把主题默认值固定成用户偏好。小地图拖动只在结束时保存角度。
 
+UI 包的 `PlayerLinks` 仅负责已提供身份、地区与语言的 URL 构造，`RealmSlugs` 提供服务器别名资料，均不进入微核心。Tooltip 复用既有成员详情和复制文本框，按当前绑定成员生成 WCL／IO 链接，返回后恢复同一固定详情；不缓存玩家链接历史。服务器别名来自灵魂复苏提供的 LycheeGroup Plus 1.0.6，包内标注数据版本 `v202610221625`，来源声明保留在文件头。
+
 ## 9. 统一界面与本地化
 
 Find 持有活动侧栏宽度和 `state.railCollapsed`，当前角色的 `prefs.find.railCollapsed` 独立于筛选记忆保存；Preview 使用独立 provider 偏好，退出后恢复正式页面状态。侧栏通过共享 Motion 的有限 Rect 任务改变宽度，`OnSizeChanged` 调整既有列表、搜索区和申请列，活动菜单保持相对侧栏的锚点。四类 PvP 与侧栏按钮静态素材由 LycheeGroup_UI/Media 持有，Catalog 只提供图标键，`UI:CategoryIcon` 统一解析产品素材与共享库图标。
@@ -379,6 +386,8 @@ LycheeUI 提供通用主题、控件、动效、菜单、阴影和弹窗；产�
 成员详情的 WCL 入口由完整角色身份拼接链接。当前国服样例为 `https://cn.warcraftlogs.com/character/cn/{服务器}/{角色名}`，服务器和角色名分别编码为 URL 路径段；正式接入按客户端区域生成对应地址，不从当前专精或笔记推断成绩。点击后打开只读链接框，聚焦并全选文本，由玩家手动复制；不调用系统剪贴板或打开外部浏览器。
 
 笔记列表和固定编辑区共用 `Notes` 的记录身份。职业和专精下拉编辑的是记录时字段，保存时与类型、理由一起提交；取消只丢弃当前编辑输入。职业变化更新对应的专精选项，不重建整个编辑区或丢失未保存的理由。
+
+当前团队的拖动状态、源按钮、跟随卡片、落点面板与 Notice 归 `UI.Tooltip`，成员装等文字由 `UI.Members:BindRoster` 按显示参数绘制。跟随卡片复用同一成员绘制，原名单保持既有布局；空小队落点独立定位。`Group.RaidGroups:CanStart` 核对拖动权限，`ResolveDrop` 在落点或相关状态变化时返回移入空组、加入小队或交换的意图，`Drop` 松手时重新校验后提交。各入口从当前 GUID 解析原生 raid 索引，核对团长／助理权限及自身、源成员、交换目标的战斗状态；成员落点走 `SwapRaidSubgroup`，空位背景走 `SetRaidSubgroup`。只提交动作，不改写 Roster，原生名单更新继续走已有 Group 通知。原生交换与容量规则参考 `wow-ui-source@15881d522c44cd106d3d8660106ec9f9d2f44167` 的 `Interface/AddOns/Blizzard_RaidFrame/Mainline/RaidFrameSocialView.lua:352`；战斗前置检查按本项目产品要求追加。界面自行登记拖动事件，不接管原生安全团队按钮。搜索、申请者与 Preview 不进入此业务入口；共享 LycheeUI 仅提供普通控件、Motion 和 Notice。
 
 ### 9.1 原生申请声音与轻量悬浮窗
 
