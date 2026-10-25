@@ -1331,6 +1331,8 @@ function P:BuildPicker()
  end);C.Box(self.activities,{width="findActivitiesWidth",height="findActivitiesHeight"})
  self.activities:SetStyle({alternateRows=false,rowHeight=44,radius=8,singleLine=true,titleX=48,titleWidth=200,titleSize=16,titleLineHeight=22})
  self.activityIDs={};self.activityMap={}
+ local levelBackground={}
+ for i=1,3 do levelBackground[i]=T.surfaceLow[i]+(T.good[i]-T.surfaceLow[i])*.12 end
  self.activities:SetRowInitializer(function(row)
   row.icon=C.Icon(row,T.findRowIconWidth);C.Box(row.icon,{width="findRowIconWidth",height="findRowIconHeight"});C.SetPoint(row.icon,"LEFT",row.icon:GetParent(),"LEFT","findRowIconLeftX",0)
   row.multiSelect=C.Checkbox(row,function(_,button)
@@ -1351,15 +1353,18 @@ function P:BuildPicker()
   row.multiSelect:HookScript("OnHide",CancelGroupChoicePress)
   row:HookScript("OnHide",function() CancelGroupChoicePress(row.multiSelect) end)
   row.seasonBadge=CreateFrame("Frame",nil,row);row.seasonBadge:SetSize(72,22);row.seasonBadge:EnableMouse(false)
-  C.Panel(row.seasonBadge,"surfaceHigh",999)
-  C.Panel(row.seasonBadge,"surfaceLow",999,1,"BORDER")
-  row.seasonLevel=C.Text(row.seasonBadge,"",10,"good");C.SetLineHeight(row.seasonLevel,14,true)
+  C.Panel(row.seasonBadge,"surfaceLow",4)
+  row.seasonLevelSection=CreateFrame("Frame",nil,row.seasonBadge);row.seasonLevelSection:SetSize(30,22);row.seasonLevelSection:SetPoint("LEFT");row.seasonLevelSection:EnableMouse(false)
+  C.Panel(row.seasonLevelSection,levelBackground,4)
+  -- The opaque end keeps the inner edge straight without doubling the tint.
+  local endFill=row.seasonLevelSection:CreateTexture(nil,"BACKGROUND");endFill:SetColorTexture(unpack(levelBackground));endFill:SetWidth(4);endFill:SetPoint("TOPRIGHT");endFill:SetPoint("BOTTOMRIGHT")
+  row.seasonLevel=C.Text(row.seasonLevelSection,"",10,"good");C.SetLineHeight(row.seasonLevel,14,true)
   row.seasonScore=C.Text(row.seasonBadge,"",10,"muted");C.SetLineHeight(row.seasonScore,14,true)
   for _,label in ipairs({row.seasonLevel,row.seasonScore}) do label:SetWordWrap(false);label:SetJustifyH("CENTER");label:Hide() end
-  row.seasonDivider=row.seasonBadge:CreateTexture(nil,"ARTWORK");row.seasonDivider:SetColorTexture(unpack(T.dim));row.seasonDivider:SetAlpha(.3);row.seasonDivider:SetSize(1,10)
-  row.seasonLevel:SetPoint("LEFT",row.seasonBadge,"LEFT",8,0)
-  row.seasonDivider:SetPoint("LEFT",row.seasonLevel,"RIGHT",6,0)
-  row.seasonScore:SetPoint("LEFT",row.seasonDivider,"RIGHT",6,0)
+  row.seasonDivider=row.seasonBadge:CreateTexture(nil,"ARTWORK");row.seasonDivider:SetColorTexture(unpack(T.dim));row.seasonDivider:SetAlpha(.18);row.seasonDivider:SetSize(1,12)
+  row.seasonLevel:SetPoint("CENTER")
+  row.seasonDivider:SetPoint("LEFT",row.seasonLevelSection,"RIGHT",0,0)
+  row.seasonScore:SetPoint("LEFT",row.seasonDivider,"RIGHT",9,0)
   row.seasonBadge:SetPoint("RIGHT",row.multiSelect,"LEFT",-8,0);row.seasonBadge:Hide()
  end)
  self.pickerConfirm=C.Button(f,Say("搜索所选副本","Search selected dungeons"),T.findPickerConfirmWidth,function()
@@ -1478,7 +1483,7 @@ function P:RefreshPicker()
    end
   end
   self.pickerLevelWidth,self.pickerScoreWidth=math.ceil(levelWidth)+2,math.ceil(scoreWidth)+2
-  local badgeWidth=self.pickerLevelWidth+self.pickerScoreWidth+29
+  local badgeWidth=self.pickerLevelWidth+self.pickerScoreWidth+33
   scoreMenuWidth=math.ceil(16+gutter+48+titleWidth+12+badgeWidth+8+measure.multiSelect:GetWidth()+6)
  end
  -- Difficulty names remain complete; the native menu grows to its real content width.
@@ -1517,7 +1522,8 @@ function P:RefreshPicker()
    UI:SetScore(row.seasonScore,record.score,"map")
    row.seasonLevel:SetWidth(self.pickerLevelWidth);row.seasonScore:SetWidth(self.pickerScoreWidth)
    local badgeHeight=math.max(22,math.ceil(math.max(row.seasonLevel:GetHeight(),row.seasonScore:GetHeight())+4))
-   row.seasonBadge:SetSize(self.pickerLevelWidth+self.pickerScoreWidth+29,badgeHeight);row.seasonDivider:SetHeight(math.max(10,badgeHeight-12))
+   row.seasonBadge:SetSize(self.pickerLevelWidth+self.pickerScoreWidth+33,badgeHeight)
+   row.seasonLevelSection:SetSize(self.pickerLevelWidth+14,badgeHeight);row.seasonDivider:SetHeight(math.max(12,badgeHeight-10))
    row.title:SetWidth(math.max(1,row:GetWidth()-48-12-row.seasonBadge:GetWidth()-8-row.multiSelect:GetWidth()-6))
   else
    UI:SetText(row.seasonLevel,"");UI:SetText(row.seasonScore,"")

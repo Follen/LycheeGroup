@@ -120,7 +120,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  s:Open();Equal(s.requests,1);Equal(s:Subscriptions(),3)
  local row=s:Row(20)
  Equal(row.seasonLevel:GetText(),"15");Equal(row.seasonScore:GetText(),"351")
- Equal(row.seasonLevel:GetParent(),row.seasonScore:GetParent(),"level and score share one badge")
+ Equal(row.seasonLevel:GetParent():GetParent(),row.seasonScore:GetParent(),"the level section stays inside the shared badge")
  Near(row.seasonLevel.color[1],u.Theme.good[1])
  local scoreColor=C_ChallengeMode.GetSpecificDungeonOverallScoreRarityColor(351)
  Near(row.seasonScore.color[1],scoreColor.r,"the badge retains the native dungeon-score color")
@@ -158,16 +158,18 @@ for _,locale in ipairs({"zhCN","enUS"}) do
      Check(Coordinate(current.seasonBadge,"LEFT","x",current)>=Coordinate(current.title,"RIGHT","x",current)+11.99,"the name has twelve units before the badge")
      for _,label in ipairs({current.seasonLevel,current.seasonScore}) do
       Check(label:GetWidth()+.01>=label:GetUnboundedStringWidth(),"record text fits its reserved width")
-      local badge=label:GetParent()
+      local badge=current.seasonBadge
       Check(badge:IsShown(),"a visible record has its badge surface")
       Check(Coordinate(badge,"RIGHT","x",current)<=Coordinate(current.multiSelect,"LEFT","x",current)-7.99,"badges do not overlap the checkbox")
       Check(Coordinate(badge,"BOTTOM","y",current)>=-.01 and Coordinate(badge,"TOP","y",current)<=current:GetHeight()+.01,"badges fit the original row at every font size")
-      Check(Coordinate(label,"LEFT","x",current)>=Coordinate(badge,"LEFT","x",current)+7.99 and Coordinate(label,"RIGHT","x",current)<=Coordinate(badge,"RIGHT","x",current)-7.99,"badge text has horizontal padding")
+      Check(Coordinate(label,"LEFT","x",current)>=Coordinate(badge,"LEFT","x",current)+6.99 and Coordinate(label,"RIGHT","x",current)<=Coordinate(badge,"RIGHT","x",current)-8.99,"badge text has horizontal padding")
       Near(Coordinate(current.title,"CENTER","y",current),Coordinate(badge,"CENTER","y",current),"name and badges share the row center")
      end
      Near(Coordinate(current.seasonLevel,"BOTTOM","y",current),Coordinate(current.seasonScore,"BOTTOM","y",current),"level and score share a baseline")
-     Check(Coordinate(current.seasonDivider,"LEFT","x",current)>=Coordinate(current.seasonLevel,"RIGHT","x",current)+5.99,"the divider has space after the level")
-     Check(Coordinate(current.seasonScore,"LEFT","x",current)>=Coordinate(current.seasonDivider,"RIGHT","x",current)+5.99,"the divider has space before the score")
+     Near(Coordinate(current.seasonLevelSection,"LEFT","x",current),Coordinate(current.seasonBadge,"LEFT","x",current),"the tinted section shares the badge's outer edge")
+     Near(current.seasonLevelSection:GetHeight(),current.seasonBadge:GetHeight(),"the two sections form one continuous badge")
+     Check(Coordinate(current.seasonDivider,"LEFT","x",current)>=Coordinate(current.seasonLevel,"RIGHT","x",current)+6.99,"the divider has space after the level")
+     Check(Coordinate(current.seasonScore,"LEFT","x",current)>=Coordinate(current.seasonDivider,"RIGHT","x",current)+8.99,"the divider has space before the score")
      Check(current.seasonDivider:GetHeight()<current.seasonBadge:GetHeight(),"the divider stays inside the shared badge")
     else
      Equal(current.seasonLevel:GetText(),"");Equal(current.seasonScore:GetText(),"")
