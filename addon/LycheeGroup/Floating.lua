@@ -30,6 +30,7 @@ local function ReleaseEntries()
  for _,entry in ipairs(entries) do wipe(entry) end
  for _,batch in ipairs(batchEntries) do wipe(batch) end
  wipe(tops);wipe(boundBatches)
+ F.measureLayouts=nil
 end
 local function Waiting(app) return A.Group.Applications:IsActive(app.id) and app.status~="invited" and (app.status=="applied" or app.pendingStatus=="applied") end
 local function Operable(app) return app.status=="applied" and not app.pendingStatus and not app.acting end
@@ -466,6 +467,33 @@ function F:Update()
  if self.panel:IsShown() then self:ShowPanel() end
  self:PublishStatus()
 end
+-- These records contain only the current panel's scalar measurement inputs.
+-- Member tables update in place, so compare the rendered values, not references.
+local function MeasureMember(self,cache,member,hideRating,group)
+ local faction=member.factionGroup and PLAYER_FACTION_GROUP[member.factionGroup]
+ local factionTexture=factionTextures[faction]
+ local itemLevelText=(zh and "装等 " or "ilvl ")..(member.itemLevel and math.floor(member.itemLevel) or "—")
+ local score=member.dungeonScore;if member.ratingKind=="pvp" then score=member.rating end
+ local scoreText=not hideRating and ScoreText(score) or false
+ local name=member.nameKey or member.name or A.L.invalidName
+ local _,spec,icon,class=group:ResolveMemberSpec(member)
+ local meta=(member.raceName or "—").." · "..(spec or member.specName or class or (zh and "未知专精" or "Unknown specialization"))
+ cache.icon=icon
+ if cache.name==name and cache.itemLevelText==itemLevelText and cache.scoreText==scoreText and cache.metaText==meta and cache.factionTexture==factionTexture and cache.hideRating==hideRating then return cache end
+ C.SetFont(self.measure,T.floatingMemberMetricFont);C.SetLineHeight(self.measure,T.floatingMemberNameLine);self.measure:SetText(itemLevelText)
+ local itemLevelWidth=math.max(T.floatingMemberItemLevelWidth,math.ceil(self.measure:GetUnboundedStringWidth()))
+ local scoreWidth=T.floatingMemberScoreWidth
+ if not hideRating then self.measure:SetText(scoreText);scoreWidth=math.max(scoreWidth,math.ceil(self.measure:GetUnboundedStringWidth())) end
+ local nameWidth=math.max(1,T.floatingMemberTextWidth+(hideRating and T.floatingMemberScoreWidth+T.floatingMemberMetricGap or 0)-(itemLevelWidth-T.floatingMemberItemLevelWidth)-(scoreWidth-T.floatingMemberScoreWidth))
+ C.SetFont(self.measure,T.floatingMemberNameFont);C.SetLineHeight(self.measure,T.floatingMemberNameLine);self.measure:SetWidth(nameWidth);self.measure:SetText(name)
+ local nameHeight=math.max(self.context:GetLineHeight("floatingMemberNameLine"),self.measure:GetStringHeight())
+ local metaWidth=T.floatingRowWidth-T.floatingMemberTextX-T.floatingFooterRightInset-(factionTexture and T.floatingMemberFactionSize+T.floatingMemberFactionGap or 0)
+ C.SetFont(self.measure,T.floatingMemberMetaFont);C.SetLineHeight(self.measure,T.floatingMemberMetaLine);self.measure:SetWidth(metaWidth);self.measure:SetText(meta)
+ cache.name,cache.itemLevelText,cache.scoreText,cache.metaText,cache.factionTexture,cache.hideRating=name,itemLevelText,scoreText,meta,factionTexture,hideRating
+ cache.itemLevelWidth,cache.scoreWidth,cache.nameWidth,cache.nameHeight,cache.metaWidth=itemLevelWidth,scoreWidth,nameWidth,nameHeight,metaWidth
+ cache.metaHeight=math.max(self.context:GetLineHeight("floatingMemberMetaLine"),self.measure:GetStringHeight())
+ return cache
+end
 function F:ShowPanel()
  if self.dragging or not (self.popupAnchor or A:GetSetting("floating") or self.standaloneTest) or not self:GetAnchor():IsVisible() or next(exits) then return end
  self:CancelHide();entryCount=0;self.entries,self.entryTops=entries,tops
@@ -473,6 +501,12 @@ function F:ShowPanel()
  local group=A.Group;local total=0;local pending=false;local batchCount=0;local now=GetTime()
  local canManage=group and group:CanManageApplicants()
  local canCancel=not self.recruiting or group:CanManageListing()
+ local layouts=self.measureLayouts or {};self.measureLayouts=layouts
+ local scale=self.measure:GetEffectiveScale()
+ if self.measureFont~=self.context.fontPath or self.measureFontScale~=self.context.fontScale or self.measureScale~=scale or self.measureRecruiting~=self.recruiting then
+  wipe(layouts);self.measureFont,self.measureFontScale,self.measureScale,self.measureRecruiting=self.context.fontPath,self.context.fontScale,scale,self.recruiting
+ end
+ for _,layout in pairs(layouts) do layout.active=nil end
  local heading=""
  if group then
   if self.recruiting then
@@ -489,38 +523,35 @@ function F:ShowPanel()
      batchCount=batchCount+1;local batch=batchEntries[batchCount]
      if batch then wipe(batch) else batch={};batchEntries[batchCount]=batch end
      batch.top,batch.applicantID=total,id
+     local layout=layouts[id]
+     if not layout then layout={members={}};layouts[id]=layout end
+     layout.active=true
      for index,member in ipairs(app.members) do
-      local faction=member.factionGroup and PLAYER_FACTION_GROUP[member.factionGroup]
-      local factionTexture=factionTextures[faction]
-      local itemLevelText=(zh and "装等 " or "ilvl ")..(member.itemLevel and math.floor(member.itemLevel) or "—")
-      C.SetFont(self.measure,T.floatingMemberMetricFont);C.SetLineHeight(self.measure,T.floatingMemberNameLine);self.measure:SetText(itemLevelText)
-      local itemLevelWidth=math.max(T.floatingMemberItemLevelWidth,math.ceil(self.measure:GetUnboundedStringWidth()))
-      local scoreWidth=T.floatingMemberScoreWidth
-      if not hideRating then
-       local score=member.dungeonScore;if member.ratingKind=="pvp" then score=member.rating end
-       self.measure:SetText(ScoreText(score));scoreWidth=math.max(scoreWidth,math.ceil(self.measure:GetUnboundedStringWidth()))
-      end
-      local nameWidth=math.max(1,T.floatingMemberTextWidth+(hideRating and T.floatingMemberScoreWidth+T.floatingMemberMetricGap or 0)-(itemLevelWidth-T.floatingMemberItemLevelWidth)-(scoreWidth-T.floatingMemberScoreWidth))
-      C.SetFont(self.measure,T.floatingMemberNameFont);C.SetLineHeight(self.measure,T.floatingMemberNameLine);self.measure:SetWidth(nameWidth);self.measure:SetText(member.nameKey or member.name or A.L.invalidName)
-      local nameHeight=math.max(self.context:GetLineHeight("floatingMemberNameLine"),self.measure:GetStringHeight())
-      local _,spec,icon,class=group:ResolveMemberSpec(member)
-      local meta=(member.raceName or "—").." · "..(spec or member.specName or class or (zh and "未知专精" or "Unknown specialization"))
-      local metaWidth=T.floatingRowWidth-T.floatingMemberTextX-T.floatingFooterRightInset-(factionTexture and T.floatingMemberFactionSize+T.floatingMemberFactionGap or 0)
-      C.SetFont(self.measure,T.floatingMemberMetaFont);C.SetLineHeight(self.measure,T.floatingMemberMetaLine);self.measure:SetWidth(metaWidth);self.measure:SetText(meta)
-      local metaHeight=math.max(self.context:GetLineHeight("floatingMemberMetaLine"),self.measure:GetStringHeight());local pad=index==1 and T.floatingFirstMemberPadding or T.floatingNextMemberPadding
-      local contentHeight=nameHeight+T.floatingMemberTextGap+metaHeight
+      local cached=layout.members[index]
+      if not cached then cached={};layout.members[index]=cached end
+      MeasureMember(self,cached,member,hideRating,group)
+      local pad=index==1 and T.floatingFirstMemberPadding or T.floatingNextMemberPadding
+      local contentHeight=cached.nameHeight+T.floatingMemberTextGap+cached.metaHeight
       local height=math.max(T.floatingMemberMinHeight,pad+contentHeight);local entry=AddEntry(total,height);total=total+height
-      entry.member,entry.applicantID,entry.padTop,entry.batch,entry.nameHeight,entry.metaText,entry.memberIcon=member,id,pad,batch,nameHeight,meta,icon
-      entry.nameWidth,entry.factionTexture,entry.metaWidth,entry.hideRating=nameWidth,factionTexture,metaWidth,hideRating
-      entry.itemLevelText,entry.itemLevelWidth,entry.scoreWidth=itemLevelText,itemLevelWidth,scoreWidth
+      entry.member,entry.applicantID,entry.padTop,entry.batch,entry.nameHeight,entry.metaText,entry.memberIcon=member,id,pad,batch,cached.nameHeight,cached.metaText,cached.icon
+      entry.nameWidth,entry.factionTexture,entry.metaWidth,entry.hideRating=cached.nameWidth,cached.factionTexture,cached.metaWidth,hideRating
+      entry.itemLevelText,entry.itemLevelWidth,entry.scoreWidth=cached.itemLevelText,cached.itemLevelWidth,cached.scoreWidth
      end
+     for index=#layout.members,#app.members+1,-1 do layout.members[index]=nil end
      if canManage or comment then
       local textWidth=canManage and T.floatingActionFooterTextWidth or T.floatingRowWidth-T.floatingMemberTextX-T.floatingFooterRightInset;local textHeight=0
-      if comment then C.SetFont(self.measure,T.floatingCommentFont);C.SetLineHeight(self.measure,T.floatingCommentLine);self.measure:SetWidth(textWidth);self.measure:SetText(comment);textHeight=math.max(self.context:GetLineHeight("floatingCommentLine"),self.measure:GetStringHeight()) end
+      if comment then
+       if layout.comment~=comment or layout.textWidth~=textWidth then
+        C.SetFont(self.measure,T.floatingCommentFont);C.SetLineHeight(self.measure,T.floatingCommentLine);self.measure:SetWidth(textWidth);self.measure:SetText(comment)
+        layout.textHeight=math.max(self.context:GetLineHeight("floatingCommentLine"),self.measure:GetStringHeight())
+       end
+       textHeight=layout.textHeight
+      end
+      layout.comment,layout.textWidth=comment,textWidth
       local height=math.max(canManage and T.floatingActionFooterMinHeight or 0,textHeight+T.floatingFooterPaddingY*2)
       local footer=AddEntry(total,height);total=total+height
       footer.footer,footer.actions,footer.comment,footer.applicantID,footer.batch,footer.textHeight,footer.textWidth=true,canManage,comment,id,batch,textHeight,textWidth
-     else local last=entries[entryCount];last.height=last.height+T.floatingBatchBottomInset;total=total+T.floatingBatchBottomInset end
+     else layout.comment,layout.textWidth,layout.textHeight=nil,nil,nil;local last=entries[entryCount];last.height=last.height+T.floatingBatchBottomInset;total=total+T.floatingBatchBottomInset end
      batch.height=total-batch.top
      local last=entries[entryCount]
      last.height=last.height+T.floatingBatchGap;last.gap=T.floatingBatchGap;total=total+T.floatingBatchGap
@@ -546,6 +577,8 @@ function F:ShowPanel()
    end end
   end
  end
+ for id,layout in pairs(layouts) do if not layout.active then layouts[id]=nil end end
+ self.measure:SetText("")
  TrimEntries(entryCount,batchCount)
  if entries[#entries] and entries[#entries].gap then local last=entries[#entries];local gap=last.gap;last.gap=0;last.height=last.height-gap;total=total-gap end
  canCancel=canCancel and (self.recruiting or #entries>0)

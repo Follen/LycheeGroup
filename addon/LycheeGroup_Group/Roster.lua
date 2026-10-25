@@ -1,5 +1,5 @@
 -- 当前队伍专精：LibSpecialization 优先；缺失时串行检视。
--- 没有轮询。计时器用于合并同帧专精广播、一次通信等待、检视节流和当前请求超时。
+-- 没有轮询。计时器用于合并同帧原生更新与专精广播、一次通信等待、检视节流和当前请求超时。
 local A=_G.LycheeGroup
 local G=A.Group
 local R={members={},dirty=true,librarySpecs={},inspected={},attempted={},changed={}}
@@ -24,6 +24,12 @@ end
 local function Refresh()
  G:Notify("roster")
  if R.active then R:Get() end
+end
+local function RequestRefresh()
+ if not R.active then Refresh();return end
+ if not R.refreshTimer then
+  R.refreshTimer=C_Timer.NewTimer(0,function() R.refreshTimer=nil;Refresh() end)
+ end
 end
 local function Prune(seen)
  for _,cache in ipairs({R.librarySpecs,R.inspected,R.attempted,R.changed}) do
@@ -81,13 +87,7 @@ function R:OnLibrarySpec(specID,name)
  if self.pending and self.pending.guid==matched then CancelTimer();self.pending=nil
  elseif not self.pending then CancelTimer() end
  self.dirty=true
- if self.active then
-  if not self.refreshTimer then
-   self.refreshTimer=C_Timer.NewTimer(0,function() R.refreshTimer=nil;Refresh() end)
-  end
- else
-  Refresh()
- end
+ RequestRefresh()
 end
 
 function R:SetActive(active)
@@ -98,7 +98,6 @@ function R:SetActive(active)
 end
 
 function R:Invalidate(reason,unit)
- CancelRefresh()
  if reason=="spec" and unit and not G.Public(UnitIsUnit(unit,"player")) then
   local guid=G.Public(UnitGUID(unit))
   if guid then
@@ -106,7 +105,7 @@ function R:Invalidate(reason,unit)
   end
  elseif reason=="group" or reason=="available" then
   wipe(self.attempted)
-  if reason=="group" and not self.active then
+  if reason=="group" then
    local seen={}
    EachUnit(function(current)
     local guid=G.Public(UnitGUID(current));if guid then seen[guid]=true end
@@ -115,7 +114,7 @@ function R:Invalidate(reason,unit)
   end
  end
  self.dirty=true
- Refresh()
+ RequestRefresh()
 end
 
 function R:Pump()

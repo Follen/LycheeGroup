@@ -1,7 +1,7 @@
 -- LycheeDev Theme v2 acceptance: real existing business, normal animation, 12 page/font cycles.
 -- Button:Click is controller coverage. No hardware dispatch, forced GC, GC-policy changes or protected business actions.
 local probe=...
-local A=assert(LycheeGroup);assert(LycheeUI.version==38 and A.RuntimeTheme and not InCombatLockdown())
+local A=assert(LycheeGroup);assert(LycheeUI.version==46 and A.RuntimeTheme and not InCombatLockdown())
 assert(A.API.Theme.version==2 and A.API.Configuration.version==2,"cold_theme_api_not_loaded")
 assert(not LycheeUI.Context.SetTheme and not LycheeUI.Context.SetRecipes,"runtime_theme_writes_remain")
 assert(not LycheeUI.Context.StyleMemberIcon and not LycheeUI.Context.SetMemberIcon and not LycheeUI.Context.SetRoleIcon and not LycheeUI.Context.SetActivityIcon,'business interfaces remain in shared library')

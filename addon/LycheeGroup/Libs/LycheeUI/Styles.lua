@@ -4,6 +4,66 @@ if not Library then return end
 local states={"selected","checked","hover","pressed","focus","disabled"}
 local empty={}
 local writeProperties={"texture","atlas","texCoord","blendMode","drawLayer","justifyH","justifyV","wordWrap","spacing","rotation","scale","frameStrata","frameLevel"}
+-- A native HookScript cannot be removed. Keep one hook per source/event and
+-- retain controllers only through active subscriptions, across all contexts.
+local function RunStyleEvent(snapshot,count,source)
+ local index=1
+ while index<=count do
+  local entry=snapshot[index];snapshot[index]=nil
+  index=index+1
+  local controller=entry.controller
+  if controller and not controller.released then
+   local action,owned=entry.action,entry.owned
+   if action=="state" then
+    owned[entry.name]=entry.value
+    -- A leave can clear both hover and pressed. Consume only this controller's
+    -- adjacent contributions; other subscribers keep their binding order.
+    while index<=count do
+     local following=snapshot[index]
+     if following.controller~=controller or following.owned~=owned or following.action~="state" then break end
+     owned[following.name]=following.value;snapshot[index]=nil;index=index+1
+    end
+    controller:Apply(false)
+   elseif action=="checked" then owned.checked=source:GetChecked();controller:Apply(false)
+   elseif action=="hide" then for name in pairs(owned) do owned[name]=false end;controller:Apply(true)
+   elseif action=="disable" then
+    for _,values in pairs(controller.sources) do values.hover,values.pressed=false,false end
+    -- This source's permanent dispatcher may outlive an embedded upgrade.
+    -- Never compare another revision's shared empty table by identity.
+    if controller.states.hover or controller.states.pressed then controller.states.hover,controller.states.pressed=false,false end
+    controller:Apply(true)
+   else controller:Apply(true) end
+  end
+ end
+end
+local function DispatchStyleEvent(state,source)
+ local nested=state.dispatching
+ local snapshot=nested and {} or state.buffer;local count=#state.entries
+ for index=1,count do snapshot[index]=state.entries[index] end
+ state.dispatching=true
+ local ok,message=pcall(RunStyleEvent,snapshot,count,source)
+ state.dispatching=nested
+ if not ok then for index=1,count do snapshot[index]=nil end;error(message,0) end
+end
+local function SubscribeStyleEvent(source,event,controller,owned,action,name,value)
+ local events=source._lycheeFixedEvents
+ if not events then events={};source._lycheeFixedEvents=events end
+ local state=events[event]
+ if not state then
+  state={entries={},buffer={}};events[event]=state
+  source:HookScript(event,function(control) DispatchStyleEvent(state,control) end)
+ end
+ local entry={controller=controller,owned=owned,action=action,name=name,value=value,eventState=state}
+ state.entries[#state.entries+1]=entry;return entry
+end
+local function UnsubscribeStyleEvents(controller)
+ for _,events in pairs(controller.bindings or empty) do for _,entry in pairs(events) do
+  local entries=entry.eventState.entries
+  for index=1,#entries do if entries[index]==entry then table.remove(entries,index);break end end
+  entry.controller,entry.owned,entry.eventState=nil,nil,nil
+ end end
+ controller.sources,controller.bindings=empty,nil
+end
 local function Merge(into,source)
  for key,value in pairs(source or empty) do
   if type(value)=="table" and type(key)~="number" and not value[1] then into[key]=Merge(type(into[key])=="table" and into[key] or {},value)
@@ -225,6 +285,7 @@ function Library.AttachStyles(UI,C)
  local function Value(v) return UI:ResolveValue(v) end
  local function Text(target) return target.label or target end
  local none={}
+ local function Unwrap(value) if value~=none then return value end end
  local methods={texture={"GetTexture","SetTexture"},atlas={"GetAtlas","SetAtlas"},texCoord={"GetTexCoord","SetTexCoord"},blendMode={"GetBlendMode","SetBlendMode"},drawLayer={"GetDrawLayer","SetDrawLayer"},justifyH={"GetJustifyH","SetJustifyH"},justifyV={"GetJustifyV","SetJustifyV"},wordWrap={"CanWordWrap","SetWordWrap"},spacing={"GetSpacing","SetSpacing"},rotation={"GetRotation","SetRotation"},scale={"GetScale","SetScale"},frameStrata={"GetFrameStrata","SetFrameStrata"},frameLevel={"GetFrameLevel","SetFrameLevel"}}
  local function Object(target,key)
   if key=="justifyH" or key=="justifyV" or key=="wordWrap" or key=="spacing" then return Text(target) end
@@ -264,6 +325,12 @@ function Library.AttachStyles(UI,C)
   local method=methods[key];if method then return Object(target,key)[method[2]] end
   return target.SetWidth and target.SetHeight
  end
+ local Winner
+ local function FontPreserve(target)
+  local text=Text(target)
+  return ((Winner(target,"spacing") or text~=target and Winner(text,"spacing")) and 1 or 0)+(Winner(text,"height") and 2 or 0)+((Winner(target,"justifyV") or text~=target and Winner(text,"justifyV")) and 4 or 0)
+ end
+ C.FixedFontPreserve=FontPreserve
  local function Write(target,part,immediate,duration,host)
   local previousHeight=target._lycheeList and target:GetHeight()
   if part.__art then local object=target._lycheeTexture or target;local art=part.__art;if art.atlas then object:SetAtlas(art.atlas) else object:SetTexture(art.texture) end;object:SetTexCoord(unpack(art.texCoord)) end
@@ -275,9 +342,10 @@ function Library.AttachStyles(UI,C)
   if part.alpha~=nil then if immediate or duration==0 then target:SetAlpha(Value(part.alpha)) else UI.Motion:Alpha(target,Value(part.alpha),duration or UI.Theme.feedbackDuration) end end
   if part.color~=nil then local color=Value(part.color);if target.SetColor then if immediate or duration==0 then target:SetColor(color) else UI.Motion:Color(target,color,duration or UI.Theme.feedbackDuration) end elseif Text(target).SetTextColor then local text=Text(target);text:SetTextColor(unpack(color));text._color=color else target:SetVertexColor(unpack(color)) end end
   local text=Text(target)
-  if part.fontSize~=nil then C.DefaultFont(text,part.fontSize,part.flags or select(3,text:GetFont())) end
-  if part.lineHeight~=nil or part.singleLine~=nil then local font=UI.fontStyles[text];C.DefaultLineHeight(text,part.lineHeight or font and font.lineHeight or Read(target,"lineHeight"),part.singleLine==nil and font and font.singleLine or part.singleLine) end
-  if part.flags~=nil and part.fontSize==nil then local font=UI.fontStyles[text];C.DefaultFont(text,font and font.size or Read(target,"fontSize"),part.flags) end
+  local preserve;if part.fontSize~=nil or part.lineHeight~=nil or part.singleLine~=nil or part.flags~=nil then preserve=FontPreserve(target) end
+  if part.fontSize~=nil then C.DefaultFont(text,part.fontSize,part.flags or select(3,text:GetFont()),preserve) end
+  if part.lineHeight~=nil or part.singleLine~=nil then local font=UI.fontStyles[text];C.DefaultLineHeight(text,part.lineHeight or font and font.lineHeight or Read(target,"lineHeight"),part.singleLine==nil and font and font.singleLine or part.singleLine,preserve) end
+  if part.flags~=nil and part.fontSize==nil then local font=UI.fontStyles[text];C.DefaultFont(text,font and font.size or Read(target,"fontSize"),part.flags,preserve) end
   if part.font~=nil then local _,size,flags=text:GetFont();text:SetFont(part.font,size,flags) end
   for _,key in ipairs(writeProperties) do if part[key]~=nil then local method=methods[key];local value=part[key];local object=Object(target,key)
    if value==none or value==false and (key=="texture" or key=="atlas") then value=nil elseif not literal[key] then value=Value(value) end
@@ -302,7 +370,7 @@ function Library.AttachStyles(UI,C)
  end
  local serial=0
  local Controller={};Controller.__index=Controller
- local function Winner(target,key)
+ Winner=function(target,key)
   local winner
   for record in pairs(target._lycheeFixedRecords or empty) do if record.rule.properties[key] and (not winner or record.direct and not winner.direct or record.direct==winner.direct and record.controller.serial>winner.controller.serial) then winner=record end end
   return winner
@@ -360,10 +428,109 @@ function Library.AttachStyles(UI,C)
  end
  local function Art(target) local object=target._lycheeTexture or target;return {texture=object:GetTexture(),atlas=object:GetAtlas(),texCoord={object:GetTexCoord()}} end
  local artKeys={texture=true,atlas=true,texCoord=true}
+ local function SameTexCoord(object,expected)
+  local a,b,c,d,e,f,g,h=object:GetTexCoord()
+  return Equal(a,expected[1]) and Equal(b,expected[2]) and Equal(c,expected[3]) and Equal(d,expected[4]) and Equal(e,expected[5]) and Equal(f,expected[6]) and Equal(g,expected[7]) and Equal(h,expected[8])
+ end
+ local function SameArt(target,expected)
+  local object=target._lycheeTexture or target
+  return expected and object:GetTexture()==expected.texture and object:GetAtlas()==expected.atlas and SameTexCoord(object,expected.texCoord)
+ end
+ local function Current(record,key,art)
+  local target=record.target;local previous=Unwrap(record.applied[key])
+  if artKeys[key] and art then return art[key] end
+  if key=="points" and previous and target:GetNumPoints()==#previous then
+   local same=true
+   for index,point in ipairs(previous) do
+    local a,b,c,x,y=target:GetPoint(index)
+    if a~=point[1] or b~=point[2] or c~=point[3] or not Equal(x,point[4]) or not Equal(y,point[5]) then same=false;break end
+   end
+   if same then return previous end
+  elseif key=="color" and previous and not target.color then
+   local text=Text(target);local r,g,b,a
+   if text.GetTextColor then r,g,b,a=text:GetTextColor() else r,g,b,a=(target._lycheeTexture or target):GetVertexColor() end
+   if Equal(r,previous[1]) and Equal(g,previous[2]) and Equal(b,previous[3]) and Equal(a,previous[4]) then return previous end
+  elseif key=="drawLayer" and previous then
+   local layer,sub=(target._lycheeTexture or target):GetDrawLayer()
+   if layer==previous[1] and sub==previous[2] then return previous end
+  end
+  return Read(target,key)
+ end
+ local fontGroup={fontSize=true,lineHeight=true,singleLine=true,flags=true,font=true}
+ local widthGroup={width=true,minWidth=true,maxWidth=true}
+ local heightGroup={height=true,minHeight=true,maxHeight=true}
+ local function Dimensions(record,capture,changedWidth,changedHeight)
+  local target=record.target;local box=target._lycheeBoxValues or empty;local rule=record.rule.properties
+  local width=rule.width or rule.minWidth or rule.maxWidth
+  local height=rule.height or rule.minHeight or rule.maxHeight
+  local minW,maxW,minH,maxH=box.minWidth or 0,box.maxWidth or math.huge,box.minHeight or 0,box.maxHeight or math.huge
+  local w,h=width and target:GetWidth(),height and target:GetHeight()
+  if capture then
+   if width and changedWidth then record.minW,record.maxW,record.nativeW=minW,maxW,w end
+   if height and changedHeight then record.minH,record.maxH,record.nativeH=minH,maxH,h end
+   return
+  end
+  return width and (record.minW~=minW or record.maxW~=maxW or not Equal(w,record.nativeW) and not Equal(w,math.max(minW,math.min(maxW,w)))) or false,
+   height and (record.minH~=minH or record.maxH~=maxH or not Equal(h,record.nativeH) and not Equal(h,math.max(minH,math.min(maxH,h)))) or false
+ end
+ local function PointReferences(target,points,host)
+  if target._lycheeLayoutOwner or points==none then return true end
+  local count=0
+  for _,point in ipairs(points) do
+   local relative=point[2];if type(relative)=="string" then relative=C.ResolveElementReference(target,relative,host) end
+   if relative then
+    count=count+1;local a,b,c=target:GetPoint(count)
+    if a~=point[1] or b~=relative or c~=point[3] then return false end
+   end
+  end
+  return target:GetNumPoints()==count
+ end
+ local function NativeFont(record,capture)
+  local text=Text(record.target);local saved=record.nativeFont
+  if not text.GetFont then return true end
+  local path,size,flags=text:GetFont();local spacing=text:GetSpacing();local height=text:GetHeight();local justify=text:GetJustifyV()
+  local style=UI.fontStyles[text];local fixed=style and style.singleLine==true
+  local mask=FontPreserve(record.target)
+  if capture then
+   saved=saved or {};record.nativeFont=saved
+   saved[1],saved[2],saved[3],saved[4],saved[5],saved[6],saved.fixed,saved.mask=path,size,flags,spacing,height,justify,fixed,mask
+   return true
+  end
+  return saved and saved.mask==mask and path==saved[1] and size==saved[2] and flags==saved[3] and (mask%2~=0 or spacing==saved[4]) and (not saved.fixed or math.floor(mask/2)%2~=0 or height==saved[5]) and (mask>=4 or justify==saved[6])
+ end
+ local function SameChannel(actual,wanted)
+  return math.abs(actual-wanted)<=.000001 or math.floor(actual*255+.5)==math.floor(wanted*255+.5)
+ end
+ local function MotionValue(key,actual,wanted)
+  if key=="alpha" then return SameChannel(actual,wanted) end
+  if type(actual)~="table" or type(wanted)~="table" then return Equal(actual,wanted) end
+  for i=1,4 do if not SameChannel(actual[i] or 1,wanted[i] or 1) then return false end end
+  return true
+ end
+ local function MotionOwns(record,key,actual)
+  local wanted=record.moving and record.moving[key]
+  if wanted==nil then return false end
+  local target=record.target;local motion=UI.Motion
+  local pending=key=="alpha" and motion.alphas[target] or motion.colors[target]
+  if motion.jobs[target] and Equal(pending,wanted) then return true end
+  record.moving[key]=nil
+  return MotionValue(key,actual,wanted)
+ end
+ local function StopOwnedMotion(record)
+  for key,wanted in pairs(record.moving or empty) do
+   local pending=key=="alpha" and UI.Motion.alphas[record.target] or UI.Motion.colors[record.target]
+   if UI.Motion.jobs[record.target] and Equal(pending,wanted) then UI.Motion:Stop(record.target,true) end
+  end
+ end
  local function ReleaseRecord(record)
+  for key in pairs(record.moving or empty) do
+   if Winner(record.target,key)==record and MotionOwns(record,key,Read(record.target,key)) then
+    UI.Motion:Stop(record.target,true);record.applied[key]=Read(record.target,key)
+   end
+  end
   local target=record.target;target._lycheeFixedRecords[record]=nil
   local restore={}
-  for key in pairs(record.rule.properties) do if not Winner(target,key) and record.applied[key]~=nil and Equal(Read(target,key),record.applied[key]==none and nil or record.applied[key]) then restore[key]=record.base[key] end end
+  for key in pairs(record.rule.properties) do if not Winner(target,key) and record.applied[key]~=nil and Equal(Read(target,key),Unwrap(record.applied[key])) then restore[key]=record.base[key] end end
   if record.artBase and Equal(Art(target),record.artApplied) then restore.__art=record.artBase;restore.texture,restore.atlas,restore.texCoord=nil,nil,nil end
   if next(restore) then Write(target,restore,true,nil,record.controller.host) end
   for other in pairs(target._lycheeFixedRecords) do other.controller:Apply(true,false,true) end
@@ -401,19 +568,57 @@ function Library.AttachStyles(UI,C)
    if name=="disabled" and self.host.IsEnabled then active=active or not self.host:IsEnabled() end;self.active[name]=active
   end
   if self.active.disabled then self.active.hover,self.active.pressed=false,false;if self.states~=empty then self.states.hover,self.states.pressed=false,false end;for _,source in pairs(self.sources) do source.hover,source.pressed=false,false end end
-  for _,record in pairs(self.records) do local target=record.target;local patch={}
+  for _,record in pairs(self.records) do local target=record.target;local patch
    if (not target._lycheeElementOwner or target._lycheeElementOwner:IsOwned()) and (not fontOnly or not Text(target).GetFont or not UI.options.ownsText or UI.options.ownsText(Text(target))) then
-   if not fontOnly and (record.rule.properties.texture or record.rule.properties.atlas or record.rule.properties.texCoord) then
-    local actual=Art(target);if not record.artBase or record.artApplied and not Equal(actual,record.artApplied) then record.artBase=actual end;patch.__art=record.artBase
+   local sameArt=true;local observedArt;local hasFont,hasArt=false,false;local sameFont
+   local widthChanged,heightChanged=Dimensions(record)
+   for key in pairs(record.rule.properties) do
+    if fontGroup[key] then hasFont=true end
+    if artKeys[key] and Winner(target,key)==record then hasArt=true end
+   end
+   if hasFont then sameFont=NativeFont(record) end
+   if not fontOnly and hasArt then
+    sameArt=SameArt(target,record.artApplied)
+    if not record.artBase or record.artApplied and not sameArt then observedArt=Art(target);record.artBase=observedArt end
+    observedArt=observedArt or record.artApplied or record.artBase
    end
    for key in pairs(record.rule.properties) do if (not fontOnly or fontKeys[key]) and Winner(target,key)==record then
-    local actual=Read(target,key);local applied=record.applied[key]
-    if record.base[key]==nil or not fontOnly and not noObserve and applied~=nil and not Equal(actual,applied==none and nil or applied) then record.base[key]=actual==nil and none or actual end
-    local value=RuleValue(record,key);if value==nil and not artKeys[key] then value=record.base[key] end;patch[key]=value
+    local actual=Current(record,key,observedArt);local applied=record.applied[key]
+    local moving=(key=="alpha" or key=="color") and MotionOwns(record,key,actual)
+    if record.base[key]==nil or not moving and not fontOnly and not noObserve and applied~=nil and not Equal(actual,Unwrap(applied)) then record.base[key]=actual==nil and none or actual end
+    local value=RuleValue(record,key);if value==nil and not artKeys[key] then value=record.base[key] end
+    local requested=value==nil and none or value
+    local finish=moving and (immediate~=false or self.options.immediate or self.options.duration and Value(self.options.duration)==0 or UI:IsReducedMotion())
+    if not record.requested or not Equal(record.requested[key],requested) or finish or not moving and not Equal(actual,Unwrap(applied)) or artKeys[key] and not sameArt or fontGroup[key] and not sameFont or widthGroup[key] and widthChanged or heightGroup[key] and heightChanged or key=="points" and not PointReferences(target,requested,self.host) then
+     patch=patch or {};patch[key]=requested
+     if finish then UI.Motion:Stop(target,true) end
+    elseif moving then record.applied[key]=actual==nil and none or actual end
    end end
-   if next(patch) then Write(target,patch,immediate~=false or self.options.immediate,self.options.duration and Value(self.options.duration),self.host)
-    for key in pairs(patch) do if key~="__art" then local actual=Read(target,key);record.applied[key]=actual==nil and none or actual end end
+   if patch then
+    local values={}
+    for key in pairs(record.rule.properties) do if (not fontOnly or fontKeys[key]) and Winner(target,key)==record then
+     local value=RuleValue(record,key);if value==nil and not artKeys[key] then value=record.base[key] end;values[key]=value==nil and none or value
+    end end
+    local art,font,width,height=false,false,false,false
+    for key in pairs(patch) do art=art or artKeys[key];font=font or fontGroup[key];width=width or widthGroup[key];height=height or heightGroup[key] end
+    for key,value in pairs(values) do if art and artKeys[key] or font and fontGroup[key] or width and widthGroup[key] or height and heightGroup[key] then patch[key]=value end end
+    if art then patch.__art=record.artBase end
+    -- A nil art override means restore the captured group, not SetTexture(nil).
+    for key in pairs(artKeys) do if patch[key]==none then patch[key]=nil end end
+    Write(target,patch,immediate~=false or self.options.immediate,self.options.duration and Value(self.options.duration),self.host)
     if patch.__art then record.artApplied=Art(target) end
+    record.requested=record.requested or {}
+    for key,value in pairs(values) do
+     record.requested[key]=value
+     local actual=Current(record,key,record.artApplied);record.applied[key]=actual==nil and none or actual
+     if key=="alpha" or key=="color" then
+      local pending=key=="alpha" and UI.Motion.alphas[target] or UI.Motion.colors[target]
+      if UI.Motion.jobs[target] and pending~=nil and Equal(pending,Value(Unwrap(value))) then record.moving=record.moving or {};record.moving[key]=pending elseif record.moving then record.moving[key]=nil end
+     end
+    end
+    if hasFont then NativeFont(record,true) end
+    Dimensions(record,true,width,height)
+   elseif target._lycheeBoxApply then target._lycheeBoxApply()
    end
    end
   end
@@ -423,22 +628,32 @@ function Library.AttachStyles(UI,C)
  function Controller:SetStates(values) if self.states==empty then self.states={} end;for key in pairs(self.states) do self.states[key]=nil end;for key,value in pairs(values) do self.states[key]=value end;return self:Apply(false) end
  function Controller:SetVariant(name) if self.options.variant==name then return self end;self.element=nil;self:Configure(self.fixedElement,self.slots,name);return self:Apply(true) end
  function Controller:Bind(source,bindings)
+  if self.released then return self end
   bindings=bindings or {hover=true,pressed=true};if self.sources==empty then self.sources={} end
   local owned=self.sources[source];if not owned then owned={};self.sources[source]=owned end
   self.bindings=self.bindings or {};local events=self.bindings[source];if not events then events={};self.bindings[source]=events end
   local function Bind(event,name,value)
-   if events[event..name] or source.HasScript and not source:HasScript(event) then return end;events[event..name]=true
-   source:HookScript(event,function() if self.released then return end;owned[name]=value;self:Apply(false) end)
+   if events[event..name] or source.HasScript and not source:HasScript(event) then return end
+   events[event..name]=SubscribeStyleEvent(source,event,self,owned,"state",name,value)
   end
   if bindings.hover then Bind("OnEnter","hover",true);Bind("OnLeave","hover",false) end
   if bindings.pressed then Bind("OnMouseDown","pressed",true);Bind("OnMouseUp","pressed",false);Bind("OnLeave","pressed",false) end
   if bindings.focus then Bind("OnEditFocusGained","focus",true);Bind("OnEditFocusLost","focus",false) end
-  if bindings.checked and not events.checked then events.checked=true;source:HookScript("OnClick",function() owned.checked=source:GetChecked();self:Apply(false) end) end
-  if not events.hide then events.hide=true;source:HookScript("OnHide",function() if self.released then return end;for name in pairs(owned) do owned[name]=false end;self:Apply(true) end) end
-  if source==self.host and not events.enabled and (not source.HasScript or source:HasScript("OnDisable")) then events.enabled=true;source:HookScript("OnDisable",function() for _,entry in pairs(self.sources) do entry.hover,entry.pressed=false,false end;if self.states~=empty then self.states.hover,self.states.pressed=false,false end;self:Apply(true) end);source:HookScript("OnEnable",function() self:Apply(true) end) end
+  if bindings.checked and not events.checked then events.checked=SubscribeStyleEvent(source,"OnClick",self,owned,"checked") end
+  if not events.hide then events.hide=SubscribeStyleEvent(source,"OnHide",self,owned,"hide") end
+  if source==self.host and not events.enabled and (not source.HasScript or source:HasScript("OnDisable")) then
+   events.enabled=SubscribeStyleEvent(source,"OnDisable",self,owned,"disable")
+   events.enable=SubscribeStyleEvent(source,"OnEnable",self,owned,"enable")
+  end
   return self
  end
- function Controller:Release(lost) for _,record in pairs(self.records) do if lost then record.target._lycheeFixedRecords[record]=nil else ReleaseRecord(record) end end;self.records=empty;self.released=true;UI.fixedControllers[self]=nil;if self.host._lycheeStyleController==self then self.host._lycheeStyleController=nil;self.host.styleController=nil end end
+ function Controller:Release(lost)
+  if self.released then return end
+  self.released=true;UnsubscribeStyleEvents(self)
+  for _,record in pairs(self.records) do if lost then StopOwnedMotion(record);record.target._lycheeFixedRecords[record]=nil else ReleaseRecord(record) end end
+  self.records=empty;UI.fixedControllers[self]=nil
+  if self.host._lycheeStyleController==self then self.host._lycheeStyleController=nil;self.host.styleController=nil end
+ end
  function C.Style(host,options)
   if host._lycheeStyleController then if Equal(host._lycheeStyleController.options,options or empty) then return host._lycheeStyleController end;error("Style is a construction binding; an existing binding cannot be replaced",2) end
   options=options or {};if options.duration~=nil and (type(Value(options.duration))~="number" or Value(options.duration)<0) then error("invalid style duration",2) end;serial=serial+1

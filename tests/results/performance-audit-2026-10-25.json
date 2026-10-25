@@ -1,0 +1,2851 @@
+{
+  "schema": "lycheegroup.performance-audit.v1",
+  "date": "2026-10-25",
+  "baseCommit": "ad56c2511b6ef6958ef3c87a1032b1c613b11118",
+  "branch": "codex/performance-audit",
+  "status": "complete",
+  "release": "unreleased performance candidate; original audit stage used installed 1.2.5/r38",
+  "audit": {
+    "rounds": 8,
+    "finalRoundFindings": 0,
+    "confirmedFindings": 19,
+    "libraryRevision": 46,
+    "roundSummary": [
+      {
+        "round": 1,
+        "findings": 7,
+        "libraryRevision": 39
+      },
+      {
+        "round": 2,
+        "findings": 4,
+        "libraryRevision": 40
+      },
+      {
+        "round": 3,
+        "findings": 2,
+        "libraryRevision": 41
+      },
+      {
+        "round": 4,
+        "findings": 3,
+        "libraryRevision": 42
+      },
+      {
+        "round": 5,
+        "findings": 1,
+        "libraryRevision": 44,
+        "withdrawnExperimentRevision": 43
+      },
+      {
+        "round": 6,
+        "findings": 1,
+        "libraryRevision": 45
+      },
+      {
+        "round": 7,
+        "findings": 1,
+        "libraryRevision": 46
+      },
+      {
+        "round": 8,
+        "findings": 0,
+        "libraryRevision": 46
+      }
+    ],
+    "reviewers": [
+      {
+        "role": "business",
+        "agent": "perf_loop_r8_business",
+        "newFindings": 0,
+        "files": [
+          {
+            "path": "addon/LycheeGroup_Group/Alerts.lua",
+            "sha256": "b117d307aa035e2c2f6facf6d6b0fba36a43ae029493c4f3dad1e720953172ac",
+            "lines": 34
+          },
+          {
+            "path": "addon/LycheeGroup_Group/Applicants.lua",
+            "sha256": "5c8e44c3947f6f3e7e974d40f8ad0c16aba47d8a82fb303c6a4420762ea1b106",
+            "lines": 371
+          },
+          {
+            "path": "addon/LycheeGroup_Group/Applications.lua",
+            "sha256": "ab85bc313aa5a82992fddec249f9d478c1b173c6639b63fe7c3700ade39ccc96",
+            "lines": 239
+          },
+          {
+            "path": "addon/LycheeGroup_Group/Catalog.lua",
+            "sha256": "bb40ceda928e9c7c7d49896fc0a228ef298274e9b5cec48534b51658e97c6d36",
+            "lines": 200
+          },
+          {
+            "path": "addon/LycheeGroup_Group/CreationPresets.lua",
+            "sha256": "c486aee8bbd17940963b0dce86bc052da627e48fa1f24aefde7163d0b29c3793",
+            "lines": 122
+          },
+          {
+            "path": "addon/LycheeGroup_Group/Game.lua",
+            "sha256": "93c7ce9c2eaa598002b1427194f017727245cc5d0b93673e3fceed2900a5aca1",
+            "lines": 99
+          },
+          {
+            "path": "addon/LycheeGroup_Group/Group.lua",
+            "sha256": "5a3c13bdf1dbd35bf55298d1182b2e9e95c7a349a7a89ee4553246b248efac11",
+            "lines": 406
+          },
+          {
+            "path": "addon/LycheeGroup_Group/History.lua",
+            "sha256": "d769f54b34932da31ef3ee20a0770b13848fdc063049dd1db7332724440c818d",
+            "lines": 288
+          },
+          {
+            "path": "addon/LycheeGroup_Group/Libs/LibSpecialization/LibSpecialization.lua",
+            "sha256": "f9430f20cb78752321e4b46337ea765799037273b199a985e449442620ad5d9e",
+            "lines": 727
+          },
+          {
+            "path": "addon/LycheeGroup_Group/Libs/LibStub/LibStub.lua",
+            "sha256": "6000f58d740eaa2b4a006c1dabb0366f0321fc687bab9e85d97d040a1fd42dab",
+            "lines": 30
+          },
+          {
+            "path": "addon/LycheeGroup_Group/Listing.lua",
+            "sha256": "c4c7fb6897be3a56f19c7b6923353a49c9c4b07baff21e6a1b92e444172a37ac",
+            "lines": 171
+          },
+          {
+            "path": "addon/LycheeGroup_Group/Locale.lua",
+            "sha256": "32891c6f1f6dfd1cace18cbc607c9bb06f63b0a6aae92378f0b96c6baae60676",
+            "lines": 45
+          },
+          {
+            "path": "addon/LycheeGroup_Group/LycheeGroup_Group.toc",
+            "sha256": "2988732131781dd01f2d44624e938720f349b42f0cf3fea7f7019e3b82574ea3",
+            "lines": 31
+          },
+          {
+            "path": "addon/LycheeGroup_Group/RaidBuffs.lua",
+            "sha256": "354871f0ed27e16d1407a9222b34e84c48318fbe61868cc7bc19129dc5a948d3",
+            "lines": 41
+          },
+          {
+            "path": "addon/LycheeGroup_Group/RaidGroups.lua",
+            "sha256": "5f55efd61ffc4c3020f77394689fe40c2f8676808168df43dfd29e474f39f78d",
+            "lines": 82
+          },
+          {
+            "path": "addon/LycheeGroup_Group/Relations.lua",
+            "sha256": "7996e287b1592a2935979f4daeacd0a3da496f1530a7e20dce37bd2dfcc3f94f",
+            "lines": 131
+          },
+          {
+            "path": "addon/LycheeGroup_Group/Results.lua",
+            "sha256": "5c065d53c91eaeb229dc324df9d460a672166d97d559cd1bd5e7ad778a7c9d5f",
+            "lines": 627
+          },
+          {
+            "path": "addon/LycheeGroup_Group/Roster.lua",
+            "sha256": "8b008c51a417b6fdc8abd610f22c679e1131aa88bf66be539d2039d9ba354753",
+            "lines": 260
+          },
+          {
+            "path": "addon/LycheeGroup_Group/Search.lua",
+            "sha256": "f6a09caef1895a2f8454c6bb9829ef10aa43fa14f8cf1f21da888609f08753f8",
+            "lines": 160
+          },
+          {
+            "path": "addon/LycheeGroup_Group/SeasonScores.lua",
+            "sha256": "6352acb3dcd0eef5f2ae0be09da9217054958864e67b1ce31fc6c3b759a56b3c",
+            "lines": 93
+          },
+          {
+            "path": "addon/LycheeGroup_Notes/Locale.lua",
+            "sha256": "8b0b3dd3a8c44021d66ede38b0173c0c4b77754b343160c36b74fc6df68e077d",
+            "lines": 15
+          },
+          {
+            "path": "addon/LycheeGroup_Notes/LycheeGroup_Notes.toc",
+            "sha256": "a239e4822f95c8414074b2b1b1d54a95eee7fcc979e252d3fafe7be8a5358288",
+            "lines": 16
+          },
+          {
+            "path": "addon/LycheeGroup_Notes/Notes.lua",
+            "sha256": "0fec47d7c6e128eff259034791cee393803b9056091c4c9c227c23fa837fc913",
+            "lines": 123
+          },
+          {
+            "path": "addon/LycheeGroup_Notes/PlayerInfo.lua",
+            "sha256": "b8262a20d7561fbe8a896ac77e6d6da1c5c2b56ce28b90ebecf098bf2427c555",
+            "lines": 135
+          },
+          {
+            "path": "addon/LycheeGroup_Notes/Records.lua",
+            "sha256": "5fc7e8daf62c7f4e38b7b3313fff393cf7396b879367adb7eea314fdab00975f",
+            "lines": 328
+          },
+          {
+            "path": "addon/LycheeGroup_Notes/RosterReminder.lua",
+            "sha256": "66984e58d9cbeef4f535b321459eaedaa02290e0e56f883be12564272a3f7dc6",
+            "lines": 121
+          },
+          {
+            "path": "addon/LycheeGroup/ActivityLabels.lua",
+            "sha256": "b102c24c9146880ef95cde0a35996795b21728b838220e954ec478b0089e8130",
+            "lines": 15
+          },
+          {
+            "path": "addon/LycheeGroup/Adapters/DataBroker.lua",
+            "sha256": "a75b53d22961c87900e6a6dd4f459faeaa70225abfd4736de0c53b3d2b7e92aa",
+            "lines": 53
+          },
+          {
+            "path": "addon/LycheeGroup/Adapters/Rurutia.lua",
+            "sha256": "c1baf7132d925b10ff3e3de3c2da7e1c71094e1bd289f234e847ab5c57948701",
+            "lines": 106
+          },
+          {
+            "path": "addon/LycheeGroup/API.lua",
+            "sha256": "8fba120210c39d751029e27a5f60d875c9c6409a88cb9bcf8b06598564872d39",
+            "lines": 123
+          },
+          {
+            "path": "addon/LycheeGroup/Appearance.lua",
+            "sha256": "967e6ea8fa4a6e32e43b34fa35d1eb8b9efcca201aaaf017d0d8a9cfe5cbc86a",
+            "lines": 425
+          },
+          {
+            "path": "addon/LycheeGroup/Bindings.lua",
+            "sha256": "cc41e6f81f5035382dfd76b35e06115d098ff958f75a72d11d4dba523e80a623",
+            "lines": 63
+          },
+          {
+            "path": "addon/LycheeGroup/BrandMotion.lua",
+            "sha256": "fbad2f68325c34d03056eecddad9653e9146e4a448cea00851e9abca9c05a448",
+            "lines": 74
+          },
+          {
+            "path": "addon/LycheeGroup/Configuration.lua",
+            "sha256": "2b4c3dc07a58afc23b912609bf8f337f7d95c58d19179e4a82d96572f529ab55",
+            "lines": 438
+          },
+          {
+            "path": "addon/LycheeGroup/Core.lua",
+            "sha256": "09fe0347615596146e584a7e3495fdc7f0046b4d38b4dacffbfac2c012eb816c",
+            "lines": 337
+          },
+          {
+            "path": "addon/LycheeGroup/Entrypoints.lua",
+            "sha256": "f9e5a692785b7aac833c5cb0a33fc45a76c7f625b81e5d0c14a4bca5f51bc2e9",
+            "lines": 280
+          },
+          {
+            "path": "addon/LycheeGroup/Floating.lua",
+            "sha256": "feed7819784930fcaa07e509f2985d754ad98824995de06e86d99d9007419d75",
+            "lines": 746
+          },
+          {
+            "path": "addon/LycheeGroup/Fonts.lua",
+            "sha256": "83b189245ea939f2eddffa3f5da2463582134aeeddfe54006edd08ed6a3a1fb2",
+            "lines": 57
+          },
+          {
+            "path": "addon/LycheeGroup/Locale.lua",
+            "sha256": "7b5954d4f8e4178c28add2cf149d7d0d00daeb75916f6b9e4f445f50c2b37e3f",
+            "lines": 52
+          },
+          {
+            "path": "addon/LycheeGroup/LycheeGroup.toc",
+            "sha256": "8ee38db475bbd3deb9c2721b5c61d211110908c128f4eb79032c8095b476c65e",
+            "lines": 33
+          },
+          {
+            "path": "addon/LycheeGroup/Minimap.lua",
+            "sha256": "8db9a49b16b39b814ec45fd5f8d281db82f5bc6f19ebbeb238a5e9d47d58fcf0",
+            "lines": 148
+          },
+          {
+            "path": "addon/LycheeGroup/PartyRoleCheck.lua",
+            "sha256": "f777fdc64b3f9ca385d69f71844c4be16ca237c559ff95f8a7231a7a04baea6f",
+            "lines": 65
+          },
+          {
+            "path": "addon/LycheeGroup/Presentation.lua",
+            "sha256": "c6c7933c8977751d15adc129725725cd4bfa12677bd59d7b0fbaf01a0d526014",
+            "lines": 46
+          },
+          {
+            "path": "addon/LycheeGroup/Specializations.lua",
+            "sha256": "e93afd3b778af7b7ca3120bbce5c33a58b7b1d83b6db57d14a07a8775e5494a6",
+            "lines": 56
+          },
+          {
+            "path": "addon/LycheeGroup/Theme/Defaults.lua",
+            "sha256": "ed1a35cccb116fef4c4180d77330b468af47fe19d40b94ed80541198108c7666",
+            "lines": 1092
+          },
+          {
+            "path": "addon/LycheeGroup/Theme/Elements.lua",
+            "sha256": "58d4a38039c35a1217de583f4f866696ba3a303c54284d6dbdac9aeb3060cbb8",
+            "lines": 212
+          },
+          {
+            "path": "addon/LycheeGroup/Theme/FindElements.lua",
+            "sha256": "ae6cee016d938110f9b34b0f28cc8e3b7e7f1184cedf985bc3a39e2dc4c6d3f0",
+            "lines": 71
+          },
+          {
+            "path": "addon/LycheeGroup/Theme/Import.lua",
+            "sha256": "f9116ce05728b62ff415c58ceb310a1083dece44ce12d9329be8b61e9b02c379",
+            "lines": 349
+          }
+        ],
+        "validation": {
+          "modules": 17,
+          "assertions": 9781,
+          "applicationSummary": 69,
+          "independentChecks": 40028
+        },
+        "report": {
+          "name": "r8-business-report.md",
+          "sha256": "c9553a8d2e57544ba89291d05537b5320077e0df31dfe2edf022f9115901c493"
+        }
+      },
+      {
+        "role": "ui",
+        "agent": "perf_loop_r8_ui",
+        "newFindings": 0,
+        "files": [
+          {
+            "path": "addon/LycheeGroup_UI/Application.lua",
+            "sha256": "180f127f72f627b4fe28c88fb452c30d07816f0455719ae8d634ab56728308e0",
+            "lines": 268
+          },
+          {
+            "path": "addon/LycheeGroup_UI/Components.lua",
+            "sha256": "d1f4b76e831ced2b45435d9f140f93ef5586033fcd8b78526a06ee3e6d83223d",
+            "lines": 309
+          },
+          {
+            "path": "addon/LycheeGroup_UI/Create.lua",
+            "sha256": "4c4e12c6ac4d54e512625d55fe4479d05eb9dab7af20224325e7b1a4272697df",
+            "lines": 1415
+          },
+          {
+            "path": "addon/LycheeGroup_UI/Elements.lua",
+            "sha256": "c35ff678670aab1f5b79033e1a8c53479bc4514582279851a036a91e9405c95b",
+            "lines": 37
+          },
+          {
+            "path": "addon/LycheeGroup_UI/Find.lua",
+            "sha256": "983d58e06710c3298d71e2618d853eb7126e36ad19582a562d53026b3730ea87",
+            "lines": 2156
+          },
+          {
+            "path": "addon/LycheeGroup_UI/Host.lua",
+            "sha256": "6af33d863a679393617f8010b998e9e01cfc724000347c16a95cb95a3e889cac",
+            "lines": 526
+          },
+          {
+            "path": "addon/LycheeGroup_UI/Locale.lua",
+            "sha256": "441d8beea2ac5dbdc13e9819f1a8f3349bc706e03e5ac87263870bc87a5f598b",
+            "lines": 68
+          },
+          {
+            "path": "addon/LycheeGroup_UI/LycheeGroup_UI.toc",
+            "sha256": "20db804073e1bb41fd1334caf9c88fd10cecc22a3c37f8d832cc8156cbf8a7cb",
+            "lines": 29
+          },
+          {
+            "path": "addon/LycheeGroup_UI/Members.lua",
+            "sha256": "d493485f0ed415a8fd3f24d959338b2a4e906511bce8ff4d1a6df167b15d5bac",
+            "lines": 236
+          },
+          {
+            "path": "addon/LycheeGroup_UI/Motion.lua",
+            "sha256": "81371c21bfe3737b2b32c5abafd7250ff1e749c4ea9148d5c0ae235060dd692f",
+            "lines": 2
+          },
+          {
+            "path": "addon/LycheeGroup_UI/Native.lua",
+            "sha256": "bfba7cfdaf1e00ec08136d68614676c485687bb86377be4eabcdd867080218c1",
+            "lines": 216
+          },
+          {
+            "path": "addon/LycheeGroup_UI/Notes.lua",
+            "sha256": "83f986a3015d85eb24c29f86679999a35ea4ec64cb074e2b4314241267c574b6",
+            "lines": 900
+          },
+          {
+            "path": "addon/LycheeGroup_UI/PlayerLinks.lua",
+            "sha256": "cd1e97c7a902a7de6201a031b168e3d1d94f412bb8768b518292a66b0c447848",
+            "lines": 55
+          },
+          {
+            "path": "addon/LycheeGroup_UI/Preview.lua",
+            "sha256": "45a9891b032d83455720bef10c5a85e768727f007ef85c558032ac2018a17358",
+            "lines": 293
+          },
+          {
+            "path": "addon/LycheeGroup_UI/RealmSlugs.lua",
+            "sha256": "6696e9873a90f9bace716cb4c976002cb01bef398ef76dbe8364c5a25434df4d",
+            "lines": 1054
+          },
+          {
+            "path": "addon/LycheeGroup_UI/Resize.lua",
+            "sha256": "70548118b7c0aa5d5dbef497029ca3e42ee29b1cba7c2f905c72095d42607d6e",
+            "lines": 122
+          },
+          {
+            "path": "addon/LycheeGroup_UI/Settings.lua",
+            "sha256": "3787f560a0ee986f523463b5efdf1fec1e15c944642be106d819f912f173c567",
+            "lines": 648
+          },
+          {
+            "path": "addon/LycheeGroup_UI/Theme.lua",
+            "sha256": "4bb0203b6e1d8ad47ef8139dd2c43f34a86f9c9f4a81606b61ba9657bc6e4787",
+            "lines": 85
+          },
+          {
+            "path": "addon/LycheeGroup_UI/Tooltip.lua",
+            "sha256": "8369095cd9bf5a4461115766e88e38fa268ed5c3fb1f9a89a554a3fa525af524",
+            "lines": 1217
+          },
+          {
+            "path": "addon/LycheeGroup_UI/Transfer.lua",
+            "sha256": "1d9aa90dd2b348a4304dd2c0c1ce190b2e17342946898b973f172373eef9f89c",
+            "lines": 217
+          },
+          {
+            "path": "addon/LycheeGroup/ActivityLabels.lua",
+            "sha256": "b102c24c9146880ef95cde0a35996795b21728b838220e954ec478b0089e8130",
+            "lines": 15
+          },
+          {
+            "path": "addon/LycheeGroup/Adapters/DataBroker.lua",
+            "sha256": "a75b53d22961c87900e6a6dd4f459faeaa70225abfd4736de0c53b3d2b7e92aa",
+            "lines": 53
+          },
+          {
+            "path": "addon/LycheeGroup/Adapters/Rurutia.lua",
+            "sha256": "c1baf7132d925b10ff3e3de3c2da7e1c71094e1bd289f234e847ab5c57948701",
+            "lines": 106
+          },
+          {
+            "path": "addon/LycheeGroup/API.lua",
+            "sha256": "8fba120210c39d751029e27a5f60d875c9c6409a88cb9bcf8b06598564872d39",
+            "lines": 123
+          },
+          {
+            "path": "addon/LycheeGroup/Bindings.lua",
+            "sha256": "cc41e6f81f5035382dfd76b35e06115d098ff958f75a72d11d4dba523e80a623",
+            "lines": 63
+          },
+          {
+            "path": "addon/LycheeGroup/BrandMotion.lua",
+            "sha256": "fbad2f68325c34d03056eecddad9653e9146e4a448cea00851e9abca9c05a448",
+            "lines": 74
+          },
+          {
+            "path": "addon/LycheeGroup/Core.lua",
+            "sha256": "09fe0347615596146e584a7e3495fdc7f0046b4d38b4dacffbfac2c012eb816c",
+            "lines": 337
+          },
+          {
+            "path": "addon/LycheeGroup/Floating.lua",
+            "sha256": "feed7819784930fcaa07e509f2985d754ad98824995de06e86d99d9007419d75",
+            "lines": 746
+          },
+          {
+            "path": "addon/LycheeGroup/Fonts.lua",
+            "sha256": "83b189245ea939f2eddffa3f5da2463582134aeeddfe54006edd08ed6a3a1fb2",
+            "lines": 57
+          },
+          {
+            "path": "addon/LycheeGroup/LycheeGroup.toc",
+            "sha256": "8ee38db475bbd3deb9c2721b5c61d211110908c128f4eb79032c8095b476c65e",
+            "lines": 33
+          },
+          {
+            "path": "addon/LycheeGroup/Minimap.lua",
+            "sha256": "8db9a49b16b39b814ec45fd5f8d281db82f5bc6f19ebbeb238a5e9d47d58fcf0",
+            "lines": 148
+          },
+          {
+            "path": "addon/LycheeGroup/Presentation.lua",
+            "sha256": "c6c7933c8977751d15adc129725725cd4bfa12677bd59d7b0fbaf01a0d526014",
+            "lines": 46
+          }
+        ],
+        "validation": {
+          "modules": 24,
+          "assertions": 16938,
+          "uiRefresh": 353,
+          "floatingPool": 28,
+          "independentChecks": 2332,
+          "cyclesPerLocale": 30
+        },
+        "report": {
+          "name": "r8-ui-report.md",
+          "sha256": "cbd3c83d3aff240d40dac6bb7ac91802016d7c8473489e251e0231cb5fce7c9a"
+        }
+      },
+      {
+        "role": "library",
+        "agent": "perf_loop_r8_library",
+        "newFindings": 0,
+        "files": [
+          {
+            "path": "../LycheeUI/Components.lua",
+            "sha256": "0c6bfe33536c57eaf39857fd9d10fcb924760cb6b9f317e20d39f08906c31562",
+            "lines": 1428
+          },
+          {
+            "path": "../LycheeUI/Core.lua",
+            "sha256": "c6b4caeb07ee0644d8a1d2b92a5c9c754093846cc683927d9e88393a8b37c50f",
+            "lines": 111
+          },
+          {
+            "path": "../LycheeUI/Elements.lua",
+            "sha256": "40576915ce51f9f84556cd57a056b0b7ec50bef1bb8af469a86d6190bc6bfe93",
+            "lines": 473
+          },
+          {
+            "path": "../LycheeUI/Layouts.lua",
+            "sha256": "894b7cdbae78d958864c53620484346ddf33d3c0c99aebba73d23e10b8fa7b28",
+            "lines": 262
+          },
+          {
+            "path": "../LycheeUI/Menu.lua",
+            "sha256": "4ec13c762ff8be5183ddbd6d68da572d8d55f1bb63ee2221301ddba2a56857e0",
+            "lines": 197
+          },
+          {
+            "path": "../LycheeUI/Motion.lua",
+            "sha256": "af4360c01eca76351eb7c5f9ca031321be8cf63143829ef5364eac1cc4c56e21",
+            "lines": 399
+          },
+          {
+            "path": "../LycheeUI/Native.lua",
+            "sha256": "1e684f5cb17201ca09ea2a747b61aede450258c0bcebe88ca5dcb97f68d0d417",
+            "lines": 377
+          },
+          {
+            "path": "../LycheeUI/Styles.lua",
+            "sha256": "99fdecda1f3ec7f3596c3040b0a84f9deea06577be13128d1f892427fb28d59f",
+            "lines": 670
+          },
+          {
+            "path": "../LycheeUI/Theme.lua",
+            "sha256": "ef3da514cd40133823f37e2d9d9d2fef84603ee7f2e0122bc22c3e0969e9d0ab",
+            "lines": 216
+          }
+        ],
+        "validation": {
+          "contractCommands": 13,
+          "contractChecks": 5017,
+          "independentChecks": 1017,
+          "frozenFiles": 30
+        },
+        "report": {
+          "name": "r8-library-report.md",
+          "sha256": "444d4ce5942ebdb1fff0b7e90181cda231b9bd947d402027749c9f71f730b96e"
+        }
+      }
+    ],
+    "rootTools": {
+      "reviewedSourceUnchanged": true,
+      "files": [
+        {
+          "path": "tools/Build-Addon.ps1",
+          "bytes": 736,
+          "lines": 15,
+          "sha256": "da6aee110bdf8b06e301bd4f7b9d98b9987f32b719d6f575c5b5056009f64cf1"
+        },
+        {
+          "path": "tools/Sync-LycheeUI.ps1",
+          "bytes": 4183,
+          "lines": 81,
+          "sha256": "1396560640b7ac385e28dadbacac1a2f18047c3dff65b34055098592bdcad0e1"
+        },
+        {
+          "path": "tools/BuildLycheeFont.py",
+          "bytes": 5400,
+          "lines": 118,
+          "sha256": "e8da050a04c81fe8cdb5f291d2f6ef3e1248c14198f6703440278f709ec72a68"
+        },
+        {
+          "path": "tests/Build-IsolatedLibraryProbe.ps1",
+          "bytes": 2985,
+          "lines": 40,
+          "sha256": "a26385c9d484ebe1b2c16d22cfe16223d537394035d41f7c832ee7f0b6b848cc"
+        }
+      ],
+      "findings": 0
+    },
+    "all73RuntimeFilesCovered": true,
+    "wholeRuntimeEachRound": true,
+    "freshReviewersEachRound": 3,
+    "scope": {
+      "productBusinessLua": 45,
+      "productUILua": 19,
+      "sharedLibraryLua": 9,
+      "uniqueRuntimeLua": 73,
+      "buildTools": 3,
+      "probeBuilders": 1
+    },
+    "findings": [
+      {
+        "id": "P01",
+        "round": 1,
+        "area": "Create applicant layout",
+        "cause": "Unchanged applications remeasure every member name and identity mark.",
+        "repair": "Reuse current-batch geometry until member identity, displayed name, marks, columns, font tuple or effective scale changes; release inactive records.",
+        "counter": {
+          "fixture": "100 unchanged notifications, five current members",
+          "heightReadsBefore": 500,
+          "heightReadsAfter": 0
+        },
+        "test": "tests/test_ui_refresh_cost.lua"
+      },
+      {
+        "id": "P02",
+        "round": 1,
+        "area": "Floating list measurement",
+        "cause": "One member change triggers native measurements for unchanged members.",
+        "repair": "Retain current member scalar inputs and comment metrics; clear released entries and invalidate font/scale inputs.",
+        "counter": {
+          "fixture": "one changed member in a warmed five-member list",
+          "changedMemberHeightReads": 2,
+          "changedMemberFontWritesAtMost": 3
+        },
+        "test": "tests/test_ui_refresh_cost.lua"
+      },
+      {
+        "id": "P03",
+        "round": 1,
+        "area": "Find hidden filter panel",
+        "cause": "Result notifications repeatedly lay out a closed filter panel.",
+        "repair": "Opening resolves complete geometry; visible notifications relayout only changed summary or error visibility.",
+        "counter": {
+          "fixture": "100 hidden-panel notifications",
+          "heightReadsBefore": 900,
+          "heightReadsAfter": 0,
+          "geometryWritesBefore": 12000,
+          "geometryWritesAfter": 0
+        },
+        "test": "tests/test_ui_refresh_cost.lua"
+      },
+      {
+        "id": "P04",
+        "round": 1,
+        "area": "Roster event coalescing",
+        "cause": "Same-frame equipment and specialization notifications rebuild the roster synchronously.",
+        "repair": "One zero-delay display notification; explicit Get remains current, prune and inspect cancellation remain synchronous.",
+        "counter": {
+          "fixture": "17 same-frame events, 40 members",
+          "notificationsBefore": 17,
+          "notificationsAfter": 1,
+          "ratingReadsBefore": 680,
+          "ratingReadsAfter": 40
+        },
+        "test": "tests/test_business_performance.lua"
+      },
+      {
+        "id": "P05",
+        "round": 1,
+        "area": "Creation favorites initialization",
+        "cause": "Pairwise duplicate comparisons grow quadratically.",
+        "repair": "Temporary exact identity set over all 11 normalized fields; preserve original winner, sort and malformed data handling.",
+        "counter": {
+          "fixture": "2000 distinct favorites",
+          "pairComparisonsBefore": 1999000,
+          "pairComparisonsAfter": 0
+        },
+        "complexity": "dedup O(P); complete initialization including unchanged sorting O(P log P)",
+        "test": "tests/test_business_performance.lua"
+      },
+      {
+        "id": "P06",
+        "round": 1,
+        "area": "LycheeUI fixed styles",
+        "cause": "Repeated fixed rules rewrite unchanged native fonts, artwork and anchors and allocate temporary state.",
+        "repair": "Read current native state, retain bounded declared-slot inputs, honor explicit derived font fields and ownership, avoid steady temporary patches.",
+        "counter": {
+          "fixture": "100 controls with two declared slots; 10000 stable Apply calls",
+          "baselineRevision": 38,
+          "candidateRevision": 40,
+          "retainedKiBBefore": 351.679,
+          "retainedKiBAfter": 423.554,
+          "retainedTradeoffKiB": 71.875,
+          "temporaryAllocationKiBBefore": 13437.5,
+          "temporaryAllocationKiBAfter": 0,
+          "nativeWritesBefore": 60000,
+          "nativeWritesAfter": 0
+        },
+        "test": "../LycheeUI/tests/fixed_writes.lua"
+      },
+      {
+        "id": "P07",
+        "round": 1,
+        "area": "LycheeUI variable list scratch data",
+        "cause": "Geometry scratch keys keep released business objects reachable.",
+        "repair": "Clear scratch keys after geometry calculation, Clear and return to fixed row heights.",
+        "counter": {
+          "fixture": "cleared variable-height list",
+          "retainedBusinessKeysBefore": 11,
+          "retainedBusinessKeysAfter": 0
+        },
+        "test": "../LycheeUI/tests/list_clear.lua"
+      },
+      {
+        "id": "P08",
+        "round": 2,
+        "area": "Applications leader summary",
+        "cause": "Hidden application sync builds full group details to find the first explicitly flagged leader.",
+        "repair": "Independent strict leader scalar cache with lazy details; preserve missing-flag and first-flag semantics.",
+        "counter": {
+          "fixture": "five 40-person applications, leader flagged first",
+          "playerInfoReadsBefore": 200,
+          "playerInfoReadsAfter": 5,
+          "singleApplicationBefore": 40,
+          "singleApplicationAfter": 1
+        },
+        "test": "tests/test_application_summary_performance.lua"
+      },
+      {
+        "id": "P09",
+        "round": 2,
+        "area": "Notes category counts",
+        "cause": "Editing one note reason scans every stored record for sidebar counts.",
+        "repair": "Compute four counts at bind and update them with actual mutations; no per-record type snapshot.",
+        "counter": {
+          "fixture": "10 reason edits, 100/1000/5000 records",
+          "fullScansBefore": 10,
+          "fullScansAfter": 0
+        },
+        "test": "tests/test_notes_count_performance.lua"
+      },
+      {
+        "id": "P10",
+        "round": 2,
+        "area": "Find fixed application captions",
+        "cause": "Every application layout invalidates unchanged caption metrics.",
+        "repair": "One displayed-frame settle on enter/font changes; reuse stable metrics and cancel pending settle on leave/hide.",
+        "counter": {
+          "fixture": "100 stable layouts after each display/font settling phase",
+          "readsPerCaptionBefore": 100,
+          "readsPerCaptionAfter": 0
+        },
+        "test": "tests/test_find_caption_performance.lua",
+        "native": "native-caption-before/native-caption-after"
+      },
+      {
+        "id": "P11",
+        "round": 2,
+        "area": "LycheeUI style state release",
+        "cause": "Permanent per-controller hooks retain released controllers and continue invoking them.",
+        "repair": "One dispatcher per source/event with removable active subscriptions; clear snapshots on normal, nested and failed delivery.",
+        "counter": {
+          "fixture": "100 Bind/Release cycles, five events",
+          "permanentHooksBefore": 500,
+          "permanentHooksAfter": 5,
+          "oldControllersBefore": 100,
+          "oldControllersAfter": 0
+        },
+        "test": "../LycheeUI/tests/style_release.lua"
+      },
+      {
+        "id": "P12",
+        "round": 3,
+        "area": "Bundled LibSpecialization automatic responses",
+        "cause": "Each request generates the same talent import string before the existing send throttle.",
+        "repair": "Retail-only current config/spec/string reuse for automatic responses; synchronous invalidation and fresh public reads. Keep minor 28 and provider selection.",
+        "counter": {
+          "fixture": "40 unchanged requests in one frame or 1.95 seconds",
+          "serializationsBefore": 40,
+          "serializationsAfter": 1,
+          "sendsBefore": 2,
+          "sendsAfter": 2,
+          "timerBefore": 1,
+          "timerAfter": 1
+        },
+        "scope": "applies only when this embedded minor 28 supplies the shared library",
+        "test": "tests/test_libspecialization_performance.lua"
+      },
+      {
+        "id": "P13",
+        "round": 3,
+        "area": "Button and generic state dispatch",
+        "cause": "Product Bind duplicates constructor tracking; adjacent hover/pressed clears repeatedly apply the same controller.",
+        "repair": "Remove two redundant bindings, preserve custom card binding, and combine only adjacent contributions from the same controller/source.",
+        "counter": {
+          "fixture": "120 real Find hover/leave cycles",
+          "applyBefore": 600,
+          "applyAfter": 240,
+          "genericPressedLeaveApplyBefore": 2,
+          "genericPressedLeaveApplyAfter": 1
+        },
+        "test": "tests/test_button_state_performance.lua and ../LycheeUI/tests/style_events.lua"
+      },
+      {
+        "id": "P14",
+        "round": 4,
+        "area": "Notes navigation state dispatch",
+        "cause": "Five Notes navigation buttons duplicate constructor hover tracking.",
+        "repair": "Keep the navigationStyle alias and selected state, remove its redundant hover Bind.",
+        "counter": {
+          "fixture": "240 hover/leave events on each of five Notes tabs",
+          "applyPerTabBefore": 480,
+          "applyPerTabAfter": 240
+        },
+        "test": "tests/test_button_state_performance.lua"
+      },
+      {
+        "id": "P15",
+        "round": 4,
+        "area": "Find closed activity picker",
+        "cause": "Repeated ClosePicker calls restore an already identical unconfirmed choice and rebuild the hidden activity list.",
+        "repair": "Restore only a changed or pending confirmed choice; keep real cancellation after hiding/leaving. Apply fixed rules at the actual filter control layout boundary.",
+        "counter": {
+          "fixture": "20 filter open/close cycles with an already closed activity picker",
+          "pickerRefreshBefore": 40,
+          "pickerRefreshAfter": 0,
+          "setItemsBefore": 40,
+          "setItemsAfter": 0,
+          "renderBefore": 80,
+          "renderAfter": 0
+        },
+        "test": "tests/test_ui_refresh_cost.lua and tests/test_find_elements.lua"
+      },
+      {
+        "id": "P16",
+        "round": 4,
+        "area": "LycheeUI menu font measurement",
+        "cause": "Each entry rewrites an already identical native font during natural-width calculation.",
+        "repair": "Six scalars retain the latest successful font request and native readback; preserve each label measurement, instance fonts and failed retries.",
+        "counter": {
+          "fixture": "100 opens of a 14-entry natural-width menu",
+          "fontWritesBefore": 1400,
+          "fontWritesAfter": 0,
+          "widthReadsBefore": 1400,
+          "widthReadsAfter": 1400
+        },
+        "test": "../LycheeUI/tests/menu_font_writes.lua",
+        "native": "native-menu-r41/native-menu-r42"
+      },
+      {
+        "id": "P17",
+        "round": 5,
+        "area": "Find hidden picker font changes",
+        "cause": "Changing font or size rebuilds an already hidden activity picker after leaving Find.",
+        "repair": "Refresh visible picker geometry only outside the closing transition; retain complete content refresh on opening, live catalog/rating updates and draft cancellation.",
+        "counter": {
+          "fixture": "20 font size changes after leaving Find; two fixture activities",
+          "pickerRefreshBefore": 20,
+          "pickerRefreshAfter": 0,
+          "setItemsBefore": 20,
+          "setItemsAfter": 0,
+          "rowRenderBefore": 40,
+          "rowRenderAfter": 0,
+          "catalogReadsBefore": 20,
+          "catalogReadsAfter": 0,
+          "retainedHiddenIDsBefore": 2,
+          "retainedHiddenIDsAfter": 0
+        },
+        "test": "tests/test_ui_refresh_cost.lua"
+      },
+      {
+        "id": "P18",
+        "round": 6,
+        "area": "LycheeUI released layout item references",
+        "cause": "A caller-retained Row or Column controller keeps cachedItems after Release, retaining descriptors from its final Layout.",
+        "repair": "Clear the cached item array and cache-valid flag while releasing existing layout ownership and registration.",
+        "counter": {
+          "fixture": "20 released Row controllers with 50 valid descriptors each; controllers deliberately retained",
+          "registeredLayouts": 0,
+          "retainedDescriptorsBefore": 1000,
+          "retainedDescriptorsAfter": 0,
+          "diagnosticReleasedKiB": 176.884
+        },
+        "scope": "Public layout Release contract; current product layouts are permanent and do not call Release.",
+        "test": "../LycheeUI/tests/layout_release.lua"
+      },
+      {
+        "id": "P19",
+        "round": 7,
+        "area": "LycheeUI measurement-only layout records",
+        "cause": "Repeated SetItems plus Measure retains obsolete descriptors and records until Layout or Release runs.",
+        "repair": "Update the current record index on every run; after Measure retain only current items and records for placements still owned by the controller.",
+        "counter": {
+          "fixture": "20 batches of 50 public descriptors using a prebuilt native Frame pool",
+          "recordsBefore": 1000,
+          "recordsAfter": 50,
+          "recordsAfterEmptyBefore": 1000,
+          "recordsAfterEmptyAfter": 0,
+          "previouslyPlacedRecordsPreserved": 50
+        },
+        "scope": "Public Row/Column Measure API; current product does not use measurement-only controllers. Existing placement anchors remain owned until Layout or Release.",
+        "test": "../LycheeUI/tests/layout_measure_records.lua"
+      }
+    ]
+  },
+  "candidateRuntimeFiles": [
+    {
+      "path": "addon/LycheeGroup/API.lua",
+      "sha256": "8fba120210c39d751029e27a5f60d875c9c6409a88cb9bcf8b06598564872d39"
+    },
+    {
+      "path": "addon/LycheeGroup/ActivityLabels.lua",
+      "sha256": "b102c24c9146880ef95cde0a35996795b21728b838220e954ec478b0089e8130"
+    },
+    {
+      "path": "addon/LycheeGroup/Adapters/DataBroker.lua",
+      "sha256": "a75b53d22961c87900e6a6dd4f459faeaa70225abfd4736de0c53b3d2b7e92aa"
+    },
+    {
+      "path": "addon/LycheeGroup/Adapters/Rurutia.lua",
+      "sha256": "c1baf7132d925b10ff3e3de3c2da7e1c71094e1bd289f234e847ab5c57948701"
+    },
+    {
+      "path": "addon/LycheeGroup/Appearance.lua",
+      "sha256": "967e6ea8fa4a6e32e43b34fa35d1eb8b9efcca201aaaf017d0d8a9cfe5cbc86a"
+    },
+    {
+      "path": "addon/LycheeGroup/Bindings.lua",
+      "sha256": "cc41e6f81f5035382dfd76b35e06115d098ff958f75a72d11d4dba523e80a623"
+    },
+    {
+      "path": "addon/LycheeGroup/BrandMotion.lua",
+      "sha256": "fbad2f68325c34d03056eecddad9653e9146e4a448cea00851e9abca9c05a448"
+    },
+    {
+      "path": "addon/LycheeGroup/Configuration.lua",
+      "sha256": "2b4c3dc07a58afc23b912609bf8f337f7d95c58d19179e4a82d96572f529ab55"
+    },
+    {
+      "path": "addon/LycheeGroup/Core.lua",
+      "sha256": "09fe0347615596146e584a7e3495fdc7f0046b4d38b4dacffbfac2c012eb816c"
+    },
+    {
+      "path": "addon/LycheeGroup/Entrypoints.lua",
+      "sha256": "f9e5a692785b7aac833c5cb0a33fc45a76c7f625b81e5d0c14a4bca5f51bc2e9"
+    },
+    {
+      "path": "addon/LycheeGroup/Floating.lua",
+      "sha256": "feed7819784930fcaa07e509f2985d754ad98824995de06e86d99d9007419d75"
+    },
+    {
+      "path": "addon/LycheeGroup/Fonts.lua",
+      "sha256": "83b189245ea939f2eddffa3f5da2463582134aeeddfe54006edd08ed6a3a1fb2"
+    },
+    {
+      "path": "addon/LycheeGroup/Libs/LycheeUI/Components.lua",
+      "sha256": "0c6bfe33536c57eaf39857fd9d10fcb924760cb6b9f317e20d39f08906c31562"
+    },
+    {
+      "path": "addon/LycheeGroup/Libs/LycheeUI/Core.lua",
+      "sha256": "c6b4caeb07ee0644d8a1d2b92a5c9c754093846cc683927d9e88393a8b37c50f"
+    },
+    {
+      "path": "addon/LycheeGroup/Libs/LycheeUI/Elements.lua",
+      "sha256": "40576915ce51f9f84556cd57a056b0b7ec50bef1bb8af469a86d6190bc6bfe93"
+    },
+    {
+      "path": "addon/LycheeGroup/Libs/LycheeUI/Layouts.lua",
+      "sha256": "894b7cdbae78d958864c53620484346ddf33d3c0c99aebba73d23e10b8fa7b28"
+    },
+    {
+      "path": "addon/LycheeGroup/Libs/LycheeUI/Menu.lua",
+      "sha256": "4ec13c762ff8be5183ddbd6d68da572d8d55f1bb63ee2221301ddba2a56857e0"
+    },
+    {
+      "path": "addon/LycheeGroup/Libs/LycheeUI/Motion.lua",
+      "sha256": "af4360c01eca76351eb7c5f9ca031321be8cf63143829ef5364eac1cc4c56e21"
+    },
+    {
+      "path": "addon/LycheeGroup/Libs/LycheeUI/Native.lua",
+      "sha256": "1e684f5cb17201ca09ea2a747b61aede450258c0bcebe88ca5dcb97f68d0d417"
+    },
+    {
+      "path": "addon/LycheeGroup/Libs/LycheeUI/Styles.lua",
+      "sha256": "99fdecda1f3ec7f3596c3040b0a84f9deea06577be13128d1f892427fb28d59f"
+    },
+    {
+      "path": "addon/LycheeGroup/Libs/LycheeUI/Theme.lua",
+      "sha256": "ef3da514cd40133823f37e2d9d9d2fef84603ee7f2e0122bc22c3e0969e9d0ab"
+    },
+    {
+      "path": "addon/LycheeGroup/Locale.lua",
+      "sha256": "7b5954d4f8e4178c28add2cf149d7d0d00daeb75916f6b9e4f445f50c2b37e3f"
+    },
+    {
+      "path": "addon/LycheeGroup/Minimap.lua",
+      "sha256": "8db9a49b16b39b814ec45fd5f8d281db82f5bc6f19ebbeb238a5e9d47d58fcf0"
+    },
+    {
+      "path": "addon/LycheeGroup/PartyRoleCheck.lua",
+      "sha256": "f777fdc64b3f9ca385d69f71844c4be16ca237c559ff95f8a7231a7a04baea6f"
+    },
+    {
+      "path": "addon/LycheeGroup/Presentation.lua",
+      "sha256": "c6c7933c8977751d15adc129725725cd4bfa12677bd59d7b0fbaf01a0d526014"
+    },
+    {
+      "path": "addon/LycheeGroup/Specializations.lua",
+      "sha256": "e93afd3b778af7b7ca3120bbce5c33a58b7b1d83b6db57d14a07a8775e5494a6"
+    },
+    {
+      "path": "addon/LycheeGroup/Theme/Defaults.lua",
+      "sha256": "ed1a35cccb116fef4c4180d77330b468af47fe19d40b94ed80541198108c7666"
+    },
+    {
+      "path": "addon/LycheeGroup/Theme/Elements.lua",
+      "sha256": "58d4a38039c35a1217de583f4f866696ba3a303c54284d6dbdac9aeb3060cbb8"
+    },
+    {
+      "path": "addon/LycheeGroup/Theme/FindElements.lua",
+      "sha256": "ae6cee016d938110f9b34b0f28cc8e3b7e7f1184cedf985bc3a39e2dc4c6d3f0"
+    },
+    {
+      "path": "addon/LycheeGroup/Theme/Import.lua",
+      "sha256": "f9116ce05728b62ff415c58ceb310a1083dece44ce12d9329be8b61e9b02c379"
+    },
+    {
+      "path": "addon/LycheeGroup_Group/Alerts.lua",
+      "sha256": "b117d307aa035e2c2f6facf6d6b0fba36a43ae029493c4f3dad1e720953172ac"
+    },
+    {
+      "path": "addon/LycheeGroup_Group/Applicants.lua",
+      "sha256": "5c8e44c3947f6f3e7e974d40f8ad0c16aba47d8a82fb303c6a4420762ea1b106"
+    },
+    {
+      "path": "addon/LycheeGroup_Group/Applications.lua",
+      "sha256": "ab85bc313aa5a82992fddec249f9d478c1b173c6639b63fe7c3700ade39ccc96"
+    },
+    {
+      "path": "addon/LycheeGroup_Group/Catalog.lua",
+      "sha256": "bb40ceda928e9c7c7d49896fc0a228ef298274e9b5cec48534b51658e97c6d36"
+    },
+    {
+      "path": "addon/LycheeGroup_Group/CreationPresets.lua",
+      "sha256": "c486aee8bbd17940963b0dce86bc052da627e48fa1f24aefde7163d0b29c3793"
+    },
+    {
+      "path": "addon/LycheeGroup_Group/Game.lua",
+      "sha256": "93c7ce9c2eaa598002b1427194f017727245cc5d0b93673e3fceed2900a5aca1"
+    },
+    {
+      "path": "addon/LycheeGroup_Group/Group.lua",
+      "sha256": "5a3c13bdf1dbd35bf55298d1182b2e9e95c7a349a7a89ee4553246b248efac11"
+    },
+    {
+      "path": "addon/LycheeGroup_Group/History.lua",
+      "sha256": "d769f54b34932da31ef3ee20a0770b13848fdc063049dd1db7332724440c818d"
+    },
+    {
+      "path": "addon/LycheeGroup_Group/Libs/LibSpecialization/LibSpecialization.lua",
+      "sha256": "f9430f20cb78752321e4b46337ea765799037273b199a985e449442620ad5d9e"
+    },
+    {
+      "path": "addon/LycheeGroup_Group/Libs/LibStub/LibStub.lua",
+      "sha256": "6000f58d740eaa2b4a006c1dabb0366f0321fc687bab9e85d97d040a1fd42dab"
+    },
+    {
+      "path": "addon/LycheeGroup_Group/Listing.lua",
+      "sha256": "c4c7fb6897be3a56f19c7b6923353a49c9c4b07baff21e6a1b92e444172a37ac"
+    },
+    {
+      "path": "addon/LycheeGroup_Group/Locale.lua",
+      "sha256": "32891c6f1f6dfd1cace18cbc607c9bb06f63b0a6aae92378f0b96c6baae60676"
+    },
+    {
+      "path": "addon/LycheeGroup_Group/RaidBuffs.lua",
+      "sha256": "354871f0ed27e16d1407a9222b34e84c48318fbe61868cc7bc19129dc5a948d3"
+    },
+    {
+      "path": "addon/LycheeGroup_Group/RaidGroups.lua",
+      "sha256": "5f55efd61ffc4c3020f77394689fe40c2f8676808168df43dfd29e474f39f78d"
+    },
+    {
+      "path": "addon/LycheeGroup_Group/Relations.lua",
+      "sha256": "7996e287b1592a2935979f4daeacd0a3da496f1530a7e20dce37bd2dfcc3f94f"
+    },
+    {
+      "path": "addon/LycheeGroup_Group/Results.lua",
+      "sha256": "5c065d53c91eaeb229dc324df9d460a672166d97d559cd1bd5e7ad778a7c9d5f"
+    },
+    {
+      "path": "addon/LycheeGroup_Group/Roster.lua",
+      "sha256": "8b008c51a417b6fdc8abd610f22c679e1131aa88bf66be539d2039d9ba354753"
+    },
+    {
+      "path": "addon/LycheeGroup_Group/Search.lua",
+      "sha256": "f6a09caef1895a2f8454c6bb9829ef10aa43fa14f8cf1f21da888609f08753f8"
+    },
+    {
+      "path": "addon/LycheeGroup_Group/SeasonScores.lua",
+      "sha256": "6352acb3dcd0eef5f2ae0be09da9217054958864e67b1ce31fc6c3b759a56b3c"
+    },
+    {
+      "path": "addon/LycheeGroup_Notes/Locale.lua",
+      "sha256": "8b0b3dd3a8c44021d66ede38b0173c0c4b77754b343160c36b74fc6df68e077d"
+    },
+    {
+      "path": "addon/LycheeGroup_Notes/Notes.lua",
+      "sha256": "0fec47d7c6e128eff259034791cee393803b9056091c4c9c227c23fa837fc913"
+    },
+    {
+      "path": "addon/LycheeGroup_Notes/PlayerInfo.lua",
+      "sha256": "b8262a20d7561fbe8a896ac77e6d6da1c5c2b56ce28b90ebecf098bf2427c555"
+    },
+    {
+      "path": "addon/LycheeGroup_Notes/Records.lua",
+      "sha256": "5fc7e8daf62c7f4e38b7b3313fff393cf7396b879367adb7eea314fdab00975f"
+    },
+    {
+      "path": "addon/LycheeGroup_Notes/RosterReminder.lua",
+      "sha256": "66984e58d9cbeef4f535b321459eaedaa02290e0e56f883be12564272a3f7dc6"
+    },
+    {
+      "path": "addon/LycheeGroup_UI/Application.lua",
+      "sha256": "180f127f72f627b4fe28c88fb452c30d07816f0455719ae8d634ab56728308e0"
+    },
+    {
+      "path": "addon/LycheeGroup_UI/Components.lua",
+      "sha256": "d1f4b76e831ced2b45435d9f140f93ef5586033fcd8b78526a06ee3e6d83223d"
+    },
+    {
+      "path": "addon/LycheeGroup_UI/Create.lua",
+      "sha256": "4c4e12c6ac4d54e512625d55fe4479d05eb9dab7af20224325e7b1a4272697df"
+    },
+    {
+      "path": "addon/LycheeGroup_UI/Elements.lua",
+      "sha256": "c35ff678670aab1f5b79033e1a8c53479bc4514582279851a036a91e9405c95b"
+    },
+    {
+      "path": "addon/LycheeGroup_UI/Find.lua",
+      "sha256": "983d58e06710c3298d71e2618d853eb7126e36ad19582a562d53026b3730ea87"
+    },
+    {
+      "path": "addon/LycheeGroup_UI/Host.lua",
+      "sha256": "6af33d863a679393617f8010b998e9e01cfc724000347c16a95cb95a3e889cac"
+    },
+    {
+      "path": "addon/LycheeGroup_UI/Locale.lua",
+      "sha256": "441d8beea2ac5dbdc13e9819f1a8f3349bc706e03e5ac87263870bc87a5f598b"
+    },
+    {
+      "path": "addon/LycheeGroup_UI/Members.lua",
+      "sha256": "d493485f0ed415a8fd3f24d959338b2a4e906511bce8ff4d1a6df167b15d5bac"
+    },
+    {
+      "path": "addon/LycheeGroup_UI/Motion.lua",
+      "sha256": "81371c21bfe3737b2b32c5abafd7250ff1e749c4ea9148d5c0ae235060dd692f"
+    },
+    {
+      "path": "addon/LycheeGroup_UI/Native.lua",
+      "sha256": "bfba7cfdaf1e00ec08136d68614676c485687bb86377be4eabcdd867080218c1"
+    },
+    {
+      "path": "addon/LycheeGroup_UI/Notes.lua",
+      "sha256": "83f986a3015d85eb24c29f86679999a35ea4ec64cb074e2b4314241267c574b6"
+    },
+    {
+      "path": "addon/LycheeGroup_UI/PlayerLinks.lua",
+      "sha256": "cd1e97c7a902a7de6201a031b168e3d1d94f412bb8768b518292a66b0c447848"
+    },
+    {
+      "path": "addon/LycheeGroup_UI/Preview.lua",
+      "sha256": "45a9891b032d83455720bef10c5a85e768727f007ef85c558032ac2018a17358"
+    },
+    {
+      "path": "addon/LycheeGroup_UI/RealmSlugs.lua",
+      "sha256": "6696e9873a90f9bace716cb4c976002cb01bef398ef76dbe8364c5a25434df4d"
+    },
+    {
+      "path": "addon/LycheeGroup_UI/Resize.lua",
+      "sha256": "70548118b7c0aa5d5dbef497029ca3e42ee29b1cba7c2f905c72095d42607d6e"
+    },
+    {
+      "path": "addon/LycheeGroup_UI/Settings.lua",
+      "sha256": "3787f560a0ee986f523463b5efdf1fec1e15c944642be106d819f912f173c567"
+    },
+    {
+      "path": "addon/LycheeGroup_UI/Theme.lua",
+      "sha256": "4bb0203b6e1d8ad47ef8139dd2c43f34a86f9c9f4a81606b61ba9657bc6e4787"
+    },
+    {
+      "path": "addon/LycheeGroup_UI/Tooltip.lua",
+      "sha256": "8369095cd9bf5a4461115766e88e38fa268ed5c3fb1f9a89a554a3fa525af524"
+    },
+    {
+      "path": "addon/LycheeGroup_UI/Transfer.lua",
+      "sha256": "1d9aa90dd2b348a4304dd2c0c1ce190b2e17342946898b973f172373eef9f89c"
+    }
+  ],
+  "library": {
+    "version": "1.3.0",
+    "revision": 46,
+    "frozenFiles": 30,
+    "sourceAndEmbeddedHashesMatch": true,
+    "runtimeFiles": [
+      {
+        "path": "Components.lua",
+        "sha256": "0c6bfe33536c57eaf39857fd9d10fcb924760cb6b9f317e20d39f08906c31562"
+      },
+      {
+        "path": "Core.lua",
+        "sha256": "c6b4caeb07ee0644d8a1d2b92a5c9c754093846cc683927d9e88393a8b37c50f"
+      },
+      {
+        "path": "Elements.lua",
+        "sha256": "40576915ce51f9f84556cd57a056b0b7ec50bef1bb8af469a86d6190bc6bfe93"
+      },
+      {
+        "path": "embeds.xml",
+        "sha256": "074fd1bf12907f3d4dc64b15216d5ce9caa7171f4ab474223ba8c21e4157c603"
+      },
+      {
+        "path": "Layouts.lua",
+        "sha256": "894b7cdbae78d958864c53620484346ddf33d3c0c99aebba73d23e10b8fa7b28"
+      },
+      {
+        "path": "Media/arrow.tga",
+        "sha256": "93786301129ed889270d2a02f5643d4416e82697785f143fa10bb7ae54998727"
+      },
+      {
+        "path": "Media/bell.tga",
+        "sha256": "d64179d1877cb926fff238a148f060f00184f2d40e140693391223211e62c8cc"
+      },
+      {
+        "path": "Media/book.tga",
+        "sha256": "ac017a1a6244bb94fb175efdb64d4c56b58c72e71a47fbc96305f618ec56c385"
+      },
+      {
+        "path": "Media/caution.tga",
+        "sha256": "6bdad242ba25891acd890ae9b4ce1e87002ec295d835bd76ec0972834820d953"
+      },
+      {
+        "path": "Media/chevron.tga",
+        "sha256": "d88346a13d505bc3aac4f58e292952f98490b5f0c03348a192e95c6fbda89780"
+      },
+      {
+        "path": "Media/circle.tga",
+        "sha256": "ee3d0ece0a31e76edc81cda3ea666c637bcf28724466222948e2ab235216b293"
+      },
+      {
+        "path": "Media/close.tga",
+        "sha256": "756dd35d3c7c393d6acc4c6109439f02ff0ba342dd82b1451d93ae3bc7a1424e"
+      },
+      {
+        "path": "Media/decline.tga",
+        "sha256": "a2b846a146af2ad86c904dad55446c7da3a01c38bf2f7217faaa18af3d00c06d"
+      },
+      {
+        "path": "Media/heart.tga",
+        "sha256": "d6be15a5e4bd895a85da6cea324d6ff8aa0a5134bbdfc645979cebe796302873"
+      },
+      {
+        "path": "Media/history.tga",
+        "sha256": "60ee8e76f8acede358987f77a5bb96d60879e21cb19b4a56ba90f8e4256900c8"
+      },
+      {
+        "path": "Media/icon-mask.tga",
+        "sha256": "3842cf0e05c57441da86894559b30b17bf97055b301cd076003b119da5f8a5b5"
+      },
+      {
+        "path": "Media/plus.tga",
+        "sha256": "07311c36e089b733d8e4dbb5ae5a2b68cc3e746e9a047be4a434e8dafa5e9fb6"
+      },
+      {
+        "path": "Media/refresh.tga",
+        "sha256": "1d4ea9510b9ee540a485dbf37b379ec6b7467707a409809ed5d012c922fec71e"
+      },
+      {
+        "path": "Media/rounded-corner.tga",
+        "sha256": "6c5203e7c6caede452ff5a34e6a356f2e7caef376cd3d1a4ac40353e340b9e5a"
+      },
+      {
+        "path": "Media/search.tga",
+        "sha256": "fc6308be9daccbc766db4942a9ddde797d57902a128c229e69f389f342d6fba7"
+      },
+      {
+        "path": "Media/settings.tga",
+        "sha256": "f326928897d118c63e16d2b3a0e15894b3064319063ae3e449125ce646b77c30"
+      },
+      {
+        "path": "Media/shadow-12.tga",
+        "sha256": "4b114a802ec77994eb266a970de8e7d1dece24883ae9cb0bfb926ae337615978"
+      },
+      {
+        "path": "Media/shadow-16.tga",
+        "sha256": "64d76fdbf085b2f28381cfdc4a2e6390b71c07c9bd6f1d911f3ab56180edc926"
+      },
+      {
+        "path": "Media/shadow-24.tga",
+        "sha256": "a7d36e795f94ce43e658898ecbcc6415fa72301104581590e318aa6e59107276"
+      },
+      {
+        "path": "Media/shadow-28.tga",
+        "sha256": "356c7b119618c92d25d747992cc1aa7cb1c9187ff18166393db36a967b296e34"
+      },
+      {
+        "path": "Menu.lua",
+        "sha256": "4ec13c762ff8be5183ddbd6d68da572d8d55f1bb63ee2221301ddba2a56857e0"
+      },
+      {
+        "path": "Motion.lua",
+        "sha256": "af4360c01eca76351eb7c5f9ca031321be8cf63143829ef5364eac1cc4c56e21"
+      },
+      {
+        "path": "Native.lua",
+        "sha256": "1e684f5cb17201ca09ea2a747b61aede450258c0bcebe88ca5dcb97f68d0d417"
+      },
+      {
+        "path": "Styles.lua",
+        "sha256": "99fdecda1f3ec7f3596c3040b0a84f9deea06577be13128d1f892427fb28d59f"
+      },
+      {
+        "path": "Theme.lua",
+        "sha256": "ef3da514cd40133823f37e2d9d9d2fef84603ee7f2e0122bc22c3e0969e9d0ab"
+      }
+    ]
+  },
+  "offline": {
+    "productModules": 39,
+    "assertions": 23623,
+    "failures": 0,
+    "layoutSuites": 16,
+    "architectureChecks": 4361,
+    "luaSyntaxFiles": 180,
+    "standalone": {
+      "uiRefresh": 353,
+      "applicationSummary": 69,
+      "notesCount": 144,
+      "findCaption": 52,
+      "buttonState": 488,
+      "libraryProfileLifecycle": 489,
+      "isolatedLibraryProfileLifecycle": 484,
+      "captionProfileLifecycle": 378,
+      "privateMenuProfileLifecycle": 28,
+      "privateMeasureProfileLifecycle": 9,
+      "privateLargeMeasureProfileLifecycle": 9
+    },
+    "libraryChecks": {
+      "main": 1245,
+      "listGeometry": 254,
+      "menuGeometry": 81,
+      "ownership": 59,
+      "nativeReacquire": 107,
+      "setPoint": 10,
+      "fixedWrites": 96,
+      "listClear": 5,
+      "styleRelease": 727,
+      "styleEvents": 19,
+      "menuFontWrites": 230,
+      "layoutRelease": 64,
+      "layoutMeasureRecords": 2120
+    },
+    "warmedNativeFixture": {
+      "measuredLibraryRevision": 43,
+      "cycles": 100,
+      "leaseTypes": 3,
+      "retainedKiB": 0.141,
+      "nativeObjectDelta": 0,
+      "activeLeases": false,
+      "inputs": 0
+    }
+  },
+  "native": {
+    "client": "12.1.5.70575",
+    "installedLibraryRevision": 38,
+    "productDeploymentChanged": false,
+    "scope": "Private contexts and owned objects; candidate library loaded into isolated Lua namespace; caption uses a private product namespace with installed library.",
+    "memoryPolicy": "natural GC; no new four-package production memory-budget measurement",
+    "interpretation": "Compare isolated r38 and candidate fixed-list batch timings. They are not full-frame FPS or total addon CPU. Setter counts describe only probe-owned objects.",
+    "runs": [
+      {
+        "name": "native-r38-style",
+        "probeRevision": "PRB-8294ce26b6bcc79fe1d9145cf9864741c25a0141d14f62f5b184fc6380edb266",
+        "source": null,
+        "rawSHA256": "5c6bee8328f39792684bb001b403ae92931dc3426699ca83e05bed04444d5b93",
+        "operation": "LMO-1e4441f53e9159f729561af32dbf85e2",
+        "request": "perf25-r38-fixed-style-baseline",
+        "reportState": "verified",
+        "complete": true,
+        "cleanup": "complete",
+        "cleanupMethod": "released",
+        "reportOK": true,
+        "resourcesReleased": true,
+        "measurement": {
+          "baseline": {
+            "batches": 24,
+            "maxBatchMs": 5.706699967384338,
+            "sumMs": 116.17259991168976
+          },
+          "build": "70575",
+          "cleanup": {
+            "driverStopped": true,
+            "idsCleared": true,
+            "jobs": 0,
+            "parentHidden": true,
+            "renderCleared": true
+          },
+          "counts": {
+            "ClearAllPoints": 1320,
+            "SetFont": 1320,
+            "SetHeight": 1320,
+            "SetJustifyV": 1320,
+            "SetPoint": 1320,
+            "SetSpacing": 2640,
+            "SetTexCoord": 1320,
+            "SetTexture": 2640
+          },
+          "gc": "natural",
+          "instrumented": {
+            "batches": 24,
+            "maxBatchMs": 5.957599997520447,
+            "sumMs": 113.94760006666183
+          },
+          "iterations": 120,
+          "output": {
+            "flags": "",
+            "font": "Fonts\\ARKai_T.ttf",
+            "height": 24,
+            "point": "LEFT",
+            "relativeIsRoot": true,
+            "relativePoint": "LEFT",
+            "size": 18,
+            "text": "1",
+            "texture": 134400,
+            "x": 12,
+            "y": 0
+          },
+          "pool": 12,
+          "poolAfter": 12,
+          "revision": 38,
+          "rows": 300,
+          "scope": "private_context",
+          "stride": 40,
+          "viewport": 400
+        }
+      },
+      {
+        "name": "native-isolated-r38-style",
+        "probeRevision": "PRB-68c30b3550a84777f5509bae988f04f788d80b8009c769619a21d64c582e641e",
+        "source": {
+          "sourceHash": "dbffcd4948013b3ec3ac3fa3e0b5074d92d128f1f471c595b48c07d365876f22",
+          "files": [
+            {
+              "path": "Core.lua",
+              "sha256": "e77746a3d908fa918a0a65a172cdbf28c7cd8661b3bb9aa2365e8afec25e6080"
+            },
+            {
+              "path": "Theme.lua",
+              "sha256": "ef3da514cd40133823f37e2d9d9d2fef84603ee7f2e0122bc22c3e0969e9d0ab"
+            },
+            {
+              "path": "Motion.lua",
+              "sha256": "af4360c01eca76351eb7c5f9ca031321be8cf63143829ef5364eac1cc4c56e21"
+            },
+            {
+              "path": "Styles.lua",
+              "sha256": "8658b793dd7a5e2f0404383d0e68d54b16658332df8e1a4bfd226d4ea47a91c8"
+            },
+            {
+              "path": "Components.lua",
+              "sha256": "197254de13ecb8a31744d913dfe079202427f2ac9e5c5afa155aed9216761b4d"
+            },
+            {
+              "path": "Layouts.lua",
+              "sha256": "4eaaff262a96d3ef8357983989a9f9a7b0e0bf1779ffbd729a3f1e0680515f1c"
+            },
+            {
+              "path": "Elements.lua",
+              "sha256": "40576915ce51f9f84556cd57a056b0b7ec50bef1bb8af469a86d6190bc6bfe93"
+            },
+            {
+              "path": "Native.lua",
+              "sha256": "1e684f5cb17201ca09ea2a747b61aede450258c0bcebe88ca5dcb97f68d0d417"
+            },
+            {
+              "path": "Menu.lua",
+              "sha256": "4eb20828bd0652d9f453b652d2d039e81090a2162943bfda5d383f6a2a07452a"
+            }
+          ],
+          "bytes": 249476
+        },
+        "rawSHA256": "6a0f2cb868809bb68c5d57d89e749872de66a2e3c650df3273a5f8f810a2772d",
+        "operation": "LMO-bb511142ea2a2e2f7715fc877b8c079f",
+        "request": "perf25-isolated-r38-style",
+        "reportState": "verified",
+        "complete": true,
+        "cleanup": "complete",
+        "cleanupMethod": "released",
+        "reportOK": true,
+        "resourcesReleased": true,
+        "measurement": {
+          "baseline": {
+            "batches": 24,
+            "maxBatchMs": 5.139699995517731,
+            "sumMs": 100.33970004320145
+          },
+          "build": "70575",
+          "cleanup": {
+            "driverStopped": true,
+            "idsCleared": true,
+            "installedLibraryUnchanged": true,
+            "jobs": 0,
+            "parentHidden": true,
+            "renderCleared": true
+          },
+          "counts": {
+            "ClearAllPoints": 1320,
+            "SetFont": 1320,
+            "SetHeight": 1320,
+            "SetJustifyV": 1320,
+            "SetPoint": 1320,
+            "SetSpacing": 2640,
+            "SetTexCoord": 1320,
+            "SetTexture": 2640
+          },
+          "gc": "natural",
+          "instrumented": {
+            "batches": 24,
+            "maxBatchMs": 5.586299955844879,
+            "sumMs": 95.21659988164902
+          },
+          "isolated": true,
+          "iterations": 120,
+          "output": {
+            "flags": "",
+            "font": "Fonts\\ARKai_T.ttf",
+            "height": 24,
+            "point": "LEFT",
+            "relativeIsRoot": true,
+            "relativePoint": "LEFT",
+            "size": 18,
+            "text": "1",
+            "texture": 134400,
+            "x": 12,
+            "y": 0
+          },
+          "pool": 12,
+          "poolAfter": 12,
+          "revision": 38,
+          "rows": 300,
+          "scope": "private_context",
+          "sourceHash": "dbffcd4948013b3ec3ac3fa3e0b5074d92d128f1f471c595b48c07d365876f22",
+          "stride": 40,
+          "viewport": 400
+        }
+      },
+      {
+        "name": "native-isolated-r39-style",
+        "probeRevision": "PRB-4868828fcd2325fdec7081fcc9883742f74a092110e0d6505944219adf87c44d",
+        "source": {
+          "sourceHash": "16bc363792e7707f22f2e8169223fe9a47a6cab77721579ed2bf448ea6df2fc9",
+          "files": [
+            {
+              "path": "Core.lua",
+              "sha256": "72e22bc6ead00eb5870939c2232f00cf1b6c0abaff44fee98eebf7ff8ec1e772"
+            },
+            {
+              "path": "Theme.lua",
+              "sha256": "ef3da514cd40133823f37e2d9d9d2fef84603ee7f2e0122bc22c3e0969e9d0ab"
+            },
+            {
+              "path": "Motion.lua",
+              "sha256": "af4360c01eca76351eb7c5f9ca031321be8cf63143829ef5364eac1cc4c56e21"
+            },
+            {
+              "path": "Styles.lua",
+              "sha256": "96921d84b066a9632c56de675efe520d297b5ca003b85bf5f9ba67be2ee3b2fa"
+            },
+            {
+              "path": "Components.lua",
+              "sha256": "0c6bfe33536c57eaf39857fd9d10fcb924760cb6b9f317e20d39f08906c31562"
+            },
+            {
+              "path": "Layouts.lua",
+              "sha256": "4eaaff262a96d3ef8357983989a9f9a7b0e0bf1779ffbd729a3f1e0680515f1c"
+            },
+            {
+              "path": "Elements.lua",
+              "sha256": "40576915ce51f9f84556cd57a056b0b7ec50bef1bb8af469a86d6190bc6bfe93"
+            },
+            {
+              "path": "Native.lua",
+              "sha256": "1e684f5cb17201ca09ea2a747b61aede450258c0bcebe88ca5dcb97f68d0d417"
+            },
+            {
+              "path": "Menu.lua",
+              "sha256": "4eb20828bd0652d9f453b652d2d039e81090a2162943bfda5d383f6a2a07452a"
+            }
+          ],
+          "bytes": 258994
+        },
+        "rawSHA256": "a84d86986b66e3a64ca24e22d1c58985c3dc0db3e35c2eb51027d4636651c725",
+        "operation": "LMO-400d95a80db53739c78cd1b470b5863b",
+        "request": "perf25-isolated-r39-style",
+        "reportState": "verified",
+        "complete": true,
+        "cleanup": "complete",
+        "cleanupMethod": "released",
+        "reportOK": true,
+        "resourcesReleased": true,
+        "measurement": {
+          "baseline": {
+            "batches": 24,
+            "maxBatchMs": 2.6782000064849854,
+            "sumMs": 53.25970023870468
+          },
+          "build": "70575",
+          "cleanup": {
+            "driverStopped": true,
+            "idsCleared": true,
+            "installedLibraryUnchanged": true,
+            "jobs": 0,
+            "parentHidden": true,
+            "renderCleared": true
+          },
+          "counts": {},
+          "gc": "natural",
+          "instrumented": {
+            "batches": 24,
+            "maxBatchMs": 2.6054999828338623,
+            "sumMs": 51.614999890327454
+          },
+          "isolated": true,
+          "iterations": 120,
+          "output": {
+            "flags": "",
+            "font": "Fonts\\ARKai_T.ttf",
+            "height": 24,
+            "point": "LEFT",
+            "relativeIsRoot": true,
+            "relativePoint": "LEFT",
+            "size": 18,
+            "text": "1",
+            "texture": 134400,
+            "x": 12,
+            "y": 0
+          },
+          "pool": 12,
+          "poolAfter": 12,
+          "revision": 39,
+          "rows": 300,
+          "scope": "private_context",
+          "sourceHash": "16bc363792e7707f22f2e8169223fe9a47a6cab77721579ed2bf448ea6df2fc9",
+          "stride": 40,
+          "viewport": 400
+        }
+      },
+      {
+        "name": "native-isolated-r40-style",
+        "probeRevision": "PRB-af561ef8eaca6273145f4440a192d8ceae76a4d0d705630605f8fb95c0b050fb",
+        "source": {
+          "sourceHash": "ad591f71e70e6f9e0c98072b1e11d5daf487e637a2ad3537b4d63dc9b821ae9e",
+          "files": [
+            {
+              "path": "Core.lua",
+              "sha256": "c5752373ab7ed246db22ead0a31c0f10d26503abec0579a70a1a4cab5e1f84d2"
+            },
+            {
+              "path": "Theme.lua",
+              "sha256": "ef3da514cd40133823f37e2d9d9d2fef84603ee7f2e0122bc22c3e0969e9d0ab"
+            },
+            {
+              "path": "Motion.lua",
+              "sha256": "af4360c01eca76351eb7c5f9ca031321be8cf63143829ef5364eac1cc4c56e21"
+            },
+            {
+              "path": "Styles.lua",
+              "sha256": "6c48cf77773d8613db52a2872c37d2b1e428cf53654c7b7a7486eb068844f9d9"
+            },
+            {
+              "path": "Components.lua",
+              "sha256": "0c6bfe33536c57eaf39857fd9d10fcb924760cb6b9f317e20d39f08906c31562"
+            },
+            {
+              "path": "Layouts.lua",
+              "sha256": "4eaaff262a96d3ef8357983989a9f9a7b0e0bf1779ffbd729a3f1e0680515f1c"
+            },
+            {
+              "path": "Elements.lua",
+              "sha256": "40576915ce51f9f84556cd57a056b0b7ec50bef1bb8af469a86d6190bc6bfe93"
+            },
+            {
+              "path": "Native.lua",
+              "sha256": "1e684f5cb17201ca09ea2a747b61aede450258c0bcebe88ca5dcb97f68d0d417"
+            },
+            {
+              "path": "Menu.lua",
+              "sha256": "4eb20828bd0652d9f453b652d2d039e81090a2162943bfda5d383f6a2a07452a"
+            }
+          ],
+          "profileSHA256": "f14a1b632d26fd890f79ca418239068301679c5425d215fbc1d30d0b3cd53010",
+          "moduleSHA256": null,
+          "bytes": 261319
+        },
+        "rawSHA256": "66c8bdda45c7777976d41768c34c05da0f3793bcf1b9a6b885aa5eb9a0ecc783",
+        "operation": "LMO-f01439483ae75e6ea09f70d946d4be7a",
+        "request": "perf25-isolated-r40-style",
+        "reportState": "verified",
+        "complete": true,
+        "cleanup": "complete",
+        "cleanupMethod": "released",
+        "reportOK": true,
+        "resourcesReleased": true,
+        "measurement": {
+          "baseline": {
+            "batches": 24,
+            "maxBatchMs": 2.405299961566925,
+            "sumMs": 49.86839985847473
+          },
+          "build": "70575",
+          "cleanup": {
+            "driverStopped": true,
+            "idsCleared": true,
+            "installedLibraryUnchanged": true,
+            "jobs": 0,
+            "parentHidden": true,
+            "renderCleared": true
+          },
+          "counts": {},
+          "gc": "natural",
+          "instrumented": {
+            "batches": 24,
+            "maxBatchMs": 2.3830000162124634,
+            "sumMs": 50.31449991464615
+          },
+          "isolated": true,
+          "iterations": 120,
+          "output": {
+            "flags": "",
+            "font": "Fonts\\ARKai_T.ttf",
+            "height": 24,
+            "point": "LEFT",
+            "relativeIsRoot": true,
+            "relativePoint": "LEFT",
+            "size": 18,
+            "text": "1",
+            "texture": 134400,
+            "x": 12,
+            "y": 0
+          },
+          "pool": 12,
+          "poolAfter": 12,
+          "revision": 40,
+          "rows": 300,
+          "scope": "private_context",
+          "sourceHash": "ad591f71e70e6f9e0c98072b1e11d5daf487e637a2ad3537b4d63dc9b821ae9e",
+          "stride": 40,
+          "viewport": 400
+        }
+      },
+      {
+        "name": "native-isolated-r41-style",
+        "probeRevision": "PRB-4fa8752c38ade7553c06e762734ea36536c5d10a921dc005f470aa48d9cabf1f",
+        "source": {
+          "sourceHash": "f24bc6288635b0794ef5ffed3c4e994fc14e73ac825da1064e8516f89e5ee70d",
+          "files": [
+            {
+              "path": "Core.lua",
+              "sha256": "c1ab80883a8bef1ab0168d53dbf3e59d67b008fd2c29b7d3764f2f9c101de82b"
+            },
+            {
+              "path": "Theme.lua",
+              "sha256": "ef3da514cd40133823f37e2d9d9d2fef84603ee7f2e0122bc22c3e0969e9d0ab"
+            },
+            {
+              "path": "Motion.lua",
+              "sha256": "af4360c01eca76351eb7c5f9ca031321be8cf63143829ef5364eac1cc4c56e21"
+            },
+            {
+              "path": "Styles.lua",
+              "sha256": "99fdecda1f3ec7f3596c3040b0a84f9deea06577be13128d1f892427fb28d59f"
+            },
+            {
+              "path": "Components.lua",
+              "sha256": "0c6bfe33536c57eaf39857fd9d10fcb924760cb6b9f317e20d39f08906c31562"
+            },
+            {
+              "path": "Layouts.lua",
+              "sha256": "4eaaff262a96d3ef8357983989a9f9a7b0e0bf1779ffbd729a3f1e0680515f1c"
+            },
+            {
+              "path": "Elements.lua",
+              "sha256": "40576915ce51f9f84556cd57a056b0b7ec50bef1bb8af469a86d6190bc6bfe93"
+            },
+            {
+              "path": "Native.lua",
+              "sha256": "1e684f5cb17201ca09ea2a747b61aede450258c0bcebe88ca5dcb97f68d0d417"
+            },
+            {
+              "path": "Menu.lua",
+              "sha256": "4eb20828bd0652d9f453b652d2d039e81090a2162943bfda5d383f6a2a07452a"
+            }
+          ],
+          "profileSHA256": "f14a1b632d26fd890f79ca418239068301679c5425d215fbc1d30d0b3cd53010",
+          "moduleSHA256": null,
+          "bytes": 261773
+        },
+        "rawSHA256": "93f06c8718eaffc8f1d2cf26541f44b920b57ef9fc8e6750a441003f85ef3d9f",
+        "operation": "LMO-c5e882b84f3c11319c2f0f9ecb936b9d",
+        "request": "perf25-isolated-r41-style",
+        "reportState": "verified",
+        "complete": true,
+        "cleanup": "complete",
+        "cleanupMethod": "released",
+        "reportOK": true,
+        "resourcesReleased": true,
+        "measurement": {
+          "baseline": {
+            "batches": 24,
+            "maxBatchMs": 2.303700029850006,
+            "sumMs": 49.066899955272675
+          },
+          "build": "70575",
+          "cleanup": {
+            "driverStopped": true,
+            "idsCleared": true,
+            "installedLibraryUnchanged": true,
+            "jobs": 0,
+            "parentHidden": true,
+            "renderCleared": true
+          },
+          "counts": {},
+          "gc": "natural",
+          "instrumented": {
+            "batches": 24,
+            "maxBatchMs": 2.3622000217437744,
+            "sumMs": 50.05689990520477
+          },
+          "isolated": true,
+          "iterations": 120,
+          "output": {
+            "flags": "",
+            "font": "Fonts\\ARKai_T.ttf",
+            "height": 24,
+            "point": "LEFT",
+            "relativeIsRoot": true,
+            "relativePoint": "LEFT",
+            "size": 18,
+            "text": "1",
+            "texture": 134400,
+            "x": 12,
+            "y": 0
+          },
+          "pool": 12,
+          "poolAfter": 12,
+          "revision": 41,
+          "rows": 300,
+          "scope": "private_context",
+          "sourceHash": "f24bc6288635b0794ef5ffed3c4e994fc14e73ac825da1064e8516f89e5ee70d",
+          "stride": 40,
+          "viewport": 400
+        }
+      },
+      {
+        "name": "native-caption-before",
+        "probeRevision": "PRB-375c3d2189f8661daa999647705b39ff59f40d0ab7d17c974207961d06da9948",
+        "source": {
+          "sourceHash": "installed",
+          "files": [],
+          "profileSHA256": "c0ed607e79877d0ec3e93a3f5d7c15d13825b37c47e5fa853ea22d9486fa4dea",
+          "moduleSHA256": "0f108283e110a334ed727ac3c9627414bb3dbcc8616ed1ef61fe118ec6875d84",
+          "bytes": 153283
+        },
+        "rawSHA256": "d7a65b2eefb11c7ffe598f35f5ddaad69a4b43f8a04c3329fe58fe791ca9cc12",
+        "operation": "LMO-cfe50168b8eb82031d72b33beaaeebad",
+        "request": "perf25-caption-before",
+        "reportState": "verified",
+        "complete": true,
+        "cleanup": "complete",
+        "cleanupMethod": "released",
+        "reportOK": true,
+        "resourcesReleased": true,
+        "measurement": {
+          "build": "70575",
+          "cleanup": {
+            "driverStopped": true,
+            "installedLibraryUnchanged": true,
+            "installedProductUnchanged": true,
+            "jobs": 0
+          },
+          "iterations": 100,
+          "phases": [
+            {
+              "fontSizes": [
+                17,
+                17
+              ],
+              "locale": "zhCN",
+              "nativeWidths": [
+                57.75,
+                57.75
+              ],
+              "phase": "first_show",
+              "reads": [
+                100,
+                100
+              ],
+              "settleStopped": true,
+              "widths": [
+                60.00044631958008,
+                60.00044631958008
+              ]
+            },
+            {
+              "fontSizes": [
+                22.099998474121094,
+                22.099998474121094
+              ],
+              "locale": "zhCN",
+              "nativeWidths": [
+                72.75,
+                72.75
+              ],
+              "phase": "font_scale",
+              "reads": [
+                100,
+                100
+              ],
+              "settleStopped": true,
+              "widths": [
+                74.99951171875,
+                74.99845886230469
+              ]
+            },
+            {
+              "fontSizes": [
+                22.099998474121094,
+                22.099998474121094
+              ],
+              "locale": "zhCN",
+              "nativeWidths": [
+                72.75,
+                72.75
+              ],
+              "phase": "font_path",
+              "reads": [
+                100,
+                100
+              ],
+              "settleStopped": true,
+              "widths": [
+                74.99951171875,
+                74.99845886230469
+              ]
+            },
+            {
+              "fontSizes": [
+                17,
+                17
+              ],
+              "locale": "enUS",
+              "nativeWidths": [
+                73.5,
+                103.5
+              ],
+              "phase": "first_show",
+              "reads": [
+                100,
+                100
+              ],
+              "settleStopped": true,
+              "widths": [
+                75.99951934814453,
+                105.99868774414062
+              ]
+            },
+            {
+              "fontSizes": [
+                22.099998474121094,
+                22.099998474121094
+              ],
+              "locale": "enUS",
+              "nativeWidths": [
+                94.50000762939453,
+                127.5
+              ],
+              "phase": "font_scale",
+              "reads": [
+                100,
+                100
+              ],
+              "settleStopped": true,
+              "widths": [
+                96.99967193603516,
+                129.99887084960938
+              ]
+            },
+            {
+              "fontSizes": [
+                22.099998474121094,
+                22.099998474121094
+              ],
+              "locale": "enUS",
+              "nativeWidths": [
+                78.74999237060547,
+                105.75
+              ],
+              "phase": "font_path",
+              "reads": [
+                100,
+                100
+              ],
+              "settleStopped": true,
+              "widths": [
+                80.99954986572266,
+                107.99870300292969
+              ]
+            }
+          ],
+          "revision": 38,
+          "scope": "private_native_captions",
+          "sourceHash": "installed"
+        }
+      },
+      {
+        "name": "native-caption-after",
+        "probeRevision": "PRB-0e39c53f617dc1cbfc60272a88d01629b2fc1dc9484ceb3d5405111031b638de",
+        "source": {
+          "sourceHash": "installed",
+          "files": [],
+          "profileSHA256": "c0ed607e79877d0ec3e93a3f5d7c15d13825b37c47e5fa853ea22d9486fa4dea",
+          "moduleSHA256": "7abee962700b711ad0a209832e61d4cf126b7ed67d8c352b9836cae1a89a8ebd",
+          "bytes": 154021
+        },
+        "rawSHA256": "7ad3cd123828a7b3c94de8e12a502a233f309474e86903f91e6518f3e1739673",
+        "operation": "LMO-15bd7d73525557950dfdc2bde60c85dc",
+        "request": "perf25-caption-after",
+        "reportState": "verified",
+        "complete": true,
+        "cleanup": "complete",
+        "cleanupMethod": "released",
+        "reportOK": true,
+        "resourcesReleased": true,
+        "measurement": {
+          "build": "70575",
+          "cleanup": {
+            "driverStopped": true,
+            "installedLibraryUnchanged": true,
+            "installedProductUnchanged": true,
+            "jobs": 0
+          },
+          "iterations": 100,
+          "phases": [
+            {
+              "fontSizes": [
+                17,
+                17
+              ],
+              "locale": "zhCN",
+              "nativeWidths": [
+                57.75,
+                57.75
+              ],
+              "phase": "first_show",
+              "reads": [
+                0,
+                0
+              ],
+              "settleStopped": true,
+              "widths": [
+                60.00044631958008,
+                60.00044631958008
+              ]
+            },
+            {
+              "fontSizes": [
+                22.099998474121094,
+                22.099998474121094
+              ],
+              "locale": "zhCN",
+              "nativeWidths": [
+                72.75,
+                72.75
+              ],
+              "phase": "font_scale",
+              "reads": [
+                0,
+                0
+              ],
+              "settleStopped": true,
+              "widths": [
+                74.99951171875,
+                74.99845886230469
+              ]
+            },
+            {
+              "fontSizes": [
+                22.099998474121094,
+                22.099998474121094
+              ],
+              "locale": "zhCN",
+              "nativeWidths": [
+                72.75,
+                72.75
+              ],
+              "phase": "font_path",
+              "reads": [
+                0,
+                0
+              ],
+              "settleStopped": true,
+              "widths": [
+                74.99951171875,
+                74.99845886230469
+              ]
+            },
+            {
+              "fontSizes": [
+                17,
+                17
+              ],
+              "locale": "enUS",
+              "nativeWidths": [
+                73.5,
+                103.5
+              ],
+              "phase": "first_show",
+              "reads": [
+                0,
+                0
+              ],
+              "settleStopped": true,
+              "widths": [
+                75.99951934814453,
+                105.99868774414062
+              ]
+            },
+            {
+              "fontSizes": [
+                22.099998474121094,
+                22.099998474121094
+              ],
+              "locale": "enUS",
+              "nativeWidths": [
+                94.50000762939453,
+                127.5
+              ],
+              "phase": "font_scale",
+              "reads": [
+                0,
+                0
+              ],
+              "settleStopped": true,
+              "widths": [
+                96.99967193603516,
+                129.99887084960938
+              ]
+            },
+            {
+              "fontSizes": [
+                22.099998474121094,
+                22.099998474121094
+              ],
+              "locale": "enUS",
+              "nativeWidths": [
+                78.74999237060547,
+                105.75
+              ],
+              "phase": "font_path",
+              "reads": [
+                0,
+                0
+              ],
+              "settleStopped": true,
+              "widths": [
+                80.99954986572266,
+                107.99870300292969
+              ]
+            }
+          ],
+          "revision": 38,
+          "scope": "private_native_captions",
+          "sourceHash": "installed"
+        }
+      },
+      {
+        "name": "native-menu-r41",
+        "probeRevision": "PRB-670df1177b4f06d578327bc080db5b4714b98f97f178f12d19fd1f4ac4c8564c",
+        "source": {
+          "sourceHash": "f24bc6288635b0794ef5ffed3c4e994fc14e73ac825da1064e8516f89e5ee70d",
+          "files": [
+            {
+              "path": "Core.lua",
+              "sha256": "c1ab80883a8bef1ab0168d53dbf3e59d67b008fd2c29b7d3764f2f9c101de82b"
+            },
+            {
+              "path": "Theme.lua",
+              "sha256": "ef3da514cd40133823f37e2d9d9d2fef84603ee7f2e0122bc22c3e0969e9d0ab"
+            },
+            {
+              "path": "Motion.lua",
+              "sha256": "af4360c01eca76351eb7c5f9ca031321be8cf63143829ef5364eac1cc4c56e21"
+            },
+            {
+              "path": "Styles.lua",
+              "sha256": "99fdecda1f3ec7f3596c3040b0a84f9deea06577be13128d1f892427fb28d59f"
+            },
+            {
+              "path": "Components.lua",
+              "sha256": "0c6bfe33536c57eaf39857fd9d10fcb924760cb6b9f317e20d39f08906c31562"
+            },
+            {
+              "path": "Layouts.lua",
+              "sha256": "4eaaff262a96d3ef8357983989a9f9a7b0e0bf1779ffbd729a3f1e0680515f1c"
+            },
+            {
+              "path": "Elements.lua",
+              "sha256": "40576915ce51f9f84556cd57a056b0b7ec50bef1bb8af469a86d6190bc6bfe93"
+            },
+            {
+              "path": "Native.lua",
+              "sha256": "1e684f5cb17201ca09ea2a747b61aede450258c0bcebe88ca5dcb97f68d0d417"
+            },
+            {
+              "path": "Menu.lua",
+              "sha256": "4eb20828bd0652d9f453b652d2d039e81090a2162943bfda5d383f6a2a07452a"
+            }
+          ],
+          "profileSHA256": "25d07e1086d322f783fbc652711542e921a30ad33cdd9b8d8dba72b0263a77cd",
+          "moduleSHA256": null,
+          "bytes": 261313
+        },
+        "rawSHA256": "76513b3a1e9a8680ff1ae6a4e73bc8d4f416f19532755d4344c64066294a20de",
+        "operation": "LMO-f7c6e2dc64fc748a36e7bb31ab42aa99",
+        "request": "perf25-menu-r41",
+        "reportState": "verified",
+        "complete": true,
+        "cleanup": "complete",
+        "cleanupMethod": "released",
+        "reportOK": true,
+        "resourcesReleased": true,
+        "measurement": {
+          "cleanup": {
+            "driverStopped": true,
+            "installedLibraryUnchanged": true,
+            "jobs": 0,
+            "menuReleased": true,
+            "methodsRestored": true,
+            "parentHidden": true
+          },
+          "entries": 14,
+          "gc": "natural",
+          "opens": 100,
+          "phases": [
+            {
+              "baseline": {
+                "batches": 10,
+                "maxBatchMs": 12.50050002336502,
+                "sumMs": 108.23030006885529
+              },
+              "font": {
+                "flags": "",
+                "path": "Fonts\\ARKai_T.ttf",
+                "size": 20.799999237060547
+              },
+              "fontWrites": 1400,
+              "height": 408.0000915527344,
+              "instrumented": {
+                "batches": 10,
+                "maxBatchMs": 11.658999979496002,
+                "sumMs": 104.48279982805252
+              },
+              "phase": "scale_130",
+              "pool": 12,
+              "poolAfter": 12,
+              "width": 290,
+              "widthReads": 1400
+            },
+            {
+              "baseline": {
+                "batches": 10,
+                "maxBatchMs": 11.844500005245209,
+                "sumMs": 110.01059997081757
+              },
+              "font": {
+                "flags": "",
+                "path": "Fonts\\ARKai_T.ttf",
+                "size": 17.1200008392334
+              },
+              "fontWrites": 1400,
+              "height": 408.0000915527344,
+              "instrumented": {
+                "batches": 10,
+                "maxBatchMs": 11.868499994277954,
+                "sumMs": 106.3102999329567
+              },
+              "phase": "standard_scale_107",
+              "pool": 12,
+              "poolAfter": 12,
+              "width": 258,
+              "widthReads": 1400
+            }
+          ],
+          "revision": 41,
+          "scope": "private_native_menu",
+          "sourceHash": "f24bc6288635b0794ef5ffed3c4e994fc14e73ac825da1064e8516f89e5ee70d"
+        }
+      },
+      {
+        "name": "native-menu-r42",
+        "probeRevision": "PRB-c58d9a4b4c548d9346c534fbcea0ccc94e792ac59845adc74c9fc7bff4ec9beb",
+        "source": {
+          "sourceHash": "fea0702439369da340586616fcbc417446d6326a1d99f6f86d70638756fd87f7",
+          "files": [
+            {
+              "path": "Core.lua",
+              "sha256": "881070dd4daa5b610646463bd255348f068720b2966d70c098ae46ef2620f1f0"
+            },
+            {
+              "path": "Theme.lua",
+              "sha256": "ef3da514cd40133823f37e2d9d9d2fef84603ee7f2e0122bc22c3e0969e9d0ab"
+            },
+            {
+              "path": "Motion.lua",
+              "sha256": "af4360c01eca76351eb7c5f9ca031321be8cf63143829ef5364eac1cc4c56e21"
+            },
+            {
+              "path": "Styles.lua",
+              "sha256": "99fdecda1f3ec7f3596c3040b0a84f9deea06577be13128d1f892427fb28d59f"
+            },
+            {
+              "path": "Components.lua",
+              "sha256": "0c6bfe33536c57eaf39857fd9d10fcb924760cb6b9f317e20d39f08906c31562"
+            },
+            {
+              "path": "Layouts.lua",
+              "sha256": "4eaaff262a96d3ef8357983989a9f9a7b0e0bf1779ffbd729a3f1e0680515f1c"
+            },
+            {
+              "path": "Elements.lua",
+              "sha256": "40576915ce51f9f84556cd57a056b0b7ec50bef1bb8af469a86d6190bc6bfe93"
+            },
+            {
+              "path": "Native.lua",
+              "sha256": "1e684f5cb17201ca09ea2a747b61aede450258c0bcebe88ca5dcb97f68d0d417"
+            },
+            {
+              "path": "Menu.lua",
+              "sha256": "4ec13c762ff8be5183ddbd6d68da572d8d55f1bb63ee2221301ddba2a56857e0"
+            }
+          ],
+          "profileSHA256": "25d07e1086d322f783fbc652711542e921a30ad33cdd9b8d8dba72b0263a77cd",
+          "moduleSHA256": null,
+          "bytes": 262138
+        },
+        "rawSHA256": "2813289546ce349b6d42eb320ace764206d86685ab5e78411b22d2901a79c251",
+        "operation": "LMO-a344230b993e682ce79f644c098d44cb",
+        "request": "perf25-menu-r42",
+        "reportState": "verified",
+        "complete": true,
+        "cleanup": "complete",
+        "cleanupMethod": "released",
+        "reportOK": true,
+        "resourcesReleased": true,
+        "measurement": {
+          "cleanup": {
+            "driverStopped": true,
+            "installedLibraryUnchanged": true,
+            "jobs": 0,
+            "menuReleased": true,
+            "methodsRestored": true,
+            "parentHidden": true
+          },
+          "entries": 14,
+          "gc": "natural",
+          "opens": 100,
+          "phases": [
+            {
+              "baseline": {
+                "batches": 10,
+                "maxBatchMs": 11.66890001296997,
+                "sumMs": 100.84120005369186
+              },
+              "font": {
+                "flags": "",
+                "path": "Fonts\\ARKai_T.ttf",
+                "size": 20.799999237060547
+              },
+              "fontWrites": 0,
+              "height": 408.0000915527344,
+              "instrumented": {
+                "batches": 10,
+                "maxBatchMs": 10.899399995803833,
+                "sumMs": 97.9145998954773
+              },
+              "phase": "scale_130",
+              "pool": 12,
+              "poolAfter": 12,
+              "width": 290,
+              "widthReads": 1400
+            },
+            {
+              "baseline": {
+                "batches": 10,
+                "maxBatchMs": 10.135999977588654,
+                "sumMs": 94.77989989519119
+              },
+              "font": {
+                "flags": "",
+                "path": "Fonts\\ARKai_T.ttf",
+                "size": 17.1200008392334
+              },
+              "fontWrites": 0,
+              "height": 408.0000915527344,
+              "instrumented": {
+                "batches": 10,
+                "maxBatchMs": 11.317899942398071,
+                "sumMs": 96.61649990081787
+              },
+              "phase": "standard_scale_107",
+              "pool": 12,
+              "poolAfter": 12,
+              "width": 258,
+              "widthReads": 1400
+            }
+          ],
+          "revision": 42,
+          "scope": "private_native_menu",
+          "sourceHash": "fea0702439369da340586616fcbc417446d6326a1d99f6f86d70638756fd87f7"
+        }
+      },
+      {
+        "name": "native-measure-r42",
+        "probeRevision": "PRB-b977e1481436e14b08a25ce13c8f0f7ae5504de6b6a4552fb243dde71f70f548",
+        "source": {
+          "sourceHash": "fea0702439369da340586616fcbc417446d6326a1d99f6f86d70638756fd87f7",
+          "files": [
+            {
+              "path": "Core.lua",
+              "sha256": "881070dd4daa5b610646463bd255348f068720b2966d70c098ae46ef2620f1f0"
+            },
+            {
+              "path": "Theme.lua",
+              "sha256": "ef3da514cd40133823f37e2d9d9d2fef84603ee7f2e0122bc22c3e0969e9d0ab"
+            },
+            {
+              "path": "Motion.lua",
+              "sha256": "af4360c01eca76351eb7c5f9ca031321be8cf63143829ef5364eac1cc4c56e21"
+            },
+            {
+              "path": "Styles.lua",
+              "sha256": "99fdecda1f3ec7f3596c3040b0a84f9deea06577be13128d1f892427fb28d59f"
+            },
+            {
+              "path": "Components.lua",
+              "sha256": "0c6bfe33536c57eaf39857fd9d10fcb924760cb6b9f317e20d39f08906c31562"
+            },
+            {
+              "path": "Layouts.lua",
+              "sha256": "4eaaff262a96d3ef8357983989a9f9a7b0e0bf1779ffbd729a3f1e0680515f1c"
+            },
+            {
+              "path": "Elements.lua",
+              "sha256": "40576915ce51f9f84556cd57a056b0b7ec50bef1bb8af469a86d6190bc6bfe93"
+            },
+            {
+              "path": "Native.lua",
+              "sha256": "1e684f5cb17201ca09ea2a747b61aede450258c0bcebe88ca5dcb97f68d0d417"
+            },
+            {
+              "path": "Menu.lua",
+              "sha256": "4ec13c762ff8be5183ddbd6d68da572d8d55f1bb63ee2221301ddba2a56857e0"
+            }
+          ],
+          "profileSHA256": "2403d36bad95fe1faebbfbea35ec11b29059c2b2c9cd34c3c841f6981eea795c",
+          "moduleSHA256": null,
+          "bytes": 260770
+        },
+        "rawSHA256": "8e54597bdb4ca8931c25b2ad6ef95637974e6b19e1de93114e076afced47145d",
+        "operation": "LMO-8157ee0e7b096339c6072529cdd0a677",
+        "request": "perf25-measure-r42",
+        "reportState": "verified",
+        "complete": true,
+        "cleanup": "complete",
+        "cleanupMethod": "released",
+        "reportOK": true,
+        "resourcesReleased": true,
+        "measurement": {
+          "baseline": {
+            "heightSum": 10500,
+            "ms": 0.9768999814987183,
+            "widthSum": 35310
+          },
+          "cleanup": {
+            "installedLibraryUnchanged": true,
+            "jobs": 0,
+            "methodsRestored": true,
+            "parentHidden": true
+          },
+          "counts": {
+            "SetFont": 200,
+            "SetSpacing": 200,
+            "SetText": 200,
+            "SetWidth": 200,
+            "SetWordWrap": 200
+          },
+          "font": {
+            "flags": "",
+            "path": "Fonts\\ARKai_T.ttf",
+            "size": 20.799999237060547
+          },
+          "gc": "natural",
+          "instrumented": {
+            "heightSum": 10500,
+            "ms": 1.0291000008583069,
+            "widthSum": 35310
+          },
+          "iterations": 100,
+          "revision": 42,
+          "scope": "private_candidate_measure",
+          "sourceHash": "fea0702439369da340586616fcbc417446d6326a1d99f6f86d70638756fd87f7",
+          "visibleText": "visible"
+        }
+      },
+      {
+        "name": "native-measure-r43",
+        "probeRevision": "PRB-60b33481b68b48d52e45abdd6e65bc0489f41ecc9bd8a8aea0d7dde7a38324aa",
+        "source": {
+          "sourceHash": "43e36e5ac3e5ddae5e9f180e5ce311d6afd96213a427062ea8db7e108bd7a4fb",
+          "files": [
+            {
+              "path": "Core.lua",
+              "sha256": "f79c1421ca0d475b88cc5ccb20fa4af0ec05ed3763ab44147147a8fc2ce14572"
+            },
+            {
+              "path": "Theme.lua",
+              "sha256": "ef3da514cd40133823f37e2d9d9d2fef84603ee7f2e0122bc22c3e0969e9d0ab"
+            },
+            {
+              "path": "Motion.lua",
+              "sha256": "af4360c01eca76351eb7c5f9ca031321be8cf63143829ef5364eac1cc4c56e21"
+            },
+            {
+              "path": "Styles.lua",
+              "sha256": "99fdecda1f3ec7f3596c3040b0a84f9deea06577be13128d1f892427fb28d59f"
+            },
+            {
+              "path": "Components.lua",
+              "sha256": "0c6bfe33536c57eaf39857fd9d10fcb924760cb6b9f317e20d39f08906c31562"
+            },
+            {
+              "path": "Layouts.lua",
+              "sha256": "56fa750d52e4b0033d76fdaaeab6c463def677f87d37df2a97837dea6ad14596"
+            },
+            {
+              "path": "Elements.lua",
+              "sha256": "40576915ce51f9f84556cd57a056b0b7ec50bef1bb8af469a86d6190bc6bfe93"
+            },
+            {
+              "path": "Native.lua",
+              "sha256": "1e684f5cb17201ca09ea2a747b61aede450258c0bcebe88ca5dcb97f68d0d417"
+            },
+            {
+              "path": "Menu.lua",
+              "sha256": "4ec13c762ff8be5183ddbd6d68da572d8d55f1bb63ee2221301ddba2a56857e0"
+            }
+          ],
+          "profileSHA256": "2403d36bad95fe1faebbfbea35ec11b29059c2b2c9cd34c3c841f6981eea795c",
+          "moduleSHA256": null,
+          "bytes": 261683
+        },
+        "rawSHA256": "af95f3a3574f1370c7d6cbaf7a3b0e3f9b0fa3491331c22dec72f8fdd3bf222c",
+        "operation": "LMO-5123ed7f12487fad89feef49708af9d0",
+        "request": "perf25-measure-r43",
+        "reportState": "verified",
+        "complete": true,
+        "cleanup": "complete",
+        "cleanupMethod": "released",
+        "reportOK": true,
+        "resourcesReleased": true,
+        "measurement": {
+          "baseline": {
+            "heightSum": 10500,
+            "ms": 0.9865999817848206,
+            "widthSum": 35310
+          },
+          "cleanup": {
+            "installedLibraryUnchanged": true,
+            "jobs": 0,
+            "methodsRestored": true,
+            "parentHidden": true
+          },
+          "counts": {
+            "SetText": 100,
+            "SetWidth": 200,
+            "SetWordWrap": 200
+          },
+          "font": {
+            "flags": "",
+            "path": "Fonts\\ARKai_T.ttf",
+            "size": 20.799999237060547
+          },
+          "gc": "natural",
+          "instrumented": {
+            "heightSum": 10500,
+            "ms": 1.0349000096321106,
+            "widthSum": 35310
+          },
+          "iterations": 100,
+          "revision": 43,
+          "scope": "private_candidate_measure",
+          "sourceHash": "43e36e5ac3e5ddae5e9f180e5ce311d6afd96213a427062ea8db7e108bd7a4fb",
+          "visibleText": "visible"
+        }
+      },
+      {
+        "name": "native-measure-large-r42",
+        "probeRevision": "PRB-5faa4d3127f324a1b9c1fa3a34a21e3df9afd80035c16bc9805b1d13a864aadd",
+        "source": {
+          "sourceHash": "fea0702439369da340586616fcbc417446d6326a1d99f6f86d70638756fd87f7",
+          "files": [
+            {
+              "path": "Core.lua",
+              "sha256": "881070dd4daa5b610646463bd255348f068720b2966d70c098ae46ef2620f1f0"
+            },
+            {
+              "path": "Theme.lua",
+              "sha256": "ef3da514cd40133823f37e2d9d9d2fef84603ee7f2e0122bc22c3e0969e9d0ab"
+            },
+            {
+              "path": "Motion.lua",
+              "sha256": "af4360c01eca76351eb7c5f9ca031321be8cf63143829ef5364eac1cc4c56e21"
+            },
+            {
+              "path": "Styles.lua",
+              "sha256": "99fdecda1f3ec7f3596c3040b0a84f9deea06577be13128d1f892427fb28d59f"
+            },
+            {
+              "path": "Components.lua",
+              "sha256": "0c6bfe33536c57eaf39857fd9d10fcb924760cb6b9f317e20d39f08906c31562"
+            },
+            {
+              "path": "Layouts.lua",
+              "sha256": "4eaaff262a96d3ef8357983989a9f9a7b0e0bf1779ffbd729a3f1e0680515f1c"
+            },
+            {
+              "path": "Elements.lua",
+              "sha256": "40576915ce51f9f84556cd57a056b0b7ec50bef1bb8af469a86d6190bc6bfe93"
+            },
+            {
+              "path": "Native.lua",
+              "sha256": "1e684f5cb17201ca09ea2a747b61aede450258c0bcebe88ca5dcb97f68d0d417"
+            },
+            {
+              "path": "Menu.lua",
+              "sha256": "4ec13c762ff8be5183ddbd6d68da572d8d55f1bb63ee2221301ddba2a56857e0"
+            }
+          ],
+          "profileSHA256": "67d0b2c2f1f1ac6735851262176dc1e53d42e992d75d1bbbd33db2e931c5f5ff",
+          "moduleSHA256": null,
+          "bytes": 260837
+        },
+        "rawSHA256": "030e3e220eab671092a7f039c3b8ec8b0800d090e55fd59192ccc0b4ba4b3d1a",
+        "operation": "LMO-4409279d2cee59d1330fa58c5d55e8bf",
+        "request": "perf25-measure-large-r42",
+        "reportState": "verified",
+        "complete": true,
+        "cleanup": "complete",
+        "cleanupMethod": "released",
+        "reportOK": true,
+        "resourcesReleased": true,
+        "measurement": {
+          "baseline": {
+            "heightSum": 105000,
+            "ms": 8.600799977779388,
+            "widthSum": 364046.25
+          },
+          "cleanup": {
+            "installedLibraryUnchanged": true,
+            "jobs": 0,
+            "methodsRestored": true,
+            "parentHidden": true
+          },
+          "counts": {
+            "SetFont": 2000,
+            "SetSpacing": 2000,
+            "SetText": 2000,
+            "SetWidth": 2000,
+            "SetWordWrap": 2000
+          },
+          "font": {
+            "flags": "",
+            "path": "Fonts\\ARKai_T.ttf",
+            "size": 20.799999237060547
+          },
+          "gc": "natural",
+          "instrumented": {
+            "heightSum": 105000,
+            "ms": 9.671999990940094,
+            "widthSum": 364046.25
+          },
+          "iterations": 1000,
+          "revision": 42,
+          "scope": "private_candidate_measure_large",
+          "sourceHash": "fea0702439369da340586616fcbc417446d6326a1d99f6f86d70638756fd87f7",
+          "visibleText": "visible"
+        }
+      },
+      {
+        "name": "native-measure-large-r43",
+        "probeRevision": "PRB-5c20315fdb82b4843641db1fb259661fb387c29a79522f6b8688608f3444f14d",
+        "source": {
+          "sourceHash": "43e36e5ac3e5ddae5e9f180e5ce311d6afd96213a427062ea8db7e108bd7a4fb",
+          "files": [
+            {
+              "path": "Core.lua",
+              "sha256": "f79c1421ca0d475b88cc5ccb20fa4af0ec05ed3763ab44147147a8fc2ce14572"
+            },
+            {
+              "path": "Theme.lua",
+              "sha256": "ef3da514cd40133823f37e2d9d9d2fef84603ee7f2e0122bc22c3e0969e9d0ab"
+            },
+            {
+              "path": "Motion.lua",
+              "sha256": "af4360c01eca76351eb7c5f9ca031321be8cf63143829ef5364eac1cc4c56e21"
+            },
+            {
+              "path": "Styles.lua",
+              "sha256": "99fdecda1f3ec7f3596c3040b0a84f9deea06577be13128d1f892427fb28d59f"
+            },
+            {
+              "path": "Components.lua",
+              "sha256": "0c6bfe33536c57eaf39857fd9d10fcb924760cb6b9f317e20d39f08906c31562"
+            },
+            {
+              "path": "Layouts.lua",
+              "sha256": "56fa750d52e4b0033d76fdaaeab6c463def677f87d37df2a97837dea6ad14596"
+            },
+            {
+              "path": "Elements.lua",
+              "sha256": "40576915ce51f9f84556cd57a056b0b7ec50bef1bb8af469a86d6190bc6bfe93"
+            },
+            {
+              "path": "Native.lua",
+              "sha256": "1e684f5cb17201ca09ea2a747b61aede450258c0bcebe88ca5dcb97f68d0d417"
+            },
+            {
+              "path": "Menu.lua",
+              "sha256": "4ec13c762ff8be5183ddbd6d68da572d8d55f1bb63ee2221301ddba2a56857e0"
+            }
+          ],
+          "profileSHA256": "67d0b2c2f1f1ac6735851262176dc1e53d42e992d75d1bbbd33db2e931c5f5ff",
+          "moduleSHA256": null,
+          "bytes": 261750
+        },
+        "rawSHA256": "cb8f1dcd458204256cd120e9005287e9b8f3aebf07c704df8c36bbe4d36aeccb",
+        "operation": "LMO-ae0f56d88016879fddb5b10cf93452d4",
+        "request": "perf25-measure-large-r43",
+        "reportState": "verified",
+        "complete": true,
+        "cleanup": "complete",
+        "cleanupMethod": "released",
+        "reportOK": true,
+        "resourcesReleased": true,
+        "measurement": {
+          "baseline": {
+            "heightSum": 105000,
+            "ms": 8.8924999833107,
+            "widthSum": 364046.25
+          },
+          "cleanup": {
+            "installedLibraryUnchanged": true,
+            "jobs": 0,
+            "methodsRestored": true,
+            "parentHidden": true
+          },
+          "counts": {
+            "SetText": 1000,
+            "SetWidth": 2000,
+            "SetWordWrap": 2000
+          },
+          "font": {
+            "flags": "",
+            "path": "Fonts\\ARKai_T.ttf",
+            "size": 20.799999237060547
+          },
+          "gc": "natural",
+          "instrumented": {
+            "heightSum": 105000,
+            "ms": 9.752100050449371,
+            "widthSum": 364046.25
+          },
+          "iterations": 1000,
+          "revision": 43,
+          "scope": "private_candidate_measure_large",
+          "sourceHash": "43e36e5ac3e5ddae5e9f180e5ce311d6afd96213a427062ea8db7e108bd7a4fb",
+          "visibleText": "visible"
+        }
+      }
+    ]
+  },
+  "defaultMotionEquivalence": {
+    "baselineRevision": 40,
+    "candidateRevision": 41,
+    "rawSHA256": "33ceebd7853233459f27f6ef2bbe8d231cd1cf8b51db5ae4eb29e0bfd93f5a50",
+    "framesEqual": true,
+    "frameRecords": 252,
+    "staleClickBlocked": true,
+    "baselineCleanup": {
+      "driverOnUpdate": false,
+      "driverRunning": false,
+      "motionJobs": 0
+    },
+    "candidateCleanup": {
+      "driverOnUpdate": false,
+      "driverRunning": false,
+      "motionJobs": 0
+    }
+  },
+  "separateObservation": {
+    "area": "Default applicant button animation",
+    "status": "pre-existing first-hover behavior retained; outside performance repair scope",
+    "detail": "The alpha and color transitions share a Motion key and the first hover color job cancels the alpha job. First-hover cancellation is also present in the pre-audit r38 snapshot. r40 and r41 have identical observed output over a 252-record comparison; this does not claim complete r38/r41 trajectory equality. Reduced-motion endpoints pass their intended alpha checks."
+  },
+  "excludedExperiment": {
+    "area": "LycheeUI generic candidate text measurement",
+    "round": 5,
+    "prototypeRevision": 43,
+    "withdrawnInRevision": 44,
+    "baselineRevision": 42,
+    "reason": "Extra request/readback caching reduced setter counts but did not demonstrate elapsed-time benefit in native 100- and 1000-candidate comparisons. Revision 44 restored Layouts.lua byte-for-byte to r42. Later r45/r46 repairs change layout record cleanup; the text measurement cache prototype remains withdrawn.",
+    "naturalGC": true,
+    "baseline100Ms": 0.9768999814987183,
+    "prototype100Ms": 0.9865999817848206,
+    "baseline1000Ms": 8.600799977779388,
+    "prototype1000Ms": 8.8924999833107,
+    "outputEqual": true,
+    "nativeRuns": [
+      "native-measure-r42",
+      "native-measure-r43",
+      "native-measure-large-r42",
+      "native-measure-large-r43"
+    ]
+  },
+  "delivery": {
+    "committed": false,
+    "pushed": false,
+    "deployed": false,
+    "productVersionBumped": false,
+    "connectionClosed": true,
+    "scope": "original audit stage, before the subsequent user-requested r46 deployment and live validation"
+  },
+  "methods": "tests/performance_audit.md",
+  "followUp": {
+    "record": "tests/results/performance-live-2026-10-25.json",
+    "status": "complete",
+    "deployedLibraryRevision": 46,
+    "naturalPeakBytes": 18031008,
+    "supplementaryPeakBytes": 19249895,
+    "nativeNewErrors": 0,
+    "connectionClosed": true,
+    "note": "Original audit-stage deployment and private-context measurements above retain their original scope."
+  }
+}

@@ -784,7 +784,6 @@ function P:BuildBatch(parent)
  f:EnableMouse(true);f.cardStyle=C.Style(f,{recipe="selectableSurface",immediate=true,slots={root=f,surface=f.bg}});f.cardStyle:Bind(f,{hover=true})
  for _,action in ipairs({f.invite,f.decline}) do
   action.feedbackStyle=action.styleController
-  action.feedbackStyle:Bind(action,{hover=true,pressed=true})
  end
  f.people={};UI:Element(f,"create.applicantBatch","create",f,"create.applicantBatch")
  return f
@@ -1114,12 +1113,19 @@ function P:Submit()
  else self:ValidateForm();state.submissionError=reason or L.failed;self:SetFormError(state.submissionError) end
 end
 local function ApplicantMarkInputs(member)
- return (member.isBNetFriend and 1 or 0)+((member.isCharFriend or member.isFriend) and 2 or 0)+(member.isGuildMate and 4 or 0)
+ local flags=0
+ if A:GetSetting("relations") then flags=(member.isBNetFriend and 1 or 0)+((member.isCharFriend or member.isFriend) and 2 or 0)+(member.isGuildMate and 4 or 0) end
+ if A:GetSetting("noteMarks")~=false then
+  local key=UI.Members:Identity(member);local note=UI:GetNote(key)
+  if note then flags=flags+(note.type=="positive" and 8 or note.type=="neutral" and 16 or note.type=="caution" and 32 or 0) end
+ end
+ return flags
 end
 local function ApplicantLayoutMatches(layout,members)
  if not layout or #layout.names~=#members then return false end
  for index,member in ipairs(members) do
-  if layout.names[index]~=ApplicantName(member) or layout.markInputs[index]~=ApplicantMarkInputs(member) then return false end
+  local key=UI.Members:Identity(member);key=key or UI.Members:ID(member)
+  if layout.names[index]~=ApplicantName(member) or layout.markInputs[index]~=ApplicantMarkInputs(member) or layout.memberKeys[index]~=key then return false end
  end
  return true
 end
@@ -1129,6 +1135,11 @@ function P:LayoutBatches(ids)
  -- Header layout may synchronously repaint after a missing applicant triggers
  -- RefreshApplicants. Keep the published IDs and geometry complete until then.
  local batchTops,batchLayouts={},{}
+ local previous=self.batchLayouts
+ local measure=self.applicantMeasure
+ local path,size,flags,spacing,line,scale
+ if measure then path,size,flags=measure.text:GetFont();spacing=measure.text:GetSpacing();line=measure.text:GetLineHeight();scale=measure:GetEffectiveScale() end
+ local width=columns.name.x+columns.name.width-T.createApplicantTitleX
  local top=0
  for index,id in ipairs(ids) do
   local app=UI:GetGroup():GetApplicant(id)
@@ -1139,19 +1150,27 @@ function P:LayoutBatches(ids)
    holder.marks=UI.Members:CreateMarks(holder)
    self.applicantMeasure=holder
   end
-  local measure=self.applicantMeasure
-  local layout={tops={},heights={},names={},markInputs={},source=app};local memberTop=0
-  for i,member in ipairs(app.members) do
-   local marks=UI.Members:BindMarks(measure.marks,member)
-   measure.text:SetWidth(columns.name.x+columns.name.width-T.createApplicantTitleX-(marks>0 and marks+6 or 0))
-   local name=ApplicantName(member);UI:SetText(measure.text,name)
-   local height=math.max(T.createMemberHeight,math.ceil(measure.text:GetStringHeight()))
-   layout.tops[i],layout.heights[i]=memberTop,height
-   layout.names[i],layout.markInputs[i]=name,ApplicantMarkInputs(member)
-   memberTop=memberTop+height+T.createMemberStride-T.createMemberHeight
+  if not measure then
+   measure=self.applicantMeasure;path,size,flags=measure.text:GetFont();spacing=measure.text:GetSpacing();line=measure.text:GetLineHeight();scale=measure:GetEffectiveScale()
   end
+  local layout=previous and previous[id]
+  if not ApplicantLayoutMatches(layout,app.members) or layout.width~=width or layout.path~=path or layout.size~=size or layout.flags~=flags or layout.spacing~=spacing or layout.line~=line or layout.scale~=scale then
+   layout={tops={},heights={},names={},markInputs={},memberKeys={},width=width,path=path,size=size,flags=flags,spacing=spacing,line=line,scale=scale};local memberTop=0
+   for i,member in ipairs(app.members) do
+    local marks=UI.Members:BindMarks(measure.marks,member)
+    measure.text:SetWidth(width-(marks>0 and marks+6 or 0))
+    local name=ApplicantName(member);UI:SetText(measure.text,name)
+    local height=math.max(T.createMemberHeight,math.ceil(measure.text:GetStringHeight()))
+    layout.tops[i],layout.heights[i]=memberTop,height
+    layout.names[i],layout.markInputs[i]=name,ApplicantMarkInputs(member)
+    local key=UI.Members:Identity(member);layout.memberKeys[i]=key or UI.Members:ID(member)
+    memberTop=memberTop+height+T.createMemberStride-T.createMemberHeight
+   end
+   layout.height=math.max(T.createMemberStride,memberTop)+T.createBatchPadding
+  end
+  layout.source=app
   batchTops[index]=top;batchLayouts[id]=layout
-  top=top+math.max(T.createMemberStride,memberTop)+T.createBatchPadding
+  top=top+layout.height
  end
  if self.applicantMeasure then UI.Members:ClearMarks(self.applicantMeasure.marks);UI:SetText(self.applicantMeasure.text,"") end
  batchTops[#ids+1]=top

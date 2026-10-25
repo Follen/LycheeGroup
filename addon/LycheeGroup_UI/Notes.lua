@@ -202,7 +202,7 @@ function P:Build(parent)
   local glyph=entry[1]=="all" and "friend" or entry[1]=="positive" and "heart" or entry[1]=="caution" and "caution" or entry[1]=="history" and "history" or "book"
   button.glyph=UI:CreateGlyph(button,glyph,T.notesButtonGlyphWidth);C.Box(button.glyph,{width="notesButtonGlyphWidth",height="notesButtonGlyphHeight"});C.SetPoint(button.glyph,"LEFT",button.glyph:GetParent(),"LEFT","notesButtonGlyphLeftX",0)
   button.icon=button.glyph
-  button.count=C.Text(button,"",14,"dim",T.notesButtonCountWidth);button.count:SetWidth(T.notesButtonCountWidth);C.SetPoint(button.count,"RIGHT",button.count:GetParent(),"RIGHT","notesButtonCountRightX",0);button.count:SetJustifyH("RIGHT");C.SetLineHeight(button.count,20,true);button.navigationStyle=button.styleController;button.navigationStyle:Bind(button,{hover=true});self.tabs[entry[1]]=button
+  button.count=C.Text(button,"",14,"dim",T.notesButtonCountWidth);button.count:SetWidth(T.notesButtonCountWidth);C.SetPoint(button.count,"RIGHT",button.count:GetParent(),"RIGHT","notesButtonCountRightX",0);button.count:SetJustifyH("RIGHT");C.SetLineHeight(button.count,20,true);button.navigationStyle=button.styleController;self.tabs[entry[1]]=button
  end
  local main=CreateFrame("Frame",nil,root);main:SetSize(MAIN_WIDTH,HEIGHT);main:SetPoint("TOPLEFT",T.notesMainX,0);C.Panel(main,"surfaceLow","notesPanelRadius");self.main=main
  self.pageTitle=C.Text(main,L.notes,24);C.SetLineHeight(self.pageTitle,32,true);self.pageTitle:SetPoint("TOPLEFT",T.notesContentInset,-T.notesContentInset)
@@ -415,9 +415,10 @@ self:RegisterBuildElements()
 -- ---------------------------------------------------------------- 名单
 
 function P:RefreshCounts()
-	local counts={all=0,positive=0,neutral=0,caution=0}
- for _,record in pairs(A.Notes.db.records) do counts.all=counts.all+1;counts[record.type or "neutral"]=(counts[record.type or "neutral"] or 0)+1 end
- for key,button in pairs(self.tabs) do UI:SetText(button.count,key=="history" and (A.Group and A.Group.charDB and #A.Group.charDB.runs or "—") or counts[key]) end
+ local all,positive,neutral,caution=A.Notes:GetCounts()
+ UI:SetText(self.tabs.all.count,all);UI:SetText(self.tabs.positive.count,positive)
+ UI:SetText(self.tabs.neutral.count,neutral);UI:SetText(self.tabs.caution.count,caution)
+ UI:SetText(self.tabs.history.count,A.Group and A.Group.charDB and #A.Group.charDB.runs or "—")
 end
 
 function P:RefreshList()

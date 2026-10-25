@@ -135,8 +135,10 @@ function N:GetTexture() return self.texture end
 function N:SetAtlas(v) self.atlas=v;self.texture=nil end
 function N:GetAtlas() return self.atlas end
 function N:SetTexCoord(...) self.texCoords={...} end
+function N:GetTexCoord() return unpack(self.texCoords or {0,1,0,1}) end
 function N:SetJustifyH(v) self.justify=v end
 function N:SetJustifyV(v) self.justifyV=v end
+function N:GetJustifyV() return self.justifyV or "MIDDLE" end
 function N:SetWordWrap(v) self.wrap=v end
 function N:CanWordWrap() return self.wrap==true end
 function N:SetFrameLevel(v) self.level=v end

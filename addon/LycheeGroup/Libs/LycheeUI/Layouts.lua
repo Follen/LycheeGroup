@@ -123,11 +123,11 @@ function Library.AttachLayouts(UI)
       end
      end
     end
-    local item=entry.frame and entry or empty;record.item=item
+    local item=entry.frame and entry or empty;record.item=item;record.index=index
     local included=not item.hidden and (o.includeHidden or frame:IsShown())
     if place then
      local box=frame._lycheeBoxValues or empty
-     record.index,record.entry,record.included=index,entry,included
+     record.entry,record.included=entry,included
      record.iw,record.ih,record.iminW,record.imaxW,record.iminH,record.imaxH=item.width,item.height,item.minWidth,item.maxWidth,item.minHeight,item.maxHeight
      record.igrow,record.ishrink,record.ialign,record.igap=item.grow,item.shrink,item.align,item.gapAfter
      record.bminW,record.bmaxW,record.bminH,record.bmaxH,record.balign=box.minWidth,box.maxWidth,box.minHeight,box.maxHeight,box.align
@@ -203,10 +203,12 @@ function Library.AttachLayouts(UI)
      frame._lycheeLayoutPlace();cursor=cursor+record.size+(record.gap or 0)+between
     end
     for frame,present in pairs(owned) do if not present then if frame._lycheeLayoutOwner==self then frame._lycheeLayoutOwner,frame._lycheeLayoutPlace=nil,nil end;owned[frame]=nil end end
-    for frame,record in pairs(self.records) do
-     local entry=self.items[record.index]
-     if not entry or (entry.frame or entry)~=frame then self.records[frame]=nil end
-    end
+   end
+   -- Measurement has no placement ownership. Retain only its current records
+   -- and any earlier placement that this controller must still relinquish.
+   for frame,record in pairs(self.records) do
+    local entry=self.items[record.index]
+    if (not entry or (entry.frame or entry)~=frame) and (place or frame._lycheeLayoutOwner~=self) then self.records[frame]=nil end
    end
    if place then
     self.cached,self.cachedItems,self.itemCount=cacheable,self.items,#self.items
@@ -224,6 +226,7 @@ function Library.AttachLayouts(UI)
    for frame in pairs(self.owned) do if frame._lycheeLayoutOwner==self then frame._lycheeLayoutOwner,frame._lycheeLayoutPlace=nil,nil end end
    for i,value in ipairs(UI.layouts) do if value==self then table.remove(UI.layouts,i);break end end
    self.owned,self.records,self.active,self.items={},{},{},{}
+   self.cachedItems,self.cached=nil,false
   end
   return layout
  end

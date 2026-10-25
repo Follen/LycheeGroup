@@ -13,7 +13,7 @@ local function FontStyle(label)
  return style
 end
 local ApplyLineHeight
-function C.DefaultFont(label,size,flags)
+function C.DefaultFont(label,size,flags,preserve)
  size=size or "bodySize"
  local role=Library.TextStyles[size]
  local effective=UI:GetFontSize(size)
@@ -22,15 +22,18 @@ function C.DefaultFont(label,size,flags)
  local result=label:SetFont(UI.fontPath,effective,style.flags)
  if role then
   style.lineHeight=role.lineHeight
-  ApplyLineHeight(label,style.lineHeight,style.singleLine)
+  ApplyLineHeight(label,style.lineHeight,style.singleLine,preserve)
   style.appliedHeight=style.singleLine and label:GetHeight() or nil
  end
  return result
 end
-ApplyLineHeight=function(label,height,singleLine)
+-- Fixed-style callers protect explicitly owned native derivatives with three
+-- bits: spacing, text height and vertical justification. Ordinary setters use nil.
+ApplyLineHeight=function(label,height,singleLine,preserve)
  height=UI:GetLineHeight(height)
  local kind=label:GetObjectType()
  if kind~="FontString" and kind~="EditBox" then error("LycheeUI.SetLineHeight expects a FontString or EditBox, got "..kind,2) end
+ if not preserve or preserve%2==0 then
  label:SetSpacing(0)
  local nativeHeight
  if kind=="FontString" then
@@ -43,13 +46,17 @@ ApplyLineHeight=function(label,height,singleLine)
   nativeHeight=editLineMeasure:GetLineHeight()
  end
  label:SetSpacing(height-nativeHeight)
- if singleLine then label:SetHeight(height);label:SetJustifyV("MIDDLE") end
+ end
+ if singleLine then
+  if not preserve or math.floor(preserve/2)%2==0 then label:SetHeight(height) end
+  if not preserve or preserve<4 then label:SetJustifyV("MIDDLE") end
+ end
 end
-function C.DefaultLineHeight(label,height,singleLine)
+function C.DefaultLineHeight(label,height,singleLine,preserve)
  UI:GetLineHeight(height)
  local style=FontStyle(label)
  style.lineHeight,style.singleLine=height,singleLine
- ApplyLineHeight(label,height,singleLine)
+ ApplyLineHeight(label,height,singleLine,preserve)
  style.appliedHeight=singleLine and label:GetHeight() or nil
 end
 function C.SetFont(label,size,flags) return C.DefaultFont(label,size,flags) end
@@ -70,7 +77,7 @@ function C.RefreshFonts()
    if style.lineHeight then
     -- A caller may have changed a former single-line label to automatic height.
     local fixed=style.singleLine and label:GetHeight()==style.appliedHeight
-    ApplyLineHeight(label,style.lineHeight,fixed)
+    ApplyLineHeight(label,style.lineHeight,fixed,C.FixedFontPreserve and C.FixedFontPreserve(label))
     style.appliedHeight=fixed and label:GetHeight() or nil
    end
   end
@@ -663,6 +670,10 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover,options)
   while low<high do local middle=math.floor((low+high+1)/2);if offsets[indices[middle]]<=pixel then low=middle else high=middle-1 end end
   return indices[low],low
  end
+ local function ClearGeometryRows()
+  if list.geometryRows then for key in pairs(list.geometryRows) do list.geometryRows[key]=nil end end
+  if list._elementHeightRecord then list._elementHeightRecord.key=nil end
+ end
  local function BuildGeometry()
   local variable=Variable()
   if not variable then
@@ -670,7 +681,7 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover,options)
     for index,row in ipairs(list.rows) do row:SetHeight(list.bodyHeight);row:SetPoint("TOPLEFT",0,-(index-1)*list.rowHeight) end
     canvas:SetHeight(list:GetHeight()+list.rowHeight*2)
    end
-   list.geometryOffsets=nil;list.geometryIndices=nil;list.geometryDirty=false;return
+   list.geometryOffsets=nil;list.geometryIndices=nil;list.geometryDirty=false;ClearGeometryRows();return
   end
   if not list.geometryDirty and list.geometryStride==list.rowHeight and list.geometryBody==list.bodyHeight then return end
   local offsets=list._geometryOffsets or {};list._geometryOffsets=offsets;list.geometryOffsets=offsets
@@ -688,6 +699,7 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover,options)
   end
   offsets[count+1]=top;for index=#offsets,count+2,-1 do offsets[index]=nil end
   for index=#indices,visible+1,-1 do indices[index]=nil end
+  ClearGeometryRows()
   list.contentHeight=visible>0 and top-gap or 0;list.geometryGap=gap;list.geometryStride,list.geometryBody=list.rowHeight,list.bodyHeight;list.geometryDirty=false
  end
  local function ContentHeight()
@@ -907,6 +919,8 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover,options)
   M:Stop(self);self.scrollTarget=nil;self.ids=nil;self.render=nil;self.selectedKey=nil;self.geometryDirty=true
   if self.indicator then self.indicator:Clear();self.indicatorKey=nil end
   for _,row in ipairs(self.rows) do Release(row);row:Hide();UI:SetText(row.title,"");UI:SetText(row.meta,"") end
+  ClearGeometryRows()
+  self._elementHeightRecord=nil;self._elementHeightStates=nil
   slider:Hide()
   self.refreshing=refreshing
  end
