@@ -1,17 +1,17 @@
 local addonName, private = ...
-local REVISION=46
+local VERSION=10000 -- V1.0.0 embedded-copy load order.
 local Library=_G.LycheeUI
 private.LycheeUILoad,private.LycheeUILoadVersion=nil,nil
-if Library and Library.version and Library.version>=REVISION then private.LycheeUI=Library;return end
+if Library and Library.version and Library.version>=VERSION then private.LycheeUI=Library;return end
 Library=Library or {}
 _G.LycheeUI = Library
-private.LycheeUI,private.LycheeUILoad,private.LycheeUILoadVersion=Library,Library,REVISION
+private.LycheeUI,private.LycheeUILoad,private.LycheeUILoadVersion=Library,Library,VERSION
 local function DefaultMedia(addon)
  return "Interface\\AddOns\\"..addon..(addon=="LycheeUI" and "\\Media\\" or "\\Libs\\LycheeUI\\Media\\")
 end
 Library.media=DefaultMedia(addonName)
 -- Existing contexts retain their original prototype during an embedded upgrade.
--- New contexts receive only the API declared by this revision.
+-- New contexts receive only the API declared by this version.
 local Context = {}
 Library.Context = Context
 Context.__index = Context
@@ -20,9 +20,17 @@ Context.__index = Context
 function Library:CreateContext(options)
  options=options or {}
  if options.fontScale and (type(options.fontScale)~="number" or options.fontScale<=0 or options.fontScale~=options.fontScale or options.fontScale==math.huge) then error("fontScale must be a finite positive number",2) end
- local valid,message=self:ValidateTheme(options.themeDefaults or {},options.themeDefaults);if not valid then error(message,2) end
- local theme
- valid,message,theme=self:ValidateTheme(options.theme or {},options.themeDefaults);if not valid then error(message,2) end
+ local valid,message,theme
+ local defaults=options.themeDefaults
+ if defaults and (type(defaults)~="table" or next(defaults)~=nil or getmetatable(defaults)~=nil) then
+  valid,message,theme=self:ValidateTheme(defaults,defaults);if not valid then error(message,2) end
+ end
+ local overrides=options.theme
+ -- Keep one resolved table when there is only one actual input layer. Tables
+ -- with metatables retain the generic two-pass lookup and validation behavior.
+ if not theme or defaults and getmetatable(defaults)~=nil or overrides and (type(overrides)~="table" or next(overrides)~=nil or getmetatable(overrides)~=nil) then
+  valid,message,theme=self:ValidateTheme(overrides or {},defaults);if not valid then error(message,2) end
+ end
  if options.media then theme.media=options.media elseif options.addon then theme.media=DefaultMedia(options.addon) end
  local context=setmetatable({Theme=theme,options=options,parent=options.parent or UIParent,
   inputs=options.inputs or {},L=options.text or {},frame=options.frame,
@@ -33,6 +41,7 @@ function Library:CreateContext(options)
  context.C=self.CreateComponents(context)
  valid,message=self:ValidateRecipes(options.recipes or {},options.recipeDefaults,theme);if not valid then error(message,2) end
  self.AttachLayouts(context)
+ self.AttachResponsive(context)
  self.AttachNative(context)
  self.AttachMenus(context)
  self.AttachElements(context)
@@ -80,7 +89,7 @@ function Context:IsHiding()
 end
 function Context:SetText(region,value)
  value=tostring(value or "")
- if region._text~=value then region:SetText(value);region._text=value end
+ if region._text~=value then region:SetText(value);region._text=value;self.C.InvalidateLayout(region,"text") end
 end
 function Context:Color(region,color)
  if region._color~=color then region:SetTextColor(unpack(color));region._color=color end
@@ -95,8 +104,9 @@ end
 function Context:Hide()
  if self.tableHeaders then for header in pairs(self.tableHeaders) do header:StopDrag(false) end end
  self.hiding=true;self:CloseMenu();self:ReleaseNativeControls();self:ClearFocus();self.Motion:StopAll()
+ self:_SuspendLayouts()
 end
-function Context:Resume() self.hiding=false end
+function Context:Resume() self.hiding=false;self:_ResumeLayouts() end
 function Context:SetWindow(frame)
  self.frame=frame
  self.Motion.lastAlpha=nil

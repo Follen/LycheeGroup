@@ -4,7 +4,7 @@ local stub = dofile("tests/ui_stubs.lua")
 stub.Install()
 _G.LycheeUI = nil
 local private = {}
-for _, file in ipairs({"Core.lua", "Theme.lua", "Motion.lua", "Styles.lua", "Components.lua", "Layouts.lua", "Elements.lua", "Native.lua", "Menu.lua"}) do
+for _, file in ipairs({"Core.lua", "Theme.lua", "Motion.lua", "Styles.lua", "Components.lua", "Layouts.lua", "Responsive.lua", "Elements.lua", "Native.lua", "Menu.lua"}) do
     assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/" .. file))("LycheeGroup", private)
 end
 _G.LycheeGroup, _G.LycheeGroupDB = nil, nil

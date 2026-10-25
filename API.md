@@ -43,7 +43,7 @@ local ok, err = LycheeGroup.API.Theme:Import(definition, {storage = "account"})
 
 `schema=1` 是声明格式版本，与 API v2、存档 schema 和插件发布版本分别管理。`id` 为稳定且非空的标识符，`revision` 为非空字符串或有限数值。允许升级、回退及重装；不按字符串大小判断新旧。
 
-`appearance.main` 和 `appearance.floating` 支持 `tokens`、`components`、`elements`、`utilities`。组件与元素可声明固定的 `base`、`states`、`variants`，元素还可组合 `classes` 和模板 `instances`。命名工具样式及状态前缀的语法见 [LycheeUI API](../LycheeUI/API.md)。
+`appearance.main` 和 `appearance.floating` 支持 `tokens`、`components`、`elements`、`utilities`。组件与元素可声明固定的 `base`、`states`、`variants`，元素还可组合 `classes` 和模板 `instances`。命名工具样式及状态前缀的语法见 [LycheeUI API](https://github.com/Follen/LycheeUI/blob/v1.0.0/API.md)。
 
 `settings` 仅接收默认模板列出的 UI 设置，例如字体、字号、主窗与浮窗比例、动效、语言、入口和成员图标。自动申请、笔记、提醒、历史等业务设置使用 Configuration。`layout` 接收已有窗口、表格和位置偏好。主题提供默认值，玩家已保存的偏好继续优先。
 

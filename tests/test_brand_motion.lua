@@ -3,7 +3,7 @@ local base=dofile("tests/stubs.lua");base.Install({locale="enUS",realm="Home"})
 local S=dofile("tests/ui_stubs.lua");S.Install()
 _G.LycheeUI=nil
 local private={}
-for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Styles.lua","Components.lua","Layouts.lua","Elements.lua","Native.lua","Menu.lua"}) do assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/"..file))("LycheeGroup",private) end
+for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Styles.lua","Components.lua","Layouts.lua","Responsive.lua","Elements.lua","Native.lua","Menu.lua"}) do assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/"..file))("LycheeGroup",private) end
 _G.LycheeGroup={};dofile("addon/LycheeGroup/BrandMotion.lua")
 local A=LycheeGroup
 local reduced=false

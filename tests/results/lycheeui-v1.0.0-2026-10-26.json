@@ -1,0 +1,342 @@
+{
+  "schema": 1,
+  "date": "2026-10-26",
+  "version": "1.0.0",
+  "tag": "v1.0.0",
+  "repository": "https://github.com/Follen/LycheeUI",
+  "status": "offline_checks_passed",
+  "freeze": {
+    "status": "frozen",
+    "runtimeFiles": 31,
+    "lockSha256": "f4515ccdeb34a927798fb3a6e9c731ac8a2d40ee9755d7612ddd33f2ff82a8f0"
+  },
+  "source": {
+    "checkedAt": "2026-10-25T19:07:05.810069+00:00",
+    "suiteCount": 29,
+    "syntaxFiles": 10,
+    "results": [
+      {
+        "command": [
+          "lua",
+          "tests/run.lua"
+        ],
+        "exitCode": 0,
+        "summary": "LycheeUI: 1666 focused assertions passed"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/flex_layouts.lua"
+        ],
+        "exitCode": 0,
+        "summary": "LycheeUI flex layouts: 113 checks passed"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/flex_pass_reuse.lua"
+        ],
+        "exitCode": 0,
+        "summary": "LycheeUI flex pass reuse: 62 checks passed"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/flex_field_ownership.lua"
+        ],
+        "exitCode": 0,
+        "summary": "LycheeUI flex field ownership: 22 checks passed"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/flex_inherited_pairs.lua"
+        ],
+        "exitCode": 0,
+        "summary": "LycheeUI inherited native pairs: 20 checks passed"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/flex_recursive_prepare.lua"
+        ],
+        "exitCode": 0,
+        "summary": "LycheeUI recursive preparation: 43 checks passed"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/recipe_catalog.lua"
+        ],
+        "exitCode": 0,
+        "summary": "Recipe catalog isolation: 21 checks passed"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/fixed_context_values.lua"
+        ],
+        "exitCode": 0,
+        "summary": "LycheeUI fixed Context values: 19 checks passed"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/flex_protected_calls.lua"
+        ],
+        "exitCode": 0,
+        "summary": "20 changed layouts / 24 records (plain): protected calls=40, projections=0, scalar reads=0"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/legacy_layout_readback.lua"
+        ],
+        "exitCode": 0,
+        "summary": "LycheeUI legacy native readback: 54 checks passed"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/layout_projection.lua"
+        ],
+        "exitCode": 0,
+        "summary": "LycheeUI layout projection: 229 checks passed"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/layout_unbounded.lua"
+        ],
+        "exitCode": 0,
+        "summary": "LycheeUI unbounded layout: 162 checks passed"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/layout_metadata_restore.lua"
+        ],
+        "exitCode": 0,
+        "summary": "LycheeUI layout metadata restore: 230 checks passed"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/responsive_rules.lua"
+        ],
+        "exitCode": 0,
+        "summary": "LycheeUI responsive rules: 68 assertions passed"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/responsive.lua"
+        ],
+        "exitCode": 0,
+        "summary": "LycheeUI responsive integration: 81 checks passed"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/flow_list.lua"
+        ],
+        "exitCode": 0,
+        "summary": "LycheeUI flow list: 776 checks passed"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/list_conditions.lua"
+        ],
+        "exitCode": 0,
+        "summary": "LycheeUI conditional list geometry: 98 checks passed"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/list_geometry.lua"
+        ],
+        "exitCode": 0,
+        "summary": "LycheeUI list geometry: 350 checks passed"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/list_memory.lua"
+        ],
+        "exitCode": 0,
+        "summary": "LycheeUI list memory: 50 checks, 0 failures"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/layout_measure_records.lua"
+        ],
+        "exitCode": 0,
+        "summary": "LycheeUI layout measurement records: 2120 checks passed"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/layout_release.lua"
+        ],
+        "exitCode": 0,
+        "summary": "LycheeUI layout release: 64 checks passed"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/elements_ownership.lua"
+        ],
+        "exitCode": 0,
+        "summary": "LycheeUI fixed ownership: 59 checks passed"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/fixed_writes.lua"
+        ],
+        "exitCode": 0,
+        "summary": "LycheeUI unchanged fixed writes: 96 checks passed"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/style_events.lua"
+        ],
+        "exitCode": 0,
+        "summary": "LycheeUI grouped style events: 19 checks passed"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/style_release.lua"
+        ],
+        "exitCode": 0,
+        "summary": "LycheeUI style release: 727 checks passed; plain native hooks=5, lost native hooks=5, ordinary native hooks=5"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/list_clear.lua"
+        ],
+        "exitCode": 0,
+        "summary": "LycheeUI list Clear: 5 checks passed"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/menu_font_writes.lua"
+        ],
+        "exitCode": 0,
+        "summary": "LycheeUI menu font writes: 230 checks passed"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/slider_geometry.lua"
+        ],
+        "exitCode": 0,
+        "summary": "LycheeUI slider geometry: 8 checks passed"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/cold_runtime.lua"
+        ],
+        "exitCode": 0,
+        "summary": "construction smoke passed"
+      }
+    ]
+  },
+  "nativeValidation": {
+    "location": "responsive-layout-2026-10-25.json",
+    "scope": "The native runs cover the pre-release implementation. V1.0.0 changes only Core/Menu release identity and embedded-copy load ordering; the remaining frozen runtime files are unchanged. Native raw reports retain their original identities and hashes."
+  },
+  "product": {
+    "checkedAt": "2026-10-25T19:10:13.049200+00:00",
+    "suiteCount": 8,
+    "syntaxFiles": 74,
+    "results": [
+      {
+        "command": [
+          "lua",
+          "tests/runner.lua"
+        ],
+        "exitCode": 0,
+        "summary": "TOTAL: 27058 asserts passed, 0 modules failed"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/run_layout_checks.lua"
+        ],
+        "exitCode": 0,
+        "summary": "UI geometry: 17 scripts passed, 0 failed"
+      },
+      {
+        "command": [
+          "node",
+          "tests/check_architecture.cjs",
+          "../LycheeUI"
+        ],
+        "exitCode": 0,
+        "summary": "Architecture boundary: 6510 checks, 0 failures; 31 frozen files"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/test_live_layout_profile.lua",
+          "../LycheeUI"
+        ],
+        "exitCode": 0,
+        "summary": "Private layout profile lifecycle: 6844 checks passed"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/test_live_layout_styles.lua",
+          "../LycheeUI"
+        ],
+        "exitCode": 0,
+        "summary": "Private declarative layout styles lifecycle: 1428 checks passed"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/test_live_list_lifetime.lua",
+          "../LycheeUI"
+        ],
+        "exitCode": 0,
+        "summary": "Private list lifetime lifecycle: 1571 checks, 0 failures"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/test_live_responsive_layout.lua"
+        ],
+        "exitCode": 0,
+        "summary": "Private responsive layout probe lifecycle: 2605 checks passed"
+      },
+      {
+        "command": [
+          "lua",
+          "tests/test_live_layout_handoff.lua"
+        ],
+        "exitCode": 0,
+        "summary": "Native handoff diagnostic: 12 checks passed"
+      }
+    ]
+  },
+  "preReleaseIdentityChanges": {
+    "Core.lua": {
+      "before": "afec0a3bde592831bd1d02d34d86cd81ba96571d1511f2705cd1d61fcc22dd91",
+      "after": "145bac840ef2d20e63a71977c55cf27c493ac47736433fe45193659d8bbda0c8"
+    },
+    "Menu.lua": {
+      "before": "9a55c60b83a3e613686c64724359affc50ed992bc7572ac3146152c978893759",
+      "after": "06ebad32c933c7b500967f9fbd8de8ab1888a9102e5fa42ddd499ad00cfd63cd"
+    }
+  },
+  "unchangedRuntimeFilesSinceNativeTests": 29
+}

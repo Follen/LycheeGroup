@@ -19,7 +19,7 @@
 - **大秘境历史**：按角色保存副本、层数、时间和队友，方便回顾与补充笔记。
 - **界面设置**：修改主窗口快捷键、整体缩放和字体大小，悬浮窗使用独立的缩放设置；再次点击设置按钮返回来源页。自动适配 RurutiaSuite 顶栏入口，需同时开启“显示悬浮窗”和“悬浮窗兼容”。Ellesmere DataBars 可添加 `荔枝组队` 插件块，显示荔枝图标、名称及申请状态。
 
-界面采用原生 Lua，内置 LycheeUI，业务模块按需加载。安装时无需另外安装 UI 库。
+界面采用原生 Lua，内置 [LycheeUI V1.0.0](https://github.com/Follen/LycheeUI/tree/v1.0.0)，业务模块按需加载。安装时无需另外安装 UI 库。
 
 功能实现与验证范围见[产品文档](Product.md)。
 
@@ -71,10 +71,10 @@ lua tests/runner.lua
 
 本地控件树预览：运行 `lua tests/ui_preview.lua`，再打开 [`tests/ui-preview.html`](tests/ui-preview.html)。生成的 `tests/preview-data.js` 仅保留在本地，不提交到版本库；预览使用样例数据，不代表游戏内验证。
 
-[`tools/Build-Addon.ps1`](tools/Build-Addon.ps1) 用于打包，默认从相邻的 `LycheeUI` 源码目录同步内置库，也可用 `-LibraryPath` 指定位置。
+[`tools/Build-Addon.ps1`](tools/Build-Addon.ps1) 用于打包，默认从相邻的 `LycheeUI` 源码目录同步内置库，也可用 `-LibraryPath` 指定位置。独立源库从 `https://github.com/Follen/LycheeUI.git` 克隆，并检出 `v1.0.0`；同步脚本会核对冻结清单与文件哈希。
 
 项目说明：[产品](Product.md) · [设计](Desgin.md) · [架构](Architecture.md) · [性能](perfermance.md) · [第三方配置 API](API.md) · [开发规范](Development.md) · [文档与变更记录规则](Agents.md)。当前实现与游戏内验证范围见产品文档。
 
-当前版本为 1.2.5，版本变化见 [更新日志](CHANGELOG.md)。本版采用 [主题 API v2](API.md)：导入和选择按账号或角色保存，登录或重载后统一生效；字号、缩放、窗口和表格偏好继续实时更新。指定 main 提交是架构改造的历史等价参照，当前业务与界面按已记录的后续产品和设计要求维护。开发规则见 [Development.md](Development.md)，验证方法见 [主题重载验证](tests/theme_reload.md)。共享库在源目录修改后由同步工具维护内置副本，冻结状态以 [.lock](../LycheeUI/.lock) 为准；通用接入见 [LycheeUI README](../LycheeUI/README.md)、[API](../LycheeUI/API.md) 和 [设计规范](../LycheeUI/DESIGN.md)。
+当前版本为 1.2.5，版本变化见 [更新日志](CHANGELOG.md)。本版采用 [主题 API v2](API.md)：导入和选择按账号或角色保存，登录或重载后统一生效；字号、缩放、窗口和表格偏好继续实时更新。指定 main 提交是架构改造的历史等价参照，当前业务与界面按已记录的后续产品和设计要求维护。开发规则见 [Development.md](Development.md)，验证方法见 [主题重载验证](tests/theme_reload.md)。共享库在源目录修改后由同步工具维护内置副本，冻结状态以 [.lock](https://github.com/Follen/LycheeUI/blob/v1.0.0/.lock) 为准；通用接入见 [LycheeUI README](https://github.com/Follen/LycheeUI/blob/v1.0.0/README.md)、[API](https://github.com/Follen/LycheeUI/blob/v1.0.0/API.md) 和 [设计规范](https://github.com/Follen/LycheeUI/blob/v1.0.0/DESIGN.md)。
 
 内置第三方库的来源与许可见[库说明](addon/LycheeGroup_Group/Libs/README.md)。

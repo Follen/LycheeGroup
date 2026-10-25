@@ -12,7 +12,10 @@ Library.ElementDefinitions={
 }
 local function Merge(into,source)
  for key,value in pairs(source or empty) do
-  if type(value)=="table" and not value[1] then into[key]=Merge(type(into[key])=="table" and into[key] or {},value) else into[key]=value end
+  if key=="conditions" and type(value)=="table" then
+   local list={};for _,branch in ipairs(into[key] or empty) do list[#list+1]=branch end;for _,branch in ipairs(value) do list[#list+1]=branch end
+   if #list>32 then error("at most 32 container conditions are supported",3) end;into[key]=list
+  elseif type(value)=="table" and not value[1] then into[key]=Merge(type(into[key])=="table" and into[key] or {},value) else into[key]=value end
  end
  return into
 end
@@ -25,6 +28,7 @@ local function Words(value)
  return value or ""
 end
 local function HasRules(rule)
+ for _,branch in ipairs(rule.conditions or empty) do if branch.classes~=nil or HasRules(branch) then return true end end
  for _,part in pairs(rule.base or empty) do if next(part) then return true end end
  for _,group in pairs(rule.states or empty) do for _,part in pairs(group) do if next(part) then return true end end end
  for _,variant in pairs(rule.variants or empty) do if HasRules(variant) then return true end end
@@ -33,14 +37,19 @@ end
 local utilities={}
 Library.Utilities=utilities
 for _,size in ipairs({0,1,2,3,4,6,8,10,12,14,16,18,20,24,28,30,32,36,40,44,48,56,64,80,96,100,120,160,200,240,300,400}) do
- utilities["w-"..size]={width=size};utilities["h-"..size]={height=size};utilities["size-"..size]={width=size,height=size};utilities["p-"..size]={padding=size}
+ utilities["w-"..size]={width=size};utilities["h-"..size]={height=size};utilities["size-"..size]={width=size,height=size};utilities["p-"..size]={padding=size};utilities["gap-"..size]={gap=size};utilities["basis-"..size]={basis=size}
 end
+utilities["flex-row"]={direction="row"};utilities["flex-col"]={direction="column"};utilities["flex-wrap"]={flowWrap=true};utilities["flex-nowrap"]={flowWrap=false}
+utilities.grow={grow=1};utilities["grow-0"]={grow=0};utilities.shrink={shrink=1};utilities["shrink-0"]={shrink=0}
+for _,axis in ipairs({"w","h"}) do for _,value in ipairs({"fill","content"}) do utilities[axis.."-"..value]={[axis=="w" and "width" or "height"]=value} end end
+for _,value in ipairs({"start","center","end","stretch"}) do utilities["items-"..value]={align=value} end
+for _,value in ipairs({"start","center","end","space-between","space-around","space-evenly"}) do utilities["justify-"..value]={justify=value} end
 for role in pairs(Library.TextStyles) do utilities["text-"..role]={fontSize=role,lineHeight=role} end
 for _,color in ipairs({"text","muted","dim","brand","primary","good","warning","blue","onPrimary","surface","surfaceLow","surfaceHigh","secondaryContainer"}) do utilities["text-"..color]={color=color};utilities["bg-"..color]={base={surface={color=color}}} end
 for _,alpha in ipairs({0,25,50,75,100}) do utilities["alpha-"..alpha]={alpha=alpha/100} end
 utilities["single-line"]={singleLine=true,wordWrap=false};utilities["wrap"]={wordWrap=true};utilities["hidden"]={shown=false};utilities["shown"]={shown=true}
 local function RuleShape(value)
- if value.base or value.states or value.classes or value.variants or value.slotKinds or value.scope or value.instances or value.template then return value end
+ if value.base or value.states or value.classes or value.variants or value.conditions or value.slotKinds or value.scope or value.instances or value.template then return value end
  return {base={root=value}}
 end
 local function CompileUtilities(directory)
@@ -60,9 +69,25 @@ local function CompileUtilities(directory)
    local key=Words(input);if strings[key] then return strings[key] end
    local rule={}
    for token in key:gmatch("%S+") do
-    local prefix,name=token:match("^([^:]+):(.+)$");if not prefix then name=token elseif not states[prefix] then error("unknown utility state: "..prefix,3) end
+    local name=token;local state;local selectors={}
+    while name:find(":",1,true) do
+     local prefix,tail=name:match("^([^:]+):(.+)$");if not prefix then error("invalid utility: "..token,3) end;name=tail
+     if prefix:sub(1,1)=="@" then
+      local bound,container=prefix:match("^@([^/]+)/(.+)$");bound=bound or prefix:match("^@(.+)$")
+      local maximum=bound:sub(1,4)=="max-";if maximum then bound=bound:sub(5) end
+      if bound=="" or not bound:match("^[%w_.%-]+$") or container and not container:match("^[%w_.%-]+$") then error("invalid container prefix: "..prefix,3) end
+      selectors[#selectors+1]={[maximum and "maxWidth" or "minWidth"]=tonumber(bound) or bound,container=container}
+      if #selectors>4 then error("at most 4 selectors per container condition: "..token,3) end
+     elseif states[prefix] and not state then state=prefix else error("unknown utility state: "..prefix,3) end
+    end
     local item=Named(name)
-    if prefix then rule.states=rule.states or {};rule.states[prefix]=Merge(rule.states[prefix] or {},item.base)
+    if #selectors>0 then
+     if item.conditions then error("nested container conditions: "..token,3) end
+     local branch={when=selectors};if state then branch.states={[state]=item.base} else branch.base=item.base;branch.states=item.states end
+     Merge(rule,{conditions={branch}})
+    elseif state then
+     rule.states=rule.states or {};rule.states[state]=Merge(rule.states[state] or {},item.base)
+     for _,conditional in ipairs(item.conditions or empty) do Merge(rule,{conditions={{when=conditional.when,states={[state]=conditional.base}}}}) end
     else Merge(rule,item) end
    end
    strings[key]=rule;return rule
@@ -70,16 +95,32 @@ local function CompileUtilities(directory)
   if kind~="table" then error("utility rules must be a string or table",3) end
   if tables[input] then return tables[input] end
   local shape=RuleShape(input);local rule=shape.classes and Merge({},Compile(shape.classes)) or {}
-  for _,key in ipairs({"base","states","variants"}) do if shape[key] then rule[key]=Merge(rule[key] or {},shape[key]) end end
+  for _,key in ipairs({"base","states"}) do if shape[key] then rule[key]=Merge(rule[key] or {},shape[key]) end end
+  if shape.variants then if type(shape.variants)~="table" then error("element variants must be a table",3) end;rule.variants=rule.variants or {};for name,variant in pairs(shape.variants) do rule.variants[name]=Merge(rule.variants[name] or {},Compile(variant)) end end
+  if shape.conditions then
+   if type(shape.conditions)~="table" then error("element conditions must be an array",3) end
+   local count=0;for index in pairs(shape.conditions) do count=count+1;if type(index)~="number" or index%1~=0 or index<1 or index>#shape.conditions then error("element conditions must be an array",3) end end
+   if count~=#shape.conditions then error("element conditions must be an array",3) end
+   for index,branch in ipairs(shape.conditions) do
+    if type(branch)~="table" then error("invalid container condition: "..index,3) end
+    if branch.conditions then error("nested container conditions are unsupported",3) end
+    for key in pairs(branch) do if key~="container" and key~="minWidth" and key~="maxWidth" and key~="when" and key~="base" and key~="states" and key~="classes" then error("unknown container condition field: "..tostring(key),3) end end
+    if branch.when and (branch.container~=nil or branch.minWidth~=nil or branch.maxWidth~=nil) then error("container condition uses either when or a single selector",3) end
+    local compiled=Compile({classes=branch.classes,base=branch.base,states=branch.states})
+    if compiled.conditions or compiled.variants then error("nested container conditions are unsupported",3) end
+    local selectors=branch.when or {{container=branch.container,minWidth=branch.minWidth,maxWidth=branch.maxWidth}}
+    Merge(rule,{conditions={{when=selectors,base=compiled.base,states=compiled.states}}})
+   end
+  end
   tables[input]=rule;return rule
  end
  return Compile
 end
 Library.CompileUtilities=CompileUtilities
-local function ValidateRule(rule,theme,definition)
+local function ValidateRule(rule,theme,definition,inheritedConditions)
  if type(rule)~="table" then return false,"element rule must be a table" end
- for _,key in ipairs({"base","states","variants","instances","slotKinds"}) do if rule[key]~=nil and type(rule[key])~="table" then return false,"element "..key.." must be a table" end end
- for key in pairs(rule) do if key~="base" and key~="states" and key~="variants" and key~="classes" and key~="instances" and key~="scope" and key~="slotKinds" and key~="template" and not properties[key] then return false,"unknown element rule field: "..tostring(key) end end
+ for _,key in ipairs({"base","states","variants","instances","slotKinds","conditions"}) do if rule[key]~=nil and type(rule[key])~="table" then return false,"element "..key.." must be a table" end end
+ for key in pairs(rule) do if key~="base" and key~="states" and key~="variants" and key~="conditions" and key~="classes" and key~="instances" and key~="scope" and key~="slotKinds" and key~="template" and not properties[key] then return false,"unknown element rule field: "..tostring(key) end end
  local function Part(part)
   if part~=nil and type(part)~="table" then return false,"element slots must be a table" end
   for slot,values in pairs(part or empty) do
@@ -98,7 +139,30 @@ local function ValidateRule(rule,theme,definition)
  end
  local valid,message=Part(rule.base);if not valid then return valid,message end
  for name,part in pairs(rule.states or empty) do if not states[name] then return false,"unknown element state: "..tostring(name) end;valid,message=Part(part);if not valid then return valid,message end end
- for _,variant in pairs(rule.variants or empty) do valid,message=ValidateRule(variant,theme,definition);if not valid then return valid,message end end
+ local total=(inheritedConditions or 0)+#(rule.conditions or empty)
+ if total>32 then return false,"at most 32 container conditions are supported" end
+ for _,variant in pairs(rule.variants or empty) do valid,message=ValidateRule(variant,theme,definition,total);if not valid then return valid,message end end
+ if rule.conditions then
+  if #rule.conditions>32 then return false,"at most 32 container conditions are supported" end
+  local count=0
+  for index,branch in pairs(rule.conditions) do
+   count=count+1;if type(index)~="number" or index<1 or index>#rule.conditions or index%1~=0 or type(branch)~="table" then return false,"element conditions must be an array" end
+   if branch.conditions or branch.variants then return false,"nested container conditions are unsupported" end
+   local selectors=branch.when or {{container=branch.container,minWidth=branch.minWidth,maxWidth=branch.maxWidth}}
+   if type(selectors)~="table" or #selectors<1 or #selectors>4 then return false,"container condition requires 1 to 4 selectors" end
+   local selectorCount=0
+   for n,selector in pairs(selectors) do
+    selectorCount=selectorCount+1;if type(n)~="number" or n%1~=0 or n<1 or n>#selectors or type(selector)~="table" then return false,"container selectors must be an array" end
+    for key in pairs(selector) do if key~="container" and key~="minWidth" and key~="maxWidth" then return false,"unknown container selector field: "..tostring(key) end end
+    if selector.container~=nil and (type(selector.container)~="string" or selector.container=="") then return false,"invalid container name" end
+    if selector.minWidth==nil and selector.maxWidth==nil then return false,"container condition requires a width bound" end
+    for _,key in ipairs({"minWidth","maxWidth"}) do if selector[key]~=nil then local v=selector[key];v=type(v)=="string" and theme[v] or v;if type(v)~="number" or v<0 or v~=v or v==math.huge then return false,"invalid container bound: "..key end end end
+   end
+   if selectorCount~=#selectors then return false,"container selectors must be an array" end
+   valid,message=ValidateRule({base=branch.base,states=branch.states},theme,definition);if not valid then return valid,message end
+  end
+  if count~=#rule.conditions then return false,"element conditions must be an array" end
+ end
  return true
 end
 function Library:ValidateUtilities(directory,theme)
@@ -125,20 +189,30 @@ function Library:ValidateElements(overrides,defaults,theme,directory)
   local ok,rule=pcall(compile,entry);if not ok then return false,rule end
   local valid,message=ValidateRule(rule,theme,definition);if not valid then return valid,message end
   valid,message=ValidateRule(entry,theme,definition);if not valid then return valid,message end
-  for key,instance in pairs(entry.instances or empty) do
-   local passed,compiled=pcall(compile,instance);if not passed then return false,compiled end
+  local combined=rule
+  if definition then
+   local passed,result=pcall(function() return Merge(Merge({},compile(definition)),rule) end);if not passed then return false,result end
+   combined=result;valid,message=ValidateRule(combined,theme,definition);if not valid then return valid,message end
+  end
+  local instanceKeys={};for key in pairs(entry.instances or empty) do instanceKeys[key]=true end;for key in pairs(definition and definition.instances or empty) do instanceKeys[key]=true end
+  for key in pairs(instanceKeys) do
+   local instance=entry.instances and entry.instances[key]
+   local passed,compiled=pcall(function()
+    local result=Merge({},combined);local default=definition and definition.instances and definition.instances[key]
+    if default then Merge(result,compile(default)) end;if instance then Merge(result,compile(instance)) end;return result
+   end);if not passed then return false,compiled end
    valid,message=ValidateRule(compiled,theme,definition);if not valid then return valid,message end
-   valid,message=ValidateRule(instance,theme,definition);if not valid then return valid,message end
+   if instance then valid,message=ValidateRule(instance,theme,definition);if not valid then return valid,message end end
   end
  end
  return true
 end
 local function Parse(path,defaults)
- local id,tail=path:match("^(.-)%.(base%..+)$")
- if not id then id,tail=path:match("^(.-)%.(states%..+)$") end
- if not id then id,tail=path:match("^(.-)%.(variants%..+)$") end
- if not id then id=path:match("^(.-)%.classes$");if id then return id,"classes" end end
- if not id or not defaults[id] then return nil end
+ local id,tail
+ for candidate in pairs(defaults) do if path:sub(1,#candidate+1)==candidate.."." and (not id or #candidate>#id) then id=candidate;tail=path:sub(#candidate+2) end end
+ if not id then return nil end
+ if tail=="classes" then return id,"classes" end
+ if not tail:match("^base%.") and not tail:match("^states%.") and not tail:match("^variants%.") and not tail:match("^conditions%.") then return nil end
  local parts={};for name in tail:gmatch("[^.]+") do parts[#parts+1]=name end
  return id,parts
 end
@@ -148,6 +222,27 @@ function Library:GetElementField(path,defaults)
  if parts=="classes" then return {type={"string","table"},types={"string","table"},default=Copy(definition.classes),ref=false} end
  local index=1;local branch=definition
  if parts[index]=="variants" then branch=definition.variants and definition.variants[parts[2]] or empty;index=3 end
+ if parts[index]=="conditions" then
+  local n=tonumber(parts[index+1]);if not n or n<1 or n%1~=0 or tostring(n)~=parts[index+1] then return nil end
+  branch=branch.conditions and branch.conditions[n];if type(branch)~="table" then return nil end
+  index=index+2
+  local selector=branch;local key=parts[index]
+  if key=="when" then
+   local selectorIndex=tonumber(parts[index+1]);if not selectorIndex or selectorIndex<1 or selectorIndex%1~=0 or tostring(selectorIndex)~=parts[index+1] then return nil end
+   selector=branch.when and branch.when[selectorIndex];if type(selector)~="table" then return nil end
+   index=index+2;key=parts[index]
+  end
+  if key=="container" or key=="minWidth" or key=="maxWidth" then
+   if #parts~=index or selector==branch and branch.when then return nil end
+   if key=="container" then return {type={"string"},types={"string"},default=Copy(selector[key]),ref=false,inherited=selector[key]==nil} end
+   local field=Library.StyleField(key,selector[key]);field.inherited=selector[key]==nil;return field
+  end
+  if selector~=branch then return nil end
+ end
+ if parts[index]=="classes" then
+  if #parts~=index then return nil end
+  return {type={"string","table"},types={"string","table"},default=Copy(branch.classes),ref=false,inherited=branch.classes==nil}
+ end
  local section=parts[index];local slot,key
  if section=="base" then slot,key=parts[index+1],parts[index+2];if #parts~=index+2 then return nil end
  elseif section=="states" and states[parts[index+1]] then slot,key=parts[index+2],parts[index+3];if #parts~=index+3 then return nil end
@@ -165,7 +260,8 @@ function Library:GetElementSchema(defaults,id,paths)
  local result={};defaults=defaults or self.ElementDefinitions
  local function Visit(value,path)
   for name,item in pairs(value) do local full=path.."."..name
-   if properties[name] or name=="classes" then local field=self:GetElementField(full,defaults);if field then result[full]=field end
+   local field=self:GetElementField(full,defaults)
+   if field then result[full]=field
    elseif name~="slotKinds" and name~="scope" and type(item)=="table" then Visit(item,full) end
   end
  end
@@ -210,7 +306,7 @@ function Library.AttachElements(UI)
   if record.id~=record.template and record.template then local own=UI.elementIndex[record.id];if own then own[key]=record.target end end
  end
  local function Unindex(record)
-  for _,id in ipairs({record.id,record.template or record.id}) do local group=UI.elementIndex[id];local key=record.key;if key==nil then key=false end;if group and group[key]==record.target then group[key]=nil end end
+  for index=1,2 do local id=index==1 and record.id or record.template or record.id;local group=UI.elementIndex[id];local key=record.key;if key==nil then key=false end;if group and group[key]==record.target then group[key]=nil end end
  end
  -- Catalog-only entries describe capabilities but have no runtime style work.
  -- Inputs are immutable for a context, so negative results can be shared too.
@@ -241,7 +337,7 @@ function Library.AttachElements(UI)
  end
  local function Rules(record)
   local template=record.template or record.id;local id=record.id;local cached=BaseRule(template)
-  if cached==empty and BaseRule(id)==empty and not record.classes then return empty end
+  if cached==empty and BaseRule(id)==empty and not record.classes and not record.boxRules then return empty end
   if template~=id then
    local group=aliases[template] or {};aliases[template]=group
    if not group[id] then group[id]=Merge(Merge({},cached),BaseRule(id)) end;cached=group[id]
@@ -254,7 +350,11 @@ function Library.AttachElements(UI)
   cached=record.instanceRules
   if record.classes then
    if not record.classRules or record.classBase~=cached then record.classRules=Merge(Merge({},cached),compile(record.classes));record.classBase=cached end
-   return record.classRules
+   cached=record.classRules
+  end
+  if record.boxRules then
+   if not record.boxCombined or record.boxBase~=cached then record.boxCombined=Merge(Merge({},cached),record.boxRules);record.boxBase=cached end
+   cached=record.boxCombined
   end
   return cached
  end
@@ -267,19 +367,80 @@ function Library.AttachElements(UI)
  local function HasHeightRules(rule)
   if HasHeightPart(rule.base) then return true end
   for _,part in pairs(rule.states or empty) do if HasHeightPart(part) then return true end end
+  for _,branch in ipairs(rule.conditions or empty) do if HasHeightRules(branch) then return true end end
   for _,part in pairs(rule.variants or empty) do if HasHeightRules(part) then return true end end
   return false
  end
+ local heightRuleFlags={}
  local function HasListHeightRules(list)
   local id=list.elementTemplate;if not id then return false end
-  if HasHeightRules(BaseRule(id)) then return true end
+  if heightRuleFlags[id]~=nil then return heightRuleFlags[id] end
+  if HasHeightRules(BaseRule(id)) then heightRuleFlags[id]=true;return true end
   for _,directory in ipairs({UI.elementDefaults,UI.elementOverrides}) do
    local entry=directory[id]
-   for _,part in pairs(entry and entry.instances or empty) do if HasHeightRules(compile(part)) then return true end end
+   for _,part in pairs(entry and entry.instances or empty) do if HasHeightRules(compile(part)) then heightRuleFlags[id]=true;return true end end
   end
+  heightRuleFlags[id]=false
   return false
  end
  UI.elementLists=setmetatable({},{__mode="k"})
+ -- One immutable union per static template, and one match/dependency record
+ -- per physical list. Business keys never allocate conditional controllers.
+ local heightConditions={}
+ local function HeightConditions(id)
+  local cached=heightConditions[id];if cached then return cached end
+  local selectors,indices={},{}
+  local function Visit(rule)
+   for _,branch in ipairs(rule.conditions or empty) do if HasHeightRules(branch) and not indices[branch] then selectors[#selectors+1]=branch;indices[branch]=#selectors end end
+   for _,variant in pairs(rule.variants or empty) do Visit(variant) end
+  end
+  Visit(BaseRule(id))
+  for _,directory in ipairs({UI.elementDefaults,UI.elementOverrides}) do
+   local entry=directory[id];for _,instance in pairs(entry and entry.instances or empty) do Visit(compile(instance)) end
+  end
+  cached={selectors=selectors,indices=indices};heightConditions[id]=cached;return cached
+ end
+ function UI:_ReleaseListHeightConditions(list)
+  local projection=list._elementHeightConditions
+  if projection then self:_ReleaseConditions(projection);projection.released=true;projection.host,projection._conditionParent=nil,nil;list._elementHeightConditions=nil end
+ end
+ function UI:_PrepareListHeightConditions(list)
+  local projection=list._elementHeightConditions;if not projection then return end
+  self:_RefreshConditions(projection)
+  if projection._conditionApplyNeeded then
+   list.geometryDirty=true
+   if list.flowText and not projection.flowInvalidated then list.flowText:Invalidate("conditions");projection.flowInvalidated=true end
+  end
+ end
+ function UI:_CompleteListHeightGeometry(list)
+  local projection=list._elementHeightConditions
+  if projection then projection._conditionApplyNeeded,projection.flowInvalidated=nil,nil end
+ end
+ local function ApplyHeightConditions(projection)
+  if projection.released or projection.applying then return end
+  local list=projection.host
+  UI:_PrepareListHeightConditions(list)
+  if not projection._conditionApplyNeeded then return end
+  projection.applying=true
+  local ok,message=pcall(list.Refresh,list,true)
+  projection.applying=false
+  if not ok then error(message,0) end
+  -- Flow consumes the projection only after its bounded index build commits.
+  if not list.flowText then UI:_CompleteListHeightGeometry(list) end
+ end
+ function UI:_SyncListHeightConditions(list)
+  if list.elementTemplate then list.elementHeights=HasListHeightRules(list) end
+  if list.released or not list.elementTemplate or not list.ids or #list.ids==0 then self:_ReleaseListHeightConditions(list);return end
+  local catalog=HeightConditions(list.elementTemplate)
+  if #catalog.selectors==0 then self:_ReleaseListHeightConditions(list);return end
+  local projection=list._elementHeightConditions
+  if projection and projection.catalog==catalog then return end
+  self:_ReleaseListHeightConditions(list)
+  projection={host=list,_conditionParent=list.canvas,catalog=catalog,conditionSelectors=catalog.selectors,conditionMatches={},_listHeightProjection=true,Apply=ApplyHeightConditions}
+  list._elementHeightConditions=projection
+  local ok,message=pcall(self._BindConditions,self,projection,catalog.selectors)
+  if not ok then self:_ReleaseListHeightConditions(list);error(message,0) end
+ end
  local function GeometryPart(part,height,minHeight,maxHeight)
   local root=part and part.root
   if root then
@@ -290,7 +451,8 @@ function Library.AttachElements(UI)
   return height,minHeight,maxHeight
  end
  function UI:ResolveListElementHeight(list,key,fallback,row,index)
-  if row and not list.rowElementState then
+  local projection=list._elementHeightConditions
+  if row and not list.rowElementState and not projection then
    local value=C.ElementValue(row,"root","height",fallback)
    value=math.max(C.ElementValue(row,"root","minHeight",0),math.min(C.ElementValue(row,"root","maxHeight",math.huge),value))
    return value
@@ -310,8 +472,11 @@ function Library.AttachElements(UI)
   local rule=Library.ResolveStyleVariant(Rules(record),variant)
   local height,minHeight,maxHeight=fallback,0,math.huge
   height,minHeight,maxHeight=GeometryPart(rule.base,height,minHeight,maxHeight)
+  local matches=projection and projection.conditionMatches;local indices=projection and projection.catalog.indices
+  for _,branch in ipairs(rule.conditions or empty) do if indices and matches[indices[branch]] then height,minHeight,maxHeight=GeometryPart(branch.base,height,minHeight,maxHeight) end end
+  local active
   if list.rowElementState then
-   local active=list._elementHeightStates
+   active=list._elementHeightStates
    if not active then active={};list._elementHeightStates=active end
    for _,name in ipairs(stateOrder) do
     local value=controller and controller.active[name]==true or false
@@ -321,8 +486,16 @@ function Library.AttachElements(UI)
     active[name]=supplied==nil and value or supplied==true
    end
    if active.disabled then active.hover,active.pressed=false,false end
-   for _,name in ipairs(stateOrder) do if active[name] then height,minHeight,maxHeight=GeometryPart(rule.states and rule.states[name],height,minHeight,maxHeight) end end
-  elseif key==list.selectedKey then height,minHeight,maxHeight=GeometryPart(rule.states and rule.states.selected,height,minHeight,maxHeight) end
+  end
+  local disabled=active and active.disabled or not active and controller and controller.active.disabled
+  for _,name in ipairs(stateOrder) do
+   local enabled=active and active[name] or not active and (name=="selected" and key==list.selectedKey or name~="selected" and controller and controller.active[name])
+   if disabled and (name=="hover" or name=="pressed") then enabled=false end
+   if enabled then
+    height,minHeight,maxHeight=GeometryPart(rule.states and rule.states[name],height,minHeight,maxHeight)
+    for _,branch in ipairs(rule.conditions or empty) do if indices and matches[indices[branch]] then height,minHeight,maxHeight=GeometryPart(branch.states and branch.states[name],height,minHeight,maxHeight) end end
+   end
+  end
   return math.max(minHeight,math.min(maxHeight,height))
  end
  local bindingOptions={}
@@ -356,7 +529,7 @@ function Library.AttachElements(UI)
     if type(reference)=="string" and reference:sub(1,1)=="@" then local id=reference:match("^@([^#]+)");if not UI.elementIndex[id] then UI.elementIndex[id]=setmetatable({},{__mode="v"});for _,other in pairs(UI.elements) do if other.id==id or other.template==id then local key=other.key;if key==nil then key=false end;UI.elementIndex[id][key]=other.target end end end;local targets=UI.elementReferences[id] or setmetatable({},{__mode="k"});UI.elementReferences[id]=targets;targets[record.target]=true end
    end end
   end
-  local function RuleReferences(value) References(value.base);for _,part in pairs(value.states or empty) do References(part) end;for _,variant in pairs(value.variants or empty) do RuleReferences(variant) end end
+  local function RuleReferences(value) References(value.base);for _,part in pairs(value.states or empty) do References(part) end;for _,branch in ipairs(value.conditions or empty) do RuleReferences(branch) end;for _,variant in pairs(value.variants or empty) do RuleReferences(variant) end end
   RuleReferences(rule)
   if active or record.applied then
    for _,part in ipairs({rule.base or empty}) do for name,values in pairs(part) do local target=Slot(record,name);if target then for key in pairs(values) do if not C.ValidateStyleTarget(target,key) then error("unsupported element target: "..record.id.."."..name.."."..key,3) end end end end end
@@ -375,6 +548,12 @@ function Library.AttachElements(UI)
   return _G[reference]
  end
  function C.Element(target,id,options)
+  if target._lycheeElementContext and target._lycheeElementContext~=UI or target._lycheeBoxContext and target._lycheeBoxContext~=UI then error("element belongs to another Context; release it before rebinding",2) end
+  local previous=target._lycheeStyleController
+  if previous and previous.context and previous.context~=UI then
+   if previous.hasOverrides then error("style belongs to another Context; release it before rebinding",2) end
+   previous:Release()
+  end
   options=options or {};local record=UI.elements[target]
   if record and record.id==id and record.template==options.template and record.key==options.key and record.scope==options.scope and record.slots==(options.slots or target) and record.classes==options.classes and record.variant==options.variant and record.owner==options.owner and (not options.stateOwner or record.stateOwner==options.stateOwner) and (not options.rowTemplate or target.elementTemplate==options.rowTemplate) and (not options.rowElementKey or target.rowElementKey==options.rowElementKey) and (not options.rowElementState or target.rowElementState==options.rowElementState) then return Apply(record) end
   if record then Unindex(record);if record.applied then UI:_BindFixedElement(target,nil,Slots(record)) end end
@@ -383,7 +562,8 @@ function Library.AttachElements(UI)
   local stateOwner=options.stateOwner
   if stateOwner==nil and not controller and target.HookScript and kind~="Texture" and kind~="MaskTexture" and kind~="FontString" then stateOwner=target end
   -- Do not reserve hash slots for absent optional identity fields.
-  record={target=target,id=id,slots=options.slots or target}
+  local boxRules=record and record.boxRules
+  record={target=target,id=id,slots=options.slots or target,boxRules=boxRules}
   if options.template~=nil then record.template=options.template end
   if options.key~=nil then record.key=options.key end
   if options.scope~=nil then record.scope=options.scope end
@@ -393,6 +573,7 @@ function Library.AttachElements(UI)
   if options.variant~=nil then record.variant=options.variant end
   if controller then record.fallbackSlots=controller.slots end
   UI.elements[target]=record
+  target._lycheeElementContext=UI
   if not UI.elementDefaults[id] and not UI.elementDefaults[record.template or id] then UI.elementDefaults[id]={base={root={}}} end
   local list=target._lycheeList
   if list and not UI.elementLists[list] then
@@ -410,7 +591,9 @@ function Library.AttachElements(UI)
    if previousTemplate~=target.elementTemplate then target._elementHeightRecord=nil end
    target.elementHeights=HasListHeightRules(target);UI.elementLists[target]=true
    if target.elementHeights then target.geometryDirty=true end
+   UI:_SyncListHeightConditions(target)
    for _,row in ipairs(target.rows or empty) do C.Element(row,target.elementTemplate,{template=target.elementTemplate,key=target:GetElementKey(row.key,row._lycheeListIndex),scope=options.scope,slots=options.rowSlots or row});row._lycheeElementRegistered=true end
+   if previousTemplate~=target.elementTemplate and target.RefreshGeometry then target:RefreshGeometry() end
   end
   -- Reconnect explicitly registered semantic anchors only on registry mutations.
   for other in pairs(UI.elementReferences[id] or empty) do if other~=target then C.ApplyElement(other) end end
@@ -419,18 +602,79 @@ function Library.AttachElements(UI)
  function C.RekeyElement(target,key,template)
   local record=UI.elements[target];if not record then return target end
   if record.key==key and (not template or record.template==template) then return target end
+  local previous=Rules(record);local oldKey,oldTemplate=record.key,record.template
+  local oldInstance,oldClass,oldClassBase,oldBox,oldBoxBase=record.instanceRules,record.classRules,record.classBase,record.boxCombined,record.boxBase
+  record.key=key;if template then record.template=template end;record.instanceRules=nil
+  -- Class and Box layers depend on their effective base, not the business key.
+  -- Rules rebuilds them only when an actual instance/template contribution changes.
+  local current=Rules(record)
+  if previous==current then
+   record.key,record.template=oldKey,oldTemplate;Unindex(record);record.key=key;if template then record.template=template end;Identity(record)
+   if not record.applied then return target end
+   local controller=target._lycheeStyleController
+   if controller and controller.fixedElement==current and (record.variant==nil or controller.options.variant==record.variant) then
+    local unchanged=true;local slots=Slots(record)
+    for name in pairs(controller.compiled or empty) do if slots[name]~=(controller.records[name] and controller.records[name].target) then unchanged=false;break end end
+    if unchanged then controller:Apply(true);return target end
+   end
+   return Apply(record)
+  end
+  local nextInstance,nextClass,nextClassBase,nextBox,nextBoxBase=record.instanceRules,record.classRules,record.classBase,record.boxCombined,record.boxBase
+  -- Old-rule restoration can synchronously query list heights. Keep the old
+  -- identity visible until that restoration has finished, as before.
+  record.key,record.template=oldKey,oldTemplate
+  record.instanceRules,record.classRules,record.classBase,record.boxCombined,record.boxBase=oldInstance,oldClass,oldClassBase,oldBox,oldBoxBase
   Unindex(record);if record.applied then UI:_BindFixedElement(target,nil,Slots(record)) end
-  record.key=key;if template then record.template=template end;record.classRules=nil;record.instanceRules=nil;Identity(record);return Apply(record)
+  record.key=key;if template then record.template=template end
+  record.instanceRules,record.classRules,record.classBase,record.boxCombined,record.boxBase=nextInstance,nextClass,nextClassBase,nextBox,nextBoxBase
+  Identity(record);return Apply(record)
  end
  function C.ReleaseElement(target)
+  if target._lycheeElementContext and target._lycheeElementContext~=UI then return target end
   local record=UI.elements[target];if not record then return target end
+  if target.elementTemplate then
+   UI:_ReleaseListHeightConditions(target)
+   target.elementTemplate,target.elementHeights=nil,nil;UI.elementLists[target]=nil
+   for _,row in ipairs(target.rows or empty) do C.ReleaseElement(row);row._lycheeElementRegistered=nil end
+   target._elementHeightRecord,target._elementHeightStates=nil,nil
+  end
   Unindex(record);if record.applied then
    if record.owner and not record.owner:IsOwned() then
     local controller=target._lycheeStyleController;if controller then controller:Release(true) end
    else UI:_BindFixedElement(target,nil,Slots(record)) end
   end
-  target._lycheeElementOwner=nil;UI.elements[target]=nil;UI.elementActive[target]=nil
+  target._lycheeElementOwner,target._lycheeElementContext,target._lycheeBoxRules=nil,nil,nil;UI.elements[target]=nil;UI.elementActive[target]=nil
+  for _,targets in pairs(UI.elementReferences) do targets[target]=nil end
   local group=UI.elementScopes[record.scope or false];if group then group[target]=nil end
+  if target.rows and target.RefreshGeometry then target:RefreshGeometry() end
+  return target
+ end
+ -- Box contributes a separate physical-object rule layer. Rebinding an
+ -- element identity keeps it; releasing Box removes only that contribution.
+ local boxInputs=setmetatable({},{__mode="k"})
+ function C.RegisterBoxRules(target,spec)
+  local rule=boxInputs[spec]
+  if not rule then
+   rule=compile({classes=spec.classes,conditions=spec.conditions})
+   local valid,message=ValidateRule(rule,UI.Theme)
+   if not valid then error(message,2) end
+   boxInputs[spec]=rule
+  end
+  local record=UI.elements[target]
+  if not record then C.Element(target,"__layout.box");record=UI.elements[target];record.boxSynthetic=true end
+  if record.boxRules==rule then return target end
+  record.boxRules,record.boxCombined,record.boxBase=rule,nil,nil
+  target._lycheeBoxRules=true
+  return Apply(record)
+ end
+ function C.ClearBoxRules(target)
+  local record=UI.elements[target]
+  if record and record.boxRules then
+   if record.boxSynthetic then return C.ReleaseElement(target) end
+   record.boxRules,record.boxCombined,record.boxBase=nil,nil,nil
+   target._lycheeBoxRules=nil
+   Apply(record)
+  end
   return target
  end
  function C.ApplyElement(target) local record=UI.elements[target];if record and record.applied and (not record.owner or record.owner:IsOwned()) then local controller=target._lycheeStyleController;if controller then controller:Apply(true) end end;return target end

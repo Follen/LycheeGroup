@@ -48,7 +48,7 @@ if (Test-Path -LiteralPath $lockPath -PathType Leaf) {
                 throw "LycheeUI is frozen: $($file.path) differs from .lock."
             }
         }
-        Write-Output "LycheeUI freeze verified: $($libraryLock.version) / r$($libraryLock.revision)"
+        Write-Output "LycheeUI freeze verified: V$($libraryLock.version)"
     }
 }
 
