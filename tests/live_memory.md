@@ -2,6 +2,16 @@
 
 当前 Theme API v2 使用 [主题重载验证](theme_reload.md) 和 [live_theme_memory.lua](live_theme_memory.lua)。该探针全程采用自然 GC，保留现有招募、申请者和玩家存档；四包同一时刻合计的采样峰值与预算单列。下面的历史探针各自保留其前提和 GC 口径，含主动回收的旧结果不能替代本轮自然峰值验收。
 
+`live_list_memory.lua` 在冻结行池与原生对象数量前，逐行遍历整行和半行偏移，使各复用行的文字、图标及部分可见行完成预热；报告同时保留预热前后的行池数量。初次多出一个部分可见行属于预热分配，预热后继续增长仍判失败。离线生命周期用例覆盖正常复用与后续扩容的失败检测。
+
+`live_relations_memory.lua` 观察已经打开的真实招募页，要求当前 Relations 已启用且加载按来源刷新的修复。启动时通过公开读取主动初始化一次身份快照，报告 `primedSnapshot` 与 `initialVersion`；随后的 110 秒不再主动读取身份，每 5 秒刷新一次四包内存，共 23 个样本。同时记录真实好友／公会事件、关系通知、身份内容版本变化，以及页面、招募状态、队伍、公会和申请批次数量；新版本的内容版本不再代表读取或重建次数。探针不包装业务方法、不提交组队动作、不主动 GC。只有全程仍在招募页、至少收到 10 次公会或战网信息更新、采样峰值不超过性能文档预算时才报告通过；没有申请者时仍可检查社交事件，按实际记录的规模解释结果。完成、失败或取消均解除临时事件与 Group 订阅并取消采样 timer；`lua tests/test_live_relations_memory.lua` 覆盖单次初始化、通知计数与退订、超预算、缺少更新、离页、取消、观察器异常、重复执行和迟到回调。自然读数与带插桩的分配诊断分别记录。
+
+```powershell
+lycheedev live execute --project D:\Code\wow\addons\LycheeGroup --session <CON-id> --file tests/live_relations_memory.lua --request relations-memory-01 --budget-seconds 120 --wait-seconds 30 --policy observation --format json
+```
+
+若返回未完成，沿原 `<CON-id>` 执行 `live resume` 读取同一次观察，不换 request 重跑。实测结果归入 [性能文档](../perfermance.md#1221-2026-10-25-大公会招募页内存增长修复)。
+
 离线探针生命周期入口为 `lua tests/test_live_theme_memory.lua`、`lua tests/test_live_refresh_memory.lua`、`lua tests/test_live_heroic_memory.lua`、`lua tests/test_live_compare.lua`、`lua tests/test_live_list_memory.lua`、`lua tests/test_live_memory_scenarios.lua` 和 `lua tests/test_live_ui_probes.lua`。刷新探针使用真实 Find 页面和 Search 请求控制器，检查六次请求、刷新与重开、筛选记忆关闭、未发出请求、空结果、错误代次、取消、观察器报错及清理后的迟到回调。英雄探针覆盖首次活动选择、六个请求代次、八秒请求间隔、首批结果后行池复用，以及完成、取消和失败后的恢复；对比探针覆盖 Lychee 分支的一次预热与六次正式搜索、当前 `activityIDs` 数组合同及清理。列表探针检查单次搜索、完整负载、原非默认筛选、准备失败和取消后的恢复；组合探针检查筛选记忆关闭时的团本分类确认、空态池首次扩容、完整列表滚动、申请者及编解码阶段，以及各阶段取消或失败后的清理。页面和动画探针覆盖完成、取消与回调失败后的路由、包装方法、帧率设置和资源恢复。各探针恢复原页面、各页显隐和导航选中状态，并保留真实的 `settingsReturnPage`；离线验证在清理后重新打开原页，逐页核对可见内容，再通过实际设置按钮核对原来源页。结果、内存计数和对比中的集合石环境使用替身，不计入游戏内性能结论。
 
 准备阶段同样纳入恢复验证：主题、英雄列表、列表及对比探针覆盖开页后尚未保存局部 UI 引用便抛错的路径；对比探针另覆盖隔离角色筛选后、开页前失败。Presence 与动效计时探针在预热前登记清理，覆盖首次开页失败和正常完成，恢复预热前的页面状态。失败后检查角色筛选原引用与运行态、窗口与原生输入、导航、包装方法和帧率，并检查迟到任务不继续执行。

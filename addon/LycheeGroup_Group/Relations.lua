@@ -1,25 +1,42 @@
 -- 当前观察者的角色好友、战网游戏角色和公会身份；不保存账号昵称或成员原表。
 local A=_G.LycheeGroup
 local G=A.Group
-local R={names={},guids={},shortNames={},dirty=true,version=0}
+local R={names={},guids={},shortNames={},dirty=true,dirtySources=7,version=0}
 G.Relations=R
-local BNET,CHARACTER,GUILD=1,2,4
+local BNET,CHARACTER,GUILD,ALL=1,2,4,7
 local memberNames={}
+local sampledNames,sampledGUIDs={},{}
+local notifiedVersion=0
+-- Each current friend owns only normalized WoW identities, never the native
+-- account record. A presence event replaces that friend's entries in place.
+local bnetFriends,bnetUpdates={},{}
+local bnetFull,bnetCount=true,0
 local function Clear()
+ -- Consumers can outlive event ownership briefly (for example an applicant
+ -- awaiting its removal event). Clearing a nonempty index invalidates them.
+ if next(R.names) or next(R.guids) then R.version=R.version+1 end
  wipe(R.names);wipe(R.guids);wipe(R.shortNames)
- R.guildClubID,R.sampledAt=nil,nil;R.dirty=true
+ wipe(sampledNames);wipe(sampledGUIDs)
+ wipe(bnetFriends);wipe(bnetUpdates);bnetFull,bnetCount=true,0
+ R.guildClubID,R.sampledAt=nil,nil;R.dirty=true;R.dirtySources=ALL;notifiedVersion=R.version
 end
 local function Schedule()
  if R.timer then return end
  R.timer=C_Timer.NewTimer(0,function()
   R.timer=nil
-  if R.active then G:Notify("relations") else Clear() end
+  if not R.active then Clear();return end
+  -- A solo/empty view has not consumed a social snapshot yet. Leave it lazy.
+  if R.sampledAt==nil then return end
+  local version=R:GetVersion()
+  if version~=notifiedVersion then
+   notifiedVersion=version
+   G:Notify("relations")
+  end
  end)
 end
 
-local function Add(flag,name,realm,guid)
+local function Identity(name,realm,guid)
  name,realm,guid=G.Public(name),G.Public(realm),G.Public(guid)
- if guid then R.guids[guid]=bit.bor(R.guids[guid] or 0,flag) end
  local key
  if realm and realm~="" or type(name)=="string" and name:find("-",1,true) then
   key=A:PlayerKey(name,realm)
@@ -27,11 +44,60 @@ local function Add(flag,name,realm,guid)
   local _,_,_,_,_,resolvedName,resolvedRealm=GetPlayerInfoByGUID(guid)
   if G.Public(resolvedName) and G.Public(resolvedRealm)~=nil then key=A:PlayerKey(resolvedName,resolvedRealm) end
  end
- if key then
-  R.names[key]=bit.bor(R.names[key] or 0,flag)
-  local short=key:match("^([^-]+)");local previous=R.shortNames[short]
-  if previous==nil then R.shortNames[short]=key
-  elseif previous~=key then R.shortNames[short]=false end
+ return key,guid
+end
+local function AddIdentity(flag,key,guid)
+ if guid then sampledGUIDs[guid]=bit.bor(sampledGUIDs[guid] or 0,flag) end
+ if key then sampledNames[key]=bit.bor(sampledNames[key] or 0,flag) end
+end
+local function Add(flag,name,realm,guid)
+ AddIdentity(flag,Identity(name,realm,guid))
+end
+-- Compare identity sets, not native order or duplicate account ownership.
+-- Preserve other source bits and leave unchanged entries untouched.
+local function MergeSource(map,sampled,sources)
+ local changed,keysChanged=false,false
+ for key,flags in pairs(map) do
+  local current=flags-bit.band(flags,sources)+(sampled[key] or 0)
+  sampled[key]=nil
+  if current~=flags then
+   map[key]=current>0 and current or nil;changed=true
+   if current==0 then keysChanged=true end
+  end
+ end
+ for key,flags in pairs(sampled) do map[key]=flags;changed,keysChanged=true,true end
+ wipe(sampled)
+ return changed,keysChanged
+end
+local function ReadBnetFriend(index)
+ local identities=bnetFriends[index]
+ local count=0
+ for account=1,C_BattleNet.GetFriendNumGameAccounts(index) do
+  local info=G.Public(C_BattleNet.GetFriendGameAccountInfo(index,account))
+  if info and G.Public(info.clientProgram)==BNET_CLIENT_WOW and G.Public(info.wowProjectID)==WOW_PROJECT_ID
+   and G.Public(info.isOnline) and G.Public(info.isInCurrentRegion) then
+   local key,guid=Identity(info.characterName,info.realmName,info.playerGuid)
+   if key or guid then
+    if not identities then identities={};bnetFriends[index]=identities end
+    count=count+1
+    local identity=identities[count] or {};identities[count]=identity
+    identity.key,identity.guid=key,guid
+   end
+  end
+ end
+ if identities then for i=#identities,count+1,-1 do identities[i]=nil end end
+end
+local function RefreshBnet()
+ local count=BNGetNumFriends()
+ if bnetFull or count~=bnetCount then
+  for index=1,count do ReadBnetFriend(index) end
+  for index in pairs(bnetFriends) do if index>count then bnetFriends[index]=nil end end
+ else
+  for index in pairs(bnetUpdates) do if index<=count then ReadBnetFriend(index) end end
+ end
+ bnetFull,bnetCount=false,count;wipe(bnetUpdates)
+ for _,identities in pairs(bnetFriends) do
+  for _,identity in ipairs(identities) do AddIdentity(BNET,identity.key,identity.guid) end
  end
 end
 
@@ -41,34 +107,43 @@ function R:GetVersion()
  -- A hidden one-off reader can request a fresh snapshot without owning events.
  -- Within one frame it shares that snapshot with the rest of its member batch.
  if self.dirty or not self.active and self.sampledAt~=now then
-  wipe(self.names);wipe(self.guids);wipe(self.shortNames)
-  if C_FriendList.IsLegacyFriendSystemEnabled() then
+  local firstSample=self.sampledAt==nil
+  local sources=self.dirtySources
+  if not self.active and self.sampledAt~=now then sources=ALL;bnetFull=true end
+  wipe(sampledNames);wipe(sampledGUIDs)
+  if bit.band(sources,CHARACTER)~=0 and C_FriendList.IsLegacyFriendSystemEnabled() then
    for index=1,C_FriendList.GetNumFriends() do
     local info=G.Public(C_FriendList.GetFriendInfoByIndex(index))
     if info then Add(CHARACTER,info.name,nil,info.guid) end
    end
   end
-  for index=1,BNGetNumFriends() do
-   for account=1,C_BattleNet.GetFriendNumGameAccounts(index) do
-    local info=G.Public(C_BattleNet.GetFriendGameAccountInfo(index,account))
-    if info and G.Public(info.clientProgram)==BNET_CLIENT_WOW and G.Public(info.wowProjectID)==WOW_PROJECT_ID
-     and G.Public(info.isOnline) and G.Public(info.isInCurrentRegion) then
-     Add(BNET,info.characterName,info.realmName,info.playerGuid)
+  if bit.band(sources,BNET)~=0 then RefreshBnet() end
+  if bit.band(sources,GUILD)~=0 then
+   self.guildClubID=C_Club.GetGuildClubId()
+   if self.guildClubID then
+    -- The scalar roster includes offline members independently of the native
+    -- display filter. Avoid allocating one full ClubMemberInfo per identity.
+    for index=1,GetNumGuildMembers() do
+     local name,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,guid=GetGuildRosterInfo(index)
+     Add(GUILD,name,nil,guid)
     end
    end
   end
-  self.guildClubID=C_Club.GetGuildClubId()
-  if self.guildClubID then
-   local members=G.Public(C_Club.GetClubMembers(self.guildClubID))
-   for _,id in ipairs(members or {}) do
-    id=G.Public(id)
-    if id then
-     local info=G.Public(C_Club.GetMemberInfo(self.guildClubID,id))
-     if info then Add(GUILD,info.name,nil,info.guid) end
-    end
+  local namesChanged,keysChanged=MergeSource(self.names,sampledNames,sources)
+  local guidsChanged=MergeSource(self.guids,sampledGUIDs,sources)
+  if keysChanged then
+   wipe(self.shortNames)
+   for key in pairs(self.names) do
+    local short=key:match("^([^-]+)");local previous=self.shortNames[short]
+    if previous==nil then self.shortNames[short]=key
+    elseif previous~=key then self.shortNames[short]=false end
    end
   end
-  self.sampledAt,self.dirty=now,false;self.version=self.version+1
+  if namesChanged or guidsChanged then self.version=self.version+1 end
+  self.sampledAt,self.dirty,self.dirtySources=now,false,0
+  -- First consumption supplies its own current data; later synchronous reads
+  -- must leave an already-scheduled change notification pending.
+  if firstSample then notifiedVersion=self.version end
   if not self.active and (next(self.names) or next(self.guids)) then Schedule() end
  end
  return self.version
@@ -112,7 +187,7 @@ end
 function R:SetActive(active)
  if self.active==active then return end
  if self.timer then self.timer:Cancel();self.timer=nil end
- self.active,self.dirty=active,true;self.sampledAt=nil
+ self.active,self.dirty=active,true;self.sampledAt=nil;self.dirtySources=ALL;bnetFull=true
  if active then
   if C_FriendList.IsLegacyFriendSystemEnabled() then C_FriendList.ShowFriends() end
   if IsInGuild() then C_GuildInfo.GuildRoster() end
@@ -121,11 +196,18 @@ function R:SetActive(active)
  end
 end
 
-function R:OnChanged()
- self.dirty=true
+function R:OnChanged(source,friendIndex)
+ local flag=source=="bnet" and BNET or source=="character" and CHARACTER or source=="guild" and GUILD or ALL
+ if bit.band(flag,BNET)~=0 then
+  friendIndex=G.Public(friendIndex)
+  if source=="bnet" and type(friendIndex)=="number" and friendIndex>=1 and friendIndex%1==0 and friendIndex<=bnetCount then
+   if not bnetFull then bnetUpdates[friendIndex]=true end
+  else bnetFull=true;wipe(bnetUpdates) end
+ end
+ self.dirty=true;self.dirtySources=bit.bor(self.dirtySources,flag)
  if self.active then Schedule() end
 end
 
 function R:OnClubChanged(id)
- if id==self.guildClubID or id==C_Club.GetGuildClubId() then self:OnChanged() end
+ if id==self.guildClubID or id==C_Club.GetGuildClubId() then self:OnChanged("guild") end
 end

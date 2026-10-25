@@ -1,7 +1,7 @@
 -- Lifecycle and preference preservation through the real Find/Search controllers.
 local checks=0
 local function Check(value,message) assert(value,message);checks=checks+1 end
-for _,mode in ipairs({"complete","remember_off","cancel","prepare_failure","observer_error","warm_open_failure"}) do
+for _,mode in ipairs({"complete","remember_off","late_pool_growth","cancel","prepare_failure","observer_error","warm_open_failure"}) do
  local f=dofile("tests/live_probe_fixture.lua")({rememberFilters=mode~="remember_off"})
  local A,U,G=f.A,f.U,f.G
  A:Open("create");A:Open("settings");U:Hide(true)
@@ -22,15 +22,24 @@ for _,mode in ipairs({"complete","remember_off","cancel","prepare_failure","obse
  A.Open=open
  for tick=1,1000 do
   if mode=="cancel" and tick==2 then p:Close() end
+  if mode=="late_pool_growth" and tick==30 then
+   local list=U.pages.find.results;local height=list:GetHeight()
+   list:SetHeight(height+list.rowHeight*4);list:SetItems(list.ids,list.render)
+   list:SetHeight(height);list:SetItems(list.ids,list.render)
+  end
   f:Advance(.1)
   if not p.active then break end
  end
  Check(not p.active,mode.." completes within its bound")
  if mode=="complete" or mode=="remember_off" then
   Check(p.result and p.result.ok,tostring(p.error or "report failed"))
+  Check(p.result.resultPoolAtStart==p.result.resultPoolBeforeWarm+1,"warmup includes the extra partially visible row")
   Check(f.nativeCalls==1,"exactly one native search")
   Check(p.result.initialRealResults==24 and p.result.initialBoundResults==24,"real Find bound the substitute results")
   Check(p.result.operations[1].calls==320 and p.result.operations[2].calls==320,"complete workload ran")
+ elseif mode=="late_pool_growth" then
+  Check(p.result and not p.result.ok,"growth after warmup must still fail")
+  Check(not p.result.checks.resultPoolStable and not p.result.checks.nativeObjectsStable,"both row and native object growth are detected")
  elseif mode=="prepare_failure" then Check(p.error and p.error:find("real_results_empty",1,true),tostring(p.error))
  elseif mode=="observer_error" then Check(p.error and p.error:find("simulated observer failure",1,true),tostring(p.error))
  elseif mode=="warm_open_failure" then Check(p.error and p.error:find("simulated open failure",1,true),tostring(p.error))

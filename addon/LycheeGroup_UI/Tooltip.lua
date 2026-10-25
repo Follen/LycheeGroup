@@ -30,6 +30,7 @@ local function Viewport()
 end
 function Tip:CaptureOwner(owner)
  if self.owner~=owner or self.pointX==nil then
+  UI.Motion:Stop(self);self:ClearHoverTransit()
   self.pointX,self.pointY=CursorInWindow();self.positionX,self.positionY=nil,nil
  end
  self.owner=owner
@@ -39,10 +40,9 @@ function Tip:Position(frame)
  local width,height=frame:GetWidth(),frame:GetHeight()
  local keep=self.pinned and self.positionX~=nil
  local x=keep and self.positionX or self.pointX+20
- local y=keep and self.positionY or self.pointY+16
+ local y=keep and self.positionY or self.pointY-T.tooltipPadding
  if not keep then
   if x+width>rightLimit then x=self.pointX-width-20 end
-  if y+height>bottomLimit then y=self.pointY-height-16 end
  end
  if keep and self.adjustPoint then
   local cursorX,cursorY=CursorInWindow()
@@ -112,7 +112,7 @@ end
 function Tip:Hide()
  if self.outsideClicks then self.outsideClicks:Hide() end
  if self.text then self.text:Hide() end
- UI.Motion:Stop(self)
+ UI.Motion:Stop(self);self:ClearHoverTransit()
  wipe(self.orderedMembers)
  wipe(self.rosterGroupCounts)
  if self.interactive then
@@ -353,7 +353,7 @@ function Tip:StartRosterDrag(button)
  local allowed,reason=UI:GetGroup().RaidGroups:CanStart(guid)
  button.suppressRosterClick=true
  if not allowed then self:ShowRosterNotice(reason);return end
- self:ClearRosterNotice();UI:CloseMenu();UI.Motion:Stop(self)
+ self:ClearRosterNotice();UI:CloseMenu();UI.Motion:Stop(self);self:ClearHoverTransit()
  self.rosterDrag={guid=guid,button=button,alpha=button:GetAlpha(),wasPinned=self.pinned}
  button:SetAlpha(.55)
  self.interactive:RegisterEvent("PLAYER_REGEN_DISABLED");self.interactive:RegisterEvent("UNIT_FLAGS")
@@ -443,7 +443,7 @@ function UI:ProgressText(record,details)
  return count.."/"..#list
 end
 function Tip:OpenRosterMenu(button,member)
- self.pinned=true;self.outsideClicks:Show();UI.Motion:Stop(self)
+ self.pinned=true;self.outsideClicks:Show();UI.Motion:Stop(self);self:ClearHoverTransit()
  Members:OpenMenu(button,member,function() self:Hide() end)
 end
 local function ApplicantContext(applicant)
@@ -493,7 +493,7 @@ function Tip:BuildInteractive()
   if not Tip.interactive:IsMouseOver() and not ownMenu then Tip:Hide() end
  end)
  outside:Hide();self.outsideClicks=outside
- f:SetScript("OnEnter",function() UI.Motion:Stop(Tip) end)
+ f:SetScript("OnEnter",function() UI.Motion:Stop(Tip);Tip:ClearHoverTransit() end)
  f:SetScript("OnLeave",function() Tip:LeaveOwner() end)
  f:SetScript("OnEvent",function(_,event,key,down)
   if event=="PLAYER_REGEN_DISABLED" or event=="UNIT_FLAGS" then Tip:CheckRosterDrag(event=="UNIT_FLAGS" and key or nil);return end
@@ -518,7 +518,7 @@ function Tip:BuildInteractive()
   end)
  end)
  f.scroll,f.canvas=scroll,canvas
- f:SetScript("OnHide",function() Tip:CancelRosterDrag();Tip:ClearRosterNotice();Tip:ClearPlayerCopy();outside:Hide();UI.Motion:Stop(scroll);scroll.scrollTarget=nil end)
+ f:SetScript("OnHide",function() UI.Motion:Stop(Tip);Tip:ClearHoverTransit();Tip:CancelRosterDrag();Tip:ClearRosterNotice();Tip:ClearPlayerCopy();outside:Hide();UI.Motion:Stop(scroll);scroll.scrollTarget=nil end)
  f.icon=C.Icon(canvas,T.tooltipFIconWidth2);C.Box(f.icon,{width="tooltipFIconWidth2",height="tooltipFIconHeight2"});f.icon:SetPoint("TOPLEFT")
  f.title=C.Text(canvas,"",18,"text");C.SetPoint(f.title,"TOPLEFT",f.title:GetParent(),"TOPLEFT","tooltipFTitleTopleftX",0);f.title:SetWordWrap(true)
  f.subtitle=C.Text(canvas,"",14,"muted");C.SetPoint(f.subtitle,"TOPLEFT",f.subtitle:GetParent(),"TOPLEFT","tooltipFSubtitleTopleftX","tooltipFSubtitleTopleftY");C.SetLineHeight(f.subtitle,20)
@@ -611,7 +611,10 @@ function Tip:ResetInteractive(owner,width,metricAlignment)
  if self.text then self.text:Hide() end
  metricAlignment=metricAlignment or "LEFT"
  local metricVertical=metricAlignment=="CENTER" and "TOP" or "MIDDLE"
- UI.Motion:Stop(self)
+ -- A data refresh of the current source must not cancel a pointer crossing.
+ if not self.hoverElapsed or self.pinned or (owner and owner~=self.owner) then
+  UI.Motion:Stop(self);self:ClearHoverTransit()
+ end
  wipe(self.orderedMembers)
  if not self.interactive then self:BuildInteractive() end
  local f=self.interactive;width=C.ElementValue(f,"root","width",width);if owner then self:CaptureOwner(owner) end
@@ -1182,7 +1185,7 @@ function Tip:LayoutPlayerCopy()
 end
 function Tip:CopyPlayerLink(kind)
  if not self.playerHeight or not self:PlayerLink(kind) then return end
- UI.Motion:Stop(self);self.copyKind=kind;self.pinned=true
+ UI.Motion:Stop(self);self:ClearHoverTransit();self.copyKind=kind;self.pinned=true
  self:Place(self:LayoutPlayerCopy())
  local f=self.interactive
  f.scrollbar:SetValue(ScrollMaximum(f.scroll,f.canvas))
@@ -1190,18 +1193,66 @@ function Tip:CopyPlayerLink(kind)
 end
 
 
+function Tip:ClearHoverTransit()
+ self.hoverX,self.hoverY,self.hoverLastX,self.hoverElapsed,self.hoverIdle=nil,nil,nil,nil,nil
+ self.hoverOwner,self.hoverEligible,self.hoverShow=nil,nil,nil
+end
+function Tip:ForgetHoverOwner(owner)
+ if self.hoverOwner==owner then self.hoverOwner,self.hoverEligible,self.hoverShow=nil,nil,nil end
+end
+-- The triangle between the exit point and the near edge of the popup admits
+-- diagonal travel through another row without making that row the new target.
+function Tip:InHoverTransit(x,y)
+ if not self.hoverX or not self.positionX then return false end
+ local left,top=self.positionX,self.positionY
+ local right,bottom=left+self.interactive:GetWidth(),top+self.interactive:GetHeight()
+ local edge=self.hoverX<left and left or self.hoverX>right and right
+ if not edge then return false end
+ local progress=(x-self.hoverX)/(edge-self.hoverX)
+ if progress<0 or progress>1 then return false end
+ local upper=self.hoverY+(top-self.hoverY)*progress-8
+ local lower=self.hoverY+(bottom-self.hoverY)*progress+8
+ return y>=upper and y<=lower,edge>self.hoverX and 1 or -1
+end
+function Tip:HoverOwner(owner,eligible,show)
+ if self.owner and self.owner~=owner and not self.pinned and self.interactive and self.interactive:IsShown() then
+  if not self.hoverElapsed then self:LeaveOwner(self.owner) end
+  local x,y=CursorInWindow()
+  if self:InHoverTransit(x,y) then
+   self.hoverOwner,self.hoverEligible,self.hoverShow=owner,eligible,show
+   return
+  end
+ end
+ UI.Motion:Stop(self);self:ClearHoverTransit()
+ show(owner)
+end
+function Tip:UpdateHoverTransit(dt)
+ local area=self.owner and (self.owner.tooltipArea or self.owner)
+ if self.interactive:IsMouseOver() or (area and area:IsMouseOver()) then self:ClearHoverTransit();return true end
+ self.hoverElapsed=self.hoverElapsed+dt
+ local x,y=CursorInWindow()
+ local inside,direction=self:InHoverTransit(x,y)
+ if inside and (x-self.hoverLastX)*direction>0 then self.hoverIdle=0 else self.hoverIdle=self.hoverIdle+dt end
+ self.hoverLastX=x
+ -- Allow a short pause on the path, extend while approaching the popup,
+ -- and bound the whole crossing even if the pointer keeps moving.
+ if self.hoverElapsed<.11 or (inside and self.hoverIdle<.2 and self.hoverElapsed<1) then return end
+ local owner,eligible,show=self.hoverOwner,self.hoverEligible,self.hoverShow
+ local target=owner and (owner.tooltipArea or owner)
+ self:ClearHoverTransit()
+ if target and target:IsVisible() and target:IsMouseOver() and eligible(owner) then show(owner) else self:Hide() end
+ return true
+end
 function Tip:LeaveOwner(owner)
  if self.rosterDrag then return end
  if self.pinned then return end
- if owner and owner~=self.owner then return end
+ if owner and owner~=self.owner then self:ForgetHoverOwner(owner);return end
  if not self.interactive or not self.interactive:IsShown() then self:Hide();return end
- local elapsed=0
- UI.Motion:Start(self,function(dt)
-  elapsed=elapsed+dt;if elapsed<.11 then return end
-  local area=self.owner and (self.owner.tooltipArea or self.owner)
-  if not self.interactive:IsMouseOver() and not (area and area:IsMouseOver()) then self:Hide() end
-  return true
- end)
+ if self.hoverElapsed then return end
+ local x,y=CursorInWindow()
+ self.hoverElapsed,self.hoverIdle,self.hoverLastX=0,0,x
+ if owner then self.hoverX,self.hoverY=x,y end
+ UI.Motion:Start(self,function(dt) return self:UpdateHoverTransit(dt) end)
 end
 
 
