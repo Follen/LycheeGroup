@@ -224,12 +224,13 @@ end
 function P:SortResultIDs(ids)
  local prefs=self.resultsHeader.state;local key=prefs.sortKey
  if not key then return ids end
- self.sortedResults=self.sortedResults or {};self.sortValues=self.sortValues or {}
- local sorted,values=self.sortedResults,self.sortValues;wipe(sorted);wipe(values)
+ self.sortedResults=self.sortedResults or {};self.sortValues=self.sortValues or {};self.sortCautions=self.sortCautions or {}
+ local sorted,values,cautions=self.sortedResults,self.sortValues,self.sortCautions;wipe(sorted);wipe(values);wipe(cautions)
  local group=UI:GetGroup()
  local activityRanks=key=="activity" and self:GetActivitySortRanks()
  for i,id in ipairs(ids) do
   local r=group:GetResult(id);local value
+  local note=UI:GetNote(r.leaderKey);cautions[id]=note and note.type=="caution" or false
   if key=="activity" then value=activityRanks[r.activityID]
   elseif key=="members" then value=r.numMembers
   elseif key=="ilvl" then value=r.requiredItemLevel
@@ -240,6 +241,7 @@ function P:SortResultIDs(ids)
   sorted[i]=id;values[id]=value
  end
  table.sort(sorted,function(a,b)
+  if cautions[a]~=cautions[b] then return not cautions[a] end
   local ar,br=group:GetResult(a),group:GetResult(b)
   local ad,bd=DeclinedAt(ar)~=nil,DeclinedAt(br)~=nil
   if ad~=bd then return not ad end
@@ -1989,7 +1991,18 @@ function P:OpenResultMenu(anchor,id,cursor)
   elseif action=="whisper" and target.leaderName and not UI.preview then ChatFrame_SendTell(target.leaderName)
   elseif action=="copy" then UI:CopyText(L.leader,target.leaderName,nil,nil,Say("完整名称","Full name"))
   elseif action=="blockTitle" then UI:GetGroup().Results:BlockTitle(target.name,target.leaderKey)
-  elseif action=="block" and not UI.preview then local _,n,r=A:PlayerKey(target.leaderKey);A:Open("notes",{add={name=n,realm=r,type="caution"}}) end
+  elseif action=="block" and target.leaderKey and not UI.preview then
+   local group=UI:GetGroup();local class=group.Results:GetLeaderClass(target)
+   local details=Detail(target);local specID
+   if details then for _,member in ipairs(details.members) do if member.nameKey==target.leaderKey then
+    class=member.class or class
+    local id,name=group:ResolveMemberSpec(member)
+    if class then specID=A.Specializations:Find(class,id or name) end
+    break
+   end end end
+   local _,name,realm=A:PlayerKey(target.leaderKey)
+   A:Open("notes",{add={name=name,realm=realm,type="caution",class=class,specID=specID}})
+  end
  end,{cursor=cursor~=false})
 end
 function P:OnNotesChanged()
@@ -2092,7 +2105,7 @@ function P:Leave()
  self.results:Clear();self.appList:Clear();self.seasonCategories:Clear();self.categories:Clear();if self.picker then self.activities:Clear();self:ClosePicker() end;M:FinishPlacement(self.filterPanel);self.filterPanel:Hide()
  StopCountdown();StopDeclineClock();M:Waiting(self.busyIcon,false);M:Spin(self.refreshIcon,false);self.busyState=nil
  wipe(state.apps);wipe(state.appIDs);state.selected=nil
- if self.sortedResults then wipe(self.sortedResults);wipe(self.sortValues) end
+ if self.sortedResults then wipe(self.sortedResults);wipe(self.sortValues);wipe(self.sortCautions) end
  if self.activitySortRanks then wipe(self.activitySortRanks) end
  self.activitySortGroups=nil
  state.showGlobal=nil

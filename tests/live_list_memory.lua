@@ -183,9 +183,13 @@ local function BeginWorkload()
  assert(report.initialRealResults>0,"real_results_empty")
  assert(report.initialBoundResults==#current and page.results.rows[1].key and not page.emptyPanel:IsShown(),"real_results_not_bound")
  local _,nativeIDs=C_LFGList.GetFilteredSearchResults();report.initialNativeFilteredResults=#(nativeIDs or {})
- -- Visit the existing pool at different rows once, accounting for lazy native
- -- text/texture resources before checking steady-state reuse.
- for index=0,#current,page.results.capacity do page.results:SetPixelOffset(index*page.results.rowHeight,false) end
+ -- Warm aligned and partial rows: a half-row offset can expose one more row
+ -- than the initial viewport. Keep these allocations in the natural samples.
+ report.resultPoolBeforeWarm=#page.results.rows
+ for index=0,#current do
+  page.results:SetPixelOffset(index*page.results.rowHeight,false)
+  page.results:SetPixelOffset((index+.5)*page.results.rowHeight,false)
+ end
  page.results:SetPixelOffset(0,false)
  report.frameCounts.warm=ObjectCounts()
  report.resultPoolAtStart=#page.results.rows

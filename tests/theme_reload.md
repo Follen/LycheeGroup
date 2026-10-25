@@ -2,6 +2,8 @@
 
 本说明维护 Theme／Configuration／Appearance API v2 的验证方法；该接口已随 1.2.4 发布。产品合同见 [API.md](../API.md)，开发边界见 [Development.md](../Development.md)。当前结果、实机数据与预算结论写入 [perfermance.md](../perfermance.md)。
 
+`group` 的关系索引回归另覆盖 1,000 人公会与 500 名战网好友：相同姓名／GUID 不推进内容版本或通知界面，名单与账号换序、重复身份和无关资料变化保持稳定；真实身份、来源及成员资格变化仍更新。同步读取不吞掉待发通知，最后消费者退出取消任务；停用后名单清空再启用时，尚未移除的申请者记录会清掉旧关系标记。
+
 Plus 功能整合的专项入口为 `lua tests/runner.lua group season_scores season_picker player_links find_enhancements activity_labels applicant_time floating`。覆盖身份四态循环、右键清除、旧组合保留、同职业同职责／嗜血筛选、未知数据与缓存失效、角色分类偏好、成绩服务的事件与关闭清理、选择器滚动复用和双语多字号、URL 编码与未知服务器、当前成员复制和返回、标题语义色与实时刷新、活动显示别名与原始数据隔离、列宽及各类行高。全部模块已纳入完整 runner。原始贡献包用于行为参考，正式实现归现有业务所有者；客户端实际成绩与复制交互另行实机核对。
 
 `tests/live_plus_features.lua` 是已连接客户端的真实数据探针，使用 `opaque` 策略、执行预算 120 秒，探针自身异步上限 105 秒。前提是非战斗、真实 Find 已打开并已有稳定的赛季钥石结果，且没有 Preview、模态窗口或已打开的菜单／Tooltip。它检查活动显示名与原始字段隔离、基础行高／标题颜色／最小队长列宽，以原生成员信息独立核对两个新筛选，再逐地图比较赛季成绩的两个原生 API 返回值、检查关菜单退订，并从真实当前玩家详情展开 IO 就地复制，核对当前身份、链接、焦点及关闭后的清理。原生值缺失如实记录，前提不足或断言失败明确报告未覆盖／失败。仅使用控制器与 `Button:Click`，不代表硬件操作；不改 Blizzard API、设置或笔记，不发送申请、邀请、取消和招募动作。结束、失败和取消时恢复原 Find 偏好引用、运行态筛选、列表位置、页面显隐及关闭的菜单／Tooltip 状态。
@@ -22,6 +24,8 @@ Plus 功能整合的专项入口为 `lua tests/runner.lua group season_scores se
 
 `node tests/check_architecture.cjs` 验证内置 LycheeUI 的冻结清单与 SHA-256，检查共享源码的产品依赖和业务文件的加载归属；传入独立 LycheeUI 目录可同时核对源库。`test_product_components.lua` 检查共享库、Context 与控件工厂没有产品方法或状态所有者，包含页面和提示的延迟构建；该脚本已纳入布局 runner。
 
+布局 runner 中的 `test_applicant_hover.lua` 通过实际申请者行与 Tooltip 回调重放 A→相邻行 B→WCL 的路径，检查左右弹出及不同缩放时仍复制 A、停在 B 后切换，以及离开、隐藏、裁切和关闭后的任务清理。另以正常动画和减少动画两种设置检查申请者邀请／拒绝按钮的首次悬停、按下、松开、移出和隐藏复用，核对语义色与透明度且不触发组队动作。坐标与悬停状态由离线替身提供；游戏内鼠标命中需另行验证。
+
 ## 离线入口
 
 在产品仓库根目录使用 Lua 5.1 和 Node.js：
@@ -32,6 +36,7 @@ lua tests/run_layout_checks.lua
 node tests/check_architecture.cjs
 lua tests/test_live_theme_memory.lua
 lua tests/test_live_refresh_memory.lua
+lua tests/test_live_relations_memory.lua
 lua tests/test_live_heroic_memory.lua
 lua tests/test_live_list_memory.lua
 lua tests/test_live_memory_scenarios.lua

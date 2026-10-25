@@ -72,22 +72,29 @@ _G.C_PaperDollInfo={GetInspectItemLevel=function() return nil end}
 _G.C_PlayerInfo={GetPlayerMythicPlusRatingSummary=function() return nil end}
 _G.BNET_CLIENT_WOW="WoW"
 _G.WOW_PROJECT_ID=1
+local socialNativeCalls={character=0,bnetAccounts=0,bnetInfo=0,guild=0,clubList=0,clubMember=0}
 _G.BNGetNumFriends=function() return #S.social.bnet end
 _G.C_BattleNet={
- GetFriendNumGameAccounts=function(index) return #S.social.bnet[index].accounts end,
- GetFriendGameAccountInfo=function(index,account) return S.social.bnet[index].accounts[account] end,
+ GetFriendNumGameAccounts=function(index) socialNativeCalls.bnetAccounts=socialNativeCalls.bnetAccounts+1;local friend=S.social.bnet[index];return friend and #friend.accounts or 0 end,
+ GetFriendGameAccountInfo=function(index,account) socialNativeCalls.bnetInfo=socialNativeCalls.bnetInfo+1;local friend=S.social.bnet[index];return friend and friend.accounts[account] end,
 }
 _G.C_FriendList={
  IsLegacyFriendSystemEnabled=function() return true end,
  GetNumFriends=function() S.socialReads=(S.socialReads or 0)+1;return #S.social.friends end,
- GetFriendInfoByIndex=function(index) return S.social.friends[index] end,
+ GetFriendInfoByIndex=function(index) socialNativeCalls.character=socialNativeCalls.character+1;return S.social.friends[index] end,
  ShowFriends=function() S.friendRequests=(S.friendRequests or 0)+1 end,
 }
 _G.C_Club={
  GetGuildClubId=function() return S.social.guildID end,
- GetClubMembers=function() local ids={};for i=1,#S.social.guild do ids[i]=i end;return ids end,
- GetMemberInfo=function(_,index) return S.social.guild[index] end,
+ GetClubMembers=function() socialNativeCalls.clubList=socialNativeCalls.clubList+1;local ids={};for i=1,#S.social.guild do ids[i]=i end;return ids end,
+ GetMemberInfo=function(_,index) socialNativeCalls.clubMember=socialNativeCalls.clubMember+1;return S.social.guild[index] end,
 }
+_G.GetNumGuildMembers=function() return #S.social.guild end
+_G.GetGuildRosterInfo=function(index)
+ socialNativeCalls.guild=socialNativeCalls.guild+1
+ local member=S.social.guild[index];if not member then return end
+ return member.name,"Member",0,90,"Mage","City","","",member.isOnline~=false,0,"MAGE",0,0,false,false,0,member.guid
+end
 _G.C_GuildInfo={GuildRoster=function() S.guildRequests=(S.guildRequests or 0)+1 end}
 _G.IsInGuild=function() return S.social.guildID~=nil end
 _G.GetPlayerInfoByGUID=function(guid)
@@ -566,6 +573,26 @@ do
 	end
 
 	-- 规范化字段与身份。
+	do
+		local previousNotes=A.Notes
+		local key=G.Results:GetResult(11).leaderKey
+		local notes={[key]={type="caution"}}
+		A.Notes={Find=function(_,identity) return notes[identity] end}
+		S.results[11].numBNetFriends=1;G.Results:OnResultUpdated(11)
+		local resultReads,memberReads,playerReads=S.resultReads,S.memberCountReads,S.playerReads
+		for _,sort in ipairs({"newest","rating","itemLevel","members"}) do
+			G.Search:SetFilters({sort=sort});local ids=G.Results:GetResults()
+			T.eq(ids[#ids],11,"a caution leader stays below other results despite friend priority and high sort values")
+			T.eq(#ids,3,"note caution changes priority without filtering the result")
+		end
+		T.eq(S.resultReads,resultReads);T.eq(S.memberCountReads,memberReads);T.eq(S.playerReads,playerReads,"caution sorting reads existing leader identities without native member scans")
+		for _,kind in ipairs({"positive","neutral"}) do
+			notes[key].type=kind;G.Results:InvalidateView()
+			T.eq(G.Results:GetResults()[1],11,"non-caution notes retain ordinary friend priority")
+		end
+		notes[key]=nil;G.Results:InvalidateView();T.eq(G.Results:GetResults()[1],11,"removing the caution note restores ordinary ordering")
+		A.Notes=previousNotes;S.results[11].numBNetFriends=0;G.Results:OnResultUpdated(11);G.Search:SetFilters({})
+	end
 	local record = G.Results:GetResult(11)
 	T.eq(record.activityName, "黑翼之巢")
 	T.eq(record.leaderKey, "团长甲-晨风号角")
@@ -3107,6 +3134,9 @@ do
  local createView={};G:Attach(createView,"create")
  T.eq(#Stubs.FramesWithEvent("BN_FRIEND_INFO_CHANGED"),1,"the current-roster view owns live observer relationships")
  T.eq(S.friendRequests,friendRequests+1);T.eq(S.guildRequests,guildRequests+1)
+ local observed={nameKey="晴昼秋岚-燃烧之刃",guid="Player-Bnet"}
+ G.Relations:Apply(observed)
+ T.ok(observed.isBNetFriend and observed.isGuildMate,"the display consumes a baseline before testing a real relationship-change burst")
  local notifications=0;local unsub=G:Subscribe(function(kind) if kind=="relations" then notifications=notifications+1 end end)
  local sort,sorts=table.sort,0
  table.sort=function(values,compare) sorts=sorts+1;return sort(values,compare) end
@@ -3892,10 +3922,216 @@ do
  G:Detach(view);S.results,S.resultIDs,S.applications=savedResults,savedIDs,savedApps
 end
 
+-- Social churn must not allocate native Club member tables or reread unrelated
+-- sources. The scale matches the large-guild/continuous-update failure without
+-- relying on the host Lua allocator or a fragile absolute heap threshold.
+do
+ local social,entry=S.social,S.activeEntry
+ S.activeEntry=nil;G.Listing:OnEntryUpdate()
+ S.social={friends={{name="Shared-Away",guid="Social-Shared"},{name="CharOnly-Away",guid="Social-Char"}},bnet={},guild={},guildID=88}
+ local function Account(name,realm,guid)
+  return {clientProgram="WoW",wowProjectID=1,isOnline=true,isInCurrentRegion=true,characterName=name,realmName=realm,playerGuid=guid}
+ end
+ for index=1,1000 do S.social.guild[index]={name="Guild"..index.."-Away",guid="Social-Guild-"..index,isOnline=index%2==0} end
+ for index=1,500 do S.social.bnet[index]={accounts={Account("Bnet"..index,"Away","Social-Bnet-"..index)}} end
+ S.social.guild[1]={name="Shared-Away",guid="Social-Shared",isOnline=false}
+ S.social.guild[2]={name="Twin-Away",guid="Social-Twin-Away",isOnline=false}
+ S.social.bnet[1].accounts={Account("Shared","Away","Social-Shared")}
+ S.social.bnet[2].accounts={Account("Twin","Elsewhere","Social-Twin-Elsewhere")}
+ S.social.bnet[3].accounts={Account("Shared","Away","Social-Shared")}
+ local function ResetReads() for key in pairs(socialNativeCalls) do socialNativeCalls[key]=0 end end
+ local function Flags(name,guid)
+  local member={name=name:match("^[^-]+"),nameKey=name,guid=guid};G.Relations:Apply(member);return member
+ end
+ local function NoReads(character,bnet,guild,label)
+  T.eq(socialNativeCalls.character,character,label..": character reads")
+  T.eq(socialNativeCalls.bnetInfo,bnet,label..": Battle.net game-account reads")
+  T.eq(socialNativeCalls.guild,guild,label..": scalar guild reads")
+  T.eq(socialNativeCalls.clubList,0,label..": no Club member-ID array")
+  T.eq(socialNativeCalls.clubMember,0,label..": no complete Club member tables")
+ end
+ G.Relations:SetActive(false)
+ local view={};G:Attach(view,"create");ResetReads();G.Relations:GetVersion()
+ NoReads(2,500,1000,"initial complete social snapshot")
+ local shared=Flags("Shared-Away","Social-Shared")
+ T.ok(shared.isBNetFriend and shared.isCharFriend and shared.isGuildMate,"all three sources coexist on one name/GUID")
+ T.eq(Flags("Guild999-Away","Social-Guild-999").isGuildMate,true,"offline guild members remain in the complete identity index")
+ local twin={name="Twin"};G.Relations:Apply(twin,true)
+ T.eq(twin.isBNetFriend,false);T.eq(twin.isGuildMate,false,"same short name on two realms remains ambiguous across sources")
+ Stubs.AdvanceClock(0)
+
+ local relationNotifications=0
+ local unwatchRelations=G:Subscribe(function(kind) if kind=="relations" then relationNotifications=relationNotifications+1 end end)
+ local unchangedVersion=G.Relations:GetVersion()
+ Fire("GUILD_ROSTER_UPDATE",true)
+ T.eq(G.Relations:GetVersion(),unchangedVersion,"unchanged guild names and GUIDs must not advance the relationship version")
+ Stubs.AdvanceClock(0)
+ T.eq(relationNotifications,0,"an unchanged guild event must not repaint relationship consumers")
+ local function NoChange(event,index,synchronous)
+  local version,notifications=G.Relations:GetVersion(),relationNotifications
+  Fire(event,index)
+  if synchronous then T.eq(G.Relations:GetVersion(),version,event..": synchronous unchanged read preserves the version") end
+  Stubs.AdvanceClock(0)
+  T.eq(relationNotifications,notifications,event..": unchanged identities do not notify")
+  T.eq(G.Relations:GetVersion(),version,event..": unchanged identities preserve the version")
+ end
+ local function Changed(event,index)
+  local version,notifications=G.Relations:GetVersion(),relationNotifications
+  Fire(event,index)
+  T.ok(G.Relations:GetVersion()>version,event..": changed relationship identities advance the version")
+  T.eq(relationNotifications,notifications,event..": synchronous consumption does not send an early display notification")
+  Stubs.AdvanceClock(0)
+  T.eq(relationNotifications,notifications+1,event..": a synchronous read cannot swallow the pending real-change notification")
+ end
+
+ ResetReads()
+ for index=1,8 do NoChange("GUILD_ROSTER_UPDATE",true,index%2==0) end
+ NoReads(0,0,8000,"eight continuous large-guild updates")
+ ResetReads();NoChange("FRIENDLIST_UPDATE",nil,true)
+ NoReads(2,0,0,"character-only invalidation")
+ ResetReads();NoChange("BN_FRIEND_INFO_CHANGED",1,true)
+ NoReads(0,1,0,"unchanged indexed Battle.net identity")
+ ResetReads();NoChange("BN_FRIEND_INFO_CHANGED")
+ NoReads(0,500,0,"unchanged complete Battle.net identities")
+
+ -- Membership and source flags matter; rank, presence, record order and the
+ -- number of accounts owning an identical identity do not change those flags.
+ S.social.guild[1].isOnline=true;NoChange("GUILD_ROSTER_UPDATE",true,true)
+ S.social.friends[1].notes="different note";NoChange("FRIENDLIST_UPDATE")
+ S.social.bnet[1].accounts[1].richPresence="Different location";NoChange("BN_FRIEND_INFO_CHANGED",1)
+ S.social.guild[1],S.social.guild[1000]=S.social.guild[1000],S.social.guild[1]
+ NoChange("GUILD_ROSTER_UPDATE",true,true)
+ S.social.guild[1],S.social.guild[1000]=S.social.guild[1000],S.social.guild[1]
+ NoChange("GUILD_ROSTER_UPDATE",true)
+ S.social.friends[1],S.social.friends[2]=S.social.friends[2],S.social.friends[1]
+ NoChange("FRIENDLIST_UPDATE",nil,true)
+ S.social.friends[1],S.social.friends[2]=S.social.friends[2],S.social.friends[1]
+ NoChange("FRIENDLIST_UPDATE")
+ S.social.bnet[1].accounts={Account("Shared","Away","Social-Shared"),Account("Shared","Away","Social-Shared")}
+ NoChange("BN_FRIEND_INFO_CHANGED",1,true)
+ S.social.bnet[1].accounts={};NoChange("BN_FRIEND_INFO_CHANGED",1)
+ T.eq(Flags("Shared-Away","Social-Shared").isBNetFriend,true,"another friend's ownership keeps the same identity present")
+ S.social.bnet[1].accounts={Account("Shared","Away","Social-Shared")};NoChange("BN_FRIEND_INFO_CHANGED",1,true)
+ S.social.bnet[4],S.social.bnet[5]=S.social.bnet[5],S.social.bnet[4]
+ NoChange("BN_FRIEND_LIST_SIZE_CHANGED",nil,true)
+ S.social.bnet[4],S.social.bnet[5]=S.social.bnet[5],S.social.bnet[4]
+ NoChange("BN_FRIEND_LIST_SIZE_CHANGED")
+ S.social.bnet[4].accounts[2]=Account("SecondAccount","Away","Social-SecondAccount")
+ Changed("BN_FRIEND_INFO_CHANGED",4)
+ S.social.bnet[4].accounts[1],S.social.bnet[4].accounts[2]=S.social.bnet[4].accounts[2],S.social.bnet[4].accounts[1]
+ NoChange("BN_FRIEND_INFO_CHANGED",4,true)
+ S.social.bnet[4].accounts={Account("Bnet4","Away","Social-Bnet-4")}
+ Changed("BN_FRIEND_INFO_CHANGED",4)
+
+ S.social.friends[3]={name="AddedCharacter-Away",guid="Social-AddedCharacter"};Changed("FRIENDLIST_UPDATE")
+ T.eq(Flags("AddedCharacter-Away","Social-AddedCharacter").isCharFriend,true,"new source membership is visible")
+ S.social.friends[3]=nil;Changed("FRIENDLIST_UPDATE")
+ T.eq(Flags("AddedCharacter-Away","Social-AddedCharacter").isCharFriend,false,"removed membership clears its old identity")
+
+ S.social.guild[1].name="Renamed-Away";Changed("GUILD_ROSTER_UPDATE",true)
+ T.eq(Flags("Renamed-Away","Social-Shared").isGuildMate,true,"a name-only guild change is visible")
+ S.social.guild[1].name="Shared-Away";Changed("GUILD_ROSTER_UPDATE",true)
+ S.social.guild[1].guid="Social-NewGuildGuid";Changed("GUILD_ROSTER_UPDATE",true)
+ T.eq(Flags("Missing-Away","Social-NewGuildGuid").isGuildMate,true,"a GUID-only guild change is visible without a name match")
+ T.eq(Flags("Missing-Away","Social-Shared").isGuildMate,false,"the previous GUID loses only its guild source")
+ S.social.guild[1].guid="Social-Shared";Changed("GUILD_ROSTER_UPDATE",true)
+
+ -- Updating one friend's current game identity must not scan all 500 friends.
+ local oldAccount=setmetatable({S.social.bnet[1].accounts[1]},{__mode="v"})
+ S.social.bnet[1].accounts={Account("Changed","Away","Social-Changed")}
+ ResetReads();Changed("BN_FRIEND_INFO_CHANGED",1)
+ NoReads(0,1,0,"one indexed Battle.net friend")
+ T.eq(socialNativeCalls.bnetAccounts,1,"one indexed event reads only that friend's game-account count")
+ collectgarbage("collect");T.eq(oldAccount[1],nil,"the per-friend cache retains identities rather than native account-info tables")
+ T.eq(Flags("Changed-Away","Social-Changed").isBNetFriend,true,"the friend's replacement identity is immediately queryable")
+ shared=Flags("Shared-Away","Social-Shared")
+ T.ok(shared.isBNetFriend and shared.isCharFriend and shared.isGuildMate,"removing one duplicate Battle.net owner preserves the other owner and other sources")
+ S.social.bnet[3].accounts={};ResetReads();Changed("BN_FRIEND_INFO_CHANGED",3)
+ NoReads(0,0,0,"indexed friend with no remaining game account")
+ shared=Flags("Shared-Away","Social-Shared")
+ T.eq(shared.isBNetFriend,false);T.ok(shared.isCharFriend and shared.isGuildMate,"removing the final Battle.net owner preserves character/guild flags")
+ S.social.friends={{name="CharOnly-Away",guid="Social-Char"}};ResetReads();Changed("FRIENDLIST_UPDATE")
+ NoReads(1,0,0,"removing one character relationship")
+ shared=Flags("Shared-Away","Social-Shared");T.eq(shared.isCharFriend,false);T.eq(shared.isGuildMate,true)
+ table.remove(S.social.guild,1);ResetReads();Changed("GUILD_ROSTER_UPDATE",true)
+ NoReads(0,0,999,"removing the final guild relationship")
+ shared=Flags("Shared-Away","Social-Shared");T.eq(shared.isGuildMate,false);T.eq(shared.isBNetFriend,false);T.eq(shared.isCharFriend,false)
+
+ S.social.bnet[2].accounts={};ResetReads();Changed("BN_FRIEND_INFO_CHANGED",2)
+ NoReads(0,0,0,"removing the cross-realm short-name collision")
+ twin={name="Twin"};G.Relations:Apply(twin,true)
+ T.eq(twin.isGuildMate,true,"a formerly ambiguous short name becomes unique after the other realm leaves")
+ T.eq(twin.isBNetFriend,false);T.eq(Flags("Twin-Elsewhere","Social-Twin-Elsewhere").isGuildMate,false,"exact identity on another realm never inherits the guild bit")
+
+ -- Size changes invalidate index ownership; later indexed events use the new order.
+ S.social.bnet[1],S.social.bnet[500]=S.social.bnet[500],S.social.bnet[1]
+ table.remove(S.social.bnet,499)
+ ResetReads();Changed("BN_FRIEND_LIST_SIZE_CHANGED")
+ NoReads(0,497,0,"Battle.net list-size/order refresh")
+ S.social.bnet[1].accounts={Account("Reordered","Away","Social-Reordered")}
+ ResetReads();Changed("BN_FRIEND_INFO_CHANGED",1)
+ NoReads(0,1,0,"indexed update after friend reordering")
+ T.eq(Flags("Bnet500-Away","Social-Bnet-500").isBNetFriend,false,"the reordered friend's former identity is removed")
+ T.eq(Flags("Reordered-Away","Social-Reordered").isBNetFriend,true)
+
+ ResetReads();NoChange("BN_FRIEND_INFO_CHANGED",nil,true)
+ NoReads(0,497,0,"Battle.net event without an index refreshes the complete source")
+ for _,event in ipairs({"BN_FRIEND_ACCOUNT_ONLINE","BN_FRIEND_ACCOUNT_OFFLINE","BN_DISCONNECTED"}) do
+  ResetReads();NoChange(event,nil,true)
+  NoReads(0,497,0,event.." refreshes the complete Battle.net source only")
+ end
+ ResetReads();G.Relations:OnChanged();G.Relations:GetVersion();Stubs.AdvanceClock(0)
+ NoReads(1,497,999,"the public unqualified invalidation still refreshes all sources")
+ local pendingVersion,pendingNotifications=G.Relations:GetVersion(),relationNotifications
+ S.social.guild[#S.social.guild+1]={name="Pending-Away",guid="Social-Pending"}
+ Fire("GUILD_ROSTER_UPDATE",true)
+ T.ok(G.Relations:GetVersion()>pendingVersion,"a final pending change is available synchronously")
+ G:Detach(view);Stubs.AdvanceClock(0)
+ T.eq(relationNotifications,pendingNotifications,"the last consumer leaving cancels its pending real-change notification")
+ T.eq(next(G.Relations.names),nil);T.eq(next(G.Relations.guids),nil);T.eq(next(G.Relations.shortNames),nil)
+ T.eq(G.Relations.timer,nil,"stopping the last consumer releases pending social notifications")
+ S.social={friends={},bnet={{accounts={Account("Fresh","Away","Social-Fresh")}}},guild={}}
+ G:Attach(view,"create");ResetReads();G.Relations:GetVersion()
+ NoReads(0,1,0,"restarting after the old friend-index cache was released")
+ T.eq(Flags("Changed-Away","Social-Changed").isBNetFriend,false,"stopped caches cannot restore an old indexed friend")
+ T.eq(Flags("Fresh-Away","Social-Fresh").isBNetFriend,true)
+ unwatchRelations();G:Detach(view);S.social,S.activeEntry=social,entry;G.Listing:OnEntryUpdate()
+end
+
+-- Applicant records can outlive the synchronous listing snapshot while the
+-- native removal event is still pending. Clearing social caches must invalidate
+-- their previously applied relationship version, including a later empty index.
+do
+ local social,entry,applicants,members=S.social,S.activeEntry,S.applicants,S.applicantMembers
+ local id=98901
+ S.social={friends={{name="Departed-Away",guid="Departed-Guid"}},guild={},bnet={{accounts={{clientProgram="WoW",wowProjectID=1,isOnline=true,isInCurrentRegion=true,characterName="Departed",realmName="Away",playerGuid="Departed-Guid"}}}}}
+ S.activeEntry={activityIDs={502}}
+ S.applicants={[id]={applicationStatus="applied",numMembers=1,displayOrderID=1}}
+ S.applicantMembers={[id]={{name="Departed-Away",class="MAGE"}}}
+ G.Listing:OnEntryUpdate()
+ local view={};G:Attach(view,"create");G.Applicants:RefreshList(true,true)
+ local cached=G:GetApplicant(id);local member=cached.members[1]
+ T.ok(member.isBNetFriend and member.isCharFriend,"cached applicant consumes the original social identity")
+ local version=cached.relationsVersion
+ -- Listing state changes first; its separate applicant-removal event has not
+ -- arrived, so the existing applicant record remains a valid service consumer.
+ S.activeEntry=nil;G.Listing:OnEntryUpdate();G:Detach(view)
+ T.eq(G.Relations.active,false);T.eq(next(G.Relations.names),nil);T.eq(next(G.Relations.guids),nil)
+ S.social={friends={},bnet={},guild={}}
+ G:Attach(view,"create")
+ T.eq(G:GetApplicant(id),cached,"reactivation refreshes the retained record instead of requiring replacement")
+ T.eq(member.isBNetFriend,false,"a cached applicant loses old Battle.net flags after stop and an empty restart")
+ T.eq(member.isCharFriend,false,"a cached applicant loses old character-friend flags after an empty restart")
+ T.ok(cached.relationsVersion~=version,"cache invalidation remains observable when the restarted identity set is empty")
+ G:Detach(view);G.Applicants:Clear()
+ S.social,S.activeEntry,S.applicants,S.applicantMembers=social,entry,applicants,members
+ G.Listing:OnEntryUpdate()
+end
+
 -- Opening Create while solo must not materialize the observer's entire social
 -- index. Native getters allocate new records, unlike the ordinary fixture data.
 do
- local friends,members,memberInfo=C_FriendList.GetFriendInfoByIndex,C_Club.GetClubMembers,C_Club.GetMemberInfo
+ local friends,guildInfo=C_FriendList.GetFriendInfoByIndex,GetGuildRosterInfo
  local social=S.social;local n=os.getenv("LYCHEE_MEASURE_SOLO_RELATIONS") and 500 or 3
  S.social={friends={},bnet={},guild={},guildID=77}
  for index=1,n do S.social.friends[index]={};S.social.guild[index]={} end
@@ -3904,10 +4140,9 @@ do
   friendReads=friendReads+1
   return {name="SocialFriend"..index.."-Away",guid="Social-Friend-"..index,connected=true,className="Mage",level=90,area="City",notes="",mobile=false,rafLinkType=0,dnd=false}
  end
- C_Club.GetClubMembers=function() local ids={};for index=1,n do ids[index]=index end;return ids end
- C_Club.GetMemberInfo=function(_,index)
+ GetGuildRosterInfo=function(index)
   guildReads=guildReads+1
-  return {name="SocialGuild"..index.."-Away",guid="Social-Guild-"..index,role=1,level=90,zone="City",classID=8,isOnline=true,memberNote="",officerNote="",presence=1}
+  return "SocialGuild"..index.."-Away","Member",0,90,"Mage","City","","",true,0,"MAGE",0,0,false,false,0,"Social-Guild-"..index
  end
  Stubs.ClearUnits();Stubs.SetUnit("player",{name="Solo",realm="Home",class="WARRIOR",guid="Solo-Self"})
  local view={}
@@ -3944,7 +4179,7 @@ do
  T.eq(guildReads,reads,"an empty roster also has no relationship consumer")
  G:Detach(view)
  T.eq(G.Game.frame.events.FRIENDLIST_UPDATE,nil,"the final consumer still releases social events")
- C_FriendList.GetFriendInfoByIndex,C_Club.GetClubMembers,C_Club.GetMemberInfo=friends,members,memberInfo
+ C_FriendList.GetFriendInfoByIndex,GetGuildRosterInfo=friends,guildInfo
  S.social=social
 end
 

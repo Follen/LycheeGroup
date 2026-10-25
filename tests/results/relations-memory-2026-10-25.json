@@ -1,0 +1,1529 @@
+{
+  "schema": "lycheegroup.relations-memory-investigation.v1",
+  "date": "2026-10-25",
+  "createdAt": "2026-10-25T08:19:17.971Z",
+  "status": "complete",
+  "baseCommit": "ffc1877d6f25adf80d7bda3f92d2e4250268991e",
+  "branch": "codex/tooltip-hover-path",
+  "productVersion": "1.2.5 with unreleased changes",
+  "client": "12.1.5.70575",
+  "libraryRevision": 46,
+  "measurement": {
+    "budgetBytes": 20000000,
+    "packages": [
+      "LycheeGroup",
+      "LycheeGroup_Group",
+      "LycheeGroup_Notes",
+      "LycheeGroup_UI"
+    ],
+    "units": "bytes; MB uses 1000000 bytes; KiB uses 1024 bytes",
+    "memory": "Refreshed GetAddOnMemoryUsage counters for the four product packages. The original cached read is retained but excluded from fresh baseline summaries.",
+    "gcPolicy": "No explicit collection or changes to collector policy in any live probe in this investigation.",
+    "naturalSampling": "No product method wrappers or business actions during the two 110-second observations. The second run was opened by the user and included actual applicants. Each sample refreshes global addon memory; that observer cost is recorded separately.",
+    "profiles": "Separate 15-second diagnostic windows temporarily wrapped product methods and the library event handler, restoring all wrappers at cleanup. Heap deltas are net changes, include nested calls and natural collection, and must not be summed across parent/child methods or interpreted as gross allocations.",
+    "scope": "The before/after live windows differ in group size, event counts and global GC state. No percentage improvement is inferred. Two 110-second sampled peaks do not establish an indefinite peak or a full automatic GC cycle."
+  },
+  "rootCause": {
+    "summary": "Any local social change rebuilt every relationship source. Guild identity indexing materialized full ClubMemberInfo tables for 979 members; repeated guild and Battle.net updates drove fast temporary allocation growth.",
+    "originalFreshMemory": {
+      "samples": 5,
+      "seconds": 20.021000000007916,
+      "firstBytes": 64948600,
+      "finalBytes": 96897566,
+      "sampledPeakBytes": 96897566,
+      "budgetPassed": false
+    },
+    "sourceCosts": {
+      "guildRosterAvailable": true,
+      "sources": {
+        "bnet": {
+          "heapNetKiB": 221.265625,
+          "lastFields": 11,
+          "ms": 2.3497999906539917,
+          "records": 142
+        },
+        "character": {
+          "heapNetKiB": 0.2890625,
+          "ms": 0.004500031471252441,
+          "records": 0
+        },
+        "guild": {
+          "heapNetKiB": 1489.3017578125,
+          "lastFields": 23,
+          "ms": 15.823300004005432,
+          "records": 979
+        }
+      }
+    },
+    "originalRelationsProfile": {
+      "groupMembers": 14,
+      "seconds": 15,
+      "rebuilds": 17,
+      "metrics": {
+        "calls": 737,
+        "heapNetKiB": 33558.64453125,
+        "maxHeapKiB": 2063.5859375,
+        "ms": 280.173401594162
+      }
+    }
+  },
+  "implementation": {
+    "sources": [
+      {
+        "path": "addon/LycheeGroup_Group/Relations.lua",
+        "previousInstalledSha256": "7996e287b1592a2935979f4daeacd0a3da496f1530a7e20dce37bd2dfcc3f94f",
+        "sha256": "350fc18e8945c9aaffed64de18c39da2ea120d1068346e2b292bde1628e7ee15",
+        "installedMatchesSource": true
+      },
+      {
+        "path": "addon/LycheeGroup_Group/Group.lua",
+        "previousInstalledSha256": "5a3c13bdf1dbd35bf55298d1182b2e9e95c7a349a7a89ee4553246b248efac11",
+        "sha256": "214a7b3921a7b182e17f79c40bfc3d9ab6f47045ae09b017dc0590c3788a8cee",
+        "installedMatchesSource": true
+      }
+    ],
+    "changes": [
+      "Invalidate character friends, Battle.net and guild independently.",
+      "Read guild full name and GUID from scalar roster returns.",
+      "For a valid friend index, refresh only that friend; list/count changes and events without a usable index refresh the complete Battle.net source.",
+      "Keep only current normalized Battle.net identity keys/GUIDs, preserve other source bits, and release all relationship indexes when inactive."
+    ],
+    "scalarIdentityEquivalence": {
+      "clubCount": 979,
+      "equivalent": true,
+      "guidMismatch": 0,
+      "matched": 979,
+      "missing": 0,
+      "offlineVisible": true,
+      "online": 195,
+      "referenceCount": 979,
+      "scalarCount": 979,
+      "scalarHeapNetKiB": 0,
+      "scalarMs": 2.8978999853134155
+    },
+    "offlineFilterEquivalence": {
+      "clubCount": 979,
+      "initial": true,
+      "restored": true,
+      "states": [
+        {
+          "guidMismatch": 0,
+          "matched": 979,
+          "missing": 0,
+          "online": 195,
+          "showOffline": false,
+          "total": 979
+        },
+        {
+          "guidMismatch": 0,
+          "matched": 979,
+          "missing": 0,
+          "online": 195,
+          "showOffline": true,
+          "total": 979
+        }
+      ]
+    },
+    "activated": {
+      "fontScale": 100,
+      "groupMembers": 22,
+      "listing": true,
+      "packages": {
+        "LycheeGroup": 2331475,
+        "LycheeGroup_Group": 4554273,
+        "LycheeGroup_Notes": 146539,
+        "LycheeGroup_UI": 6003945
+      },
+      "page": "create",
+      "reduceMotion": false,
+      "relationsActive": true,
+      "revision": 46,
+      "shown": true,
+      "sources": 0,
+      "loadedRevisionMarker": "Relations.dirtySources is a number"
+    }
+  },
+  "results": {
+    "fixedRelationsProfile": {
+      "groupMembers": 22,
+      "seconds": 15,
+      "rebuilds": 11,
+      "metrics": {
+        "calls": 523,
+        "heapNetKiB": 12.4951171875,
+        "maxHeapKiB": 3.7578125,
+        "ms": 48.875699043273926
+      },
+      "beforePackageBytes": 13301523,
+      "afterPackageBytes": 6442762,
+      "globalHeapBeforeKiB": 644659.3623046875,
+      "globalHeapAfterKiB": 561738.5732421875,
+      "naturalCollectionObserved": true
+    },
+    "firstNaturalRun": {
+      "summary": {
+        "elapsedSeconds": 110.19199999998091,
+        "samples": 23,
+        "firstBytes": 8169003,
+        "finalBytes": 11868345,
+        "growthBytes": 3699342,
+        "sampledPeakBytes": 11868345,
+        "groupMembers": [
+          1
+        ],
+        "guildMembers": [
+          979
+        ],
+        "activeSamples": 23,
+        "relationsRebuilds": 80,
+        "events": {
+          "BN_FRIEND_INFO_CHANGED": 90,
+          "GUILD_ROSTER_UPDATE": 75
+        },
+        "observerRefreshMs": {
+          "min": 98.67599999904633,
+          "max": 118.6579999923706,
+          "total": 2488.7160997986794
+        },
+        "intervalsWithLowerGlobalHeap": 0,
+        "checks": {
+          "budget": true,
+          "repeatedSocialUpdates": true,
+          "scene": true
+        }
+      },
+      "observation": {
+        "activeSamples": 23,
+        "budgetBytes": 20000000,
+        "build": "70575",
+        "checks": {
+          "budget": true,
+          "repeatedSocialUpdates": true,
+          "scene": true
+        },
+        "durationSeconds": 110,
+        "elapsedSeconds": 110.19199999998091,
+        "events": {
+          "BN_FRIEND_INFO_CHANGED": 90,
+          "GUILD_ROSTER_UPDATE": 75
+        },
+        "gcPolicy": "natural; no explicit collection",
+        "ok": true,
+        "peakBytes": 11868345,
+        "sampleIntervalSeconds": 5,
+        "samples": [
+          {
+            "active": true,
+            "bytes": 8169003,
+            "combat": false,
+            "elapsedSeconds": 0,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 553045.6103515625,
+            "observerRefreshMs": 100.60879999399185,
+            "packages": {
+              "LycheeGroup": 2381719,
+              "LycheeGroup_Group": 1729026,
+              "LycheeGroup_Notes": 111405,
+              "LycheeGroup_UI": 3946853
+            },
+            "relationsVersion": 158
+          },
+          {
+            "active": true,
+            "bytes": 8172971,
+            "combat": false,
+            "elapsedSeconds": 5,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 554582.66796875,
+            "observerRefreshMs": 104.26240003108978,
+            "packages": {
+              "LycheeGroup": 2381719,
+              "LycheeGroup_Group": 1729858,
+              "LycheeGroup_Notes": 111405,
+              "LycheeGroup_UI": 3949989
+            },
+            "relationsVersion": 158
+          },
+          {
+            "active": true,
+            "bytes": 8494630,
+            "combat": false,
+            "elapsedSeconds": 10.00099999998929,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 556774.7529296875,
+            "observerRefreshMs": 100.35159999132156,
+            "packages": {
+              "LycheeGroup": 2385026,
+              "LycheeGroup_Group": 2040992,
+              "LycheeGroup_Notes": 111405,
+              "LycheeGroup_UI": 3957207
+            },
+            "relationsVersion": 163
+          },
+          {
+            "active": true,
+            "bytes": 8499078,
+            "combat": false,
+            "elapsedSeconds": 15.007999999972526,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 558382.5869140625,
+            "observerRefreshMs": 98.67599999904633,
+            "packages": {
+              "LycheeGroup": 2385410,
+              "LycheeGroup_Group": 2041824,
+              "LycheeGroup_Notes": 111405,
+              "LycheeGroup_UI": 3960439
+            },
+            "relationsVersion": 167
+          },
+          {
+            "active": true,
+            "bytes": 8787331,
+            "combat": false,
+            "elapsedSeconds": 20.013999999966472,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 560398.3642578125,
+            "observerRefreshMs": 115.57269996404648,
+            "packages": {
+              "LycheeGroup": 2391431,
+              "LycheeGroup_Group": 2311824,
+              "LycheeGroup_Notes": 111405,
+              "LycheeGroup_UI": 3972671
+            },
+            "relationsVersion": 172
+          },
+          {
+            "active": true,
+            "bytes": 9073874,
+            "combat": false,
+            "elapsedSeconds": 25.014999999955762,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 562601.8896484375,
+            "observerRefreshMs": 102.42829996347427,
+            "packages": {
+              "LycheeGroup": 2393336,
+              "LycheeGroup_Group": 2590153,
+              "LycheeGroup_Notes": 111405,
+              "LycheeGroup_UI": 3978980
+            },
+            "relationsVersion": 174
+          },
+          {
+            "active": true,
+            "bytes": 9082462,
+            "combat": false,
+            "elapsedSeconds": 30.015999999945052,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 565561.623046875,
+            "observerRefreshMs": 115.40790003538132,
+            "packages": {
+              "LycheeGroup": 2393720,
+              "LycheeGroup_Group": 2594565,
+              "LycheeGroup_Notes": 111405,
+              "LycheeGroup_UI": 3982772
+            },
+            "relationsVersion": 177
+          },
+          {
+            "active": true,
+            "bytes": 9361151,
+            "combat": false,
+            "elapsedSeconds": 35.021999999997206,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 567520.490234375,
+            "observerRefreshMs": 105.14439994096756,
+            "packages": {
+              "LycheeGroup": 2394162,
+              "LycheeGroup_Group": 2867756,
+              "LycheeGroup_Notes": 111405,
+              "LycheeGroup_UI": 3987828
+            },
+            "relationsVersion": 181
+          },
+          {
+            "active": true,
+            "bytes": 9717480,
+            "combat": false,
+            "elapsedSeconds": 40.02899999998044,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 569457.8486328125,
+            "observerRefreshMs": 113.24919998645782,
+            "packages": {
+              "LycheeGroup": 2411326,
+              "LycheeGroup_Group": 3148429,
+              "LycheeGroup_Notes": 111405,
+              "LycheeGroup_UI": 4046320
+            },
+            "relationsVersion": 185
+          },
+          {
+            "active": true,
+            "bytes": 9731272,
+            "combat": false,
+            "elapsedSeconds": 45.02899999998044,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 570905.857421875,
+            "observerRefreshMs": 112.88379997015,
+            "packages": {
+              "LycheeGroup": 2411710,
+              "LycheeGroup_Group": 3153197,
+              "LycheeGroup_Notes": 111405,
+              "LycheeGroup_UI": 4054960
+            },
+            "relationsVersion": 190
+          },
+          {
+            "active": true,
+            "bytes": 10005880,
+            "combat": false,
+            "elapsedSeconds": 50.03599999996368,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 572664.595703125,
+            "observerRefreshMs": 102.34679996967316,
+            "packages": {
+              "LycheeGroup": 2412094,
+              "LycheeGroup_Group": 3422237,
+              "LycheeGroup_Notes": 111405,
+              "LycheeGroup_UI": 4060144
+            },
+            "relationsVersion": 193
+          },
+          {
+            "active": true,
+            "bytes": 10015944,
+            "combat": false,
+            "elapsedSeconds": 55.042999999946915,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 574426.9775390625,
+            "observerRefreshMs": 100.50940001010895,
+            "packages": {
+              "LycheeGroup": 2412478,
+              "LycheeGroup_Group": 3423277,
+              "LycheeGroup_Notes": 111405,
+              "LycheeGroup_UI": 4068784
+            },
+            "relationsVersion": 198
+          },
+          {
+            "active": true,
+            "bytes": 10018456,
+            "combat": false,
+            "elapsedSeconds": 60.04899999999907,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 576477.4521484375,
+            "observerRefreshMs": 105.03740000724792,
+            "packages": {
+              "LycheeGroup": 2413054,
+              "LycheeGroup_Group": 3423485,
+              "LycheeGroup_Notes": 111405,
+              "LycheeGroup_UI": 4070512
+            },
+            "relationsVersion": 199
+          },
+          {
+            "active": true,
+            "bytes": 10381732,
+            "combat": false,
+            "elapsedSeconds": 65.05999999999767,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 578503.05078125,
+            "observerRefreshMs": 104.45520001649857,
+            "packages": {
+              "LycheeGroup": 2429329,
+              "LycheeGroup_Group": 3709935,
+              "LycheeGroup_Notes": 111405,
+              "LycheeGroup_UI": 4131063
+            },
+            "relationsVersion": 202
+          },
+          {
+            "active": true,
+            "bytes": 10404396,
+            "combat": false,
+            "elapsedSeconds": 70.0679999999702,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 582720.443359375,
+            "observerRefreshMs": 106.33539998531342,
+            "packages": {
+              "LycheeGroup": 2429713,
+              "LycheeGroup_Group": 3716983,
+              "LycheeGroup_Notes": 111405,
+              "LycheeGroup_UI": 4146295
+            },
+            "relationsVersion": 209
+          },
+          {
+            "active": true,
+            "bytes": 10688901,
+            "combat": false,
+            "elapsedSeconds": 75.0789999999688,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 587271.5048828125,
+            "observerRefreshMs": 118.50799995660782,
+            "packages": {
+              "LycheeGroup": 2430097,
+              "LycheeGroup_Group": 3990224,
+              "LycheeGroup_Notes": 111405,
+              "LycheeGroup_UI": 4157175
+            },
+            "relationsVersion": 214
+          },
+          {
+            "active": true,
+            "bytes": 10971843,
+            "combat": false,
+            "elapsedSeconds": 80.10399999999208,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 589343.76953125,
+            "observerRefreshMs": 118.6579999923706,
+            "packages": {
+              "LycheeGroup": 2430536,
+              "LycheeGroup_Group": 4261847,
+              "LycheeGroup_Notes": 111405,
+              "LycheeGroup_UI": 4168055
+            },
+            "relationsVersion": 219
+          },
+          {
+            "active": true,
+            "bytes": 11254427,
+            "combat": false,
+            "elapsedSeconds": 85.12199999997392,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 591173.6083984375,
+            "observerRefreshMs": 118.3076999783516,
+            "packages": {
+              "LycheeGroup": 2430920,
+              "LycheeGroup_Group": 4533167,
+              "LycheeGroup_Notes": 111405,
+              "LycheeGroup_UI": 4178935
+            },
+            "relationsVersion": 224
+          },
+          {
+            "active": true,
+            "bytes": 11537818,
+            "combat": false,
+            "elapsedSeconds": 90.14499999996042,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 593063.7109375,
+            "observerRefreshMs": 112.82150000333786,
+            "packages": {
+              "LycheeGroup": 2432344,
+              "LycheeGroup_Group": 4808566,
+              "LycheeGroup_Notes": 111405,
+              "LycheeGroup_UI": 4185503
+            },
+            "relationsVersion": 226
+          },
+          {
+            "active": true,
+            "bytes": 11553274,
+            "combat": false,
+            "elapsedSeconds": 95.16399999998976,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 596252.7021484375,
+            "observerRefreshMs": 103.51719999313354,
+            "packages": {
+              "LycheeGroup": 2433000,
+              "LycheeGroup_Group": 4811326,
+              "LycheeGroup_Notes": 111405,
+              "LycheeGroup_UI": 4197543
+            },
+            "relationsVersion": 230
+          },
+          {
+            "active": true,
+            "bytes": 11835052,
+            "combat": false,
+            "elapsedSeconds": 100.17299999995157,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 599345.2060546875,
+            "observerRefreshMs": 106.32649999856949,
+            "packages": {
+              "LycheeGroup": 2433384,
+              "LycheeGroup_Group": 5084400,
+              "LycheeGroup_Notes": 111405,
+              "LycheeGroup_UI": 4205863
+            },
+            "relationsVersion": 234
+          },
+          {
+            "active": true,
+            "bytes": 11859753,
+            "combat": false,
+            "elapsedSeconds": 105.18499999999767,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 601287.70703125,
+            "observerRefreshMs": 114.9636999964714,
+            "packages": {
+              "LycheeGroup": 2435279,
+              "LycheeGroup_Group": 5098120,
+              "LycheeGroup_Notes": 111405,
+              "LycheeGroup_UI": 4214949
+            },
+            "relationsVersion": 235
+          },
+          {
+            "active": true,
+            "bytes": 11868345,
+            "combat": false,
+            "elapsedSeconds": 110.19199999998091,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 602817.4091796875,
+            "observerRefreshMs": 108.34420001506805,
+            "packages": {
+              "LycheeGroup": 2435663,
+              "LycheeGroup_Group": 5098744,
+              "LycheeGroup_Notes": 111405,
+              "LycheeGroup_UI": 4222533
+            },
+            "relationsVersion": 238
+          }
+        ],
+        "schema": "lycheegroup.relations-memory.v1"
+      }
+    },
+    "userRequestedRepeat": {
+      "summary": {
+        "elapsedSeconds": 110.30800000001909,
+        "samples": 23,
+        "firstBytes": 8917476,
+        "finalBytes": 10620132,
+        "growthBytes": 1702656,
+        "sampledPeakBytes": 10620132,
+        "groupMembers": [
+          1
+        ],
+        "guildMembers": [
+          979
+        ],
+        "applicants": [
+          0,
+          1
+        ],
+        "activeSamples": 23,
+        "relationsRebuilds": 45,
+        "events": {
+          "BN_FRIEND_ACCOUNT_ONLINE": 1,
+          "BN_FRIEND_INFO_CHANGED": 103,
+          "GUILD_ROSTER_UPDATE": 64
+        },
+        "observerRefreshMs": {
+          "min": 131.82789999246597,
+          "max": 155.81370002031326,
+          "total": 3214.7074001431465
+        },
+        "intervalsWithLowerGlobalHeap": 0,
+        "checks": {
+          "budget": true,
+          "repeatedSocialUpdates": true,
+          "scene": true
+        }
+      },
+      "observation": {
+        "activeSamples": 23,
+        "budgetBytes": 20000000,
+        "build": "70575",
+        "checks": {
+          "budget": true,
+          "repeatedSocialUpdates": true,
+          "scene": true
+        },
+        "durationSeconds": 110,
+        "elapsedSeconds": 110.30800000001909,
+        "events": {
+          "BN_FRIEND_ACCOUNT_ONLINE": 1,
+          "BN_FRIEND_INFO_CHANGED": 103,
+          "GUILD_ROSTER_UPDATE": 64
+        },
+        "gcPolicy": "natural; no explicit collection",
+        "ok": true,
+        "peakBytes": 10620132,
+        "sampleIntervalSeconds": 5,
+        "samples": [
+          {
+            "active": true,
+            "applicants": 0,
+            "bytes": 8917476,
+            "combat": false,
+            "elapsedSeconds": 0,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 647679.71484375,
+            "listing": true,
+            "motion": 0,
+            "observerRefreshMs": 138.3598000407219,
+            "packages": {
+              "LycheeGroup": 2571864,
+              "LycheeGroup_Group": 2321102,
+              "LycheeGroup_Notes": 62118,
+              "LycheeGroup_UI": 3962392
+            },
+            "page": "create",
+            "relationTimer": false,
+            "relationsActive": true,
+            "relationsVersion": 267,
+            "rosterMembers": 1,
+            "shown": true
+          },
+          {
+            "active": true,
+            "applicants": 0,
+            "bytes": 8921444,
+            "combat": false,
+            "elapsedSeconds": 5.022999999986496,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 649618.9921875,
+            "listing": true,
+            "motion": 0,
+            "observerRefreshMs": 150.4447000026703,
+            "packages": {
+              "LycheeGroup": 2571864,
+              "LycheeGroup_Group": 2321934,
+              "LycheeGroup_Notes": 62118,
+              "LycheeGroup_UI": 3965528
+            },
+            "page": "create",
+            "relationTimer": false,
+            "relationsActive": true,
+            "relationsVersion": 267,
+            "rosterMembers": 1,
+            "shown": true
+          },
+          {
+            "active": true,
+            "applicants": 0,
+            "bytes": 8925412,
+            "combat": false,
+            "elapsedSeconds": 10.045999999972992,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 651353.2119140625,
+            "listing": true,
+            "motion": 0,
+            "observerRefreshMs": 131.82789999246597,
+            "packages": {
+              "LycheeGroup": 2571864,
+              "LycheeGroup_Group": 2322766,
+              "LycheeGroup_Notes": 62118,
+              "LycheeGroup_UI": 3968664
+            },
+            "page": "create",
+            "relationTimer": false,
+            "relationsActive": true,
+            "relationsVersion": 267,
+            "rosterMembers": 1,
+            "shown": true
+          },
+          {
+            "active": true,
+            "applicants": 0,
+            "bytes": 8929380,
+            "combat": false,
+            "elapsedSeconds": 15.049999999988358,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 653393.533203125,
+            "listing": true,
+            "motion": 0,
+            "observerRefreshMs": 134.0572999715805,
+            "packages": {
+              "LycheeGroup": 2571864,
+              "LycheeGroup_Group": 2323598,
+              "LycheeGroup_Notes": 62118,
+              "LycheeGroup_UI": 3971800
+            },
+            "page": "create",
+            "relationTimer": false,
+            "relationsActive": true,
+            "relationsVersion": 267,
+            "rosterMembers": 1,
+            "shown": true
+          },
+          {
+            "active": true,
+            "applicants": 0,
+            "bytes": 8933348,
+            "combat": false,
+            "elapsedSeconds": 20.055999999982305,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 656635.94140625,
+            "listing": true,
+            "motion": 0,
+            "observerRefreshMs": 138.9654000401497,
+            "packages": {
+              "LycheeGroup": 2571864,
+              "LycheeGroup_Group": 2324430,
+              "LycheeGroup_Notes": 62118,
+              "LycheeGroup_UI": 3974936
+            },
+            "page": "create",
+            "relationTimer": false,
+            "relationsActive": true,
+            "relationsVersion": 267,
+            "rosterMembers": 1,
+            "shown": true
+          },
+          {
+            "active": true,
+            "applicants": 0,
+            "bytes": 8937316,
+            "combat": false,
+            "elapsedSeconds": 25.066999999980908,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 658603.125,
+            "listing": true,
+            "motion": 0,
+            "observerRefreshMs": 133.39859998226166,
+            "packages": {
+              "LycheeGroup": 2571864,
+              "LycheeGroup_Group": 2325262,
+              "LycheeGroup_Notes": 62118,
+              "LycheeGroup_UI": 3978072
+            },
+            "page": "create",
+            "relationTimer": false,
+            "relationsActive": true,
+            "relationsVersion": 267,
+            "rosterMembers": 1,
+            "shown": true
+          },
+          {
+            "active": true,
+            "applicants": 0,
+            "bytes": 8939300,
+            "combat": false,
+            "elapsedSeconds": 30.071999999985565,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 660594.4287109375,
+            "listing": true,
+            "motion": 0,
+            "observerRefreshMs": 139.59079998731613,
+            "packages": {
+              "LycheeGroup": 2571864,
+              "LycheeGroup_Group": 2325678,
+              "LycheeGroup_Notes": 62118,
+              "LycheeGroup_UI": 3979640
+            },
+            "page": "create",
+            "relationTimer": false,
+            "relationsActive": true,
+            "relationsVersion": 267,
+            "rosterMembers": 1,
+            "shown": true
+          },
+          {
+            "active": true,
+            "applicants": 0,
+            "bytes": 8945252,
+            "combat": false,
+            "elapsedSeconds": 35.089999999967404,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 662123.46484375,
+            "listing": true,
+            "motion": 0,
+            "observerRefreshMs": 138.3880000114441,
+            "packages": {
+              "LycheeGroup": 2571864,
+              "LycheeGroup_Group": 2326926,
+              "LycheeGroup_Notes": 62118,
+              "LycheeGroup_UI": 3984344
+            },
+            "page": "create",
+            "relationTimer": false,
+            "relationsActive": true,
+            "relationsVersion": 267,
+            "rosterMembers": 1,
+            "shown": true
+          },
+          {
+            "active": true,
+            "applicants": 0,
+            "bytes": 8948228,
+            "combat": false,
+            "elapsedSeconds": 40.10099999996601,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 663560.0654296875,
+            "listing": true,
+            "motion": 0,
+            "observerRefreshMs": 139.22399997711182,
+            "packages": {
+              "LycheeGroup": 2571864,
+              "LycheeGroup_Group": 2327550,
+              "LycheeGroup_Notes": 62118,
+              "LycheeGroup_UI": 3986696
+            },
+            "page": "create",
+            "relationTimer": false,
+            "relationsActive": true,
+            "relationsVersion": 267,
+            "rosterMembers": 1,
+            "shown": true
+          },
+          {
+            "active": true,
+            "applicants": 0,
+            "bytes": 8951204,
+            "combat": false,
+            "elapsedSeconds": 45.11199999996461,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 665051.7822265625,
+            "listing": true,
+            "motion": 0,
+            "observerRefreshMs": 134.72100001573563,
+            "packages": {
+              "LycheeGroup": 2571864,
+              "LycheeGroup_Group": 2328174,
+              "LycheeGroup_Notes": 62118,
+              "LycheeGroup_UI": 3989048
+            },
+            "page": "create",
+            "relationTimer": false,
+            "relationsActive": true,
+            "relationsVersion": 267,
+            "rosterMembers": 1,
+            "shown": true
+          },
+          {
+            "active": true,
+            "applicants": 1,
+            "bytes": 9232936,
+            "combat": false,
+            "elapsedSeconds": 50.11999999999534,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 668534.4990234375,
+            "listing": true,
+            "motion": 0,
+            "observerRefreshMs": 137.27700001001358,
+            "packages": {
+              "LycheeGroup": 2573093,
+              "LycheeGroup_Group": 2600236,
+              "LycheeGroup_Notes": 62118,
+              "LycheeGroup_UI": 3997489
+            },
+            "page": "create",
+            "relationTimer": false,
+            "relationsActive": true,
+            "relationsVersion": 271,
+            "rosterMembers": 1,
+            "shown": true
+          },
+          {
+            "active": true,
+            "applicants": 1,
+            "bytes": 9241702,
+            "combat": false,
+            "elapsedSeconds": 55.14000000001397,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 670209.02734375,
+            "listing": true,
+            "motion": 0,
+            "observerRefreshMs": 141.40299999713898,
+            "packages": {
+              "LycheeGroup": 2573477,
+              "LycheeGroup_Group": 2606298,
+              "LycheeGroup_Notes": 62118,
+              "LycheeGroup_UI": 3999809
+            },
+            "page": "create",
+            "relationTimer": false,
+            "relationsActive": true,
+            "relationsVersion": 273,
+            "rosterMembers": 1,
+            "shown": true
+          },
+          {
+            "active": true,
+            "applicants": 1,
+            "bytes": 9508770,
+            "combat": false,
+            "elapsedSeconds": 60.15299999999115,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 673430.552734375,
+            "listing": true,
+            "motion": 0,
+            "observerRefreshMs": 135.746699988842,
+            "packages": {
+              "LycheeGroup": 2574053,
+              "LycheeGroup_Group": 2868150,
+              "LycheeGroup_Notes": 62118,
+              "LycheeGroup_UI": 4004449
+            },
+            "page": "create",
+            "relationTimer": false,
+            "relationsActive": true,
+            "relationsVersion": 277,
+            "rosterMembers": 1,
+            "shown": true
+          },
+          {
+            "active": true,
+            "applicants": 1,
+            "bytes": 9770986,
+            "combat": false,
+            "elapsedSeconds": 65.16700000001583,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 675132.4697265625,
+            "listing": true,
+            "motion": 0,
+            "observerRefreshMs": 135.492899954319,
+            "packages": {
+              "LycheeGroup": 2574437,
+              "LycheeGroup_Group": 3127662,
+              "LycheeGroup_Notes": 62118,
+              "LycheeGroup_UI": 4006769
+            },
+            "page": "create",
+            "relationTimer": false,
+            "relationsActive": true,
+            "relationsVersion": 279,
+            "rosterMembers": 1,
+            "shown": true
+          },
+          {
+            "active": true,
+            "applicants": 1,
+            "bytes": 9772738,
+            "combat": false,
+            "elapsedSeconds": 70.17399999999907,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 676683.0361328125,
+            "listing": true,
+            "motion": 0,
+            "observerRefreshMs": 141.9355999827385,
+            "packages": {
+              "LycheeGroup": 2574821,
+              "LycheeGroup_Group": 3127870,
+              "LycheeGroup_Notes": 62118,
+              "LycheeGroup_UI": 4007929
+            },
+            "page": "create",
+            "relationTimer": false,
+            "relationsActive": true,
+            "relationsVersion": 280,
+            "rosterMembers": 1,
+            "shown": true
+          },
+          {
+            "active": true,
+            "applicants": 1,
+            "bytes": 9783690,
+            "combat": false,
+            "elapsedSeconds": 75.18900000001304,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 680746.7060546875,
+            "listing": true,
+            "motion": 0,
+            "observerRefreshMs": 155.81370002031326,
+            "packages": {
+              "LycheeGroup": 2575205,
+              "LycheeGroup_Group": 3132638,
+              "LycheeGroup_Notes": 62118,
+              "LycheeGroup_UI": 4013729
+            },
+            "page": "create",
+            "relationTimer": false,
+            "relationsActive": true,
+            "relationsVersion": 285,
+            "rosterMembers": 1,
+            "shown": true
+          },
+          {
+            "active": true,
+            "applicants": 1,
+            "bytes": 10050010,
+            "combat": false,
+            "elapsedSeconds": 80.21700000000419,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 682608.4072265625,
+            "listing": true,
+            "motion": 0,
+            "observerRefreshMs": 135.48590004444122,
+            "packages": {
+              "LycheeGroup": 2575589,
+              "LycheeGroup_Group": 3392774,
+              "LycheeGroup_Notes": 62118,
+              "LycheeGroup_UI": 4019529
+            },
+            "page": "create",
+            "relationTimer": false,
+            "relationsActive": true,
+            "relationsVersion": 290,
+            "rosterMembers": 1,
+            "shown": true
+          },
+          {
+            "active": true,
+            "applicants": 1,
+            "bytes": 10316000,
+            "combat": false,
+            "elapsedSeconds": 85.23099999997066,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 685621.8525390625,
+            "listing": true,
+            "motion": 0,
+            "observerRefreshMs": 146.12319999933243,
+            "packages": {
+              "LycheeGroup": 2576028,
+              "LycheeGroup_Group": 3654845,
+              "LycheeGroup_Notes": 62118,
+              "LycheeGroup_UI": 4023009
+            },
+            "page": "create",
+            "relationTimer": false,
+            "relationsActive": true,
+            "relationsVersion": 293,
+            "rosterMembers": 1,
+            "shown": true
+          },
+          {
+            "active": true,
+            "applicants": 1,
+            "bytes": 10324216,
+            "combat": false,
+            "elapsedSeconds": 90.25299999996787,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 687527.6611328125,
+            "listing": true,
+            "motion": 0,
+            "observerRefreshMs": 137.8488000035286,
+            "packages": {
+              "LycheeGroup": 2576412,
+              "LycheeGroup_Group": 3659197,
+              "LycheeGroup_Notes": 62118,
+              "LycheeGroup_UI": 4026489
+            },
+            "page": "create",
+            "relationTimer": false,
+            "relationsActive": true,
+            "relationsVersion": 296,
+            "rosterMembers": 1,
+            "shown": true
+          },
+          {
+            "active": true,
+            "applicants": 1,
+            "bytes": 10332432,
+            "combat": false,
+            "elapsedSeconds": 95.26199999998789,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 688992.7841796875,
+            "listing": true,
+            "motion": 0,
+            "observerRefreshMs": 142.74200004339218,
+            "packages": {
+              "LycheeGroup": 2576796,
+              "LycheeGroup_Group": 3663549,
+              "LycheeGroup_Notes": 62118,
+              "LycheeGroup_UI": 4029969
+            },
+            "page": "create",
+            "relationTimer": false,
+            "relationsActive": true,
+            "relationsVersion": 299,
+            "rosterMembers": 1,
+            "shown": true
+          },
+          {
+            "active": true,
+            "applicants": 1,
+            "bytes": 10602044,
+            "combat": false,
+            "elapsedSeconds": 100.27700000000186,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 690704.74609375,
+            "listing": true,
+            "motion": 0,
+            "observerRefreshMs": 140.2669000029564,
+            "packages": {
+              "LycheeGroup": 2577180,
+              "LycheeGroup_Group": 3925817,
+              "LycheeGroup_Notes": 62118,
+              "LycheeGroup_UI": 4036929
+            },
+            "page": "create",
+            "relationTimer": false,
+            "relationsActive": true,
+            "relationsVersion": 305,
+            "rosterMembers": 1,
+            "shown": true
+          },
+          {
+            "active": true,
+            "applicants": 1,
+            "bytes": 10614708,
+            "combat": false,
+            "elapsedSeconds": 105.28899999998976,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 692185.64453125,
+            "listing": true,
+            "motion": 0,
+            "observerRefreshMs": 146.34860002994537,
+            "packages": {
+              "LycheeGroup": 2578604,
+              "LycheeGroup_Group": 3931289,
+              "LycheeGroup_Notes": 62118,
+              "LycheeGroup_UI": 4042697
+            },
+            "page": "create",
+            "relationTimer": false,
+            "relationsActive": true,
+            "relationsVersion": 309,
+            "rosterMembers": 1,
+            "shown": true
+          },
+          {
+            "active": true,
+            "applicants": 0,
+            "bytes": 10620132,
+            "combat": false,
+            "elapsedSeconds": 110.30800000001909,
+            "groupMembers": 1,
+            "guildMembers": 979,
+            "heapKiB": 693688.8955078125,
+            "listing": true,
+            "motion": 0,
+            "observerRefreshMs": 139.24560004472733,
+            "packages": {
+              "LycheeGroup": 2578604,
+              "LycheeGroup_Group": 3931977,
+              "LycheeGroup_Notes": 62118,
+              "LycheeGroup_UI": 4047433
+            },
+            "page": "create",
+            "relationTimer": false,
+            "relationsActive": true,
+            "relationsVersion": 312,
+            "rosterMembers": 1,
+            "shown": true
+          }
+        ],
+        "schema": "lycheegroup.recruit-repeat-memory.v1"
+      }
+    },
+    "closedAfterFirstRun": {
+      "applications": 0,
+      "bytes": 7603117,
+      "groupMembers": 0,
+      "idle": true,
+      "listing": false,
+      "motion": 0,
+      "packages": {
+        "LycheeGroup": 2526668,
+        "LycheeGroup_Group": 1264702,
+        "LycheeGroup_Notes": 60269,
+        "LycheeGroup_UI": 3751478
+      },
+      "page": "create",
+      "relationGUIDs": 0,
+      "relationNames": 0,
+      "relationShortNames": 0,
+      "relationTimer": false,
+      "relationsActive": false,
+      "resultCount": 0,
+      "resultUpdate": false,
+      "rosterRefreshTimer": false,
+      "rosterTimer": false,
+      "searchPending": false,
+      "searchTimer": false,
+      "shown": false,
+      "views": false
+    },
+    "skippedCycleAttempt": {
+      "error": "LycheeMemoryProbe:6: requires_live_create_page",
+      "reportOk": false,
+      "resourcesReleased": true,
+      "cleanup": "complete",
+      "reason": "The user had already ended recruitment and closed the page. This attempt did not collect a cycle and is not a passing run."
+    },
+    "errors": {
+      "snapshots": [
+        {
+          "file": "bugs-before.json",
+          "providerVersion": "v12.1.1",
+          "session": 442,
+          "requestedCount": 100,
+          "returnedCount": 42,
+          "availableCount": 42,
+          "complete": false,
+          "incompleteReasons": [
+            "error[17].stack",
+            "error[17].locals"
+          ],
+          "currentSessionRows": 0,
+          "totalOccurrences": 3881,
+          "messageSessionCountTimeSha256": "8067c6d1edccb4e8e0d51a4f0feb7c5ef3ad66683cf4eb64533c958c9912f0a3"
+        },
+        {
+          "file": "bugs-after.json",
+          "providerVersion": "v12.1.1",
+          "session": 443,
+          "requestedCount": 100,
+          "returnedCount": 42,
+          "availableCount": 42,
+          "complete": false,
+          "incompleteReasons": [
+            "error[17].stack",
+            "error[17].locals"
+          ],
+          "currentSessionRows": 0,
+          "totalOccurrences": 3881,
+          "messageSessionCountTimeSha256": "8067c6d1edccb4e8e0d51a4f0feb7c5ef3ad66683cf4eb64533c958c9912f0a3"
+        },
+        {
+          "file": "bugs-repeat.json",
+          "providerVersion": "v12.1.1",
+          "session": 443,
+          "requestedCount": 100,
+          "returnedCount": 42,
+          "availableCount": 42,
+          "complete": false,
+          "incompleteReasons": [
+            "error[17].stack",
+            "error[17].locals"
+          ],
+          "currentSessionRows": 0,
+          "totalOccurrences": 3881,
+          "messageSessionCountTimeSha256": "8067c6d1edccb4e8e0d51a4f0feb7c5ef3ad66683cf4eb64533c958c9912f0a3"
+        }
+      ],
+      "sameMessageSessionCountTimeRows": true,
+      "newRowsOrOccurrences": 0,
+      "currentSessionRows": 0,
+      "coverage": "All 42 retained provider rows; one historical stack/locals pair was truncated. Message, session, counter and time were present and unchanged."
+    },
+    "connections": [
+      {
+        "file": "disconnect.json",
+        "closed": true,
+        "bound": false,
+        "complete": true,
+        "cleanup": "complete"
+      },
+      {
+        "file": "repeat-disconnect.json",
+        "closed": true,
+        "bound": false,
+        "complete": true,
+        "cleanup": "complete"
+      }
+    ]
+  },
+  "validation": {
+    "productRunner": {
+      "command": "lua tests/runner.lua",
+      "assertions": 23960,
+      "failures": 0
+    },
+    "groupRegression": {
+      "assertions": 3646,
+      "failures": 0,
+      "coverage": "1000 guild members, 500 Battle.net friends; source isolation, indexed updates and full fallbacks, offline identities, overlap, duplicates, short-name ambiguity, cleanup and native record release."
+    },
+    "layout": {
+      "scripts": 16,
+      "failures": 0
+    },
+    "architecture": {
+      "command": "node tests/check_architecture.cjs",
+      "checks": 4330,
+      "failures": 0,
+      "frozenLibraryFiles": 30
+    },
+    "observationLifecycle": {
+      "command": "lua tests/test_live_relations_memory.lua",
+      "checks": 371,
+      "failures": 0,
+      "coverage": "Normal/repeated observation, budget failure, absent events, scene exit, initial and callback observer failures, cancellation, and late callback cleanup."
+    }
+  },
+  "probeSources": [
+    {
+      "path": "tests/live_relations_memory.lua",
+      "sha256": "811475a33dd17660ce48ebbd81ee32726e5cfa812e455358f284ae296791b08a"
+    },
+    {
+      "path": "tests/test_live_relations_memory.lua",
+      "sha256": "c11ea51bbf7d946736ed9c3fb875bc3f172ab623172a4881843c5d6ce6f5c2ed"
+    },
+    {
+      "path": ".lycheedev/memory-spike-2026-10-25/recruit-repeat.lua",
+      "sha256": "69be6cc47a81a00f34cb11e993f9ae3374da1d998e064c526a7efab945ba3f92"
+    },
+    {
+      "path": ".lycheedev/memory-spike-2026-10-25/call-profile.lua",
+      "sha256": "da9af6bcdc46dde7ef6fa95228b8fb0751a207d069f46ca1d65a16497131842d"
+    }
+  ],
+  "rawEvidence": {
+    "natural-state.json": {
+      "path": ".lycheedev/memory-spike-2026-10-25/natural-state.json",
+      "sha256": "2aff301e21955f85cb0c99489080daf90ddf9daf87e5bdf676451601005319db",
+      "complete": true,
+      "reportState": "verified",
+      "cleanup": "complete",
+      "reportOk": true,
+      "resourcesReleased": true
+    },
+    "call-profile.json": {
+      "path": ".lycheedev/memory-spike-2026-10-25/call-profile.json",
+      "sha256": "32dab15a5f6f335addb3d96bbfd00e74542dc154d08b27ecd1a1bad073b43acd",
+      "complete": true,
+      "reportState": "verified",
+      "cleanup": "complete",
+      "reportOk": true,
+      "resourcesReleased": true
+    },
+    "call-profile-fixed.json": {
+      "path": ".lycheedev/memory-spike-2026-10-25/call-profile-fixed.json",
+      "sha256": "5620c5454a9f88811183e2855a794fd8e6a25d2cc8a37d214f8ec31dbf676e61",
+      "complete": true,
+      "reportState": "verified",
+      "cleanup": "complete",
+      "reportOk": true,
+      "resourcesReleased": true
+    },
+    "social-source-cost.json": {
+      "path": ".lycheedev/memory-spike-2026-10-25/social-source-cost.json",
+      "sha256": "8472157d2b0b0d59013ebc1db9ef0b5440f6617de88cd8ab8f6554a65508172a",
+      "complete": true,
+      "reportState": "verified",
+      "cleanup": "complete",
+      "reportOk": true,
+      "resourcesReleased": true
+    },
+    "guild-scalar-check.json": {
+      "path": ".lycheedev/memory-spike-2026-10-25/guild-scalar-check.json",
+      "sha256": "e43fa0d5f3b11079c6642cf64153434b964d362e071796a515ee493952cb43c6",
+      "complete": true,
+      "reportState": "verified",
+      "cleanup": "complete",
+      "reportOk": true,
+      "resourcesReleased": true
+    },
+    "guild-filter-check.json": {
+      "path": ".lycheedev/memory-spike-2026-10-25/guild-filter-check.json",
+      "sha256": "9022459d871ad9ba8d72f591e5bcc20bb0c24d13454a8df04fdba29e4b9cda2e",
+      "complete": true,
+      "reportState": "verified",
+      "cleanup": "complete",
+      "reportOk": true,
+      "resourcesReleased": true
+    },
+    "natural-fixed-resume-1.json": {
+      "path": ".lycheedev/memory-spike-2026-10-25/natural-fixed-resume-1.json",
+      "sha256": "efc3844cfe600d221509520d056740eb1df640e0bfcb55de1ae159007ece0495",
+      "complete": true,
+      "reportState": "verified",
+      "cleanup": "complete",
+      "reportOk": true,
+      "resourcesReleased": true
+    },
+    "recruit-repeat-resume-1.json": {
+      "path": ".lycheedev/memory-spike-2026-10-25/recruit-repeat-resume-1.json",
+      "sha256": "8ba1421054dcd2a7e2b21595ba3f2f630686d56cda083c86b012ea99612a1e20",
+      "complete": true,
+      "reportState": "verified",
+      "cleanup": "complete",
+      "reportOk": true,
+      "resourcesReleased": true
+    },
+    "closed-state.json": {
+      "path": ".lycheedev/memory-spike-2026-10-25/closed-state.json",
+      "sha256": "ea4669fdf8b3f39d088f10de2a24d9bdf23756e7b3e03f6d42d9303e4f8fb8cc",
+      "complete": true,
+      "reportState": "verified",
+      "cleanup": "complete",
+      "reportOk": true,
+      "resourcesReleased": true
+    },
+    "open-fixed.json": {
+      "path": ".lycheedev/memory-spike-2026-10-25/open-fixed.json",
+      "sha256": "fac034345813398bf7a8cd67fb892fa94fd2ac658f9ab8d09d98c4ea216496e5",
+      "complete": true,
+      "reportState": "verified",
+      "cleanup": "complete",
+      "reportOk": true,
+      "resourcesReleased": true
+    },
+    "natural-cycle-start.json": {
+      "path": ".lycheedev/memory-spike-2026-10-25/natural-cycle-start.json",
+      "sha256": "33840273c717ecd0cf79b75963512a5fd6d886444896db0d30fbe7118dded8ff",
+      "complete": true,
+      "reportState": "verified",
+      "cleanup": "complete",
+      "reportOk": false,
+      "resourcesReleased": true
+    },
+    "bugs-before.json": {
+      "path": ".lycheedev/memory-spike-2026-10-25/bugs-before.json",
+      "sha256": "693af2bcead93955d899ab2230011d7fc2f57aa741936fe4420c40fd7064950e",
+      "complete": true,
+      "reportState": "verified",
+      "cleanup": "complete",
+      "reportOk": true,
+      "resourcesReleased": true
+    },
+    "bugs-after.json": {
+      "path": ".lycheedev/memory-spike-2026-10-25/bugs-after.json",
+      "sha256": "fd081dd8bfe04d55866e0a61b052570e883679806844a59abbc4cea6ce503f69",
+      "complete": true,
+      "reportState": "verified",
+      "cleanup": "complete",
+      "reportOk": true,
+      "resourcesReleased": true
+    },
+    "bugs-repeat.json": {
+      "path": ".lycheedev/memory-spike-2026-10-25/bugs-repeat.json",
+      "sha256": "e731a73c97aa9e0ceed0fd1e4b8cd2fc99a5d02fd1d179a15937df7268b43a7e",
+      "complete": true,
+      "reportState": "verified",
+      "cleanup": "complete",
+      "reportOk": true,
+      "resourcesReleased": true
+    }
+  }
+}

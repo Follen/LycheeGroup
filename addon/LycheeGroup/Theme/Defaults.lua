@@ -1076,8 +1076,8 @@ definition.appearance.main.components={
  iconButton={
   variants={
    creditsLink={base={icon={color="muted"}},states={hover={icon={color="text"}},pressed={icon={color="accent"}}}},
-   applicantInvite={base={hover={shown=false,alpha=0}},states={hover={hover={color="good",alpha="createActionHoverAlpha",shown=true}},pressed={hover={color="good",alpha="createActionPressedAlpha",shown=true}}}},
-   applicantDecline={base={hover={shown=false,alpha=0}},states={hover={hover={color="accent",alpha="createActionHoverAlpha",shown=true}},pressed={hover={color="accent",alpha="createActionPressedAlpha",shown=true}}}},
+   applicantInvite={base={hover={color="good",shown=false,alpha=0}},states={hover={hover={alpha="createActionHoverAlpha",shown=true}},pressed={hover={alpha="createActionPressedAlpha",shown=true}}}},
+   applicantDecline={base={hover={color="accent",shown=false,alpha=0}},states={hover={hover={alpha="createActionHoverAlpha",shown=true}},pressed={hover={alpha="createActionPressedAlpha",shown=true}}}},
   },
  },
  selectableSurface={

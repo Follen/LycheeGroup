@@ -20,6 +20,54 @@ local function ExcludeClassRole(page)
  page.quickIdentity:Fire("OnClick","RightButton")
  page.quickIdentity:Fire("OnClick","LeftButton");page.quickIdentity:Fire("OnClick","LeftButton")
 end
+-- The result menu carries the selected leader's identity into the real note
+-- editor, including search data that supplies a localized spec name only.
+for _,locale in ipairs({"zhCN","enUS"}) do
+ for _,scenario in ipairs({"specID","specName","classOnly","wrongClassSpec","summaryOnly","unknown","applicationOnly","refreshedLeader"}) do
+  local f=dofile("tests/ui_fixture.lua")(locale);local a,u,g=f.A,f.U,f.G
+  a:SetSetting("reduceMotion",true)
+  local leader={name="Leader-Away",nameKey="Leader-Away",class="WARRIOR",specName="狂怒",isLeader=true,assignedRole="DAMAGER"}
+  local other={name="Leader-Other",nameKey="Leader-Other",class="PALADIN",specID=70,assignedRole="DAMAGER"}
+  local expectedClass,expectedSpec="WARRIOR",72
+  if scenario=="specID" then leader.specID=72;leader.specName=nil
+  elseif scenario=="classOnly" or scenario=="summaryOnly" then leader.specName=nil;expectedSpec=nil
+  elseif scenario=="wrongClassSpec" then leader.specID=70;leader.specName=nil;expectedSpec=nil
+  elseif scenario=="unknown" then leader.class=nil;leader.specName=nil;expectedClass,expectedSpec=nil,nil end
+  local record={id=301,name="Note target",leaderName=leader.nameKey,leaderKey=leader.nameKey,activityID=2,
+   activity=g.Catalog:GetActivity(2),categoryID=2,numMembers=2,maxNumPlayers=5,age=1,
+   details={members={other,leader},counts={TANK=0,HEALER=0,DAMAGER=2}}}
+  if scenario=="summaryOnly" then record.details.members={other};g.Results.GetLeaderClass=function() return "WARRIOR" end end
+  if scenario=="applicationOnly" then
+   g.apps={{id=301,status="applied",categoryID=2,result=record}}
+  else g.records[301]=record end
+  a:Open("find");local page=u.pages.find
+  local list=scenario=="applicationOnly" and page.appList or page.results
+  page:OpenResultMenu(list,301)
+  if scenario=="refreshedLeader" then
+   record.leaderName,record.leaderKey="Replacement-Home","Replacement-Home"
+   record.details.members={{nameKey=record.leaderKey,class="PALADIN",specID=70,isLeader=true}}
+   expectedClass,expectedSpec="PALADIN",70
+  end
+  local menu=u.context.menu
+  for index,item in ipairs(menu.items) do if item.value=="block" then
+   local row=menu.list.rows[index];row:Fire("OnMouseDown","LeftButton");row:Fire("OnClick","LeftButton");break
+  end end
+  Check.eq(u.page,"notes",scenario.." opens the note editor")
+  local notes=u.pages.notes
+  Check.eq(notes.eName.box:GetText(),record.leaderKey,scenario.." carries the complete current leader identity")
+  Check.eq(notes.classChoice.value,expectedClass,scenario.." carries the known leader class")
+  Check.eq(notes.specChoice.value,expectedSpec,scenario.." carries only a specialization valid for that leader's class")
+  Check.eq(notes.typeButtons.caution.active,true)
+  Check.eq(notes.classChoice.label:GetText()==u.L.unknown,expectedClass==nil)
+  Check.eq(notes.specChoice.label:GetText()==u.L.unknown,expectedSpec==nil)
+  notes.eReason.box:UserType("From the selected leader");notes.eSave:Fire("OnClick","LeftButton")
+  local saved=a.Notes:Find(record.leaderKey)
+  Check.ok(saved,scenario.." saves the requested player")
+  Check.eq(saved.class,expectedClass);Check.eq(saved.specID,expectedSpec);Check.eq(saved.type,"caution")
+  Check.eq(a.Notes:Find(other.nameKey),nil,"a same-name teammate on another realm is not recorded")
+  u:Hide(true)
+ end
+end
 for _,locale in ipairs({"zhCN","enUS"}) do
  local preferences={rememberFilters=true,find=SavedChoice()}
  local f,page=Open(locale,preferences);local a,u,g=f.A,f.U,f.G
@@ -120,7 +168,23 @@ do
  Color(Row(4).title.color,u.Theme.text,"ordinary title")
  Check.ok(a.Notes:Add("Leader1","Away","Blocked leader",nil,nil,{type="caution"}))
  Color(Row(1).title.color,u.Theme.findTitleBlockedColor,"a leader caution record overrides every relationship")
+ for _,key in ipairs({"activity","age","members","ilvl","rating"}) do for _,descending in ipairs({false,true}) do
+  page.resultsHeader:SetSort(key,descending,true);page:OnHeaderSort()
+  Check.eq(page.results.ids[#page.results.ids],1,"a blocked leader stays below every other result in either header direction")
+  Check.eq(#page.results.ids,4,"lowering blocked leaders does not hide a result")
+ end end
+ g.declinedParties[g.records[2].partyGUID]=1;g:Notify("results")
+ Check.eq(page.results.ids[#page.results.ids],1,"a blocked leader stays below a declined party that has no caution note")
+ g.declinedParties[g.records[2].partyGUID]=nil;g:Notify("results")
+ a:SetSetting("noteMarks",false)
+ Check.eq(page.results.ids[#page.results.ids],1,"turning off note markers does not promote a blocked leader")
+ a:SetSetting("noteMarks",true)
+ a:SetSetting("notesEnabled",false)
+ Check.eq(page.results.ids[1],1,"disabling automatic notes restores ordinary relationship priority")
+ a:SetSetting("notesEnabled",true)
+ Check.eq(page.results.ids[#page.results.ids],1,"reenabling notes immediately reapplies the blocked-leader order")
  Check.ok(a.Notes:Edit("Leader1-Away","Recommended instead",{type="positive"}))
+ Check.eq(page.results.ids[1],1,"changing a caution note immediately restores the selected sort")
  Color(Row(1).title.color,u.Theme.findTitleBnetColor,"editing a leader note refreshes the visible title")
  Check.ok(a.Notes:Edit("Leader1-Away","Blocked again",{type="caution"}))
  Color(Row(1).title.color,u.Theme.findTitleBlockedColor)

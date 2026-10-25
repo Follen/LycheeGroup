@@ -94,13 +94,13 @@ function UI:BindTooltipArea(row,fraction,eligible,show)
  area:SetScript("OnEnter",function()
   if not eligible(row) then return end
   local enter=row:GetScript("OnEnter");if enter then enter(row) end
-  show(row)
+  UI.Tooltip:HoverOwner(row,eligible,show)
  end)
  area:SetScript("OnLeave",function()
   if not row:IsMouseOver() then local leave=row:GetScript("OnLeave");if leave then leave(row) end end
   UI.Tooltip:LeaveOwner(row)
  end)
- area:SetScript("OnHide",function() if UI.Tooltip:IsOwned(row) then UI.Tooltip:Hide() end end)
+ area:SetScript("OnHide",function() UI.Tooltip:ForgetHoverOwner(row);if UI.Tooltip:IsOwned(row) then UI.Tooltip:Hide() end end)
  -- Setting hover scripts enables clicks in Retail; narrow input last.
  area:EnableMouse(false);area:EnableMouseMotion(true)
  return area

@@ -201,17 +201,20 @@ end
 -- ---------------------------------------------------------------- 事件分发
 
 -- 微核心唤醒交接与本包事件帧的共同入口;按事件名转发给具名所有者。
-local function RelationsChanged(g) g.Relations:OnChanged() end
+local function CharacterFriendsChanged(g) g.Relations:OnChanged("character") end
+local function BnetFriendsChanged(g) g.Relations:OnChanged("bnet") end
+local function BnetFriendChanged(g,index) g.Relations:OnChanged("bnet",index) end
+local function GuildChanged(g) g.Relations:OnChanged("guild") end
 local function ClubChanged(g,id) g.Relations:OnClubChanged(id) end
 local DISPATCH = {
-	FRIENDLIST_UPDATE = RelationsChanged,
-	BN_FRIEND_LIST_SIZE_CHANGED = RelationsChanged,
-	BN_FRIEND_INFO_CHANGED = RelationsChanged,
-	BN_FRIEND_ACCOUNT_ONLINE = RelationsChanged,
-	BN_FRIEND_ACCOUNT_OFFLINE = RelationsChanged,
-	BN_DISCONNECTED = RelationsChanged,
-	GUILD_ROSTER_UPDATE = RelationsChanged,
-	PLAYER_GUILD_UPDATE = function(g,unit) if G.Public(UnitIsUnit(unit,"player")) then g.Relations:OnChanged();if IsInGuild() then C_GuildInfo.GuildRoster() end end end,
+	FRIENDLIST_UPDATE = CharacterFriendsChanged,
+	BN_FRIEND_LIST_SIZE_CHANGED = BnetFriendsChanged,
+	BN_FRIEND_INFO_CHANGED = BnetFriendChanged,
+	BN_FRIEND_ACCOUNT_ONLINE = BnetFriendsChanged,
+	BN_FRIEND_ACCOUNT_OFFLINE = BnetFriendsChanged,
+	BN_DISCONNECTED = BnetFriendsChanged,
+	GUILD_ROSTER_UPDATE = GuildChanged,
+	PLAYER_GUILD_UPDATE = function(g,unit) if G.Public(UnitIsUnit(unit,"player")) then g.Relations:OnChanged("guild");if IsInGuild() then C_GuildInfo.GuildRoster() end end end,
 	CLUB_ADDED = ClubChanged,
 	CLUB_MEMBER_ADDED = ClubChanged,
 	CLUB_MEMBER_REMOVED = ClubChanged,

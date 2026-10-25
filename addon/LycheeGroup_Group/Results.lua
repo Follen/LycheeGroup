@@ -420,6 +420,7 @@ end
 local sorting
 local function Sort(a,b)
  local x,y=records[a],records[b]
+ if x.sortCaution~=y.sortCaution then return not x.sortCaution end
  local xd,yd=G.Applications:GetDeclinedAt(x.partyGUID)~=nil,G.Applications:GetDeclinedAt(y.partyGUID)~=nil
  if xd~=yd then return not xd end
  local xf,yf=x.bnetFriends+x.charFriends+x.guildMates>0,y.bnetFriends+y.charFriends+y.guildMates>0
@@ -618,7 +619,12 @@ function Results:GetResults()
   end
   local leaderText=type(filters.leaderText)=="string" and filters.leaderText:lower():match("^%s*(.-)%s*$") or nil
   if leaderText=="" then leaderText=nil end
-  for id,record in pairs(records) do if not record.isDelisted and Pass(record,filters,leaderText,playerSpecID,playerClass,roleClass,playerRole,needBloodlust) then ids[#ids+1]=id end end
+  local notes=A:GetSetting("notesEnabled") and A.Notes
+  for id,record in pairs(records) do if not record.isDelisted and Pass(record,filters,leaderText,playerSpecID,playerClass,roleClass,playerRole,needBloodlust) then
+   local note=notes and record.leaderKey and notes:Find(record.leaderKey)
+   record.sortCaution=note and note.type=="caution" or false
+   ids[#ids+1]=id
+  end end
   sorting=filters.sort or A:GetSetting("defaultSort");table.sort(ids,Sort);dirty=false
  end
  return ids
