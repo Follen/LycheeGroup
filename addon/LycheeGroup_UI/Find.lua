@@ -1269,14 +1269,15 @@ function P:TierItems()
  return items
 end
 local function SeasonRecordText(record)
- return record.level and "+"..math.floor(record.level) or "—",record.score and math.floor(record.score)..Say(" 分"," pts") or "—"
+ return record.level and tostring(math.floor(record.level)) or "—",record.score and tostring(math.floor(record.score)) or "—"
 end
 function P:StopPickerScores()
  local service=self.pickerScoreService;self.pickerScoreService=nil
  if service then service:End() end
- self.pickerScoreWidth=nil
+ self.pickerLevelWidth,self.pickerScoreWidth=nil,nil
  if self.activities then
   for _,row in ipairs(self.activities.rows) do
+   row.seasonBadge:Hide()
    row.seasonLevel:Hide();row.seasonScore:Hide();UI:SetText(row.seasonLevel,"");UI:SetText(row.seasonScore,"")
   end
  end
@@ -1312,7 +1313,13 @@ function P:BuildPicker()
  self.difficultySurface=CreateFrame("Frame",nil,f);C.Box(self.difficultySurface,{width="findDifficultySurfaceWidth",height="findDifficultySurfaceHeight"});C.Panel(self.difficultySurface,"surfaceLow","findPanelRadius4")
  self.difficultySelection=C.Selection(self.difficultySurface)
  self.difficultyButtons={}
- for i=1,12 do self.difficultyButtons[i]=C.Button(self.difficultySurface,"",T.findButtonWidth2,function(button) state.difficultyID=button.value or nil;P:RefreshPicker();P.results:SetPixelOffset(0,false);if state.browseReady then P:CommitChoice();P:DoSearch(true) else P:UpdateFilters(true) end end,{variant="compact",selectionFill=false}) end
+ for i=1,12 do self.difficultyButtons[i]=C.Button(self.difficultySurface,"",T.findButtonWidth2,function(button)
+  local difficulty=button.value or nil
+  if state.difficultyID==difficulty then return end
+  state.browseReady=false;UI:GetGroup().Search:EndBrowse()
+  state.difficultyID=difficulty
+  P:RefreshPicker();P:UpdateFilters(true)
+ end,{variant="compact",selectionFill=false}) end
  self.activities=C.List(f,T.findActivitiesWidth,T.findActivitiesHeight,48,function(key)
   if P.keystoneGroups and P.keystoneGroups[key] then P:ToggleGroupChoice(key);return end
   state.groupKeys=nil;P.draftGroupKeys=nil
@@ -1324,6 +1331,8 @@ function P:BuildPicker()
  end);C.Box(self.activities,{width="findActivitiesWidth",height="findActivitiesHeight"})
  self.activities:SetStyle({alternateRows=false,rowHeight=44,radius=8,singleLine=true,titleX=48,titleWidth=200,titleSize=16,titleLineHeight=22})
  self.activityIDs={};self.activityMap={}
+ local levelBackground={}
+ for i=1,3 do levelBackground[i]=T.surfaceLow[i]+(T.good[i]-T.surfaceLow[i])*.12 end
  self.activities:SetRowInitializer(function(row)
   row.icon=C.Icon(row,T.findRowIconWidth);C.Box(row.icon,{width="findRowIconWidth",height="findRowIconHeight"});C.SetPoint(row.icon,"LEFT",row.icon:GetParent(),"LEFT","findRowIconLeftX",0)
   row.multiSelect=C.Checkbox(row,function(_,button)
@@ -1343,13 +1352,20 @@ function P:BuildPicker()
   row.multiSelect:HookScript("OnLeave",function(button) if button.pressedGroupKey then button.groupPressCancelled=true end end)
   row.multiSelect:HookScript("OnHide",CancelGroupChoicePress)
   row:HookScript("OnHide",function() CancelGroupChoicePress(row.multiSelect) end)
-  row.seasonLevel=C.Text(row,"",12,"good");C.SetLineHeight(row.seasonLevel,12,true)
-  row.seasonScore=C.Text(row,"",10,"dim");C.SetLineHeight(row.seasonScore,10,true)
-  for _,label in ipairs({row.seasonLevel,row.seasonScore}) do label:SetWordWrap(false);label:SetJustifyH("RIGHT");label:Hide() end
-  row.seasonLevel:SetPoint("BOTTOMRIGHT",row.multiSelect,"LEFT",-8,1)
-  row.seasonScore:SetPoint("TOPRIGHT",row.multiSelect,"LEFT",-8,-1)
+  row.seasonBadge=CreateFrame("Frame",nil,row);row.seasonBadge:SetSize(71,22);row.seasonBadge:EnableMouse(false)
+  C.Panel(row.seasonBadge,"surfaceLow",4)
+  row.seasonLevelSection=CreateFrame("Frame",nil,row.seasonBadge);row.seasonLevelSection:SetSize(30,22);row.seasonLevelSection:SetPoint("LEFT");row.seasonLevelSection:EnableMouse(false)
+  C.Panel(row.seasonLevelSection,levelBackground,4)
+  -- The opaque end keeps the inner edge straight without doubling the tint.
+  local endFill=row.seasonLevelSection:CreateTexture(nil,"BACKGROUND");endFill:SetColorTexture(unpack(levelBackground));endFill:SetWidth(4);endFill:SetPoint("TOPRIGHT");endFill:SetPoint("BOTTOMRIGHT")
+  row.seasonLevel=C.Text(row.seasonLevelSection,"",10,"good");C.SetLineHeight(row.seasonLevel,14,true)
+  row.seasonScore=C.Text(row.seasonBadge,"",10,"muted");C.SetLineHeight(row.seasonScore,14,true)
+  for _,label in ipairs({row.seasonLevel,row.seasonScore}) do label:SetWordWrap(false);label:SetJustifyH("CENTER");label:Hide() end
+  row.seasonLevel:SetPoint("CENTER")
+  row.seasonScore:SetPoint("LEFT",row.seasonLevelSection,"RIGHT",9,0)
+  row.seasonBadge:SetPoint("RIGHT",row.multiSelect,"LEFT",-8,0);row.seasonBadge:Hide()
  end)
- self.pickerConfirm=C.Button(f,Say("确定","Confirm"),T.findPickerConfirmWidth,function()
+ self.pickerConfirm=C.Button(f,Say("搜索所选副本","Search selected dungeons"),T.findPickerConfirmWidth,function()
   state.groupKeys=CopyGroupKeys(P.draftGroupKeys);state.groupKey=nil;P:CommitChoice()
   P.results:SetPixelOffset(0,false);P:DoSearch()
  end);self.pickerConfirm:SetWidth(T.findPickerConfirmWidth);self.pickerConfirm:SetPrimary(true);self.pickerConfirm:SetHeight(T.findPickerConfirmHeight);self.pickerConfirm:Hide()
@@ -1447,21 +1463,26 @@ function P:RefreshPicker()
  wipe(self.activityIDs);wipe(self.activityMap)
  if cat.id~=9 then self.activityIDs[#self.activityIDs+1]=0 end
  for _,group in ipairs(UI:GetGroup().Catalog:GetGroups(state.category)) do if not state.tier or group.tier==state.tier then self.activityMap[group.key]=group;self.activityIDs[#self.activityIDs+1]=group.key end end
- local contentHeight=math.max(1,#self.activityIDs*48-4);local listHeight=C.ElementValue(self.activities,"root","height",math.min(440,contentHeight))
+ local confirm=multiGroups and next(self.draftGroupKeys)~=nil
+ local measure=self.activities.rows[1]
+ local contentHeight=math.max(1,#self.activityIDs*48-4)
+ local listHeight=C.ElementValue(self.activities,"root","height",math.min(440,contentHeight))
  local gutter=contentHeight>listHeight and C.listRightInset or 0
  local scoreMenuWidth=0
- self.pickerScoreWidth=nil
+ self.pickerLevelWidth,self.pickerScoreWidth=nil,nil
  if self.pickerScoreService then
-  local measure=self.activities.rows[1];local titleWidth,scoreWidth=0,0
+  local titleWidth,levelWidth,scoreWidth=0,0,0
   for _,key in ipairs(self.activityIDs) do
    if multiGroups[key] then
     local group=self.activityMap[key];local level,score=SeasonRecordText(self.pickerScoreService:GetRecord(group))
     titleWidth=math.max(titleWidth,C.MeasureTextWidth(measure.title,ActivityLabel(group.name)))
-    scoreWidth=math.max(scoreWidth,C.MeasureTextWidth(measure.seasonLevel,level),C.MeasureTextWidth(measure.seasonScore,score))
+    levelWidth=math.max(levelWidth,C.MeasureTextWidth(measure.seasonLevel,level))
+    scoreWidth=math.max(scoreWidth,C.MeasureTextWidth(measure.seasonScore,score))
    end
   end
-  self.pickerScoreWidth=math.ceil(scoreWidth)+2
-  scoreMenuWidth=math.ceil(16+gutter+48+titleWidth+12+self.pickerScoreWidth+8+measure.multiSelect:GetWidth()+6)
+  self.pickerLevelWidth,self.pickerScoreWidth=math.ceil(levelWidth)+2,math.ceil(scoreWidth)+2
+  local badgeWidth=self.pickerLevelWidth+self.pickerScoreWidth+32
+  scoreMenuWidth=math.ceil(16+gutter+48+titleWidth+12+badgeWidth+8+measure.multiSelect:GetWidth()+6)
  end
  -- Difficulty names remain complete; the native menu grows to its real content width.
  local menuWidth=C.ElementValue(self.picker,"root","width",math.max(scoreMenuWidth,chooseDifficulty and math.max(336,total+math.max(0,#diffs-1)*4+22) or 336))
@@ -1479,11 +1500,10 @@ function P:RefreshPicker()
  end
  if not chooseDifficulty then self.difficultySelection:Clear() end
  if chooseDifficulty then top=top+48 end
- local confirm=multiGroups and next(self.draftGroupKeys)~=nil
  self.activities:SetGutter(gutter)
  self.activities:ClearAllPoints();C.SetPoint(self.activities,"TOPLEFT",self.activities:GetParent(),"TOPLEFT","findActivitiesTopleftX",-top);self.activities:SetViewport(listHeight);self.picker:SetHeight(top+listHeight+(confirm and 64 or 8))
  self.pickerConfirm:SetShown(confirm);self.pickerConfirm:SetWidth(menuWidth-16);self.pickerConfirm:ClearAllPoints();C.SetPoint(self.pickerConfirm,"TOPLEFT",self.pickerConfirm:GetParent(),"TOPLEFT","findPickerConfirmTopleftX",-top-listHeight-8)
- if state.groupKeys then self.activities.selectedKey=nil else self.activities.selectedKey=state.groupKey or 0 end
+ if state.groupKeys or multiGroups and next(self.draftGroupKeys) then self.activities.selectedKey=nil else self.activities.selectedKey=state.groupKey or 0 end
  self.activities:SetItems(self.activityIDs,function(row,key)
   local group=self.activityMap[key];UI:SetText(row.title,ActivityLabel(group and group.name or AllActivitiesLabel(cat)));row.icon:Show();if group then UI:SetActivityIcon(row.icon,group.activity) else row.icon:SetTexture(UI:CategoryIcon(cat.icon));row.icon:SetTexCoord(0,1,0,1) end
   local selectable=multiGroups and multiGroups[key]
@@ -1492,13 +1512,17 @@ function P:RefreshPicker()
   local checked=self.draftGroupKeys or state.groupKeys
   row.multiSelect:SetValue(checked and checked[key] or false)
   local showScore=self.pickerScoreService and selectable
+  row.seasonBadge:SetShown(showScore or false)
   row.seasonLevel:SetShown(showScore or false);row.seasonScore:SetShown(showScore or false)
   if showScore then
-   local record=self.pickerScoreService:GetRecord(group);local level,score=SeasonRecordText(record)
+   local record=self.pickerScoreService:GetRecord(group);local level=SeasonRecordText(record)
    UI:SetText(row.seasonLevel,level);UI:Color(row.seasonLevel,record.level and "good" or "dim")
-   UI:SetScore(row.seasonScore,record.score,"map");UI:SetText(row.seasonScore,score)
-   row.seasonLevel:SetWidth(self.pickerScoreWidth);row.seasonScore:SetWidth(self.pickerScoreWidth)
-   row.title:SetWidth(math.max(1,row:GetWidth()-48-12-self.pickerScoreWidth-8-row.multiSelect:GetWidth()-6))
+   UI:SetScore(row.seasonScore,record.score,"map")
+   row.seasonLevel:SetWidth(self.pickerLevelWidth);row.seasonScore:SetWidth(self.pickerScoreWidth)
+   local badgeHeight=math.max(22,math.ceil(math.max(row.seasonLevel:GetHeight(),row.seasonScore:GetHeight())+4))
+   row.seasonBadge:SetSize(self.pickerLevelWidth+self.pickerScoreWidth+32,badgeHeight)
+   row.seasonLevelSection:SetSize(self.pickerLevelWidth+14,badgeHeight)
+   row.title:SetWidth(math.max(1,row:GetWidth()-48-12-row.seasonBadge:GetWidth()-8-row.multiSelect:GetWidth()-6))
   else
    UI:SetText(row.seasonLevel,"");UI:SetText(row.seasonScore,"")
    row.title:SetWidth(row:GetWidth()-60-(selectable and 32 or 0))
@@ -1560,7 +1584,6 @@ function P:SelectCategory(key,row)
  end
  self:RefreshPicker();self:UpdateFilters(true)
  if changed or not self.picker:IsShown() then self.picker:Show();self.picker:RegisterEvent("GLOBAL_MOUSE_DOWN");M:Reveal(self.picker,"TOPLEFT",self.rail,"TOPRIGHT",T.findPickerGap,-self.pickerY,0,T.findPickerMotionOffset,T.findPickerMotionDuration) else self:ClosePicker() end
- if changed and state.browseReady then self:DoSearch(true) end
 end
 function P:RememberCategory()
  if not A:GetSetting("rememberFilters") then return end

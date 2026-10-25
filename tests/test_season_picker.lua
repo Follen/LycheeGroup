@@ -83,22 +83,62 @@ local function Session(locale)
  return s
 end
 
+-- Opening remembered categories is navigation, not a new native search.
+do
+ local s=Session("zhCN");local p,g=s.page,s.fixture.G
+ local search=g.Search.Search;local searches=0
+ function g.Search:Search(...) searches=searches+1;return search(self,...) end
+ s:Open();Click(s:Row(0));Equal(searches,1,"an explicit all-dungeons choice submits once")
+ p:SelectCategory("seasonRaid");p:SelectCategory("seasonDungeon")
+ Equal(searches,1,"returning to a remembered top-level category only opens its picker")
+ for _=1,12 do p:SelectCategory("seasonRaid");p:SelectCategory("seasonDungeon") end
+ Equal(searches,1,"repeated category navigation cannot consume search requests")
+ Check(p.refresh:IsEnabled(),"the restored confirmed choice remains available for manual refresh")
+ Click(p.refresh);Equal(searches,2,"manual refresh explicitly submits the restored choice once")
+ p:SelectCategory("seasonDungeon")
+ local normal
+ for _,button in ipairs(p.difficultyButtons) do if button:IsShown() and button.value==1 then normal=button;break end end
+ Check(normal~=nil,"the real selector offers normal difficulty")
+ g.Search.pending={categoryKey="seasonDungeon"}
+ g.Search.timer=C_Timer.NewTimer(.2,function() searches=searches+100 end)
+ Click(normal)
+ Equal(searches,2,"changing difficulty edits the pending choice without searching")
+ Equal(g.Search.pending,nil);Equal(g.Search.timer,nil)
+ s.fixture.base.AdvanceClock(.3);Equal(searches,2,"difficulty changes cancel obsolete queued searches")
+ p:ClosePicker();Equal(g.filters.difficultyID,8,"closing an unsubmitted difficulty restores the confirmed choice")
+ p:SelectCategory("seasonDungeon");Click(normal);Click(s:Row(20))
+ Equal(searches,3,"an explicit dungeon choice submits the new difficulty once")
+ Equal(g.filters.difficultyID,1)
+ p:SelectCategory("seasonDungeon");Click(normal);Equal(searches,3,"the current difficulty is a no-op")
+ p:ClosePicker();Click(p.start);Equal(searches,4,"the explicit search action remains usable")
+ s.fixture.U:Hide(true)
+end
+
 for _,locale in ipairs({"zhCN","enUS"}) do
  local s=Session(locale);local p,u=s.page,s.fixture.U
  Equal(s.requests,0,"opening Find does not request selector scores")
  s:Open();Equal(s.requests,1);Equal(s:Subscriptions(),3)
  local row=s:Row(20)
- Equal(row.seasonLevel:GetText(),"+15");Equal(row.seasonScore:GetText(),locale=="zhCN" and "351 分" or "351 pts")
+ Equal(row.seasonLevel:GetText(),"15");Equal(row.seasonScore:GetText(),"351")
+ Equal(row.seasonLevel:GetParent():GetParent(),row.seasonScore:GetParent(),"the level section stays inside the shared badge")
  Near(row.seasonLevel.color[1],u.Theme.good[1])
- Equal(s:Row(21).seasonLevel:GetText(),"—");Equal(s:Row(21).seasonScore:GetText(),locale=="zhCN" and "0 分" or "0 pts")
+ local scoreColor=C_ChallengeMode.GetSpecificDungeonOverallScoreRarityColor(351)
+ Near(row.seasonScore.color[1],scoreColor.r,"the badge retains the native dungeon-score color")
+ Near(row.seasonScore.color[2],scoreColor.g);Near(row.seasonScore.color[3],scoreColor.b)
+ Equal(s:Row(21).seasonLevel:GetText(),"—");Equal(s:Row(21).seasonScore:GetText(),"0")
  Equal(s:Row(22).seasonLevel:GetText(),"—");Equal(s:Row(22).seasonScore:GetText(),"—")
+ Near(s:Row(21).seasonScore.color[1],u.Theme.muted[1],"a confirmed zero keeps the existing neutral color")
+ Near(s:Row(22).seasonScore.color[1],u.Theme.muted[1],"an unknown score keeps the existing neutral color")
  Check(not s:Row(0).seasonLevel:IsShown(),"the all-instances row has no character records")
  -- A checkbox keeps native multi-select behavior while scores occupy a separate area.
  Click(row.multiSelect);Equal(row.multiSelect:GetValue(),true);Check(p.pickerConfirm:IsShown())
+ Equal(p.activities.selectedKey,nil,"a checked draft no longer highlights all dungeons")
  local reads=s.mapReads+s.statReads+s.scoreReads
  local initialRows=#p.activities.rows
  for _,scale in ipairs({.7,1,1.3}) do
   u:ApplyFont(s.fixture.A.Fonts:GetPath(),scale)
+  Equal(p.activities.bodyHeight,44,"score badges preserve the original compact row height")
+  Equal(p.activities.rowHeight,48,"the original four-unit row gap is preserved")
   local width=p.picker:GetWidth()
   Check(width>336,"offscreen titles contribute to picker width")
   for _,control in ipairs({p.tierChoice,p.difficultySurface,p.activities,p.pickerConfirm}) do Near(control:GetWidth(),width-16) end
@@ -115,17 +155,24 @@ for _,locale in ipairs({"zhCN","enUS"}) do
    for _,current in ipairs(p.activities.rows) do if current.key and current:IsShown() then
     if current.seasonLevel:IsShown() then
      Check(current.title:GetWidth()+.01>=current.title:GetUnboundedStringWidth(),"recycled titles stay complete")
-     local titleRight=Coordinate(current.title,"RIGHT","x",current)
-     local badgeLeft=Coordinate(current.seasonLevel,"LEFT","x",current)
-     Check(titleRight<=badgeLeft-11.99,"title and records have a twelve-unit gap")
+     Check(Coordinate(current.seasonBadge,"LEFT","x",current)>=Coordinate(current.title,"RIGHT","x",current)+11.99,"the name has twelve units before the badge")
      for _,label in ipairs({current.seasonLevel,current.seasonScore}) do
       Check(label:GetWidth()+.01>=label:GetUnboundedStringWidth(),"record text fits its reserved width")
-      Check(Coordinate(label,"RIGHT","x",current)<=Coordinate(current.multiSelect,"LEFT","x",current)-7.99,"records do not overlap the checkbox")
-      Check(Coordinate(label,"BOTTOM","y",current)>=-.01 and Coordinate(label,"TOP","y",current)<=current:GetHeight()+.01,"both lines fit the row")
+      local badge=current.seasonBadge
+      Check(badge:IsShown(),"a visible record has its badge surface")
+      Check(Coordinate(badge,"RIGHT","x",current)<=Coordinate(current.multiSelect,"LEFT","x",current)-7.99,"badges do not overlap the checkbox")
+      Check(Coordinate(badge,"BOTTOM","y",current)>=-.01 and Coordinate(badge,"TOP","y",current)<=current:GetHeight()+.01,"badges fit the original row at every font size")
+      Check(Coordinate(label,"LEFT","x",current)>=Coordinate(badge,"LEFT","x",current)+6.99 and Coordinate(label,"RIGHT","x",current)<=Coordinate(badge,"RIGHT","x",current)-8.99,"badge text has horizontal padding")
+      Near(Coordinate(current.title,"CENTER","y",current),Coordinate(badge,"CENTER","y",current),"name and badges share the row center")
      end
-     Check(Coordinate(current.seasonLevel,"BOTTOM","y",current)>=Coordinate(current.seasonScore,"TOP","y",current)+1.99,"record lines have a two-unit gap")
+     Near(Coordinate(current.seasonLevel,"BOTTOM","y",current),Coordinate(current.seasonScore,"BOTTOM","y",current),"level and score share a baseline")
+     Near(Coordinate(current.seasonLevelSection,"LEFT","x",current),Coordinate(current.seasonBadge,"LEFT","x",current),"the tinted section shares the badge's outer edge")
+     Near(current.seasonLevelSection:GetHeight(),current.seasonBadge:GetHeight(),"the two sections form one continuous badge")
+     Check(Coordinate(current.seasonLevelSection,"RIGHT","x",current)>=Coordinate(current.seasonLevel,"RIGHT","x",current)+6.99,"the tinted section has space after the level")
+     Check(Coordinate(current.seasonScore,"LEFT","x",current)>=Coordinate(current.seasonLevelSection,"RIGHT","x",current)+8.99,"the score has space after the shared section boundary")
     else
      Equal(current.seasonLevel:GetText(),"");Equal(current.seasonScore:GetText(),"")
+     Check(not current.seasonBadge:IsShown(),"non-score rows have no badge surface")
     end
    end end
   end
@@ -139,7 +186,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  Equal(s.mapReads+s.statReads+s.scoreReads,reads,"layout and scrolling reuse per-CMID records")
  local beforeWidth=p.picker:GetWidth()
  s.scores[114]=9876543210;s:Fire("CHALLENGE_MODE_MAPS_UPDATE")
- Check(p.picker:GetWidth()>beforeWidth,"new score width updates when the API event arrives")
+ Check(p.picker:GetWidth()>beforeWidth,"a longer score reserves its badge width without compressing dungeon names")
  p:SelectCategory("2");Equal(s:Subscriptions(),0)
  for _,current in ipairs(p.activities.rows) do Check(not current.seasonLevel:IsShown() and not current.seasonScore:IsShown(),"scores clear outside seasonal dungeons") end
  local requests=s.requests;reads=s.mapReads+s.statReads+s.scoreReads
@@ -156,7 +203,7 @@ end
 do
  local s=Session("enUS");local p=s.page;s:Open();p.activities.clip.mouseOver=true
  local row=s:Row(20);local box=row.multiSelect
- box:Fire("OnMouseDown","LeftButton");p.activities:SetPixelOffset(48,false)
+ box:Fire("OnMouseDown","LeftButton");p.activities:SetPixelOffset(p.activities.rowHeight,false)
  local nextKey=row.key;Check(nextKey~=20,"the real activity list reuses the pressed checkbox row")
  box:Fire("OnMouseUp","LeftButton");box:SetChecked(true);Click(box)
  Equal(p.draftGroupKeys[nextKey],nil,"releasing a rebound checkbox cannot select its new dungeon")
@@ -177,7 +224,7 @@ end
 do
  local s=Session("enUS");local p,u=s.page,s.fixture.U;s.synchronous=true
  s:Open();Equal(s.requests,1);Equal(p.refreshingPicker,nil)
- Equal(s:Row(20).seasonLevel:GetText(),"+15")
+ Equal(s:Row(20).seasonLevel:GetText(),"15")
  local requests=s.requests;local reads=s.mapReads+s.statReads+s.scoreReads
  u.preview={provider={Catalog=s.fixture.G.Catalog}}
  p:RefreshPicker();Equal(s:Subscriptions(),0)
@@ -189,7 +236,7 @@ do
   GetRecord=function() return {level=42,score=700} end,
  }
  p:RefreshPicker();Equal(previewBegins,1)
- Equal(s:Row(20).seasonLevel:GetText(),"+42")
+ Equal(s:Row(20).seasonLevel:GetText(),"42")
  Equal(s.requests,requests);Equal(s.mapReads+s.statReads+s.scoreReads,reads)
  p.picker:Hide();Equal(previewEnds,1)
  u.preview=nil

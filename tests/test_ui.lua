@@ -1180,10 +1180,10 @@ find.quickChoices.tankPresence.button:Fire("OnClick","RightButton")
 T.eq(G.filters.tankPresence,nil,"right click clears the seasonal condition at normal difficulty")
 local searchMethod=G.Search.Search;local requestedActivity
 G.Search.Search=function(_,category,id) requestedActivity=id;return true end
-find:DoSearch();T.same(requestedActivity,{3},"a selected seasonal map and normal difficulty request its unique native activity")
+activityRow:Fire("OnClick","LeftButton");T.same(requestedActivity,{3},"confirming a seasonal map and normal difficulty requests its unique native activity")
 for _,button in ipairs(find.difficultyButtons) do if button.value==false and button:IsShown() then button:Fire("OnClick") end end
 T.eq(find.searchHint:GetText(),"队伍标题或钥石范围，如 12-15");T.eq(find.searchModeToggle:IsShown(),true,"title and leader modes remain available with Mythic+ selected")
-find:DoSearch();T.same(requestedActivity,{2,3},"all difficulties request every valid native activity for the selected dungeon")
+activityRow:Fire("OnClick","LeftButton");T.same(requestedActivity,{2,3},"confirming all difficulties requests every valid native activity for the selected dungeon")
 G.Search.Search=searchMethod
 find:SetFiltersOpen(true);Pick(find.socialChoice,"noCaution")
 T.eq(find.socialChoice.label:GetText(),"不含拉黑记录");T.eq(G.filters.notes,"noCaution","the note choice requests exclusion rather than blocked-only results")
@@ -1257,7 +1257,7 @@ do
  find:SelectCategory("seasonDungeon");T.eq(Row(202).multiSelect:GetChecked(),true);T.eq(G.filters.difficultyID,8);T.eq(calls,singleCalls,"same-category reopening preserves the confirmed one-item collection and difficulty")
  find:SelectCategory("seasonRaid");singleCalls=calls;find:SelectCategory("seasonDungeon")
  T.same(G.filters.groupKeys,{[202]=true});T.eq(find.activities.selectedKey,nil);T.eq(Row(202).multiSelect:GetChecked(),true,"returning from another category restores the checked dungeon")
- T.eq(G.filters.difficultyID,8);T.eq(calls,singleCalls+1,"returning to a confirmed one-item collection resumes its search")
+ T.eq(G.filters.difficultyID,8);T.eq(calls,singleCalls,"returning to a confirmed one-item collection restores its choice without searching")
  Row(0):Fire("OnClick","LeftButton");T.eq(G.filters.groupKey,nil);T.eq(G.filters.groupKeys,nil);T.eq(find.context:GetText(),"全部副本  ·  "..GetDifficultyInfo(8))
  find:SelectCategory("seasonDungeon");Check(201);Check(202);find.pickerConfirm:Fire("OnClick")
  local selectedCalls=calls
@@ -1265,8 +1265,8 @@ do
  find:SelectCategory("seasonRaid");T.eq(G.Search.pending,nil);T.eq(G.Search.timer,nil)
  selectedCalls=calls
  f.base.AdvanceClock(.3);T.eq(calls,selectedCalls,"switching category cancels delayed native searches")
- find:SelectCategory("seasonDungeon");T.eq(calls,selectedCalls+1,"returning to confirmed multi-selection resumes its search")
- T.eq(find.picker:IsShown(),true,"restoring the search keeps the selection menu open")
+ find:SelectCategory("seasonDungeon");T.eq(calls,selectedCalls,"returning to confirmed multi-selection only restores the picker")
+ T.eq(find.picker:IsShown(),true,"restoring the choice keeps the selection menu open")
  selectedCalls=calls
  T.same(G.filters.groupKeys,{[201]=true,[202]=true});T.eq(G.filters.difficultyID,8,"category restoration recovers only the confirmed keystone selection")
  T.ok(find.refresh:IsEnabled(),"restoring confirmed dungeons keeps manual refresh available")
@@ -2850,7 +2850,7 @@ do
  T.eq(fresh.G.searchText,"","opening Find searches the restored confirmed selection")
  T.eq(page.refresh:IsEnabled(),true,"a restored confirmed single selection can be refreshed")
  page:SelectCategory("seasonDungeon")
- T.eq(page.activities.selectedKey,20);T.eq(page.activities.rows[1].title:GetText(),"All instances")
+ T.eq(page.activities.selectedKey,nil,"a restored keystone choice uses its checkbox without a second row highlight");T.eq(page.activities.rows[1].title:GetText(),"All instances")
  local row;for _,item in ipairs(page.activities.rows) do if item.key==20 then row=item;break end end
  T.eq(row.multiSelect:IsShown(),true);T.eq(row.multiSelect:GetChecked(),true,"a legacy single selection opens as a checked keystone draft")
  fresh.U:Hide(true)
