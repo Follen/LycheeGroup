@@ -68,7 +68,9 @@ for _,locale in ipairs({"zhCN","enUS"}) do
   local natural=label.GetUnboundedStringWidth
   label.GetUnboundedStringWidth=function(self) return natural(self)*1.22 end
  end
- p:LayoutQuickFilters()
+ local settle=p.frame:GetScript("OnUpdate")
+ check(settle~=nil,locale..": first display schedules one metric settle")
+ settle(p.frame,.016)
  check(full(p.autoJoin.label),locale..": Auto join is ellipsized after font metrics settle")
  check(full(p.applicationSettings.label),locale..": Auto apply is ellipsized after font metrics settle")
  f.U:Hide(true)

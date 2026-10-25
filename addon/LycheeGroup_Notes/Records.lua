@@ -16,6 +16,20 @@ local subscribers = {}
 -- One stored key per folded identity; only legacy collisions need a key array.
 -- Records and their display names stay in the original saved table.
 local identities = {}
+local totalCount, positiveCount, neutralCount, cautionCount = 0, 0, 0, 0
+
+local function CountType(kind, delta)
+	kind = kind or "neutral"
+	if kind == "positive" then positiveCount = positiveCount + delta
+	elseif kind == "neutral" then neutralCount = neutralCount + delta
+	elseif kind == "caution" then cautionCount = cautionCount + delta end
+end
+
+local function CountRecord(record, delta)
+	if not record then return end
+	totalCount = totalCount + delta
+	CountType(record.type, delta)
+end
 
 local function Trim(value)
 	if type(value) ~= "string" then return "" end
@@ -107,7 +121,12 @@ end
 function Records.Bind(db)
 	DB = db
 	identities = {}
-	for key in pairs(DB.records) do Index(key, true) end
+	totalCount, positiveCount, neutralCount, cautionCount = 0, 0, 0, 0
+	for key, record in pairs(DB.records) do Index(key, true); CountRecord(record, 1) end
+end
+
+function Records.GetCounts()
+	return totalCount, positiveCount, neutralCount, cautionCount
 end
 
 -- Subscribe(fn(kind, keyOrKeys)):add/edit/remove 携带单个 key;
@@ -198,7 +217,9 @@ function Records.Add(name, realm, reason, unit, preClassSpec, details)
 		class = playerInfo.class,
 		specID = playerInfo.specID,
 	}
+	CountRecord(existing, -1)
 	DB.records[key] = record
+	CountRecord(record, 1)
 	Index(key, existing == nil)
 	Publish("add", key)
 	SyncSummary()
@@ -213,8 +234,10 @@ function Records.Edit(playerKey, reason, details)
 	local cleanReason = Trim(reason)
 	record.reason = cleanReason
 	if details then
+		local previousType = record.type
 		record.type = details.type
 		record.class, record.specID, record.classSpec = details.class, details.specID, details.classSpec or ""
+		if previousType ~= record.type then CountType(previousType, -1); CountType(record.type, 1) end
 	end
 	Publish("edit", playerKey)
 	return true
@@ -226,6 +249,7 @@ function Records.Remove(playerKey)
 	local record = DB.records[playerKey]
 	if not record then return false end
 	DB.records[playerKey] = nil
+	CountRecord(record, -1)
 	local identity = Identity(playerKey)
 	local indexed = identities[identity]
 	if type(indexed) == "table" then
@@ -263,7 +287,7 @@ function Records.Merge(records)
 				local currentTimestamp = TimestampOf(current)
 				if current then current.timestamp = currentTimestamp end
 				if not current or timestamp > currentTimestamp then
-					DB.records[key] = {
+					local record = {
 						name = cleanName,
 						server = cleanServer,
 						timestamp = timestamp,
@@ -273,6 +297,9 @@ function Records.Merge(records)
 						class = type(item.class) == "string" and item.class or nil,
 						specID = type(item.specID) == "number" and item.specID or nil,
 					}
+					CountRecord(current, -1)
+					DB.records[key] = record
+					CountRecord(record, 1)
 					Index(key, current == nil)
 					changed = changed + 1
 					if not changedSet[key] then
@@ -294,6 +321,7 @@ end
 -- 与 Notes:Add 命令包装共用同一命名层;内部经 Records 表组织实现,此处以冒号方法适配调用方。
 function Notes:Find(playerKey) return self.Records.Find(playerKey) end
 function Notes:List(query) return self.Records.List(query) end
+function Notes:GetCounts() return self.Records.GetCounts() end
 function Notes:Edit(key, reason, details) return self.Records.Edit(key, reason, details) end
 function Notes:Remove(key) return self.Records.Remove(key) end
 function Notes:Merge(records) return self.Records.Merge(records) end

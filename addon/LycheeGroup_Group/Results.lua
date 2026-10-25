@@ -146,6 +146,7 @@ local function Normalize(id,record,invalidateDetails,expectedScan,metadataDirty)
   record.checkedRoleClass,record.checkedRole,record.hasMemberClassRole=nil,nil,nil
   record.bloodlustKnown,record.hasBloodlust=nil,nil
   record.leaderClassKnown,record.leaderClass=nil,nil
+  record.flaggedLeaderClassKnown,record.flaggedLeaderClass=nil,nil
  end
  return record
 end
@@ -158,6 +159,25 @@ function Results:GetMemberCounts(record)
  local counts={TANK=Public(native.TANK),HEALER=Public(native.HEALER),DAMAGER=Public(native.DAMAGER)}
  record.memberCounts=counts
  return counts
+end
+-- Application summaries retain their original first-explicit-flag contract.
+-- The general leader summary also matches leaderKey, so its cache is separate.
+function Results:GetFlaggedLeaderClass(record)
+ if record.flaggedLeaderClassKnown then return record.flaggedLeaderClass end
+ local class
+ local details=record.details
+ if details and not record.detailsDirty then
+  for _,member in ipairs(details.members) do
+   if member.isLeader==true then class=member.class;break end
+  end
+ else
+  for index=1,record.numMembers or 0 do
+   local member=Public(C_LFGList.GetSearchResultPlayerInfo(record.id,index))
+   if type(member)=="table" and Public(member.isLeader)==true then class=Public(member.classFilename);break end
+  end
+ end
+ record.flaggedLeaderClassKnown,record.flaggedLeaderClass=true,class
+ return class
 end
 -- Large-group rows need the leader's color, not a full member snapshot.
 function Results:GetLeaderClass(record)
@@ -293,7 +313,7 @@ function Results:GetDetails(idOrRecord)
  -- Five-player rows show individual members. Their role-count API result also
  -- contains nested class counts, so read it only for an actual role filter.
  local memberCount=0
- local leaderClass,leaderFound
+ local leaderClass,leaderFound,flaggedLeaderClass,flaggedLeaderFound
  details.counts=record.memberCounts or record.maxNumPlayers~=5 and self:GetMemberCounts(record) or nil
  for index=1,record.numMembers or 0 do
   local info=Public(C_LFGList.GetSearchResultPlayerInfo(record.id,index))
@@ -312,6 +332,7 @@ function Results:GetDetails(idOrRecord)
    info.name=name;info.nameKey=key
    info.class=Public(info.classFilename);info.localizedClass=Public(info.className)
    if not leaderFound and (isLeader or record.leaderKey and key==record.leaderKey) then leaderClass,leaderFound=info.class,true end
+   if not flaggedLeaderFound and isLeader then flaggedLeaderClass,flaggedLeaderFound=info.class,true end
    info.specName=Public(info.specName);info.assignedRole=Public(info.assignedRole)
    info.isLeader=isLeader
    -- Search data identifies the leader's faction, not every remote member's.
@@ -348,6 +369,7 @@ function Results:GetDetails(idOrRecord)
  else details.encounters=nil end
  record.details=details;record.detailsDirty=nil
  record.leaderClassKnown,record.leaderClass=true,leaderClass
+ record.flaggedLeaderClassKnown,record.flaggedLeaderClass=true,flaggedLeaderClass
  -- 队列仅存 ID，旧结果不会被缓存队列继续强引用。
  TouchDetails(record)
  return details

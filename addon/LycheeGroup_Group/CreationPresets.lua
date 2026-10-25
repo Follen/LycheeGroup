@@ -45,6 +45,19 @@ local function Equal(a,b)
  for _,key in ipairs(fields) do if a[key]~=b[key] then return false end end
  return true
 end
+local function Identity(settings)
+ local parts={}
+ for index,key in ipairs(fields) do
+  local value=settings[key]
+  -- All normalized leaves are finite nonnegative doubles, booleans or nil.
+  -- Seventeen significant digits distinguish adjacent doubles; signed zero
+  -- must still share Lua's numeric equality. The separator never occurs in a leaf.
+  if value==nil then parts[index]="n"
+  elseif type(value)=="boolean" then parts[index]=value and "t" or "f"
+  else parts[index]=value==0 and "0" or string.format("%.17g",value) end
+ end
+ return table.concat(parts,"/")
+end
 local function Find(store,settings,count)
  for i=1,count or #store do if Equal(store[i],settings) then return store[i],i end end
 end
@@ -74,9 +87,12 @@ function Presets.New(store,changed)
  table.sort(invalid,function(a,b) return a.key<b.key end)
  for _,entry in ipairs(invalid) do Preserve(store,entry.key,entry.value) end
  table.sort(candidates,function(a,b) if a.usedAt~=b.usedAt then return a.usedAt>b.usedAt end;return a.order<b.order end)
+ local seen={}
  for _,candidate in ipairs(candidates) do
   local entry,normalized=candidate.entry,candidate.normalized
-  if not Find(store,normalized) then
+  local identity=Identity(normalized)
+  if not seen[identity] then
+   seen[identity]=true
    wipe(entry);for key,value in pairs(normalized) do entry[key]=value end;entry.favorite=true
    store[#store+1]=entry
   end

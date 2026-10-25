@@ -5,6 +5,21 @@ function Library.AttachMenus(UI)
  local C,T,M=UI.C,UI.Theme,UI.Motion
  local menu
  local RelayoutGeometry
+ local requestedFont,requestedSize,requestedFlags,appliedFont,appliedSize,appliedFlags
+ local function MeasureFont(font,size,flags)
+  local currentFont,currentSize,currentFlags=menu.measure:GetFont()
+  if currentFont==font and currentSize==size and currentFlags==flags
+   or requestedFont==font and requestedSize==size and requestedFlags==flags
+    and currentFont==appliedFont and currentSize==appliedSize and currentFlags==appliedFlags then return end
+  if menu.measure:SetFont(font,size,flags) then
+   requestedFont,requestedSize,requestedFlags=font,size,flags
+   appliedFont,appliedSize,appliedFlags=menu.measure:GetFont()
+  else
+   -- Failed native font requests must remain retryable on the next item/open.
+   requestedFont,requestedSize,requestedFlags=nil,nil,nil
+   appliedFont,appliedSize,appliedFlags=nil,nil,nil
+  end
+ end
  local function IsChecked(entry) return entry.checked==true or menu.selectMenu and entry.value==menu.selectedValue end
  local function PrepareRow(row,index)
   if not index then return end
@@ -100,7 +115,7 @@ function Library.AttachMenus(UI)
     local fontSize=UI:ResolveElementValue("menu.row","label","fontSize",UI:GetFontSize("menuFontSize"),key)
     local font=UI:ResolveElementValue("menu.row","label","font",UI.fontPath,key)
     local flags=UI:ResolveElementValue("menu.row","label","flags","",key)
-    menu.measure:SetFont(font,fontSize,flags)
+    MeasureFont(font,fontSize,flags)
     menu.measure:SetText(entry.label or tostring(entry.value or ""))
     natural=math.max(natural,math.ceil(menu.measure:GetStringWidth())+(selectMenu and T.menuSelectInset or entry.icon and T.menuIconTextInset or T.menuTextInset)+T.menuTextInset+T.menuPadding*2+gutter)
    end

@@ -1474,11 +1474,11 @@ do
  T.eq(G:GetRoster(),members);T.eq(reads,1,"unchanged roster reuses its specialization snapshot")
  local refreshed
  local unsubscribe=G:Subscribe(function(kind) if kind=="roster" then refreshed=G:GetRoster() end end)
- selected=2;Fire("ACTIVE_PLAYER_SPECIALIZATION_CHANGED")
+ selected=2;Fire("ACTIVE_PLAYER_SPECIALIZATION_CHANGED");Stubs.AdvanceClock(0)
  T.eq(refreshed and refreshed[2].specID,66,"the native active-player specialization event refreshes visible roster consumers")
  T.eq(refreshed[2].assignedRole,"TANK","an unassigned role follows specialization changes")
  T.eq(refreshed[1].specID,nil,"self specialization never fills another member's missing data")
- selected=1;player.role="DAMAGER";Fire("PLAYER_SPECIALIZATION_CHANGED","player")
+ selected=1;player.role="DAMAGER";Fire("PLAYER_SPECIALIZATION_CHANGED","player");Stubs.AdvanceClock(0)
  T.eq(refreshed[2].specID,65,"the unit specialization event also refreshes the raid-alias player")
  T.eq(refreshed[2].assignedRole,"DAMAGER","an explicitly assigned role remains authoritative")
  T.eq(#Stubs.FramesWithEvent("ACTIVE_PLAYER_SPECIALIZATION_CHANGED"),1)
@@ -1544,6 +1544,7 @@ do
  T.eq(G.Roster.pending,pending,"an unrelated response does not release the current inspect request")
  T.eq(G:GetRoster()[3].specID,nil,"an unrelated inspect response cannot complete this teammate")
  Fire("INSPECT_READY","LIB-1")
+ Stubs.AdvanceClock(0)
  T.eq(rosterUpdates,1,"a current teammate inspected by another consumer still updates the roster")
  T.eq(G.Roster.pending,pending,"another teammate's response keeps the current request intact")
  Stubs.SetUnit("party2",nil);Fire("INSPECT_READY","NATIVE-2")
@@ -2633,7 +2634,9 @@ do
   {name="PrivateMember-Away",classFilename="PALADIN",specName="Retribution"}}
  S.applications={9003};S.appStatus={[9003]="applied"};S.appPending={}
  G.Results:BeginSearch(20000);G.Applications:SyncAll()
- local app=G:GetApplication(9003);local result,details=app.result,app.result.details
+ local app=G:GetApplication(9003);local result=app.result
+ T.eq(result.details,nil,"a hidden application starts with a strict leader summary, not a full roster")
+ local details=G.Results:GetDetails(result)
  local members,reads=details.members,S.playerReads
  T.eq(G:GetResult(9003),nil,"the application owns its snapshot after the browse store is cleared")
  S.results[9003].name="After refresh"
@@ -2643,7 +2646,10 @@ do
  T.eq(app.result,result,"an application without a search-store record reuses its result container")
  T.eq(app.result.details,details,"private refreshes reuse the detail container")
  T.eq(app.result.details.members,members,"private refreshes reuse the members array")
- T.eq(S.playerReads,reads+2,"container reuse still reads every native member, even in the same frame")
+ T.eq(S.playerReads,reads+1,"hidden refreshes read only through the first flagged leader, even in the same frame")
+ T.eq(result.detailsDirty,true,"the previous full snapshot waits for an actual detail consumer")
+ T.eq(G.Results:GetDetails(result),details,"an explicit consumer refreshes the existing full container")
+ T.eq(S.playerReads,reads+3,"explicit full refresh still reads every current native member")
  T.eq(app.name,"After refresh");T.eq(app.leaderClass,"PALADIN")
  T.eq(members[1].specName,"Holy");T.eq(members[2].name,"Replacement-Away")
  local nativeApplicationInfo=C_LFGList.GetApplicationInfo
@@ -2672,7 +2678,7 @@ do
  G.Results:CommitResults(20001)
  T.eq(app.result,G:GetResult(9003),"a new browse adopts its current result object for the existing application")
  T.ok(app.result~=result);T.eq(updates,3,"a result batch publishes application metadata once")
- result,details=app.result,app.result.details;members=details.members
+ result=app.result;details=G.Results:GetDetails(result);members=details.members
  S.results[9003].name="Visible result update"
  Stubs.FireEvent("LFG_LIST_SEARCH_RESULT_UPDATED",9003);G.Game.frame:GetScript("OnUpdate")()
  T.eq(app.name,"Visible result update");T.eq(updates,4);T.eq(applicationReads,0)
@@ -2680,7 +2686,9 @@ do
  G.Results:BeginSearch(20002)
  reads=S.playerReads;S.players[9003][2].specName="Arms"
  Fire("LFG_LIST_APPLICATION_STATUS_UPDATED",9003,"applied","applied")
- T.eq(S.playerReads,reads+2,"application status events also refresh all same-count member details")
+ T.eq(S.playerReads,reads+1,"application status events refresh their strict summary without reading other members")
+ T.eq(G.Results:GetDetails(result),details,"the consumer retains the original detail container across status updates")
+ T.eq(S.playerReads,reads+3,"an explicit detail read still refreshes same-count member changes")
  T.eq(members[2].specName,"Arms")
  S.players[9003][1].isLeader=false
  G.Applications:SyncAll()

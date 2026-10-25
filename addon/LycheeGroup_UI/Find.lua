@@ -87,6 +87,15 @@ local function ChoiceSnapshot(choice)
  return {groupKey=choice.groupKey,groupKeys=keys,difficultyID=choice.difficultyID,tier=choice.tier,
   selected=choice.selected==true or choice.browseReady==true or choice.groupKey~=nil or keys~=nil}
 end
+local function MatchesConfirmedChoice(choice)
+ if state.groupKey~=choice.groupKey or state.difficultyID~=choice.difficultyID or state.tier~=choice.tier or (state.browseReady==true)~=(choice.selected==true) then return false end
+ local current,confirmed=state.groupKeys,choice.groupKeys
+ if current~=confirmed then
+  if current then for key,value in pairs(current) do if value and not (confirmed and confirmed[key]) then return false end end end
+  if confirmed then for key,value in pairs(confirmed) do if value and not (current and current[key]) then return false end end end
+ end
+ return true
+end
 function P:CommitChoice()
  state.browseReady=true;state.confirmedChoice=ChoiceSnapshot(state)
 end
@@ -403,6 +412,7 @@ local function UpdateApplication(row,id)
 end
 function P:Build(parent)
  local f=CreateFrame("Frame",nil,parent);f:SetAllPoints(parent);self.frame=f
+ f:HookScript("OnHide",function(frame) frame:SetScript("OnUpdate",nil) end)
  local rail=CreateFrame("Frame",nil,f);rail:SetSize(T.findSidebarWidth,T.contentHeight);rail:SetPoint("TOPLEFT");self.rail=rail
  local seasonStride=zh and 52 or 72
  local seasonHeight=seasonStride*2;local categoriesTop=seasonHeight+24
@@ -461,7 +471,6 @@ function P:Build(parent)
  self.applicationSettings:SetHeight(T.findApplicationSettingsHeight);C.SetFont(self.applicationSettings.label,14);C.SetLineHeight(self.applicationSettings.label,20,true)
  UI.Application.onPreferencesChanged=function() P:UpdateApplicationSettings() end
  self.applicationSettingsStyle=self.applicationSettings.styleController
- self.applicationSettingsStyle:Bind(self.applicationSettings,{hover=true,pressed=true})
  self.applicationControlItems={{frame=self.applicationSettings},{frame=self.autoApply},{frame=self.autoJoin}}
  self.applicationControlOptions={anchor="TOPRIGHT",width="content",height=44,align="center",padding={0,0,0,0}}
  self.applicationControls=C.Row(self.applicationPanel,self.applicationControlItems,self.applicationControlOptions)
@@ -813,10 +822,21 @@ function P:RefreshFilterPlacement()
  self:LayoutFilters()
  if UI.page=="find" then UI:FitToScreen() end
 end
-function P:LayoutApplicationControls()
- -- A FontString can settle after hidden construction without changing its
- -- font tuple. Refresh these two fixed captions at the layout boundary.
+function P:InvalidateApplicationControlMetrics()
  C.InvalidateTextMetrics(self.autoJoin.label);C.InvalidateTextMetrics(self.applicationSettings.label)
+end
+local function SettleApplicationControls(frame)
+ frame:SetScript("OnUpdate",nil)
+ if UI.hiding or not frame:IsVisible() then return end
+ P:InvalidateApplicationControlMetrics();P:LayoutQuickFilters()
+ UI:RefreshWindowSize()
+end
+function P:QueueApplicationControlSettle()
+ -- Native metrics can change after hidden construction or a font update even
+ -- when the font tuple is unchanged. Resolve that once on the displayed frame.
+ if self.frame:IsVisible() and not UI.hiding then self.frame:SetScript("OnUpdate",SettleApplicationControls) end
+end
+function P:LayoutApplicationControls()
  FitText(self.autoJoin.label);FitText(self.applicationSettings.label)
  self.applicationSettings:SetWidth(self.applicationSettings.label:GetWidth())
  self.autoJoinOptions.gap=-T.findAutoJoinLabelRightX
@@ -1110,13 +1130,15 @@ function P:LayoutFilters()
    local headingHeight=math.max(controlHeight,self.filterRolesLabel:GetHeight())
    Place(self.filterRolesLabel,0,(headingHeight-self.filterRolesLabel:GetHeight())/2)
    self.quickLogic:SetSize(logicWidth,controlHeight);Place(self.quickLogic,w-logicWidth,(headingHeight-controlHeight)/2)
+   C.ApplyElement(self.quickLogic)
    Hit(self.quickLogic,(headingHeight-controlHeight)/2,controlHeight)
    local roleTop=headingHeight+8;local identityWidth=self.quickFilterItems[4].width;local roleWidth=(w-identityWidth-24)/3
    for index,key in ipairs(PRESENCE_KEYS) do
     local button=self.quickChoices[key].button;button:SetSize(roleWidth,controlHeight)
-    Place(button,(index-1)*(roleWidth+8),roleTop);Hit(button,roleTop,controlHeight)
+    Place(button,(index-1)*(roleWidth+8),roleTop);C.ApplyElement(button);Hit(button,roleTop,controlHeight)
    end
    self.quickIdentity:SetSize(identityWidth,controlHeight);Place(self.quickIdentity,w-identityWidth,roleTop)
+   C.ApplyElement(self.quickIdentity)
    Hit(self.quickIdentity,roleTop,controlHeight)
    self.quickFilters:SetSize(w,roleTop+controlHeight);self.importantFilters:SetHeight(roleTop+controlHeight)
    y=y+roleTop+controlHeight+T.findFilterGroupGap
@@ -1217,8 +1239,13 @@ function P:UpdateFilterSummary()
 end
 function P:UpdateFilterResultSummary()
  local count=self.filterCount or 0
- UI:SetText(self.filterStatus,state.browseReady and Say("%d 项条件 · %d 支队伍","%d filters · %d groups"):format(count,self.filteredResultCount or 0) or Say("%d 项条件 · 待搜索","%d filters · No search yet"):format(count))
- self:LayoutFilters()
+ local text=state.browseReady and Say("%d 项条件 · %d 支队伍","%d filters · %d groups"):format(count,self.filteredResultCount or 0) or Say("%d 项条件 · 待搜索","%d filters · No search yet"):format(count)
+ local changed=self.filterStatus:GetText()~=text
+ UI:SetText(self.filterStatus,text)
+ -- Opening already resolves the complete final geometry. Streaming results
+ -- only need to update this caption while the filter panel is closed.
+ local hasError=(self.filterError:GetText() or "")~=""
+ if self.filterPanel:IsShown() and (changed or self.filterError:IsShown()~=hasError) then self:LayoutFilters() end
 end
 function P:SetFiltersOpen(open)
  local wasOpen=self.filterPanel:IsShown()
@@ -1348,7 +1375,7 @@ function P:PositionPicker()
 end
 function P:ClosePicker()
  if self.picker then M:FinishPlacement(self.picker);self.picker:UnregisterEvent("GLOBAL_MOUSE_DOWN");self.picker:Hide() end
- if not state.browseReady and state.confirmedChoice then
+ if not state.browseReady and state.confirmedChoice and (self.restoringChoice or not MatchesConfirmedChoice(state.confirmedChoice)) then
   local choice=state.confirmedChoice
   state.groupKey,state.groupKeys,state.difficultyID,state.tier=choice.groupKey,CopyGroupKeys(choice.groupKeys),choice.difficultyID,choice.tier
   self.restoringChoice=true;self:RefreshPicker()
@@ -1920,18 +1947,20 @@ function P:PrepareFontMinimum()
 end
 function P:LayoutFont()
  if not self.frame then return end
+ self:QueueApplicationControlSettle()
  PrepareFontLayout(self)
  self:LayoutResultColumns();self.applicationHeader:Layout(APP_BODY)
  self:LayoutListRows()
  if not self.appsHeight then self:LayoutQuickFilters();self:LayoutResults() end
  self:LayoutFilters()
- if self.picker then self:RefreshPicker() end
+ if self.picker and self.picker:IsVisible() and not UI.hiding then self:RefreshPicker() end
 UI:ApplyElementScope("find")
  end
 -- Reflow existing controls only; keep query, selection, input leases and result identity.
 function P:ReflowMetrics(width,height)
  -- Resolve font metrics before the final widths, then paint each table once.
  -- LayoutListRows refreshes both existing row pools after their geometry changes.
+ self:QueueApplicationControlSettle()
  PrepareFontLayout(self)
  SizePage(self,width,height)
  SizeSidebar(self,state.railCollapsed and T.findCollapsedSidebarWidth or T.findSidebarWidth)
@@ -1939,7 +1968,7 @@ function P:ReflowMetrics(width,height)
  self:LayoutListRows()
  if not self.appsHeight then self:LayoutQuickFilters();self:LayoutResults() end
  self:LayoutFilters()
- if self.picker then self:RefreshPicker() end
+ if self.picker and self.picker:IsVisible() and not UI.hiding then self:RefreshPicker() end
 UI:ApplyElementScope("find")
  end
 function P:OnResultSelect(id,button,row)
@@ -1979,6 +2008,7 @@ function P:EnsureSearchInput()
 end
 function P:Enter(context)
  ClearResultClick()
+ self:InvalidateApplicationControlMetrics();self:QueueApplicationControlSettle()
  UI:GetGroup():Attach(self,"search")
  if UI.preview then
   self.search.box=self.previewSearchBox;self.previewSearchBox:Show();self.searchAvailable=true;self.searchError=nil
@@ -2052,6 +2082,7 @@ function P:Enter(context)
 end
 function P:Leave()
  ClearResultClick()
+ self.frame:SetScript("OnUpdate",nil)
  self.resultsHeader:StopDrag(false);self.applicationHeader:StopDrag(false)
  self:FinishSidebar()
  M:Stop(self);self.pendingTooltipResultID=nil

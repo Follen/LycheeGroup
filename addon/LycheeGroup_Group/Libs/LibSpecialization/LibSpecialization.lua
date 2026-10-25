@@ -312,7 +312,8 @@ function LS.UnregisterPlayerSpecChange(addon)
 	LS.callbackMapPlayerSpecChange[addon] = nil
 end
 
-local GetInfo
+local GetInfo, GetBroadcastInfo
+local InvalidateBroadcastInfo = function() end
 if isCata then
 	function GetInfo()
 		local specIndex = GetPrimaryTalentTree()
@@ -381,7 +382,14 @@ else
 	local C_Traits_GenerateImportString = C_Traits.GenerateImportString
 	local C_ClassTalents_GetActiveConfigID = C_ClassTalents.GetActiveConfigID
 	local GetSpecialization, GetSpecializationInfo = C_SpecializationInfo.GetSpecialization, C_SpecializationInfo.GetSpecializationInfo
-	function GetInfo()
+	-- Local Retail performance patch: only automatic replies reuse a successful
+	-- current-config import string. Public reads and request callbacks stay fresh.
+	local cachedConfig, cachedSpec, cachedTalent
+	InvalidateBroadcastInfo = function()
+		cachedConfig, cachedSpec, cachedTalent = nil, nil, nil
+	end
+	local function ReadInfo(reuse)
+		if not reuse then InvalidateBroadcastInfo() end
 		local spec = GetSpecialization()
 		if type(spec) == "number" and spec > 0 then
 			local specId = GetSpecializationInfo(spec)
@@ -392,17 +400,29 @@ else
 				if position and role then
 					local activeConfigID = C_ClassTalents_GetActiveConfigID()
 					if activeConfigID then
+						if isRetail and reuse and cachedConfig == activeConfigID and cachedSpec == specId and cachedTalent then
+							return specId, role, position, cachedTalent
+						end
+						InvalidateBroadcastInfo()
 						local talentString = C_Traits_GenerateImportString(activeConfigID)
+						if isRetail and type(talentString) == "string" and talentString ~= "" then
+							cachedConfig, cachedSpec, cachedTalent = activeConfigID, specId, talentString
+						end
 						return specId, role, position, talentString
 					end
+					InvalidateBroadcastInfo()
 					return specId, role, position
 				elseif not starterSpecs[specId] then
 					geterrorhandler()(format("LibSpecialization: Unknown spec ID %q", specId))
 				end
 			end
 		end
+		InvalidateBroadcastInfo()
 	end
+	function GetInfo() return ReadInfo(false) end
+	function GetBroadcastInfo() return ReadInfo(true) end
 end
+GetBroadcastInfo = GetBroadcastInfo or GetInfo
 LS.MySpecialization = GetInfo
 
 local throttleTimer = 3 -- Seconds
@@ -477,7 +497,7 @@ do
 		end
 		local prev = 0
 		function PrepareForInstance()
-			local specId, role, _, talentString = GetInfo()
+			local specId, role, _, talentString = GetBroadcastInfo()
 			if specId then
 				currentSpecId = specId
 				currentTalentString = talentString
@@ -517,7 +537,7 @@ do
 		end
 		local prev = 0
 		function PrepareForGroup()
-			local specId, role, _, talentString = GetInfo()
+			local specId, role, _, talentString = GetBroadcastInfo()
 			if specId then
 				currentSpecId = specId
 				currentTalentString = talentString
@@ -557,7 +577,7 @@ do
 		end
 		local prev = 0
 		function PrepareForGuild()
-			local specId, role, _, talentString = GetInfo()
+			local specId, role, _, talentString = GetBroadcastInfo()
 			if specId then
 				currentSpecId = specId
 				currentTalentString = talentString
@@ -621,6 +641,7 @@ do
 				end
 			end
 		elseif event == "PLAYER_TALENT_UPDATE" or event == "PLAYER_SPECIALIZATION_CHANGED" or ((event == "ACTIVE_COMBAT_CONFIG_CHANGED" or event == "TRAIT_CONFIG_UPDATED") and prefix == C_ClassTalents_GetActiveConfigID()) then
+			InvalidateBroadcastInfo()
 			for _,func in next, LS.callbackMapPlayerSpecChange do
 				securecallfunction(func) -- Notify when the player has changed their spec
 			end

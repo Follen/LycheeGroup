@@ -1,7 +1,7 @@
 -- Real Preview/Find/Search and transfer controllers; counters and business data are substitutes.
 local checks=0
 local function Check(value,message) assert(value,message);checks=checks+1 end
-for _,mode in ipairs({"complete","remember_off","cancel","cancel_raid","cancel_applicants","observer_error","prepare_failure"}) do
+for _,mode in ipairs({"complete","remember_off","late_pool_growth","cancel","cancel_raid","cancel_applicants","observer_error","prepare_failure"}) do
  local f=dofile("tests/live_probe_fixture.lua")({rememberFilters=mode~="remember_off"})
  local A,U,G=f.A,f.U,f.G
  EJ_GetDifficulty=function() return 15 end;EJ_SetDifficulty=function() end
@@ -14,6 +14,22 @@ for _,mode in ipairs({"complete","remember_off","cancel","cancel_raid","cancel_a
  if mode=="prepare_failure" then
   local get=G.Catalog.GetActivities
   G.Catalog.GetActivities=function(self,key) if key=="seasonRaid" then return {} end;return get(self,key) end
+ end
+ if mode=="late_pool_growth" then
+  local list=U.pages.find.results
+  local setOffset,calls=list.SetPixelOffset,0
+  list.SetPixelOffset=function(self,...)
+   local result=setOffset(self,...)
+   if U.preview and U.preview.scenario=="applications" then
+    calls=calls+1
+    if calls==81 then
+     local height=self:GetHeight()
+     self:SetHeight(height+self.rowHeight*4);self:SetItems(self.ids,self.render)
+     self:SetHeight(height);self:SetItems(self.ids,self.render)
+    end
+   end
+   return result
+  end
  end
  local p=f:Start("tests/live_memory_scenarios.lua")
  for tick=1,1100 do
@@ -30,7 +46,11 @@ for _,mode in ipairs({"complete","remember_off","cancel","cancel_raid","cancel_a
   Check(p.result.fixture.visiblePreviewResults==100 and p.result.fixture.boundPreviewResults==100,"all raid groups pass real Preview/Find filtering")
   Check(p.result.checks.raidScrolled and p.result.checks.raidFirstRowChanged,"full bound list actually scrolls")
   Check(p.result.fixture.initialFindPool<p.result.fixture.findPoolAtFirstBind and p.result.fixture.initialBatchPool<p.result.fixture.batchPoolAtFirstBind,"first full lists legitimately grow both empty-state pools")
+  Check(p.result.fixture.findPoolAfterFirstTraversal>p.result.fixture.findPoolAtFirstBind,"first scroll warms partially visible edge rows")
+  Check(p.result.operations.raidScroll>=81 and p.result.operations.applicantScroll>=81,"each pool is observed through a complete repeated traversal")
   Check(#p.result.codec==3 and p.result.operations.applicantRefresh>0,"applicants and codec phases complete")
+ elseif mode=="late_pool_growth" then
+  Check(p.result and p.result.checks.poolsReused==false and p.result.ok==false,"pool growth after the fixed warmup must fail")
  elseif mode=="prepare_failure" then Check(p.error and p.error:find("raid_activity_missing",1,true),tostring(p.error))
  elseif mode=="observer_error" then Check(p.error and p.error:find("simulated observer failure",1,true),tostring(p.error))
  else Check(p.result==nil,"cancellation cannot report completion") end

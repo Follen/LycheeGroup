@@ -54,8 +54,7 @@ local function AdoptResult(record,result)
  local activity=result.activity
  record.activityLabel=activity and activity.groupID and activity.groupID>0 and C_LFGList.GetActivityGroupInfo(activity.groupID) or result.activityName
  record.activityDetail=activity and activity.difficultyID and activity.difficultyID>0 and GetDifficultyInfo(activity.difficultyID) or ""
- record.leaderClass=nil
- for _,member in ipairs(G.Results:GetDetails(result).members) do if member.isLeader then record.leaderClass=member.class;break end end
+ record.leaderClass=G.Results:GetFlaggedLeaderClass(result)
 end
 -- Adopt an already-read result without changing application status or join state.
 function Applications:AdoptResult(id,result)

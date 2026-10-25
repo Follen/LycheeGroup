@@ -93,8 +93,8 @@ local function BeginRaidPreview()
  assert(report.fixture.boundPreviewResults==100,"preview_results_not_bound")
  report.checks.raidResultsVisible=not find.emptyPanel:IsShown() and find.results.rows[1].key~=nil
  assert(report.checks.raidResultsVisible,"preview_results_not_visible")
- -- Empty-state warmup legitimately has a smaller pool. Establish reuse only
- -- after the first full list has its final geometry; initial allocations remain sampled.
+ -- Keep the first binding separate from the first complete scroll traversal:
+ -- partially visible edge rows can legitimately expand the pool during scrolling.
  originalFindPool=#find.results.rows;report.fixture.findPoolAtFirstBind=originalFindPool
  report.fixture.raidFirstKey=find.results.rows[1].key
  report.fixture.raidMaximumObservedOffset=0;report.checks.raidFirstRowChanged=false
@@ -127,7 +127,7 @@ local function Finish()
  Cleanup();phase="closed";Sample("closed_final");report.retainedKB=Sample("closed_after_diagnostic_gc",true).addonTotalKB
  report.checks.pageFramesReused=true
  for key,frame in pairs(originalFrames) do if ui.pages[key].frame~=frame then report.checks.pageFramesReused=false end end
- report.checks.poolsReused=#find.results.rows==originalFindPool and #create.batchPool==originalBatchPool
+ report.checks.poolsReused=report.fixture.findPoolAfterFirstTraversal~=nil and report.fixture.batchPoolAfterFirstTraversal~=nil and #find.results.rows==originalFindPool and #create.batchPool==originalBatchPool
  report.checks.notesUnchanged=NoteCount()==report.notesAtStart
  report.checks.nativeDraftPreserved=true
  if hasNativeDraft then for _,saved in ipairs(nativeDraft) do
@@ -163,6 +163,7 @@ local function Tick()
  elseif phase=="preview_100_groups_40_members" then
   local list=find.results
   -- Observe the previous animated request after the intervening frame ticks.
+  if step==41 then originalFindPool=#list.rows;report.fixture.findPoolAfterFirstTraversal=originalFindPool end
   report.fixture.raidMaximumObservedOffset=math.max(report.fixture.raidMaximumObservedOffset,list.pixelOffset)
   if list.rows[1].key and list.rows[1].key~=report.fixture.raidFirstKey then report.checks.raidFirstRowChanged=true end
   local maximum=math.max(0,(#list.ids-1)*list.rowHeight+list.rows[1]:GetHeight()-list:GetHeight())
@@ -172,19 +173,20 @@ local function Tick()
    local tip=ui.Tooltip;local id=provider.recordIDs[(step-1)%100+1]
    tip:Hide();tip:ShowGroup(list.rows[1],provider.records[id]);tip.expanded=true;tip:RenderGroup();report.operations.raidTips=report.operations.raidTips+1
   end
-  if now-phaseAt>=20 then
+  if now-phaseAt>=20 and step>=81 then
    report.checks.raidScrolled=report.fixture.raidMaximumObservedOffset>0
    assert(report.checks.raidScrolled and report.checks.raidFirstRowChanged,"preview_results_did_not_scroll")
    BeginApplicants()
   end
   nextAt=GetTime()+.15
  elseif phase=="preview_50_applicant_batches" then
+  if step==41 then originalBatchPool=#create.batchPool;report.fixture.batchPoolAfterFirstTraversal=originalBatchPool end
   if step%4==0 then create:RefreshApplicants();report.operations.applicantRefresh=report.operations.applicantRefresh+1 end
   local maximum=math.max(0,create.batchBody:GetHeight()-create.batchScroll:GetHeight())
   local fraction=step%40/20;if fraction>1 then fraction=2-fraction end
   create:SetBatchOffset(maximum*fraction,true);report.operations.applicantScroll=report.operations.applicantScroll+1
   if step%2==0 then ui.Tooltip:Hide();ui.Tooltip:ShowApplicants(create.manage,provider:GetApplicant(provider.applicantIDs[(step-1)%#provider.applicantIDs+1]));report.operations.applicantTips=report.operations.applicantTips+1 end
-  if now-phaseAt>=20 then BeginCodec() end
+  if now-phaseAt>=20 and step>=81 then BeginCodec() end
   nextAt=GetTime()+.15
  elseif phase=="notes_codec_1000" then
   local t=debugprofilestop();encoded=ui.Transfer.Encode(records)
