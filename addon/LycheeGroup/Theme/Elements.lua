@@ -48,6 +48,7 @@ Add(main,"settings","aboutAddon","settings.about.addon")
 Add(main,"settings","aboutHeader","settings.aboutHeader")
 main["settings.credits.person"]={scope="settings",template=true,slotKinds={root="box",portrait="texture",name="text"}}
 Add(main,"settings","box","settings.panel")
+Add(main,"settings","box","settings.blocksToolbar")
 Add(main,"settings","component","settings.about.link settings.aboutBrand settings.bindingNotice settings.block settings.blocksClear settings.blocksHeader settings.blocksList settings.cancelBinding settings.dedicationToast settings.frame settings.main settings.navigation settings.overwriteBinding settings.rail settings.reloadLanguage")
 Add(main,"settings","settingRow","settings.row")
 Add(main,"settings","text","settings.blocksCount settings.blocksEmpty settings.heading settings.otherAddonsHeading settings.themeReloadHint")
@@ -181,6 +182,9 @@ main["tooltip.scroll"].slotKinds=kinds.box;main["tooltip.canvas"].slotKinds=kind
 main["tooltip.composition"].slotKinds=Map(kinds.box,rosterSlots)
 main["create.groupStrip"].slotKinds=Map(kinds.box,rosterSlots)
 main["settings.row"].slotKinds=Map(kinds.settingRow,{["control/arrows/1"]="texture",["control/arrows/2"]="texture",["control/fill"]="surface",["control/hover"]="surface",["control/focus"]="surface",["control/focusInner"]="surface"})
+-- Below 640 units the fixed control area otherwise leaves less than 348 units
+-- for the title and explanation; compact the first text gap before wrapping.
+main["settings.row"].conditions={{container="settings-content",maxWidth=640,base={root={gap=12}}}}
 main["notes.record"].slotKinds=Map(kinds.row,main["notes.record"].slotKinds)
 main["notes.history"].slotKinds=Map(kinds.row,main["notes.history"].slotKinds)
 main["notes.historyMember"].slotKinds=Map(kinds.row,main["notes.historyMember"].slotKinds)

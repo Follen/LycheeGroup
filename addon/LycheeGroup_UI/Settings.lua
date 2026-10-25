@@ -55,7 +55,7 @@ function P:Build(parent)
  self.heading=C.Text(main,"",24);self.heading:SetPoint("TOPLEFT",T.settingsContentInset,-T.settingsContentInset);C.SetLineHeight(self.heading,32,true)
  self.panels={};self.controls={}
  for _,entry in ipairs(sections) do
-  local panel=CreateFrame("Frame",nil,main);panel:SetSize(BODY_WIDTH,T.contentHeight-120);C.SetPoint(panel,"TOPLEFT",panel:GetParent(),"TOPLEFT",T.settingsContentInset,"settingsPanelTopleftY");self.panels[entry[1]]=panel;UI:Element(panel,"settings.panel","settings",panel,"settings.panel",entry[1])
+  local panel=CreateFrame("Frame",nil,main);panel:SetSize(BODY_WIDTH,T.contentHeight-120);C.SetPoint(panel,"TOPLEFT",panel:GetParent(),"TOPLEFT",T.settingsContentInset,"settingsPanelTopleftY");self.panels[entry[1]]=panel;UI:Element(panel,"settings.panel","settings",panel,"settings.panel",entry[1]);C.Container(panel,"settings-content")
   for i,row in ipairs(definitions[entry[1]] or {}) do self:BuildRow(panel,row,i) end
  end
  local reset={"resetPosition",S("悬浮窗位置","Floating window position"),S("未锁定时拖动荔枝标志，可放在屏幕内任意位置。","Drag the lychee logo to position the window when unlocked."),"action"}
@@ -66,9 +66,13 @@ self:RegisterBuildElements()
  end
 function P:BuildBlocks()
  local panel=self.panels.blocks
- self.blocksCount=C.Text(panel,"",14,"muted");C.SetLineHeight(self.blocksCount,20,true)
+ local toolbar=CreateFrame("Frame",nil,panel);self.blocksToolbar=toolbar
+ self.blocksCount=C.Text(toolbar,"",14,"muted");C.SetLineHeight(self.blocksCount,20,true)
  self.blocksCount:SetWordWrap(false)
- self.blocksClear=C.Button(panel,S("全部清空","Clear all"),nil,function() if P.blockGroup then P.blockGroup.Results:ClearBlockedTitles() end end,{variant="text"})
+ self.blocksClear=C.Button(toolbar,S("全部清空","Clear all"),nil,function() if P.blockGroup then P.blockGroup.Results:ClearBlockedTitles() end end,{variant="text"})
+ local spacer=CreateFrame("Frame",nil,toolbar);spacer:SetSize(0,1)
+ self.blocksToolbarItems={{frame=self.blocksCount,manageWidth=false,manageHeight=false},{frame=spacer,width="fill",manageHeight=false},{frame=self.blocksClear,manageWidth=false,manageHeight=false}}
+ local _,toolbarLayout=C.Box(toolbar,{layout="row",items=self.blocksToolbarItems,align="center",gap=0,track=true});self.blocksToolbarLayout=toolbarLayout
  -- SetRowInitializer grows the visible pool after the actual records arrive.
  local list=C.List(panel,BODY_WIDTH+12,0,52)
  list:SetStyle({selectionFill=false,selectionMark=false,hoverFill=false,radius=0});self.blocksList=list
@@ -79,6 +83,8 @@ function P:BuildBlocks()
   row.remove=C.Button(row,S("移除","Remove"),nil,function(button)
    if P.blockGroup and row.key==button.targetKey and row._hitVisible and list.clip:IsMouseOver() then P.blockGroup.Results:RemoveBlockedLeader(button.targetKey) end
   end,{variant="text"});C.SetPoint(row.remove,"RIGHT",row.remove:GetParent(),"RIGHT","settingsRowRemoveRightX",0)
+  row.blockItems={{frame=row.title,gapAfter=24,manageHeight=false},{frame=row.meta,manageHeight=false},{frame=row.remove,manageHeight=false}}
+  row.blockLayout=C.Row(row,row.blockItems,{mode="flex",width="fill",height="fill",padding={12,0,12,0},align="center",track=true})
  end)
  self.blocksHeader=C.TableHeader(panel,{
   {key="name",label=S("名字","Name"),width="settingsColumnNameWidth340",min="settingsColumnNameMin140"},
@@ -91,16 +97,36 @@ self:RegisterBuildElements()
 function P:LayoutBlockColumns(header)
  if not self.blocksList then return end
  local name,realm,actions=header.columns.name,header.columns.realm,header.columns.actions
+ -- Quantize cumulative column edges once, then share their differences with
+ -- the native header and every physical row in the bounded list pool.
+ local unit
+ if GetPhysicalScreenSize then local _,height=GetPhysicalScreenSize();if height and height>0 then unit=768/height/header:GetEffectiveScale() end end
+ local function snap(value) return unit and math.floor(value/unit+.5)*unit or value end
+ local first,last,total=snap(name.width),snap(name.width+realm.width),snap(name.width+realm.width+actions.width)
+ name.x,name.width=0,first;realm.x,realm.width=first,last-first;actions.x,actions.width=last,total-last
+ header:SetWidth(total)
+ for index,definition in ipairs(header.definitions) do
+  local cell=header.columns[definition.key];local button,handle=header.buttons[index],header.handles[index]
+  button:ClearAllPoints();button:SetPoint("TOPLEFT",cell.x,0);button:SetWidth(cell.width)
+  handle:ClearAllPoints();handle:SetPoint("TOPLEFT",cell.x+cell.width-T.tableHandleWidth/2,0)
+ end
+ local geometry=self.blockColumnGeometry or {};self.blockColumnGeometry=geometry
+ geometry.width,geometry.nameWidth,geometry.realmWidth,geometry.actionsWidth=total,math.max(1,name.width-24),math.max(1,realm.width-24),actions.width
  for _,key in ipairs({"name","realm"}) do
   local label=header.labels[key]
-  label:ClearAllPoints();label:SetPoint("LEFT",12,0);label:SetWidth(math.max(1,header.columns[key].width-24))
+  local cell=header.columns[key];local left,right=snap(cell.x+12),snap(cell.x+cell.width-12)
+  label:ClearAllPoints();label:SetPoint("LEFT",left-cell.x,0);label:SetWidth(math.max(1,right-left))
  end
  local actionLabel=header.labels.actions
- actionLabel:ClearAllPoints();actionLabel:SetPoint("RIGHT",-12-T.settingsActionTextPadding/2,0);actionLabel:SetJustifyH("RIGHT");actionLabel:SetWidth(math.max(1,actions.width-24-T.settingsActionTextPadding/2))
+ local actionRight=snap(total-12)
+ actionLabel:ClearAllPoints();actionLabel:SetPoint("RIGHT",actionRight-total-T.settingsActionTextPadding/2,0);actionLabel:SetJustifyH("RIGHT");actionLabel:SetWidth(math.max(1,actions.width-24-T.settingsActionTextPadding/2))
  for _,row in ipairs(self.blocksList.rows) do
-  row.title:ClearAllPoints();row.title:SetPoint("LEFT",name.x+12,0);row.title:SetWidth(math.max(1,name.width-24))
-  row.meta:ClearAllPoints();row.meta:SetPoint("LEFT",realm.x+12,0);row.meta:SetWidth(math.max(1,realm.width-24))
-  row.remove:ClearAllPoints();row.remove:SetPoint("LEFT",actions.x+actions.width-12-row.remove:GetWidth(),0)
+  local items=row.blockItems;local removeWidth=row.blockRemoveWidth or row.remove:GetWidth();local gap=geometry.actionsWidth-removeWidth
+  if items[1].width~=geometry.nameWidth or items[2].width~=geometry.realmWidth or items[2].gapAfter~=gap or items[3].width~=removeWidth then
+   items[1].width,items[2].width,items[2].gapAfter,items[3].width=geometry.nameWidth,geometry.realmWidth,gap,removeWidth
+   row.blockLayout:Invalidate("columns")
+  end
+  if row.blockLayout.dirty then row.blockLayout:Layout() end
  end
 end
 function P:LayoutBlocks()
@@ -110,11 +136,11 @@ function P:LayoutBlocks()
  local toolbarHeight=math.max(32,math.ceil(self.blocksClear.label:GetStringHeight())+12)
  self.blocksClear:SetHeight(toolbarHeight)
  self.blocksClear:SetWidth(math.ceil(C.MeasureTextWidth(self.blocksClear.label))+T.settingsActionTextPadding)
- -- The count belongs to the title line; its panel still owns visibility.
+ -- The toolbar belongs to the block panel while sharing the page title line.
  self.blocksCount:SetWidth(math.ceil(C.MeasureTextWidth(self.blocksCount))+2)
- self.blocksCount:ClearAllPoints();self.blocksCount:SetPoint("LEFT",self.heading,"RIGHT",12,0)
- local titleCenter=self.panels.blocks.layoutTop-T.settingsContentInset-self.heading:GetHeight()/2
- self.blocksClear:ClearAllPoints();self.blocksClear:SetPoint("RIGHT",self.panels.blocks,"TOPRIGHT",-list.gutter-12,titleCenter)
+ self.blocksToolbar:SetSize(math.max(1,BODY_WIDTH-self.heading:GetWidth()-24-list.gutter),math.max(toolbarHeight,self.blocksCount:GetHeight()))
+ self.blocksToolbar:ClearAllPoints();self.blocksToolbar:SetPoint("LEFT",self.heading,"RIGHT",12,0)
+ if self.blocksToolbarLayout.dirty then self.blocksToolbarLayout:Layout() end
  local headingHeight=24
  for _,label in pairs(self.blocksHeader.labels) do headingHeight=math.max(headingHeight,math.ceil(label:GetHeight())) end
  self.blocksHeader:SetHeight(headingHeight)
@@ -126,7 +152,8 @@ function P:LayoutBlocks()
  list:ClearAllPoints();C.SetPoint(list,"TOPLEFT",list:GetParent(),"TOPLEFT","settingsListTopleftX",-top);list:SetRowHeight(rowHeight,rowHeight,viewport)
  for _,row in ipairs(list.rows) do
   row.remove:SetHeight(toolbarHeight)
-  row.remove:SetWidth(math.ceil(C.MeasureTextWidth(row.remove.label))+T.settingsActionTextPadding)
+  row.blockRemoveWidth=math.ceil(C.MeasureTextWidth(row.remove.label))+T.settingsActionTextPadding
+  if not row.remove._lycheeLayoutFields or not row.remove._lycheeLayoutFields.width then row.remove:SetWidth(row.blockRemoveWidth) end
  end
  self.blocksHeader:Layout(list:GetWidth()-list.gutter)
  self.blocksEmpty:SetWidth(math.max(1,self.blocksHeader:GetWidth()-24));self.blocksEmpty:SetHeight(math.ceil(self.blocksEmpty:GetStringHeight()))
@@ -374,8 +401,7 @@ function P:BuildRow(parent,row,index)
  local holder=CreateFrame("Frame",nil,parent);holder:SetSize(BODY_WIDTH,T.settingsHolderHeight2);holder:SetPoint("TOPLEFT",0,-(parent.nextRowY or 0));holder:EnableMouse(true)
  UI.drag:AddHandle(holder)
  local fill=C.Panel(holder,"rowAlternate","settingsFillRadius");holder.fill=fill;fill:SetShown(index%2==0)
- UI:Element(holder,"settings.row","settings",holder,"settings.row",row[1])
- local controlWidth=C.ElementValue(holder,"control","width",T.settingsControlWidth);local content=BODY_WIDTH-24-controlWidth-48;local labelWidth=content*T.settingsLabelRatio;local helpWidth=content-labelWidth
+ local controlWidth=UI.context:ResolveElementValue("settings.row","control","width",T.settingsControlWidth,row[1]);local content=BODY_WIDTH-24-controlWidth-48;local labelWidth=content*T.settingsLabelRatio;local helpWidth=content-labelWidth
  local label=C.Text(holder,row[2],14,"text",labelWidth);C.SetPoint(label,"LEFT",label:GetParent(),"LEFT","settingsLabelLeftX",0);label:SetWordWrap(true);C.SetLineHeight(label,20)
  label:SetWidth(C.ElementValue(holder,"label","width",labelWidth))
  local help=C.Text(holder,row[3],14,"muted",C.ElementValue(holder,"help","width",helpWidth));help:SetPoint("LEFT",36+labelWidth,0);help:SetWordWrap(true);C.SetLineHeight(help,20)
@@ -402,8 +428,9 @@ function P:BuildRow(parent,row,index)
     width=math.max(width,math.ceil(self.valueLabel:GetStringWidth())+6)
    end
    UI:SetText(self.valueLabel,text);self.valueLabel:SetWidth(width)
-   self:ClearAllPoints();self:SetPoint("RIGHT",-24-width,0)
-   self:SetWidth(math.max(60,controlWidth-12-width))
+   self.valueWidth,self.desiredWidth=width,math.max(60,controlWidth-12-width)
+   if not self._lycheeLayoutOwner then self:ClearAllPoints();self:SetPoint("RIGHT",-24-width,0) end
+   if not self._lycheeLayoutFields or not self._lycheeLayoutFields.width then self:SetWidth(self.desiredWidth) end
   end
   control:LayoutValueWidth()
  elseif row[4]=="binding" then
@@ -427,12 +454,12 @@ function P:BuildRow(parent,row,index)
  holder.control,holder.valueLabel,holder.input,holder.track,holder.thumb=control,control.valueLabel,control.box,control.track,control.thumb
  if control.thumb then holder.thumbVisual=control.thumb:GetObjectType()=="Texture" and control.thumb or control.thumb:GetRegions() end
  layoutRow.control,layoutRow.range,layoutRow.check=control,row[4]=="range",not row[4]
- layoutRow.items={{frame=label,width=labelWidth,gapAfter=24},{frame=help,width=helpWidth,gapAfter=24},{frame=control}}
- if layoutRow.range then layoutRow.items[3].gapAfter=12;layoutRow.items[4]={frame=control.valueLabel} end
- layoutRow.options={width=BODY_WIDTH,height=rowHeight,padding={T.settingsLabelLeftX,0,layoutRow.check and 0 or 12,0},align="center"}
- layoutRow.layout=C.Row(holder,layoutRow.items,layoutRow.options)
- parent.rowItems=parent.rowItems or {};parent.rowItems[#parent.rowItems+1]={frame=holder,width="fill"}
- if not parent.rowLayout then parent.rowLayout=C.Column(parent,parent.rowItems,{width=BODY_WIDTH,height="content",includeHidden=true}) end
+ layoutRow.items={{frame=label,width=0,grow=T.settingsLabelRatio,height="content"},{frame=help,width=0,grow=1-T.settingsLabelRatio,height="content"},{frame=control,manageHeight=false}}
+ if layoutRow.range then layoutRow.items[3].gapAfter=12;layoutRow.items[4]={frame=control.valueLabel,manageWidth=false} end
+ local _,layout=C.Box(holder,{layout="row",items=layoutRow.items,width="fill",height="content",minHeight="settingsHolderHeight2",padding={T.settingsLabelLeftX,16,layoutRow.check and 0 or 12,16},gap=24,align="center",track=true})
+ layoutRow.layout=layout
+ parent.rowItems=parent.rowItems or {};parent.rowItems[#parent.rowItems+1]={frame=holder,width="fill",manageHeight=false}
+ if not parent.rowLayout then parent.rowLayout=C.Column(parent,parent.rowItems,{mode="flex",width="fill",height="content",includeHidden=true,track=true}) else parent.rowLayout:SetItems(parent.rowItems) end
  if row[4]=="binding" or row[4]=="action" then layoutRow.action=control end
  if row[4]~="action" then self.controls[row[1]]={widget=control,definition=row,help=help,frame=holder} end
  UI:Element(holder,"settings.row","settings",holder,"settings.row",row[1])
@@ -506,20 +533,23 @@ function P:LayoutRows()
   panel.layoutTop=(key=="blocks" and T.settingsContentInset+self.heading:GetHeight()+12 or 80)+offset
   panel:ClearAllPoints();panel:SetPoint("TOPLEFT",self.main,"TOPLEFT",T.settingsContentInset,-panel.layoutTop);panel:SetHeight((self.layoutHeight or T.contentHeight)-panel.layoutTop-40)
   local top=0
+  if panel.rowLayout and panel.rowLayout.dirty then panel.rowLayout:Layout() end
   for _,row in ipairs(panel.rows or {}) do
-   if row.action then row.action:SetWidth(math.ceil(row.action.label:GetStringWidth())+T.settingsActionTextPadding) end
-   local height=math.max(T.settingsHolderHeight2,row.label:GetStringHeight()+32,row.help:GetStringHeight()+32)
-   row.frame:SetHeight(height)
-   row.options.width,row.options.height=BODY_WIDTH,height
-   row.options.padding[1]=T.settingsLabelLeftX
-   row.items[1].width,row.items[2].width=row.label:GetWidth(),row.help:GetWidth()
+   local labelWidth=C.ElementValue(row.frame,"label","width",0);local helpWidth=C.ElementValue(row.frame,"help","width",0)
+   local labelGrow=labelWidth==0 and T.settingsLabelRatio or 0;local helpGrow=helpWidth==0 and 1-T.settingsLabelRatio or 0
    local control=row.control
-   row.items[3].width=C.ElementValue(row.frame,"control","width",(row.range or row.action or row.check) and control:GetWidth() or T.settingsControlWidth)
-   if row.range then row.items[4].width=control.valueLabel:GetWidth()
-   else row.items[2].gapAfter=24+row.controlWidth-row.items[3].width+(row.check and 12 or 0) end
-   row.layout:Layout();top=top+height
+   local naturalWidth=row.range and control.desiredWidth or row.action and math.ceil(C.MeasureTextWidth(control.label))+T.settingsActionTextPadding or row.check and control:GetWidth() or T.settingsControlWidth
+   local controlWidth=C.ElementValue(row.frame,"control","width",naturalWidth)
+   local gap;if not row.range then gap=24+row.controlWidth-controlWidth+(row.check and 12 or 0) end
+   if row.items[1].width~=labelWidth or row.items[1].grow~=labelGrow or row.items[2].width~=helpWidth or row.items[2].grow~=helpGrow or row.items[2].gapAfter~=gap or row.items[3].width~=controlWidth or row.range and row.items[4].width~=control.valueWidth then
+    row.items[1].width,row.items[1].grow,row.items[2].width,row.items[2].grow=labelWidth,labelGrow,helpWidth,helpGrow
+    row.items[2].gapAfter,row.items[3].width=gap,controlWidth
+    if row.range then row.items[4].width=control.valueWidth end
+    row.layout:Invalidate("settings-control")
+   end
+   if row.layout.dirty then row.layout:Layout() end;top=top+row.frame:GetHeight()
   end
-  if panel.rowLayout then panel.rowLayout.options.width=BODY_WIDTH;panel.rowLayout:Layout() end
+  if panel.rowLayout and panel.rowLayout.dirty then panel.rowLayout:Layout() end
   panel.nextRowY=top
  end
  local reloadPanel=self.reloadLanguage:GetParent()
@@ -537,10 +567,6 @@ local function SizePage(self,width,height)
   panel:SetWidth(BODY_WIDTH)
   for _,row in ipairs(panel.rows or {}) do
    row.controlWidth=C.ElementValue(row.frame,"control","width",T.settingsControlWidth)
-   local available=BODY_WIDTH-24-row.controlWidth-48
-   local rowLabelWidth=C.ElementValue(row.frame,"label","width",available*T.settingsLabelRatio)
-   local rowHelpWidth=C.ElementValue(row.frame,"help","width",available-rowLabelWidth)
-   row.frame:SetWidth(BODY_WIDTH);row.label:SetWidth(rowLabelWidth);row.help:SetWidth(rowHelpWidth)
   end
  end
  self.aboutHeader:SetWidth(BODY_WIDTH);self.aboutValues.name:SetWidth(BODY_WIDTH-84)
@@ -643,6 +669,6 @@ end
 
 
 function P:RegisterBuildElements()
-UI:ElementFields(self,"settings","frame rail main heading reloadLanguage blocksCount blocksClear blocksHeader blocksEmpty aboutHeader aboutBrand otherAddonsHeading dedicationToast bindingNotice cancelBinding overwriteBinding","settings")
+UI:ElementFields(self,"settings","frame rail main heading reloadLanguage blocksToolbar blocksCount blocksClear blocksHeader blocksEmpty aboutHeader aboutBrand otherAddonsHeading dedicationToast bindingNotice cancelBinding overwriteBinding","settings")
  if self.blocksList then UI:ElementList(self.blocksList,"settings.blocksList","settings","settings.block") end
 end

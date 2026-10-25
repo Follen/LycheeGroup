@@ -3,6 +3,11 @@ local Library=private.LycheeUILoad
 if not Library then return end
 local states={"selected","checked","hover","pressed","focus","disabled"}
 local empty={}
+local layoutMetadata={direction=true,flowWrap=true,gap=true,lineGap=true,basis=true,grow=true,shrink=true,justify=true,participate=true,reserve=true,manageWidth=true,manageHeight=true,managePoints=true}
+local symbolicAxes={width=true,height=true,minWidth=true,maxWidth=true,minHeight=true,maxHeight=true,basis=true}
+local function Symbolic(key,value)
+ return symbolicAxes[key] and type(value)=="string" and (value=="content" or value=="fill" or value:match("^%d+%.?%d*%%$"))
+end
 local writeProperties={"texture","atlas","texCoord","blendMode","drawLayer","justifyH","justifyV","wordWrap","spacing","rotation","scale","frameStrata","frameLevel"}
 -- A native HookScript cannot be removed. Keep one hook per source/event and
 -- retain controllers only through active subscriptions, across all contexts.
@@ -90,11 +95,17 @@ recipes.surface={base={surface={color="panel",radius="panelRadius"}},states={hov
 function Library.ResolveRecipes(defaults,overrides)
  return Merge(Merge(Merge({},Library.ComponentRecipes),defaults),overrides)
 end
+local defaultResolveRecipes=Library.ResolveRecipes
 local properties={minWidth={"number","string"},maxWidth={"number","string"},minHeight={"number","string"},maxHeight={"number","string"},padding={"number","string","table"},align={"string"},fit={"string"},width={"number","string"},height={"number","string"},radius={"number","string"},alpha={"number","string"},fontSize={"number","string"},lineHeight={"number","string"},color={"table","string"},singleLine={"boolean"},shown={"boolean"},desaturated={"boolean"},flags={"string"}}
 local literal={flags=true,align=true,fit=true,texture=true,atlas=true,texCoord=true,blendMode=true,drawLayer=true,font=true,justifyH=true,justifyV=true,wordWrap=true,points=true,frameStrata=true}
+for _,key in ipairs({"direction","justify","flowWrap","participate","reserve","manageWidth","manageHeight","managePoints"}) do literal[key]=true end
+for _,key in ipairs({"direction","justify"}) do properties[key]={"string"} end
+for _,key in ipairs({"flowWrap","participate","reserve","manageWidth","manageHeight","managePoints"}) do properties[key]={"boolean"} end
+for _,key in ipairs({"gap","lineGap","basis","grow","shrink"}) do properties[key]={"number","string"} end
 for key,types in pairs({texture={"number","string","boolean"},atlas={"string","boolean"},texCoord={"table"},blendMode={"string"},drawLayer={"table"},font={"string"},justifyH={"string"},justifyV={"string"},wordWrap={"boolean"},spacing={"number","string"},rotation={"number","string"},scale={"number","string"},frameStrata={"string"},frameLevel={"number","string"},points={"table"}}) do properties[key]=types end
 Library.StyleProperties=properties
 local geometry={width=true,height=true,minWidth=true,maxWidth=true,minHeight=true,maxHeight=true,padding=true,align=true,fit=true,alpha=true,shown=true}
+for key in pairs(layoutMetadata) do geometry[key]=true end
 Library.StyleSlotKinds={box=geometry,roundedBox=Merge(Merge({},geometry),{radius=true}),text=Merge(Merge({},geometry),{fontSize=true,lineHeight=true,singleLine=true,flags=true,color=true}),texture=Merge(Merge({},geometry),{color=true,desaturated=true}),shape=Merge(Merge({},geometry),{color=true}),surface={alpha=true,shown=true,color=true,radius=true}}
 for name,kind in pairs(Library.StyleSlotKinds) do if name~="surface" then kind.points=true end end
 for _,name in ipairs({"box","roundedBox"}) do local kind=Library.StyleSlotKinds[name];kind.scale=true;kind.frameStrata=true;kind.frameLevel=true end
@@ -132,12 +143,14 @@ local function StyleField(property,value)
   ref=not literal[property] and properties[property][2]=="string",refType=property=="fontSize" and "font" or property=="lineHeight" and "line" or property=="color" and "color" or "number"}
  if property=="width" or property=="height" or property:find("^min") or property:find("^max") or property=="padding" or property=="radius" or property=="alpha" then field.min=0 end
  if property=="align" then field.enum={"start","center","end","stretch"} elseif property=="fit" then field.enum={"none","contain","cover"} end
+ if property=="direction" then field.enum={"row","column"} elseif property=="justify" then field.enum={"start","center","end","space-between","space-around","space-evenly"} end
  if property=="alpha" then field.max=1 end
  return field
 end
 Library.StyleField=StyleField
 function Library.ResolveStyleValue(value,field,theme,scale)
  local property=type(field)=="table" and field.property or field
+ if Symbolic(property,value) then return value end
  theme=theme or Library.ResolveTheme()
  if property=="padding" and value~=nil then
   local result={};for i,name in ipairs(paddingSides) do result[i]=PaddingSide(value,name,i,theme) end;return result
@@ -152,7 +165,11 @@ local variantCache=setmetatable({},{__mode="k"})
 function Library.ResolveStyleVariant(rule,name)
  if not rule or not name or not rule.variants or not rule.variants[name] then return rule end
  local cache=variantCache[rule];if not cache then cache={};variantCache[rule]=cache end
- if not cache[name] then local part=rule.variants[name];cache[name]={base=Merge(Merge({},rule.base),part.base),states=Merge(Merge({},rule.states),part.states)} end
+ if not cache[name] then
+  local part=rule.variants[name];local combined={base=Merge(Merge({},rule.base),part.base),states=Merge(Merge({},rule.states),part.states)}
+  if rule.conditions or part.conditions then combined.conditions={};for _,branch in ipairs(rule.conditions or empty) do combined.conditions[#combined.conditions+1]=branch end;for _,branch in ipairs(part.conditions or empty) do combined.conditions[#combined.conditions+1]=branch end;if #combined.conditions>32 then error("at most 32 container conditions are supported",2) end end
+  cache[name]=combined
+ end
  return cache[name]
 end
 function Library.SameRecipes(a,b,oldTheme,newTheme)
@@ -182,14 +199,17 @@ local noDefaults={}
 local function Catalog(defaults)
  local key=defaults or noDefaults;local cached=schemaCache[key]
  if cached then return cached end
- cached={recipes=Library.ResolveRecipes(defaults),fields={}};schemaCache[key]=cached
+ -- Internal schema reads may use the immutable builtin catalog directly.
+ -- Public composition and per-context recipe directories still own their copies.
+ local recipes=defaults==nil and Library.ResolveRecipes==defaultResolveRecipes and Library.ComponentRecipes or Library.ResolveRecipes(defaults)
+ cached={recipes=recipes,fields={},fieldProperties={}};schemaCache[key]=cached
  local function Visit(value,path)
   for name,item in pairs(value) do
    local nextPath=path=="" and name or path.."."..name
    if properties[name] then
     local recipeName,slot=path:match("^([^.]+).*%.([^.]+)$")
     local allowed,kind=Supports(cached.recipes[recipeName],slot,name)
-    if allowed then cached.fields[nextPath]=value
+    if allowed then cached.fields[nextPath]=value;cached.fieldProperties[nextPath]=name
     else cached.error="unsupported recipe property: "..nextPath end
    elseif name~="slotKinds" and type(item)=="table" then Visit(item,nextPath) end
   end
@@ -225,6 +245,10 @@ function Library:GetStyleField(path,defaults)
  local field=StyleField(property,nil);field.type=field.types;field.inherited=true;field.slotKind=kind;return field
 end
 local function ValidateValue(property,value,theme)
+ if Symbolic(property,value) then return (property=="width" or property=="height" or property=="basis") or value~="content" and value~="fill" end
+ if property=="direction" then return value=="row" or value=="column" end
+ if property=="justify" then return value=="start" or value=="center" or value=="end" or value=="space-between" or value=="space-around" or value=="space-evenly" end
+ if property=="flowWrap" or property=="participate" or property=="reserve" or property=="manageWidth" or property=="manageHeight" or property=="managePoints" then return type(value)=="boolean" end
  if property=="texture" then return value==false or type(value)=="string" or type(value)=="number" and value==value and math.abs(value)~=math.huge
  elseif property=="atlas" then return value==false or type(value)=="string"
  elseif property=="points" then
@@ -266,7 +290,7 @@ function Library:ValidateRecipes(overrides,defaults,theme)
  if type(overrides)~="table" then return false,"recipes must be a table" end
  if defaults~=nil and type(defaults)~="table" then return false,"recipe defaults must be a table" end
  theme=theme or self.ResolveTheme();local catalog=Catalog(defaults);if catalog.error then return false,catalog.error end;local schema=catalog.fields
- for path,part in pairs(schema) do local property=path:match("([^.]+)$");if not ValidateValue(property,part[property],theme) then return false,"invalid recipe default: "..path end end
+ for path,part in pairs(schema) do local property=catalog.fieldProperties[path];if not ValidateValue(property,part[property],theme) then return false,"invalid recipe default: "..path end end
  local function Visit(value,path)
   for key,item in pairs(value) do
    local name=path=="" and key or path.."."..key;local property
@@ -286,6 +310,12 @@ function Library.AttachStyles(UI,C)
  local function Text(target) return target.label or target end
  local none={}
  local function Unwrap(value) if value~=none then return value end end
+ local function StyleValue(value,key,context)
+  if Symbolic(key,value) or literal[key] then return Unwrap(value) end
+  if context and context~=UI then return context:ResolveValue(Unwrap(value)) end
+  return Value(Unwrap(value))
+ end
+ local function FieldOwner(target,key) local fields=target._lycheeLayoutFields;return fields and fields[key] end
  local methods={texture={"GetTexture","SetTexture"},atlas={"GetAtlas","SetAtlas"},texCoord={"GetTexCoord","SetTexCoord"},blendMode={"GetBlendMode","SetBlendMode"},drawLayer={"GetDrawLayer","SetDrawLayer"},justifyH={"GetJustifyH","SetJustifyH"},justifyV={"GetJustifyV","SetJustifyV"},wordWrap={"CanWordWrap","SetWordWrap"},spacing={"GetSpacing","SetSpacing"},rotation={"GetRotation","SetRotation"},scale={"GetScale","SetScale"},frameStrata={"GetFrameStrata","SetFrameStrata"},frameLevel={"GetFrameLevel","SetFrameLevel"}}
  local function Object(target,key)
   if key=="justifyH" or key=="justifyV" or key=="wordWrap" or key=="spacing" then return Text(target) end
@@ -294,7 +324,11 @@ function Library.AttachStyles(UI,C)
  end
  local function Read(target,key)
   local text=Text(target);local font=UI.fontStyles[text]
-  if key=="width" then return target:GetWidth() elseif key=="height" then return target:GetHeight()
+  if key=="width" or key=="height" then
+   local value=target._lycheeBoxValues and target._lycheeBoxValues[key]
+   if value~=nil and (FieldOwner(target,key) or Symbolic(key,value)) then return value end
+   return key=="width" and target:GetWidth() or target:GetHeight()
+  elseif layoutMetadata[key] then local box=target._lycheeBoxValues;return box and box[key]
   elseif key=="alpha" then return target:GetAlpha() elseif key=="shown" then return target:IsShown()
   elseif key=="radius" then return target.radius or 0
   elseif key=="color" then return target.color or (text.GetTextColor and {text:GetTextColor()} or {(target._lycheeTexture or target):GetVertexColor()})
@@ -305,7 +339,10 @@ function Library.AttachStyles(UI,C)
   elseif key=="singleLine" then return font and font.singleLine==true or false
   elseif key=="desaturated" then return (target._lycheeTexture or target):IsDesaturated()
   elseif key=="points" then local out={};for i=1,target:GetNumPoints() do out[i]={target:GetPoint(i)} end;return out
-  elseif key=="padding" or key=="align" or key=="fit" or key:match("^min") or key:match("^max") then return target._lycheeBoxValues and target._lycheeBoxValues[key] or (key=="align" and "start" or key=="fit" and "none" or key:match("^max") and math.huge or 0) end
+  -- Preserve declaration absence through the existing `none` restore sentinel.
+  -- Synthetic defaults would override item/options fallbacks; infinite maxima
+  -- would also become invalid numeric declarations in the layout solver.
+  elseif key=="padding" or key=="align" or key=="fit" or key=="minWidth" or key=="minHeight" or key=="maxWidth" or key=="maxHeight" then return target._lycheeBoxValues and target._lycheeBoxValues[key] end
   local method=methods[key];if method then local object=Object(target,key);if key=="texCoord" or key=="drawLayer" then return {object[method[1]](object)} end;return object[method[1]](object) end
  end
  local function Equal(a,b)
@@ -335,9 +372,19 @@ function Library.AttachStyles(UI,C)
   local previousHeight=target._lycheeList and target:GetHeight()
   if part.__art then local object=target._lycheeTexture or target;local art=part.__art;if art.atlas then object:SetAtlas(art.atlas) else object:SetTexture(art.texture) end;object:SetTexCoord(unpack(art.texCoord)) end
   local box=target._lycheeBoxValues
-  for _,key in ipairs({"minWidth","maxWidth","minHeight","maxHeight","padding","align","fit"}) do if part[key]~=nil then box=box or {};target._lycheeBoxValues=box;box[key]=(key=="align" or key=="fit") and part[key] or Value(part[key]) end end
-  if part.width~=nil or part.minWidth~=nil or part.maxWidth~=nil then target:SetWidth(math.max(box and box.minWidth or 0,math.min(box and box.maxWidth or math.huge,Value(part.width) or target:GetWidth()))) end
-  if part.height~=nil or part.minHeight~=nil or part.maxHeight~=nil then target:SetHeight(math.max(box and box.minHeight or 0,math.min(box and box.maxHeight or math.huge,Value(part.height) or target:GetHeight()))) end
+  local geometryChanged=false
+  for key,value in pairs(part) do if layoutMetadata[key] or symbolicAxes[key] or key=="padding" or key=="align" or key=="fit" then
+   box=box or {};target._lycheeBoxValues=box;local resolved=StyleValue(value,key)
+   if not Equal(box[key],resolved) then geometryChanged=true;box[key]=resolved end
+  end end
+  local function Dimension(axis,minKey,maxKey)
+   if part[axis]==nil and part[minKey]==nil and part[maxKey]==nil or FieldOwner(target,axis) then return end
+   local value=part[axis]~=nil and StyleValue(part[axis],axis) or (axis=="width" and target:GetWidth() or target:GetHeight())
+   if type(value)~="number" then return end
+   local low,high=box and box[minKey],box and box[maxKey];low=type(low)=="number" and low or 0;high=type(high)=="number" and high or math.huge
+   if axis=="width" then target:SetWidth(math.max(low,math.min(high,value))) else target:SetHeight(math.max(low,math.min(high,value))) end
+  end
+  Dimension("width","minWidth","maxWidth");Dimension("height","minHeight","maxHeight")
   if part.radius~=nil then target:SetRadius(Value(part.radius)) end
   if part.alpha~=nil then if immediate or duration==0 then target:SetAlpha(Value(part.alpha)) else UI.Motion:Alpha(target,Value(part.alpha),duration or UI.Theme.feedbackDuration) end end
   if part.color~=nil then local color=Value(part.color);if target.SetColor then if immediate or duration==0 then target:SetColor(color) else UI.Motion:Color(target,color,duration or UI.Theme.feedbackDuration) end elseif Text(target).SetTextColor then local text=Text(target);text:SetTextColor(unpack(color));text._color=color else target:SetVertexColor(unpack(color)) end end
@@ -355,9 +402,25 @@ function Library.AttachStyles(UI,C)
   end end
   if part.desaturated~=nil then (target._lycheeTexture or target):SetDesaturated(part.desaturated) end
   if part.shown~=nil then target:SetShown(part.shown) end
-  if part.points and not target._lycheeLayoutOwner then target:ClearAllPoints();for _,point in ipairs(part.points) do local relative=point[2];if type(relative)=="string" then relative=C.ResolveElementReference(target,relative,host) end;if relative then target:SetPoint(point[1],relative,point[3],Value(point[4] or 0),Value(point[5] or 0)) end end end
+  if part.points and part.points~=none and not FieldOwner(target,"points") and not target._lycheeLayoutOwner then target:ClearAllPoints();for _,point in ipairs(part.points) do local relative=point[2];if type(relative)=="string" then relative=C.ResolveElementReference(target,relative,host) end;if relative then target:SetPoint(point[1],relative,point[3],Value(point[4] or 0),Value(point[5] or 0)) end end end
   if target._lycheeBoxApply then target._lycheeBoxApply() end
-  if target._lycheeLayoutOwner and (part.width~=nil or part.height~=nil or part.fontSize~=nil or part.lineHeight~=nil or part.minWidth~=nil or part.maxWidth~=nil or part.minHeight~=nil or part.maxHeight~=nil) then target._lycheeLayoutOwner:Layout() end
+  local changed=geometryChanged or part.width~=nil or part.height~=nil or part.fontSize~=nil or part.lineHeight~=nil or part.font~=nil or part.flags~=nil or part.wordWrap~=nil or part.spacing~=nil or part.singleLine~=nil or part.shown~=nil or part.scale~=nil
+  if changed then
+   if C.InvalidateLayout then C.InvalidateLayout(target,"style") end
+   local fields=target._lycheeLayoutFields
+   if not C.InvalidateLayout and fields then for key,owner in pairs(fields) do
+    local duplicate=false;for previous,other in pairs(fields) do if previous==key then break end;if other==owner then duplicate=true;break end end
+    if not duplicate and owner.Invalidate then owner:Invalidate("style") end
+   end end
+   local owner=target._lycheeLayoutOwner
+   if owner and not (fields and (fields.width==owner or fields.height==owner or fields.points==owner)) then if owner.Invalidate then owner:Invalidate("style") else owner.cached=false;owner:Layout() end end
+   local own=target._lycheeBoxLayout
+   if not C.InvalidateLayout and own and own~=owner and not (fields and (fields.width==own or fields.height==own or fields.points==own)) and own.Invalidate then own:Invalidate("style") end
+   -- A component's font API can write its label while the component itself is
+   -- the flow item. Notify both actual native content and its semantic host.
+   if C.InvalidateLayout and text~=target then C.InvalidateLayout(text,"style") end
+   if C.InvalidateLayout and host and host~=target and host~=text then C.InvalidateLayout(host,"style") end
+  end
   if previousHeight and previousHeight~=target:GetHeight() then target._lycheeList:RowGeometryChanged() end
  end
  C.ReadStyleValue=Read;C.ValidateStyleTarget=ValidateTarget
@@ -377,11 +440,66 @@ function Library.AttachStyles(UI,C)
  end
  local function RuleValue(record,key)
   local value=record.rule.base[key]
-  for _,name in ipairs(states) do if record.controller.active[name] then local part=record.rule.states[name];if part and part[key]~=nil then value=part[key] end end end
+  local matches=record.controller.conditionMatches
+  for _,branch in ipairs(record.rule.conditions or empty) do if matches and matches[branch.index] and branch.base[key]~=nil then value=branch.base[key] end end
+  for _,name in ipairs(states) do if record.controller.active[name] then
+   local part=record.rule.states[name];if part and part[key]~=nil then value=part[key] end
+   for _,branch in ipairs(record.rule.conditions or empty) do local conditional=branch.states[name];if matches and matches[branch.index] and conditional and conditional[key]~=nil then value=conditional[key] end end
+  end end
   return value
  end
  function C.SharedElementValue(target,key) local record=Winner(target,key);if not record then return nil,false end;local value=RuleValue(record,key);if value==nil then value=record.base[key] end;return value,true end
- function C.FixedValue(target,key,fallback) local record=Winner(target,key);local value=record and RuleValue(record,key);if value~=nil and value~=none then return Value(value) end;return fallback end
+ function C.FixedValue(target,key,fallback) local record=Winner(target,key);local value=record and RuleValue(record,key);if value~=nil and value~=none then return StyleValue(value,key,record.controller.context) end;return fallback end
+ function C._FixedValueContext(target,key)
+  local record=Winner(target,key);local value=record and RuleValue(record,key)
+  if value~=nil and value~=none then return record.controller.context end
+ end
+ -- A transient geometry projection uses the same winner and layer order as
+ -- FixedValue, resolving each winning rule in its owning Context. Scratch
+ -- winner references are cleared after every call, including errors/nesting.
+ local projectionFields={width=true,height=true,minWidth=true,maxWidth=true,minHeight=true,maxHeight=true,basis=true,grow=true,shrink=true,align=true,gapAfter=true,manageWidth=true,manageHeight=true,managePoints=true,participate=true,reserve=true}
+ local projectionPool,projectionDepth={},0
+ local function ClearProjection(values) for key in pairs(values) do values[key]=nil end end
+ local function OverlayProjection(values,part)
+  for key,value in pairs(part or empty) do if projectionFields[key] then values[key]=value end end
+ end
+ local function ProjectFixedLayout(target,out,keys,item,scratch)
+  local raw,values,winners=scratch.raw,scratch.values,scratch.winners
+  for record in pairs(target._lycheeFixedRecords or empty) do
+   ClearProjection(raw)
+   local rule,controller=record.rule,record.controller;local matches=controller.conditionMatches
+   OverlayProjection(raw,rule.base)
+   for _,branch in ipairs(rule.conditions or empty) do if matches and matches[branch.index] then OverlayProjection(raw,branch.base) end end
+   for _,name in ipairs(controller.stateOrder or states) do if controller.active[name] then
+    OverlayProjection(raw,rule.states[name])
+    for _,branch in ipairs(rule.conditions or empty) do if matches and matches[branch.index] then OverlayProjection(raw,branch.states[name]) end end
+   end end
+   for key in pairs(rule.properties) do if projectionFields[key] then
+    local winner=winners[key]
+    if not winner or record.direct and not winner.direct or record.direct==winner.direct and controller.serial>winner.controller.serial then
+     winners[key],values[key]=record,raw[key]
+    end
+   end end
+  end
+  local box=target._lycheeBoxValues or empty
+  for i=1,#keys do local key=keys[i];local value=values[key]
+   if value~=nil and value~=none then out[key]=StyleValue(value,key,winners[key].controller.context)
+   else
+    value=item[key];if value==nil then value=box[key] end
+    if key~="width" and key~="height" and box[key]~=nil then value=box[key] end
+    out[key]=value
+   end
+  end
+ end
+ function C._ProjectFixedLayout(target,out,keys,item)
+  projectionDepth=projectionDepth+1;local depth=projectionDepth;local scratch=projectionPool[depth]
+  if not scratch then scratch={raw={},values={},winners={}};projectionPool[depth]=scratch end
+  local ok,message=pcall(ProjectFixedLayout,target,out,keys,item or empty,scratch)
+  ClearProjection(scratch.raw);ClearProjection(scratch.values);ClearProjection(scratch.winners)
+  projectionDepth=projectionDepth-1
+  if not ok then error(message,0) end
+  return out
+ end
  function C.OwnsStyle(host,slot,key,value)
   local controller=host._lycheeStyleController;local record=controller and controller.records[slot]
   if not record or not record.rule.properties[key] then return false end
@@ -405,6 +523,7 @@ function Library.AttachStyles(UI,C)
  end
  local recipes={}
  local stateOrders=setmetatable({},{__mode="k"})
+ local conditionSelectors=setmetatable({},{__mode="k"})
  local compiled=setmetatable({},{__mode="k"})
  local function Compile(options,element)
   local key=(options.recipe or "").."/"..(options.variant or "")..(options.legacy and "/legacy" or "/full")
@@ -416,15 +535,28 @@ function Library.AttachStyles(UI,C)
   if node.value then return node.value end
   local base=Merge(Merge(Merge({},recipe.base),options.style),element.base)
   local groups={};local names={}
+  local branches=element.conditions
+  if branches then
+   if #branches>32 then error("at most 32 container conditions are supported",3) end
+   for _,branch in ipairs(branches) do for name in pairs(branch.base or empty) do names[name]=true end;for _,part in pairs(branch.states or empty) do for name in pairs(part) do names[name]=true end end end
+  end
   for name in pairs(base) do names[name]=true end
   for _,state in ipairs(states) do local part=Merge(Merge(Merge({},recipe.states and recipe.states[state]),options.states and options.states[state]),element.states and element.states[state]);groups[state]=part;for name in pairs(part) do names[name]=true end end
   local out={}
   for name in pairs(names) do local rule={base=base[name] or empty,states={},properties={}}
    for property in pairs(rule.base) do rule.properties[property]=true end
    for _,state in ipairs(states) do local part=groups[state][name];if part and next(part) then rule.states[state]=part;for property in pairs(part) do rule.properties[property]=true end end end
+   for index,branch in ipairs(branches or empty) do
+    local part=branch.base and branch.base[name];local conditionalStates={}
+    for _,state in ipairs(states) do local values=branch.states and branch.states[state] and branch.states[state][name];if values then conditionalStates[state]=values end end
+    if part or next(conditionalStates) then
+     rule.conditions=rule.conditions or {};rule.conditions[#rule.conditions+1]={index=index,base=part or empty,states=conditionalStates}
+     for property in pairs(part or empty) do rule.properties[property]=true end;for _,values in pairs(conditionalStates) do for property in pairs(values) do rule.properties[property]=true end end
+    end
+   end
    if next(rule.properties) then out[name]=rule end
   end
-  node.value=out;return out
+  conditionSelectors[out]=branches;node.value=out;return out
  end
  local function Art(target) local object=target._lycheeTexture or target;return {texture=object:GetTexture(),atlas=object:GetAtlas(),texCoord={object:GetTexCoord()}} end
  local artKeys={texture=true,atlas=true,texCoord=true}
@@ -438,6 +570,7 @@ function Library.AttachStyles(UI,C)
  end
  local function Current(record,key,art)
   local target=record.target;local previous=Unwrap(record.applied[key])
+  if key=="points" and FieldOwner(target,"points") and record.applied[key]~=nil then return previous end
   if artKeys[key] and art then return art[key] end
   if key=="points" and previous and target:GetNumPoints()==#previous then
    local same=true
@@ -461,9 +594,10 @@ function Library.AttachStyles(UI,C)
  local heightGroup={height=true,minHeight=true,maxHeight=true}
  local function Dimensions(record,capture,changedWidth,changedHeight)
   local target=record.target;local box=target._lycheeBoxValues or empty;local rule=record.rule.properties
-  local width=rule.width or rule.minWidth or rule.maxWidth
-  local height=rule.height or rule.minHeight or rule.maxHeight
+  local width=(rule.width or rule.minWidth or rule.maxWidth) and not FieldOwner(target,"width")
+  local height=(rule.height or rule.minHeight or rule.maxHeight) and not FieldOwner(target,"height")
   local minW,maxW,minH,maxH=box.minWidth or 0,box.maxWidth or math.huge,box.minHeight or 0,box.maxHeight or math.huge
+  minW=type(minW)=="number" and minW or 0;maxW=type(maxW)=="number" and maxW or math.huge;minH=type(minH)=="number" and minH or 0;maxH=type(maxH)=="number" and maxH or math.huge
   local w,h=width and target:GetWidth(),height and target:GetHeight()
   if capture then
    if width and changedWidth then record.minW,record.maxW,record.nativeW=minW,maxW,w end
@@ -474,7 +608,7 @@ function Library.AttachStyles(UI,C)
    height and (record.minH~=minH or record.maxH~=maxH or not Equal(h,record.nativeH) and not Equal(h,math.max(minH,math.min(maxH,h)))) or false
  end
  local function PointReferences(target,points,host)
-  if target._lycheeLayoutOwner or points==none then return true end
+  if target._lycheeLayoutOwner or FieldOwner(target,"points") or points==none then return true end
   local count=0
   for _,point in ipairs(points) do
    local relative=point[2];if type(relative)=="string" then relative=C.ResolveElementReference(target,relative,host) end
@@ -522,6 +656,9 @@ function Library.AttachStyles(UI,C)
    if UI.Motion.jobs[record.target] and Equal(pending,wanted) then UI.Motion:Stop(record.target,true) end
   end
  end
+ local function LayoutBindingChanged(target)
+  if C.InvalidateLayout and (target._lycheeBoxLayout or target._lycheeLayoutFields or target._lycheeLayoutInputs) then C.InvalidateLayout(target,"rules") end
+ end
  local function ReleaseRecord(record)
   for key in pairs(record.moving or empty) do
    if Winner(record.target,key)==record and MotionOwns(record,key,Read(record.target,key)) then
@@ -534,35 +671,64 @@ function Library.AttachStyles(UI,C)
   if record.artBase and Equal(Art(target),record.artApplied) then restore.__art=record.artBase;restore.texture,restore.atlas,restore.texCoord=nil,nil,nil end
   if next(restore) then Write(target,restore,true,nil,record.controller.host) end
   for other in pairs(target._lycheeFixedRecords) do other.controller:Apply(true,false,true) end
+  LayoutBindingChanged(target)
  end
  function Controller:Configure(element,slots,variant)
   if self.configured and self.element==element and self.slots==slots and self.options.variant==variant then
    local unchanged=true;for name in pairs(self.compiled or empty) do if self.slots[name]~=(self.records[name] and self.records[name].target) then unchanged=false;break end end
    if unchanged then return self end
   end
+  local oldVariant=self.options.variant;self.options.variant=variant
+  local selectedSlots=slots or self.slots
+  local ok,rules=pcall(function()
+   local result=Compile(self.options,element)
+   for name,rule in pairs(result) do local target=selectedSlots[name];if target then
+    ValidateBinding({[name]=target},{[name]=rule.base});for _,part in pairs(rule.states) do ValidateBinding({[name]=target},{[name]=part}) end
+    for _,branch in ipairs(rule.conditions or empty) do ValidateBinding({[name]=target},{[name]=branch.base});for _,part in pairs(branch.states) do ValidateBinding({[name]=target},{[name]=part}) end end
+   end end
+   return result
+  end)
+  self.options.variant=oldVariant
+  if not ok then error(rules,0) end
+  if UI._ReleaseConditions then UI:_ReleaseConditions(self) end
+  self.conditionSelectors,self.conditionMatches,self._conditionApplyNeeded=nil,nil,nil
   self.configured=true
   -- Restoring a row dimension can synchronously remeasure its list. Expose the
   -- selected variant before that callback resolves the row's fixed values.
   self.options.variant=variant
-  for _,record in pairs(self.records) do ReleaseRecord(record) end
+  self.configuring=true
+  local restored,message=pcall(function() for _,record in pairs(self.records) do ReleaseRecord(record) end end)
+  self.configuring=false
+  if not restored then self.configured=false;error(message,0) end
   self.element,self.slots,self.options.variant=element,slots or self.slots,variant
-  self.records=empty;local rules=Compile(self.options,element);self.compiled=rules;self.hasOverrides=next(rules)~=nil
+  self.records=empty;self.compiled=rules;self.hasOverrides=next(rules)~=nil
   UI.fixedControllers[self]=self.hasOverrides and true or nil
   for name,rule in pairs(rules) do local target=self.slots[name];if target then
-   ValidateBinding({[name]=target},{[name]=rule.base});for _,part in pairs(rule.states) do ValidateBinding({[name]=target},{[name]=part}) end
    local record={controller=self,target=target,slot=name,direct=name=="root" and target==self.host,rule=rule,base={},applied={}}
    if self.records==empty then self.records={} end;self.records[name]=record;target._lycheeFixedRecords=target._lycheeFixedRecords or {};target._lycheeFixedRecords[record]=true
   end end
   self.stateOrder=stateOrders[rules]
-  if not self.stateOrder then local names={};for _,name in ipairs(states) do for _,rule in pairs(rules) do if rule.states[name] then names[#names+1]=name;break end end end;self.stateOrder=next(names) and names or empty;stateOrders[rules]=self.stateOrder end
+  if not self.stateOrder then local names={};for _,name in ipairs(states) do for _,rule in pairs(rules) do local found=rule.states[name]~=nil;for _,branch in ipairs(rule.conditions or empty) do found=found or branch.states[name]~=nil end;if found then names[#names+1]=name;break end end end;self.stateOrder=next(names) and names or empty;stateOrders[rules]=self.stateOrder end
+  local selectors=conditionSelectors[rules]
+  if selectors and #selectors>0 then
+   self.conditionSelectors=selectors;self.conditionMatches={}
+   if UI._BindConditions then
+    local bound,message=pcall(UI._BindConditions,UI,self,selectors)
+    if not bound then
+     if UI._ReleaseConditions then UI:_ReleaseConditions(self) end
+     self.conditionSelectors,self.conditionMatches,self._conditionApplyNeeded=nil,nil,nil
+     self.configured=false;error(message,0)
+    end
+   end
+  end
   if self.hasOverrides then C.ProtectStyle(self.host) end
+  for _,record in pairs(self.records) do LayoutBindingChanged(record.target) end
   return self
  end
  local fontKeys={font=true,fontSize=true,lineHeight=true,flags=true,singleLine=true,spacing=true,wordWrap=true,justifyH=true,justifyV=true}
- function Controller:Apply(immediate,fontOnly,noObserve)
-  if self.released or self.applying or self.host._lycheeElementOwner and not self.host._lycheeElementOwner:IsOwned() then return self end
-  if not self.hasOverrides then return self end
-  self.applying=true;if self.active==empty then self.active={} end
+ local function ApplyInternal(self,immediate,fontOnly,noObserve)
+  if self.conditionSelectors and UI._RefreshConditions then UI:_RefreshConditions(self) end
+  if self.active==empty then self.active={} end
   for _,name in ipairs(states) do local active=self.states[name]==true;for _,source in pairs(self.sources) do active=active or source[name]==true end
    if self.options.trackNative then local host=self.host;if name=="hover" then active=active or host._inside==true or host.hovered==true elseif name=="pressed" then active=active or host._pressed==true elseif name=="selected" then active=active or host.active==true or host.selected==true or host._selected==true elseif name=="focus" then active=active or host.focused==true or host.expanded==true elseif name=="checked" then active=active or host._checked==true or host.GetChecked and host:GetChecked()==true end end
    if name=="disabled" and self.host.IsEnabled then active=active or not self.host:IsEnabled() end;self.active[name]=active
@@ -585,7 +751,7 @@ function Library.AttachStyles(UI,C)
    for key in pairs(record.rule.properties) do if (not fontOnly or fontKeys[key]) and Winner(target,key)==record then
     local actual=Current(record,key,observedArt);local applied=record.applied[key]
     local moving=(key=="alpha" or key=="color") and MotionOwns(record,key,actual)
-    if record.base[key]==nil or not moving and not fontOnly and not noObserve and applied~=nil and not Equal(actual,Unwrap(applied)) then record.base[key]=actual==nil and none or actual end
+    if record.base[key]==nil or not record.writeFailed and not moving and not fontOnly and not noObserve and applied~=nil and not Equal(actual,Unwrap(applied)) then record.base[key]=actual==nil and none or actual end
     local value=RuleValue(record,key);if value==nil and not artKeys[key] then value=record.base[key] end
     local requested=value==nil and none or value
     local finish=moving and (immediate~=false or self.options.immediate or self.options.duration and Value(self.options.duration)==0 or UI:IsReducedMotion())
@@ -605,7 +771,9 @@ function Library.AttachStyles(UI,C)
     if art then patch.__art=record.artBase end
     -- A nil art override means restore the captured group, not SetTexture(nil).
     for key in pairs(artKeys) do if patch[key]==none then patch[key]=nil end end
-    Write(target,patch,immediate~=false or self.options.immediate,self.options.duration and Value(self.options.duration),self.host)
+    local written,message=pcall(Write,target,patch,immediate~=false or self.options.immediate,self.options.duration and Value(self.options.duration),self.host)
+    if not written then record.writeFailed=true;error(message,0) end
+    record.writeFailed=nil
     if patch.__art then record.artApplied=Art(target) end
     record.requested=record.requested or {}
     for key,value in pairs(values) do
@@ -622,9 +790,19 @@ function Library.AttachStyles(UI,C)
    end
    end
   end
-  self.applying=false;return self
+  return self
  end
- function Controller:SetState(name,value) value=value==true;if self.states[name]==value or self.states[name]==nil and not value then return self end;if self.states==empty then self.states={} end;self.states[name]=value;return self:Apply(false) end
+ function Controller:Apply(immediate,fontOnly,noObserve)
+  if self.released or self.applying or self.configuring or self.host._lycheeElementOwner and not self.host._lycheeElementOwner:IsOwned() or not self.hasOverrides then return self end
+  self.applying=true
+  local ok,message=pcall(ApplyInternal,self,immediate,fontOnly,noObserve)
+  self.applying=false
+  if not ok then self._applyFailed=true;error(message,0) end
+  self._applyFailed=nil
+  if not fontOnly then self._conditionApplyNeeded=nil end
+  return self
+ end
+ function Controller:SetState(name,value) value=value==true;if self.states[name]==value or self.states[name]==nil and not value then if self._applyFailed then return self:Apply(false) end;return self end;if self.states==empty then self.states={} end;self.states[name]=value;return self:Apply(false) end
  function Controller:SetStates(values) if self.states==empty then self.states={} end;for key in pairs(self.states) do self.states[key]=nil end;for key,value in pairs(values) do self.states[key]=value end;return self:Apply(false) end
  function Controller:SetVariant(name) if self.options.variant==name then return self end;self.element=nil;self:Configure(self.fixedElement,self.slots,name);return self:Apply(true) end
  function Controller:Bind(source,bindings)
@@ -650,19 +828,28 @@ function Library.AttachStyles(UI,C)
  function Controller:Release(lost)
   if self.released then return end
   self.released=true;UnsubscribeStyleEvents(self)
+  if UI._ReleaseConditions then UI:_ReleaseConditions(self) end;self.conditionSelectors,self.conditionMatches,self._conditionApplyNeeded=nil,nil,nil
   for _,record in pairs(self.records) do if lost then StopOwnedMotion(record);record.target._lycheeFixedRecords[record]=nil else ReleaseRecord(record) end end
   self.records=empty;UI.fixedControllers[self]=nil
   if self.host._lycheeStyleController==self then self.host._lycheeStyleController=nil;self.host.styleController=nil end
  end
  function C.Style(host,options)
+  if host._lycheeElementContext and host._lycheeElementContext~=UI or host._lycheeBoxContext and host._lycheeBoxContext~=UI then error("style belongs to another Context; release it before rebinding",2) end
+  local previous=host._lycheeStyleController
+  if previous and previous.context and previous.context~=UI then
+   if previous.hasOverrides then error("style belongs to another Context; release it before rebinding",2) end
+   previous:Release()
+  end
   if host._lycheeStyleController then if Equal(host._lycheeStyleController.options,options or empty) then return host._lycheeStyleController end;error("Style is a construction binding; an existing binding cannot be replaced",2) end
   options=options or {};if options.duration~=nil and (type(Value(options.duration))~="number" or Value(options.duration)<0) then error("invalid style duration",2) end;serial=serial+1
-  local controller=setmetatable({host=host,options=options,slots=options.slots or {root=host},records=empty,states=empty,active=empty,sources=empty,serial=serial},Controller)
-  controller:Configure(nil,controller.slots,options.variant)
+  local controller=setmetatable({context=UI,host=host,options=options,slots=options.slots or {root=host},records=empty,states=empty,active=empty,sources=empty,serial=serial},Controller)
+  local ok,message=pcall(controller.Configure,controller,nil,controller.slots,options.variant)
+  if not ok then controller:Release(true);error(message,0) end
   host._lycheeStyleController,host.styleController=controller,controller;return controller:Apply(true)
  end
  function UI:_BindFixedElement(host,rule,slots,variant)
   local controller=host._lycheeStyleController
+  if controller and controller.context and controller.context~=self then error("style belongs to another Context; release it before rebinding",2) end
   if not controller then if not rule or not next(rule) then return end;controller=C.Style(host,{slots=slots,trackNative=true}) end
   controller.fixedElement=rule;controller:Configure(rule,slots or controller.slots,variant~=nil and variant or controller.options.variant);return controller:Apply(true)
  end

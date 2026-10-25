@@ -181,7 +181,7 @@ do
   base.Install({locale="enUS",realm="Home"});ui.Install();_G.LycheeUI=nil;_G.LibStub=nil
   C_ChallengeMode.IsChallengeModeActive=function() return false end
   local private={}
-  for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Styles.lua","Components.lua","Layouts.lua","Elements.lua","Native.lua","Menu.lua"}) do assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/"..file))("LycheeGroup",private) end
+  for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Styles.lua","Components.lua","Layouts.lua","Responsive.lua","Elements.lua","Native.lua","Menu.lua"}) do assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/"..file))("LycheeGroup",private) end
   for _,file in ipairs({"Locale.lua","Theme/Defaults.lua","Theme/Elements.lua","Theme/FindElements.lua","Core.lua","Configuration.lua","Appearance.lua","Theme/Import.lua","Specializations.lua","Presentation.lua","Fonts.lua","BrandMotion.lua","ActivityLabels.lua","Floating.lua","API.lua","Entrypoints.lua"}) do dofile("addon/LycheeGroup/"..file) end
   LycheeGroupDB,LycheeGroupPrefsDB=account,prefs
   LycheeGroup.Minimap={Initialize=function() end}

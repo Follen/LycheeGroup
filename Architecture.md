@@ -2,7 +2,7 @@
 
 更新日期：2026-10-24。
 
-状态：当前发布版本为 1.2.5；本版采用启动时固定主题。主题启动固定、实时偏好和业务状态分别管理，架构改造以 main 提交 `5ce215182c15b59e44c573db9a1a6488536bb8bd` 为默认界面等价基线；此后用户指定的布局和交互调整按产品、设计文档维护。验证方法见 [tests/theme_reload.md](tests/theme_reload.md)，开发规范见 [Development.md](Development.md)；本次及历史验证集中记录在 [perfermance.md 第 12 节](perfermance.md#12-当前内存测试与验证状态)。
+状态：当前发布版本为 1.2.5；本版采用启动时固定主题。主题启动固定、实时偏好和业务状态分别管理，架构改造以 main 提交 `5ce215182c15b59e44c573db9a1a6488536bb8bd` 为默认界面等价基线；此后用户指定的布局和交互调整按产品、设计文档维护。验证方法见 [tests/theme_reload.md](tests/theme_reload.md)，开发规范见 [Development.md](Development.md)；本次及历史验证集中记录在 [perfermance.md 第 12 节](perfermance.md#12-当前性能验证与历史结果)。
 
 产品范围见 [Product.md](Product.md)，视觉与动画轨迹见 [Desgin.md](Desgin.md)，资源额度与测量方法见 [perfermance.md](perfermance.md)。历史 `.lycheedev/` 链接指向未随仓库分发的本地调查记录。
 
@@ -10,7 +10,7 @@
 
 使用 WoW 原生 Lua UI，建立自己的启动入口、业务状态和界面。产品业务采用 `LycheeGroup` 命名体系，独立通用库采用 `LycheeUI` 命名。
 
-LycheeGroup 的四个 AddOn 分别为微核心、组队业务、玩家记录、统一界面；[LycheeUI](../LycheeUI) 在独立源码目录维护，发布时复制进主包 `Libs/LycheeUI`，由主包 TOC 引用 `embeds.xml`，游戏插件列表不新增独立库。依赖只从产品指向共享库，业务数据和平台业务 API 留在产品层；参数、公开方法和回调的隔离规则见 [Development.md 第 4 节](Development.md#4-lycheeui-与产品严格隔离)。共享库不保存业务状态，不声明 SavedVariables 或登录事件；Context 拥有主题、控件、原生控件租借、动效和菜单实例，使用者按自身界面生命周期调用。模块可以在包内按职责分文件，不为每个页面、语言、动效或工具另拆子插件。
+LycheeGroup 的四个 AddOn 分别为微核心、组队业务、玩家记录、统一界面；[LycheeUI](https://github.com/Follen/LycheeUI) 在独立源码目录维护，发布时复制进主包 `Libs/LycheeUI`，由主包 TOC 引用 `embeds.xml`，游戏插件列表不新增独立库。依赖只从产品指向共享库，业务数据和平台业务 API 留在产品层；参数、公开方法和回调的隔离规则见 [Development.md 第 4 节](Development.md#4-lycheeui-与产品严格隔离)。共享库不保存业务状态，不声明 SavedVariables 或登录事件；Context 拥有主题、控件、原生控件租借、动效和菜单实例，使用者按自身界面生命周期调用。模块可以在包内按职责分文件，不为每个页面、语言、动效或工具另拆子插件。
 
 Group 包内置 LibSpecialization minor 28 和 LibStub，加载顺序为 LibStub → LibSpecialization → Group 与 Roster；已有同版或更新版时复用共享实例。LibSpecialization 保留原名称、版本选择和通讯协议，本地修补仅复用 Retail 自动回应的当前天赋字符串，公开读取仍即时取得原生值。来源、许可证与修补范围见 [Libs/README.md](addon/LycheeGroup_Group/Libs/README.md)。
 
@@ -34,7 +34,11 @@ Host 开始退场时调用笔记页的 `CancelPendingSave`，使草稿令牌失�
 
 暴雪 API 的调用条件、频率和事件通过荔枝 Dev 的固定版本源码核实。本地读取与服务器请求分开处理，请求在明确入口合并并尊重原生限流状态，不通过常驻轮询或重试风暴维持同步。
 
-共享组件在构造时接收固定主题、recipe、元素和 utility；业务继续持有活动选择、申请目标、收藏状态与成员身份。窗口、页头、侧栏与页面留白等产品尺寸，以及导航字号、品牌尺寸和时长，由产品两套主题默认声明，库只解析普通 token。悬停、按下、选中和禁用在已声明规则之间切换，字体与布局走专用实时入口。主窗与浮窗分别持有 Context，字体从各自基准应用增量及用户比例，不累计缩放。菜单、提示和原生输入读取同一启动来源；原生输入归还时恢复借用前快照并保留新宿主的改动。完整共享接口见 [LycheeUI API](../LycheeUI/API.md)。
+共享组件在构造时接收固定主题、recipe、元素和 utility；业务继续持有活动选择、申请目标、收藏状态与成员身份。窗口、页头、侧栏与页面留白等产品尺寸，以及导航字号、品牌尺寸和时长，由产品两套主题默认声明，库只解析普通 token。悬停、按下、选中和禁用在已声明规则之间切换，字体与布局走专用实时入口。主窗与浮窗分别持有 Context，字体从各自基准应用增量及用户比例，不累计缩放。菜单、提示和原生输入读取同一启动来源；原生输入归还时恢复借用前快照并保留新宿主的改动。完整共享接口见 [LycheeUI API](https://github.com/Follen/LycheeUI/blob/v1.0.0/API.md)。
+
+增强布局仍由 LycheeUI 持有原生对象的几何记录。`Layouts` 统一求解 Box/Row/Column，`Responsive` 为每个 Context 提供一个按需布局队列，并只连接实际父容器、内容和显隐依赖；`Elements` 与 `Styles` 编译固定条件并选择命中分支。读取、计算、提交和通知分批执行，失败与过期代次不会继续提交。原生锚点及固定 Box 不登记响应任务，菜单、动画和原生租约继续按各自生命周期管理。
+
+设置页将行内容、屏蔽工具栏和列单元格交给共享增强布局，产品仍持有设置定义、文字、动作、列偏好和静态断点声明。屏蔽表头产生一次累计列边界，当前物理行池复用这些边界。共享列表的文字变高路径显式开启，完整业务 key 仍由产品持有；库只保留两个数值索引缓冲、单个测量文字对象及当前可见行，分批完成后按 key 和项内偏移恢复滚动位置。容量与任务预算见 [性能约束](perfermance.md)。
 
 ## 2. 四个业务包与共享库
 
@@ -66,9 +70,9 @@ addon/
     Theme、Motion、Elements、Resize、Host、Components、Members、PlayerLinks、RealmSlugs、Tooltip、Native、Application、Preview、Find、Create、Notes、Settings、Transfer、Media、Locale
 ```
 
-品牌原始文件保留在 [Media](Media/lychee-logo.png)，离线预览直接引用此处 PNG。品牌、职责、关系、活动与申请操作等产品素材位于主包 `Media`，由产品 `productMedia` 参数提供路径，浮窗无需加载 UI 包即可使用。通用图形、箭头、按钮符号和阴影源位于 [LycheeUI/Media](../LycheeUI/Media)，运行时位于主包 `Libs/LycheeUI/Media`，由共享 `media` 参数提供路径。UI 子包 Media 保留关于页图片，以及专用阵营、收藏星标、活动图标、成员遮罩和三态尺寸拖动柄 TGA。拖动柄源图在 `assets/imagegen/resize-grip`，收藏源图在 `assets/favorites`，职责盾牌源图在 `assets/roles`，阵营源图及生成信息见 [assets/factions](assets/factions/prompts.txt)。四个产品包的 TOC `IconTexture` 统一引用主包的 `Media/addon-logo.tga`；素材设计见 [Desgin.md](Desgin.md#1-品牌与语言)。共享库源码位于 `D:/Code/wow/addons/LycheeUI`，与本产品独立。磁盘素材引用不需要加载业务 UI。
+品牌原始文件保留在 [Media](Media/lychee-logo.png)，离线预览直接引用此处 PNG。品牌、职责、关系、活动与申请操作等产品素材位于主包 `Media`，由产品 `productMedia` 参数提供路径，浮窗无需加载 UI 包即可使用。通用图形、箭头、按钮符号和阴影源位于 [LycheeUI/Media](https://github.com/Follen/LycheeUI/blob/v1.0.0/Media)，运行时位于主包 `Libs/LycheeUI/Media`，由共享 `media` 参数提供路径。UI 子包 Media 保留关于页图片，以及专用阵营、收藏星标、活动图标、成员遮罩和三态尺寸拖动柄 TGA。拖动柄源图在 `assets/imagegen/resize-grip`，收藏源图在 `assets/favorites`，职责盾牌源图在 `assets/roles`，阵营源图及生成信息见 [assets/factions](assets/factions/prompts.txt)。四个产品包的 TOC `IconTexture` 统一引用主包的 `Media/addon-logo.tga`；素材设计见 [Desgin.md](Desgin.md#1-品牌与语言)。共享库源码位于 `D:/Code/wow/addons/LycheeUI`，与本产品独立。磁盘素材引用不需要加载业务 UI。
 
-运行 `tools/Sync-LycheeUI.ps1` 从独立源码同步内置库，运行 `tools/Build-Addon.ps1` 生成只含四个产品目录的安装包。共享库的冻结状态与规则由 [.lock](../LycheeUI/.lock) 维护；冻结时，同步脚本在复制前核对运行文件清单和 SHA-256，内容不一致便停止。产品内置副本不包含库 TOC、测试或说明文档，不手工维护第二份源码。其他插件的接入方式和公共接口由共享库 [README](../LycheeUI/README.md) 与 [API.md](../LycheeUI/API.md) 维护。
+运行 `tools/Sync-LycheeUI.ps1` 从独立源码同步内置库，运行 `tools/Build-Addon.ps1` 生成只含四个产品目录的安装包。共享库的冻结状态与规则由 [.lock](https://github.com/Follen/LycheeUI/blob/v1.0.0/.lock) 维护；冻结时，同步脚本在复制前核对运行文件清单和 SHA-256，内容不一致便停止。产品内置副本不包含库 TOC、测试或说明文档，不手工维护第二份源码。其他插件的接入方式和公共接口由共享库 [README](https://github.com/Follen/LycheeUI/blob/v1.0.0/README.md) 与 [API.md](https://github.com/Follen/LycheeUI/blob/v1.0.0/API.md) 维护。
 
 ## 3. 加载、激活与退出
 
@@ -90,7 +94,7 @@ Host 在从 find／create／notes 进入 settings 时保存本次会话的 `sett
 
 [Bindings.xml](addon/LycheeGroup/Bindings.xml) 注册 `LYCHEEGROUP_TOGGLE` 动作，由 `A:ToggleWindow` 路由；[Bindings.lua](addon/LycheeGroup/Bindings.lua) 持有主键、冲突和默认初始化入口。PLAYER_LOGIN 在当前账号／角色绑定范围内尝试一次默认键，`bindingDefaultScopes` 记录已尝试范围；容器损坏时通过 Configuration 保留原值并恢复空表，不替换玩家已有绑定。战斗时只延迟到一次脱战事件。改键使用该动作的原生 context，保留第二键并按 GetCurrentBindingSet 保存。Settings 仅在可见时订阅 UPDATE_BINDINGS，由设置行临时接收键盘输入，冲突复用 Notice 并在玩家确认后写入；Esc、切分类、离页、隐藏和战斗开始都释放键盘捕获及临时冲突状态。
 
-Settings 持有鸣谢分类、静态名单、头像及用户提供的平台链接；底部入口复用分类导航，首次选择时创建两位贡献者的控件。平台按钮复用 `C.IconButton` 与 `Tooltip:BindText`。Settings 为关于与鸣谢的每个条目按需创建一组行内复制控件，最多四组；当前链接、输入焦点与有限展开任务归页面持有，同条目的平台按钮共用一组。复制不请求网络，离页或隐藏时清空链接、焦点和任务。头像来自用户于 2026-10-24 提供的附件，平台图标逐字节沿用 Lychee 的 `Media/About/bilibili.tga` 与 `douyin.tga`；其 [素材说明](../Lychee/assets/about/README.md)记录了 Simple Icons 的 CC0 来源。头像与平台图标随 UI 子包发布，保留比例及透明度。该分类不加载 Group 或 Notes，也不创建设置项；控件生命周期见 [perfermance.md](perfermance.md#3-先明确工作何时存在)。
+Settings 持有鸣谢分类、静态名单、头像及用户提供的平台链接；底部入口复用分类导航，首次选择时创建两位贡献者的控件。平台按钮复用 `C.IconButton` 与 `Tooltip:BindText`。Settings 为关于与鸣谢的每个条目按需创建一组行内复制控件，最多四组；当前链接、输入焦点与有限展开任务归页面持有，同条目的平台按钮共用一组。复制不请求网络，离页或隐藏时清空链接、焦点和任务。头像来自用户于 2026-10-24 提供的附件，平台图标逐字节沿用 Lychee 的 `Media/About/bilibili.tga` 与 `douyin.tga`；其 素材说明（本地参考：`../Lychee/assets/about/README.md`）记录了 Simple Icons 的 CC0 来源。头像与平台图标随 UI 子包发布，保留比例及透明度。该分类不加载 Group 或 Notes，也不创建设置项；控件生命周期见 [perfermance.md](perfermance.md#3-先明确工作何时存在)。
 
 主配置 `uiScale` 保存主窗百分比。Settings 使用共享 `C.Slider(...,{commitOnRelease=true,onPreview=...})`，库负责手动轨道、固定拖动尺度、步长及采样生命周期；页面按当前字体测量百分比标签宽度并缩短滑轨，保持操作区右对齐，在提交回调中保存设置。松手先停止采样再提交，隐藏或离页调用 `FinishDrag(false)` 取消预览并恢复拖动前值。Host.FitToScreen 将其乘到既有屏幕适配比例，设置变更、重开、筛选面板开合或屏幕变化时应用；筛选面板位于主窗内部，不增加屏幕适配宽度；主窗关闭屏幕边缘钳制，允许移出屏幕；模态窗口继承父窗尺度，Tooltip 按既有相对比例重新定位。浮窗仍由 Floating 的独立比例控制，主窗缩放不重写 `floatingScale`。
 
@@ -247,11 +251,11 @@ Catalog 按分类保存活动 ID 成员集合，与该分类目录共同失效�
 
 源码依据：`wow-ui-source` retail 固定提交 `18c6d677b605b312f3d813d498404631fb941977`，`LFGList.lua` 的 `LFGListEntryCreation_SetupGroupDropdown`、`LFGListEntryCreation_SetupActivityDropdown` 和 `LFGListEntryCreation_Select`，以及 `Blizzard_APIDocumentationGenerated/LFGListInfoDocumentation.lua` 的活动记录定义。
 
-2026-10-16 在 build 12.1.5.70391 上只读核对了原生目录，结果见 [目录观察](.lycheedev/premade-catalog-result.json) 与 [指定副本补充观察](.lycheedev/premade-followup-result.json)。千丝之城返回普通／英雄／史诗三个活动；赛季诸王之眠只有英雄／史诗／史诗钥石。团本不能直接沿用地下城的 `CurrentSeason` 过滤：该组合返回零组，而 `Recommended | PvE` 返回七组；`isCurrentRaidActivity` 在部分旧团本也为真，不能单独作为赛季归属。观察范围仅为当前角色和客户端可用目录，不代表所有角色或后续版本。
+2026-10-16 在 build 12.1.5.70391 上只读核对了原生目录，结果见 目录观察（本地参考：`.lycheedev/premade-catalog-result.json`） 与 指定副本补充观察（本地参考：`.lycheedev/premade-followup-result.json`）。千丝之城返回普通／英雄／史诗三个活动；赛季诸王之眠只有英雄／史诗／史诗钥石。团本不能直接沿用地下城的 `CurrentSeason` 过滤：该组合返回零组，而 `Recommended | PvE` 返回七组；`isCurrentRaidActivity` 在部分旧团本也为真，不能单独作为赛季归属。观察范围仅为当前角色和客户端可用目录，不代表所有角色或后续版本。
 
 当前目录进一步只读验证：`GetAvailableActivities(2,nil,68)` 返回当季地图真实支持的普通、英雄、史诗与钥石变体；保留完整返回集，不在内部再筛成仅钥石。季赛地下城搜索使用 PvE 条件及明确原生活动 ID，唯一难度匹配才传单一 ID，不能展示普通却仍以仅钥石条件搜索；赛季团本使用 PvE 全量活动与冒险指南当前赛季团本集合的交集，不能照搬地下城 CurrentSeason 条件，也不能用 Recommended 推荐池代替赛季。目录数据观察不等于真实搜索流程验收。
 
-2026-10-17 在同一 build 的[当前目录观察](.lycheedev/raid-native-season-state-01.json)中，冒险指南动态末项为“本赛季”，团本列表包含三座赛季副本与世界首领集合；LFG 推荐池还包含四座其他赛季团本。Catalog 单独保存末项的团本 journal ID 集合，与 `mapID > 0` 的原生活动交叉匹配，排除世界首领并保留每座副本的各难度。普通资料片映射不被末项重复条目覆盖；普通团本读取 PvE 全量目录，当前资料片同样可浏览。末项识别已在该 build 实测，并非已查到公开的专用赛季 API。目录失效时一并清理资料片与赛季缓存。
+2026-10-17 在同一 build 的当前目录观察（本地参考：`.lycheedev/raid-native-season-state-01.json`）中，冒险指南动态末项为“本赛季”，团本列表包含三座赛季副本与世界首领集合；LFG 推荐池还包含四座其他赛季团本。Catalog 单独保存末项的团本 journal ID 集合，与 `mapID > 0` 的原生活动交叉匹配，排除世界首领并保留每座副本的各难度。普通资料片映射不被末项重复条目覆盖；普通团本读取 PvE 全量目录，当前资料片同样可浏览。末项识别已在该 build 实测，并非已查到公开的专用赛季 API。目录失效时一并清理资料片与赛季缓存。
 
 申请倒计时已接入：原生 `LFGListSearchEntry_Update`（同文件 3271、3361 附近）读取 `GetApplicationInfo` 第四返回值 `appDuration`，`Applications` 以 `GetTime() + appDuration` 持有到期时刻，UI 只在可见等待申请期间更新显示。UI 不固定五分钟，也不将缺少期限解释为过期。Apply 只采纳原生列表和事件，不人为补出 pending 申请；Cancel 读回原生状态并通知界面，原生缺席或已结束条目不再占名额。Applications 在首次确认 cancelled 时发送 applicationCancelled 通知，Find 对当前结果调用已有搜索入口，满额提示显示期间也遵循同一刷新路径。提交入口读取原生取消状态，避免本地结束记录退场后把旧结果重新当成可申请项。UI 与浮窗复用 Applications 的有效性判断，取消按钮复用 CanCancel。2026-10-18 实测取消后的旧结果不接受再次提交，刷新取得新结果后申请成功；安装后用户确认取消会自动刷新，随后重新申请成功。
 
@@ -381,7 +385,7 @@ LycheeUI 提供通用主题、控件、动效、菜单、阴影和弹窗；产�
 
 2026-10-17 核实登记机制后，已确认采用借用引擎已登记输入框的方案。LycheeUI 负责统一外观和借用周期；结束时归还父级、锚点、尺寸、层级、样式与回调。集合石等界面提前接管对象时，布局／显示事件立即撤销仍属于本库的样式和回调，不覆盖对方刚设置的父级、布局或处理器。普通文本输入仍由 LycheeUI 自建。
 
-当时客户端 `12.1.5.70391` 的运行时代码确认：`StoreSecureReference` 在写入引用前检查与 `issecure()` 相同的 Lua 执行状态，非安全调用跳过写入并正常返回；`pcall` 成功不能证明登记成功。XML 加载器保存同一执行状态，处理 `secureReferenceKey` 的登记时也要求该状态为空。暴雪搜索框／标题通过自己的 XML 登记，说明／申请备注通过自己的 `OnLoad` 调用登记；复制属性或从普通插件调用同名函数不会获得安全执行环境。实机中，Lua 登记和插件 XML 登记两次实验均由原生框收到活动文本，自建框未收到。证据见[执行状态实测](.lycheedev/input-registration-security-state-01.json)、[Lua 登记检查](.lycheedev/store-secure-reference-valid-path.json)、[XML 状态传递](.lycheedev/xml-security-context-disasm.json)与[XML 登记检查](.lycheedev/secure-reference-xml-registration-gate.json)。这些证据确认两条尝试的失败原因，不证明所有可能的公开接入方式均已排除。
+当时客户端 `12.1.5.70391` 的运行时代码确认：`StoreSecureReference` 在写入引用前检查与 `issecure()` 相同的 Lua 执行状态，非安全调用跳过写入并正常返回；`pcall` 成功不能证明登记成功。XML 加载器保存同一执行状态，处理 `secureReferenceKey` 的登记时也要求该状态为空。暴雪搜索框／标题通过自己的 XML 登记，说明／申请备注通过自己的 `OnLoad` 调用登记；复制属性或从普通插件调用同名函数不会获得安全执行环境。实机中，Lua 登记和插件 XML 登记两次实验均由原生框收到活动文本，自建框未收到。证据见执行状态实测（本地参考：`.lycheedev/input-registration-security-state-01.json`）、Lua 登记检查（本地参考：`.lycheedev/store-secure-reference-valid-path.json`）、XML 状态传递（本地参考：`.lycheedev/xml-security-context-disasm.json`）与XML 登记检查（本地参考：`.lycheedev/secure-reference-xml-registration-gate.json`）。这些证据确认两条尝试的失败原因，不证明所有可能的公开接入方式均已排除。
 
 创建收藏区由 Create 首次展开时创建控件，折叠清空行绑定。活动行星标以当前 `FormData` 调用 Find／ToggleFavorite；招募摘要的独立星标使用 `GetListing()` 返回的已确认条件，二者随各自来源刷新。条目活动名按 Catalog 的实际上下文解析，条目只负责应用和移除。“应用”恢复活动及创建条件，保持当前原生标题和描述不变，完成后停留表单；不回填文本或自动发布。标题和描述继续归原生输入对象持有，普通新草稿仍为空。
 
@@ -453,7 +457,7 @@ Rurutia 适配在悬停和入口刷新时，从自身 TopBar records、microMenu
 
 ## 10. 开发与验证入口
 
-开发边界见 [Development.md](Development.md)，公开合同见 [API.md](API.md)。主题固定、实时偏好、默认界面与生命周期的验证方法集中在 [tests/theme_reload.md](tests/theme_reload.md) 和 [tests/live_memory.md](tests/live_memory.md)；当前实测结果与历史记录集中在 [perfermance.md 第 12 节](perfermance.md#12-当前内存测试与验证状态)。
+开发边界见 [Development.md](Development.md)，公开合同见 [API.md](API.md)。主题固定、实时偏好、默认界面与生命周期的验证方法集中在 [tests/theme_reload.md](tests/theme_reload.md) 和 [tests/live_memory.md](tests/live_memory.md)；当前实测结果与历史记录集中在 [perfermance.md 第 12 节](perfermance.md#12-当前性能验证与历史结果)。
 
 架构验收关注按合同加载、单一数据所有者、事件只做相关工作、退出无无用任务，以及用户流程完整。与其他实现比较时保持相同客户端、数据量和操作场景；静态结构不代替功能与性能实测。
 
@@ -469,5 +473,5 @@ Rurutia 适配在悬停和入口刷新时，从自身 TopBar records、microMenu
 | 4 | 最小实施方案：确定 Group 基础接口、Search token 绑定、申请变更出口、Application、Tooltip 和共用悬停区域的范围；不引入设置总线或全能 facade。 |
 | 5 | 跨模块反向核对：确认 EndBrowse 必须保留有效输入；成员表可能按槽位复用，需在选中时保存稳定身份；核对加载顺序、原回调次序和必要回归。 |
 
-上述重构已完成。该阶段九个离线模块通过，共 4,362 条断言；重新生成的 36 个真实 Lua 控件树样本与基线文件完全一致，覆盖布局、文字、颜色与控件状态。该结果证明离线样本等价，不代替游戏内字体、事件和受保护操作验证；后续性能与卫生修复后的最终离线结果及 live 结果集中记录于 [perfermance.md 第 12 节](perfermance.md#12-当前内存测试与验证状态)。
+上述重构已完成。该阶段九个离线模块通过，共 4,362 条断言；重新生成的 36 个真实 Lua 控件树样本与基线文件完全一致，覆盖布局、文字、颜色与控件状态。该结果证明离线样本等价，不代替游戏内字体、事件和受保护操作验证；后续性能与卫生修复后的最终离线结果及 live 结果集中记录于 [perfermance.md 第 12 节](perfermance.md#12-当前性能验证与历史结果)。
 

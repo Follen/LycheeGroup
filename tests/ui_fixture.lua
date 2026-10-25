@@ -10,7 +10,7 @@ end
 _G.LycheeGroup=nil;_G.LycheeGroupDB=nil;_G.LycheeGroupPrefsDB=nil;_G.LycheeGroupNotesDB=nil;_G.LibStub=nil
 _G.LycheeUI=nil
 local libraryPrivate={}
-for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Styles.lua","Components.lua","Layouts.lua","Elements.lua","Native.lua","Menu.lua"}) do assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/"..file))("LycheeGroup",libraryPrivate) end
+for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Styles.lua","Components.lua","Layouts.lua","Responsive.lua","Elements.lua","Native.lua","Menu.lua"}) do assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/"..file))("LycheeGroup",libraryPrivate) end
 for _,file in ipairs({"Locale.lua","Theme/Defaults.lua","Theme/Elements.lua","Theme/FindElements.lua","Core.lua","Configuration.lua","Appearance.lua","Theme/Import.lua","Specializations.lua","Fonts.lua","BrandMotion.lua"}) do dofile("addon/LycheeGroup/"..file) end
 -- WoW restores SavedVariables after executing the addon's files. A fixture
 -- theme is prepared in persistent storage before the real startup boundary.

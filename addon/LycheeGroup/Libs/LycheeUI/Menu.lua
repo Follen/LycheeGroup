@@ -191,7 +191,7 @@ function Library.AttachMenus(UI)
  function UI:IsMenuOpen(anchor) return menu~=nil and menu:IsShown() and (anchor==nil or menu.anchor==anchor) end
  function UI:IsMenuHovered(anchor) return self:IsMenuOpen(anchor) and menu:IsMouseOver() end
 end
--- Commit only after all nine definition files completed in manifest order.
+-- Commit only after all ten definition files completed in manifest order.
 Library.version=private.LycheeUILoadVersion
-Library.versionString="1.3.0"
+Library.versionString="1.0.0"
 private.LycheeUILoad,private.LycheeUILoadVersion=nil,nil

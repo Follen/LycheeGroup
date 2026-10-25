@@ -641,9 +641,175 @@ function C.Selection(parent,options)
  Hook(parent,"OnHide",function() frame:Clear() end)
  return frame
 end
+-- One opt-in work record per text-flow list; text indices contain numbers,
+-- while native rows remain a viewport-sized physical pool.
+local FlowWork={}
+local flowMeta={__index=FlowWork}
+local function FlowNumber(value,fallback,name)
+ if value==nil then value=fallback else value=Value(value) end
+ if type(value)~="number" or value<0 or value~=value or value==math.huge then error("list flow "..name.." must be finite and nonnegative",3) end
+ return value
+end
+local function FlowRowAt(list,pixel)
+ local offsets,indices=list.geometryOffsets,list.geometryIndices
+ if not offsets or not indices or #indices==0 then return math.floor(pixel/list.rowHeight)+1 end
+ local low,high=1,#indices
+ while low<high do local middle=math.floor((low+high+1)/2);if offsets[indices[middle]]<=pixel then low=middle else high=middle-1 end end
+ return indices[low]
+end
+function FlowWork:CaptureAnchor()
+ local list=self.host;local index=FlowRowAt(list,list.pixelOffset or 0)
+ self.anchorKey=list.ids and list.ids[index];self.anchorFallback=index
+ self.anchorOffset=(list.pixelOffset or 0)-(list.geometryOffsets and list.geometryOffsets[index] or (index-1)*list.rowHeight)
+ self.anchorItemsVersion=list._flowItemsVersion or 0
+ if self.sourceItemsVersion==self.anchorItemsVersion then self.anchorIndex=index else self.anchorIndex=nil end
+end
+function FlowWork:Signature(save)
+ local list=self.host;local label=list.rows[1].title;local opts=self.options
+ local left=FlowNumber(opts.insetLeft,T.listTextInset,"insetLeft")
+ local right=FlowNumber(opts.insetRight,math.max(0,T.listTextReserve-T.listTextInset-list.gutter),"insetRight")
+ local width=math.max(1,list:GetWidth()-list.gutter-left-right)
+ local path,size,flags=label:GetFont();local spacing=label:GetSpacing() or 0
+ local top=FlowNumber(opts.paddingTop,T.listTextTop,"paddingTop");local bottom=FlowNumber(opts.paddingBottom,T.listTextTop,"paddingBottom")
+ local minimum=FlowNumber(opts.minHeight,list.bodyHeight,"minHeight")
+ if not save then return self.width==width and self.path==path and self.size==size and self.flags==flags and self.spacing==spacing and self.top==top and self.bottom==bottom and self.minimum==minimum end
+ self.width,self.path,self.size,self.flags,self.spacing,self.top,self.bottom,self.minimum,self.left=width,path,size,flags,spacing,top,bottom,minimum,left
+end
+function FlowWork:Invalidate(reason,preserveAnchor)
+ if self.released then return self end
+ reason=reason or "content"
+ if reason=="hide" or reason=="show" or reason=="size" then
+  if self:Signature(false) then
+   if self.dirty and UI._QueueLayout then UI:_QueueLayout(self,reason) end
+   return self
+  end
+ end
+ if not self.dirty and not preserveAnchor then self:CaptureAnchor() end
+ self.dirty=true;self.generation=self.generation+1;self.cursor,self.clearOffset,self.clearIndex=nil,nil,nil;self.sourceIds=nil;self._notifyPending=false
+ self.lastInvalidation=reason;self.host.geometryDirty=true
+ if UI._QueueLayout then UI:_QueueLayout(self,reason) end
+ return self
+end
+function FlowWork:CheckSignature()
+ if not self:Signature(false) then self:Invalidate("metrics") end
+end
+function FlowWork:ConfigureRow(row)
+ local label=row.title;local record=row._flowText
+ if not record then
+  local font=UI.fontStyles[label]
+  record={singleLine=font and font.singleLine,wrap=label:CanWordWrap()};row._flowText=record
+  C.DefaultLineHeight(label,font and font.lineHeight or "listTitleLineHeight",false)
+  label:SetHeight(0);label:SetWordWrap(true);label:SetJustifyV("TOP")
+ end
+ local left=self.left or FlowNumber(self.options.insetLeft,T.listTextInset,"insetLeft");local top=self.top or FlowNumber(self.options.paddingTop,T.listTextTop,"paddingTop")
+ if record.left~=left or record.top~=top then label:ClearAllPoints();label:SetPoint("TOPLEFT",left,-top);record.left,record.top=left,top end
+ local width=self.width or math.max(1,self.host:GetWidth()-T.listTextReserve)
+ if label:GetWidth()~=width then label:SetWidth(width) end
+ if row.meta:IsShown() then row.meta:Hide() end
+end
+function FlowWork:RenderRow(row,key,index)
+ local list=self.host;local generation=self.generation
+ if list.render then list.render(row,key) end
+ if self.released or list.flowText~=self or self.generation~=generation then return false end
+ if C.ApplyElement then C.ApplyElement(row) end
+ self:ConfigureRow(row)
+ local text=self.resolve(key,index)
+ if self.released or list.flowText~=self or self.generation~=generation then return false end
+ UI:SetText(row.title,text==nil and "" or tostring(text));return true
+end
+function FlowWork:StepLayout()
+ if self.host and UI._PrepareListHeightConditions then UI:_PrepareListHeightConditions(self.host) end
+ if self.released or not self.dirty then return true end
+ local started=debugprofilestop and debugprofilestop()
+ local list=self.host
+ if not list:IsVisible() or UI:IsHiding() then return false end
+ if not self:Signature(false) and self.cursor then self:Invalidate("metrics") end
+ if not self.cursor then
+  self:Signature(true)
+  for _,row in ipairs(list.rows) do self:ConfigureRow(row) end
+  self.sourceIds=list.ids;self.sourceItemsVersion=list._flowItemsVersion or 0;self.sourceGeneration=self.generation
+  self.cursor,self.total,self.visible=1,0,0
+  self.gap=math.max(0,list.rowHeight-list.bodyHeight)
+  self.offsets=self.offsets or {};self.indices=self.indices or {}
+  self.oldOffsetsCount,self.oldIndicesCount=self.offsets._flowLength or #self.offsets,self.indices._flowLength or #self.indices
+  self.offsets._flowLength,self.indices._flowLength=self.oldOffsetsCount,self.oldIndicesCount
+  if self.anchorItemsVersion==self.sourceItemsVersion then self.anchorIndex=self.anchorFallback else self.anchorIndex=nil end
+  if self.sourceIds and #self.sourceIds>0 then
+   if not self.probe then
+    self.probe=list._flowProbe or list:CreateFontString(nil,"OVERLAY");list._flowProbe=self.probe
+    self.probe:Hide();self.probe:SetWordWrap(true)
+   end
+   self.probe:SetFont(self.path,self.size,self.flags);self.probe:SetSpacing(self.spacing);self.probe:SetWidth(self.width)
+  end
+ end
+ local ids=self.sourceIds;local count=ids and #ids or 0;local generation=self.sourceGeneration
+ local batch=FlowNumber(self.options.batchSize,128,"batchSize")
+ if batch<1 or batch>512 or batch~=math.floor(batch) then error("list flow batchSize must be an integer from 1 to 512",2) end
+ local timeBudget=FlowNumber(self.options.timeBudgetMs,2,"timeBudgetMs")
+ if timeBudget<=0 or timeBudget>8 then error("list flow timeBudgetMs must be greater than 0 and at most 8",2) end
+ local work=0;self.steps=self.steps+1
+ while self.cursor<=count and work<batch and (work==0 or not started or debugprofilestop()-started<timeBudget) do
+  local index=self.cursor;local key=ids[index];local text=self.resolve(key,index)
+  if self.released or self.generation~=generation or list.flowText~=self then return false end
+  self.probe:SetText(text==nil and "" or tostring(text));local height=math.max(self.minimum,self.probe:GetStringHeight()+self.top+self.bottom)
+  self.measurements=self.measurements+1
+  if list.rowHeightResolver then height=list.rowHeightResolver(key,index,height) or height end
+  if list.elementHeights then height=UI:ResolveListElementHeight(list,key,height,nil,index) end
+  height=FlowNumber(height,nil,"row height")
+  if self.released or self.generation~=generation or list.flowText~=self then return false end
+  self.offsets[index]=self.total
+  self.offsets._flowLength=math.max(self.offsets._flowLength,index)
+  if height>0 then self.visible=self.visible+1;self.indices[self.visible]=index;self.indices._flowLength=math.max(self.indices._flowLength,self.visible);self.total=self.total+height+self.gap end
+  if self.anchorKey~=nil and key==self.anchorKey and not self.anchorIndex then self.anchorIndex=index end
+  self.cursor=index+1;work=work+1;self.indexWork=self.indexWork+1
+  if not list:IsVisible() or UI:IsHiding() then self.lastBatch=work;self.maxBatch=math.max(self.maxBatch,work);return false end
+ end
+ if self.cursor>count then
+  self.offsets[count+1]=self.total
+  self.offsets._flowLength=math.max(self.offsets._flowLength,count+1)
+  self.clearOffset=self.clearOffset or count+2;self.clearIndex=self.clearIndex or self.visible+1
+  while self.clearOffset<=self.oldOffsetsCount and work<batch and (work==0 or not started or debugprofilestop()-started<timeBudget) do self.offsets[self.clearOffset]=nil;self.clearOffset=self.clearOffset+1;work=work+1;self.indexWork=self.indexWork+1 end
+  while self.clearIndex<=self.oldIndicesCount and work<batch and (work==0 or not started or debugprofilestop()-started<timeBudget) do self.indices[self.clearIndex]=nil;self.clearIndex=self.clearIndex+1;work=work+1;self.indexWork=self.indexWork+1 end
+ end
+ self.lastBatch=work;self.maxBatch=math.max(self.maxBatch,work)
+ if self.cursor<=count or self.clearOffset<=self.oldOffsetsCount or self.clearIndex<=self.oldIndicesCount then return false end
+ if self.released or self.generation~=generation or list.flowText~=self then return false end
+ self.offsets._flowLength,self.indices._flowLength=count+1,self.visible
+ local oldOffsets,oldIndices=list.geometryOffsets,list.geometryIndices
+ list.geometryOffsets,list.geometryIndices=self.offsets,self.indices
+ self.offsets,self.indices=oldOffsets,oldIndices
+ list.contentHeight=self.visible>0 and self.total-self.gap or 0;list.geometryGap=self.gap
+ list.geometryStride,list.geometryBody=list.rowHeight,list.bodyHeight;list.geometryDirty=false
+ self.cursor,self.clearOffset,self.clearIndex,self.sourceIds=nil,nil,nil,nil
+ self.dirty=false;self.lastError=nil;self.commits=self.commits+1
+ local anchor=math.min(count,math.max(1,self.anchorIndex or self.anchorFallback or 1))
+ local body=math.max(0,(list.geometryOffsets[anchor+1] or 0)-(list.geometryOffsets[anchor] or 0)-self.gap)
+ local within=math.min(self.anchorOffset or 0,math.max(0,body-.000001))
+ M:Stop(list);list.scrollTarget=nil
+ list.pixelOffset=math.max(0,math.min((list.geometryOffsets[anchor] or 0)+within,math.max(0,list.contentHeight-list:GetHeight())))
+ list.offset=FlowRowAt(list,list.pixelOffset)-1
+ list:Refresh(true)
+ if self.released or list.flowText~=self or self.generation~=generation then return false end
+ if UI._CompleteListHeightGeometry then UI:_CompleteListHeightGeometry(list) end
+ self._notifyPending=true;return true
+end
+function FlowWork:NotifyLayout()
+ if not self._notifyPending or self.released then return end
+ self._notifyPending=false
+ local list=self.host;local callback=self.onGeometryChanged
+ if callback and list.notifiedContentHeight~=list.contentHeight then list.notifiedContentHeight=list.contentHeight;callback(list,list.contentHeight) end
+end
+function FlowWork:Release()
+ if self.released then return end
+ self.released=true;self.dirty=false;self._notifyPending=false
+ if UI._ForgetWork then UI:_ForgetWork(self) end
+ if self.probe then self.probe:SetText("");self.probe:Hide() end
+ self.resolve,self.options,self.offsets,self.indices,self.sourceIds,self.anchorKey,self.onGeometryChanged=nil,nil,nil,nil,nil,nil,nil
+ self.host,self.probe=nil,nil
+end
 function C.List(parent,width,height,rowHeight,onSelect,onHover,options)
  local list=CreateFrame("Frame",nil,parent);list:SetSize(width,height)
- local CreateRow
+ local CreateRow,ApplyRowStyle
  local gutterExplicit=false
  list.bodyHeight=rowHeight or T.listRowHeight
  list.rows={};list.offset=0;list.pixelOffset=0;list.rowHeight=rowHeight or T.listRowHeight;list.viewportHeight=height;list.gutter=C.listRightInset
@@ -661,7 +827,7 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover,options)
   end
   return key
  end
- local function Variable() return list.rowHeightResolver~=nil or list.elementHeights==true end
+ local function Variable() return list.flowText~=nil or list.rowHeightResolver~=nil or list.elementHeights==true end
  local function RowTop(index) return list.geometryOffsets and list.geometryOffsets[index] or (index-1)*list.rowHeight end
  local function FindRow(pixel)
   local offsets=list.geometryOffsets;if not offsets then return math.floor(pixel/list.rowHeight)+1 end
@@ -675,6 +841,8 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover,options)
   if list._elementHeightRecord then list._elementHeightRecord.key=nil end
  end
  local function BuildGeometry()
+  if UI._PrepareListHeightConditions then UI:_PrepareListHeightConditions(list) end
+  if list.flowText then list.flowText:CheckSignature();return end
   local variable=Variable()
   if not variable then
    if list.geometryOffsets then
@@ -701,11 +869,12 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover,options)
   for index=#indices,visible+1,-1 do indices[index]=nil end
   ClearGeometryRows()
   list.contentHeight=visible>0 and top-gap or 0;list.geometryGap=gap;list.geometryStride,list.geometryBody=list.rowHeight,list.bodyHeight;list.geometryDirty=false
+  if UI._CompleteListHeightGeometry then UI:_CompleteListHeightGeometry(list) end
  end
  local function ContentHeight()
   BuildGeometry()
   local count=list.ids and #list.ids or 0
-  return list.geometryOffsets and list.contentHeight or (count>0 and (count-1)*list.rowHeight+list.rows[1]:GetHeight() or 0)
+  return list.geometryOffsets and list.contentHeight or (count>0 and (count-1)*list.rowHeight+(list.flowText and list.bodyHeight or list.rows[1]:GetHeight()) or 0)
  end
  function list:GetContentHeight() return ContentHeight() end
  local function MaxOffset()
@@ -713,6 +882,7 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover,options)
   return overflow>.01 and overflow or 0
  end
  function list:RefreshGeometry()
+  if self.flowText then self.flowText:Invalidate("geometry") end
   self.geometryDirty=true
   if not self.refreshing then self:Refresh(true) end
  end
@@ -724,8 +894,17 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover,options)
   self.rowHeightResolver=resolve;self:RefreshGeometry()
  end
  local function Release(row)
-  if C.RekeyElement then C.RekeyElement(row,nil) end
   if row.pressedKey then row.pressCancelled=true end
+  row.pressedKey=nil
+  row._inside,row._pressed,row._selected=nil,nil,nil
+  if row._elementCheckedOwned then row._checked=row._elementCheckedBaseline else row._checked=nil end
+  row._elementCheckedOwned,row._elementCheckedBaseline=nil,nil
+  if row._elementDisabledOwned then
+   local enabled=row._elementEnabledBaseline
+   row._elementDisabledOwned,row._elementEnabledBaseline=nil,nil
+   if row:IsEnabled()~=enabled then row:SetEnabled(enabled) end
+  end
+  if C.RekeyElement then C.RekeyElement(row,nil) end
   row._lycheeListIndex=nil
   row.key=nil;row.noteDot:Hide();row.alternate:Hide();row.hover:Hide();row.hover:SetAlpha(0)
   row._inside=nil;row._pressed=nil
@@ -800,9 +979,15 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover,options)
    if self.rowElementKey then row._lycheeListIndex=key~=nil and absolute or nil end
    if key and self.elementHeights and self.rowElementState then
     local checked=self.rowElementState(key,absolute,"checked")
-    if checked~=nil then row._checked=checked==true end
+    if checked~=nil then
+     if not row._elementCheckedOwned then row._elementCheckedOwned=true;row._elementCheckedBaseline=row._checked end
+     row._checked=checked==true
+    end
     local disabled=self.rowElementState(key,absolute,"disabled")
-    if disabled~=nil then local enabled=disabled~=true;if row:IsEnabled()~=enabled then row:SetEnabled(enabled) end end
+    if disabled~=nil then
+     if not row._elementDisabledOwned then row._elementDisabledOwned=true;row._elementEnabledBaseline=row:IsEnabled() end
+     local enabled=disabled~=true;if row:IsEnabled()~=enabled then row:SetEnabled(enabled) end
+    end
    end
    row.alternate:SetShown(key~=nil and self.alternateRows~=false and absolute%2==0)
    if row:IsShown()~=(key~=nil) then row:SetShown(key~=nil) end
@@ -814,10 +999,17 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover,options)
     local body=self.geometryOffsets[absolute+1]-self.geometryOffsets[absolute]-self.geometryGap
     if row:GetHeight()~=body then row:SetHeight(body) end
    end
-   if key and self.render then
+   if key and (self.render or self.flowText) then
     if rebound or not positionOnly then
      if list.elementTemplate then local elementKey=list:GetElementKey(key,absolute);if not row._lycheeElementRegistered then C.Element(row,list.elementTemplate,{template=list.elementTemplate,key=elementKey,scope=list.elementScope,slots=list.elementRowSlots or row});row._lycheeElementRegistered=true else C.RekeyElement(row,elementKey,list.elementTemplate) end end
-     self.render(row,key);if C.ApplyElement then C.ApplyElement(row) end
+     if self.flowText then
+      local flow=self.flowText;local ok,result=pcall(flow.RenderRow,flow,row,key,absolute)
+      if not ok or not result then
+       Release(row);row:Hide();self.refreshing=nil
+       if not ok then flow:Invalidate("render error");error(result,0) end
+       return
+      end
+     else if self.render then self.render(row,key) end;if C.ApplyElement then C.ApplyElement(row) end end
     end
     local selected=key==self.selectedKey
     local duration=not self:IsVisible() and 0 or nil
@@ -848,8 +1040,8 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover,options)
    self.indicatorKey,self.indicatorOffset=self.selectedKey,self.offset
   end
   self.refreshing=nil
-  if self.geometryDirty then self:Refresh(true) end
-  if Variable() and options and options.onGeometryChanged then
+  if self.geometryDirty and not self.flowText then self:Refresh(true) end
+  if Variable() and not self.flowText and options and options.onGeometryChanged then
    local height=ContentHeight()
    if self.notifiedContentHeight~=height then self.notifiedContentHeight=height;options.onGeometryChanged(self,height) end
   end
@@ -858,12 +1050,13 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover,options)
  local function ScrollStep(dt)
   scrollElapsed=math.min(T.scrollDuration,scrollElapsed+dt);local p=scrollElapsed/T.scrollDuration;p=1-(1-p)*(1-p)
   list.pixelOffset=scrollFrom+(list.scrollTarget-scrollFrom)*p;list.offset=FindRow(list.pixelOffset)-1;list:Refresh(true)
+  if list.flowText and list.flowText.dirty then list.flowText:CaptureAnchor() end
   return scrollElapsed==T.scrollDuration
  end
  function list:SetPixelOffset(value,animate)
   local target=math.max(0,math.min(value,MaxOffset()))
   M:Stop(self);self.scrollTarget=target
-  if target==self.pixelOffset or not animate or UI:IsReducedMotion() or T.scrollDuration==0 then self.pixelOffset=target;self.offset=FindRow(target)-1;self:Refresh(true);return end
+  if target==self.pixelOffset or not animate or UI:IsReducedMotion() or T.scrollDuration==0 then self.pixelOffset=target;self.offset=FindRow(target)-1;self:Refresh(true);if self.flowText and self.flowText.dirty then self.flowText:CaptureAnchor() end;return end
   scrollFrom,scrollElapsed=self.pixelOffset,0
   M:Start(self,ScrollStep)
  end
@@ -876,7 +1069,68 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover,options)
   end
   list.capacity=math.min(list.poolCapacity-1,visible)
  end
- function list:SetItems(ids,render) self.ids=ids;self.render=render;self.geometryDirty=true;EnsureRows(self:GetHeight());self:Refresh() end
+ function list:SetItems(ids,render)
+  if self.released then return self end
+  local flow=self.flowText;if flow then flow:CaptureAnchor() end
+  self.ids=ids;self.render=render;self.geometryDirty=true
+  if UI._SyncListHeightConditions then UI:_SyncListHeightConditions(self) end
+  if flow then
+   self._flowItemsVersion=(self._flowItemsVersion or 0)+1
+   self.geometryOffsets,self.geometryIndices=nil,nil
+   flow:Invalidate("items",true)
+  end
+  EnsureRows(self:GetHeight());self:Refresh()
+ end
+ function list:InvalidateTextGeometry(reason)
+  if self.flowText then self.flowText:Invalidate(reason or "content") end
+  return self
+ end
+ function list:LayoutFonts() self:InvalidateTextGeometry("font") end
+ function list:SetRowTextResolver(resolve,flowOptions)
+  if self.released then return self end
+  if resolve~=nil and type(resolve)~="function" then error("row text resolver must be a function or nil",2) end
+  if flowOptions~=nil and type(flowOptions)~="table" then error("row text options must be a table",2) end
+  local previous=self.flowText
+  if not resolve then
+   if previous then
+    previous:Release();self.flowText=nil;UI.fontLayouts[self]=nil
+    self.geometryOffsets,self.geometryIndices=nil,nil;self.geometryDirty=true
+    for index,row in ipairs(self.rows) do local record=row._flowText
+     if record then
+      local font=UI.fontStyles[row.title]
+      local single=record.singleLine;if self.rowStyle and self.rowStyle.singleLine~=nil then single=self.rowStyle.singleLine end
+      C.DefaultLineHeight(row.title,font and font.lineHeight or "listTitleLineHeight",single)
+      row.title:SetWordWrap(record.wrap);row.title:SetHeight(single and UI:GetLineHeight(font and font.lineHeight or "listTitleLineHeight") or 0)
+      row.title:ClearAllPoints();row.title:SetPoint("TOPLEFT",T.listTextInset,-T.listTextTop);row.meta:SetShown(true);row._flowText=nil
+     end
+     row:SetHeight(self.bodyHeight);row:SetPoint("TOPLEFT",0,-(index-1)*self.rowHeight)
+     if self.rowStyle then ApplyRowStyle(row,self.rowStyle) end
+    end
+    self:Refresh()
+   end
+   return self
+  end
+  local opts=flowOptions or previous and previous.options or {}
+  local batch=FlowNumber(opts.batchSize,128,"batchSize")
+  if batch<1 or batch>512 or batch~=math.floor(batch) then error("list flow batchSize must be an integer from 1 to 512",2) end
+  local timeBudget=FlowNumber(opts.timeBudgetMs,2,"timeBudgetMs")
+  if timeBudget<=0 or timeBudget>8 then error("list flow timeBudgetMs must be greater than 0 and at most 8",2) end
+  if previous then
+   if previous.resolve==resolve and (flowOptions==nil or previous.options==flowOptions) then return self end
+   local oldOptions=previous.options;previous.options=opts
+   local ok,message=pcall(previous.Signature,previous,false)
+   if not ok then previous.options=oldOptions;error(message,0) end
+   previous:CaptureAnchor();previous.resolve=resolve;previous.options=flowOptions or previous.options
+   previous:Invalidate("resolver",true);return self
+  end
+  local flow=setmetatable({host=self,mode="list-flow",resolve=resolve,options=opts,onGeometryChanged=options and options.onGeometryChanged,dirty=true,generation=1,steps=0,measurements=0,indexWork=0,maxBatch=0,commits=0},flowMeta)
+  flow:Signature(true)
+  self.flowText=flow;flow:CaptureAnchor()
+  for _,row in ipairs(self.rows) do flow:ConfigureRow(row) end
+  flow:Signature(true);self.geometryDirty=true;UI.fontLayouts[self]=true
+  if UI._TrackWork then UI:_TrackWork(flow) end
+  return self
+ end
  function list:SetRowHeight(stride,bodyHeight,viewportHeight)
   if type(stride)~="number" or stride<=0 or stride~=stride or stride==math.huge then error("list row stride must be finite and positive",2) end
   local body=bodyHeight or self.rowStyle and Value(self.rowStyle.rowHeight) or stride
@@ -884,6 +1138,7 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover,options)
   self.rowHeight=stride;self.bodyHeight=body
   if viewportHeight~=nil and self.viewportHeight~=viewportHeight then self.viewportHeight=viewportHeight;self:SetHeight(viewportHeight) end
   self.geometryDirty=true
+  if self.flowText then self.flowText:Invalidate("row height") end
   if not Variable() then for index,row in ipairs(self.rows) do row:SetHeight(self.bodyHeight);row:SetPoint("TOPLEFT",0,-(index-1)*stride) end end
   EnsureRows(self:GetHeight());canvas:SetHeight(self:GetHeight()+stride*2)
   self:Refresh(true)
@@ -901,6 +1156,7 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover,options)
   local width=list:GetWidth()-list.gutter
   canvas:SetWidth(width)
   for _,row in ipairs(list.rows) do row:SetWidth(width) end
+  if list.flowText then list.flowText:CheckSignature() end
  end
  function list:SetGutter(width)
   gutterExplicit=true
@@ -915,21 +1171,52 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover,options)
   self:Refresh(true)
  end
  function list:Clear()
+  if UI._ReleaseListHeightConditions then UI:_ReleaseListHeightConditions(self) end
   local refreshing=self.refreshing;self.refreshing=true
   M:Stop(self);self.scrollTarget=nil;self.ids=nil;self.render=nil;self.selectedKey=nil;self.geometryDirty=true
   if self.indicator then self.indicator:Clear();self.indicatorKey=nil end
   for _,row in ipairs(self.rows) do Release(row);row:Hide();UI:SetText(row.title,"");UI:SetText(row.meta,"") end
   ClearGeometryRows()
   self._elementHeightRecord=nil;self._elementHeightStates=nil
+  if self.flowText then
+   local flow=self.flowText;flow.generation=flow.generation+1;flow.dirty=false;flow.cursor=nil;flow.sourceIds=nil;flow.offsets,flow.indices,flow.anchorKey=nil,nil,nil;flow._notifyPending=false
+   self.geometryOffsets,self.geometryIndices,self.contentHeight=nil,nil,0
+   self._geometryOffsets,self._geometryIndices=nil,nil
+   if flow.probe then flow.probe:SetText("") end
+   if UI._LayoutSettled then UI:_LayoutSettled(flow) end
+  end
   slider:Hide()
   self.refreshing=refreshing
  end
+ function list:Release()
+  if self.released then return end
+  -- Release is terminal; native row scripts survive but must no longer retain
+  -- application callbacks or their captured data. Clear keeps these for reuse.
+  onSelect,onHover,options=nil,nil,nil
+  self.initializeRow=nil
+  self:Clear()
+  if C.ReleaseElement then C.ReleaseElement(self) end
+  for _,row in ipairs(self.rows) do
+   if C.ReleaseElement then C.ReleaseElement(row) end
+   local controller=row._lycheeStyleController
+   if controller and controller.context==UI then controller:Release() end
+   row._lycheeElementRegistered,row.pressedKey=nil,nil
+  end
+  local controller=self._lycheeStyleController
+  if controller and controller.context==UI then controller:Release() end
+  self.released=true
+  if self.flowText then self.flowText:Release();self.flowText=nil;UI.fontLayouts[self]=nil end
+  self.geometryOffsets,self.geometryIndices,self._geometryOffsets,self._geometryIndices,self.geometryRows=nil,nil,nil,nil,nil
+  self.rowHeightResolver,self.rowElementKey,self.rowElementState,self.elementRowSlots=nil,nil,nil,nil
+  self._flowProbe=nil
+ end
  function list:RefreshKeys(keys,resolve)
+  if self.flowText then self.flowText:Invalidate("keys") end
   for _,row in ipairs(self.rows) do if row.key then
    for _,key in ipairs(keys) do if resolve(row.key,key) then self.render(row,row.key);UI:ReleaseRow(row);break end end
   end end
  end
- local function ApplyRowStyle(row,style)
+ ApplyRowStyle=function(row,style)
   if style.rowHeight then row:SetHeight(Value(style.rowHeight)) end
   if style.radius then row.alternate:SetRadius(style.radius);row.selected:SetRadius(style.radius);row.hover:SetRadius(style.radius) end
   if style.titleSize then C.DefaultFont(row.title,style.titleSize) end
@@ -951,6 +1238,10 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover,options)
   for _,key in ipairs({"alternateRows","selectionFill","selectionMark","hoverFill","idleTextColor","hoverColor"}) do if style[key]~=nil then self[key]=style[key] end end
   if style.rowHeight then self.bodyHeight=Value(style.rowHeight);self.geometryDirty=true end
   for _,row in ipairs(self.rows) do ApplyRowStyle(row,self.rowStyle) end
+  if self.flowText then
+   for _,row in ipairs(self.rows) do local font=UI.fontStyles[row.title];C.DefaultLineHeight(row.title,font and font.lineHeight or "listTitleLineHeight",false);row.title:SetHeight(0);row.title:SetWordWrap(true) end
+   self.flowText:Invalidate("style")
+  end
   self:Refresh(true)
  end
 
@@ -991,9 +1282,11 @@ function C.List(parent,width,height,rowHeight,onSelect,onHover,options)
   if list.elementTemplate and C.Element then C.Element(row,list.elementTemplate,{template=list.elementTemplate,key=list:GetElementKey(row.key,row._lycheeListIndex),scope=list.elementScope,slots=list.elementRowSlots or row});row._lycheeElementRegistered=true end
   list.rows[i]=row
   if list.rowStyle then ApplyRowStyle(row,list.rowStyle) end
+  if list.flowText then list.flowText:ConfigureRow(row) end
  end
  for i=1,list.poolCapacity do CreateRow(i) end
  Hook(list,"OnSizeChanged",ResizeContent)
+ if options and options.rowTextResolver then list:SetRowTextResolver(options.rowTextResolver,options.flowText) end
  return list
 end
 
@@ -1208,11 +1501,14 @@ function C.Slider(parent,width,min,max,step,onChange,options)
   local thumb=CreateFrame("Button",nil,input);thumb:SetSize(T.sliderThumbWidth,T.sliderThumbHeight)
   local texture=thumb:CreateTexture(nil,"ARTWORK");texture:SetAllPoints();texture:SetTexture(130871);texture:SetVertexColor(unpack(T.accent))
   local drag
+  local function PaintValue()
+   local x=max>min and input:GetWidth()*(shell.value-min)/(max-min) or 0
+   progress:SetWidth(x);thumb:ClearAllPoints();thumb:SetPoint("CENTER",input,"LEFT",x,0)
+  end
   function shell:SetValue(value)
    value=min+math.floor((value-min)/step+.5)*step
    self.value=math.max(min,math.min(max,value))
-   local x=max>min and input:GetWidth()*(self.value-min)/(max-min) or 0
-   progress:SetWidth(x);thumb:ClearAllPoints();thumb:SetPoint("CENTER",input,"LEFT",x,0)
+   PaintValue()
    if options.onPreview then options.onPreview(self.value) end
   end
   function shell:GetValue() return self.value end
@@ -1249,6 +1545,10 @@ function C.Slider(parent,width,min,max,step,onChange,options)
   thumb:SetScript("OnMouseDown",Begin);thumb:SetScript("OnMouseUp",Release)
   shell:HookScript("OnHide",function() shell:FinishDrag(false) end)
   shell.slider,shell.track,shell.thumb,shell.progress=input,track,thumb,progress;shell:SetValue(min)
+  Hook(shell,"OnSizeChanged",function(self,width)
+   if input:GetWidth()~=width then input:SetWidth(width) end
+   PaintValue()
+  end)
 
   return shell
  end
@@ -1270,6 +1570,7 @@ function C.Slider(parent,width,min,max,step,onChange,options)
   UpdateProgress(value);shell.value=value;if not shell.updating and onChange then onChange(value) end
  end)
  slider:SetScript("OnSizeChanged",function() UpdateProgress(slider:GetValue()) end)
+  Hook(shell,"OnSizeChanged",function() UpdateProgress(slider:GetValue()) end)
  shell.slider,shell.track,shell.thumb,shell.progress=slider,track,thumb,progress;shell:SetValue(min or 0)
  UpdateProgress(slider:GetValue())
 

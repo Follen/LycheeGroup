@@ -2,29 +2,28 @@
   "schema": 1,
   "library": "LycheeUI",
   "status": "frozen",
-  "version": "1.3.0",
-  "revision": 46,
-  "note": "2026-10-25：在 r45 布局释放修复基础上，Row/Column 的 Measure 清除过期且无摆放所有权的记录；仅保留当前条目与仍需归还的旧摆放记录。预建 Frame 池下反复测量保持有界，锚点与后续 Layout/Release 验证通过。兼容修订为 r46，文本使用 LF。",
+  "version": "1.0.0",
+  "note": "V1.0.0：独立公开发布；包含原生控件、主题、样式、显式增强布局、静态容器条件、按需调度和分批文字行高索引。运行文本使用 LF，发布内容由标签和 SHA-256 固定。",
   "runtimeFiles": [
     {
       "path": "Components.lua",
-      "sha256": "0c6bfe33536c57eaf39857fd9d10fcb924760cb6b9f317e20d39f08906c31562"
+      "sha256": "28d6092b20b4d59c8cddf1950e25a29f81e39ceb80b37f4b8bf24a2526aa57f5"
     },
     {
       "path": "Core.lua",
-      "sha256": "c6b4caeb07ee0644d8a1d2b92a5c9c754093846cc683927d9e88393a8b37c50f"
+      "sha256": "145bac840ef2d20e63a71977c55cf27c493ac47736433fe45193659d8bbda0c8"
     },
     {
       "path": "Elements.lua",
-      "sha256": "40576915ce51f9f84556cd57a056b0b7ec50bef1bb8af469a86d6190bc6bfe93"
+      "sha256": "1a2cf204d76e0dc538b0a77e7f33df81dfa291b8a246151aa4c2ab0e62f987e9"
     },
     {
       "path": "embeds.xml",
-      "sha256": "074fd1bf12907f3d4dc64b15216d5ce9caa7171f4ab474223ba8c21e4157c603"
+      "sha256": "1a36c42e52eb13bd4785ba483dcb1f2e519b1276d9a097b33684b73551c5e7c3"
     },
     {
       "path": "Layouts.lua",
-      "sha256": "894b7cdbae78d958864c53620484346ddf33d3c0c99aebba73d23e10b8fa7b28"
+      "sha256": "3f81c614fa264999b49bed2b1e3520486d05fe0921407e361742f3dc0603a1e3"
     },
     {
       "path": "Media/arrow.tga",
@@ -108,7 +107,7 @@
     },
     {
       "path": "Menu.lua",
-      "sha256": "4ec13c762ff8be5183ddbd6d68da572d8d55f1bb63ee2221301ddba2a56857e0"
+      "sha256": "06ebad32c933c7b500967f9fbd8de8ab1888a9102e5fa42ddd499ad00cfd63cd"
     },
     {
       "path": "Motion.lua",
@@ -119,21 +118,28 @@
       "sha256": "1e684f5cb17201ca09ea2a747b61aede450258c0bcebe88ca5dcb97f68d0d417"
     },
     {
+      "path": "Responsive.lua",
+      "sha256": "f711ce79c6568c70f55aa9f3b5dc1bc6a49f5f60a08db7e56f396081af592891"
+    },
+    {
       "path": "Styles.lua",
-      "sha256": "99fdecda1f3ec7f3596c3040b0a84f9deea06577be13128d1f892427fb28d59f"
+      "sha256": "2f3790d737f0a94db8cdae836b457bfa80ef65c254d4c1ab2a07e567ba9ec762"
     },
     {
       "path": "Theme.lua",
       "sha256": "ef3da514cd40133823f37e2d9d9d2fef84603ee7f2e0122bc22c3e0969e9d0ab"
     }
   ],
-  "frozenOn": "2026-10-25",
+  "frozenOn": "2026-10-26",
   "maintenance": {
-    "scope": "冻结 runtimeFiles 列出的运行源码、加载清单与通用素材；公开 API 和组件行为以当前 1.3.0／r46 合同为准。",
+    "scope": "冻结 runtimeFiles 列出的运行源码、加载清单与通用素材；公开 API 和组件行为以 V1.0.0 合同为准。",
     "consumerBoundary": "产品页面、业务数据、品牌图形与轨迹、产品默认样式由消费方维护；消费方开发不得顺带修改或升级共享库。",
     "changeConditions": "用户明确要求修改 LycheeUI，或明确要求解决必须修改该库的问题时，在该授权范围内维护；已有授权无需逐次确认。",
     "sourceOfTruth": "先修改独立源库，再通过消费方同步脚本更新内置副本；不得直接修补内置副本或反向覆盖源库。",
-    "validation": "运行文件变化后执行受影响的通用合同验证，核对消费方接入；验证完成后再更新兼容修订、实际文件清单与 SHA-256，并重新冻结。只修改文档或冻结说明不提升兼容修订。",
+    "validation": "运行文件变化后执行受影响的通用合同验证，核对消费方接入；验证完成后为新版本更新实际文件清单与 SHA-256，并重新冻结。文档修改不改变运行版本；已发布标签和运行内容不原位覆盖。",
     "integrity": "同步前核对冻结清单和哈希；存在差异时定位来源，不通过重写哈希掩盖未经确认的源码变化。运行文本保持 LF。"
-  }
+  },
+  "loadVersion": 10000,
+  "repository": "https://github.com/Follen/LycheeUI",
+  "tag": "v1.0.0"
 }

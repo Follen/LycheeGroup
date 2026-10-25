@@ -19,7 +19,7 @@ The current version is **1.2.5**, targeting retail **12.1.5** (Interface `120105
 - **Mythic+ history:** keep a per-character history of runs, key levels, dates, and teammates, then add notes from past runs.
 - **Interface settings:** change the main-window key binding, overall scale, and font size; the floating window has its own scale setting. Clicking Settings again returns to the page you came from. Automatically integrate with the RurutiaSuite top bar when both the floating window and compatibility settings are enabled. In Ellesmere DataBars, add the `荔枝组队` broker plugin to show the Lychee icon, name, and application status.
 
-The interface uses native Lua with bundled LycheeUI. Feature modules load on demand; no separate UI library installation is needed.
+The interface uses native Lua with bundled [LycheeUI V1.0.0](https://github.com/Follen/LycheeUI/tree/v1.0.0). Feature modules load on demand; no separate UI library installation is needed.
 
 See the [product document](Product.md) for implementation and verification coverage.
 
@@ -71,10 +71,10 @@ Select specific modules by adding their names, for example `lua tests/runner.lua
 
 For the local widget-tree preview, run `lua tests/ui_preview.lua`, then open [`tests/ui-preview.html`](tests/ui-preview.html). The generated `tests/preview-data.js` stays local and is not committed. This preview uses sample data and does not verify in-game behavior.
 
-[`tools/Build-Addon.ps1`](tools/Build-Addon.ps1) builds the addon archive. It syncs the bundled library from a sibling `LycheeUI` source directory by default; use `-LibraryPath` to select another location.
+[`tools/Build-Addon.ps1`](tools/Build-Addon.ps1) builds the addon archive. It syncs the bundled library from a sibling `LycheeUI` source directory by default; use `-LibraryPath` to select another location. Clone `https://github.com/Follen/LycheeUI.git` and check out `v1.0.0`; the sync script verifies the frozen file inventory and hashes.
 
 Project documents (in Chinese): [Product](Product.md) · [Design](Desgin.md) · [Architecture](Architecture.md) · [Performance](perfermance.md) · [Third-party configuration API](API.md) · [Development rules](Development.md) · [Documentation and changelog rules](Agents.md). The product document describes the current implementation and in-game validation coverage.
 
-The current release is 1.2.5; release notes are in the [changelog](CHANGELOG.md). This release uses [Theme API v2](API.md): account or character themes apply at login or reload, while font size, scale, window size, and table preferences remain live. The pinned main commit is the historical equivalence reference for the architecture migration; current behavior and UI follow the documented product and design changes. See [Development.md](Development.md) for development rules and [theme reload validation](tests/theme_reload.md) for verification methods. Edit LycheeUI in its source directory and use the sync tool to update the embedded copy; [.lock](../LycheeUI/.lock) records its freeze status. Shared-library contracts are in its [README](../LycheeUI/README.md), [API](../LycheeUI/API.md), and [design specification](../LycheeUI/DESIGN.md).
+The current release is 1.2.5; release notes are in the [changelog](CHANGELOG.md). This release uses [Theme API v2](API.md): account or character themes apply at login or reload, while font size, scale, window size, and table preferences remain live. The pinned main commit is the historical equivalence reference for the architecture migration; current behavior and UI follow the documented product and design changes. See [Development.md](Development.md) for development rules and [theme reload validation](tests/theme_reload.md) for verification methods. Edit LycheeUI in its source directory and use the sync tool to update the embedded copy; [.lock](https://github.com/Follen/LycheeUI/blob/v1.0.0/.lock) records its freeze status. Shared-library contracts are in its [README](https://github.com/Follen/LycheeUI/blob/v1.0.0/README.md), [API](https://github.com/Follen/LycheeUI/blob/v1.0.0/API.md), and [design specification](https://github.com/Follen/LycheeUI/blob/v1.0.0/DESIGN.md).
 
 See the [library notes](addon/LycheeGroup_Group/Libs/README.md) for bundled third-party sources and licenses.
