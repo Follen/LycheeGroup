@@ -1352,7 +1352,7 @@ function P:BuildPicker()
   row.multiSelect:HookScript("OnLeave",function(button) if button.pressedGroupKey then button.groupPressCancelled=true end end)
   row.multiSelect:HookScript("OnHide",CancelGroupChoicePress)
   row:HookScript("OnHide",function() CancelGroupChoicePress(row.multiSelect) end)
-  row.seasonBadge=CreateFrame("Frame",nil,row);row.seasonBadge:SetSize(72,22);row.seasonBadge:EnableMouse(false)
+  row.seasonBadge=CreateFrame("Frame",nil,row);row.seasonBadge:SetSize(71,22);row.seasonBadge:EnableMouse(false)
   C.Panel(row.seasonBadge,"surfaceLow",4)
   row.seasonLevelSection=CreateFrame("Frame",nil,row.seasonBadge);row.seasonLevelSection:SetSize(30,22);row.seasonLevelSection:SetPoint("LEFT");row.seasonLevelSection:EnableMouse(false)
   C.Panel(row.seasonLevelSection,levelBackground,4)
@@ -1361,10 +1361,8 @@ function P:BuildPicker()
   row.seasonLevel=C.Text(row.seasonLevelSection,"",10,"good");C.SetLineHeight(row.seasonLevel,14,true)
   row.seasonScore=C.Text(row.seasonBadge,"",10,"muted");C.SetLineHeight(row.seasonScore,14,true)
   for _,label in ipairs({row.seasonLevel,row.seasonScore}) do label:SetWordWrap(false);label:SetJustifyH("CENTER");label:Hide() end
-  row.seasonDivider=row.seasonBadge:CreateTexture(nil,"ARTWORK");row.seasonDivider:SetColorTexture(unpack(T.dim));row.seasonDivider:SetAlpha(.18);row.seasonDivider:SetSize(1,12)
   row.seasonLevel:SetPoint("CENTER")
-  row.seasonDivider:SetPoint("LEFT",row.seasonLevelSection,"RIGHT",0,0)
-  row.seasonScore:SetPoint("LEFT",row.seasonDivider,"RIGHT",9,0)
+  row.seasonScore:SetPoint("LEFT",row.seasonLevelSection,"RIGHT",9,0)
   row.seasonBadge:SetPoint("RIGHT",row.multiSelect,"LEFT",-8,0);row.seasonBadge:Hide()
  end)
  self.pickerConfirm=C.Button(f,Say("搜索所选副本","Search selected dungeons"),T.findPickerConfirmWidth,function()
@@ -1483,7 +1481,7 @@ function P:RefreshPicker()
    end
   end
   self.pickerLevelWidth,self.pickerScoreWidth=math.ceil(levelWidth)+2,math.ceil(scoreWidth)+2
-  local badgeWidth=self.pickerLevelWidth+self.pickerScoreWidth+33
+  local badgeWidth=self.pickerLevelWidth+self.pickerScoreWidth+32
   scoreMenuWidth=math.ceil(16+gutter+48+titleWidth+12+badgeWidth+8+measure.multiSelect:GetWidth()+6)
  end
  -- Difficulty names remain complete; the native menu grows to its real content width.
@@ -1522,8 +1520,8 @@ function P:RefreshPicker()
    UI:SetScore(row.seasonScore,record.score,"map")
    row.seasonLevel:SetWidth(self.pickerLevelWidth);row.seasonScore:SetWidth(self.pickerScoreWidth)
    local badgeHeight=math.max(22,math.ceil(math.max(row.seasonLevel:GetHeight(),row.seasonScore:GetHeight())+4))
-   row.seasonBadge:SetSize(self.pickerLevelWidth+self.pickerScoreWidth+33,badgeHeight)
-   row.seasonLevelSection:SetSize(self.pickerLevelWidth+14,badgeHeight);row.seasonDivider:SetHeight(math.max(12,badgeHeight-10))
+   row.seasonBadge:SetSize(self.pickerLevelWidth+self.pickerScoreWidth+32,badgeHeight)
+   row.seasonLevelSection:SetSize(self.pickerLevelWidth+14,badgeHeight)
    row.title:SetWidth(math.max(1,row:GetWidth()-48-12-row.seasonBadge:GetWidth()-8-row.multiSelect:GetWidth()-6))
   else
    UI:SetText(row.seasonLevel,"");UI:SetText(row.seasonScore,"")

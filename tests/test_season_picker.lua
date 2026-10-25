@@ -168,9 +168,8 @@ for _,locale in ipairs({"zhCN","enUS"}) do
      Near(Coordinate(current.seasonLevel,"BOTTOM","y",current),Coordinate(current.seasonScore,"BOTTOM","y",current),"level and score share a baseline")
      Near(Coordinate(current.seasonLevelSection,"LEFT","x",current),Coordinate(current.seasonBadge,"LEFT","x",current),"the tinted section shares the badge's outer edge")
      Near(current.seasonLevelSection:GetHeight(),current.seasonBadge:GetHeight(),"the two sections form one continuous badge")
-     Check(Coordinate(current.seasonDivider,"LEFT","x",current)>=Coordinate(current.seasonLevel,"RIGHT","x",current)+6.99,"the divider has space after the level")
-     Check(Coordinate(current.seasonScore,"LEFT","x",current)>=Coordinate(current.seasonDivider,"RIGHT","x",current)+8.99,"the divider has space before the score")
-     Check(current.seasonDivider:GetHeight()<current.seasonBadge:GetHeight(),"the divider stays inside the shared badge")
+     Check(Coordinate(current.seasonLevelSection,"RIGHT","x",current)>=Coordinate(current.seasonLevel,"RIGHT","x",current)+6.99,"the tinted section has space after the level")
+     Check(Coordinate(current.seasonScore,"LEFT","x",current)>=Coordinate(current.seasonLevelSection,"RIGHT","x",current)+8.99,"the score has space after the shared section boundary")
     else
      Equal(current.seasonLevel:GetText(),"");Equal(current.seasonScore:GetText(),"")
      Check(not current.seasonBadge:IsShown(),"non-score rows have no badge surface")
