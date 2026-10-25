@@ -64,6 +64,72 @@ do
  for _,field in ipairs({"name","realm","nameKey"}) do local member={name="Player",realm="Illidan"};member[field]=secret;Check.eq(links.Identity(member),nil) end
 end
 
+-- Enter through real applicant rows so activity profiles and hover routing are
+-- covered as well as the link builder and roster details.
+for _,locale in ipairs({"zhCN","enUS"}) do
+ local f=dofile("tests/ui_fixture.lua")(locale)
+ local a,u,g=f.A,f.U,f.G
+ a:SetSetting("reduceMotion",true)
+ local activities={
+  [900]={categoryID=4,maxNumPlayers=5,isPvpActivity=true},
+  [901]={categoryID=9,maxNumPlayers=40,isRatedPvpActivity=true},
+  [902]={categoryID=6,maxNumPlayers=5},
+ }
+ local getActivity=g.Catalog.GetActivity
+ g.Catalog.GetActivity=function(self,id) return activities[id] or getActivity(self,id) end
+ local first={name="First-Illidan",nameKey="First-Illidan",class="MAGE",assignedRole="DAMAGER",applicantID=31,itemLevel=320,dungeonScore=2500,
+  dungeonScores={mapScore=320,current={name="Current dungeon",level=12,timed=true},best={name="Best dungeon",level=13,timed=true}}}
+ local second={name="Second-Illidan",nameKey="Second-Illidan",class="PRIEST",assignedRole="HEALER",applicantID=31,itemLevel=321}
+ local app={id=31,status="applied",activityID=2,members={first,second}}
+ g.applicants[31]=app;g.listing={activityID=2,name="Applicant links"}
+ a:Open("create")
+ local page,tip=u.pages.create,u.Tooltip
+ page.batchScroll.mouseOver=true
+ local region=locale=="zhCN" and "cn" or "us"
+ local prefix=locale=="zhCN" and "/cn" or ""
+ local host=locale=="zhCN" and "cn" or "www"
+ for _,activityID in ipairs({2,3,1,902,900,901,2}) do
+  tip:Hide();app.activityID=activityID;g.listing.activityID=activityID;g:Notify("listing");g:Notify("applicants")
+  local links=activityID~=900 and activityID~=901
+  for index,member in ipairs(app.members) do
+   tip:Hide()
+   page.batchPool[1].people[index].tooltipArea:Fire("OnEnter")
+   local view=tip.interactive
+   Check.eq(tip.member,member,"applicant hover selects the actual member")
+   Check.eq(view.wcl:IsShown(),links,"WCL follows the applicant activity")
+   Check.eq(view.io:IsShown(),links,"Raider.IO follows the applicant activity")
+   Check.eq(view.wcl:IsEnabled(),links);Check.eq(view.io:IsEnabled(),links)
+   if links then
+    local name=index==1 and "First" or "Second"
+    view.io:Fire("OnClick")
+    Check.eq(view.copyField.box:GetText(),"https://raider.io"..prefix.."/characters/"..region.."/illidan/"..name)
+    view.wcl:Fire("OnClick")
+    Check.eq(view.copyField.box:GetText(),"https://"..host..".warcraftlogs.com/character/"..region.."/Illidan/"..name)
+    Check.eq(view.copyField.box:HasFocus(),true);Check.eq(tip.pinned,true)
+    Check.ok(view.scroll:GetVerticalScroll()+view.scroll:GetHeight()+.01>=view.canvas:GetHeight(),"copy remains reachable below dungeon records")
+   else
+    tip:CopyPlayerLink("io");tip:CopyPlayerLink("wcl")
+    Check.eq(view.copyField:IsShown(),false,"PvP cannot open a hidden link action")
+    Check.eq(view.copyField.box:HasFocus(),false)
+   end
+  end
+ end
+ -- A source refresh may change the activity while a copy field has focus.
+ app.activityID=900;g.listing.activityID=900;tip:RefreshApplicant()
+ local view=tip.interactive
+ Check.eq(view.io:IsShown(),false);Check.eq(view.wcl:IsShown(),false)
+ Check.eq(view.copyField:IsShown(),false);Check.eq(view.copyField.box:HasFocus(),false)
+ Check.eq(view.copyField.box:GetText(),"")
+ tip:Hide();app.activityID=2;g.listing.activityID=2
+ first.name,first.nameKey="Unknown",nil
+ g:Notify("listing");g:Notify("applicants")
+ page.batchPool[1].people[1].tooltipArea:Fire("OnEnter")
+ Check.eq(view.io:IsShown(),true);Check.eq(view.wcl:IsShown(),true,"non-PvP actions remain discoverable without a complete identity")
+ Check.eq(view.io:IsEnabled(),false);Check.eq(view.wcl:IsEnabled(),false)
+ tip:CopyPlayerLink("wcl");Check.eq(view.copyField:IsShown(),false,"missing realm never creates a link to the local realm")
+ u:Hide(true)
+end
+
 for _,locale in ipairs({"zhCN","enUS"}) do
  local f=dofile("tests/ui_fixture.lua")(locale)
  local a,u,g=f.A,f.U,f.G;a:SetSetting("reduceMotion",true);a:Open("create")
