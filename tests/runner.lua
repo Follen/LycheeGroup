@@ -3,7 +3,7 @@
 --   lua tests/runner.lua core notes (runs selected modules only)
 -- Business logic and UI controllers use offline substitutes; passing these
 -- proves nothing about in-game API permissions, rendering or event ordering.
-local ALL = { "core", "native_queue", "configuration", "appearance", "theme_reload", "theme_menu", "theme_selection", "theme_controls", "notes", "group", "group_storage", "business_performance", "alert_performance", "libspecialization_performance", "raid_groups", "season_scores", "transfer", "ui", "activity_labels", "player_links", "resize", "table_find", "table_create", "table_notes", "notes_history_ui", "transient_notices", "filters", "result_unknown_numbers", "find_enhancements", "find_application_context", "season_picker", "auto_apply", "party_role_check", "preview", "applicant_time", "roster_drag", "floating", "glyph_slots", "data_broker", "brand_motion", "minimap", "fonts" }
+local ALL = { "core", "native_queue", "configuration", "appearance", "theme_reload", "theme_menu", "theme_selection", "theme_controls", "notes", "group", "group_storage", "business_performance", "alert_performance", "sound_menu", "libspecialization_performance", "raid_groups", "season_scores", "transfer", "ui", "activity_labels", "player_links", "resize", "table_find", "table_create", "table_notes", "notes_history_ui", "transient_notices", "filters", "result_unknown_numbers", "find_enhancements", "find_application_context", "season_picker", "auto_apply", "party_role_check", "preview", "applicant_time", "roster_drag", "floating", "glyph_slots", "data_broker", "brand_motion", "minimap", "fonts" }
 
 local requested = {}
 local known = {}

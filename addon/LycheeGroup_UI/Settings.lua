@@ -697,37 +697,52 @@ function P:SyncSoundMenuButtons()
  if not self.soundMenuAnchor or not UI.context:IsMenuOpen(self.soundMenuAnchor) then self:HideSoundMenuButtons();return end
  local menu=UI.context:GetMenu()
  for _,row in ipairs(menu.list.rows) do
-  local entry=row:IsShown() and applicantSounds[row.key]
+  local entry=row:IsShown() and row:IsMouseEnabled() and applicantSounds[row.key]
   local button=row.applicantSoundPreview
   if entry and entry.value~="off" then
    if not button then
-    button=C.IconButton(row,nil,32,function(b) P:PreviewApplicantSound(b.soundChoice) end,{iconSize=12})
+    button=C.IconButton(row,nil,32,function(b)
+     if row:IsMouseEnabled() and menu.list.clip:IsMouseOver() then P:PreviewApplicantSound(b.soundChoice) end
+    end,{iconSize=12})
     button.icon:SetTexture("Interface\\AddOns\\LycheeGroup_UI\\Media\\sound-preview-play.tga")
     button:SetPoint("RIGHT",-4,0);row.applicantSoundPreview=button
     self.soundMenuButtons[#self.soundMenuButtons+1]=button
    end
-   button.soundChoice=entry.value
-   button:Show()
-   row.title:SetWidth(math.max(0,row:GetWidth()-T.menuSelectInset-T.menuTextInset-40))
-  elseif button then button:Hide();button.soundChoice=nil end
+   -- Hiding cancels the component's old press before this pooled row is rebound.
+   if button.soundChoice~=entry.value then button:Hide();button.soundChoice=entry.value end
+   if not button:IsShown() then button:Show() end
+   local width=math.max(0,row:GetWidth()-T.menuSelectInset-T.menuTextInset-40)
+   if math.abs(row.title:GetWidth()-width)>.01 then row.title:SetWidth(width) end
+  elseif button and button.soundChoice then button:Hide();button.soundChoice=nil end
  end
 end
 function P:OpenSoundMenu(anchor)
  if not self.soundMenuMeasure then self.soundMenuMeasure=C.Text(anchor,"","menuFontSize","text");self.soundMenuMeasure:Hide() end
  local width=anchor:GetWidth()
+ local context,measure=UI.context,self.soundMenuMeasure
  for _,entry in ipairs(applicantSounds) do
-  width=math.max(width,math.ceil(C.MeasureTextWidth(self.soundMenuMeasure,entry.label))+T.menuSelectInset+T.menuTextInset+T.menuPadding*2+40)
+  local key=context:GetMenuElementKey(anchor,entry.value)
+  local font=context:ResolveElementValue("menu.row","label","font",context.fontPath,key)
+  local size=context:ResolveElementValue("menu.row","label","fontSize",context:GetFontSize("menuFontSize"),key)
+  local flags=context:ResolveElementValue("menu.row","label","flags","",key)
+  local currentFont,currentSize,currentFlags=measure:GetFont()
+  if currentFont~=font or currentSize~=size or currentFlags~=flags then measure:SetFont(font,size,flags) end
+  -- Reserve the scrollbar too: startup row heights may make this menu scroll.
+  width=math.max(width,math.ceil(C.MeasureTextWidth(measure,entry.label))+T.menuSelectInset+T.menuTextInset+T.menuPadding*2+40+C.listRightInset)
  end
- self.soundMenuAnchor=anchor
  UI:OpenMenu(anchor,applicantSounds,function(value,label) anchor:SetValue(value,label);A:SetSetting("applicantAlertSound",value) end,{kind="select",selectedValue=anchor.value,width=width})
  if not UI.context:IsMenuOpen(anchor) then return end
+ self.soundMenuAnchor=anchor
  if not self.soundMenuButtons then
   self.soundMenuButtons={}
   local menu=UI.context:GetMenu()
   -- The shared menu/list exposes rows for product-owned controls. Rebind after
   -- refresh so font/layout changes and row reuse cannot leave stale actions.
-  hooksecurefunc(menu.list,"Refresh",function() P:SyncSoundMenuButtons() end)
-  menu:HookScript("OnHide",function() P:HideSoundMenuButtons();P:StopSoundPreview() end)
+  hooksecurefunc(menu.list,"Refresh",function() if P.soundMenuAnchor then P:SyncSoundMenuButtons() end end)
+  menu:HookScript("OnHide",function()
+   if not P.soundMenuAnchor then return end
+   P.soundMenuAnchor=nil;P:HideSoundMenuButtons();P:StopSoundPreview()
+  end)
  end
  self:SyncSoundMenuButtons()
 end

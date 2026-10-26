@@ -266,6 +266,7 @@ do
  local function PreviewFor(value)
   if not u.context:IsMenuOpen(choice) then choice:Fire("OnClick","LeftButton") end
   local menu=u.context:GetMenu()
+  menu.list.clip.mouseOver=true
   check(#menu.items==3,"preview is still a fourth menu item")
   for _,row in ipairs(menu.list.rows) do
    local entry=menu.items[row.key]
