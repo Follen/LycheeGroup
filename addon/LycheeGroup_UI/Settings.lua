@@ -7,12 +7,24 @@ local zh=A:GetLocale()=="zhCN"
 local function S(cn,en) return zh and cn or en end
 local sections={{"general",S("常规","General")},{"interface",S("界面显示","Appearance")},{"browse",S("寻求组队","Find groups")},{"memberIcons",S("成员显示","Member display")},{"notes",S("笔记与提醒","Notes & reminders")},{"blocks",S("屏蔽名单","Blocked leaders")},{"floating",S("悬浮窗","Floating window")},{"about",L.about},{"credits",S("鸣谢","Credits"),true}}
 local types={{value="positive",label=S("推荐","Positive")},{value="neutral",label=S("中性","Neutral")},{value="caution",label=S("拉黑","Blocked")}}
+local function ThemeChoices()
+ local catalog=A.API.Theme:List({includeBuiltins=true});local choices={}
+ table.sort(catalog,function(a,b)
+  if a.builtin~=b.builtin then return a.builtin end
+  return a.id==b.id and a.storage<b.storage or a.id<b.id
+ end)
+ for _,theme in ipairs(catalog) do
+  if theme.effective then choices[#choices+1]={value=theme.id,label=theme.name} end
+ end
+ return choices
+end
 local definitions={
  general={{"language",S("界面语言","Interface language"),S("仅改变插件文字，重载界面后生效。","Change addon text. Reload the UI to apply."),{{value="auto",label=S("跟随游戏","Game language")},{value="zhCN",label="简体中文"},{value="enUS",label="English"}}},
  {"toggleBinding",A.L.bindingToggle,"","binding"},
  {"minimap",S("显示小地图按钮","Show minimap button"),S("是否显示小地图按钮","Show or hide the minimap button.")},
  {"nativeLFGEntry",S("隐藏原生组队眼睛","Hide the native LFG eye"),S("预组队隐藏原生眼睛按钮","Hide the native eye button for premade groups.")}},
- interface={{"font",S("界面字体","Interface font"),S("选择主窗口与悬浮窗使用的字体。","Choose the main and floating window font."),function() return A.Fonts:Choices() end},
+ interface={{"theme",S("界面主题","Theme"),S("切换主窗口与悬浮窗外观，重载后生效。","Change the main and floating window appearance. Reload to apply."),ThemeChoices},
+ {"font",S("界面字体","Interface font"),S("选择主窗口与悬浮窗使用的字体。","Choose the main and floating window font."),function() return A.Fonts:Choices() end},
  {"fontScale",S("字体大小","Font size"),S("调节插件全局文字大小。","Adjust text size throughout the addon."),"range",70,130},
  {"uiScale",S("主窗口缩放","Main window scale"),S("等比调整整个主窗口。","Scale the entire main window proportionally."),"range",75,125},
  {"reduceMotion",L.reduceMotion,S("关闭开窗位移、Logo 动作和局部过渡。","Disable window movement, logo animation and local transitions.")}},
@@ -44,7 +56,7 @@ function P:Build(parent)
    P:CancelBindingCapture(true);P:ShowBindingNotice(A.L.bindingCombat);P:Sync()
   end
  end)
- root:HookScript("OnHide",function() P:CancelBindingCapture(true);P:CloseLinkCopy(true) end)
+ root:HookScript("OnHide",function() P:CancelBindingCapture(true);P:CloseLinkCopy(true);P:StopThemeSubscription() end)
  local rail=CreateFrame("Frame",nil,root);rail:SetSize(T.settingsSidebarWidth,T.contentHeight);rail:SetPoint("TOPLEFT");self.rail=rail
  self.nav={};for i,entry in ipairs(sections) do
   local b=C.Navigation(rail,entry[2],T.settingsSidebarWidth,function() P:SelectSection(entry[1]) end,nil,{radius=8,fontSize=14});b:SetPoint("TOPLEFT",0,-12-(i-1)*52);b.label:SetWidth(T.settingsBLabelWidth)
@@ -439,7 +451,15 @@ function P:BuildRow(parent,row,index)
  elseif row[4]=="action" then
   control=C.Button(holder,S("重置位置","Reset position"),controlWidth,function() A.Appearance:SaveFloatingPosition(false) end);C.SetPoint(control,"RIGHT",control:GetParent(),"RIGHT","settingsControlRightX",0)
  elseif row[4] then
-  control=C.Choice(holder,controlWidth,function() return type(row[4])=="function" and row[4]() or row[4] end,function(value) A:SetSetting(row[1],value) end);control:SetHeight(T.settingsControlHeight);C.SetPoint(control,"RIGHT",control:GetParent(),"RIGHT","settingsControlRightX",0)
+  control=C.Choice(holder,controlWidth,function() return type(row[4])=="function" and row[4]() or row[4] end,function(value)
+   if row[1]=="theme" then
+    local status=A.API.Theme:GetStatus()
+    local storage=not status.followingDefault and status.next.activationStorage or "account"
+    local ok=A.API.Theme:Activate(value,{storage=storage})
+    P.themeSelectionError=not ok and S("无法切换主题，请重新选择。","Unable to switch themes. Choose another theme.") or nil
+    P:Sync()
+   else A:SetSetting(row[1],value) end
+  end);control:SetHeight(T.settingsControlHeight);C.SetPoint(control,"RIGHT",control:GetParent(),"RIGHT","settingsControlRightX",0)
  else
   control=C.Check(holder,"",function(value)
    A:SetSetting(row[1],value)
@@ -616,9 +636,11 @@ UI:ApplyElementScope("settings")
  end
 
 function P:Sync()
+ local themeStatus=A.API.Theme:GetStatus()
  for key,entry in pairs(self.controls) do
   local c,row=entry.widget,entry.definition
-  local value=A:GetSetting(key)
+  local value
+  if key=="theme" then value=themeStatus.next.id or A.ThemeDefaults.id else value=A:GetSetting(key) end
   if row[4]=="binding" then
    local text=self.bindingCapture and A.L.bindingListen or A.L.bindingCurrent:format(A.Bindings:Text())
    local conflict=not A.Bindings:Keys() and A.Bindings:Conflict(A.Bindings.defaultKey)
@@ -635,13 +657,14 @@ function P:Sync()
  floatingScale.progress:SetShown(scaleAvailable)
  floatingScale.thumb:SetVertexColor(unpack(scaleAvailable and T.accent or T.disabled))
  UI:Color(floatingScale.valueLabel,scaleAvailable and "muted" or T.disabled)
- local pendingTheme=A.API.Theme:GetStatus().reloadRequired
- if pendingTheme and not self.themeReloadHint then
+ local pendingTheme=themeStatus.reloadRequired
+ local themeMessage=self.themeSelectionError or S("主题已保存，重载界面后生效。","Theme saved. Reload the UI to apply it.")
+ if (pendingTheme or self.themeSelectionError) and not self.themeReloadHint then
   self.themeReloadHint=C.Text(self.panels.interface,S("主题已保存，重载界面后生效。","Theme saved. Reload the UI to apply it."),14,"muted",BODY_WIDTH,20)
   self.themeReloadHint:SetWordWrap(true)
   UI:Element(self.themeReloadHint,"settings.themeReloadHint","settings")
  end
- if self.themeReloadHint then self.themeReloadHint:SetShown(pendingTheme) end
+ if self.themeReloadHint then UI:SetText(self.themeReloadHint,themeMessage);self.themeReloadHint:SetShown(pendingTheme or self.themeSelectionError~=nil) end
  -- Language belongs to General; a pending theme belongs to Appearance.
  -- Reuse the action while keeping each reload reason in its own section.
  self.reloadLanguage:SetParent(self.section=="general" and self.panels.general or self.panels.interface)
@@ -651,11 +674,19 @@ function P:Sync()
  if self.section=="blocks" then self:RefreshBlocks() end
 UI:ApplyElementScope("settings")
  end
+function P:StopThemeSubscription()
+ if self.themeSubscription then self.themeSubscription();self.themeSubscription=nil end
+end
 function P:Enter(context)
  if self.dedicationExpired then self:HideDedicationToast() end
+ self:StopThemeSubscription()
+ self.themeSubscription=A.API.Theme:Subscribe(function()
+  if self.frame:IsShown() and UI.page=="settings" and not UI.hiding then P:Sync() end
+ end)
  self.frame:RegisterEvent("UPDATE_BINDINGS");self:SelectSection(context and context.section or self.section)
 end
 function P:Leave()
+ self:StopThemeSubscription()
  self:CloseLinkCopy(true)
  self:StopBlocks()
  self.frame:UnregisterEvent("UPDATE_BINDINGS")

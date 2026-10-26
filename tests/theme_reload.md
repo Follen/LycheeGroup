@@ -2,6 +2,10 @@
 
 本说明维护 Theme／Configuration／Appearance API v2 的验证方法；该接口已随 1.2.4 发布。产品合同见 [API.md](../API.md)，开发边界见 [Development.md](../Development.md)。当前结果、实机数据与预算结论写入 [perfermance.md](../perfermance.md)。
 
+`lua tests/runner.lua theme_selection theme_reload theme_menu appearance` 覆盖内置默认／透明毛玻璃、第三方名称与目录、默认候选和玩家选择的账号／角色优先级、重载生效、导入原子性、导出名称、损坏存档保留及设置页订阅释放。`theme_selection` 已纳入完整 runner；`lua tests/test_settings_sections.lua` 与 `lua tests/test_settings_responsive.lua` 检查含主题选择行的双语、多字号设置布局。原生客户端的材质观感和弹层阅读效果另行实机检查。
+
+`lua tests/runner.lua theme_controls auto_apply` 沿实际申请弹窗与原生输入租约检查两种主题、两种语言下的无边框未选方块与背景的色差、勾选与失焦恢复、反复重开后的对象复用，以及预览输入框的相同状态。颜色断言按实际背景层做透明度合成，检查焦点边缘颜色是否透进输入框中央；离线合成不代替游戏截图。
+
 `group` 的关系索引回归另覆盖 1,000 人公会与 500 名战网好友：相同姓名／GUID 不推进内容版本或通知界面，名单与账号换序、重复身份和无关资料变化保持稳定；真实身份、来源及成员资格变化仍更新。同步读取不吞掉待发通知，最后消费者退出取消任务；停用后名单清空再启用时，尚未移除的申请者记录会清掉旧关系标记。
 
 Plus 功能整合的专项入口为 `lua tests/runner.lua group season_scores season_picker player_links find_enhancements activity_labels applicant_time floating`。覆盖身份四态循环、右键清除、旧组合保留、同职业同职责／嗜血筛选、未知数据与缓存失效、角色分类偏好、成绩服务的事件与关闭清理、一级分类反复切换不搜索、难度草稿取消旧请求及关闭恢复、确认活动只提交一次、选择器滚动复用和双语多字号下固定 44 行高内名称、成绩徽章与复选框的留位、URL 编码与未知服务器、当前成员复制和返回、标题语义色与实时刷新、活动显示别名与原始数据隔离、列宽及各类行高。全部模块已纳入完整 runner。原始贡献包用于行为参考，正式实现归现有业务所有者；客户端实际成绩与复制交互另行实机核对。

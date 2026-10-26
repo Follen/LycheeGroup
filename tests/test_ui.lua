@@ -4928,13 +4928,16 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  local a,u,g=fresh.A,fresh.U,fresh.G
  a:SetSetting("reduceMotion",true);a:Open("settings",{section="interface"})
  local page=u.pages.settings;local reload=page.reloadLanguage;local current=u.context.Theme
+ local currentBrand={unpack(current.brand)}
  T.eq(page.themeReloadHint,nil,"default Settings do not construct a pending-theme message")
  T.eq(reload:IsShown(),false)
  local searches=0;local search=g.Search.Search
  g.Search.Search=function(self,...) searches=searches+1;return search(self,...) end
  local definition={schema=1,id="fixture.reload.hint."..locale,revision=1,appearance={main={tokens={brand={.2,.3,.4,1}}}}}
  T.ok(a.API.Theme:Import(definition,{activate=true}))
- T.eq(page.themeReloadHint,nil,"Theme import does not broadcast a UI refresh")
+ T.ok(page.themeReloadHint and page.themeReloadHint:IsVisible(),"visible Settings refreshes the pending theme hint after import")
+ T.eq(u.context.Theme,current,"directory notifications preserve the running theme")
+ T.same(current.brand,currentBrand,"directory notifications never apply pending theme colors")
  page:Sync()
  T.eq(page.reloadLanguage,reload,"pending themes reuse the existing reload button")
  T.eq(reload:IsVisible(),true)

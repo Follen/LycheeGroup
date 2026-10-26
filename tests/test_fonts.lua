@@ -65,7 +65,13 @@ do
  a:Open("settings",{section="interface"})
  local page=u.pages.settings
  local slider=page.controls.fontScale.widget
- T.eq(page.panels.interface.rows[2].frame,page.controls.fontScale.frame,"font size follows the interface font")
+ local fontIndex,scaleIndex
+ for index,row in ipairs(page.panels.interface.rows) do
+  if row.frame==page.controls.font.frame then fontIndex=index end
+  if row.frame==page.controls.fontScale.frame then scaleIndex=index end
+ end
+ T.ok(fontIndex and scaleIndex,"font and font size remain in Appearance settings")
+ T.eq(scaleIndex,fontIndex+1,"font size follows the interface font")
  T.eq(slider.slider:GetMinMaxValues(),70);T.eq(select(2,slider.slider:GetMinMaxValues()),130)
  T.eq(slider.valueLabel:GetText(),"100%")
  T.near(slider.progress:GetWidth(),slider:GetWidth()/2,.001,"the font slider fills the left half at 100 percent")
