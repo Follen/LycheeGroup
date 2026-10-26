@@ -9,7 +9,7 @@ $productRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $archivePath = [IO.Path]::GetFullPath($OutputPath)
 $archiveDirectory = Split-Path -Parent $archivePath
 New-Item -ItemType Directory -Path $archiveDirectory -Force | Out-Null
-$folders = @('LycheeGroup', 'LycheeGroup_Group', 'LycheeGroup_Notes', 'LycheeGroup_UI') |
+$folders = @('LycheeGroup', 'LycheeGroup_Group', 'LycheeGroup_Notes', 'LycheeGroup_UI', 'LycheeGroup_Guide') |
     ForEach-Object { Join-Path $productRoot "addon\$_" }
 Compress-Archive -LiteralPath $folders -DestinationPath $archivePath -Force
 Write-Output "Built $archivePath"

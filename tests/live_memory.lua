@@ -8,7 +8,7 @@ if not A or not A.db then return probe:Fail("lycheegroup_not_ready") end
 if not UpdateAddOnMemoryUsage or not GetAddOnMemoryUsage then return probe:Fail("memory_api_unavailable") end
 if InCombatLockdown() then return probe:Fail("combat_active") end
 
-local PACKAGES = { "LycheeGroup", "LycheeGroup_Group", "LycheeGroup_Notes", "LycheeGroup_UI" }
+local PACKAGES = { "LycheeGroup", "LycheeGroup_Group", "LycheeGroup_Notes", "LycheeGroup_UI", "LycheeGroup_Guide" }
 local PAGES = { "settings", "notes", "find", "create" }
 local SETTLE, ROUNDS, LIMIT = 1.90, 5, 110
 local oldUI, oldPage, oldReturn = A.UI, A.UI and A.UI.page, A.UI and A.UI.settingsReturnPage

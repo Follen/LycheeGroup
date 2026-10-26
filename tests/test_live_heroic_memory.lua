@@ -44,8 +44,8 @@ for _,mode in ipairs({"complete","cancel","observer_error","no_request","stale_r
   reads=reads+1
   if mode=="observer_error" and reads==9 then error("simulated observer failure") end
  end
- GetAddOnMemoryUsage=function() return 1000 end
- C_AddOns.IsAddOnLoaded=function() return true,true end
+ GetAddOnMemoryUsage=function(name) return name=="LycheeGroup_Guide" and 0 or 1000 end
+ C_AddOns.IsAddOnLoaded=function(name) return true,name~="LycheeGroup_Guide" end
  -- Preserve a session override, an original preference reference and live filters.
  assert(A.API.Configuration:Set({["settings.rememberFilters"]=false}))
  local oldPrefs=G.prefs.find
@@ -92,6 +92,8 @@ for _,mode in ipairs({"complete","cancel","observer_error","no_request","stale_r
  if mode=="complete" then
   if probe.result then for name,value in pairs(probe.result.checks) do Check(value,"complete report check: "..name) end end
   Check(probe.result and probe.result.ok,tostring(probe.error or "report failed"))
+  Check(#probe.result.packages==5 and probe.result.packages[5]=="LycheeGroup_Guide","Guide is sampled without becoming a prerequisite")
+  for _,sample in ipairs(probe.result.samples) do Check(sample.loaded[5]==false and sample.addonTotalKB==4000,"normal heroic searches leave Guide unloaded") end
   Check(nativeCalls==6 and #probe.result.queries==6,"exactly six real search submissions")
   for index,query in ipairs(probe.result.queries) do
    Check(query.activityID==1 and query.generation>query.generationBefore and query.generationWhenDone==query.generation,"completed result belongs to its requested generation")

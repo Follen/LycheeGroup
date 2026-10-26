@@ -13,7 +13,7 @@ local function position(region,root)
  return px+relative:GetWidth()*part(anchor,"LEFT","RIGHT")+x-region:GetWidth()*part(point[1],"LEFT","RIGHT"),py+relative:GetHeight()*part(anchor,"TOP","BOTTOM")-y-region:GetHeight()*part(point[1],"TOP","BOTTOM")
 end
 local sections={
- {"general","常规","General",{"language","toggleBinding","minimap","nativeLFGEntry","applicantAlertSound"}},
+ {"general","常规","General",{"language","toggleBinding","minimap","nativeLFGEntry","applicantAlertSound","guide"}},
  {"interface","界面显示","Appearance",{"theme","font","fontScale","uiScale","reduceMotion"}},
  {"browse","寻求组队","Find groups",{"defaultSort","rememberFilters","showImportantFilters"}},
  {"memberIcons","成员显示","Member display",{"relations","raidMembers","memberIconShape","memberIconScale","memberClassBorder","memberLeaderMark"}},
@@ -94,7 +94,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
    check(#(panel.rows or {})==#rows,tag..": category has unexpected settings: "..key)
    for index,setting in ipairs(rows) do
     local row=panel.rows[index]
-    if setting=="resetPosition" then check(row.action~=nil and p.controls[setting]==nil,tag..": action becomes a saved setting: "..setting)
+    if setting=="resetPosition" or setting=="guide" then check(row.action~=nil and p.controls[setting]==nil,tag..": action stored as a preference: "..setting)
     else
      local control=p.controls[setting]
      check(control~=nil and control.frame==row.frame and control.frame:GetParent()==panel,tag..": setting appears in the wrong category or order: "..setting)

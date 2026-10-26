@@ -139,7 +139,7 @@ local function HandOffToGroup(event, ...)
     group:OnEvent(event, ...)
 end
 
--- 原生头像菜单和命令共用同一记录意图；实际写入仍归 Notes。
+-- 原生头像菜单与界面共用同一记录意图；实际写入仍归 Notes。
 function A:RecordPlayer(name, realm, unit, reason)
     self:LoadDB()
     local key, cleanName, cleanRealm = self:PlayerKey(name, realm)
@@ -252,28 +252,30 @@ LinkUtil.RegisterLinkHandler("lycheegroup", function(link, _, data, context)
     end
 end)
 
-local function SlashNote(rest)
-    local name, reason = rest:match("^(%S+)%s*(.-)$")
-    if name then A:RecordPlayer(name, nil, nil, reason); return end
-    local key, cleanName, realm = A:UnitIdentity("target")
-    if not key then A:NoteMessage(A.L.invalidName); return end
-    A:RecordPlayer(cleanName, realm, "target")
+-- Optional developer tools register their own handler and usage here.
+A.DevCommands=A.DevCommands or {}
+A.DevCommands.test={usage="/lg dev test [applications|create|applicants|off]",run=function(rest)
+    local ok,err=A:Preview(rest~="" and rest or "applications");if not ok then A:Print(err) end
+end}
+A.DevCommands.floattest={usage="/lg dev floattest",run=function(rest)
+    if rest~="" then A:Print(A.DevCommands.floattest.usage);return end
+    A:Print(A.Floating:ToggleStandaloneTest() and A.L.floatingTestOn or A.L.floatingTestOff)
+end}
+local function DeveloperCommand(message)
+    local command,rest=message:match("^%s*(%S*)%s*(.-)%s*$")
+    local entry=A.DevCommands[command]
+    if entry then return entry.run(rest) end
+    local names={};for name in pairs(A.DevCommands) do names[#names+1]=name end;table.sort(names)
+    for _,name in ipairs(names) do A:Print(A.DevCommands[name].usage) end
 end
 
-SLASH_LYCHEEGROUP1 = "/lycheegroup"
-SLASH_LYCHEEGROUP2 = "/lg"
+SLASH_LYCHEEGROUP1 = "/lg"
 SlashCmdList.LYCHEEGROUP = function(message)
-    local command, rest = (message or ""):match("^%s*(%S*)%s*(.-)$")
-    if command == "test" then
-        local ok,err=A:Preview(rest~="" and rest or "applications");if not ok then A:Print(err) end
-    elseif command == "floattest" then
-        A:Print(A.Floating:ToggleStandaloneTest() and A.L.floatingTestOn or A.L.floatingTestOff)
-    elseif command == "note" then
-        SlashNote(rest)
-    elseif command == "" or command == "find" then
+    local command, rest = (message or ""):match("^%s*(%S*)%s*(.-)%s*$")
+    if command == "dev" then
+        DeveloperCommand(rest)
+    elseif command == "" then
         A:ToggleWindow()
-    elseif command == "create" or command == "notes" or command == "settings" then
-        A:Open(command)
     else
         A:Print(A.L.cmdUsage)
     end

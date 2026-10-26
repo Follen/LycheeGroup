@@ -297,16 +297,18 @@ do
 	T.eq(inits, 1, "重复使用不重复初始化")
 	C_ChallengeMode.IsChallengeModeActive=oldChallengeActive
 
-	-- 命令处理使用姓名/服务器各自字段，未填写理由不保存本地化占位文本。
+	-- 玩家命令只切换主窗；原生/界面记录入口仍保留姓名与服务器。
 	local captured
 	local toggle, toggles = A.ToggleWindow, 0
 	A.ToggleWindow = function() toggles = toggles + 1 end
 	SlashCmdList.LYCHEEGROUP(""); SlashCmdList.LYCHEEGROUP("find")
-	T.eq(toggles,2,"slash toggles use the common transition decision")
+	T.eq(toggles,1,"only the bare player command toggles the main window")
 	A.ToggleWindow = toggle
 	local oldOpen = A.Open
 	A.Open = function(_, page, context) captured={page=page,context=context}; return true end
 	SlashCmdList.LYCHEEGROUP("note Cross-Foreign")
+	T.eq(captured,nil,"removed player commands do not open notes")
+	A:RecordPlayer("Cross", "Foreign")
 	T.eq(captured.page,"notes")
 	T.eq(captured.context.add.name,"Cross")
 	T.eq(captured.context.add.realm,"Foreign")

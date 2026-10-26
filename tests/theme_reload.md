@@ -16,7 +16,7 @@ Plus 功能整合的专项入口为 `lua tests/runner.lua group season_scores se
 
 `lua tests/runner.lua glyph_slots floating` 使用严格的 Frame 替身检查公开图标槽：原生 Frame 不提供文字或纹理颜色 getter，颜色由内部 Texture 读写，尺寸与 `$parent` 仍以 Frame 为对象；覆盖自定义颜色、尺寸、锚点、状态和行复用。LycheeUI 源库的 `tests/glyph_style.lua` 单独验证同一通用合同，不依赖产品模块。
 
-浮窗布局更新由 `floating`、`data_broker` 和布局 runner 的 `floating_pool` 覆盖：半透明总背景及自定义 Theme 颜色、悬停恢复、活动标题和原生邀请边界、处理后空态与计时清理、同组成员各自的评分／装等，以及中英文 70%／100%／130% 字号下的文字与列间留位。`tests/live_floating_redesign.lua` 使用当前真实申请或招募快照，通过公开浮窗接口检查原生 Frame、状态点贴图、活动与队伍标题字号、领队与倒计时的间距及可见成员数值，并调用 `Screenshot()` 留图，收到截图成功事件后再恢复弹层。要求非战斗、未开启 `/lg floattest`，使用 `opaque` 策略和至少 8 秒预算；临时弹层检查最多保护输入 4 秒，结束恢复此前弹层显隐与宿主，清理任务和临时锚点。该探针不提交申请、邀请、拒绝或招募操作，也不把控制器调用记为硬件操作；实际覆盖状态以每次报告为准。[2026-10-24 验证记录](results/floating-redesign-2026-10-24.json) 区分移除时钟前的真实招募／申请场景和最终版本的空态检查。
+浮窗布局更新由 `floating`、`data_broker` 和布局 runner 的 `floating_pool` 覆盖：半透明总背景及自定义 Theme 颜色、悬停恢复、活动标题和原生邀请边界、处理后空态与计时清理、同组成员各自的评分／装等，以及中英文 70%／100%／130% 字号下的文字与列间留位。`tests/live_floating_redesign.lua` 使用当前真实申请或招募快照，通过公开浮窗接口检查原生 Frame、状态点贴图、活动与队伍标题字号、领队与倒计时的间距及可见成员数值，并调用 `Screenshot()` 留图，收到截图成功事件后再恢复弹层。要求非战斗、未开启 `/lg dev floattest`，使用 `opaque` 策略和至少 8 秒预算；临时弹层检查最多保护输入 4 秒，结束恢复此前弹层显隐与宿主，清理任务和临时锚点。该探针不提交申请、邀请、拒绝或招募操作，也不把控制器调用记为硬件操作；实际覆盖状态以每次报告为准。[2026-10-24 验证记录](results/floating-redesign-2026-10-24.json) 区分移除时钟前的真实招募／申请场景和最终版本的空态检查。
 
 `lua tests/runner.lua raid_groups roster_drag group` 覆盖当前成员装等缓存、团队换组原生动作边界及 Tooltip 拖动控制器：GUID 重新解析、团长／助理权限、自身和相关成员战斗、满组与交换、未知身份、成员离队、点击抑制、空小队落点与隐藏清理，并检查双语多字号提示布局。
 
@@ -66,7 +66,7 @@ lua tests/measure_creation.lua
 
 `test_element_refresh.lua` 现验证固定主题及导入待生效，保留字体／尺寸实时行为。`test_element_layout.lua`、`test_find_elements.lua` 和池测试在 fixture 第四个参数预载主题，保留静态 slot、状态、锚点、实例换键与列表几何。热主题事务、逐叶 diff 刷新次数、任意撤回和方法包装器断言已随取消的接口移除。原生输入所有权及归还快照仍保留验证。
 
-测量脚本使用离线 Lua 堆和替身对象，读数不能换算为 WoW 四包字节。停止或强制 GC 的诊断测量单列，不用于自然峰值达标结论。
+测量脚本使用离线 Lua 堆和替身对象，读数不能换算为 WoW 五包字节。停止或强制 GC 的诊断测量单列，不用于自然峰值达标结论。
 
 产品专项测量留在本目录，默认使用内置 LycheeUI：`measure_font_cost.lua` 检查字体切换成本，`measure_element_values.lua` 检查元素值读取，`measure_theme_context.lua` 检查新 Context 解析成本，`measure_static_allocations.lua` 分开首次建页与预热后的切页／字号成本。后者的 `stable`、`native` 模式减少 Lua 替身实现产生的额外开销，`native cow` 只在诊断虚拟机内比较静态规则共享方案，不修改运行文件。历史调查见 [static-allocation-2026-10-23.md](results/static-allocation-2026-10-23.md)。
 
@@ -124,7 +124,7 @@ node tests/capture_main_ui.cjs D:/Code/wow/addons/LycheeGroup
 
 ## 实机与清理
 
-自然连续场景使用 `live_theme_memory.lua`。它要求当前 LycheeUI V1.0.0、API v2 已加载、非战斗、没有 Preview 或活动模态窗口；有招募时观察真实招募与申请者，没有招募时等待实际非空搜索结果。最多等待 12 次初始搜索检查，随后遍历包含鸣谢页的 9 个设置分区及 12 轮四页／字号切换，基本操作间隔 0.75 秒。每轮重进寻队再检查搜索完成、结果代次及可见行填充，未完成时以 0.5 秒间隔最多等 12 次；失败明确记为未覆盖，不以空列表成本算通过。异步上限 120 秒。使用原生 Button:Click 调用入口，不代表硬件点击。日志记录操作边界和等待样本、观察器刷新成本、同一时刻四包字节数、每轮实际结果规模和 `budgetPassed`，`report.ok` 不能代替预算字段。
+自然连续场景使用 `live_theme_memory.lua`。它要求当前 LycheeUI V1.0.0、API v2 已加载、非战斗、没有 Preview 或活动模态窗口；有招募时观察真实招募与申请者，没有招募时等待实际非空搜索结果。最多等待 12 次初始搜索检查，随后遍历包含鸣谢页的 9 个设置分区及 12 轮四页／字号切换，基本操作间隔 0.75 秒。每轮重进寻队再检查搜索完成、结果代次及可见行填充，未完成时以 0.5 秒间隔最多等 12 次；失败明确记为未覆盖，不以空列表成本算通过。异步上限 120 秒。使用原生 Button:Click 调用入口，不代表硬件点击。日志记录操作边界和等待样本、观察器刷新成本、同一时刻五包字节数（含先前使用引导包后的保留量，不为采样主动加载引导）、每轮实际结果规模和 `budgetPassed`，`report.ok` 不能代替预算字段。
 
 在已连接的同一项目执行一次固定请求，并按 CLI 返回的原操作继续：
 
@@ -138,6 +138,6 @@ lycheedev live execute --project . --session <CON-id> --file tests/live_theme_me
 
 沿用 [live_memory.md](live_memory.md) 的 LycheeDev 连接、返回验证和清理方法。主题改造的自然场景必须计入登录、首开、四页、正常动画、字号与缩放往返、浮窗、原生输入，以及实际存在的搜索、招募和申请者；已有玩家业务不为测试前提而取消。
 
-Theme 的 pending 测试先保存账号／角色主题与偏好，对导入、迟建对象、字号隔离及重载分别采样；完成后通过明确恢复数据和重载还原。保留固定请求、实际客户端与角色身份、每包同一时刻的字节数、采样规模、业务结果和 cleanup。四包预算按性能文档执行，不通过强制 GC、清空存档、删结果、缩小池容量或关闭正常动画达标。
+Theme 的 pending 测试先保存账号／角色主题与偏好，对导入、迟建对象、字号隔离及重载分别采样；完成后通过明确恢复数据和重载还原。保留固定请求、实际客户端与角色身份、每包同一时刻的字节数、采样规模、业务结果和 cleanup。五包预算按性能文档执行，不通过强制 GC、清空存档、删结果、缩小池容量或关闭正常动画达标。
 
 DataBroker 适配由产品 runner 的 `test_data_broker.lua` 覆盖，可单独运行 `lua tests/runner.lua data_broker floating`。检查双语状态、可选库延迟加载、独立浮窗关闭后的摘要及悬停列表更新、点击入口、动画结束、多个 Broker 按钮与原宿主的所有权切换，以及后台订阅释放；使用真实荔枝控制器和标准库替身。Ellesmere 的字体、图标裁切及实际栏位显示在游戏内检查。

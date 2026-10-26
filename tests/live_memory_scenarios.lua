@@ -14,14 +14,17 @@ if LFGListFrame and LFGListFrame.EntryCreation then
   nativeDraft[#nativeDraft+1]={box=box,text=value};hasNativeDraft=hasNativeDraft or value~=""
  end
 end
-local packages={"LycheeGroup","LycheeGroup_Group","LycheeGroup_Notes","LycheeGroup_UI"}
+local packages={"LycheeGroup","LycheeGroup_Group","LycheeGroup_Notes","LycheeGroup_UI","LycheeGroup_Guide"}
 local started=GetTime()
 local report={schema="lycheegroup.memory-scenarios.v1",packages=packages,units="KB",samples={},peaks={},checks={},fixture={},codec={},operations={pageOpen=0,pageClose=0,transferOpen=0,raidScroll=0,raidTips=0,applicantScroll=0,applicantRefresh=0,applicantTips=0},
  scenario={pageCycles=12,previewGroups=100,previewMembersPerGroup=40,previewApplicants=50,previewMembersPerApplication=5,codecRecords=1000,codecRounds=3,
   gcPolicy="natural until final closed sample; separate collection after all work",
   fixtureScope="private preview data; tests rendering, not native data acquisition; fixture generation heap recorded separately",
   input="page/list/tooltip controllers; synthetic codec records are never merged into saved notes"},peakBytes=0}
-for i=1,300 do report.samples[i]={addonKB={0,0,0,0},loaded={false,false,false,false}} end
+for i=1,300 do
+ local row={addonKB={},loaded={}};report.samples[i]=row
+ for packageIndex=1,#packages do row.addonKB[packageIndex],row.loaded[packageIndex]=0,false end
+end
 local used,ticker,eventFrame,cleaned=0
 local oldPage,oldReturn=ui.page,ui.settingsReturnPage
 local oldShown,originalFrames={},{}
@@ -135,7 +138,10 @@ local function Finish()
   if issecretvalue and issecretvalue(current) or current~=saved.text then report.checks.nativeDraftPreserved=false end
  end end
  report.checks.knownOwnersIdle=not ui:IsShown() and not ui.preview and not g:HasViews() and not g.Results.updatePending and g.Game.frame:GetScript("OnUpdate")==nil and not g.Search.timer and not g.Search.pending and next(ui.Motion.jobs)==nil
- report.checks.allPackagesLoaded=true;for _,loaded in ipairs(report.samples[used].loaded) do if not loaded then report.checks.allPackagesLoaded=false end end
+ report.checks.allPackagesLoaded=true
+ for i,name in ipairs(packages) do
+  if name~="LycheeGroup_Guide" and not report.samples[used].loaded[i] then report.checks.allPackagesLoaded=false end
+ end
  report.checks.under20MB=report.peakBytes<=20000000
  report.ok=report.checks.pageFramesReused and report.checks.poolsReused and report.checks.notesUnchanged and report.checks.nativeDraftPreserved and report.checks.knownOwnersIdle and report.checks.allPackagesLoaded and report.checks.under20MB and report.checks.raidResultsVisible and report.checks.raidScrolled and report.checks.raidFirstRowChanged
  report.elapsedSeconds,report.sampleCount=GetTime()-started,used

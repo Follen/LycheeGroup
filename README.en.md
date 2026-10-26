@@ -18,6 +18,7 @@ The current version is **1.2.5**, targeting retail **12.1.5** (Interface `120105
 - **Player profiles:** copy WCL and Raider.IO character links from player details.
 - **Player notes:** share positive, neutral, or blocked-player records across characters on the account, with reminders when you group again. Import and export your notes.
 - **Mythic+ history:** keep a per-character history of runs, key levels, dates, and teammates, then add notes from past runs.
+- **Usage guide:** follow one continuous sequence through Find, healer and auto-apply selection, Create, and window controls using real activity information with sample player and group data. The welcome page appears on the account’s first ordinary main-window opening; reopen it from Settings → General → Start guide or `/lg dev guide`. Your live group and saved preferences remain unchanged.
 - **Interface settings:** choose Default theme, Frosted glass, or an imported theme, then reload to apply. Change the main-window key binding, overall scale, and font size; the floating window has its own scale setting. Clicking Settings again returns to the page you came from. Automatically integrate with the RurutiaSuite top bar when both the floating window and compatibility settings are enabled. In Ellesmere DataBars, add the `荔枝组队` broker plugin to show the Lychee icon, name, and application status.
 
 The interface uses native Lua with bundled [LycheeUI V1.0.0](https://github.com/Follen/LycheeUI/tree/v1.0.0). Feature modules load on demand; no separate UI library installation is needed.
@@ -27,13 +28,14 @@ See the [product document](Product.md) for implementation and verification cover
 ## Installation
 
 1. Download or clone this repository.
-2. Copy the four folders in [`addon/`](addon) to `World of Warcraft/_retail_/Interface/AddOns/`:
+2. Copy the five folders in [`addon/`](addon) to `World of Warcraft/_retail_/Interface/AddOns/`:
 
    ```text
    LycheeGroup
    LycheeGroup_Group
    LycheeGroup_Notes
    LycheeGroup_UI
+   LycheeGroup_Guide
    ```
 
 3. Start or restart the game, enable Lychee LFG in the addon list, and type `/lg` to open it.
@@ -43,20 +45,22 @@ See the [product document](Product.md) for implementation and verification cover
 | Command | Action |
 | --- | --- |
 | `/lg` | Toggle the main window |
-| `/lg create` | Create and manage a group |
-| `/lg notes` | Open player notes |
-| `/lg settings` | Open settings |
-| `/lg floattest` | Temporarily show the standalone floating window at screen center; run again to restore. Uses the current live floating window. |
-| `/lg note` | Record your current player target |
-| `/lg note Name-Realm reason` | Record a player by name |
 
-`/lycheegroup` is an alias for `/lg`.
+Use the interface to find or create groups, open notes or settings, and record players. Development checks use these commands; `/lg dev` lists them:
+
+| Command | Action |
+| --- | --- |
+| `/lg dev floattest` | Temporarily center the current live floating window; run again to restore |
+| `/lg dev test [applications\|create\|applicants\|off]` | Open a sample applications, create, or applicants scene; `off` exits |
+| `/lg dev guide` | Open the continuous guide welcome page; no route argument |
 
 The game's green queue eye opens Lychee's Create page for an active premade listing, or Find with the active application selected. This also works while matchmaking is queued. With matchmaking alone, left-click keeps the game's queue menu; right-click retains its native behavior.
 
 Hold the bottom-right resize grip: drag horizontally to change width, vertically to change height, or diagonally to change both. A minimum size keeps controls usable and increases with larger fonts. Pages rearrange while preserving current input and selections. Releasing saves this character's size for reopening and reloading. Window dimensions, overall scale, and font size are separate controls.
 
 The default main-window key is the English semicolon `;`. It is assigned only when the addon has no binding and the key is free. Change it under General, where you can also choose the game language, Simplified Chinese, or English (applied after reloading). Under Appearance, select a font, adjust font size from 70% to 130%, and scale the main window from 75% to 125%; both use 100% as the baseline and apply immediately. The bundled LycheeFont uses the complete YaHei font for the Chinese UI and Inter for the English UI; game and shared fonts remain available.
+
+The account’s first ordinary main-window opening shows only the existing welcome page; teaching starts after Start guide is clicked. It does not reopen automatically after a reload, character change, or later opening on the same account, while manual entry remains available. The compact dark card centers the Lychee logo, thank-you text, and Start guide, with Don’t show again at the top right. Real activities and sample data are prepared only after starting the continuous Find and Create guide. This first-open behavior is implemented, passes offline validation, and has been copied to the game directory for reload and in-game acceptance; native visuals, natural memory, and CPU measurements remain pending.
 
 ## Development
 

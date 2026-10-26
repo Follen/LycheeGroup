@@ -13,7 +13,7 @@ local function Idle()
  return not InCombatLockdown() and not IsInGroup() and not C_ChallengeMode.IsChallengeModeActive() and not C_LFGList.HasActiveEntryInfo() and #C_LFGList.GetApplications()==0
 end
 assert(Idle(), "requires_idle_business")
-local packages={"LycheeGroup","LycheeGroup_Group","LycheeGroup_Notes","LycheeGroup_UI","MeetingStone"}
+local packages={"LycheeGroup","LycheeGroup_Group","LycheeGroup_Notes","LycheeGroup_UI","LycheeGroup_Guide","MeetingStone"}
 local config=A.API.Configuration
 local saved={fps=GetCVar("maxFPS"),fpsBk=GetCVar("maxFPSBk"),remember=config:Get("settings.rememberFilters"),rememberSource=config:GetSource("settings.rememberFilters"),
  page=A.UI and A.UI.page,returnPage=A.UI and A.UI.settingsReturnPage,
@@ -108,8 +108,8 @@ local function CPU()
  return values
 end
 local function Total(values)
- if targetName=="meetingstone" then return values[5] end
- return values[1]+values[2]+values[3]+values[4]
+ if targetName=="meetingstone" then return values[#packages] end
+ local total=0;for i=1,#packages-1 do total=total+values[i] end;return total
 end
 local function Sample(at)
  local tick=debugprofilestop();UpdateAddOnMemoryUsage()

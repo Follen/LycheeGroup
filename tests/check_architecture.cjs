@@ -98,11 +98,15 @@ const owners = {
   LycheeGroup: ['ActivityLabels.lua'],
   LycheeGroup_Group: ['SeasonScores.lua', 'RaidGroups.lua'],
   LycheeGroup_UI: ['PlayerLinks.lua', 'RealmSlugs.lua'],
+  LycheeGroup_Guide: ['Guide.lua', 'Bindings.lua', 'Interactions.lua', 'Data.lua', 'Provider.lua', 'Adapter.lua', 'View.lua'],
 };
-for (const name of ['LycheeGroup', 'LycheeGroup_Group', 'LycheeGroup_Notes', 'LycheeGroup_UI']) {
+for (const name of ['LycheeGroup', 'LycheeGroup_Group', 'LycheeGroup_Notes', 'LycheeGroup_UI', 'LycheeGroup_Guide']) {
   const toc = fs.readFileSync(path.join(root, 'addon', name, name + '.toc'), 'utf8');
   if (name !== 'LycheeGroup') check(/^## LoadOnDemand:\s*1\s*$/m.test(toc), name + ' must remain load-on-demand');
   const loaded = loadedFiles(path.join(root, 'addon', name, name + '.toc'));
+  for (const [file, entryOwner] of [['Bootstrap.lua', 'LycheeGroup'], ['Entry.lua', 'LycheeGroup_UI']]) {
+    check(loaded.has(fileKey(path.join(root, 'addon/LycheeGroup_Guide', file))) === (name === entryOwner), file + ' must load only through ' + entryOwner);
+  }
   for (const file of loaded) check(fs.existsSync(file), name + ' loads a missing runtime file: ' + file);
   for (const [owner, names] of Object.entries(owners)) {
     for (const file of names) check(loaded.has(fileKey(path.join(root, 'addon', owner, file))) === (name === owner), `${file} must load only in ${owner}`);
