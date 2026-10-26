@@ -120,4 +120,42 @@ do
 	end
 end
 
+do
+	-- Python base64 over the exact JSON below supplies an independent wire
+	-- vector; the public serialization format remains unchanged.
+	local values = { true, false, 1.5, '中文\n"\\\r', {} }
+	T.eq(Transfer.Serialize(values), '[true,false,1.5,"中文\\n\\"\\\\\\r",[]]')
+	T.eq(Transfer.Encode(values), "LN-W3RydWUsZmFsc2UsMS41LCLkuK3mlodcblwiXFxcciIsW11d")
+	local plain, padded = "LN-WyJhYmMiXQ", "LN-WyJhYmMiXQ=="
+	for _,text in ipairs({ plain, padded, plain .. "=====", " \t\r\n" .. padded .. " \r\n\t" }) do
+		T.eq(Transfer.Decode(text)[1], "abc", "offset decoding preserves whitespace and permissive padding")
+	end
+	for _,text in ipairs({ plain .. "==A", plain .. "=A=", "LN-WyJh\nYmMiXQ==", plain .. "汉", plain .. "== \n A", " \t LN- == \r\n" }) do
+		local records,err = Transfer.Decode(text)
+		T.eq(records,nil,"invalid characters inside the payload are not trailing whitespace")
+		T.eq(err,"invalidData")
+	end
+end
+
+do
+	-- Plain strings emit three fragments; escaped strings retain the C gsub
+	-- path as one fragment. These sizes straddle both 512-slot boundaries.
+	local plain,escaped = "中文原文", '中文\n"\\\r'
+	for _,case in ipairs({{plain,'"中文原文"'},{escaped,'"中文\\n\\"\\\\\\r"'}}) do
+		local value,quoted = case[1],case[2]
+		for _,count in ipairs({127,128,129,255,256,257,511,512,513}) do
+			local values = {}
+			for i=1,count do values[i]=value end
+			local expected = "[" .. string.rep(quoted .. ",",count-1) .. quoted .. "]"
+			T.eq(Transfer.Serialize(values),expected,"shared serialization blocks preserve exact boundary bytes")
+			local decoded = Transfer.Decode(Transfer.Encode(values))
+			T.eq(#decoded,count);T.eq(decoded[1],value);T.eq(decoded[count],value)
+		end
+	end
+	local records = {}
+	for i=1,128 do records[i]={reason=escaped} end
+	local one = '{"reason":"中文\\n\\"\\\\\\r"}'
+	T.eq(Transfer.Serialize(records),"["..string.rep(one..",",127)..one.."]","nested tables share the emitter without per-level formatting changes")
+end
+
 _G.LycheeGroup = nil

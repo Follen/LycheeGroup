@@ -27,6 +27,20 @@ local function ApplicantRow(page)
  end
 end
 
+function Guide:RefreshViewport()
+ if not self.active or self.transition or self.preparing or self.Adapter.starting then return end
+ local view,window=self.View,A.UI.frame
+ if not view.mode or not window then return end
+ local left,top=window:GetLeft(),window:GetTop();if not left or not top then return end
+ local scale=UIParent:GetEffectiveScale()/window:GetEffectiveScale();local screen=view.screen
+ -- Fit and the display event may both observe the same change. Compare the
+ -- last committed geometry without allocating state or scheduling more work.
+ if view.root:GetEffectiveScale()==window:GetEffectiveScale() and screen.left==-left+4
+  and screen.top==top-UIParent:GetHeight()*scale+4
+  and screen.right==UIParent:GetWidth()*scale-left-4 and screen.bottom==top-4 then return end
+ if self.steps then self:UpdateStep() else view:Layout() end
+end
+
 function Guide:Bind()
  local UI=A.UI
  self.active=true
@@ -34,9 +48,12 @@ function Guide:Bind()
  self.Adapter:Attach()
  if not self.events then
   self.events=CreateFrame("Frame")
-  self.events:SetScript("OnEvent",function() Guide:Stop("interrupted") end)
+  self.events:SetScript("OnEvent",function(_,event)
+   if event=="DISPLAY_SIZE_CHANGED" then Guide:RefreshViewport() else Guide:Stop("interrupted") end
+  end)
  end
  self.events:RegisterEvent("PLAYER_REGEN_DISABLED")
+ self.events:RegisterEvent("DISPLAY_SIZE_CHANGED")
 end
 
 function Guide:Open()

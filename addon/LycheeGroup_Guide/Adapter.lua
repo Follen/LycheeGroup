@@ -8,17 +8,20 @@ local function Pack(...) return {n=select("#",...),...} end
 local function CopyRoles(source)
  local copy={};for _,role in ipairs(roles) do if source and source[role]==true then copy[role]=true end end;return copy
 end
+local function LeaseResult(ok,...)
+ if not ok then
+  local err=...
+  pcall(Guide.Stop,Guide,"interrupted")
+  error(err,0)
+ end
+ return ...
+end
 
 function Adapter:Lease(owner,key,handler)
  local record={owner=owner,key=key,original=assert(owner[key]),handler=handler}
  record.wrapper=function(...)
   if not record.handler then return record.original(...) end
-  local result=Pack(pcall(record.handler,record.original,...))
-  if not result[1] then
-   pcall(Guide.Stop,Guide,"interrupted")
-   error(result[2],0)
-  end
-  return unpack(result,2,result.n)
+  return LeaseResult(pcall(record.handler,record.original,...))
  end
  self.leases[#self.leases+1]=record;owner[key]=record.wrapper
 end
@@ -166,6 +169,14 @@ function Adapter:Attach()
    if Guide.steps then Guide:UpdateStep() else Guide.View:Layout() end
   end
   return unpack(result,1,result.n)
+ end)
+ local function AfterFit(...)
+  Guide:RefreshViewport();return ...
+ end
+ self:Lease(UI,"FitToScreen",function(original,owner,...)
+  -- Pure scale/bounds changes need not emit OnSizeChanged. Forward all return
+  -- values through the post-fit check without another packed result table.
+  return AfterFit(original(owner,...))
  end)
  self:Lease(UI,"StartPreview",Navigate)
  self:Lease(UI,"EndPreview",function(original,owner,...)

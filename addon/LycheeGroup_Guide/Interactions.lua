@@ -114,7 +114,9 @@ local function AfterClick(control,button)
   if phase==1 and collapsed then Guide:SetPhase(2)
   elseif phase==2 and not collapsed then Guide:QueueAdvance() end
  elseif id=="filters" then
-  if phase==1 and page.filtersOpen then Guide:SetPhase(2)
+  if phase==1 and page.filtersOpen then
+   UI.Motion:FinishPlacement(page.filterPanel)
+   Guide:SetPhase(2)
   elseif phase==1 and provider.filters.healerPresence then Guide:QueueAdvance()
   elseif phase==2 and page.filtersOpen and provider.filters.healerPresence then Guide:SetPhase(3)
   elseif phase==2 and not page.filtersOpen and not Guide:RoleFilterTarget() then Guide:QueueAdvance()

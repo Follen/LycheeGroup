@@ -313,6 +313,13 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  Check(ShadeCount(view,450,350)==0 and ShadeCount(view,250,350)==1,"rating-only sorting exposes one column rather than the whole table")
  Near(view.highlight:GetWidth(),102,"rating-only reveal keeps the original header outline")
  Near(view.highlight:GetHeight(),44,"rating-only reveal does not turn the outline into a tall column")
+ local columnTop=column.GetTop
+ column.GetTop=function(self) return columnTop(self)-.00006103515625 end
+ Check(view:Layout() and view.revealActive,"native coordinate rounding does not disable the rating-column reveal")
+ Check(ShadeCount(view,450,350)==0,"rating values remain clear after a subpixel boundary round trip")
+ column.GetTop=function(self) return columnTop(self)-.02 end
+ Check(view:Layout() and not view.revealActive,"a genuinely displaced reveal still falls back to the target")
+ column.GetTop=columnTop;view:Layout()
  VerifyMask(view,U.frame:GetWidth(),U.frame:GetHeight());Stable(view,f.S.nodes)
  local previousBottom=view.maskHole.bottom
  column:SetHeight(column:GetHeight()-80)
@@ -361,6 +368,10 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  view:SetContextFrame(exteriorContext)
  Check(view:ShowStep(exteriorTarget,"Sort this column.",7,8),"narrow exterior strip remains usable")
  Check(not Outside(view.card.guideRect) and Distance(view.card.guideRect,view.hole)<100,"a nearby interior placement takes precedence over the exterior strip")
+ Near(view.card.guideRect.y+view.card.guideRect.height,view.hole.top-30,"the card above a target leaves sixteen extra pixels of vertical space")
+ local liftedY=view.card.guideRect.y
+ for _=1,4 do view.layoutValid=false;Check(view:Layout(),"explicit refresh preserves the lifted card") end
+ Near(view.card.guideRect.y,liftedY,"repeated placement does not accumulate the upward offset")
  VerifyCard(view,1400,1000);Stable(view,f.S.nodes)
  view:SetContextFrame(nil)
  U.frame.GetLeft,U.frame.GetTop=exteriorLeft,exteriorTop

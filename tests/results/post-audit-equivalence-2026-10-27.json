@@ -1,0 +1,579 @@
+{
+  "schema": 1,
+  "date": "2026-10-27",
+  "status": "complete_for_recorded_scope",
+  "branch": "codex/post-audit-equivalence",
+  "baseCommit": "c28d73cf9981cae0af56bcdd2b9c0079034a8832",
+  "previousBroadAudit": "ffc1877d6f25adf80d7bda3f92d2e4250268991e",
+  "scope": "此前性能审计后的业务、主题、设置和使用引导增量；响应布局已有独立验收，本轮检查其产品接入和交叉行为。",
+  "auditRounds": [
+    {
+      "round": 1,
+      "focus": [
+        "Guide全包生命周期与双语完整流程",
+        "声音/申请/难度记忆/关系/排序",
+        "主题默认/API/设置/详情交互"
+      ],
+      "confirmedNewFindings": 0
+    },
+    {
+      "round": 2,
+      "focus": [
+        "Guide与字号/预览/声音/导航交叉",
+        "真实Alerts与普通Preview和Guide隔离",
+        "纯界面缩放而窗口尺寸不变"
+      ],
+      "confirmedNewFindings": 1
+    },
+    {
+      "round": 3,
+      "focus": [
+        "修复租约重入、函数身份、返回值、稳定调用",
+        "同有效缩放的屏幕边界变化"
+      ],
+      "confirmedNewFindings": 1
+    },
+    {
+      "round": 4,
+      "focus": [
+        "最终实现独立复审",
+        "教学及隐藏主窗欢迎×两种显示事件顺序",
+        "跨UI组合回归"
+      ],
+      "confirmedNewFindings": 0
+    }
+  ],
+  "fixes": [
+    {
+      "id": "guide-scale",
+      "severity": "P2",
+      "cause": "纯有效缩放不保证触发OnSizeChanged，Guide沿用旧缩放和屏幕边界。",
+      "change": "FitToScreen完成后比较已保存屏幕边界与有效缩放，变化时刷新当前视图。",
+      "nativeBefore": {
+        "actualLeft": -163.99998474121094,
+        "actualRight": 1364.0000410079954,
+        "cachedLeft": -675.9999389648438,
+        "cachedRight": 1875.9999895095862,
+        "cardBottom": 441.11105816198324,
+        "cardLeft": 330.6666839122772,
+        "cardRight": 608.000031709671,
+        "cardTop": 611.7777662816952,
+        "cardVisible": true,
+        "inScreen": true,
+        "pending": false,
+        "rootScale": 0.5333333611488342,
+        "screenHeight": 767.9999317910915,
+        "screenWidth": 1365.333366394043,
+        "tag": "welcome125",
+        "windowScale": 0.8888888955116272
+      },
+      "nativeAfter": {
+        "actualLeft": -163.99998474121094,
+        "actualRight": 1364.0000410079954,
+        "cachedLeft": -163.99998474121094,
+        "cachedRight": 1364.0000410079954,
+        "cardBottom": 291.7777799516916,
+        "cardLeft": 451.5555589199066,
+        "cardRight": 913.7777845859528,
+        "cardTop": 576.2222265154123,
+        "cardVisible": true,
+        "inScreen": true,
+        "pending": false,
+        "rootScale": 0.8888888955116272,
+        "screenHeight": 767.9999317910915,
+        "screenWidth": 1365.333366394043,
+        "tag": "welcome125",
+        "windowScale": 0.8888888955116272
+      }
+    },
+    {
+      "id": "guide-display-bounds",
+      "severity": "P2",
+      "cause": "同缩放屏幕尺寸变化不触发尺寸回调；独立欢迎隐藏主窗时Host还会跳过Fit。",
+      "change": "活动Guide临时监听DISPLAY_SIZE_CHANGED，沿用同一比较路径，退出注销。",
+      "offlineBeforeCardX": [
+        -207,
+        33
+      ],
+      "offlineAfterCardX": [
+        3,
+        243
+      ],
+      "nativeResolutionChangeTested": false
+    }
+  ],
+  "unconfirmedInvestigation": {
+    "topic": "已经出现在完整名单中的applied申请短暂被后续完整名单遗漏后返回",
+    "artificialSequenceReproduced": true,
+    "nativeEvidence": false,
+    "countedAsDefect": false,
+    "codeChanged": false,
+    "reason": "历史实机证据仅支持首次完整名单到达前的遗漏，不支持已入表后遗漏。"
+  },
+  "offline": {
+    "baselineRunnerAssertions": 35767,
+    "finalRunnerAssertions": 35973,
+    "failedModules": 0,
+    "layoutScriptsPassed": 17,
+    "architectureChecks": 6539,
+    "architectureFailures": 0,
+    "frozenLibraryFiles": 31,
+    "guideAssertions": 7472,
+    "independentGuideChecks": {
+      "data": 455,
+      "entry": 310,
+      "adapter": 18187,
+      "bindings": 246,
+      "view": 99636
+    },
+    "projectionScenes": 120,
+    "projectionSHA256": "a9b46cdb86652852a2ca4e140c3d28387ffd6c5531c0b9dfbce76c2322ff58e4",
+    "projectionEqual": true,
+    "projectionScope": "两主题×中英文×字号100/130；四页、九个设置分区、声音菜单、申请弹窗；可见几何、文字、字体、颜色、纹理与状态，正常动效结算后比较。",
+    "independentRuns": {
+      "completeGuideTours": 16,
+      "manualWelcomeCycles": 36,
+      "randomApplicantOperations": 10000,
+      "waitingCountChecks": 20000,
+      "soundGuideIntegrationChecks": 19,
+      "displayEventOrderCombinations": 4,
+      "stableFitAndDisplayTriplesPerCombination": 100,
+      "extraGuideLayoutsInStableTriples": 0
+    },
+    "logs": [
+      ".lycheedev/post-audit/final-runner.txt",
+      ".lycheedev/post-audit/final-layout.txt",
+      ".lycheedev/post-audit/final-architecture.txt"
+    ]
+  },
+  "native": {
+    "client": "retail 12.1.5.70575",
+    "pid": 25552,
+    "character": "灵止光-死亡之翼",
+    "guid": "Player-741-066A34E3",
+    "connection": "CON-6f7a699ec9c326e0468780d3ff5f098a",
+    "forcedGC": false,
+    "normalAnimation": true,
+    "budgetBytes": 20000000,
+    "baselineDefaultWarm": {
+      "evidence": ".lycheedev/post-audit/default-native-cycles-resume.json",
+      "coldMain": false,
+      "rounds": 12,
+      "settingsSections": 9,
+      "clicks": 58,
+      "fontChanges": 12,
+      "elapsedSeconds": 58.45900000000256,
+      "samples": 85,
+      "naturalPeakBytes": 16889490,
+      "budgetPassed": true,
+      "resultCounts": [
+        38,
+        39
+      ],
+      "visibleRows": [
+        12
+      ],
+      "observerRefreshMs": 6495.825400061905,
+      "restored": {
+        "accountUnchanged": true,
+        "characterUnchanged": true,
+        "sessionRestored": true,
+        "listingUnchanged": true,
+        "resourcesReleased": true
+      }
+    },
+    "candidateDefaultCold": {
+      "evidence": ".lycheedev/post-audit/default-candidate-native-cycles-resume.json",
+      "coldMain": true,
+      "rounds": 12,
+      "settingsSections": 9,
+      "clicks": 58,
+      "fontChanges": 12,
+      "elapsedSeconds": 58.64299999999639,
+      "samples": 85,
+      "naturalPeakBytes": 18834734,
+      "budgetPassed": true,
+      "resultCounts": [
+        35,
+        37
+      ],
+      "visibleRows": [
+        12
+      ],
+      "observerRefreshMs": 6395.828300014138,
+      "restored": {
+        "accountUnchanged": true,
+        "characterUnchanged": true,
+        "sessionRestored": true,
+        "listingUnchanged": true,
+        "resourcesReleased": true
+      }
+    },
+    "candidateFrostedCold": {
+      "evidence": ".lycheedev/post-audit/frosted-native-cycles-resume.json",
+      "coldMain": true,
+      "rounds": 12,
+      "settingsSections": 9,
+      "clicks": 58,
+      "fontChanges": 12,
+      "elapsedSeconds": 58.32100000000355,
+      "samples": 85,
+      "naturalPeakBytes": 19083315,
+      "budgetPassed": true,
+      "resultCounts": [
+        38,
+        39
+      ],
+      "visibleRows": [
+        12
+      ],
+      "observerRefreshMs": 6166.358500048518,
+      "restored": {
+        "accountUnchanged": true,
+        "characterUnchanged": true,
+        "sessionRestored": true,
+        "listingUnchanged": true,
+        "resourcesReleased": true
+      }
+    },
+    "guideDefault": {
+      "evidence": ".lycheedev/post-audit/default-guide-workflow-resume.json",
+      "status": "reached_resize_controller_limit",
+      "reason": "hardware_cursor_delta_required",
+      "theme": {
+        "current": {
+          "activationStorage": "account",
+          "id": false
+        },
+        "default": {
+          "id": false
+        },
+        "defaultConfigured": false,
+        "followingDefault": false,
+        "next": {
+          "activationStorage": "account",
+          "id": false
+        },
+        "reloadRequired": false
+      },
+      "stepsSeen": [
+        "activity",
+        "sidebar",
+        "filters",
+        "details",
+        "sort",
+        "apply",
+        "raidActivity",
+        "raidDetails",
+        "createPage",
+        "createActivity",
+        "publish",
+        "applicantDetails",
+        "faction",
+        "time",
+        "resize"
+      ],
+      "phaseActions": 34,
+      "reachedResize": true,
+      "completedHardwareResize": false,
+      "configurationResizeVerified": true,
+      "cardInScreenEverySample": true,
+      "providerIsolated": true,
+      "realActionAttempts": 0,
+      "realApplicationsUnchanged": true,
+      "realListingUnchanged": true,
+      "sessionRestored": true,
+      "guideSavedRestored": true,
+      "originalUIRestored": true,
+      "cleanup": {
+        "active": false,
+        "bindings": 0,
+        "leases": 0,
+        "motionJobs": 0,
+        "nativeApplicationLease": false,
+        "nativeCreationLease": false,
+        "nativeSearchLease": false,
+        "preview": false,
+        "previewApplication": false,
+        "session": false,
+        "task": false
+      },
+      "naturalPeakBytes": 13337401,
+      "budgetPassed": true,
+      "samples": 69,
+      "observerRefreshMs": 5068.759099982679,
+      "elapsedSeconds": 28.93000000000029,
+      "screenshots": {
+        "group_details": {
+          "calledAt": 8.68699999999808,
+          "requestedAt": 8.427999999999884,
+          "state": {
+            "active": true,
+            "id": "details",
+            "index": 4,
+            "page": "find",
+            "pending": false,
+            "phase": 2,
+            "ready": true
+          }
+        },
+        "private_applicant_cards": {
+          "calledAt": 22.65299999999843,
+          "requestedAt": 22.389000000002852,
+          "state": {
+            "active": true,
+            "id": "applicantDetails",
+            "index": 12,
+            "page": "create",
+            "pending": false,
+            "phase": 1,
+            "ready": true
+          }
+        }
+      }
+    },
+    "guideFrosted": {
+      "evidence": ".lycheedev/post-audit/frosted-guide-workflow-resume.json",
+      "status": "reached_resize_controller_limit",
+      "reason": "hardware_cursor_delta_required",
+      "theme": {
+        "current": {
+          "activationStorage": "account",
+          "id": "lycheegroup.frosted",
+          "revision": 1,
+          "storage": "builtin"
+        },
+        "default": {
+          "id": false
+        },
+        "defaultConfigured": false,
+        "followingDefault": false,
+        "next": {
+          "activationStorage": "account",
+          "id": "lycheegroup.frosted",
+          "revision": 1,
+          "storage": "builtin"
+        },
+        "reloadRequired": false
+      },
+      "stepsSeen": [
+        "activity",
+        "sidebar",
+        "filters",
+        "details",
+        "sort",
+        "apply",
+        "raidActivity",
+        "raidDetails",
+        "createPage",
+        "createActivity",
+        "publish",
+        "applicantDetails",
+        "faction",
+        "time",
+        "resize"
+      ],
+      "phaseActions": 34,
+      "reachedResize": true,
+      "completedHardwareResize": false,
+      "configurationResizeVerified": true,
+      "cardInScreenEverySample": true,
+      "providerIsolated": true,
+      "realActionAttempts": 0,
+      "realApplicationsUnchanged": true,
+      "realListingUnchanged": true,
+      "sessionRestored": true,
+      "guideSavedRestored": true,
+      "originalUIRestored": true,
+      "cleanup": {
+        "active": false,
+        "bindings": 0,
+        "leases": 0,
+        "motionJobs": 0,
+        "nativeApplicationLease": false,
+        "nativeCreationLease": false,
+        "nativeSearchLease": false,
+        "preview": false,
+        "previewApplication": false,
+        "session": false,
+        "task": false
+      },
+      "naturalPeakBytes": 13780420,
+      "budgetPassed": true,
+      "samples": 69,
+      "observerRefreshMs": 5153.445899993181,
+      "elapsedSeconds": 28.904999999998836,
+      "screenshots": {
+        "group_details": {
+          "calledAt": 8.648000000001048,
+          "requestedAt": 8.390999999995984,
+          "state": {
+            "active": true,
+            "id": "details",
+            "index": 4,
+            "page": "find",
+            "pending": false,
+            "phase": 2,
+            "ready": true
+          }
+        },
+        "private_applicant_cards": {
+          "calledAt": 22.593999999997322,
+          "requestedAt": 22.328999999997905,
+          "state": {
+            "active": true,
+            "id": "applicantDetails",
+            "index": 12,
+            "page": "create",
+            "pending": false,
+            "phase": 1,
+            "ready": true
+          }
+        }
+      }
+    },
+    "soundMenu": {
+      "choiceUnchanged": true,
+      "cooldownUnchanged": true,
+      "hardware": false,
+      "nativePlayback": true,
+      "released": true,
+      "rows": [
+        {
+          "preview": true,
+          "textFits": true,
+          "value": "voice"
+        },
+        {
+          "preview": true,
+          "textFits": true,
+          "value": "native"
+        },
+        {
+          "preview": false,
+          "textFits": true,
+          "value": "off"
+        }
+      ],
+      "scenario": "native sound menu and actual playback capability",
+      "voicePlayback": true
+    },
+    "finalState": {
+      "applications": 0,
+      "guide": {
+        "active": false,
+        "bindings": 0,
+        "combatEvent": false,
+        "displayEvent": false,
+        "leases": 0,
+        "task": false
+      },
+      "guideSaved": {
+        "completed": true,
+        "completedVersion": 4,
+        "dismissed": true,
+        "welcomeShown": true
+      },
+      "layout": {
+        "failures": 0,
+        "queued": 0
+      },
+      "listing": false,
+      "settings": {
+        "fontScale": 100,
+        "reduceMotion": false,
+        "sound": "native",
+        "uiScale": 100
+      },
+      "theme": {
+        "current": {
+          "activationStorage": "account",
+          "id": false
+        },
+        "default": {
+          "id": false
+        },
+        "defaultConfigured": false,
+        "followingDefault": false,
+        "next": {
+          "activationStorage": "account",
+          "id": false
+        },
+        "reloadRequired": false
+      },
+      "ui": {
+        "motion": 0,
+        "page": "find",
+        "searchLease": false,
+        "shown": false
+      }
+    },
+    "retainedErrors": {
+      "beforeRows": 42,
+      "afterRows": 42,
+      "rowsUnchanged": true,
+      "snapshotComplete": false,
+      "coverage": "请求100条，返回全部42条；一条历史记录缺stack/locals，按原始行、计数、时间和会话完整比较，不声称捕获provider之外的错误。"
+    },
+    "connectionClosed": true,
+    "visuallyInspectedScreenshots": [
+      "WoWScrnShot_102726_011545.jpg",
+      "WoWScrnShot_102726_012246.jpg",
+      "WoWScrnShot_102726_012300.jpg",
+      "WoWScrnShot_102726_012647.jpg",
+      "WoWScrnShot_102726_012701.jpg"
+    ]
+  },
+  "deployment": {
+    "runtimeFiles": 159,
+    "allSHA256Match": true,
+    "changedFiles": [
+      {
+        "path": "LycheeGroup_Guide\\Adapter.lua",
+        "sourceSHA256": "ef3f9f5ccadf241751383458520071f666f5f8f979c99fcf9f99e856189e440b",
+        "installedSHA256": "ef3f9f5ccadf241751383458520071f666f5f8f979c99fcf9f99e856189e440b",
+        "matches": true,
+        "changedSinceBase": true
+      },
+      {
+        "path": "LycheeGroup_Guide\\Guide.lua",
+        "sourceSHA256": "976b62522e5f9acc87b3ed6876d841e4b9d69236017971d6bcdf208b85469ea2",
+        "installedSHA256": "976b62522e5f9acc87b3ed6876d841e4b9d69236017971d6bcdf208b85469ea2",
+        "matches": true,
+        "changedSinceBase": true
+      }
+    ],
+    "evidence": ".lycheedev/post-audit/installed-candidate.json"
+  },
+  "limits": [
+    "实机通过插件控件主回调与公开配置入口驱动，未模拟硬件鼠标命中、拖拽或修饰键。",
+    "真实搜索通过服务器数据验证；申请、发布、邀请/拒绝的操作隔离于教学provider，未向其他玩家发送测试请求。",
+    "屏幕分辨率变化以离线原生几何语义和事件顺序验证；游戏内直接验证了75%至125%的有效缩放。",
+    "原生Frame/纹理分配不由插件Lua内存计数完整归因；本轮未重复共享库已完成的CPU专项。"
+  ],
+  "evidenceDirectory": ".lycheedev/post-audit",
+  "committed": false,
+  "published": false,
+  "probeSources": [
+    {
+      "path": "tests/live_theme_memory.lua",
+      "sha256": "9700bd7add7eccabd64eae424327282321ce270d14db988b747c4ccc900df5e1"
+    },
+    {
+      "path": ".lycheedev/post-audit/live-guide-scale.lua",
+      "sha256": "0281c4913585a402483a66700f8275a845d68dad025eac0e18420647b2af7619"
+    },
+    {
+      "path": ".lycheedev/post-audit/live-guide-workflow.lua",
+      "sha256": "3874b77e0e8739880c3aa5f1e539d297ccc7ab8640e9c8b2f683f8cbaec4c23b"
+    },
+    {
+      "path": ".lycheedev/post-audit/live-sound-menu.lua",
+      "sha256": "15ad3f99268ea48ead8b2a957eba0fdec9fa652cb924ef525004e4a13e91d882"
+    },
+    {
+      "path": ".lycheedev/post-audit/project-ui.lua",
+      "sha256": "2a5692b309452dbc0ea5a80d3918f8f96ab59a00f4822217bc4e884d620867a6"
+    }
+  ]
+}

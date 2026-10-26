@@ -127,6 +127,68 @@ do
  reloaded.U:Hide(true)
 end
 
+-- Resolving the current label must preserve the complete menu's path priority,
+-- without rebuilding that menu for stable Settings refreshes.
+do
+ local f=dofile("tests/ui_fixture.lua")("enUS",nil,{reduceMotion=true})
+ local a,u=f.A,f.U
+ local oldLib,oldChat,oldUnit,oldDamage=LibStub,ChatFontNormal,UNIT_NAME_FONT,DAMAGE_TEXT_FONT
+ local paths={"Fonts\\Alias.ttf","Fonts\\Shared.ttf","Fonts\\Alias.ttf",STANDARD_TEXT_FONT,a.Fonts:GetDefaultPath()}
+ local names={"First alias","Shared name","Second alias","Game duplicate","Bundled duplicate"}
+ ChatFontNormal=CreateFont();ChatFontNormal:SetFont("Fonts\\Chat.ttf",14,"")
+ UNIT_NAME_FONT="Fonts\\Chat.ttf";DAMAGE_TEXT_FONT="Fonts\\Damage.ttf"
+ local reads=0
+ local media={List=function() reads=reads+1;return names end,Fetch=function(_,_,name) for i,n in ipairs(names) do if n==name then return paths[i] end end end}
+ LibStub=function(name) if name=="LibSharedMedia-3.0" then return media end end
+ local function Expected(value)
+  for _,choice in ipairs(a.Fonts:Choices()) do if choice.value==value then return choice.label end end
+ end
+ for _,value in ipairs({"default","game","Fonts\\Chat.ttf","Fonts\\Damage.ttf","Fonts\\Alias.ttf","Fonts\\Shared.ttf",STANDARD_TEXT_FONT,a.Fonts:GetDefaultPath(),"Fonts\\Unlisted.ttf"}) do
+  a:SetSetting("font",value)
+  T.eq(a.Fonts:ChoiceLabel(value),Expected(value),"current font labels retain menu deduplication and priority")
+ end
+ T.eq(a.Fonts:ChoiceLabel(nil),nil);T.eq(a.Fonts:ChoiceLabel(false),nil)
+ local check=a.Fonts.check;local set=check.SetFont
+ check.SetFont=function(self,path,...) if path=="missing-font" then return false end;return set(self,path,...) end
+ a:SetSetting("font","missing-font")
+ T.eq(a.Fonts:ChoiceLabel("missing-font"),nil,"an unavailable unlisted saved value keeps the Choice's original fallback label")
+ a:SetSetting("font","default");a:Open("settings",{section="interface"})
+ local page=u.pages.settings;local choices=a.Fonts.Choices;local builds=0
+ a.Fonts.Choices=function(self,...) builds=builds+1;return choices(self,...) end
+ local widths=0
+ for _,entry in pairs(page.controls) do
+  local label=entry.widget.valueLabel
+  if label then local width=label.GetStringWidth;label.GetStringWidth=function(self,...) widths=widths+1;return width(self,...) end end
+ end
+ page:Sync();widths,reads=0,0
+ for _=1,20 do page:Sync() end
+ T.eq(builds,0,"stable Settings refreshes do not build the font menu")
+ T.eq(reads,0,"the bundled selection needs no SharedMedia directory read")
+ T.eq(widths,0,"stable Settings refreshes do not remeasure percentage samples")
+ names[1]="Renamed alias"
+ page.controls.font.widget:Fire("OnClick","LeftButton")
+ T.eq(builds,1,"opening the menu still builds its current complete directory")
+ local menu=u.context:GetMenu();local found
+ for _,entry in ipairs(menu.items) do if entry.value==paths[1] then found=entry.label end end
+ T.eq(found,"Renamed alias","an alias change is visible without a retained font catalog")
+ u:CloseMenu()
+ local label=page.controls.fontScale.widget.valueLabel;local original=label.GetFont
+ label:SetSpacing(label:GetSpacing()+1);page:Sync();T.ok(widths>0,"letter spacing invalidates percentage widths")
+ widths=0;label:SetFont(label:GetFont());page:Sync();T.eq(widths,0,"the same font tuple retains its measured widths")
+ label:SetFont("Fonts\\New.ttf",select(2,original(label)),"OUTLINE");page:Sync();T.ok(widths>0,"path and flags invalidate percentage widths")
+ widths=0;u.frame:SetScale(u.frame:GetScale()*.9);page:Sync();T.ok(widths>0,"effective scale invalidates native text measurements")
+ local oldScreen=GetPhysicalScreenSize;local physicalWidth=1920
+ GetPhysicalScreenSize=function() return physicalWidth,1080 end
+ page:Sync();widths=0;physicalWidth=2560;page:Sync();T.ok(widths>0,"physical resolution invalidates native text measurements")
+ GetPhysicalScreenSize=oldScreen
+ local getWidth=label.GetStringWidth
+ label.GetStringWidth=function() return 0 end;label:SetSpacing(label:GetSpacing()+1);page:Sync()
+ T.eq(page.controls.fontScale.widget.valueMetricsReady,false,"unready text metrics are not cached as final widths")
+ label.GetStringWidth=getWidth;widths=0;page:Sync();T.ok(widths>0,"the next refresh retries initially unready text metrics")
+ u:Hide(true)
+ LibStub,ChatFontNormal,UNIT_NAME_FONT,DAMAGE_TEXT_FONT=oldLib,oldChat,oldUnit,oldDamage
+end
+
 -- The selected UI language is fixed for the login, including later LoD modules.
 for _,case in ipairs({{"zhCN","enUS","Settings","LycheeFont"},{"enUS","zhCN","设置","荔枝字体"}}) do
  local savedSettings={language=case[2]}

@@ -183,7 +183,10 @@ end
 function View:LayoutMask(width,height)
  local target,reveal=self.targetRect,self.revealRect
  local t=target
- self.revealActive=reveal.valid and (not target.valid or reveal.left<=target.left and reveal.top<=target.top and reveal.right>=target.right and reveal.bottom>=target.bottom)
+ -- Native frame coordinates lose a few float bits when the guide region is
+ -- anchored back to the window. Accept that round trip, not a displaced region.
+ local epsilon=.01
+ self.revealActive=reveal.valid and (not target.valid or reveal.left<=target.left+epsilon and reveal.top<=target.top+epsilon and reveal.right>=target.right-epsilon and reveal.bottom>=target.bottom-epsilon)
  if self.revealActive then t=reveal end
  self.maskHole=t.valid and t or nil
  local a,cuts=self.avoidRect,self.cuts;cuts[1],cuts[2]=0,height;local count=2
@@ -283,8 +286,12 @@ function View:Layout()
   if x then self.compact=bestCompact;ch=self:MeasureCard(cw) end
  end
  if not x then return self:SuspendCard() end
+ -- Retain the unshifted candidate for hysteresis, so repeated layout cannot
+ -- accumulate the lift. Keep its original position when the upper space is busy.
+ local placementY=y
+ if self.mode=="step" and Fits(x,y-16,cw,ch,s,t,a,c) then y=y-16 end
  Rect(self.card,x,y,cw,ch);self:PlaceArrow(x,y,cw,ch)
- self.lastX,self.lastY,self.lastWidth,self.lastValid=x,y,cw,true
+ self.lastX,self.lastY,self.lastWidth,self.lastValid=x,placementY,cw,true
  self.lastCompact=self.compact
  Rect(self.body,self.bodyLeft,self.bodyTop,self.bodyWidth,self.bodyHeight)
  if self.mode=="step" then

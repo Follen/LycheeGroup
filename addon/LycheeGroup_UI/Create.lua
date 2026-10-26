@@ -1149,8 +1149,9 @@ function P:LayoutBatches(ids)
  if not ids then return end
  -- Header layout may synchronously repaint after a missing applicant triggers
  -- RefreshApplicants. Keep the published IDs and geometry complete until then.
- local batchTops,batchLayouts={},{}
- local previous=self.batchLayouts
+ local previousTops,previous=self.batchTops,self.batchLayouts
+ local batchTops,batchLayouts
+ if not previous or not previousTops or #previousTops~=#ids+1 then batchTops,batchLayouts={},{} end
  local measure=self.applicantMeasure
  local path,size,flags,spacing,line,scale
  if measure then path,size,flags=measure.text:GetFont();spacing=measure.text:GetSpacing();line=measure.text:GetLineHeight();scale=measure:GetEffectiveScale() end
@@ -1168,7 +1169,7 @@ function P:LayoutBatches(ids)
   if not measure then
    measure=self.applicantMeasure;path,size,flags=measure.text:GetFont();spacing=measure.text:GetSpacing();line=measure.text:GetLineHeight();scale=measure:GetEffectiveScale()
   end
-  local layout=previous and previous[id]
+  local prior=previous and previous[id];local layout=prior
   if not ApplicantLayoutMatches(layout,app.members) or layout.width~=width or layout.path~=path or layout.size~=size or layout.flags~=flags or layout.spacing~=spacing or layout.line~=line or layout.scale~=scale then
    layout={tops={},heights={},names={},markInputs={},memberKeys={},width=width,path=path,size=size,flags=flags,spacing=spacing,line=line,scale=scale};local memberTop=0
    for i,member in ipairs(app.members) do
@@ -1184,11 +1185,20 @@ function P:LayoutBatches(ids)
    layout.height=math.max(T.createMemberStride,memberTop)+T.createBatchPadding
   end
   layout.source=app
-  batchTops[index]=top;batchLayouts[id]=layout
+  if not batchTops and (layout~=prior or layout.index~=index or previousTops[index]~=top) then
+   batchTops,batchLayouts={},{}
+   for prefix=1,index-1 do
+    batchTops[prefix]=previousTops[prefix];local key=ids[prefix];batchLayouts[key]=previous[key]
+   end
+  end
+  if batchTops then batchTops[index]=top;batchLayouts[id]=layout end
   top=top+layout.height
  end
  if self.applicantMeasure then UI.Members:ClearMarks(self.applicantMeasure.marks);UI:SetText(self.applicantMeasure.text,"") end
- batchTops[#ids+1]=top
+ if batchTops then
+  batchTops[#ids+1]=top
+  for index,id in ipairs(ids) do batchLayouts[id].index=index end
+ else batchTops,batchLayouts=previousTops,previous end
  self.appIDs,self.batchTops,self.batchLayouts=ids,batchTops,batchLayouts
  self.batchBody:SetHeight(math.max(1,top));self:LayoutApplicantViewport()
 end

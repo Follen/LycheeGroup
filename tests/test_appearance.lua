@@ -59,3 +59,64 @@ do
  T.eq(api:Get("floating").productMedia,"ProductAssets/")
  T.eq(api:Get("floating").media,"GenericAssets/")
 end
+
+-- Narrow public projections preserve the full getter/schema result, including
+-- derived colors, aliases and startup isolation while another theme is pending.
+local function CheckProjections(f,label)
+ local a,library=f.A,LycheeUI;local api=a.API.Appearance
+ for _,scope in ipairs({"main","floating"}) do
+  local theme=api:Get(scope);local expectedType,expectedColors={},{}
+  for role,fields in pairs(library.TextStyles) do expectedType[role]={fontSize=theme[fields.fontSize],lineHeight=theme[fields.lineHeight]} end
+  for key in pairs(library:GetColorSchema(a.StyleDefaults[scope])) do expectedColors[key]=theme[key] end
+  local get,schema=api.Get,library.GetThemeSchema
+  api.Get=function() error("narrow projection cloned the complete theme") end
+  library.GetThemeSchema=function() error("narrow projection built the complete schema") end
+  local ok,typography,colors=pcall(function() return api:GetTypography(scope),api:GetColors(scope) end)
+  api.Get,library.GetThemeSchema=get,schema
+  if not ok then error(typography,0) end
+  T.same(typography,expectedType,label.." "..scope.." typography")
+  T.same(colors,expectedColors,label.." "..scope.." exact color key domain and values")
+  typography.label.fontSize=-1;colors.primary[1]=-1
+  T.same(api:GetTypography(scope),expectedType,"nested typography returns are isolated")
+  T.same(api:GetColors(scope),expectedColors,"nested color returns are isolated")
+  T.ok(colors.primary~=colors.accent,"aliased source colors still return separate arrays")
+ end
+ T.eq(f.U.frame,nil,"read-only projections do not create the window")
+end
+
+do
+ local seed=Fixture("enUS")
+ local imported=Theme("appearance.projections",{
+  main={tokens={primary={.2,.4,.6},labelFontSize=19,bodyLineHeight=27}},
+  floating={tokens={surface={.1,.2,.3,.4},bodyFontSize=18}},
+ })
+ for _,case in ipairs({{"default"},{"frosted",seed.A.BuiltinThemes["lycheegroup.frosted"]},{"imported",imported}}) do
+  local f=Fixture("enUS",nil,nil,case[2]);local api=f.A.API.Appearance
+  CheckProjections(f,case[1])
+  for _,method in ipairs({"GetTypography","GetColors"}) do
+   for _,scope in ipairs({false,"missing"}) do
+    local value,err=api[method](api,scope)
+    T.eq(value,nil);T.eq(err,"unknown appearance scope: "..tostring(scope))
+   end
+   local value,err=api[method](api)
+   T.eq(value,nil);T.eq(err,"unknown appearance scope: nil")
+  end
+  local beforeType,beforeColors={},{}
+  for _,scope in ipairs({"main","floating"}) do beforeType[scope]=api:GetTypography(scope);beforeColors[scope]=api:GetColors(scope) end
+  T.ok(f.A.API.Theme:Import(Theme("appearance.pending",{
+   main={tokens={primary={.7,.2,.1,1},labelFontSize=23}},
+   floating={tokens={surface={.6,.5,.4,.3},bodyFontSize=20}},
+  }),{activate=true}))
+  T.eq(f.A.API.Theme:GetStatus().reloadRequired,true)
+  CheckProjections(f,case[1].." pending")
+  for _,scope in ipairs({"main","floating"}) do
+   T.same(api:GetTypography(scope),beforeType[scope],"pending typography waits for reload")
+   T.same(api:GetColors(scope),beforeColors[scope],"pending colors wait for reload")
+  end
+  f=Fixture("enUS",f.A.charPrefs,f.A.db)
+  CheckProjections(f,case[1].." reloaded")
+  T.eq(f.A.API.Appearance:GetTypography("main").label.fontSize,23)
+  T.same(f.A.API.Appearance:GetColors("main").primary,{.7,.2,.1,1})
+  T.same(f.A.API.Appearance:GetColors("floating").surface,{.6,.5,.4,.3})
+ end
+end
