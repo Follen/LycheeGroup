@@ -1,0 +1,639 @@
+{
+  "evidenceScope": {
+    "status": "historical-superseded",
+    "capturedRule": "First new application played immediately; additional applications within 3 seconds could queue a merged trailing playback.",
+    "currentRule": "First eligible new application plays immediately; arrivals within 3 seconds are silently discarded without a queue or trailing playback. Only a new application after the interval can play again.",
+    "currentRuleLiveValidation": "not-performed",
+    "note": "All original captures below are preserved as historical diagnostic evidence. They do not validate the current rule. Bell, MeetingStone sound compatibility and the pending state shown in earlier captures have been removed."
+  },
+  "date": "2026-10-26",
+  "build": "12.1.5.70575",
+  "runtime": "0000009f000027b4c1ac83c5e396558f",
+  "before": {
+    "soundTraceOperation": "LMO-96733170636c95038da7ca80d8751c67",
+    "recordTraceOperation": "LMO-d1b2795bd0adf6c82393b613de7338cb",
+    "verified": "verified",
+    "cleanup": "complete",
+    "choice": "bell",
+    "reminderBatchTimes": [
+      11247.904,
+      11250.904,
+      11296.287,
+      11299.292,
+      11302.291000000001,
+      11305.506,
+      11326.300000000001,
+      11329.300000000001
+    ],
+    "meetingStoneSuppressedAttempts": [
+      {
+        "id": 47615,
+        "t": 11248.237000000001
+      },
+      {
+        "id": 47615,
+        "t": 11296.59
+      },
+      {
+        "id": 47615,
+        "t": 11301.499
+      },
+      {
+        "id": 47615,
+        "t": 11305.506
+      },
+      {
+        "id": 47615,
+        "t": 11326.6
+      }
+    ],
+    "transitions": [
+      {
+        "time": 11396.569,
+        "kind": "list",
+        "id": null,
+        "removed": [],
+        "added": [],
+        "nativeIds": [
+          79,
+          81,
+          77,
+          80,
+          76
+        ]
+      },
+      {
+        "time": 11396.844000000001,
+        "kind": "list",
+        "id": null,
+        "removed": [],
+        "added": [],
+        "nativeIds": [
+          79,
+          81,
+          77,
+          80,
+          76
+        ]
+      },
+      {
+        "time": 11405.392,
+        "kind": "item",
+        "id": 82,
+        "removed": [],
+        "added": [
+          82
+        ],
+        "nativeIds": [
+          79,
+          81,
+          77,
+          80,
+          82,
+          76
+        ]
+      },
+      {
+        "time": 11405.392,
+        "kind": "list",
+        "id": null,
+        "removed": [],
+        "added": [],
+        "nativeIds": [
+          79,
+          81,
+          77,
+          80,
+          82,
+          76
+        ]
+      },
+      {
+        "time": 11414.125,
+        "kind": "item",
+        "id": 83,
+        "removed": [],
+        "added": [
+          83
+        ],
+        "nativeIds": [
+          79,
+          81,
+          77,
+          80,
+          82,
+          76
+        ]
+      },
+      {
+        "time": 11414.125,
+        "kind": "list",
+        "id": null,
+        "removed": [
+          83
+        ],
+        "added": [],
+        "nativeIds": [
+          79,
+          81,
+          77,
+          80,
+          82,
+          76
+        ]
+      },
+      {
+        "time": 11414.458,
+        "kind": "list",
+        "id": null,
+        "removed": [],
+        "added": [
+          83
+        ],
+        "nativeIds": [
+          79,
+          81,
+          77,
+          80,
+          82,
+          76,
+          83
+        ]
+      },
+      {
+        "time": 11414.458,
+        "kind": "item",
+        "id": 83,
+        "removed": [],
+        "added": [],
+        "nativeIds": [
+          79,
+          81,
+          77,
+          80,
+          82,
+          76,
+          83
+        ]
+      },
+      {
+        "time": 11424.258,
+        "kind": "item",
+        "id": 84,
+        "removed": [],
+        "added": [
+          84
+        ],
+        "nativeIds": [
+          79,
+          81,
+          77,
+          80,
+          82,
+          76,
+          83
+        ]
+      },
+      {
+        "time": 11424.258,
+        "kind": "list",
+        "id": null,
+        "removed": [
+          84
+        ],
+        "added": [],
+        "nativeIds": [
+          79,
+          81,
+          77,
+          80,
+          82,
+          76,
+          83
+        ]
+      },
+      {
+        "time": 11424.392,
+        "kind": "list",
+        "id": null,
+        "removed": [],
+        "added": [
+          84
+        ],
+        "nativeIds": [
+          79,
+          81,
+          77,
+          80,
+          82,
+          76,
+          83,
+          84
+        ]
+      },
+      {
+        "time": 11424.392,
+        "kind": "item",
+        "id": 84,
+        "removed": [],
+        "added": [],
+        "nativeIds": [
+          79,
+          81,
+          77,
+          80,
+          82,
+          76,
+          83,
+          84
+        ]
+      },
+      {
+        "time": 11427.125,
+        "kind": "item",
+        "id": 85,
+        "removed": [],
+        "added": [
+          85
+        ],
+        "nativeIds": [
+          79,
+          81,
+          77,
+          80,
+          82,
+          76,
+          83,
+          84
+        ]
+      },
+      {
+        "time": 11427.125,
+        "kind": "list",
+        "id": null,
+        "removed": [
+          85
+        ],
+        "added": [],
+        "nativeIds": [
+          79,
+          81,
+          77,
+          80,
+          82,
+          76,
+          83,
+          84
+        ]
+      },
+      {
+        "time": 11427.392,
+        "kind": "list",
+        "id": null,
+        "removed": [],
+        "added": [
+          85
+        ],
+        "nativeIds": [
+          85,
+          79,
+          81,
+          77,
+          80,
+          82,
+          76,
+          83,
+          84
+        ]
+      },
+      {
+        "time": 11427.392,
+        "kind": "item",
+        "id": 85,
+        "removed": [],
+        "added": [],
+        "nativeIds": [
+          85,
+          79,
+          81,
+          77,
+          80,
+          82,
+          76,
+          83,
+          84
+        ]
+      },
+      {
+        "time": 11434.692000000001,
+        "kind": "item",
+        "id": 81,
+        "removed": [],
+        "added": [],
+        "nativeIds": [
+          85,
+          79,
+          81,
+          77,
+          80,
+          82,
+          76,
+          83,
+          84
+        ]
+      }
+    ]
+  },
+  "regression": {
+    "command": "lua tests/runner.lua group",
+    "beforeFix": "expected 1, got 2: a temporarily incomplete native list must not repeat the same applicant alert",
+    "fullSuiteAsserts": 28304,
+    "settingsChecks": 10017
+  },
+  "currentStatus": "Latest 60-second real applicant capture passed for observed arrivals: 4 new applications, 4 Dialog voice plays; minimum start-to-start interval 3.0003688 seconds; unlisted records preserved. Probe released and connection closed; no CPU or memory measurement.",
+  "after": {
+    "operation": "LMO-6012816c7ff114ddcae22c7600e1b04c",
+    "runtime": "000000a20000310adc4a7576e9e97239",
+    "verified": "verified",
+    "cleanup": "complete",
+    "data": {
+      "choice": "voice",
+      "compatibilityPresent": false,
+      "events": [
+        {
+          "a": 133,
+          "candidates": false,
+          "event": "LFG_LIST_APPLICANT_UPDATED",
+          "state": "cooldown",
+          "t": 12984.217,
+          "waiting": true
+        },
+        {
+          "a": true,
+          "b": false,
+          "candidates": false,
+          "event": "LFG_LIST_APPLICANT_LIST_UPDATED",
+          "state": "cooldown",
+          "t": 12984.217,
+          "waiting": true
+        },
+        {
+          "a": true,
+          "b": true,
+          "candidates": false,
+          "event": "LFG_LIST_APPLICANT_LIST_UPDATED",
+          "state": "cooldown",
+          "t": 12984.425000000001,
+          "waiting": true
+        },
+        {
+          "a": 133,
+          "candidates": false,
+          "event": "LFG_LIST_APPLICANT_UPDATED",
+          "state": "cooldown",
+          "t": 12984.425000000001,
+          "waiting": true
+        },
+        {
+          "a": 121,
+          "candidates": false,
+          "event": "LFG_LIST_APPLICANT_UPDATED",
+          "state": "cooldown",
+          "t": 12985.144,
+          "waiting": true
+        },
+        {
+          "a": 123,
+          "candidates": false,
+          "event": "LFG_LIST_APPLICANT_UPDATED",
+          "state": "idle",
+          "t": 12990.704,
+          "waiting": true
+        },
+        {
+          "a": 134,
+          "candidates": false,
+          "event": "LFG_LIST_APPLICANT_UPDATED",
+          "state": "cooldown",
+          "t": 13001.302,
+          "waiting": true
+        },
+        {
+          "a": true,
+          "b": false,
+          "candidates": false,
+          "event": "LFG_LIST_APPLICANT_LIST_UPDATED",
+          "state": "cooldown",
+          "t": 13001.302,
+          "waiting": true
+        },
+        {
+          "a": 135,
+          "candidates": true,
+          "event": "LFG_LIST_APPLICANT_UPDATED",
+          "state": "pending",
+          "t": 13001.302,
+          "waiting": true
+        },
+        {
+          "a": true,
+          "b": true,
+          "candidates": true,
+          "event": "LFG_LIST_APPLICANT_LIST_UPDATED",
+          "state": "pending",
+          "t": 13001.302,
+          "waiting": true
+        },
+        {
+          "a": true,
+          "b": true,
+          "candidates": true,
+          "event": "LFG_LIST_APPLICANT_LIST_UPDATED",
+          "state": "pending",
+          "t": 13001.561,
+          "waiting": true
+        },
+        {
+          "a": 134,
+          "candidates": true,
+          "event": "LFG_LIST_APPLICANT_UPDATED",
+          "state": "pending",
+          "t": 13001.561,
+          "waiting": true
+        },
+        {
+          "a": 136,
+          "candidates": false,
+          "event": "LFG_LIST_APPLICANT_UPDATED",
+          "state": "cooldown",
+          "t": 13008.266,
+          "waiting": true
+        },
+        {
+          "a": true,
+          "b": false,
+          "candidates": false,
+          "event": "LFG_LIST_APPLICANT_LIST_UPDATED",
+          "state": "cooldown",
+          "t": 13008.266,
+          "waiting": true
+        },
+        {
+          "a": true,
+          "b": true,
+          "candidates": false,
+          "event": "LFG_LIST_APPLICANT_LIST_UPDATED",
+          "state": "cooldown",
+          "t": 13008.496000000001,
+          "waiting": true
+        },
+        {
+          "a": 136,
+          "candidates": false,
+          "event": "LFG_LIST_APPLICANT_UPDATED",
+          "state": "cooldown",
+          "t": 13008.496000000001,
+          "waiting": true
+        },
+        {
+          "a": 135,
+          "candidates": false,
+          "event": "LFG_LIST_APPLICANT_UPDATED",
+          "state": "idle",
+          "t": 13011.371000000001,
+          "waiting": true
+        },
+        {
+          "a": 116,
+          "candidates": false,
+          "event": "LFG_LIST_APPLICANT_UPDATED",
+          "state": "idle",
+          "t": 13016.633,
+          "waiting": true
+        },
+        {
+          "a": 122,
+          "candidates": false,
+          "event": "LFG_LIST_APPLICANT_UPDATED",
+          "state": "idle",
+          "t": 13031.606,
+          "waiting": true
+        },
+        {
+          "a": 127,
+          "candidates": false,
+          "event": "LFG_LIST_APPLICANT_UPDATED",
+          "state": "idle",
+          "t": 13033.109,
+          "waiting": true
+        },
+        {
+          "a": 132,
+          "candidates": false,
+          "event": "LFG_LIST_APPLICANT_UPDATED",
+          "state": "idle",
+          "t": 13033.322,
+          "waiting": true
+        }
+      ],
+      "finished": 13038.106,
+      "listChecks": [
+        {
+          "id": 133,
+          "preserved": true,
+          "seen": true,
+          "t": 12984.217
+        },
+        {
+          "id": 134,
+          "preserved": true,
+          "seen": true,
+          "t": 13001.302
+        },
+        {
+          "id": 134,
+          "preserved": true,
+          "seen": true,
+          "t": 13001.302
+        },
+        {
+          "id": 136,
+          "preserved": true,
+          "seen": true,
+          "t": 13008.266
+        }
+      ],
+      "meetingStoneLoaded": false,
+      "newItems": [
+        {
+          "id": 133,
+          "seen": true,
+          "status": "applied",
+          "t": 12984.217
+        },
+        {
+          "id": 134,
+          "seen": true,
+          "status": "applied",
+          "t": 13001.302
+        },
+        {
+          "id": 135,
+          "seen": true,
+          "status": "applied",
+          "t": 13001.302
+        },
+        {
+          "id": 136,
+          "seen": true,
+          "status": "applied",
+          "t": 13008.266
+        }
+      ],
+      "plays": [
+        {
+          "channel": "Dialog",
+          "handle": 98330,
+          "path": "Interface\\AddOns\\LycheeGroup_Group\\Media\\new-applicant-zhCN-v2.ogg",
+          "played": true,
+          "precise": 12984.2185876,
+          "preview": false,
+          "t": 12984.217
+        },
+        {
+          "channel": "Dialog",
+          "handle": 98479,
+          "interval": 17.08482340000046,
+          "path": "Interface\\AddOns\\LycheeGroup_Group\\Media\\new-applicant-zhCN-v2.ogg",
+          "played": true,
+          "precise": 13001.303411,
+          "preview": false,
+          "t": 13001.302
+        },
+        {
+          "channel": "Dialog",
+          "handle": 98517,
+          "interval": 3.0003687999997055,
+          "path": "Interface\\AddOns\\LycheeGroup_Group\\Media\\new-applicant-zhCN-v2.ogg",
+          "played": true,
+          "precise": 13004.3037798,
+          "preview": false,
+          "t": 13004.303
+        },
+        {
+          "channel": "Dialog",
+          "handle": 98550,
+          "interval": 3.9637729999994917,
+          "path": "Interface\\AddOns\\LycheeGroup_Group\\Media\\new-applicant-zhCN-v2.ogg",
+          "played": true,
+          "precise": 13008.2675528,
+          "preview": false,
+          "t": 13008.266
+        }
+      ],
+      "started": 12978.105,
+      "violations": {}
+    },
+    "connectionClosed": true
+  }
+}

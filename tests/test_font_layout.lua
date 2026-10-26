@@ -396,7 +396,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
   a:SetSetting("fontScale",percent);a:Open("settings",{section="interface"})
   local settings=u.pages.settings
   local panel=settings.panels.interface
-  check(#panel.rows==4,"interface settings group font, font size, window scale and motion together")
+  check(#panel.rows==5,"interface settings group theme, font, font size, window scale and motion together")
   local previous
   for _,entry in ipairs(panel.rows) do
    if previous then check(separated(previous,entry.frame),"appearance setting rows overlap") end
@@ -405,11 +405,11 @@ for _,locale in ipairs({"zhCN","enUS"}) do
    check(entry.frame:GetHeight()+.001>=entry.help:GetStringHeight()+32,"appearance setting description exceeds its row")
    previous=entry.frame
   end
-  check(top(previous)+previous:GetHeight()<=panel:GetHeight()+.001,("all four interface rows fit their panel (%s/%d: %.2f/%.2f)"):format(locale,percent,top(previous)+previous:GetHeight(),panel:GetHeight()))
+  check(top(previous)+previous:GetHeight()<=panel:GetHeight()+.001,("all five interface rows fit their panel (%s/%d: %.2f/%.2f)"):format(locale,percent,top(previous)+previous:GetHeight(),panel:GetHeight()))
   if settings.reloadLanguage:IsShown() then
-   check(separated(previous,settings.reloadLanguage),"reload action overlaps the fourth interface row")
+   check(separated(previous,settings.reloadLanguage),"reload action overlaps the last interface row")
    check(top(settings.reloadLanguage)+settings.reloadLanguage:GetHeight()<=panel:GetHeight()+.001,
-    ("all four interface rows and reload action fit their panel (%s/%d: end %.3f, panel %.3f)"):format(locale,percent,top(settings.reloadLanguage)+settings.reloadLanguage:GetHeight(),panel:GetHeight()))
+    ("all five interface rows and reload action fit their panel (%s/%d: end %.3f, panel %.3f)"):format(locale,percent,top(settings.reloadLanguage)+settings.reloadLanguage:GetHeight(),panel:GetHeight()))
   end
   for _,entry in pairs(settings.controls) do
    if not entry.definition[4] then

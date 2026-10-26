@@ -4,6 +4,18 @@ local G,L = A.Group,A.GroupLocale
 local Applicants={}
 G.Applicants=Applicants
 local records,ordered={},{}
+-- Maintain the actionable count with record mutations; visual/audio sync is O(1).
+local alertWaiting=0
+local function TrackAlert(record)
+ local waiting=record.status=="applied" and not record.pendingStatus and not record.acting or false
+ if waiting~=(record.alertWaiting or false) then
+  alertWaiting=alertWaiting+(waiting and 1 or -1);record.alertWaiting=waiting or nil
+ end
+end
+local function ForgetAlert(record)
+ if not record then return end
+ if record.alertWaiting then alertWaiting=alertWaiting-1;record.alertWaiting=nil end
+end
 local generation,dirty=0,true
 local currentActivityID
 local retired={}
@@ -37,7 +49,7 @@ end
 local function NotifyChanged(immediate)
  if immediate then
   if notifyTimer then notifyTimer:Cancel();notifyTimer=nil end
-  G:Notify("applicants")
+  G.Alerts:Sync();G:Notify("applicants")
  elseif not notifyTimer then
   notifyTimer=C_Timer.NewTimer(0,function() notifyTimer=nil;G.Alerts:Sync();G:Notify("applicants") end)
  end
@@ -54,7 +66,7 @@ local function ScheduleRetirement()
   retirementTimer,retirementAt=nil,nil
   local now,changed=GetTime(),false
   for id,record in pairs(records) do
-   if record.removeAt and record.removeAt<=now then records[id]=nil;retired[id]=generation;changed=true end
+   if record.removeAt and record.removeAt<=now then ForgetAlert(record);records[id]=nil;retired[id]=generation;changed=true end
   end
   if changed then wipe(ordered);dirty=true end
   ScheduleRetirement()
@@ -68,10 +80,14 @@ local function Read(id,activityID)
  if status=="applied" or (status==nil or status=="none") and pending=="applied" then retired[id]=nil
  elseif retired[id] then return nil end
  local record=records[id]
- local isNew=record==nil
  if not record then record={id=id,members={}};records[id]=record end
+ -- Initial data can arrive before the actual applied state. A batch is new
+ -- once, when it first becomes a complete pending application.
+ local isNew=status=="applied" and not pending and not record.alertSeen
+ if status=="applied" and not pending then record.alertSeen=true end
  if record.status~=status or record.pendingStatus~=pending then record.acting=nil;record.inviteSize=nil end
  record.status,record.pendingStatus=status,pending
+ TrackAlert(record)
  if finished[status] then record.removeAt=record.removeAt or GetTime()+5 else record.removeAt=nil end
  record.numMembers=G.Public(info.numMembers) or 0
  record.comment=G.Public(info.comment)
@@ -128,11 +144,19 @@ function Applicants:RefreshList(silent,immediate)
   if retired[id] then retired[id]=generation end
   local record,isNew=Read(id,currentActivityID)
   if record then
-   record.generation=generation
-   if isNew and record.status=="applied" then newBatch=true end
+   record.generation=generation;record.listed=true
+   if isNew and not silent then newBatch=true end
   end
  end
- for id,record in pairs(records) do if record.generation~=generation then records[id]=nil;dirty=true end end
+ for id,record in pairs(records) do
+  if record.generation~=generation then
+   -- An item event can precede its first appearance in GetApplicants. Keep
+   -- that still-active record so the later list cannot reset alertSeen.
+   local info=not record.listed and G.Public(C_LFGList.GetApplicantInfo(id))
+   local arriving=type(info)=="table" and (G.Public(info.applicationStatus)=="applied" or G.Public(info.pendingApplicationStatus)=="applied")
+   if not arriving then ForgetAlert(record);records[id]=nil;dirty=true end
+  end
+ end
  for id,seen in pairs(retired) do if seen~=generation then retired[id]=nil end end
  ScheduleRetirement()
  self:TryAutoInvite()
@@ -142,10 +166,10 @@ end
 function Applicants:OnApplicantUpdated(id)
  local listing=G.Listing:GetListing()
  local record,isNew=Read(id,listing and listing.activityID)
- if not record then records[id]=nil;dirty=true end
+ if not record then ForgetAlert(records[id]);records[id]=nil;dirty=true end
  ScheduleRetirement()
  self:TryAutoInvite()
- G.Alerts:Update(isNew and record.status=="applied")
+ G.Alerts:Update(isNew)
  NotifyChanged()
 end
 function Applicants:OnEntryUpdate(created)
@@ -170,6 +194,7 @@ function Applicants:Clear()
  if self.autoInviting then self.autoInviteDirty=true end
  ClearConfirmation(true)
  wipe(records);wipe(ordered);wipe(retired);ScheduleRetirement()
+ alertWaiting=0
  currentActivityID=nil;dirty=false;G.Alerts:Stop();NotifyChanged(true)
 end
 local function Finite(value)
@@ -245,8 +270,16 @@ local function Act(id,decline,automatic,confirmed,capacity)
  if automatic and not GetCVarBool("profanityFilter") then ConsoleExec("profanityFilter 1") end
  record.inviteSize=not decline and size or nil
  record.acting=decline and "decline" or "invite"
+ TrackAlert(record)
  local ok=pcall(decline and C_LFGList.DeclineApplicant or InviteNative,id,convertToRaid)
- if not ok then record.acting=nil;record.inviteSize=nil;return false,decline and L.declineApplicantFailed or L.inviteFailed end
+ if not ok then
+  record.acting=nil;record.inviteSize=nil
+  if records[id]==record then
+   TrackAlert(record)
+   G.Alerts:Sync()
+  end
+  return false,decline and L.declineApplicantFailed or L.inviteFailed
+ end
  NotifyChanged(not Applicants.autoInviting)
  return true,nil,size
 end
@@ -368,4 +401,7 @@ function Applicants:GetCount()
  local total=0
  for _,record in pairs(records) do if record.status=="applied" and not record.pendingStatus then total=total+1 end end
  return total
+end
+function Applicants:HasWaitingApplicants()
+ return alertWaiting>0
 end

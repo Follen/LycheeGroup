@@ -82,7 +82,7 @@ LycheeUI 是独立于产品业务的 UI 抽象层。依赖方向只能是 `Lyche
 
 ### 使用引导的开发边界
 
-教学逻辑全部留在 `LycheeGroup_Guide`。原四个产品包的 Lua 相对功能开始基线 `c03b501`，只允许本次独立命令需求产生的修改：Entrypoints 通用 `/lg dev` 分发、命令帮助 Locale 和普通 Preview 用法提示。玩家功能只保留 `/lg`，页面和记录操作使用界面入口；测试命令为 `/lg dev floattest`、`/lg dev test [applications|create|applicants|off]` 和 `/lg dev guide`，`/lg dev` 列出清单，不保留旧玩家子命令、测试命令或别名。教学逻辑不进入原 UI／Group Lua，Host、Settings 和 Resize 源码不增加引导分支。通过主包 TOC 末尾的 `..\LycheeGroup_Guide\Bootstrap.lua` 与 UI TOC 末尾的 `..\LycheeGroup_Guide\Entry.lua` 接入：Bootstrap 只向通用 `A.DevCommands` 表注册 guide，Entrypoints 不直接提及引导；账号首开判断、动态设置行和启动状态归 `A.GuideEntry`，不增加 `A.OpenGuide` 或 `A.MODULES` 条目。完整 Guide 包加载只建立定义；首次普通 Show 或手动入口随后创建欢迎视图，点击开始后才读取真实目录、建立 provider 并接入当前教学控件。删除旧轻提示及字体刷新 lease。
+教学逻辑全部留在 `LycheeGroup_Guide`。引导接入对原四个产品包 Lua 的修改仅包括独立命令需求：Entrypoints 通用 `/lg dev` 分发、命令帮助 Locale 和普通 Preview 用法提示；新申请声音等独立业务变更按各自合同维护。玩家功能只保留 `/lg`，页面和记录操作使用界面入口；测试命令为 `/lg dev floattest`、`/lg dev test [applications|create|applicants|off]` 和 `/lg dev guide`，`/lg dev` 列出清单，不保留旧玩家子命令、测试命令或别名。教学逻辑不进入原 UI／Group Lua，Host、Settings 和 Resize 源码不增加引导分支。通过主包 TOC 末尾的 `..\LycheeGroup_Guide\Bootstrap.lua` 与 UI TOC 末尾的 `..\LycheeGroup_Guide\Entry.lua` 接入：Bootstrap 只向通用 `A.DevCommands` 表注册 guide，Entrypoints 不直接提及引导；账号首开判断、动态设置行和启动状态归 `A.GuideEntry`，不增加 `A.OpenGuide` 或 `A.MODULES` 条目。完整 Guide 包加载只建立定义；首次普通 Show 或手动入口随后创建欢迎视图，点击开始后才读取真实目录、建立 provider 并接入当前教学控件。删除旧轻提示及字体刷新 lease。
 
 活动直接使用真实 `Group.Catalog` 的对象与目录身份；限时通过活动地图匹配静态挑战模式资料，未知时保留未知。Provider 独立建立样例对象图，模拟范围只含玩家、队伍、申请与教学成绩，禁止复制或虚构副本、贴图、难度或限时。选择另一活动时重绑固定教学记录，不替换真实 Group，不读取真实队伍来补齐教学样例。
 

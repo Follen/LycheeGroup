@@ -7,7 +7,7 @@ local WAKE_EVENTS = {
     "LFG_LIST_ACTIVE_ENTRY_UPDATE",
 }
 
--- Keep the stock animation running: its OnLoop owns applicant sounds.
+-- Keep the stock glow animation running; Group.Alerts owns applicant audio.
 local nativeLFGHooked = false
 local nativeLFGClickBound = false
 local nativeLFGState

@@ -30,6 +30,7 @@ local DEFAULTS = {
 	noteMarks = true,
 	defaultNote = "neutral",
 	reminders = "all",
+	applicantAlertSound = "native",
 	history = true,
 }
 for key,value in pairs(A.ThemeDefaults.settings) do DEFAULTS[key]=value end
@@ -45,7 +46,7 @@ end
 -- UI defaults come from Theme; business defaults and lifecycle effects stay here.
 function A:RegisterConfigurationSettings()
  local definitions={}
- local choices={language={"auto","zhCN","enUS"},defaultNote={"positive","neutral","caution"},reminders={"all","positive","caution","off"},raidMembers={"shift","alt","ctrl","always"},memberIconShape={"circle","square"},defaultSort={"newest","rating","itemLevel","members"}}
+ local choices={language={"auto","zhCN","enUS"},defaultNote={"positive","neutral","caution"},reminders={"all","positive","caution","off"},applicantAlertSound={"voice","native","off"},raidMembers={"shift","alt","ctrl","always"},memberIconShape={"circle","square"},defaultSort={"newest","rating","itemLevel","members"}}
  local ranges={fontScale={70,130},uiScale={75,125},floatingScale={50,150},memberIconScale={75,175},minimapAngle={0,360}}
  local function Add(key,value,storage)
   local definition={default=value,storage=storage,type=type(value),legacy={storage=storage,key=key},enum=choices[key]}
@@ -280,7 +281,7 @@ function A:ApplyConfigurationChanges(changes)
 	if Changed("nativeLFGEntry") and self.SyncNativeLFGEntry then self:SyncNativeLFGEntry() end
 	if (Changed("minimap") or Changed("minimapAngle")) and self.Minimap then self.Minimap:UpdateSettings() end
 	if (Changed("font") or Changed("fontScale")) and self.Fonts then self.Fonts:Apply() end
-	for _,key in ipairs({"history","autoJoin"}) do
+	for _,key in ipairs({"history","autoJoin","applicantAlertSound"}) do
 		if Changed(key) then
 			if self.Group then self.Group:OnSettingChanged(key,Value(key))
 			elseif key=="history" and self.SyncHistoryWake then self:SyncHistoryWake(Value(key)) end

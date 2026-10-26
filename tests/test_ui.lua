@@ -3881,6 +3881,10 @@ end
 do
  local fresh=dofile("tests/ui_fixture.lua")("enUS")
  local a,u,g=fresh.A,fresh.U,fresh.G;local now=0
+ local oldPlaySound,oldStopSound=PlaySound,StopSound
+ local plays=0
+ PlaySound=function() plays=plays+1;return true,plays end
+ StopSound=function() end
  GetTime=function() return now end
  g.Public=function(value) return value end
  function g:RemotePlayerKey(name) return name and a:PlayerKey(name) end
@@ -3904,7 +3908,8 @@ do
  function g:GetApplicant(id) reads=reads+1;return self.Applicants:GetApplicant(id) end
  function g:RefreshApplicants() return self.Applicants:RequestRefresh() end
  g.Applicants:RefreshList()
- T.eq(QueueStatusButton.glowLocks["lfglist-applicant"],-1,"a hidden real applicant service starts the native reminder")
+ T.eq(QueueStatusButton.glowLocks["lfglist-applicant"],0,"a hidden real applicant service starts silent native highlighting")
+ T.eq(plays,1,"the real new applicant plays once")
  a:Open("create");local page=u.pages.create;u.Motion:Tick(.5)
  T.eq(QueueStatusButton.glowLocks["lfglist-applicant"],false,"entering the actual applicant page acknowledges the reminder")
  local ids=page.appIDs
@@ -3923,16 +3928,17 @@ do
  u:Hide();u.Motion:Tick(.5)
  T.eq(page.unsub,nil);T.eq(next(g.views),nil);T.eq(u.Motion.jobs[page.batchScroll],nil)
  status="applied";g.Applicants:RefreshList();fresh.base.AdvanceClock(0)
- T.eq(QueueStatusButton.glowLocks["lfglist-applicant"],-1,"a closed main window releases its applicant-view ownership")
+ T.eq(QueueStatusButton.glowLocks["lfglist-applicant"],0,"a closed main window releases its applicant-view ownership")
  T.eq(a:Preview("applicants"),true)
- T.eq(QueueStatusButton.glowLocks["lfglist-applicant"],-1,"preview applicants never acknowledge a real reminder")
+ T.eq(QueueStatusButton.glowLocks["lfglist-applicant"],0,"preview applicants never acknowledge a real reminder")
  u:Hide(true);a:Open("create")
  T.eq(QueueStatusButton.glowLocks["lfglist-applicant"],false,"returning to the live applicant page acknowledges it")
  page.editListing:Fire("OnClick");g.Alerts:Update(true)
- T.eq(QueueStatusButton.glowLocks["lfglist-applicant"],-1,"the editing form does not claim the hidden applicant list is visible")
+ T.eq(QueueStatusButton.glowLocks["lfglist-applicant"],0,"the editing form does not claim the hidden applicant list is visible")
  page.formCancel:Fire("OnClick")
  T.eq(QueueStatusButton.glowLocks["lfglist-applicant"],false,"returning from editing acknowledges the visible applicants")
  u:Hide(true);g.Applicants:Clear();QueueStatusButton=previousEye
+ PlaySound,StopSound=oldPlaySound,oldStopSound
 end
 
 -- Search and saved-application details follow the current leader and faction.
