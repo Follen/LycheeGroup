@@ -14,7 +14,7 @@ local function position(region,root)
 end
 local sections={
  {"general","常规","General",{"language","toggleBinding","minimap","nativeLFGEntry"}},
- {"interface","界面显示","Appearance",{"font","fontScale","uiScale","reduceMotion"}},
+ {"interface","界面显示","Appearance",{"theme","font","fontScale","uiScale","reduceMotion"}},
  {"browse","寻求组队","Find groups",{"defaultSort","rememberFilters","showImportantFilters"}},
  {"memberIcons","成员显示","Member display",{"relations","raidMembers","memberIconShape","memberIconScale","memberClassBorder","memberLeaderMark"}},
  {"notes","笔记与提醒","Notes & reminders",{"defaultNote","noteMarks","reminders","history"}},
@@ -106,7 +106,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
    for other,otherPanel in pairs(p.panels) do check(otherPanel:IsShown()==(other==key),tag..": a hidden category leaks content") end
   end
   local actual=0;for key in pairs(p.controls) do actual=actual+1;check(seen[key],tag..": unclassified setting: "..key) end
-  check(actual==count and count==25,tag..": settings were lost during regrouping")
+  check(actual==count and count==26,tag..": settings were lost during regrouping")
   check(p.rail:GetWidth()==208,tag..": categories change the sidebar width")
   check(#p.credits==2 and p.credits[1].name:GetText()=="@露露缇雅" and p.credits[2].name:GetText()=="@灵魂复苏",tag..": contributor names or order are incorrect")
   p.nav.general:Fire("OnClick","LeftButton");p.nav.credits:Fire("OnClick","LeftButton")
@@ -139,12 +139,13 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  local a,u,s=f.A,f.U,f.S
  a:Open("settings",{section="general"})
  local p=u.pages.settings
- -- All moved controls still call the same setting entry point and save scope.
+ -- Preference controls still call the same setting entry point and save scope.
+ -- The theme Choice uses Theme:Activate; its storage contract has its own suite.
  for _,section in ipairs(sections) do
   p:SelectSection(section[1])
   for _,key in ipairs(section[4]) do
    local entry=p.controls[key]
-   if entry and key~="toggleBinding" then
+   if entry and key~="toggleBinding" and key~="theme" then
     local original=a:GetSetting(key);local definition=a.Configuration.definitions["settings."..key]
     local storage=definition.storage;local widget,row=entry.widget,entry.definition;local changed
     if not row[4] then widget:Fire("OnClick","LeftButton");changed=not original

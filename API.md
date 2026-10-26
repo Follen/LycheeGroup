@@ -10,7 +10,7 @@ DataBroker 等独立状态展示可使用 `API.Floating:Subscribe(callback, {bac
 
 | 入口 | 负责内容 | 生效时间 |
 | --- | --- | --- |
-| `API.Theme` v2 | 主题定义、选择、版本、导出和旧静态覆盖清除 | 下一次登录或重载 |
+| `API.Theme` v2 | 主题目录、选择、第三方默认主题、版本、导出和旧静态覆盖清除 | 下一次登录或重载 |
 | `API.Configuration` v2 | 已登记的设置和布局偏好 | 依对应设置的现有生命周期生效；字号、比例、尺寸和列宽实时更新，语言需重载 |
 | `API.Appearance` v2 | 当前主题及声明目录的只读查询 | 返回本次启动的主题；不返回活控件 |
 
@@ -24,6 +24,7 @@ DataBroker 等独立状态展示可使用 `API.Floating:Subscribe(callback, {bac
 local definition = {
     schema = 1,
     id = "myaddon.readable",
+    name = "我的清晰主题",
     revision = "2",
     settings = {fontScale = 110},
     layout = {window = {width = 1400}},
@@ -42,6 +43,8 @@ local ok, err = LycheeGroup.API.Theme:Import(definition, {storage = "account"})
 ```
 
 `schema=1` 是声明格式版本，与 API v2、存档 schema 和插件发布版本分别管理。`id` 为稳定且非空的标识符，`revision` 为非空字符串或有限数值。允许升级、回退及重装；不按字符串大小判断新旧。
+
+`name` 是可选的非空显示名称，设置页的主题列表使用它；旧包未提供名称时显示 `id`。名称随导出保留，仅修改名称不会要求重载。内置主题为 `lycheegroup.default`（默认主题）和 `lycheegroup.frosted`（透明毛玻璃）；这两个 ID 不允许导入覆盖或删除。复制默认模板创建第三方主题时，使用自己的 ID。
 
 `appearance.main` 和 `appearance.floating` 支持 `tokens`、`components`、`elements`、`utilities`。组件与元素可声明固定的 `base`、`states`、`variants`，元素还可组合 `classes` 和模板 `instances`。命名工具样式及状态前缀的语法见 [LycheeUI API](https://github.com/Follen/LycheeUI/blob/v1.0.0/API.md)。
 
@@ -63,22 +66,48 @@ local status = themes:GetStatus()
 -- reloadRequired：当前与下次启动来源是否不同
 -- error：本次启动回退的具体错误（若存在）
 -- next.error：待选主题定义缺失的错误；此查询不重新编译待生效组合
+-- default：未被玩家选择覆盖时的默认候选
+-- followingDefault：没有明确选择，正在跟随默认候选
+-- defaultConfigured：账号或角色保存了第三方默认候选
 ```
 
 | 方法 | 行为 |
 | --- | --- |
 | `GetDefaults()` | 返回同格式的内置模板副本 |
-| `Import(definition, options)` | 验证并注册或替换主题；`activate=true` 同时选择该包，省略时仅注册 |
-| `Activate(idOrFalse, options)` | 选择已存在的主题；`false` 明确选择内置默认，保留定义和玩家覆盖 |
-| `Remove(id, options)` | 删除该保存位置的定义及同 ID 选择，下层选择重新参与查找 |
-| `List()` | 列出主题身份、保存位置、当前使用与待生效选择 |
+| `Import(definition, options)` | 验证并注册或替换主题；`activate=true` 同时明确选择，`default=true` 同时指定为默认候选；省略时仅注册 |
+| `Activate(idOrFalse, options)` | 明确选择已有或内置主题；`false` 和 `"lycheegroup.default"` 均选择内置默认，保留定义和玩家覆盖 |
+| `SetDefault(idOrFalseOrNil, options)` | 指定配置包推荐的默认主题；`false` 指定内置默认，`nil` 清除此保存位置的默认候选；不覆盖明确选择 |
+| `UseDefault(options)` | 清除此保存位置的明确选择，重新按账号／角色优先级查找；其他位置的明确选择继续有效 |
+| `Remove(id, options)` | 删除该保存位置的定义及同 ID 明确选择、默认候选，下层选择重新参与查找；内置主题不可删除 |
+| `List(options)` | 列出已导入主题；`includeBuiltins=true` 同时列出两个内置主题 |
 | `Export(id, options)` | 导出指定包；省略 ID 导出选中包，`state="current"` 选择本次启动来源，默认使用下次启动来源 |
 | `GetStatus()` | 返回 `current`、`next`、`reloadRequired` 和具体错误 |
+| `Subscribe(callback)` | 目录或保存的选择变化后调用无参数回调；返回取消订阅函数，不立即回调，也不修改正在运行的外观 |
 | `ResetOverrides(scope, paths, options)` | 清除指定保存位置的旧静态视觉覆盖，重载后跟随主题 |
 
 Theme 写操作只接收 `account` 或 `character`，省略为 `account`。`storage="session"` 返回错误。主题定义和选择必须能够跨重载保存。
 
-主题选择先读角色、再读账号。角色选择 `false` 会停止向下查找并使用内置默认；没有角色选择才继承账号。选定 ID 的定义同样先查角色、再查账号。删除角色包及该位置的选择后，账号选择重新参与查找。
+主题选择依次取：角色明确选择 → 账号明确选择 → 角色默认候选 → 账号默认候选 → 内置默认主题。明确选择 `false` 同样优先于第三方默认候选。第三方推荐主题变化时，未手动选择主题的玩家随之切换；已有明确选择继续保留。内置主题直接从产品目录读取；其他 ID 的定义先查角色、再查账号。删除角色包及该位置的选择后，账号选择重新参与查找。
+
+设置 → 界面显示 → 界面主题列出两个内置主题及有效的第三方主题。玩家选择写入已有明确选择的位置；尚无明确选择时写入账号。选择、导入或默认候选变化均沿用重载后生效的方式。设置页打开期间更新目录会刷新可选项和选中名称；这类目录通知不应用新的视觉规则。
+
+配置包注册主题并指定默认值的示例：
+
+```lua
+local themes = LycheeGroup.API.Theme
+local ok, err = themes:Import(definition, {storage = "account", default = true})
+-- 后续可用 SetDefault 更换推荐主题；不会覆盖玩家手动选择。
+-- 例如推荐内置毛玻璃主题：
+-- themes:SetDefault("lycheegroup.frosted", {storage = "account"})
+
+for _, item in ipairs(themes:List({includeBuiltins = true})) do
+    if item.effective then
+        print(item.name, item.id, item.selected, item.isDefault)
+    end
+end
+```
+
+列表每项包含 `id`、`name`、`revision`、`storage`、`builtin`、`effective`、`current`、`selected`、`isDefault`。`storage` 为 `account`、`character` 或 `builtin`；同 ID 的角色定义遮蔽账号定义，被遮蔽项仍可查询，但 `effective=false`，设置页不重复显示。包结构损坏的存档项同样标记为 `effective=false` 并附带 `error`，原数据保留；目录查询不编译每个包，具体视觉字段仍在导入、选择及启动时验证。`current` 标记本次启动使用的位置，`selected` 标记待生效位置，`isDefault` 标记默认候选；玩家可明确选择其他主题，所以后两项不必相同。现有调用 `List()` 仍只取得导入包。
 
 相同 ID、revision 和内容重复导入是幂等操作。更新未选主题不会产生当前主题的重载请求；更新当前选中主题不会改变正在显示的界面。字号、窗口尺寸等实时偏好的变更不计入 `reloadRequired`。
 

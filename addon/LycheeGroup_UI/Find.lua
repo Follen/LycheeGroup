@@ -514,7 +514,7 @@ function P:Build(parent)
  UI.Tooltip:BindText(self.resultsHeader.buttons[2],function()
   local prefs=P.resultsHeader.state
   local order=prefs.sortKey~="activity" and Say("默认","Default") or prefs.descending and Say("降序","Descending") or Say("升序","Ascending")
-  return Say("活动排序：%s\n按活动选择菜单顺序排列。\n点击切换：默认 → 升序 → 降序。","Activity order: %s\nUses the activity menu order.\nClick to cycle: Default → Ascending → Descending."):format(order)
+  return Say("活动排序：%s。\n点击切换：默认 → 升序 → 降序。","Activity order: %s.\nClick to cycle: Default → Ascending → Descending."):format(order)
  end)
  self.resultHeadings=self.resultsHeader.labels
  self.applicationHeader=C.TableHeader(self.applicationPanel,applicationDefinitions,{
@@ -749,7 +749,7 @@ function P:BuildQuickFilters()
   end,{height=32,radius=8});button:SetWidth(T.findButtonWidth)
   button:RegisterForClicks("LeftButtonUp","RightButtonUp")
   local present=role=="DAMAGER" and Say("已齐","Full") or Say("已有","Has")
-  UI.Tooltip:BindText(button,Say("左键切换不限／缺少／%s，右键恢复不限。全部满足时最多两项已有／已齐。","Left-click: Any / Lacks / %s. Right-click: Any. Match all allows at most two Has / Full conditions."):format(present))
+  UI.Tooltip:BindText(button,Say("左键切换：不限 → 缺少 → %s；右键重置。\n“全部”模式最多两项已有／已齐。","Left-click: Any → Lacks → %s; right-click to reset.\nIn All mode, choose up to two Has / Full conditions."):format(present))
   local icon=C.Icon(button,T.findIconWidth2);C.Box(icon,{width="findIconWidth2",height="findIconHeight2"});C.SetPoint(icon,"LEFT",icon:GetParent(),"LEFT","findIconLeftX",0);UI:SetRoleIcon(icon,role)
   button.elementIcon=icon
   button.label:ClearAllPoints();C.SetPoint(button.label,"LEFT",button.label:GetParent(),"LEFT","findButtonLabelLeftX2",0);C.SetFont(button.label,13)
@@ -769,7 +769,7 @@ function P:BuildQuickFilters()
  C.SetFont(self.quickIdentity.label,13);self.quickIdentity.label:ClearAllPoints();C.SetPoint(self.quickIdentity.label,"LEFT",self.quickIdentity.label:GetParent(),"LEFT","findQuickIdentityLabelLeftX",0)
  self.quickIdentityIcon=C.GameIcon(self.quickIdentity,T.findQuickIdentityIconWidth);C.Box(self.quickIdentityIcon,{width="findQuickIdentityIconWidth",height="findQuickIdentityIconHeight"});C.SetPoint(self.quickIdentityIcon,"LEFT",self.quickIdentityIcon:GetParent(),"LEFT","findQuickIdentityIconLeftX",0)
  self.quickIdentityFunnel=C.Icon(self.quickIdentity,T.findQuickIdentityFunnelWidth);C.Box(self.quickIdentityFunnel,{width="findQuickIdentityFunnelWidth",height="findQuickIdentityFunnelHeight"});self.quickIdentityFunnel:SetTexture("Interface\\AddOns\\LycheeGroup_UI\\Media\\filter-any.tga");C.SetPoint(self.quickIdentityFunnel,"LEFT",self.quickIdentityFunnel:GetParent(),"LEFT","findQuickIdentityFunnelLeftX",0)
- UI.Tooltip:BindText(self.quickIdentity,Say("依次排除同职业、同职业同职责、同专精；右键恢复不限。","Cycle exclusions: same class, same class and role, same spec. Right-click to reset."))
+ UI.Tooltip:BindText(self.quickIdentity,Say("左键切换，避开与你同职业、同职业同职责或同专精的队伍。\n右键恢复不限。","Left-click to avoid groups with your class, class and role, or spec.\nRight-click to reset."))
  self.quickFilterItems={{frame=self.quickChoices.tankPresence.button},{frame=self.quickChoices.healerPresence.button},{frame=self.quickChoices.damagePresence.button},{frame=self.quickIdentity},{frame=self.quickLogic}}
  self.quickFilterOptions={width="content",gap=6,align="stretch"}
  self.quickFilterLayout=C.Row(self.quickFilters,self.quickFilterItems,self.quickFilterOptions)
@@ -1066,7 +1066,7 @@ function P:BuildFilters()
  self.hideZeroScore.label:ClearAllPoints();self.hideZeroScore.label:SetPoint("LEFT");self.hideZeroScore.label:SetWidth(T.findHideZeroScoreLabelWidth)
  self.hideZeroScore.track:ClearAllPoints();self.hideZeroScore.track:SetPoint("RIGHT")
  for _,entry in ipairs({
-  {"requireBloodlust",Say("嗜血来源","Bloodlust source"),Say("队伍至少四人时，排除你加入后仍无嗜血来源的队伍。按萨满、法师、猎人和唤魔师职业判断，不检查宠物或技能冷却；成员资料未知时保留。","For groups of four or more, hide those without a Bloodlust source after you join. Checks shaman, mage, hunter and evoker classes, not pets or cooldowns; unknown member data is kept.")},
+  {"requireBloodlust",Say("嗜血来源","Bloodlust source"),Say("队伍至少 4 人时，隐藏你加入后仍缺少嗜血来源的队伍。","Hide groups of 4 or more that would still lack a Bloodlust source after you join.")},
  }) do
   local key=entry[1]
   local toggle=C.Check(body,entry[2],function(value) state.filters[key]=value or nil;P:UpdateFilters() end)

@@ -1,5 +1,5 @@
--- Static semantic directory only. Live targets remain owned by their pages.
--- Slot maps are shared; defaults stay in Theme/Defaults and component recipes.
+-- Static identities, slot maps and element rules; pages own their live targets.
+-- Product tokens and component recipes stay in Theme/Defaults.
 local A=_G.LycheeGroup
 local kinds={
  box={root="box"},text={root="text"},texture={root="texture"},
@@ -168,6 +168,11 @@ main["modal"].slotKinds={root="box",surface="surface",title="text",content="box"
 -- Composite parts retain the original objects and stable list business keys.
 main["application.role"].slotKinds=Map(kinds.button,{roleIcon="texture"})
 main["application.autoApply"].slotKinds=Map(kinds.button,{box="box",["box/fill"]="surface",["box/mark"]="shape"})
+main["application.autoApplyBox"]={
+ scope="application",slotKinds={root="box",surface="surface",mark="shape"},
+ base={surface={color="applicationCheckboxUnchecked"}},
+ states={checked={surface={color="primary"}}},
+}
 main["notes.eClose"].slotKinds=Map(kinds.button,{elementIcon="texture"})
 main["create.pickerSearch"].slotKinds=Map(kinds.edit,{elementIcon="texture"})
 main["create.pickerClear"].slotKinds=Map(kinds.button,{elementIcon="texture"})

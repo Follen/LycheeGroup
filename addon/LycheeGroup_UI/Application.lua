@@ -96,6 +96,8 @@ function Application:BuildApplication()
  end,{height=40,variant="text"});
  modal.autoApply.label:ClearAllPoints();C.SetPoint(modal.autoApply.label,"LEFT",modal.autoApply.label:GetParent(),"LEFT","applicationModalAutoApplyLabelLeftX",0)
  modal.autoApply.box=C.Checkbox(modal.autoApply,nil,{size=20,boxSize=18,radius=3})
+ local autoApplyBox=modal.autoApply.box
+ C.Element(autoApplyBox,"application.autoApplyBox",{scope="application",slots={root=autoApplyBox,surface=autoApplyBox.fill,mark=autoApplyBox.mark}})
  C.SetPoint(modal.autoApply.box,"LEFT",modal.autoApply.box:GetParent(),"LEFT","applicationModalAutoApplyBoxLeftX",0);modal.autoApply.box:EnableMouse(false);modal.autoApply.box:EnableMouseMotion(false)
  function modal.autoApply:SetValue(value) self.value=value==true;self.box:SetValue(self.value) end
  modal.autoApply:SetValue(self:IsAutoApplyEnabled())

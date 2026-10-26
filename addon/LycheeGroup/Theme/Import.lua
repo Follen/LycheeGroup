@@ -4,6 +4,14 @@ local Configuration=A.Configuration
 local Service={}
 A.ThemeService=Service
 local API={version=2};A.API=A.API or {};A.API.Theme=API
+local subscribers={}
+local function Builtin(id) return id==A.ThemeDefaults.id or A.BuiltinThemes and A.BuiltinThemes[id]~=nil end
+local function DisplayName(id,package)
+ if id==A.ThemeDefaults.id then return A:GetLocale()=="zhCN" and "默认主题" or "Default theme" end
+ if id=="lycheegroup.frosted" then return A:GetLocale()=="zhCN" and "透明毛玻璃" or "Frosted glass" end
+ local name=type(package)=="table" and package.name
+ return type(name)=="string" and name:find("%S") and name or tostring(id)
+end
 local function HasPrefix(path)
  if path=="theme" then return true end
  local scope=path:match("^theme%.([^.]+)$");if scope then return A.StyleDefaults[scope]~=nil end
@@ -81,8 +89,9 @@ local function RecipeValues(value,scope,path,values)
 end
 local function Values(definition)
  if type(definition)~="table" or definition.schema~=1 then return nil,"theme definition requires schema=1" end
- local fields={schema=true,id=true,revision=true,appearance=true,settings=true,layout=true}
+ local fields={schema=true,id=true,revision=true,name=true,appearance=true,settings=true,layout=true}
  for key in pairs(definition) do if not fields[key] then return nil,"unknown theme definition field: "..tostring(key) end end
+ if definition.name~=nil and (type(definition.name)~="string" or not definition.name:find("%S")) then return nil,"theme name must be a nonempty string" end
  local values={}
  if definition.appearance~=nil then
   if type(definition.appearance)~="table" then return nil,"appearance must be a scope table" end
@@ -131,12 +140,19 @@ local function Identity(id,revision)
  if type(revision)~="number" and type(revision)~="string" or type(revision)=="string" and revision:match("^%s*$") or type(revision)=="number" and (revision~=revision or revision==math.huge or revision==-math.huge) then return false,"theme revision must be a nonempty string or finite number" end
  return true
 end
+local function PackageError(id,package)
+ if type(package)~="table" then return "selected theme definition must be a table: "..tostring(id) end
+ local valid,reason=Identity(package.id,package.revision)
+ if not valid or package.schema~=1 or package.id~=id or type(package.values)~="table" then
+  return "invalid selected theme definition "..tostring(id)..": "..(reason or "schema, id and values must match the theme package")
+ end
+end
 function Service:Parse(definition)
  local ok,copy=pcall(Clone,definition);if not ok then return nil,copy end
  if type(copy)~="table" then return nil,"theme definition must be a table" end
  local valid,err=Identity(copy.id,copy.revision);if not valid then return nil,err end
  local values,reason=Values(copy);if not values then return nil,reason end
- local package={schema=1,id=copy.id,revision=copy.revision,values=values}
+ local package={schema=1,id=copy.id,revision=copy.revision,name=copy.name,values=values}
  local compiled;compiled,err=A.Appearance:Compile({selection={id=copy.id,revision=copy.revision},values=values,overrides={}})
  if not compiled then return nil,err end
  return package
@@ -175,6 +191,10 @@ function Service:Migrate(store)
 end
 function Service:Bind()
  self.stores={};self.bindingErrors={}
+ self.builtins={}
+ for id,definition in pairs(A.BuiltinThemes or {}) do
+  self.builtins[id]={schema=1,id=id,revision=definition.revision,name=definition.name,values=assert(Values(definition))}
+ end
  for _,storage in ipairs({"account","character"}) do
   local store=Configuration.stores[storage];local root=Configuration.roots[storage]
   local theme,err=Configuration:BindTable(root,store,"theme","uiConfig.theme")
@@ -197,28 +217,35 @@ function Service:Bind()
   end
  end
 end
-function Service:Source(stores)
+function Service:Package(id,stores)
+ stores=stores or self.stores
+ if self.builtins[id] then return self.builtins[id],"builtin" end
+ for _,storage in ipairs({"character","account"}) do
+  if stores[storage].presets[id]~=nil then return stores[storage].presets[id],storage end
+ end
+end
+function Service:Source(stores,defaultsOnly)
  stores=stores or self.stores
  local id,activation,err
- for _,storage in ipairs({"character","account"}) do
-  local selected=stores[storage].activePreset
-  if selected~=nil then
-   activation=storage
-   if selected~=false and (type(selected)~="string" or not selected:match("^[%w][%w_.%-]*$")) then err=storage.." theme selection must be an identifier or false";id=false
-   else id=selected end
-   break
+ for _,field in ipairs(defaultsOnly and {"defaultPreset"} or {"activePreset","defaultPreset"}) do
+  for _,storage in ipairs({"character","account"}) do
+   local selected=stores[storage][field]
+   if selected~=nil then
+    activation=storage
+    if selected~=false and (type(selected)~="string" or not selected:match("^[%w][%w_.%-]*$")) then err=storage.." theme selection must be an identifier or false";id=false
+    elseif selected==A.ThemeDefaults.id then id=false
+    else id=selected end
+    break
+   end
   end
+  if activation then break end
  end
  local package,owner
- if id then for _,storage in ipairs({"character","account"}) do if stores[storage].presets[id]~=nil then package,owner=stores[storage].presets[id],storage;break end end end
+ if id then package,owner=self:Package(id,stores) end
  local revision
  if owner then
-  if type(package)~="table" then err="selected theme definition must be a table: "..id
-  else
-   local valid,reason=Identity(package.id,package.revision)
-   if not valid or package.schema~=1 or package.id~=id or type(package.values)~="table" then err="invalid selected theme definition "..id..": "..(reason or "schema, id and values must match the theme package")
-   else revision=package.revision end
-  end
+  err=PackageError(id,package)
+  if not err then revision=package.revision end
  elseif id then err="selected theme definition is missing: "..id end
  for _,storage in ipairs({"character","account"}) do
   local binding=self.bindingErrors and self.bindingErrors[storage]
@@ -237,6 +264,8 @@ function A:InitializeRuntimeTheme()
   runtime.error, runtime.requested=err,source
  end
  self.RuntimeTheme=runtime
+ local package=runtime.selection.id and Service:Package(runtime.selection.id)
+ runtime.themeName=type(package)=="table" and package.name or nil
 end
 local function Storage(options)
  if options~=nil and type(options)~="table" then return nil,"options must be a table" end
@@ -253,54 +282,105 @@ local function Draft(storage)
  return draft
 end
 local function Commit(storage,draft)
+ if Equal(Service.stores[storage],draft) then return true end
  local stores=Shallow(Service.stores);stores[storage]=draft
  local source=Service:Source(stores)
  if not Equal(source,Service:Source()) then
   local runtime,err=A.Appearance:Compile(source);if not runtime then return false,err end
  end
  Service.stores[storage]=draft;Configuration.stores[storage].theme=draft
+ -- Only catalog consumers listen here; the running visual theme stays frozen.
+ for callback in pairs(subscribers) do
+  local ok,err=pcall(callback);if not ok then geterrorhandler()(err) end
+ end
  return true
+end
+function API:Subscribe(callback)
+ if type(callback)~="function" then return nil,"theme subscriber must be a function" end
+ local subscription={};subscribers[callback]=subscription
+ return function() if subscribers[callback]==subscription then subscribers[callback]=nil end end
 end
 function API:Import(definition,options)
  local storage,err=Storage(options);if not storage then return false,err end
  if options and options.activate~=nil and type(options.activate)~="boolean" then return false,"activate must be a boolean" end
+ if options and options.default~=nil and type(options.default)~="boolean" then return false,"default must be a boolean" end
  local package;package,err=Service:Parse(definition);if not package then return false,err end
+ if Builtin(package.id) then return false,"builtin themes cannot be replaced: "..package.id end
  Ready()
  local draft=Draft(storage)
  draft.presets[package.id]=Equal(draft.presets[package.id],package) and draft.presets[package.id] or package
  if options and options.activate then draft.activePreset=package.id end
+ if options and options.default then draft.defaultPreset=package.id end
  return Commit(storage,draft)
 end
 function API:Activate(id,options)
  local storage,err=Storage(options);if not storage then return false,err end
  Ready()
+ if id==A.ThemeDefaults.id then id=false end
  if id~=false then
   if type(id)~="string" then return false,"theme id must be a string or false" end
-  if not Service.stores.character.presets[id] and not Service.stores.account.presets[id] then return false,"unknown theme: "..id end
+  if not Service:Package(id) then return false,"unknown theme: "..id end
  end
  local draft=Draft(storage);draft.activePreset=id
+ return Commit(storage,draft)
+end
+function API:SetDefault(id,options)
+ local storage,err=Storage(options);if not storage then return false,err end
+ Ready()
+ if id==A.ThemeDefaults.id then id=false end
+ if id~=nil and id~=false then
+  if type(id)~="string" then return false,"default theme must be an identifier, false or nil" end
+  if not Service:Package(id) then return false,"unknown theme: "..id end
+ end
+ local draft=Draft(storage);draft.defaultPreset=id
+ return Commit(storage,draft)
+end
+function API:UseDefault(options)
+ local storage,err=Storage(options);if not storage then return false,err end
+ Ready();local draft=Draft(storage);draft.activePreset=nil
  return Commit(storage,draft)
 end
 function API:Remove(id,options)
  local storage,err=Storage(options);if not storage then return false,err end
  if type(id)~="string" or not id:match("^[%w][%w_.%-]*$") then return false,"theme id must be a nonempty identifier" end
+ if Builtin(id) then return false,"builtin themes cannot be removed: "..id end
  Ready()
  local draft=Draft(storage);draft.presets[id]=nil
  if draft.activePreset==id then draft.activePreset=nil end
+ if draft.defaultPreset==id then draft.defaultPreset=nil end
  return Commit(storage,draft)
 end
 function API:GetStatus()
  Ready()
  local source=Service:Source();local runtime=A.RuntimeTheme
  local pending=Clone(source.selection);pending.error=source.error
- return {current=Clone(runtime.selection),next=pending,reloadRequired=not Equal(runtime.source,source),error=runtime.error}
+ local default=Service:Source(nil,true)
+ local defaultSelection=Clone(default.selection);defaultSelection.error=default.error
+ return {current=Clone(runtime.selection),next=pending,reloadRequired=not Equal(runtime.source,source),error=runtime.error,
+  default=defaultSelection,followingDefault=Service.stores.character.activePreset==nil and Service.stores.account.activePreset==nil,
+  defaultConfigured=Service.stores.character.defaultPreset~=nil or Service.stores.account.defaultPreset~=nil}
 end
-function API:List()
- Ready();local source=Service:Source();local list={}
- for _,storage in ipairs({"character","account"}) do for id,package in pairs(Service.stores[storage].presets) do
+function API:List(options)
+ if options~=nil and type(options)~="table" then return nil,"options must be a table" end
+ if options and options.includeBuiltins~=nil and type(options.includeBuiltins)~="boolean" then return nil,"includeBuiltins must be a boolean" end
+ Ready();local source=Service:Source();local default=Service:Source(nil,true);local list={}
+ local function Add(id,package,storage)
+  local _,owner=Service:Package(id)
+  local normalized=id
+  if id==A.ThemeDefaults.id then normalized=false end
+  local function Matches(selection) return selection.id==normalized and (normalized==false or selection.storage==storage) end
   local revision=type(package)=="table" and package.revision or nil
   if type(revision)~="string" and type(revision)~="number" or type(revision)=="number" and (revision~=revision or revision==math.huge or revision==-math.huge) then revision=nil end
-  list[#list+1]={id=type(id)=="string" and id or tostring(id),revision=revision,storage=storage,current=A.RuntimeTheme.selection.id==id and A.RuntimeTheme.selection.storage==storage,selected=source.selection.id==id and source.selection.storage==storage}
+  local err=storage~="builtin" and PackageError(id,package) or nil
+  list[#list+1]={id=type(id)=="string" and id or tostring(id),name=DisplayName(id,package),revision=revision,storage=storage,builtin=storage=="builtin",
+   effective=err==nil and (storage=="builtin" or owner==storage),error=err,current=Matches(A.RuntimeTheme.selection),selected=Matches(source.selection),isDefault=Matches(default.selection)}
+ end
+ if options and options.includeBuiltins then
+  Add(A.ThemeDefaults.id,A.ThemeDefaults,"builtin")
+  for id,package in pairs(Service.builtins) do Add(id,package,"builtin") end
+ end
+ for _,storage in ipairs({"character","account"}) do for id,package in pairs(Service.stores[storage].presets) do
+  Add(id,package,storage)
  end end
  table.sort(list,function(a,b)return a.id==b.id and a.storage<b.storage or tostring(a.id)<tostring(b.id) end);return list
 end
@@ -316,18 +396,22 @@ function API:Export(id,options)
  if storage~=nil and storage~="account" and storage~="character" then return nil,"unknown theme storage" end
  if state=="current" then
   if id and id~=source.selection.id or storage and storage~=source.selection.storage then return nil,"theme is not the current startup source" end
-  package={id=source.selection.id or A.ThemeDefaults.id,revision=source.selection.revision or A.ThemeDefaults.revision,values=source.values}
+  package={id=source.selection.id or A.ThemeDefaults.id,revision=source.selection.revision or A.ThemeDefaults.revision,name=A.RuntimeTheme.themeName,values=source.values}
  elseif id then
   if type(id)~="string" then return nil,"theme id must be a string" end
+  if id==A.ThemeDefaults.id then return self:GetDefaults() end
   if storage then package=Service.stores[storage].presets[id]
-  else package=Service.stores.character.presets[id] or Service.stores.account.presets[id] end
- else package={id=source.selection.id or A.ThemeDefaults.id,revision=source.selection.revision or A.ThemeDefaults.revision,values=source.values} end
+  else package=Service:Package(id) end
+ else
+  local selected=source.selection.id and Service:Package(source.selection.id)
+  package={id=source.selection.id or A.ThemeDefaults.id,revision=source.selection.revision or A.ThemeDefaults.revision,name=type(selected)=="table" and selected.name or nil,values=source.values}
+ end
  if package==nil then return nil,"unknown theme: "..tostring(id) end
  if type(package)~="table" or type(package.values)~="table" then return nil,"invalid theme package: "..tostring(id) end
  local valid,reason=Identity(package.id,package.revision);if not valid then return nil,reason end
  valid,reason=Configuration:CheckSerializable(package.values);if not valid then return nil,reason end
  for key in pairs(package.values) do if type(key)~="string" or not A.Appearance:GetField(key) and not ThemePreference(key) then return nil,"unknown theme path: "..tostring(key) end end
- local definition={schema=1,id=package.id,revision=package.revision}
+ local definition={schema=1,id=package.id,revision=package.revision,name=package.name}
  for key,value in pairs(package.values) do A.Appearance:WriteDeclaration(definition,key,Clone(value)) end
  return definition
 end
