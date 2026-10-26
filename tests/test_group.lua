@@ -44,14 +44,16 @@ local S = {
 
 S.now=100
 _G.GetTime=function() return S.now end
+_G.GetTimePreciseSec=_G.GetTime
 _G.InCombatLockdown=function() return false end
 _G.CanInspect=function(unit) return UnitExists(unit) end
 local specCallbacks={}
 local specLibrary={RegisterGroup=function(owner,callback) specCallbacks[owner]=callback end,UnregisterGroup=function(owner) specCallbacks[owner]=nil end}
 _G.LibStub=function(name) assert(name=="LibSpecialization");return specLibrary end
 _G.SOUNDKIT={UI_GROUP_FINDER_RECEIVE_APPLICATION=47615}
-_G.PlaySound=function(id,channel,_,finish) S.soundCalls=(S.soundCalls or 0)+1;S.soundKit=id;S.soundChannel=channel;S.soundFinish=finish;return true,7 end
-_G.StopSound=function() end
+_G.PlaySound=function(id,channel) S.soundAt=S.now;S.soundCalls=(S.soundCalls or 0)+1;S.soundKit=id;S.soundChannel=channel;S.soundHandle=(S.soundHandle or 0)+1;return true,S.soundHandle end
+_G.PlaySoundFile=function(path,channel) S.soundAt=S.now;S.soundCalls=(S.soundCalls or 0)+1;S.soundFile=path;S.soundChannel=channel;S.soundHandle=(S.soundHandle or 0)+1;return true,S.soundHandle end
+_G.StopSound=function(handle) S.soundStops=(S.soundStops or 0)+1;S.stoppedHandle=handle end
 -- Native queue-eye contract from the pinned QueueStatusFrame source.
 _G.QueueStatusButton={glowLocks={}}
 function QueueStatusButton:SetGlowLock(key,enabled,count)
@@ -2063,100 +2065,141 @@ S.appStatus[17]="invited";G:OnEvent("LFG_LIST_APPLICATION_STATUS_UPDATED",17,"in
 T.eq(accepts,4,"the new application round can auto-accept after the previous round joined")
 S.appStatus[17]="inviteaccepted";G:OnEvent("LFG_LIST_APPLICATION_STATUS_UPDATED",17,"inviteaccepted","invited")
 A:SetSetting("autoJoin",false)
--- Cancellation clears the shared native loop, including a later native event handler.
+-- Leading-edge applicant audio: only a new arrival can play, never elapsed time.
 do
  local eye=QueueStatusButton
- S.activeEntry={activityIDs={501},name="Applicant reminders"};G.Listing:OnEntryUpdate()
- G.Applicants:Clear()
- S.applicants={[801]={applicationStatus="applied",numMembers=1,displayOrderID=1}}
- S.applicantMembers={[801]={{name="Sound-Away",class="MAGE",itemLevel=250,dungeonScore=2400}}}
- G:OnEvent("LFG_LIST_APPLICANT_LIST_UPDATED")
- eye:SetGlowLock("lfglist-applicant",true)
- S.applicants[801].applicationStatus="cancelled"
- G:OnEvent("LFG_LIST_APPLICANT_UPDATED",801)
- T.eq(eye.glowLocks["lfglist-applicant"],false,"last withdrawal immediately clears the native repeating sound")
- -- Model Blizzard/another LFG handler running after our event callback.
- eye:SetGlowLock("lfglist-applicant",true)
- Stubs.AdvanceClock(0)
- T.eq(eye.glowLocks["lfglist-applicant"],false,"the coalesced applicant update clears a late native rearm")
- local sounds=S.soundCalls or 0
- PulseApplicantSound();PulseApplicantSound()
- T.eq(S.soundCalls or 0,sounds,"cancelled applicants cannot trigger another native sound pulse")
- G.Applicants:Clear()
-
- S.applicants[801].applicationStatus="applied"
- G:OnEvent("LFG_LIST_APPLICANT_LIST_UPDATED");Stubs.AdvanceClock(0)
- T.eq(eye.glowLocks["lfglist-applicant"],-1,"an unread applicant uses the native repeating reminder")
- T.eq(S.soundCalls or 0,sounds,"the addon does not play a second copy of the native sound")
- PulseApplicantSound();PulseApplicantSound()
- T.eq(S.soundCalls,sounds+2,"the queue eye owns repeated playback")
- T.eq(S.soundKit,47615);T.eq(S.soundChannel,nil,"the native pulse retains the game's default channel")
- T.eq(#Stubs.FramesWithEvent("SOUNDKIT_FINISHED"),0,"no separate sound-completion listener is installed")
- T.eq(Stubs.PendingTimers(),0,"reminders add no Lua loop or audio timer")
+ local function Advance(seconds) S.now=S.now+seconds;Stubs.AdvanceClock(seconds) end
+ local function Update(id) G:OnEvent("LFG_LIST_APPLICANT_UPDATED",id);Advance(0) end
+ local function List() G:OnEvent("LFG_LIST_APPLICANT_LIST_UPDATED");Advance(0) end
+ local function Add(id,size,status)
+  S.applicants[id]={applicationStatus=status or "applied",numMembers=size or 1,displayOrderID=id}
+  local members={};S.applicantMembers[id]=members
+  for index=1,size or 1 do members[index]={name="Sound"..id.."-"..index,class="MAGE",itemLevel=250,dungeonScore=2400} end
+ end
+ local function Reset()
+  G.Alerts:StopPreview();G.Applicants:Clear();S.applicants={};S.applicantMembers={}
+  S.activeEntry={activityIDs={501},name="Applicant reminders"};G.Listing:OnEntryUpdate()
+  A:SetSetting("applicantAlertSound","voice");G.Alerts:OnSettingChanged()
+  S.now=math.max(S.now,S.soundAt or S.now);Advance(3)
+  S.soundCalls,S.soundStops=0,0;S.soundKit,S.soundFile=nil,nil
+ end
+ Reset();Add(801,3);List()
+ T.eq(S.soundCalls,1,"a multi-member application produces one immediate sound")
+ T.eq(S.soundFile,"Interface\\AddOns\\LycheeGroup_Group\\Media\\new-applicant-zhCN-v2.ogg")
+ T.eq(S.soundChannel,"Dialog");T.eq(G.Alerts:GetState(),"cooldown")
+ T.eq(eye.glowLocks["lfglist-applicant"],0);T.eq(Stubs.PendingTimers(),0)
+ for _=1,25 do Update(801);List();G.Alerts:Sync();PulseApplicantSound() end
+ T.eq(S.soundCalls,1,"duplicate updates and native pulses do not replay")
  local writes=S.glowWrites
- for i=1,25 do G.Alerts:Sync() end
- T.eq(S.glowWrites,writes,"unchanged unread state does not reapply the native animation lock")
- eye:SetGlowLock("lfglist-applicant",true,6);writes=S.glowWrites
- G.Alerts:Sync()
- T.eq(eye.glowLocks["lfglist-applicant"],-1,"an external finite reminder still restores the existing repeating policy")
- T.eq(S.glowWrites,writes+1,"changed external state is reconciled once")
+ for _=1,25 do G.Alerts:Sync() end
+ T.eq(S.glowWrites,writes,"stable native glow is not rewritten")
+ eye:SetGlowLock("lfglist-applicant",true,6);PulseApplicantSound();T.eq(S.soundCalls,1)
+ eye:SetGlowLock("unrelated-queue",true,6);T.eq(eye.glowLocks["unrelated-queue"],6)
+ T.eq(#Stubs.FramesWithEvent("SOUNDKIT_FINISHED"),0)
+ Advance(1);Add(802);Update(802);Advance(1);Add(803);Update(803)
+ T.eq(S.soundCalls,1);T.eq(Stubs.PendingTimers(),0,"cooldown arrivals are dropped without a sound timer")
+ Advance(1);T.eq(S.soundCalls,1,"the third-second boundary never plays by itself")
+ Update(802);List();Advance(20);T.eq(S.soundCalls,1,"skipped arrivals never catch up later")
+ Add(804);Update(804);T.eq(S.soundCalls,2,"a later genuinely new arrival plays immediately")
+ T.eq(Stubs.PendingTimers(),0)
 
+ -- Viewing changes only the native highlight.
  local main,popup={},{}
- G:SetApplicantView(main,true)
- T.eq(eye.glowLocks["lfglist-applicant"],false,"viewing applicants acknowledges the reminder")
- writes=S.glowWrites
- for i=1,25 do G:SetApplicantView(main,true) end
- T.eq(S.glowWrites,writes,"refreshing the same visible viewer does not repeat native animation cleanup")
+ G:SetApplicantView(main,true);T.eq(eye.glowLocks["lfglist-applicant"],false)
+ Advance(3);Add(805);Update(805);T.eq(S.soundCalls,3)
  G:SetApplicantView(popup,true);G:SetApplicantView(main,false)
- S.applicants[802]={applicationStatus="applied",numMembers=1,displayOrderID=2}
- S.applicantMembers[802]={{name="Visible-Away",class="WARRIOR",itemLevel=250}}
- G:OnEvent("LFG_LIST_APPLICANT_LIST_UPDATED")
- eye:SetGlowLock("lfglist-applicant",true);Stubs.AdvanceClock(0)
- T.eq(eye.glowLocks["lfglist-applicant"],false,"a visible popup also suppresses a later native callback")
- G:SetApplicantView(popup,false)
- G:OnEvent("LFG_LIST_APPLICANT_UPDATED",802);G:OnEvent("LFG_LIST_APPLICANT_LIST_UPDATED");Stubs.AdvanceClock(0)
- T.eq(eye.glowLocks["lfglist-applicant"],false,"closing a viewed list and duplicate updates do not restart reminders")
-
- S.applicants[803]={applicationStatus="applied",numMembers=1,displayOrderID=3}
- S.applicantMembers[803]={{name="New-Away",class="MAGE",itemLevel=250}}
- G:OnEvent("LFG_LIST_APPLICANT_LIST_UPDATED");Stubs.AdvanceClock(0)
- T.eq(eye.glowLocks["lfglist-applicant"],-1,"a later new applicant starts another reminder")
- eye:SetGlowLock("lfglist-applicant",false) -- Original panel OnShow acknowledges it.
- G:OnEvent("LFG_LIST_APPLICANT_UPDATED",803);Stubs.AdvanceClock(0)
- T.eq(eye.glowLocks["lfglist-applicant"],false,"closing the original panel cannot revive its acknowledged reminder")
- G.Applicants:Clear();G:OnEvent("LFG_LIST_APPLICANT_LIST_UPDATED");Stubs.AdvanceClock(0)
- S.applicants[801].applicationStatus="cancelled";G:OnEvent("LFG_LIST_APPLICANT_UPDATED",801);Stubs.AdvanceClock(0)
- T.eq(eye.glowLocks["lfglist-applicant"],-1,"one withdrawal preserves reminders while other applications remain")
- eye:SetGlowLock("unrelated-queue",true,6)
- S.applicants={};G:OnEvent("LFG_LIST_APPLICANT_LIST_UPDATED");Stubs.AdvanceClock(0)
- T.eq(eye.glowLocks["lfglist-applicant"],false,"removing all applicants clears the shared reminder")
- T.eq(eye.glowLocks["unrelated-queue"],6,"applicant cleanup preserves unrelated queue reminders")
- T.eq(Stubs.PendingTimers(),0,"an empty list leaves no applicant tasks")
- eye.glowLocks["unrelated-queue"]=nil
-
- S.applicants={[804]={applicationStatus="applied",numMembers=1,displayOrderID=4}}
- S.applicantMembers[804]={{name="Native-Away",class="MAGE",itemLevel=250}}
+ Advance(3);Add(806);Update(806);T.eq(S.soundCalls,4)
+ eye:SetGlowLock("lfglist-applicant",true);G.Alerts:Sync();T.eq(eye.glowLocks["lfglist-applicant"],false)
+ G:SetApplicantView(popup,false);List();T.eq(S.soundCalls,4)
  _G.LFGListFrame={IsVisible=function() return true end}
- G:OnEvent("LFG_LIST_APPLICANT_LIST_UPDATED");Stubs.AdvanceClock(0)
- T.eq(eye.glowLocks["lfglist-applicant"],false,"the original applicant panel also counts as viewed")
+ Advance(3);Add(807);List();T.eq(S.soundCalls,5);T.eq(eye.glowLocks["lfglist-applicant"],false)
  _G.LFGListFrame=nil
- G:OnEvent("LFG_LIST_APPLICANT_LIST_UPDATED");Stubs.AdvanceClock(0)
- T.eq(eye.glowLocks["lfglist-applicant"],false)
- local canManage=G.CanManageApplicants
- G.CanManageApplicants=function() return false end
- S.applicants[805]={applicationStatus="applied",numMembers=1,displayOrderID=5}
- S.applicantMembers[805]={{name="ReadOnly-Away",class="MAGE",itemLevel=250}}
- G:OnEvent("LFG_LIST_APPLICANT_LIST_UPDATED");Stubs.AdvanceClock(0)
- T.eq(eye.glowLocks["lfglist-applicant"],false,"ordinary members do not get management reminders")
- G.CanManageApplicants=canManage
- G.Applicants:Clear();G.Applicants:Restore();Stubs.AdvanceClock(0)
- T.eq(eye.glowLocks["lfglist-applicant"],false,"restoring existing applicants does not create a new reminder")
- eye:SetGlowLock("lfglist-applicant",true)
- S.activeEntry=nil;G:OnEvent("LFG_LIST_ACTIVE_ENTRY_UPDATE",false)
- T.eq(eye.glowLocks["lfglist-applicant"],false,"ending recruitment clears the native loop")
- G.Applicants:Clear();S.applicants={}
-end
 
+ -- Complete data, not a repeated status or list, establishes the first arrival.
+ Reset();Add(820,1,"none");S.applicants[820].pendingApplicationStatus="applied";Update(820)
+ T.eq(S.soundCalls,0)
+ S.applicants[820].applicationStatus="applied";S.applicants[820].pendingApplicationStatus=nil;Update(820)
+ T.eq(S.soundCalls,1)
+ S.applicants[820].applicationStatus="invited";Update(820);Advance(3)
+ S.applicants[820].applicationStatus="applied";Update(820);T.eq(S.soundCalls,1)
+ Reset();Add(821);Update(821)
+ local getApplicants=C_LFGList.GetApplicants
+ C_LFGList.GetApplicants=function() return {} end;List();C_LFGList.GetApplicants=getApplicants
+ Advance(.3);List();Update(821);Advance(3);Update(821)
+ T.eq(S.soundCalls,1,"an initial incomplete list cannot forget the first arrival")
+ T.ok(G:GetApplicant(821));S.applicants[821]=nil;List();T.eq(G:GetApplicant(821),nil)
+
+ -- Cancellation/processing cannot manufacture or release a deferred alert.
+ Reset();Add(830);Add(831);List();Advance(1);Add(832);Update(832)
+ S.applicants[830].applicationStatus="cancelled";Update(830);List()
+ Advance(3);T.eq(S.soundCalls,1,"cancelling an old applicant cannot release a skipped new arrival")
+ S.applicants[830]=nil;S.applicants[832]=nil;List();Advance(5)
+ T.eq(S.soundCalls,1);T.eq(Stubs.PendingTimers(),0)
+ S.applicants[831].applicationStatus="invited";Update(831);List();Advance(5)
+ T.eq(S.soundCalls,1,"invitation and list updates are silent")
+
+ -- A failed action restores actionability, without turning it into a new arrival.
+ Reset();Add(837);Update(837);Advance(1);Add(838);Update(838)
+ local decline=C_LFGList.DeclineApplicant
+ C_LFGList.DeclineApplicant=function(id) G:OnEvent("LFG_LIST_APPLICANT_UPDATED",id);error("synchronous decline failure") end
+ T.eq(G.Applicants:Decline(838),false);C_LFGList.DeclineApplicant=decline;Advance(0)
+ T.ok(G.Applicants:HasWaitingApplicants());T.eq(G:GetApplicant(838).acting,nil)
+ Advance(3);T.eq(S.soundCalls,1);T.eq(Stubs.PendingTimers(),0)
+
+ -- Restore, manual refresh, disabled sound and permission recovery never catch up.
+ Reset();Add(840);G.Applicants:Restore();Advance(0);Update(840);List();T.eq(S.soundCalls,0)
+ Add(841);G.Applicants:RequestRefresh();Advance(0);Update(841);T.eq(S.soundCalls,0)
+ Add(842);Update(842);T.eq(S.soundCalls,1)
+ local manager=G.CanManageApplicants
+ G.CanManageApplicants=function() return false end;G.Alerts:Sync();Add(843);Update(843)
+ T.eq(G.Alerts:GetState(),"disabled");Advance(3)
+ G.CanManageApplicants=manager;G.Alerts:Sync();List();T.eq(S.soundCalls,1)
+ Add(844);Update(844);T.eq(S.soundCalls,2)
+ A:SetSetting("applicantAlertSound","off");Add(845);Update(845);Advance(3)
+ eye:SetGlowLock("lfglist-applicant",true);PulseApplicantSound();T.eq(S.soundCalls,2)
+ A:SetSetting("applicantAlertSound","native");List();T.eq(S.soundCalls,2)
+ Add(846);Update(846);T.eq(S.soundCalls,3);T.eq(S.soundKit,47615)
+ A:SetSetting("applicantAlertSound","voice");Add(847);Update(847);Advance(3)
+ T.eq(S.soundCalls,3,"tone changes cannot resurrect a suppressed arrival")
+ Add(848);Update(848);T.eq(S.soundCalls,4)
+ S.activeEntry=nil;G:OnEvent("LFG_LIST_ACTIVE_ENTRY_UPDATE",false);Advance(5)
+ T.eq(S.soundCalls,4);T.eq(eye.glowLocks["lfglist-applicant"],false)
+ T.eq(eye.glowLocks["unrelated-queue"],6);eye.glowLocks["unrelated-queue"]=nil
+
+ -- Lifecycle changes preserve the last real playback's cooldown.
+ Reset();Add(870);Update(870);Advance(1)
+ A:SetSetting("applicantAlertSound","native");Add(871);Update(871);T.eq(S.soundCalls,1)
+ G.Applicants:Clear();S.applicants={};Add(872);Update(872);T.eq(S.soundCalls,1)
+ G.CanManageApplicants=function() return false end;G.Alerts:Sync()
+ G.CanManageApplicants=manager;G.Alerts:Sync();Add(873);Update(873);T.eq(S.soundCalls,1)
+ Advance(2);List();T.eq(S.soundCalls,1);Add(874);Update(874);T.eq(S.soundCalls,2)
+
+ -- Preview replaces owned sound and does not move or queue business cooldown.
+ Reset();Add(860);Update(860);Advance(1);Add(861);Update(861)
+ local handle=S.soundHandle
+ G.Alerts:Preview();T.eq(S.soundCalls,2);T.eq(S.stoppedHandle,handle)
+ handle=S.soundHandle;G.Alerts:Preview();T.eq(S.soundCalls,3);T.eq(S.stoppedHandle,handle)
+ G.Alerts:StopPreview();Advance(2);T.eq(S.soundCalls,3,"preview does not cause catch-up playback")
+ Add(862);Update(862);T.eq(S.soundCalls,4,"preview does not extend real cooldown")
+ local stops=S.soundStops;G.Alerts:StopPreview();T.eq(S.soundStops,stops)
+ Advance(30);T.eq(S.soundCalls,4);T.eq(Stubs.PendingTimers(),0)
+ Reset();S.activeEntry=nil;G.Applicants:Clear();G.Alerts:Preview();T.eq(S.soundCalls,1)
+ G.Alerts:StopPreview();A:SetSetting("applicantAlertSound","off");G.Alerts:Preview();T.eq(S.soundCalls,1)
+ A:SetSetting("applicantAlertSound","native");G.Alerts:Preview()
+ T.eq(S.soundCalls,2);T.eq(S.soundKit,47615);T.eq(S.soundChannel,"Dialog")
+ handle=S.soundHandle;stops=S.soundStops;G.Alerts:StopPreview();T.eq(S.stoppedHandle,handle)
+ T.eq(S.soundStops,stops+1);G.Alerts:StopPreview();T.eq(S.soundStops,stops+1)
+ A:SetSetting("applicantAlertSound","off");local plays=S.soundCalls
+ G.Alerts:Preview("voice");T.eq(S.soundCalls,plays+1)
+ T.eq(A:GetSetting("applicantAlertSound"),"off","per-option preview does not enable saved sound alerts")
+ T.eq(S.soundFile,"Interface\\AddOns\\LycheeGroup_Group\\Media\\new-applicant-zhCN-v2.ogg")
+ G.Alerts:StopPreview();A:SetSetting("applicantAlertSound","voice")
+ G.Alerts:Preview("native");T.eq(S.soundCalls,plays+2);T.eq(S.soundKit,47615)
+ T.eq(A:GetSetting("applicantAlertSound"),"voice","previewing the other option does not select it")
+ G.Alerts:StopPreview()
+ A:SetSetting("applicantAlertSound","voice");G.Applicants:Clear();Advance(0)
+ T.eq(Stubs.PendingTimers(),0)
+end
 -- Lightweight specialization resolution stays within the member's native class.
 do
  local shared,getClass=A.Specializations,GetClassInfo

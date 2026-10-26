@@ -84,7 +84,7 @@ addon/
 
 主包 `PartyRoleCheck.lua` 独立接入队员的预组队职责确认，不依赖 Group 或 UI 已加载。收到 `LFG_ROLE_CHECK_SHOW` 后读取 `Core.charPrefs.applicationRoles`，只在非队长、非战斗且 `C_LFGList.GetRoleCheckInfo()` 明确为预组队时安排一次下一帧处理；原生弹窗完成初始化后，重新检查身份、职责可用性、各职责按钮及原生组合校验。提交沿用原生 `SetLFGRoles`／`CompleteLFGRoleCheck` 顺序，保留 leader 标志，仅明确成功后隐藏原生弹窗；失败还原原生职责并保留手动入口。当前确认只尝试一次，`LFG_ROLE_CHECK_HIDE` 取消待处理任务并释放临时监听。职责偏好仍由 UI.Application 写入，桥接只读当前角色存档。原生流程依据 wow-ui-source `e7aa82019dc298e0351c7159d60c2a9b916b9b67` 的 `LFDFrame.lua`，离线覆盖见 `tests/test_party_role_check.lua`；游戏内提交权限和真实多人事件顺序待实机验证。
 
-原生组队眼睛的显示与点击接入由 Entrypoints 持有。账号设置 `nativeLFGEntry` 只控制隐藏入口：隐藏时以透明且不响应鼠标的方式接管按钮，关闭已有队列 tooltip；不 Hide 按钮，保留 EyeHighlightAnim 的原生声音循环。一次 OnShow、SetAlpha 与 QueueStatusFrame.Update hook 同步显示状态；按原生规则遍历 GetLFGMode，在任一分类存在 mode 且 submode 不是 noteleport 时释放接管，保留副本匹配、职责确认、就绪邀请和副本内传送入口，即使仍有预组队招募或申请也显示。所有此类状态结束后恢复隐藏；关闭设置同样恢复接管前的透明度和鼠标响应。按钮未加载时仅等对应 ADDON_LOADED，绑定后退订，不预加载业务界面。
+原生组队眼睛的显示与点击接入由 Entrypoints 持有。账号设置 `nativeLFGEntry` 只控制隐藏入口：隐藏时以透明且不响应鼠标的方式接管按钮，关闭已有队列 tooltip；不 Hide 按钮，保留 EyeHighlightAnim 的高亮动画；新申请声音由 Group.Alerts 单独接管。一次 OnShow、SetAlpha 与 QueueStatusFrame.Update hook 同步显示状态；按原生规则遍历 GetLFGMode，在任一分类存在 mode 且 submode 不是 noteleport 时释放接管，保留副本匹配、职责确认、就绪邀请和副本内传送入口，即使仍有预组队招募或申请也显示。所有此类状态结束后恢复隐藏；关闭设置同样恢复接管前的透明度和鼠标响应。按钮未加载时仅等对应 ADDON_LOADED，绑定后退订，不预加载业务界面。
 
 绿眼睛的 OnClick 在按钮就绪后安装一次分流，与隐藏设置独立。左键从 `C_LFGList` 读取当前招募和活动申请，已有招募调用 `Open("create")`，否则以首个 applied／invited 的 `applicationID` 调用 `Open("find", context)`；无预组队时左键交回原回调，保留普通副本匹配的队列菜单和正在进行的战场计分板。右键同样原样交给原回调。预组队左键不调用 `LFGListUtil_OpenBestWindow`，因此不会同时触发集合石等插件在该函数上的开窗 hook；如原生窗口已显示，先隐藏以交还输入，荔枝打开失败则恢复。该分流只在点击时读取，不复制 Group 状态、不新增计时器，按钮等待与显示共用原有事件 Frame。原生分支与按钮类型参考 wow-ui-source `15881d522c44cd106d3d8660106ec9f9d2f44167` 的 QueueStatusFrame.lua／xml；替身验证见 `tests/test_native_queue.lua`。
 
@@ -148,7 +148,7 @@ flowchart LR
 | Group.Listing / Applicants | 当前招募与申请者、各成员全部 requestedRoles、assignedRole／specID、终态展示清理 | 报名职责独立于分配职责和当前专精；更新具体记录，原生仍活动但详情暂缺时保留最后确认的招募快照，原生确认结束后清理所属数据 |
 | Group.CreationPresets | 账号级 `Group.db.creationPresets` 收藏数组 | UI 通过 Find／ToggleFavorite／Remove 匹配、切换和移除条件；Listing 不写入收藏 |
 | Group.History | 当前角色大秘境历史 run 与进行中活动的成员基线 | 活动事件驱动去重记录；活动结束退订队伍监听，不周期扫描 |
-| Group.Alerts | 当前招募的未查看标记及可见申请列表的所有者集合 | Applicants 的新增申请触发；列表查看、待处理申请清空、权限丢失或招募结束清理原生申请提醒 |
+| Group.Alerts | 声音冷却截止时间、单个播放句柄、当前招募未查看标记及可见申请列表的所有者集合 | 真正的新申请按 3 秒间隔触发声音，冷却内直接丢弃；查看只清高亮，业务重置保留截止时间，试听不改变业务间隔 |
 | Group.RaidBuffs | 当前活动与成员职业／小队形成的职业增益缺口 | Roster 调用独立统计模型，Preview 复用同一模型，无新轮询 |
 | Group.Roster | 当前成员快照、按 GUID 保存的库同步专精／检视结果与单个检视请求、职业／小队统计输入 | LibSpecialization 回调与游戏事件使快照失效；创建页需要且缺专精时才检视；装等独立接纳已有原生值，复用当前 GUID 缓存 |
 | Group.RaidGroups | 当前团队成员换小队的落点判断、动作检查与原生提交 | 预览与动作共用身份、权限、容量和战斗校验；提交时按 GUID 重新解析 raid 索引，不保存名单副本或乐观结果 |
@@ -209,7 +209,7 @@ Find 将 `hideSameSpec` 与赛季地下城的角色偏好一同保存，其他�
 
 ## 5. 事件驱动的实际边界
 
-事件直接路由到所有者，依据参数定位受影响记录。`Group:Notify` 只分发变化通知；Game 根据创建页与活动招募维护本地关系监听需求，申请变化不承担无关副作用；`Group:Publish` 只负责发布招募。Core 保存设置后，仅把历史记录和自动进组的实际变化交给已加载的 `Group:OnSettingChanged`，通常不因此加载 Group；例外是开启历史时发现当前秘境正在进行，入口会立即加载 Group 并恢复记录。原有 Restore／Discard／TryAutoJoin 的同步时机不变。共享的受限值读取函数 `Group.Public` 在 Group 基础文件定义，具名服务及现有操作入口保持原合同。页面不可见时不生成展示对象；可覆盖状态按同一所有者／同一用途合并，不丢弃用户动作。
+事件直接路由到所有者，依据参数定位受影响记录。`Group:Notify` 只分发变化通知；Game 根据创建页与活动招募维护本地关系监听需求，申请变化不承担无关副作用；`Group:Publish` 只负责发布招募。Core 保存设置后，将历史记录、自动进组及新申请提示音的实际变化交给已加载的 `Group:OnSettingChanged`，通常不因此加载 Group；例外是开启历史时发现当前秘境正在进行，入口会立即加载 Group 并恢复记录。原有 Restore／Discard／TryAutoJoin 的同步时机不变。共享的受限值读取函数 `Group.Public` 在 Group 基础文件定义，具名服务及现有操作入口保持原合同。页面不可见时不生成展示对象；可覆盖状态按同一所有者／同一用途合并，不丢弃用户动作。
 
 | 触发 | 所有者与处理 | 结束条件 |
 | --- | --- | --- |
@@ -417,11 +417,21 @@ LycheeUI 提供通用主题、控件、动效、菜单、阴影和弹窗；产�
 
 当前团队的拖动状态、源按钮、跟随卡片、落点面板与 Notice 归 `UI.Tooltip`，成员装等文字由 `UI.Members:BindRoster` 按显示参数绘制。跟随卡片复用同一成员绘制，原名单保持既有布局；空小队落点独立定位。`Group.RaidGroups:CanStart` 核对拖动权限，`ResolveDrop` 在落点或相关状态变化时返回移入空组、加入小队或交换的意图，`Drop` 松手时重新校验后提交。各入口从当前 GUID 解析原生 raid 索引，核对团长／助理权限及自身、源成员、交换目标的战斗状态；成员落点走 `SwapRaidSubgroup`，空位背景走 `SetRaidSubgroup`。只提交动作，不改写 Roster，原生名单更新继续走已有 Group 通知。原生交换与容量规则参考 `wow-ui-source@15881d522c44cd106d3d8660106ec9f9d2f44167` 的 `Interface/AddOns/Blizzard_RaidFrame/Mainline/RaidFrameSocialView.lua:352`；战斗前置检查按本项目产品要求追加。界面自行登记拖动事件，不接管原生安全团队按钮。搜索、申请者与 Preview 不进入此业务入口；共享 LycheeUI 仅提供普通控件、Motion 和 Notice。
 
-### 9.1 原生申请声音与轻量悬浮窗
+### 9.1 新申请声音状态机与轻量悬浮窗
 
-`Group.Applicants` 识别当前招募新增申请 ID，`Alerts` 持有未查看标记，通过 `QueueStatusButton:SetGlowLock("lfglist-applicant", enabled)` 与游戏和集合石共用原生申请提醒。循环和 SoundKit 47615 播放由原生 `EyeHighlightAnim.OnLoop` 负责；本插件不再持有声音句柄、播放任务或 `SOUNDKIT_FINISHED` 监听，也不覆盖原生播放回调和声道。申请者单条及整表更新先同步状态，再复用已有的下一帧展示通知同步提醒，覆盖其他原生事件回调稍后重新开启提醒的情况，不增加独立 timer。同步前比较原生 `glowLocks` 中的实际值，相同目标不重复调用 setter；仍识别其他入口后来写入的有限时长或关闭状态，不另存一份本地锁缓存。
+`Group.Applicants` 在现有申请记录中识别首次可处理的申请，用 `alertSeen` 去重；静默恢复和冷却期内丢弃的申请也标记为已见。待处理计数随读取、移除和动作提交更新，`HasWaitingApplicants()` 以 O(1) 返回是否还有待处理申请，供高亮判断。提醒不维护候选计数、候选代次、第二份申请 ID 集合或待播队列；邀请／拒绝失败不重新安排声音。
 
-主窗创建页仅在申请者列表实际展示时通过 `Group:SetApplicantView(owner, visible)` 登记查看状态，编辑表单和离页释放；浮窗展开招募列表时登记，收起或隐藏时释放；预览 provider 的同名接口不修改真实业务。查看、待处理数归零、结束招募或失去管理权限会清除未查看标记并关闭该原生提醒，不影响其他队列的高亮锁。一次 `SetGlowLock` 安全 hook 记录原生界面或集合石对同一提醒的关闭，避免之后的重复状态更新重新开启已查看提醒。主设置继续清理废弃音色／开关键，不改玩家全局声音配置。集合石 12.2.4、固定原生源码和离线取消／查看调用路径已核对；原生眼睛隐藏／恢复与透明父控件下的动画循环已实机核对，实际新申请可听效果和真实事件顺序仍待实机验证，邀请准备音不受影响。
+`Group.Alerts` 拥有声音状态机、高精度冷却截止时间及一个播放句柄。声音只由真正的新申请触发，与主窗／浮窗的查看状态分开：
+
+| 状态 | 进入与退出 | 保留工作 |
+| --- | --- | --- |
+| `idle` 待命 | 真正的新申请立即播放，进入 `cooldown` | 无计时器 |
+| `cooldown` 冷却 | 截止前的新申请只更新业务和高亮，不保存播放请求；截止后下一批真正的新申请按 `idle` 处理 | 仅截止时间，无到期任务 |
+| `disabled` 停用 | 无招募、无管理权限或选择关闭；保留上次播放截止时间，恢复后进入待命或剩余冷却，不补播 | 无计时器 |
+
+单条事件先到、申请尚未首次出现在完整名单时，仅在名单遗漏处查询该 ID 的原生状态；仍在申请中的记录保留，避免去重标记丢失，首次入表后恢复正常名单移除规则。最后一次真实提醒的冷却截止时间独立于业务重置；清空、权限恢复、招募重建和切换音色都不能缩短播放间隔。设置下拉菜单通过 LycheeUI 公开的菜单列表扩展点复用两个 IconButton，试听传入该行音色而不写设置；按钮在菜单关闭和复用时清理。切换提示音停止自身播放；试听与提醒共用句柄，后一次播放替换前一次，试听不改变业务截止时间，退出试听仅停止仍属于试听的句柄。声音使用 `Dialog` 对话声道；音色及播放间隔见 [Product.md](Product.md)，运行成本见 [perfermance.md](perfermance.md)。声音服务不新增 `OnUpdate`、任何计时器或声音完成事件监听。
+
+主窗／浮窗通过 `Group:SetApplicantView(owner, visible)` 登记查看状态，仅用于原生高亮；预览 provider 不改变真实状态。申请者单条及整表更新同步业务后，仍复用已有展示通知协调高亮；相同目标不重复调用 setter。对 `QueueStatusButton:SetGlowLock` 安装一次安全 hook，只将 `lfglist-applicant` 的启用值归零；零值在 `UpdateGlow` 中保留高亮，在 `OnGlowPulse` 中不产生声音。安装时也归零已有申请锁；按钮晚到时在后续同步中绑定。原生关闭锁时清除未查看标记，其他锁和共享动画回调保持原样，不包装全局播放函数，也不修改全局声音设置。该合同已核对固定 Retail UI 源提交 `15881d522c44cd106d3d8660106ec9f9d2f44167` 的 `Blizzard_QueueStatusFrame/Mainline/QueueStatusFrame.lua`、同名 XML 与 `Blizzard_GroupFinder/Mainline/LFGList.lua`；原生申请音为 47615。当前规则的验证方法与状态见 [tests/applicant_alerts.md](tests/applicant_alerts.md)；其中保留的真实事件顺序和名单短暂遗漏记录属于此前版本的诊断证据，不证明当前丢弃规则已通过实机验证。
 
 主包 `Floating` 持有位置、锁定、缩放、展开状态以及有限行／批次控件池，权威记录仍归 Group。申请与招募模式互斥。申请模式取所有分类 waiting 项，不混入 invited；招募模式按批次引用全部成员与一份原生 `GetApplicantInfo.comment`。`GetApplicantMemberInfo` 没有成员备注，不能把组备注复制成多人私有备注。点击主体经加载器定位页面；单条取消、取消全部等待、整批邀请／拒绝、结束招募直接调用 Group，不加载 UI。hover 只读已有快照与职业专精解析，不为打开轻面板加载 UI、目录或笔记。
 
