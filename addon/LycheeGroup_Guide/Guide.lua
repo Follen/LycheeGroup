@@ -1,10 +1,10 @@
 -- One continuous tour owns a private player/provider graph and a reusable spotlight.
 -- Package loading performs no client reads and creates no native objects or jobs.
 local A=_G.LycheeGroup
-local Guide={version=3}
+local Guide={version=4}
 A.Guide=Guide
 local function S(cn,en) return A:GetLocale()=="zhCN" and cn or en end
-local sequence={"activity","sidebar","filters","details","sort","apply","createPage","createActivity","publish","faction","time","resize"}
+local sequence={"activity","sidebar","filters","details","sort","apply","raidActivity","raidDetails","createPage","createActivity","publish","applicantDetails","faction","time","resize"}
 local demoPlayer={class="SHAMAN",specID=264,role="HEALER",itemLevel=280,roles={TANK=false,HEALER=true,DAMAGER=true}}
 local function Metadata()
  local data=type(A.db.guide)=="table" and A.db.guide or {}
@@ -46,6 +46,9 @@ function Guide:Open()
  if not UI:IsShown() then UI:Show("settings") end
  self:Bind()
  UI:CloseMenu();UI:CloseModal("guide");UI.Tooltip:Hide()
+ self.Adapter:CaptureGeometry()
+ self.transition=true;self.Adapter.starting=true;UI:Hide(true);self.Adapter.starting=nil;self.transition=nil
+ self.standalone=true
  self.View:ShowIntroduction(S("感谢您使用荔枝组队，我们创建了一个新手引导，来帮助你更好的使用它","Thank you for using Lychee LFG. We created this guide to help you use it."))
  return true
 end
@@ -53,6 +56,7 @@ end
 function Guide:Start()
  if InCombatLockdown() then self:Stop("interrupted");return false end
  local UI=A.UI
+ self.standalone=nil
  if self.ownsPreview then self:Stop("interrupted","navigate") end
  if not self.active then self:Bind() end
  local group,err=A:Ensure("Group")
@@ -60,9 +64,13 @@ function Guide:Start()
  local resolved,activity,category=pcall(self.ResolveActivity,self,group.Catalog)
  if not resolved then self:Stop("interrupted");error(activity,0) end
  if not activity then self:Stop("later");A:Print(category);return false,category end
+ self.dungeonActivity,self.dungeonCategory=activity,category
+ local raidOK,raid,raidCategory=pcall(self.ResolveRaid,self,group.Catalog)
+ if not raidOK then self:Stop("interrupted");error(raid,0) end
+ self.raidActivity,self.raidCategory=raid,raidCategory
  local steps={}
  for _,id in ipairs(sequence) do
-  if id~="time" or activity.isMythicPlusActivity then steps[#steps+1]=id end
+  if (id~="time" or activity.isMythicPlusActivity) and (id~="raidActivity" and id~="raidDetails" or self.raidActivity) then steps[#steps+1]=id end
  end
  self.page,self.steps,self.index,self.phase="find",steps,1,1
  self.transition,self.ownsPreview=true,true
@@ -71,6 +79,7 @@ function Guide:Start()
  self.transition=nil
  if not success then self:Stop("interrupted");error(ok,0) end
  if not ok then self:Stop("later");A:Print(reason);return false,reason end
+ self.standalone=nil
  UI.preview.provider.applicationPrefs.roles={}
  self.View:Hide()
  local delay=A:GetSetting("reduceMotion") and 0 or math.max(UI.Theme.windowPageMotionDuration,UI.Theme.windowOpenDuration or .42)
@@ -114,7 +123,8 @@ function Guide:PrepareStep()
  if self.page=="find" then
   page:SetFiltersOpen(false)
   if id=="activity" then page:SetSidebarCollapsed(false,false,false)
-  elseif id=="details" or id=="apply" then page:ClearFilters();page:ClearSearch() end
+  elseif id=="details" or id=="apply" or id=="raidActivity" or id=="raidDetails" then page:ClearFilters();page:ClearSearch() end
+  if id=="createPage" then UI.preview.provider:BindActivity(self.dungeonActivity,self.dungeonCategory) end
  elseif id=="createActivity" then
   UI.Native:SetPreviewCreationText(S("一起限时，轻松打","A relaxed timed run"),S("熟悉路线，等大家准备好再出发。","Know the route; start when everyone is ready."))
  end
@@ -188,14 +198,17 @@ end
 function Guide:RevealFrame()
  local id,phase=self.steps[self.index],self.phase;local page=A.UI.pages[self.page]
  if id=="activity" and (phase==2 or phase==3) and self.activityChoiceGoal then return page.activities end
- if id=="details" or id=="apply" and phase==1 then return self:ListRegion() end
+ if id=="details" or id=="raidDetails" or id=="applicantDetails" or id=="apply" and phase==1 then return self:ListRegion() end
  if id=="sort" then return self:ListRegion(HeaderButton(page.resultsHeader,"rating")) end
  if id=="faction" or id=="time" then return self:ListRegion() end
 end
 
 function Guide:Target()
  local UI=A.UI;local page=UI.pages[self.page];local id=self.steps[self.index];local phase=self.phase
- if id=="activity" then
+ if id=="raidActivity" then
+  if phase==1 then return FirstRow(page.seasonCategories,self.raidCategory) or FirstRow(page.categories,self.raidCategory) end
+  return FirstRow(page.activities,A.UI.preview.provider.Catalog:GetGroupKey(self.raidCategory,self.raidActivity))
+ elseif id=="activity" then
    if phase==1 or not page.picker or not page.picker:IsShown() then
     local key=UI.preview.provider.category
     return FirstRow(page.seasonCategories,key) or FirstRow(page.categories,key)
@@ -214,8 +227,9 @@ function Guide:Target()
  elseif id=="filters" then
   if phase==1 or not page.filtersOpen then return page.quickPlacement=="header" and self:RoleFilterTarget() or page.filterToggle end
   return phase==2 and self:RoleFilterTarget() or page.filterDone
- elseif id=="details" then
-  if phase==2 and self.detailsArea then return self.detailsArea end
+ elseif id=="details" or id=="raidDetails" or id=="applicantDetails" then
+  if phase>=2 and self.detailsArea then return self.detailsArea end
+  if id=="applicantDetails" then local row=ApplicantRow(page);return row and row.tooltipArea end
   local row=FirstRow(page.results)
   return row and row.tooltipArea
  elseif id=="sort" then
@@ -237,7 +251,17 @@ end
 
 function Guide:Instruction()
  local id,phase=self.steps[self.index],self.phase
- if id=="activity" then
+ if id=="raidActivity" then
+  return phase==1 and S("点击团队副本分类，看看团本队伍。","Click the raid category to explore raid groups.")
+   or S("点击一个团队副本，查看队伍。","Click a raid to view its groups.")
+ elseif id=="raidDetails" then
+  if phase==1 then return S("移到团本队伍左侧，查看队伍概览和首领进度。","Hover over the left side of a raid group to see its overview and boss progress.") end
+  if phase==2 then return S("鼠标保持在队伍或详情上，按 Shift 展开成员名单。","Keep the pointer over the group or tooltip and press Shift to expand the member list.") end
+  return S("成员名单已展开。看完后，把鼠标移到空白处继续。","The member list is expanded. Move the pointer to an empty area when you're done.")
+ elseif id=="applicantDetails" then
+  return phase==1 and S("移到申请者姓名处，查看个人资料、装备和副本成绩。","Hover over an applicant's name to view their profile, equipment and dungeon results.")
+   or S("看完个人资料后，把鼠标移到空白处继续。","Move the pointer to an empty area after reading the profile.")
+ elseif id=="activity" then
    if phase==1 then return S("点击左侧地下城分类，选择要去的副本。","Click the dungeon category on the left to choose where to go.") end
    if phase==2 then return self.activityChoiceGoal and S("先勾选一个想去的大秘境。","Select one Mythic+ dungeon you want to run.") or S("点击一个想去的副本。","Click a dungeon you want to run.") end
    if phase==3 then return S("再勾选一个副本，同时搜索多个大秘境。","Select another dungeon to search several Mythic+ dungeons together.") end
@@ -328,6 +352,7 @@ end
 
 function Guide:Stop(reason,source)
  if not self.active then return end
+ local standalone=self.standalone;self.standalone=nil
  self.active,self.ownsPreview=nil,nil
  self:ReleaseBindings()
  self.detailsArea,self.detailsLeaving=nil,nil
@@ -338,6 +363,7 @@ function Guide:Stop(reason,source)
  self.page,self.steps,self.index,self.phase=nil,nil,nil,nil
  self.preparing,self.transition,self.ready,self.pendingAdvance,self.appliedID=nil,nil,nil,nil,nil
  self.activityChoiceGoal=nil
+ self.raidActivity,self.raidCategory,self.dungeonActivity,self.dungeonCategory=nil,nil,nil,nil
  if reason=="skipped" or reason=="dismissed" then Metadata().dismissed=true end
- self.Adapter:Finish(source~="hide" and source~="navigate" and source~="previewEnd")
+ self.Adapter:Finish(source~="hide" and source~="navigate" and source~="previewEnd",standalone)
 end

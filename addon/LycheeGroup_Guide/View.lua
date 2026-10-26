@@ -85,7 +85,7 @@ function View:Build()
   if i>=2 then b:SetLabelStyle("captionFontSize","captionLineHeight") end
   C.SetLineHeight(b.label,i>=2 and "captionLineHeight" or "buttonLineHeight",false);b.label:SetWordWrap(true)
   b.label:SetJustifyH("CENTER")
-  b.fill:Show();b.fill:Hide();b.hover:Show();b.hover:Hide();self.buttons[i]=b;self.buttonLayout[i]={}
+  b.hover:Hide();self.buttons[i]=b;self.buttonLayout[i]={}
  end
  self.buttons.start,self.buttons.skip,self.buttons.dismiss=self.buttons[1],self.buttons[2],self.buttons[3]
  return true
@@ -124,11 +124,23 @@ function View:MeasureCard(width)
  end
  cache.width,cache.height,cache.revision,cache.compact,cache.limit=width,height,self.contentRevision,self.compact,limit;SaveMetrics(cache);return height
 end
+function View:AttachRoot(parent)
+ if self.root:GetParent()==parent then return end
+ self.root:SetParent(parent)
+ -- SetParent resets inherited strata and levels in the native frame tree.
+ -- Restore the complete overlay order after switching the welcome's parent.
+ local level=A.UI.frame:GetFrameLevel()+120
+ self.root:SetFrameStrata("DIALOG");self.root:SetFrameLevel(level)
+ for _,shade in ipairs(self.shades) do shade:SetFrameStrata("DIALOG");shade:SetFrameLevel(level+1) end
+ self.card:SetFrameStrata("DIALOG");self.card:SetFrameLevel(level+3)
+ self.highlight:SetFrameStrata("TOOLTIP");self.highlight:SetFrameLevel(level+2)
+ self.layoutValid=false
+end
 function View:FindPlacement(w,h)
  local t,a,c,s=self.targetRect,self.avoidRect,self.contextRect,self.screen
  local previous=self.mode~="intro" and self.lastValid and self.lastWidth==w and Fits(self.lastX,self.lastY,w,h,s,t,a,c)
  local cx=t.valid and (t.left+t.right)/2 or A.UI.frame:GetWidth()/2
- local cy=t.valid and (t.top+t.bottom)/2 or A.UI.frame:GetHeight()/2
+ local cy=t.valid and (t.top+t.bottom)/2 or A.UI.frame:GetHeight()/2-(self.mode=="intro" and 120 or 0)
  local function Score(x,y)
   local centerX,centerY=x+w/2-cx,y+h/2-cy
   if not t.valid then return centerX*centerX+centerY*centerY end
@@ -211,7 +223,17 @@ function View:SyncBrand(play)
 end
 function View:Layout()
  if not self.root or not self.mode then return false end
- local window=A.UI.frame;if not window:IsVisible() then self:Hide();return false end
+ if not SameMetrics(self.layoutMetrics) then
+  local C=A.UI.C
+  C.DefaultFont(self.body,"bodyFontSize");C.DefaultLineHeight(self.body,"bodyLineHeight",false)
+  C.DefaultFont(self.counter,"captionFontSize");C.DefaultLineHeight(self.counter,"captionLineHeight",true)
+  for i,button in ipairs(self.buttons) do
+   C.DefaultFont(button.label,i==1 and "buttonFontSize" or "captionFontSize")
+   C.DefaultLineHeight(button.label,i==1 and "buttonLineHeight" or "captionLineHeight",false)
+  end
+ end
+ local window=A.UI.frame;if self.mode~="intro" and not window:IsVisible() then self:Hide();return false end
+ if self.mode=="intro" then self.root:SetScale(window:GetEffectiveScale()/UIParent:GetEffectiveScale()) end
  local width,height=window:GetWidth(),window:GetHeight();local left,top=window:GetLeft(),window:GetTop()
  if not left or not top then return false end
  local scale=UIParent:GetEffectiveScale()/window:GetEffectiveScale();local s=self.screen
@@ -227,7 +249,10 @@ function View:Layout()
  local same=self.layoutValid and self.layoutRevision==self.contentRevision and SameMetrics(self.layoutMetrics)
  if same then for i=1,24 do if g[i]~=self.lastGeometry[i] then same=false;break end end end
  if same then return not self.suspended end
- self:LayoutMask(width,height)
+ if self.mode=="intro" then
+  for _,shade in ipairs(self.shades) do shade:Hide() end
+  self.highlight:Hide();self.hole,self.maskHole=nil,nil
+ else self:LayoutMask(width,height) end
  local wasSuspended=self.suspended
  local available=s.right-s.left
  if available<=80 then return self:SuspendCard() end
@@ -287,6 +312,7 @@ function View:SetRevealFrame(frame)
 end
 function View:ShowStep(target,text,index,total)
  if not self:Build() then return false end
+ self:AttachRoot(A.UI.frame);self.root:SetScale(1)
  local body=text or "";local changed=self.mode~="step" or self.text~=body
  if self.mode~="step" then self.brandMotion:Stop();self.body:SetJustifyH("LEFT");self.cardSurface:SetColor(A.UI.Theme.raised) end
  if self.mode~="step" or self.index~=index or self.target~=target then self.lastValid=false;self.layoutValid=false end
@@ -300,6 +326,7 @@ function View:ShowStep(target,text,index,total)
 end
 function View:ShowIntroduction(text)
  if not self:Build() then return false end
+ self:AttachRoot(UIParent)
  local visible=self.mode=="intro" and self.card:IsVisible()
  local body=text or "";local changed=self.mode~="intro" or self.text~=body
  if self.mode~="intro" then self.lastValid=false;self.layoutValid=false;self.body:SetJustifyH("CENTER");self.cardSurface:SetColor(A.UI.Theme.surface) end

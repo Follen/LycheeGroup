@@ -45,6 +45,25 @@ local function Provider()
  local preview=A.UI.preview
  return Adapter:IsPreview(preview) and preview.provider or nil
 end
+local function TeachingOwner(owner)
+ if not Guide.ready or not Guide.steps then return false end
+ local target=Guide:Target()
+ return target and owner and owner.tooltipArea==target
+end
+function Adapter:QuietResultHover()
+ local list=A.UI.pages.find.results
+ if not list then return end
+ self.resultList,self.resultHoverFill=list,list.hoverFill
+ list.hoverFill=false
+ for _,row in ipairs(list.rows) do
+  local leave=row:GetScript("OnLeave");if leave then leave(row) end
+ end
+end
+function Adapter:RestoreResultHover()
+ local list=self.resultList
+ if list and list.hoverFill==false then list.hoverFill=self.resultHoverFill end
+ self.resultList,self.resultHoverFill=nil,nil
+end
 local function Prefs(provider)
  local prefs=provider.applicationPrefs
  if prefs.enabled==nil then prefs.enabled=provider.prefs.autoApply==true end
@@ -67,6 +86,11 @@ local function SaveEnabled(provider,enabled)
  Prefs(provider).enabled=enabled==true;provider.prefs.autoApply=enabled==true
 end
 
+function Adapter:CaptureGeometry()
+ if self.geometry then return end
+ local UI=A.UI
+ self.geometry={width=UI.windowWidth,height=UI.windowHeight,preferredWidth=UI.preferredWindowWidth,preferredHeight=UI.preferredWindowHeight,point=Pack(UI.frame:GetPoint())}
+end
 function Adapter:RestoreGeometry()
  local geometry=self.geometry;if not geometry then return end
  self.geometry=nil
@@ -93,12 +117,24 @@ function Adapter:Attach()
  end)
  for _,method in ipairs({"ShowGroup","ShowApplicants","ShowRoster","ShowPlayer","ShowNote"}) do
   local name=method
-  self:Lease(tooltip,name,function(original,owner,...)
-   if not Guide.active or name=="ShowGroup" and Guide.steps and Guide.steps[Guide.index]=="details" then
-    return original(owner,...)
+  self:Lease(tooltip,name,function(original,owner,anchor,...)
+   local id=Guide.steps and Guide.steps[Guide.index]
+   if not Guide.active or TeachingOwner(anchor) and (name=="ShowGroup" and (id=="details" or id=="raidDetails") or name=="ShowPlayer" and id=="applicantDetails") then
+    return original(owner,anchor,...)
    end
   end)
  end
+ self:Lease(tooltip,"HoverOwner",function(original,owner,anchor,...)
+  if not Guide.active or TeachingOwner(anchor) then return original(owner,anchor,...) end
+ end)
+ self:Lease(A,"GetSetting",function(original,owner,key,...)
+  if Guide.active and Guide.steps and Guide.steps[Guide.index]=="raidDetails" and key=="raidMembers" then return "shift" end
+  return original(owner,key,...)
+ end)
+ self:Lease(_G.LycheeGroupEscapeHandler,"IsShown",function(original,...)
+  if Guide.active and Guide.standalone and Guide.View.root and Guide.View.root:IsShown() then return true end
+  return original(...)
+ end)
  local function Navigate(original,owner,...)
   if Guide.active and not Guide.transition then Guide:Stop("interrupted","navigate") end
   return original(owner,...)
@@ -217,9 +253,8 @@ end
 function Adapter:Start(scenario,options)
  local provider,err=Guide:CreateProvider(scenario,options);if not provider then return false,err end
  local UI=A.UI
- local returnPage=UI.preview and UI.preview.returnPage or UI.page or "find"
- local geometry={width=UI.windowWidth,height=UI.windowHeight,preferredWidth=UI.preferredWindowWidth,preferredHeight=UI.preferredWindowHeight,point=Pack(UI.frame:GetPoint())}
- self.geometry=geometry
+ local returnPage="find"
+ self:CaptureGeometry()
  self.starting=true
  local hidden,hideError=pcall(UI.Hide,UI,true)
  self.starting=nil
@@ -228,15 +263,17 @@ function Adapter:Start(scenario,options)
  UI.preview=self.session
  UI.pages.find:BeginPreview(provider);UI.pages.create:BeginPreview(provider)
  UI:Show(scenario=="applications" and "find" or "create");UI:UpdatePreviewIndicator()
+ self:QuietResultHover()
  return true
 end
 
-function Adapter:Finish(reopen)
+function Adapter:Finish(reopen,standalone)
  local UI=A.UI;local session=self.session
  local failure
  local function Attempt(callback)
   local ok,err=pcall(callback);if not ok and not failure then failure=err end
  end
+ Attempt(function() self:RestoreResultHover() end)
  if session then
   Attempt(function() UI:Hide(true) end)
   -- The frame may already be hidden after a failed page entry.
@@ -261,10 +298,10 @@ function Adapter:Finish(reopen)
    UI.finishHide,UI.hiding=nil,nil;UI.exitToken=(UI.exitToken or 0)+1
    Attempt(function() UI.frame:Hide() end)
   end
-  Attempt(function() self:RestoreGeometry() end)
  end
+ Attempt(function() self:RestoreGeometry() end)
  self.session,self.geometry,self.starting=nil,nil,nil
  self:Detach()
- if not failure and session and reopen then Attempt(function() A:Open(session.returnPage) end) end
+ if not failure and (session or standalone) and reopen then Attempt(function() A:Open("find") end) end
  if failure then error(failure,0) end
 end

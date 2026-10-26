@@ -245,6 +245,7 @@ function Guide:CreateProvider(scenario,options)
  function p:RemoveListing() self.listing=nil;self:Notify("listing");return true end
  function p:Invite(id) local app=self.applicants[id];app.status="invited";app.acting=nil;self:Notify("applicants",id);return true end
  function p:Decline(id) local app=self.applicants[id];app.status="declined";app.acting=nil;self:Notify("applicants",id);return true end
+ local Member
  function p:BindActivity(selected,key)
   self.activity,self.category=selected,key
   local profile=A.GroupPresentation.Activity(selected)
@@ -252,6 +253,14 @@ function Guide:CreateProvider(scenario,options)
    local record=self.records[id]
    record.activity,record.activityID,record.activityName,record.categoryID=selected,selected.id,selected.name,selected.categoryID
    record.maxNumPlayers=selected.maxNumPlayers or 5
+   if profile.kind=="raid" and not record.raidDetails then
+    local members={record.dungeonDetails.members[1]};local counts={TANK=0,HEALER=0,DAMAGER=0}
+    for index=2,12 do members[index]=Member((-9000-id)*20+index) end
+    for _,member in ipairs(members) do counts[member.assignedRole]=counts[member.assignedRole]+1 end
+    record.raidDetails={members=members,counts=counts,encounters={}}
+   end
+   record.details=profile.kind=="raid" and record.raidDetails or record.dungeonDetails
+   record.numMembers=#record.details.members
    record.level=selected.isMythicPlusActivity and 8+(-9000-id) or nil
    record.ratingKind=profile.kind=="pvp" and "pvp" or "dungeon"
    if profile.kind=="pvp" then record.leaderRating=profile.requirementRatingKind and 1600+(-9000-id)*75 or nil
@@ -264,7 +273,7 @@ function Guide:CreateProvider(scenario,options)
  local specs={73,257,64,264,260}
  local scores={2940,2535,3075,2670,2805}
  local names={S("山间小路","Oakshield"),S("晨风","Morningwind"),S("冰糖","Winterlight"),S("浅蓝","Clearwater"),S("夜行","Nightstep")}
- local function Member(index)
+ Member=function(index)
   local slot=(index-1)%5+1;local name=names[slot]..(index>5 and tostring(index) or "");local realm=S("白银之手","Silvermoon")
   local relation=(index-1)%4
   return {isPreview=true,name=name,realm=realm,nameKey=name.."-"..realm,class=classes[slot],assignedRole=roles[slot],specID=specs[slot],itemLevel=260+slot*3,dungeonScore=scores[slot],factionGroup=index%2,raceID=index%2==1 and 1 or 2,raceName=index%2==1 and S("人类","Human") or S("兽人","Orc"),isBNetFriend=relation==1,isCharFriend=relation==2,isGuildMate=relation==3,isFriend=false}
@@ -286,6 +295,7 @@ function Guide:CreateProvider(scenario,options)
   if profile.kind=="pvp" then r.leaderRating=profile.requirementRatingKind and 1600+i*75 or nil
   else r.leaderRating=members[1].dungeonScore end
   r.partyGUID="PreviewParty-"..i
+  r.dungeonDetails=r.details
   p.records[id]=r;p.recordIDs[#p.recordIDs+1]=id
  end
  p.roster={Member(1),Member(2),Member(3)};p.roster[1].isLeader=true

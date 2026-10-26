@@ -7,6 +7,7 @@ local function Current()
  return Guide.steps[Guide.index],Guide.phase,UI.pages[Guide.page],UI.preview.provider,UI
 end
 local function Visible(frame) return frame and frame:IsVisible() end
+local function Details(id) return id=="details" or id=="raidDetails" or id=="applicantDetails" end
 local function Geometry() Guide:QueueUpdate() end
 
 function Guide:QueueUpdate()
@@ -31,11 +32,11 @@ function Guide:ContextFrame()
  if UI.activeModal then return UI.activeModal.frame end
  if Visible(page.picker) then return page.picker end
  if self.page=="find" then
-  if id=="activity" or id=="sidebar" then return page.rail
+  if id=="activity" or id=="raidActivity" or id=="sidebar" then return page.rail
   elseif id=="filters" then return page.filtersOpen and page.filterPanel or page.search
   elseif id=="apply" and phase==5 then return page.applicationPanel
-  elseif id=="details" or id=="sort" or id=="apply" then return page.results end
- elseif id=="faction" or id=="time" then return page.batchScroll
+  elseif Details(id) or id=="sort" or id=="apply" then return page.results end
+ elseif id=="faction" or id=="time" or id=="applicantDetails" then return page.batchScroll
  elseif id=="createActivity" then return page.pickerTrigger:GetParent()
  elseif id=="publish" then return page.publish:GetParent() end
 end
@@ -51,9 +52,9 @@ function Guide:RecoverPhase()
   and self.appliedID and provider.Applications:IsActive(self.appliedID) then
   self.phase=5;return
  end
- if (id=="activity" or id=="createActivity") and not Visible(page.picker)
+ if (id=="activity" or id=="raidActivity" or id=="createActivity") and not Visible(page.picker)
   or id=="filters" and not page.filtersOpen
-  or id=="details" and not Visible(UI.Tooltip.interactive)
+  or Details(id) and not Visible(UI.Tooltip.interactive)
   or id=="apply" and phase<5 and not UI.Application.previewApplication then
   self.phase=1;self.appliedID=nil
   if id=="activity" then self.activityChoiceGoal=nil end
@@ -62,24 +63,26 @@ end
 
 local function AfterEnter(control)
  local id,phase,_,_,UI=Current();if not id then return end
+ if Details(id) and control~=Guide:Target() and control~=UI.Tooltip.interactive then return end
  -- Native HookScript observers run after the leased primary script. Recheck
  -- once after this event stack, including tooltips opened by a child region.
  Guide:QueueUpdate()
- if id=="details" then Guide.detailsLeaving=nil end
- if id=="details" then
+ if Details(id) then Guide.detailsLeaving=nil end
+ if Details(id) and control~=UI.Tooltip.interactive then
   local row=control:GetParent()
-  if UI.Tooltip:IsResult(row.key) and (phase==1 or Guide.detailsArea~=control) then Guide.detailsArea=control;Guide:SetPhase(2);return end
+  local matches=id=="applicantDetails" and UI.Tooltip.member==row.member or id~="applicantDetails" and UI.Tooltip:IsResult(row.key)
+  if matches and (phase==1 or Guide.detailsArea~=control) then Guide.detailsArea=control;Guide:SetPhase(2);return end
  end
  Guide:UpdateStep()
 end
 local function DetailsLeave()
  local id,phase=Current()
- if id=="details" and phase==2 then Guide.detailsLeaving=true end
+ if Details(id) and phase>=2 then Guide.detailsLeaving=true end
  Guide:QueueUpdate()
 end
 local function PopupHide(frame)
  local id,phase,_,_,UI=Current()
- if id=="details" and phase==2 and Guide.detailsLeaving and frame==UI.Tooltip.interactive then Guide:QueueAdvance()
+ if Details(id) and phase>=(id=="raidDetails" and 3 or 2) and Guide.detailsLeaving and frame==UI.Tooltip.interactive then Guide:QueueAdvance()
  else Guide:QueueUpdate() end
 end
 
@@ -91,7 +94,7 @@ local function AfterClick(control,button)
  Guide.transition=nil
  if button and button~="LeftButton" then return end
  local id,phase,page,provider,UI=Current();if not id then return end
- if id=="activity" or id=="createActivity" then
+ if id=="activity" or id=="raidActivity" or id=="createActivity" then
   if phase==1 then
    if Visible(page.picker) then
     if id=="activity" then Guide:PrepareActivityPicker() else UI.Motion:FinishPlacement(page.picker) end
@@ -131,6 +134,13 @@ local function AfterClick(control,button)
   if phase==1 and expanded then Guide:SetPhase(2)
   elseif phase==2 and not expanded then Guide:QueueAdvance() end
  end
+end
+
+local function AfterModifier(_,event,key,down)
+ local id,phase,_,_,UI=Current()
+ if id=="raidDetails" and phase==2 and event=="MODIFIER_STATE_CHANGED" and down==1
+  and (key=="LSHIFT" or key=="RSHIFT") and UI.Tooltip.expanded then Guide:SetPhase(3)
+ else Guide:QueueUpdate() end
 end
 
 local function AfterDoubleClick(_,button)
@@ -183,12 +193,13 @@ function Guide:BindStep(target,avoid,context)
  if target.tooltipArea then bindings:Bind(target.tooltipArea,"OnEnter",AfterEnter) end
  if id=="resize" then
   bindings:Bind(target,"OnMouseDown",AfterResizeDown);bindings:Bind(target,"OnMouseUp",AfterResizeUp)
- elseif id=="details" then
+ elseif Details(id) then
   -- The production hover callback creates and positions the tooltip first;
   -- search-result members remain read-only, just as in the ordinary UI.
-  if phase==2 then
+  if phase>=2 then
    bindings:Bind(target,"OnLeave",DetailsLeave)
    if avoid then bindings:Bind(avoid,"OnEnter",AfterEnter);bindings:Bind(avoid,"OnLeave",DetailsLeave) end
+   if id=="raidDetails" and avoid then bindings:Bind(avoid,"OnEvent",AfterModifier) end
   end
  elseif id=="apply" and phase==1 then bindings:Bind(target,"OnDoubleClick",AfterDoubleClick)
  else bindings:Bind(target,"OnClick",AfterClick,id=="createPage" and BeforeClick or nil) end
@@ -199,11 +210,10 @@ function Guide:BindStep(target,avoid,context)
    end
   end
  end
- if id=="details" or id=="apply" and phase==1 then
+ if id=="apply" and phase==1 then
   for _,row in ipairs(page.results.rows) do
    if row._hitVisible and row:IsShown() then
-    if id=="details" then bindings:Bind(row.tooltipArea,"OnEnter",AfterEnter)
-    else bindings:Bind(row,"OnDoubleClick",AfterDoubleClick) end
+    bindings:Bind(row,"OnDoubleClick",AfterDoubleClick)
    end
   end
  end

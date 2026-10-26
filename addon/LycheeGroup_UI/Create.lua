@@ -249,11 +249,11 @@ function P:Build(parent)
  self.pickerIcon=C.Icon(self.pickerTrigger,T.createPickerIconWidth);C.Box(self.pickerIcon,{width="createPickerIconWidth",height="createPickerIconHeight"});C.SetPoint(self.pickerIcon,"LEFT",self.pickerIcon:GetParent(),"LEFT","createPickerIconLeftX",0)
  self.pickerName=C.Text(self.pickerTrigger,"",14,"text",T.createPickerNameWidth);self.pickerName:SetWidth(T.createPickerNameWidth);C.SetLineHeight(self.pickerName,20,true);C.SetPoint(self.pickerName,"TOPLEFT",self.pickerName:GetParent(),"TOPLEFT","createPickerNameTopleftX","createPickerNameTopleftY")
  self.pickerContext=C.Text(self.pickerTrigger,"",14,"muted",T.createPickerContextWidth);self.pickerContext:SetWidth(T.createPickerContextWidth);C.SetLineHeight(self.pickerContext,20,true);C.SetPoint(self.pickerContext,"TOPLEFT",self.pickerContext:GetParent(),"TOPLEFT","createPickerContextTopleftX","createPickerContextTopleftY")
- self.difficultyChoice=C.Choice(desc,FORM-352,function() return P:DifficultyItems() end,function(value) form.activityID=value;P:RefreshPicker() end);self.difficultyChoice:SetHeight(T.createDifficultyChoiceHeight);C.SetPoint(self.difficultyChoice,"TOPLEFT",self.difficultyChoice:GetParent(),"TOPLEFT","createDifficultyChoiceTopleftX","createDifficultyChoiceTopleftY")
+ self.difficultyChoice=C.Choice(desc,FORM-352,function() return P:DifficultyItems() end,function(value) P:SelectDifficulty(value) end);self.difficultyChoice:SetHeight(T.createDifficultyChoiceHeight);C.SetPoint(self.difficultyChoice,"TOPLEFT",self.difficultyChoice:GetParent(),"TOPLEFT","createDifficultyChoiceTopleftX","createDifficultyChoiceTopleftY")
  self.difficultyGroup=CreateFrame("Frame",nil,desc);self.difficultyGroup:SetSize(FORM-352,T.createDifficultyGroupHeight);C.SetPoint(self.difficultyGroup,"TOPLEFT",self.difficultyGroup:GetParent(),"TOPLEFT","createDifficultyGroupTopleftX","createDifficultyGroupTopleftY");C.Panel(self.difficultyGroup,"panel","createPanelRadius2")
  self.difficultySelection=C.Selection(self.difficultyGroup)
  self.difficultyButtons={}
- for i=1,4 do self.difficultyButtons[i]=C.Button(self.difficultyGroup,"",T.createButtonWidth,function(button) form.activityID=button.value;P:RefreshPicker() end,{variant="compact",selectionFill=false}) end
+ for i=1,4 do self.difficultyButtons[i]=C.Button(self.difficultyGroup,"",T.createButtonWidth,function(button) P:SelectDifficulty(button.value) end,{variant="compact",selectionFill=false}) end
  self.difficultyFixedSurface=CreateFrame("Frame",nil,desc);C.Box(self.difficultyFixedSurface,{width="createDifficultyFixedSurfaceWidth",height="createDifficultyFixedSurfaceHeight"});C.Panel(self.difficultyFixedSurface,"field","createPanelRadius2")
  self.difficultyFixed=C.Text(self.difficultyFixedSurface,"",14,"muted");C.SetLineHeight(self.difficultyFixed,20,true);self.difficultyFixed:SetPoint("CENTER")
  self.favorite=C.IconButton(desc,nil,T.createFavoriteWidth,function() UI:GetGroup().Presets:ToggleFavorite(P:FormData()) end,{iconSize=24});C.Box(self.favorite,{width="createFavoriteWidth",height="createFavoriteHeight2"});C.SetPoint(self.favorite,"TOPRIGHT",self.favorite:GetParent(),"TOPRIGHT",0,"createFavoriteToprightY")
@@ -944,6 +944,15 @@ function P:DifficultyItems()
   if label then items[#items+1]={value=act.id,label=label} end
  end end;return items
 end
+function P:SelectDifficulty(activityID)
+ -- Only a current difficulty control commits memory; prefill and fallback do not.
+ for _,item in ipairs(self:DifficultyItems()) do if item.value==activityID then
+  local group=UI:GetGroup();local activity=group.Catalog:GetActivity(activityID)
+  form.activityID=activityID
+  if group.Catalog:GetCategory(state.category).id==3 then group.prefs.creationRaidDifficultyID=activity.difficultyID end
+  self:RefreshPicker();return
+ end end
+end
 function P:LayoutActivityChoice(variants)
  local label=L.chooseActivity;for _,entry in ipairs(variants) do if entry.value==form.activityID then label=entry.label end end;self.difficultyChoice:SetValue(form.activityID,label)
  UI:SetText(self.difficultyFixed,label)
@@ -983,6 +992,12 @@ function P:RefreshPicker()
   form.activityID=activities[1] and activities[1].id
   for _,activity in ipairs(activities) do
    if activity.isMythicPlusActivity then form.activityID=activity.id;break end
+  end
+  if cat and cat.id==3 then
+   local difficultyID=UI:GetGroup().prefs.creationRaidDifficultyID
+   for _,activity in ipairs(activities) do
+    if type(difficultyID)=="number" and difficultyID>0 and activity.difficultyID==difficultyID then form.activityID=activity.id;break end
+   end
   end
  end
  self.pickerVariants=self:DifficultyItems();self:LayoutActivityChoice(self.pickerVariants)

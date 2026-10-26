@@ -7,6 +7,8 @@ local function LoadGuide()
 end
 local function Fixture(...)
  local f=dofile("tests/ui_fixture.lua")(...)
+ EJ_GetDifficulty=function() return 14 end;EJ_SetDifficulty=function() end;EJ_SelectInstance=function() end
+ EJ_GetEncounterInfoByIndex=function(index) return ({"First boss","Second boss","Final boss"})[index] end
  local info,available,groups,groupName,fullName=C_LFGList.GetActivityInfoTable,C_LFGList.GetAvailableActivities,C_LFGList.GetAvailableActivityGroups,C_LFGList.GetActivityGroupInfo,C_LFGList.GetActivityFullName
  local second={id=4,categoryID=2,fullName="Second dungeon",shortName="Second",groupFinderActivityGroupID=40,difficultyID=8,isMythicPlusActivity=true,maxNumPlayers=5,orderIndex=3,allowCrossFaction=true}
  C_LFGList.GetActivityInfoTable=function(id) return id==4 and second or info(id) end
@@ -64,9 +66,14 @@ local function Interact(f,guide,outsideRelease)
  local id,phase=Step(guide),guide.phase;local U,S=f.U,f.S
  CheckCard(guide,id,phase)
  local target=guide:Target();T.ok(target,id.."/"..phase.." has a production target")
- if id=="details" and phase==1 then
-  U.pages.find.results.clip.mouseOver=true;target.mouseOver=true;target:Fire("OnEnter")
- elseif id=="details" then
+ if (id=="details" or id=="raidDetails" or id=="applicantDetails") and phase==1 then
+  if id=="applicantDetails" then U.pages.create.batchScroll.mouseOver=true else U.pages.find.results.clip.mouseOver=true end
+  target.mouseOver=true;target:Fire("OnEnter")
+ elseif id=="raidDetails" and phase==2 then
+  T.eq(U.Tooltip.expanded,false,"raid starts in overview mode")
+  U.Tooltip.interactive:Fire("OnEvent","MODIFIER_STATE_CHANGED","LSHIFT",1)
+  T.eq(U.Tooltip.expanded,true,"production Shift handler expands the member list")
+ elseif id=="details" or id=="raidDetails" or id=="applicantDetails" then
   guide.detailsArea.mouseOver=false;guide.detailsArea:Fire("OnLeave")
   U.Tooltip.interactive.mouseOver=false;U.Tooltip.interactive:Fire("OnLeave");U.Tooltip:UpdateHoverTransit(2)
  elseif id=="apply" and phase==1 then
@@ -105,6 +112,9 @@ do
  f.A:Open("settings");local guide=f.A.Guide
  T.eq(loads,1);T.ok(guide and guide.active);T.eq(guide.View.mode,"intro")
  T.ok(guide.View.card:IsVisible());T.eq(guide.steps,nil);T.eq(f.U.preview,nil)
+ T.ok(not f.U.frame:IsShown(),"first welcome is standalone, with the main window hidden")
+ T.ok(guide.View.buttons.start.fill:IsShown(),"start has its primary fill before hover")
+ T.same(guide.View.buttons.start.fill.color,f.U.Theme.primary,"start uses the default primary red before hover")
  T.eq(f.A.GuideEntry.hint,nil);T.eq(f.A.db.guide.welcomeShown,true)
  Click(guide.View.buttons.dismiss);T.eq(guide.active,nil)
  f.U:Hide(true);f.A:Open("find");T.eq(guide.active,nil);T.eq(loads,1)
@@ -126,7 +136,7 @@ end end
 for _,locale in ipairs({"zhCN","enUS"}) do
  local f=Fixture(locale,nil,{reduceMotion=true})
  local A,U,G,S=f.A,f.U,f.G,f.S
- A:Open("settings");T.eq(A.Guide,nil);T.eq(A.GuideEntry.hint,nil)
+ A:Open("find");A:Open("settings");T.eq(A.Guide,nil);T.eq(A.GuideEntry.hint,nil)
  local originalWidth,originalHeight=U.windowWidth,U.windowHeight
  local account,character,groupDB=Copy(A.db),Copy(A.charPrefs),Copy(G.db)
  account.guide=nil -- Welcome/completion metadata is the guide's allowed account state.
@@ -136,7 +146,11 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  local originals={}
  local function Trap(owner,key)
   originals[#originals+1]={owner,key,owner[key]}
-  owner[key]=function() error("guide reached a real player/action boundary: "..key) end
+  local original=owner[key]
+  owner[key]=function(...)
+   if not A.Guide or not A.Guide.active and not U.preview then return original(...) end
+   error("guide reached a real player/action boundary: "..key)
+  end
  end
  for _,key in ipairs({"Search","ApplyToGroup","CreateListing","UpdateListing","RemoveListing","InviteApplicant","DeclineApplicant","CancelApplication","AcceptInvite","ClearApplicationTextFields","ClearCreationTextFields","ClearSearchTextFields","CopyActiveEntryInfoToCreationFields","SetEntryTitle","GetAvailableRoles"}) do Trap(C_LFGList,key) end
  for _,key in ipairs({"Publish","Update","RemoveListing","Invite","Decline","Cancel"}) do Trap(G,key) end
@@ -147,7 +161,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  T.ok(guide:Open());T.eq(guide.View.mode,"intro")
  T.eq(guide.View.body:GetText(),locale=="zhCN" and "感谢您使用荔枝组队，我们创建了一个新手引导，来帮助你更好的使用它" or "Thank you for using Lychee LFG. We created this guide to help you use it.","welcome preserves the requested copy")
  Click(guide.View.buttons[1]);Drain(f)
- T.eq(U.page,"find");T.eq(#guide.steps,12);T.eq(U.preview.provider.Catalog,G.Catalog)
+ T.eq(U.page,"find");T.eq(#guide.steps,15);T.eq(U.preview.provider.Catalog,G.Catalog)
  T.ok(U.preview.provider~=G);T.ok(not U.previewExit or not U.previewExit:IsShown())
  T.ok(U.preview.provider.activity.id>0);T.eq(#U.preview.provider.apps,0)
  T.eq(Step(guide),"activity");T.eq(guide.phase,1)
@@ -191,7 +205,8 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  Interact(f,guide);T.eq(guide.phase,5)
  T.ok(U.preview.provider.Applications:IsActive(guide.appliedID))
  T.ok(U.Application:IsAutoApplyEnabled());T.ok(U.preview.provider.applicationPrefs.roles.HEALER)
- Interact(f,guide);T.eq(Step(guide),"createPage");T.eq(U.preview.provider.Applications:GetActiveCount(),0)
+ Interact(f,guide);T.eq(Step(guide),"raidActivity");T.eq(U.preview.provider.Applications:GetActiveCount(),0)
+ To(f,guide,"createPage")
  local session=U.preview;local flowSteps=guide.steps
  T.eq(guide:Target(),U.navItems.create)
  T.ok(guide.View.target~=U.navItems.create,"navigation outline has its own tight visual bounds")
@@ -209,10 +224,10 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  Interact(f,guide,true);T.same(A.charPrefs,character);T.eq(guide.demo,nil)
  T.eq(guide.active,nil);T.eq(U.preview,nil);T.eq(U.guideSession,nil)
  T.eq(guide.View.target,nil);T.eq(guide.View.mode,nil);T.eq(guide.task,nil);T.eq(#guide.Bindings.records,0)
- T.eq(U.windowWidth,originalWidth);T.eq(U.windowHeight,originalHeight);T.eq(U.page,"settings")
+ T.eq(U.windowWidth,originalWidth);T.eq(U.windowHeight,originalHeight);T.eq(U.page,"find")
  T.eq(A.db.guide.completedVersion,guide.version);T.ok(A.db.guide.completed)
  T.eq(next(guide.events.events),nil);T.eq(handle:GetScript("OnUpdate"),nil)
- T.ok(Start(f,guide));T.eq(#guide.steps,12,"manual replay always includes the complete continuous tour");Finish(f,guide)
+ T.ok(Start(f,guide));T.eq(#guide.steps,15,"manual replay always includes the complete continuous tour");Finish(f,guide)
  local metadata=A.db.guide;A.db.guide=nil;T.same(A.db,account);A.db.guide=metadata
  T.eq(metadata.welcomeShown,true,"manual replay preserves the account's first-welcome state")
  T.same(A.charPrefs,character);T.same(G.db,groupDB)
@@ -344,7 +359,7 @@ do
  T.eq(guide.phase,5,"closing the submitted modal must show cancellation instead of returning to double-click")
  T.eq(guide.appliedID,submitted,"modal closure retains the submitted application identity")
  T.eq(U.preview.provider.Applications:GetActiveCount(),1)
- Interact(f,guide);T.eq(Step(guide),"createPage");Finish(f,guide)
+ Interact(f,guide);T.eq(Step(guide),"raidActivity");Finish(f,guide)
  T.eq(U.preview,nil)
 end
 
@@ -361,8 +376,68 @@ do
  T.eq(guide.phase,5,"a valid early submission proceeds to cancellation")
  T.eq(guide.appliedID,submitted);T.eq(U.preview.provider.Applications:GetActiveCount(),1)
  T.ok(U.Application:IsAutoApplyEnabled());T.ok(U.preview.provider.applicationPrefs.roles.DAMAGER)
- Interact(f,guide);T.eq(Step(guide),"createPage");Finish(f,guide)
+ Interact(f,guide);T.eq(Step(guide),"raidActivity");Finish(f,guide)
  T.eq(U.preview,nil)
+end
+
+-- Teaching keeps one result as its target; crossing another row must not
+-- move the outline or replace the open tooltip through delayed hover transit.
+for _,step in ipairs({"details","raidDetails"}) do
+ local f=Fixture("zhCN",nil,{reduceMotion=true})
+ f.A:Open("settings");LoadGuide();local guide,U=f.A.Guide,f.U
+ T.ok(Start(f,guide));To(f,guide,step)
+ local list=U.pages.find.results;local target=guide:Target();local first=target:GetParent();local second
+ for _,row in ipairs(list.rows) do if row~=first and row._hitVisible and row:IsShown() then second=row;break end end
+ T.ok(second);list.clip.mouseOver=true
+ second.mouseOver=true;second.tooltipArea.mouseOver=true;second.tooltipArea:Fire("OnEnter");Drain(f)
+ T.eq(guide:Target(),target,"hovering another result cannot move the teaching outline")
+ T.ok(not U.Tooltip.interactive or not U.Tooltip.interactive:IsShown(),"another result cannot open teaching details")
+ T.ok(not second.hover:IsShown() or second.hover:GetAlpha()==0,"teaching suppresses competing full-row hover fills")
+ second.mouseOver=false;second.tooltipArea.mouseOver=false;second.tooltipArea:Fire("OnLeave")
+ Interact(f,guide);T.eq(U.Tooltip.owner,first)
+ U.Tooltip:HoverOwner(second,function() return true end,function(row) U.Tooltip:ShowGroup(row,U:GetGroup():GetResult(row.key)) end)
+ T.eq(U.Tooltip.hoverOwner,nil,"another result is not queued for delayed tooltip handoff")
+ T.eq(U.Tooltip.owner,first)
+ U.Tooltip:ShowGroup(second,U:GetGroup():GetResult(second.key))
+ T.eq(U.Tooltip.owner,first,"a delayed show cannot replace the teaching owner")
+ T.eq(guide:Target(),target)
+ guide:Stop("later")
+ T.eq(list.hoverFill,nil,"ordinary result hover setting returns after the guide")
+ T.eq(guide.Adapter.resultList,nil,"the hover lease releases the result list")
+end
+
+-- Raid teaching always demonstrates Shift without changing the player's setting.
+do
+ local f=Fixture("zhCN",nil,{reduceMotion=true,raidMembers="always"})
+ f.A:Open("settings");LoadGuide();local guide,U=f.A.Guide,f.U
+ T.ok(Start(f,guide));To(f,guide,"raidDetails");Interact(f,guide)
+ T.eq(U.Tooltip.record.categoryID,3);T.eq(#U.Tooltip.details.members,12)
+ T.eq(U.Tooltip.expanded,false);T.eq(f.A:GetSetting("raidMembers"),"shift")
+ U.Tooltip.interactive:Fire("OnEvent","MODIFIER_STATE_CHANGED","LALT",1);Drain(f)
+ T.eq(guide.phase,2,"another modifier does not complete Shift teaching")
+ guide.detailsArea.mouseOver=false;guide.detailsArea:Fire("OnLeave")
+ U.Tooltip.interactive.mouseOver=false;U.Tooltip.interactive:Fire("OnLeave");U.Tooltip:UpdateHoverTransit(2);Drain(f)
+ T.eq(Step(guide),"raidDetails");T.eq(guide.phase,1,"leaving before expansion returns to the hover instruction")
+ Interact(f,guide);Interact(f,guide);T.eq(guide.phase,3)
+ Interact(f,guide);T.eq(Step(guide),"createPage")
+ T.eq(f.A:GetSetting("raidMembers"),"always","the original setting returns outside raid teaching")
+ To(f,guide,"applicantDetails");local area=guide:Target();Interact(f,guide)
+ T.eq(U.Tooltip.member,area:GetParent().member,"actual applicant hover opens that person's profile")
+ T.eq(guide.View.avoidFrame,U.Tooltip.interactive)
+ Finish(f,guide);T.eq(U.page,"find");T.eq(f.A:GetSetting("raidMembers"),"always")
+end
+
+-- A temporarily missing native raid category omits only its two teaching steps.
+do
+ local f=Fixture("enUS",nil,{reduceMotion=true})
+ local categories=f.G.Catalog.GetCategories
+ f.G.Catalog.GetCategories=function(self)
+  local result={};for _,category in ipairs(categories(self)) do if category.id~=3 then result[#result+1]=category end end;return result
+ end
+ f.A:Open("settings");LoadGuide();local guide=f.A.Guide
+ T.ok(Start(f,guide));T.eq(#guide.steps,13)
+ for _,id in ipairs(guide.steps) do T.ok(id~="raidActivity" and id~="raidDetails") end
+ Finish(f,guide);T.eq(f.U.page,"find")
 end
 
 -- The general fixture omits world positions. Supply measured rectangles here
