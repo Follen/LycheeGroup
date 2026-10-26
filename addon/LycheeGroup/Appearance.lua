@@ -416,10 +416,14 @@ function API:Get(scope)
  local result=Clone(Appearance:GetResolvedTheme(scope));if A.Fonts then result.font=A.Fonts:GetPath() end;return result
 end
 function API:GetTypography(scope)
- local theme,err=self:Get(scope);if not theme then return nil,err end
+ local ok,err=Scope(scope);if not ok then return nil,err end
+ local theme=Appearance:GetResolvedTheme(scope)
  local result={};for role,fields in pairs(Library.TextStyles) do result[role]={fontSize=theme[fields.fontSize],lineHeight=theme[fields.lineHeight]} end;return result
 end
 function API:GetColors(scope)
- local theme,err=self:Get(scope);if not theme then return nil,err end
- local result={};for key in pairs(Library:GetColorSchema(A.StyleDefaults[scope])) do result[key]=theme[key] end;return result
+ local ok,err=Scope(scope);if not ok then return nil,err end
+ local theme=Appearance:GetResolvedTheme(scope)
+ -- Theme validation admits tables only as colors; copy each returned color
+ -- without building an authoring schema or cloning unrelated scalar tokens.
+ local result={};for key,value in pairs(theme) do if type(value)=="table" then result[key]=Clone(value) end end;return result
 end

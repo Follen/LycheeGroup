@@ -101,6 +101,31 @@ local function Finish(f,guide)
  error("route did not finish")
 end
 
+-- Opening the filter popup must settle its position before the spotlight reads
+-- a child button. Otherwise the next hover repairs an old rectangle with a jump.
+do
+ local f=Fixture("zhCN",nil,{reduceMotion=true,showImportantFilters=false})
+ local A,U=f.A,f.U;A:Open("find");LoadGuide();local guide=A.Guide
+ T.ok(Start(f,guide));To(f,guide,"filters")
+ local panel=U.pages.find.filterPanel;local target=U.pages.find.quickChoices.healerPresence.button
+ local getLeft=target.GetLeft
+ target.GetLeft=function(self)
+  local _,_,_,x=panel:GetPoint()
+  return getLeft(self)+(x or 0)+U.Theme.findFilterWindowInset
+ end
+ A:SetSetting("reduceMotion",false)
+ Click(guide:Target());Drain(f);T.eq(guide.phase,2)
+ local left=guide.View.targetRect.left
+ U.Motion:Tick(1)
+ target:Fire("OnEnter");Drain(f)
+ T.near(guide.View.targetRect.left,left,.001,"hover does not repair a stale filter spotlight")
+ T.eq(U.Motion.placements[panel],nil,"teaching settles popup placement before highlighting its child")
+ guide:Stop("later")
+ U.pages.find:SetFiltersOpen(true)
+ T.ok(U.Motion.placements[panel],"ordinary filter opening retains its animation")
+ U.pages.find:SetFiltersOpen(false)
+end
+
 -- First account use opens the actual welcome, without starting a private tour.
 -- A fresh UI/character sharing that account's metadata stays cold afterwards.
 do
@@ -478,3 +503,82 @@ do
  end
  guide:Stop("later")
 end
+
+-- Public scale and display changes need not resize the window. Supply native anchor/scale
+-- coordinates only in these sessions so a card outside the window can be
+-- checked against the screen after FitToScreen changes its effective scale.
+for _,change in ipairs({"scale","display"}) do for _,welcome in ipairs({false,true}) do
+ local f=Fixture("enUS",nil,{reduceMotion=true})
+ local A,U=f.A,f.U;A:Open("settings")
+ -- The UI fixture omits the public facade and Floating; no Floating action is
+ -- invoked here, but load the real facade rather than duplicating Set's route.
+ local floating=A.Floating;A.Floating=floating or {};dofile("addon/LycheeGroup/API.lua");A.Floating=floating
+ T.ok(A.API.Configuration:Set({["layout.window.width"]=1200,["layout.window.height"]=720,["settings.uiScale"]=75}))
+ local function Factor(point,axis)
+  if axis=="x" then return point:find("LEFT") and 0 or point:find("RIGHT") and 1 or .5 end
+  return point:find("BOTTOM") and 0 or point:find("TOP") and 1 or .5
+ end
+ local Coordinate
+ Coordinate=function(node,point,axis)
+  local scale=node:GetEffectiveScale();local size=(axis=="x" and node:GetWidth() or node:GetHeight())*scale
+  if node==UIParent then return size*Factor(point,axis) end
+  if node.allPoints then return Coordinate(node.allPoints,point,axis) end
+  local p={node:GetPoint()};local relative,anchor,x,y
+  if type(p[2])=="table" then relative,anchor,x,y=p[2],p[3],p[4] or 0,p[5] or 0
+  else relative,anchor,x,y=node:GetParent(),p[1],p[2] or 0,p[3] or 0 end
+  if not relative or not anchor then return size*Factor(point,axis) end
+  return Coordinate(relative,anchor,axis)+(axis=="x" and x or y)*scale+(Factor(point,axis)-Factor(p[1],axis))*size
+ end
+ local function NativeCoordinates(node)
+  node.GetLeft=function(self) return Coordinate(self,"LEFT","x")/self:GetEffectiveScale() end
+  node.GetRight=function(self) return Coordinate(self,"RIGHT","x")/self:GetEffectiveScale() end
+  node.GetTop=function(self) return Coordinate(self,"TOP","y")/self:GetEffectiveScale() end
+  node.GetBottom=function(self) return Coordinate(self,"BOTTOM","y")/self:GetEffectiveScale() end
+  return node
+ end
+ for _,node in ipairs(f.S.nodes) do NativeCoordinates(node) end
+ local create=CreateFrame;CreateFrame=function(...) return NativeCoordinates(create(...)) end
+ local fit=U.FitToScreen;local sentinel={}
+ local taggedFit=function(...) fit(...);return sentinel,nil,false end;U.FitToScreen=taggedFit
+ LoadGuide();local guide=A.Guide
+ T.ok(guide:Open())
+ if not welcome then T.ok(guide:Start());To(f,guide,"details") end
+ local view=guide.View;local width,height=U.windowWidth,U.windowHeight;local index,phase=guide.index,guide.phase
+ T.ok(view.card:IsVisible())
+ T.eq(guide.events.events.DISPLAY_SIZE_CHANGED,true,"welcome and teaching observe display bounds only while active")
+ local scale=U.frame:GetEffectiveScale()
+ if change=="scale" then T.ok(A.API.Configuration:Set({["settings.uiScale"]=125}))
+ else
+  UIParent:SetWidth(1500)
+  U.frame:Fire("OnEvent","DISPLAY_SIZE_CHANGED")
+  if guide.events.events.DISPLAY_SIZE_CHANGED then guide.events:Fire("OnEvent","DISPLAY_SIZE_CHANGED") end
+  T.eq(U.frame:GetEffectiveScale(),scale,"display bounds can change without changing effective scale")
+ end
+ Drain(f)
+ T.eq(guide.active,true,"a display change preserves the active guide")
+ T.eq(U.windowWidth,width);T.eq(U.windowHeight,height,"pure scaling does not send OnSizeChanged")
+ local left,right=Coordinate(view.card,"LEFT","x"),Coordinate(view.card,"RIGHT","x")
+ T.ok(left>=0 and right<=UIParent:GetWidth()*UIParent:GetEffectiveScale(),"public scale change keeps the guide card inside the screen")
+ T.near(view.root:GetEffectiveScale(),U.frame:GetEffectiveScale(),.001,"standalone welcome follows the changed main-window scale")
+ T.near(view.screen.left,-U.frame:GetLeft()+4,.001,"the guide refreshes screen bounds without a size event")
+ T.near(view.screen.right,UIParent:GetWidth()*UIParent:GetEffectiveScale()/U.frame:GetEffectiveScale()-U.frame:GetLeft()-4,.001,"the guide refreshes the right screen bound")
+ T.eq(guide.index,index);T.eq(guide.phase,phase,"scaling cannot complete the current teaching interaction")
+ local first,second,third=U:FitToScreen()
+ T.eq(first,sentinel);T.eq(second,nil);T.eq(third,false,"the scale lease preserves every original return value")
+ local updates,layouts=0,0;local update,layout=guide.UpdateStep,view.Layout
+ guide.UpdateStep=function(self,...) updates=updates+1;return update(self,...) end
+ view.Layout=function(self,...) layouts=layouts+1;return layout(self,...) end
+ for _=1,20 do U:FitToScreen() end
+ -- Either native display observer can run first; a settled duplicate event
+ -- must not cause another teaching or card layout pass.
+ if guide.events.events.DISPLAY_SIZE_CHANGED then guide.events:Fire("OnEvent","DISPLAY_SIZE_CHANGED") end
+ U.frame:Fire("OnEvent","DISPLAY_SIZE_CHANGED")
+ T.eq(updates,0,"stable fits and duplicate display events do not refresh teaching")
+ T.eq(layouts,0,"stable fits and duplicate display events do not lay out the card")
+ guide.UpdateStep,view.Layout=update,layout
+ guide:Stop("later");Drain(f)
+ T.eq(U.FitToScreen,taggedFit,"ending the guide restores the exact FitToScreen method")
+ T.eq(#guide.Adapter.leases,0);T.eq(#guide.Bindings.records,0);T.eq(guide.task,nil)
+ T.eq(next(guide.events.events),nil,"ending the guide removes display and combat subscriptions")
+ CreateFrame=create
+end end

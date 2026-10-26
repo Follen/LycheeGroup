@@ -4973,3 +4973,49 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  T.eq(page.themeReloadHint:IsVisible(),true)
  u:Hide(true)
 end
+-- Stable applicant geometry retains its two complete indexes; an in-place
+-- order change and a missing source still publish only complete replacements.
+do
+ local f=dofile("tests/ui_fixture.lua")("enUS",nil,{reduceMotion=true})
+ local a,u,g=f.A,f.U,f.G
+ g.listing={activityID=2,name="Batch index regression"}
+ for id=1,25 do g.applicants[id]={id=id,status="applied",displayOrderID=id,members={{name="Applicant"..id.."-Home",nameKey="Applicant"..id.."-Home",class="MAGE",assignedRole="DAMAGER"}}} end
+ a:Open("create");local page=u.pages.create
+ local tops,layouts,ids=page.batchTops,page.batchLayouts,page.appIDs
+ for _=1,10 do page:LayoutBatches() end
+ T.eq(page.batchTops,tops,"stable applicant tops retain identity")
+ T.eq(page.batchLayouts,layouts,"stable applicant layout map retains identity")
+ local replacement={};for index,id in ipairs(ids) do replacement[index]=id end
+ page:LayoutBatches(replacement);ids=replacement
+ T.eq(page.batchTops,tops);T.eq(page.batchLayouts,layouts,"a fresh equivalent ID array retains the complete geometry")
+ local old=g.applicants[ids[1]];local refreshed={id=old.id,status=old.status,displayOrderID=old.displayOrderID,members=old.members}
+ g.applicants[ids[1]]=refreshed;page:LayoutBatches(ids)
+ T.eq(page.batchLayouts,layouts);T.eq(layouts[ids[1]].source,refreshed,"a replaced applicant source updates without copying unchanged geometry")
+ ids[1],ids[2]=ids[2],ids[1];page:LayoutBatches(ids)
+ T.ok(page.batchTops~=tops and page.batchLayouts~=layouts,"an in-place reordered ID array rebuilds the committed index")
+ T.eq(page.batchPool[1].appID,ids[1],"visible cards follow the new in-place order")
+ T.eq(page.batchTops[2],page.batchLayouts[ids[1]].height)
+ tops,layouts=page.batchTops,page.batchLayouts
+ g.applicants[ids[2]].members[1].nameKey="Changed-Away";page:LayoutBatches(ids)
+ T.ok(page.batchLayouts~=layouts,"a changed member invalidates its geometry")
+ T.eq(page.batchLayouts[ids[1]],layouts[ids[1]],"an unchanged prefix keeps its member layout")
+ T.eq(page.batchLayouts[ids[2]].names[1],"Changed-Away")
+ layouts=page.batchLayouts;g.applicants[ids[3]].members[1].isBNetFriend=true;page:LayoutBatches(ids)
+ T.ok(page.batchLayouts~=layouts,"relationship marks invalidate member measurement inputs")
+ layouts=page.batchLayouts;a:SetSetting("fontScale",130)
+ T.ok(page.batchLayouts~=layouts,"new typography rebuilds the complete batch index")
+ tops,layouts=page.batchTops,page.batchLayouts
+ local missing=ids[3];local source=g.GetApplicant;local once=true;local reentered=0;local refresh=page.RefreshApplicants
+ page.RefreshApplicants=function(self,...)
+  reentered=reentered+1;T.eq(self.batchTops,tops,"missing-source recovery sees the last complete tops")
+  T.eq(self.batchLayouts,layouts,"missing-source recovery sees the last complete layout map")
+  return refresh(self,...)
+ end
+ g.GetApplicant=function(self,id) if once and id==missing then once=false;return nil end;return source(self,id) end
+ g.applicants[ids[1]].members[1].nameKey="Changed-prefix-Away"
+ page:LayoutBatches(ids)
+ T.eq(reentered,1,"a missing applicant reenters the existing full refresh once")
+ T.eq(#page.appIDs,25);T.eq(#page.batchTops,26)
+ page.RefreshApplicants=refresh;g.GetApplicant=source
+ u:Hide(true)
+end

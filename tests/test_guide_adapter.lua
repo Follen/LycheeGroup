@@ -178,6 +178,35 @@ Scenario("leased method error",function(f)
  Check(not ok and err==sentinel,"leased original errors propagate after cleanup")
 end)
 
+Scenario("leased method return values",function(f)
+ Start(f)
+ local owner={};local identity={};local calls=0
+ local original=function(self,...)
+  Equal(self,owner,"leased method preserves its receiver")
+  return ...
+ end
+ owner.Read=original
+ f.guide.Adapter:Lease(owner,"Read",function(method,...)
+  calls=calls+1;return method(...)
+ end)
+ local proxy=owner.Read
+ local function Returned(...)
+  Equal(select("#",...),7,"leased method preserves trailing nil returns")
+  local a,b,c,d,e,g,h=...
+  Equal(a,nil,"leading nil return");Equal(b,false,"false return")
+  Equal(c,identity,"returned object identity");Equal(d,0,"zero return")
+  Equal(e,"text","string return");Equal(g,nil,"middle nil return");Equal(h,nil,"trailing nil return")
+ end
+ Returned(owner:Read(nil,false,identity,0,"text",nil,nil))
+ Equal(select("#",owner:Read()),0,"an empty return list remains empty")
+ Equal(select("#",owner:Read(nil)),1,"one nil return remains one return")
+ f.guide:Stop("later")
+ Equal(owner.Read,original,"detach restores the exact leased method")
+ local before=calls
+ Returned(proxy(owner,nil,false,identity,0,"text",nil,nil))
+ Equal(calls,before,"an inactive proxy bypasses the retired handler")
+end)
+
 Scenario("EndPreview fails before releasing its session",function(f)
  local sentinel={source="before-preview-release"}
  local failing=function() error(sentinel,0) end

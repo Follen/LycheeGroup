@@ -438,14 +438,24 @@ function P:BuildRow(parent,row,index)
   end) end
   control.valueLabel=C.Text(control,"",14,"muted",nil);C.SetPoint(control.valueLabel,"LEFT",control,"RIGHT","settingsControlValueLabelLeftX",0);control.valueLabel:SetJustifyH("RIGHT")
   function control:LayoutValueWidth()
-   local text=self.valueLabel:GetText()
-   self.valueLabel:SetWidth(0);self.valueLabel:SetWordWrap(false)
-   local width=52
-   for digit=0,9 do
-    UI:SetText(self.valueLabel,string.rep(tostring(digit),3).."%")
-    width=math.max(width,math.ceil(self.valueLabel:GetStringWidth())+6)
+   local label=self.valueLabel
+   local path,size,flags=label:GetFont();local spacing=label:GetSpacing();local scale=label:GetEffectiveScale()
+   local screenWidth,screenHeight;if GetPhysicalScreenSize then screenWidth,screenHeight=GetPhysicalScreenSize() end
+   local width=self.valueWidth
+   if not self.valueMetricsReady or self.valueMeasure~=label.GetStringWidth or self.valueFont~=path or self.valueSize~=size or self.valueFlags~=flags or self.valueSpacing~=spacing or self.valueScale~=scale
+    or self.valueScreenWidth~=screenWidth or self.valueScreenHeight~=screenHeight or label:CanWordWrap() then
+    local text=label:GetText();local ready=true
+    label:SetWidth(0);label:SetWordWrap(false);width=52
+    for digit=0,9 do
+     UI:SetText(label,string.rep(tostring(digit),3).."%")
+     local measured=label:GetStringWidth();if measured<=0 then ready=false end
+     width=math.max(width,math.ceil(measured)+6)
+    end
+    UI:SetText(label,text);label:SetWidth(width)
+    self.valueFont,self.valueSize,self.valueFlags,self.valueSpacing,self.valueScale=path,size,flags,spacing,scale
+    self.valueMeasure=label.GetStringWidth
+    self.valueScreenWidth,self.valueScreenHeight,self.valueMetricsReady=screenWidth,screenHeight,ready
    end
-   UI:SetText(self.valueLabel,text);self.valueLabel:SetWidth(width)
    self.valueWidth,self.desiredWidth=width,math.max(60,controlWidth-12-width)
    if not self._lycheeLayoutOwner then self:ClearAllPoints();self:SetPoint("RIGHT",-24-width,0) end
    if not self._lycheeLayoutFields or not self._lycheeLayoutFields.width then self:SetWidth(self.desiredWidth) end
@@ -658,7 +668,11 @@ function P:Sync()
    UI:SetText(entry.help,text)
    UI:SetText(c.label,self.bindingCapture and S("按下新按键…","Press a key…") or A.L.bindingChange)
   elseif row[4]=="range" then c:LayoutValueWidth();if not c:IsDragging() then c:SetValue(value);UI:SetText(c.valueLabel,value.."%") end
-  elseif row[4] then local label;local choices=type(row[4])=="function" and row[4]() or row[4];for _,choice in ipairs(choices) do if choice.value==value then label=choice.label;break end end;c:SetValue(value,label)
+  elseif row[4] then
+   local label
+   if key=="font" then label=A.Fonts:ChoiceLabel(value)
+   else local choices=type(row[4])=="function" and row[4]() or row[4];for _,choice in ipairs(choices) do if choice.value==value then label=choice.label;break end end end
+   c:SetValue(value,label)
   else c:SetValue(value==true);UI:SetText(c.label,value and S("已开启","On") or S("已关闭","Off"));c:SetWidth(math.ceil(c.label:GetStringWidth())+c.track:GetWidth()+36) end
  end
  local floatingScale=self.controls.floatingScale.widget

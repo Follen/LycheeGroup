@@ -26,46 +26,57 @@ local function EscapeString(s)
 	return '"' .. (s:gsub("\\", "\\\\"):gsub('"', '\\"'):gsub("\n", "\\n"):gsub("\r", "\\r")) .. '"'
 end
 
-local function SerializeValue(v)
-	local kind = type(v)
-	if kind == "string" then
-		return EscapeString(v)
-	elseif kind == "number" or kind == "boolean" then
-		return tostring(v)
-	elseif kind == "table" then
-		return Transfer.Serialize(v)
-	end
-	return '""'
-end
-
 -- 顺序整数键为 true 时输出数组,否则输出对象;键名按字符串转义。
 function Transfer.Serialize(t)
-	local isArray, maxIndex, count = true, 0, 0
-	for k in pairs(t) do
-		count = count + 1
-		if type(k) == "number" and k == math.floor(k) and k > 0 then
-			if k > maxIndex then maxIndex = k end
+	local out, block, used = {}, {}, 0
+	local function Emit(value)
+		used = used + 1
+		block[used] = value
+		if used == BLOCK_SIZE then
+			out[#out + 1] = table.concat(block, "", 1, used)
+			used = 0
+		end
+	end
+	local function String(value)
+		if value:find('[\\"\n\r]') then Emit(EscapeString(value))
+		else Emit('"');Emit(value);Emit('"') end
+	end
+	local Table
+	local function Value(value)
+		local kind = type(value)
+		if kind == "string" then String(value)
+		elseif kind == "number" or kind == "boolean" then Emit(tostring(value))
+		elseif kind == "table" then Table(value)
+		else Emit('""') end
+	end
+	Table = function(value)
+		local isArray, maxIndex, count = true, 0, 0
+		for key in pairs(value) do
+			count = count + 1
+			if type(key) == "number" and key == math.floor(key) and key > 0 then
+				if key > maxIndex then maxIndex = key end
+			else isArray = false;break end
+		end
+		if isArray and count == maxIndex then
+			Emit("[")
+			for index = 1, maxIndex do
+				if index > 1 then Emit(",") end
+				Value(value[index])
+			end
+			Emit("]")
 		else
-			isArray = false
-			break
+			Emit("{")
+			local first = true
+			for key, item in pairs(value) do
+				if not first then Emit(",") end
+				first = false
+				String(tostring(key));Emit(":");Value(item)
+			end
+			Emit("}")
 		end
 	end
-	if isArray and count == maxIndex then
-		local out = { "[" }
-		for index = 1, maxIndex do
-			if index > 1 then out[#out + 1] = "," end
-			out[#out + 1] = SerializeValue(t[index])
-		end
-		out[#out + 1] = "]"
-		return table.concat(out)
-	end
-	local out, first = { "{" }, true
-	for k, v in pairs(t) do
-		if not first then out[#out + 1] = "," end
-		first = false
-		out[#out + 1] = EscapeString(tostring(k)) .. ":" .. SerializeValue(v)
-	end
-	out[#out + 1] = "}"
+	Table(t)
+	if used > 0 then out[#out + 1] = table.concat(block, "", 1, used) end
 	return table.concat(out)
 end
 
@@ -152,7 +163,7 @@ end
 -- ---------------------------------------------------------------- Base64
 
 local function EncodeBase64(data)
-	local out, block, used = {}, {}, 0
+	local out, block, used = { PREFIX }, {}, 0
 	for i = 1, #data, 3 do
 		local b1, b2, b3 = data:byte(i, i + 2)
 		local n = b1 * 65536 + (b2 or 0) * 256 + (b3 or 0)
@@ -168,13 +179,14 @@ local function EncodeBase64(data)
 	return table.concat(out)
 end
 
-local function DecodeBase64(payload)
+local function DecodeBase64(payload, first, last)
 	-- Decode() has already validated the alphabet and trailing padding.
-	local length = (payload:find("=", 1, true) or #payload + 1) - 1
+	local padding = payload:find("=", first, true)
+	local length = (padding and padding <= last and padding or last + 1) - first
 	local out, block, used = {}, {}, 0
 	local full = length - length % 4
 	for i = 1, full, 4 do
-		local a, b, c, d = payload:byte(i, i + 3)
+		local a, b, c, d = payload:byte(first + i - 1, first + i + 2)
 		local n = B64REV[a] * 262144 + B64REV[b] * 4096 + B64REV[c] * 64 + B64REV[d]
 		used = used + 1
 		block[used] = string.char(math.floor(n / 65536), math.floor(n / 256) % 256, n % 256)
@@ -185,7 +197,7 @@ local function DecodeBase64(payload)
 	end
 	local remaining = length - full
 	if remaining >= 2 then
-		local a, b, c = payload:byte(full + 1, length)
+		local a, b, c = payload:byte(first + full, first + length - 1)
 		local first = B64REV[a] * 4 + math.floor(B64REV[b] / 16)
 		used = used + 1
 		block[used] = remaining == 3 and string.char(first, B64REV[b] % 16 * 16 + math.floor(B64REV[c] / 4)) or string.char(first)
@@ -198,17 +210,20 @@ end
 
 function Transfer.Encode(records)
 	if type(records) ~= "table" then records = {} end
-	return PREFIX .. EncodeBase64(Transfer.Serialize(records))
+	return EncodeBase64(Transfer.Serialize(records))
 end
 
 -- 非法输入统一返回 nil + "invalidData"(UI.L 键),不区分失败细节。
 function Transfer.Decode(text)
 	if type(text) ~= "string" then return nil, "invalidData" end
-	text = text:match("^%s*(.-)%s*$")
-	if text:sub(1, #PREFIX) ~= PREFIX then return nil, "invalidData" end
-	local payload = text:sub(#PREFIX + 1)
-	if payload == "" or not payload:match("^[A-Za-z0-9+/]*=*$") then return nil, "invalidData" end
-	local raw = DecodeBase64(payload)
+	-- Validate a slice of the input, avoiding full-size trim/alphabet captures
+	-- and the extra payload substring before decoding it into bounded blocks.
+	local start = text:find("%S")
+	if not start or text:sub(start, start + #PREFIX - 1) ~= PREFIX then return nil, "invalidData" end
+	local first = start + #PREFIX
+	local _, last = text:find("^[A-Za-z0-9+/]*=*", first)
+	if not last or last < first or text:find("%S", last + 1) then return nil, "invalidData" end
+	local raw = DecodeBase64(text, first, last)
 	if not raw or raw == "" then return nil, "invalidData" end
 	local records, nextPos = ParseValue(raw, 1, 1)
 	if type(records) ~= "table" then return nil, "invalidData" end

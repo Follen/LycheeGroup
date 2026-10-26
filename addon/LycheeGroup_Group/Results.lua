@@ -276,10 +276,10 @@ function Results:MatchesPartyFilters(record,playerClass,playerRole,needBloodlust
  if checkBloodlust then record.bloodlustKnown,record.hasBloodlust=true,lustOK end
  return not checkBloodlust or lustOK
 end
-local function RelationNames(values,excludeKey)
+local function RelationNames(values,excludeKey,names)
+ names=names or {};wipe(names)
  values=Public(values)
- if type(values)~="table" then return {} end
- local names={}
+ if type(values)~="table" then return names end
  for _,value in ipairs(values) do
   value=Public(value)
   if type(value)=="string" and value~="" and (not excludeKey or A:PlayerKey(value)~=excludeKey) then names[#names+1]=value end
@@ -350,11 +350,17 @@ function Results:GetDetails(idOrRecord)
   end
  end
  for index=#details.members,memberCount+1,-1 do details.members[index]=nil end
- details.relationships=nil
  if record.bnetFriends+record.charFriends+record.guildMates>0 then
   local bnet,character,guild=C_LFGList.GetSearchResultFriends(record.id)
-  local relations={bnet=RelationNames(bnet),character=RelationNames(character),guild=RelationNames(guild,A:UnitIdentity("player"))}
+  local relations=details.relationships or {}
+  relations.bnet=RelationNames(bnet,nil,relations.bnet)
+  relations.character=RelationNames(character,nil,relations.character)
+  relations.guild=RelationNames(guild,A:UnitIdentity("player"),relations.guild)
   details.relationships=relations
+ elseif details.relationships then
+  local relations=details.relationships
+  wipe(relations.bnet);wipe(relations.character);wipe(relations.guild)
+  details.relationships=nil
  end
  if record.categoryID==3 then
   local encounters=Public(C_LFGList.GetSearchResultEncounterInfo(record.id))

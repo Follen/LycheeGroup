@@ -196,5 +196,14 @@ end
 -- A saved listing is identified by its actual native activity, never by its name.
 function Catalog:GetContextForActivity(id,preferred)
  if preferred then for _,activity in ipairs(self:GetActivities(preferred)) do if activity.id==id then return preferred end end end
+ -- Callers normally already own the activity. Avoid warming unrelated native
+ -- categories only to route it; seasonal/ordinary contexts keep their order.
+ local known=self.activities[id];local categoryID=known and known.categoryID
+ if type(categoryID)=="number" then
+  for _,category in ipairs(self:GetCategories()) do if category.id==categoryID then
+   for _,activity in ipairs(self:GetActivities(category.key)) do if activity.id==id then return category.key end end
+  end end
+ end
+ -- Unknown or stale metadata retains the complete original lookup.
  for _,category in ipairs(self:GetCategories()) do for _,activity in ipairs(self:GetActivities(category.key)) do if activity.id==id then return category.key end end end
 end

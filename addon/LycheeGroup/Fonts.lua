@@ -40,6 +40,25 @@ function F:Choices()
  return choices
 end
 
+-- Settings needs one label; only opening its menu needs the full directory.
+-- Match Choices' path exclusions and first-name priority without retaining it.
+function F:ChoiceLabel(value)
+ if type(value)~="string" then return end
+ local zh=A:GetLocale()=="zhCN"
+ if value=="default" then return zh and "荔枝字体" or "LycheeFont" end
+ if value=="game" then return zh and "游戏默认" or "Game default" end
+ if value==self:GetDefaultPath() or value==STANDARD_TEXT_FONT then return end
+ if ChatFontNormal and value==ChatFontNormal:GetFont() then return zh and "聊天字体" or "Chat font" end
+ if value==UNIT_NAME_FONT then return zh and "姓名字体" or "Name font" end
+ if value==DAMAGE_TEXT_FONT then return zh and "伤害数字字体" or "Damage font" end
+ local media=LibStub and LibStub("LibSharedMedia-3.0",true)
+ if media then
+  for _,name in ipairs(media:List("font")) do if media:Fetch("font",name,true)==value then return name end end
+ end
+ local current=self:GetPath()
+ if current==value then return current:match("([^\\/]+)%.[^%.]+$") or current end
+end
+
 function F:GetScale() return A:GetSetting("fontScale")/100 end
 
 function F:IsOwned(region,window,menu,tooltip)
