@@ -1154,20 +1154,20 @@ function Tip:RenderPlayer(member,fromGroup,adjustPoint)
  top=metricTop+metricHeight+4+valueHeight+20
  if scores then top=self:RenderDungeons(scores,top)+20 end
  if note then top=NoteHeader(f,note,top)+20 else f.comment:Hide() end
- local showWCL=name~=nil and realm~=nil and realm~=""
+ local showLinks=context.showPlayerLinks~=false
  local showNote=not UI.preview and key~=nil
  -- Preview presents the action without invoking native region APIs.
- local region=not UI.preview and GetCurrentRegion() or nil
- f.wcl:SetShown(showWCL);f.wcl:SetAvailable(not UI.preview and Links.GetWCLURL(name,realm,region)~=nil)
- f.io:SetShown(showWCL);f.io:SetAvailable(not UI.preview and Links.GetRaiderIOURL(name,realm,region,A:GetLocale())~=nil)
+ local region=showLinks and not UI.preview and GetCurrentRegion() or nil
+ f.wcl:SetShown(showLinks);f.wcl:SetAvailable(showLinks and not UI.preview and Links.GetWCLURL(name,realm,region)~=nil)
+ f.io:SetShown(showLinks);f.io:SetAvailable(showLinks and not UI.preview and Links.GetRaiderIOURL(name,realm,region,A:GetLocale())~=nil)
  f.note:SetShown(showNote)
  f.actionOptions.width,f.actionOptions.y=f.canvas:GetWidth(),-top;f.actionLayout:Layout()
- UI:SetText(f.footer,"");self.playerHeight=top+((showWCL or showNote) and 40 or 0);self:Place(self:LayoutPlayerCopy())
+ UI:SetText(f.footer,"");self.playerHeight=top+((showLinks or showNote) and 40 or 0);self:Place(self:LayoutPlayerCopy())
 UI:ApplyElementScope("tooltip")
  end
 
 function Tip:PlayerLink(kind)
- if UI.preview or not self.member then return end
+ if UI.preview or not self.member or self.memberContext and self.memberContext.showPlayerLinks==false then return end
  local _,name,realm=Links.Identity(self.member)
  if kind=="wcl" then return Links.GetWCLURL(name,realm,GetCurrentRegion()) end
  if kind=="io" then return Links.GetRaiderIOURL(name,realm,GetCurrentRegion(),A:GetLocale()) end

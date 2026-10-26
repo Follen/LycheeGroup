@@ -2620,7 +2620,7 @@ do
   T.eq(metric.title.justifyV,"TOP");T.eq(metric.value.justifyV,"TOP")
   T.eq(TopOffset(metric.title)-metric.title:GetHeight()-4,TopOffset(metric.value),"player numbers sit beneath their headings")
  end
- local actionTop=TopOffset(view.wcl)
+ local actionTop=TopOffset(view.note)
  person.pvpRatingInfo.activityName=string.rep("Long rated arena ",5);tip:RenderPlayer(person)
  local wrappedHeight=view.metrics[2].title:GetStringHeight()
  T.ok(wrappedHeight>24,"the long rating label exercises real wrapping")
@@ -2628,7 +2628,7 @@ do
   T.eq(view.metrics[i].title:GetHeight(),wrappedHeight);T.eq(view.metrics[i].value:GetHeight(),24)
   T.eq(TopOffset(view.metrics[i].value),TopOffset(view.metrics[i].title)-wrappedHeight-4,"both numbers clear the full wrapped heading")
  end
- T.ok(TopOffset(view.wcl)<actionTop,"actions move below the complete wrapped metric row")
+ T.ok(TopOffset(view.note)<actionTop,"the available note action moves below the complete wrapped PvP metric row")
  person.pvpRatingInfo.activityName="3v3";tip:RenderPlayer(person)
  T.eq(view.metrics[2].value:GetHeight(),24,"reusing a player detail releases the previous wrapped height")
  tip:ResetInteractive(row,440)
