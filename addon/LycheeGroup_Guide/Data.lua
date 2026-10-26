@@ -3,14 +3,21 @@ local A=_G.LycheeGroup
 local Guide=A.Guide
 local empty={}
 local function Positive(value) return type(value)=="number" and value>0 and value<math.huge end
-local function Select(catalog,category,mythicOnly)
- if type(category)~="table" or category.id~=2 then return end
+local function Select(catalog,category,mythicOnly,categoryID)
+ categoryID=categoryID or 2
+ if type(category)~="table" or category.id~=categoryID then return end
  for _,activity in ipairs(catalog:GetActivities(category.key) or empty) do
-  if type(activity)=="table" and Positive(activity.id) and activity.categoryID==2 and (not mythicOnly or activity.isMythicPlusActivity) then
+  if type(activity)=="table" and Positive(activity.id) and activity.categoryID==categoryID and (not mythicOnly or activity.isMythicPlusActivity) then
    local key=catalog:GetGroupKey(category.key,activity)
    local group=key and catalog:GetGroup(category.key,key)
    if type(group)=="table" and group.activity and catalog:GetActivity(activity.id)==activity then return activity,category.key,group end
   end
+ end
+end
+function Guide:ResolveRaid(catalog)
+ for _,category in ipairs(catalog:GetCategories() or empty) do
+  local activity,key=Select(catalog,category,false,3)
+  if activity then return activity,key end
  end
 end
 function Guide:ResolveActivity(catalog)

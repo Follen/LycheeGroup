@@ -3,7 +3,7 @@
 local Fixture=dofile("tests/ui_fixture.lua")
 local checks=0
 local function Check(value,message) checks=checks+1;assert(value,message) end
-local function Near(actual,expected,message) Check(math.abs(actual-expected)<.001,message) end
+local function Near(actual,expected,message) Check(math.abs(actual-expected)<.001,message.." ("..tostring(actual).." / "..tostring(expected)..")") end
 local function Inside(x,y,rect)
  return x>=rect.x and x<rect.x+rect.width and y>=rect.y and y<rect.y+rect.height
 end
@@ -21,6 +21,10 @@ local function Target(window,x,y,width,height,scale,parent)
  return target
 end
 local function VerifyMask(view,width,height)
+ if view.mode=="intro" then
+  for _,shade in ipairs(view.shades) do Check(not shade:IsShown(),"standalone welcome leaves the game background clear") end
+  return
+ end
  local hole=view.maskHole
  for y=2,height-1,17 do for x=2,width-1,19 do
   local shaded=0
@@ -154,8 +158,21 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  Check(not view.target and not view.avoidFrame and not view.hole and not view.mode and not view.root:IsShown(),"hide releases every temporary target reference")
  Check(view.body:GetText()=="" and view.counter:GetText()=="","hide clears step content")
  local beforeIntro=#f.S.nodes
+ -- Native SetParent resets inherited strata/levels throughout this subtree.
+ -- The general UI stub keeps explicit values; reproduce the observed client
+ -- transition here so switching from standalone welcome cannot hide the mask.
+ local nativeParent=view.root.SetParent
+ view.root.SetParent=function(frame,parent)
+  nativeParent(frame,parent)
+  local function ReparentLayers(node,strata,level)
+   node:SetFrameStrata(strata);node:SetFrameLevel(level)
+   for _,child in ipairs({node:GetChildren()}) do ReparentLayers(child,strata,level+1) end
+  end
+  ReparentLayers(frame,parent:GetFrameStrata(),parent:GetFrameLevel()+1)
+ end
  local welcome=locale=="zhCN" and "感谢您使用荔枝组队，我们创建了一个新手引导，来帮助你更好的使用它" or "Thank you for using Lychee LFG. We created this guide to help you use it."
  Check(view:ShowIntroduction(welcome),"welcome opens without a target")
+ Check(view.card:GetFrameStrata()=="DIALOG","welcome card restores its layer after reparenting")
  Check(view.ShowRoutes==nil,"obsolete route-selection interface is removed")
  Check(#f.S.nodes==beforeIntro,"welcome reuses every native object from the first step")
  for _,button in ipairs(view.buttons) do button:Fire("OnEnter");button:Fire("OnLeave") end
@@ -166,7 +183,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  Check(view.body:GetText()==welcome,"welcome preserves the supplied wording exactly")
  Check(view.cardSurface.color==U.Theme.surface,"welcome uses the main window's deep surface color")
  Near(view.card.guideRect.x+view.card:GetWidth()/2,U.frame:GetWidth()/2,"welcome panel is centered horizontally")
- Near(view.card.guideRect.y+view.card:GetHeight()/2,U.frame:GetHeight()/2,"welcome panel is centered vertically")
+ Near(view.card.guideRect.y+view.card:GetHeight()/2,U.frame:GetHeight()/2-120,"welcome panel is moved up by 120 UI pixels")
  local function Composition()
   local width=view.card:GetWidth();local logo=view.brandAnchor.guideRect;local body=view.body.guideRect
   local start,dismiss=view.buttons.start.guideRect,view.buttons.dismiss.guideRect
@@ -209,6 +226,11 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  Check(calls[n-1]=="start" and calls[n]=="dismissed","welcome offers only one start and permanent dismissal")
  local detailTarget=Target(U.frame,100,100,180,44,.8)
  Check(view:ShowStep(detailTarget,"Inspect this player's details.",2,5),"detail instruction opens")
+ Check(view.root:GetFrameStrata()=="DIALOG" and view.card:GetFrameStrata()=="DIALOG","teaching layers survive the standalone parent transition")
+ Check(view.card:GetFrameLevel()>U.frame:GetFrameLevel()+100,"instruction stays above the host blocker and page controls")
+ for _,shade in ipairs(view.shades) do
+  Check(shade:GetFrameStrata()=="DIALOG" and shade:GetFrameLevel()>U.frame:GetFrameLevel()+100,"mask stays above ordinary page controls")
+ end
  local previous=view.card.guideRect
  local playerTip=Target(U.frame,previous.x,previous.y,360,260,.8,UIParent)
  playerTip:EnableMouse(true)
