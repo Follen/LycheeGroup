@@ -31,3 +31,4 @@ Adapters\DataBroker.lua
 Minimap.lua
 PartyRoleCheck.lua
 Entrypoints.lua
+..\LycheeGroup_Guide\Bootstrap.lua

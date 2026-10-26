@@ -38,8 +38,8 @@ for _,mode in ipairs({"complete","remember_off","cancel","observer_error","empty
   reads=reads+1
   if testing and mode=="observer_error" and reads==4 then error("simulated observer failure") end
  end
- GetAddOnMemoryUsage=function() return 1000 end
- C_AddOns.IsAddOnLoaded=function() return true,true end
+ GetAddOnMemoryUsage=function(name) return name=="LycheeGroup_Guide" and 0 or 1000 end
+ C_AddOns.IsAddOnLoaded=function(name) return true,name~="LycheeGroup_Guide" end
  -- The prerequisite includes an already populated pool and all four pages.
  for _,key in ipairs({"settings","notes","create","find"}) do A:Open(key) end
  local page=U.pages.find
@@ -80,6 +80,8 @@ for _,mode in ipairs({"complete","remember_off","cancel","observer_error","empty
  Check(not probe.active,mode.." bounded completion")
  if mode=="complete" or mode=="remember_off" then
   Check(probe.result and probe.result.ok,tostring(probe.error or "report failed"))
+  Check(#probe.result.packages==5 and probe.result.packages[5]=="LycheeGroup_Guide","refresh samples include the Guide package")
+  for _,sample in ipairs(probe.result.samples) do Check(sample.loaded[5]==false and sample.addonTotalKB==4000,"reopening business pages never requires Guide") end
   Check(nativeCalls==6 and #probe.result.queries==6,"six native requests, with no duplicate reopen search")
   local expected={"reopen","refresh","reopen","refresh","reopen","refresh"}
   for i,query in ipairs(probe.result.queries) do

@@ -4,6 +4,9 @@ local function Check(value,message) assert(value,message);checks=checks+1 end
 for _,mode in ipairs({"complete","remember_off","late_pool_growth","cancel","prepare_failure","observer_error","warm_open_failure"}) do
  local f=dofile("tests/live_probe_fixture.lua")({rememberFilters=mode~="remember_off"})
  local A,U,G=f.A,f.U,f.G
+ local guideLoaded=mode=="remember_off"
+ C_AddOns.IsAddOnLoaded=function(name) return true,name~="LycheeGroup_Guide" or guideLoaded end
+ GetAddOnMemoryUsage=function(name) return name=="LycheeGroup_Guide" and (guideLoaded and 512 or 0) or 1000 end
  A:Open("create");A:Open("settings");U:Hide(true)
  G.Search:SetFilters({sort="rating",maxMembers=4})
  local oldPrefs,oldPage,oldReturn=G.prefs.find,U.page,U.settingsReturnPage
@@ -33,6 +36,11 @@ for _,mode in ipairs({"complete","remember_off","late_pool_growth","cancel","pre
  Check(not p.active,mode.." completes within its bound")
  if mode=="complete" or mode=="remember_off" then
   Check(p.result and p.result.ok,tostring(p.error or "report failed"))
+  Check(#p.result.packages==5 and p.result.packages[5]=="LycheeGroup_Guide","the report includes the Guide package")
+  for _,sample in ipairs(p.result.samples) do
+   Check(sample.loaded[5]==guideLoaded,"sampling does not require loading Guide")
+   Check(sample.addonTotalKB==4000+(guideLoaded and 512 or 0),"Guide retention contributes to the simultaneous product total")
+  end
   Check(p.result.resultPoolAtStart==p.result.resultPoolBeforeWarm+1,"warmup includes the extra partially visible row")
   Check(f.nativeCalls==1,"exactly one native search")
   Check(p.result.initialRealResults==24 and p.result.initialBoundResults==24,"real Find bound the substitute results")

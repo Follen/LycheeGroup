@@ -4,7 +4,7 @@ local probe=...
 local A=_G.LycheeGroup
 assert(A and A.UI and A.UI.Transfer and A.Notes and A.Group,"requires_all_business_packages_loaded")
 assert(not A.UI:IsShown() and not A.UI.preview and not InCombatLockdown(),"requires_closed_idle_ui")
-local packages={"LycheeGroup","LycheeGroup_Group","LycheeGroup_Notes","LycheeGroup_UI"}
+local packages={"LycheeGroup","LycheeGroup_Group","LycheeGroup_Notes","LycheeGroup_UI","LycheeGroup_Guide"}
 local version,build,_,interface=GetBuildInfo()
 local report={schema="lycheegroup.transfer-memory.v1",packages=packages,units="KB",samples={},rounds={},peakBytes=0,
  client={version=version,build=build,interface=interface},scenario={records=1000,rounds=3,reasonBytes=198,gcPolicy="natural until all rounds finish; separate final collection",samplePolicy="before and after each synchronous encode/decode"}}
@@ -14,7 +14,7 @@ local function Sample(tag,collected)
  row.luaHeapKB=collectgarbage("count")
  local t=debugprofilestop();UpdateAddOnMemoryUsage();row.counterRefreshMs=debugprofilestop()-t
  local total=0
- for i,name in ipairs(packages) do local _,loaded=C_AddOns.IsAddOnLoaded(name);assert(loaded,"package_not_loaded");row.loaded[i]=loaded;row.addonKB[i]=GetAddOnMemoryUsage(name);total=total+row.addonKB[i] end
+ for i,name in ipairs(packages) do local _,loaded=C_AddOns.IsAddOnLoaded(name);assert(loaded or name=="LycheeGroup_Guide","package_not_loaded");row.loaded[i]=loaded==true;row.addonKB[i]=GetAddOnMemoryUsage(name);total=total+row.addonKB[i] end
  row.addonTotalKB=total;report.samples[#report.samples+1]=row
  if not collected then report.peakBytes=math.max(report.peakBytes,total*1024) end
  return row

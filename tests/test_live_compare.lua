@@ -51,7 +51,8 @@ for _,mode in ipairs({"complete","cancel","open_failure","partial_open_failure"}
  GetFramerate=function() return 60 end
  debugprofilestop=function() return 0 end
  UpdateAddOnMemoryUsage=function() end;UpdateAddOnCPUUsage=function() end
- GetAddOnMemoryUsage=function() return 1000 end;GetAddOnCPUUsage=function() return 0 end
+ GetAddOnMemoryUsage=function(name) return name=="LycheeGroup_Guide" and 512 or name=="MeetingStone" and 9000 or 1000 end
+ GetAddOnCPUUsage=function(name) return now*(name=="LycheeGroup_Guide" and 2 or name=="MeetingStone" and 7 or 1) end
  local main=f.S.New("Frame",nil,UIParent);main:Hide()
  function main:GetSelectedPanel() return nil end
  local profile={cdb={profile={lastSearchCode="original",searchHistoryList={}}},gdb={global={filters={[3]={}}}}}
@@ -109,6 +110,11 @@ for _,mode in ipairs({"complete","cancel","open_failure","partial_open_failure"}
  if mode=="complete" then
   if probe.result then for name,value in pairs(probe.result.checks) do Check(value,"complete report check: "..name) end end
   Check(probe.result and probe.result.ok,tostring(probe.error or "report failed"))
+  Check(#probe.result.packages==6 and probe.result.packages[5]=="LycheeGroup_Guide" and probe.result.packages[6]=="MeetingStone","Guide precedes the independent comparison package")
+  for _,sample in ipairs(probe.result.samples) do
+   Check(sample.totalKB==4512 and sample.packageKB[5]==512 and sample.packageKB[6]==9000,"Lychee total includes Guide and excludes MeetingStone")
+  end
+  Check(math.abs(probe.result.cpuMs-probe.result.duration*6)<.001,"CPU totals include Guide without the comparison package")
   Check(nativeCalls==7 and #probe.result.queries==6,"one warmup and six measured real requests")
   for _,query in ipairs(probe.result.queries) do Check(query.activityID==1956 and query.results==24,"measured target identity and populated result event") end
  else Check(probe.result==nil,"cancellation cannot report completion") end

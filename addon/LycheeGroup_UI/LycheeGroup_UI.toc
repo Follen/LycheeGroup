@@ -27,3 +27,4 @@ Find.lua
 Create.lua
 Notes.lua
 Settings.lua
+..\LycheeGroup_Guide\Entry.lua

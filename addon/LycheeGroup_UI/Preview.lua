@@ -269,7 +269,7 @@ function UI:UpdatePreviewIndicator()
  if self.previewExit then self.previewExit:SetShown(self.preview~=nil) end
 end
 function UI:StartPreview(scenario)
- if scenario~="applications" and scenario~="create" and scenario~="applicants" then return false,S("用法：/lg test applications|create|applicants|off","Usage: /lg test applications|create|applicants|off") end
+ if scenario~="applications" and scenario~="create" and scenario~="applicants" then return false,S("用法：/lg dev test [applications|create|applicants|off]","Usage: /lg dev test [applications|create|applicants|off]") end
  local provider,err=NewProvider(scenario);if not provider then return false,err end
  local returnPage=self.preview and self.preview.returnPage or self.page or "find"
  self:Hide(true)

@@ -52,7 +52,8 @@ do
  local f=fixture();local p=run(f)
  check(not p.error and p.result.ok,"normal observation passes")
  check(#p.result.samples==23 and p.result.events.GUILD_ROSTER_UPDATE==22,"bounded samples and real event count")
- check(p.result.peakBytes==4096000,"all four package counters are included")
+ check(p.result.peakBytes==5120000,"all five package counters are included")
+ check(p.result.samples[1].packages.LycheeGroup_Guide==1024000,"previously loaded Guide retention is included")
  check(p.result.primedSnapshot and p.result.initialVersion==17,"the one intentional public read is identified in the report")
  check(p.result.identityVersionChanges==0 and p.result.relationNotifications==0,"repeated source events are distinct from identity changes and display notifications")
  for _,row in ipairs(p.result.samples)do

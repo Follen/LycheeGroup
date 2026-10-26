@@ -796,19 +796,19 @@ do
 end
 
 -- Case-insensitive identity belongs to Notes; original Core/storage/display
--- keys stay usable by native members, commands, LN imports and list actions.
+-- keys stay usable by native members, note entry, LN imports and list actions.
 do
  local f=dofile("tests/ui_fixture.lua")("enUS",nil,{askReason=false,reduceMotion=true})
  local a,notes=f.A,f.A.Notes
  f.base.SetUnit("player",{name="Self",realm="SilverHand",class="WARRIOR",classID=1,guid="Player-self"})
  f.base.SetUnit("party1",{name="Alice",realm="SilverHand",class="MAGE",classID=8,guid="Player-alice"})
  dofile("addon/LycheeGroup/Entrypoints.lua")
- SlashCmdList.LYCHEEGROUP("note alice-SilverHand known-person")
+ a:RecordPlayer("alice-SilverHand",nil,nil,"known-person")
  local record=notes:Find("alice-SilverHand")
- T.ok(record,"the real note command stores its requested player")
+ T.ok(record,"the note entry stores its requested player")
  local nativeKey=a:UnitIdentity("party1")
  local found,key=notes:Find(nativeKey)
- T.eq(found,record,"a command's lowercase spelling matches the actual native member")
+ T.eq(found,record,"the entered lowercase spelling matches the actual native member")
  T.eq(key,"alice-SilverHand","lookup returns the stored key for follow-up actions")
  T.eq(a:PlayerKey("Alice","SilverHand"),"Alice-SilverHand","Core preserves public identity formatting")
  T.eq(a:RecordPlayer("self","silverhand",nil,"same player"),false,"case changes cannot record the current character")

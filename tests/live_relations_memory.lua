@@ -5,7 +5,7 @@ local A=assert(LycheeGroup,"product_missing")
 local G,U=assert(A.Group,"group_missing"),assert(A.UI,"ui_missing")
 assert(U:IsShown() and U.page=="create" and not U.preview and G.Relations.active,"requires_live_create_page")
 assert(type(G.Relations.dirtySources)=="number","requires_scoped_relations_refresh")
-local packages={"LycheeGroup","LycheeGroup_Group","LycheeGroup_Notes","LycheeGroup_UI"}
+local packages={"LycheeGroup","LycheeGroup_Group","LycheeGroup_Notes","LycheeGroup_UI","LycheeGroup_Guide"}
 local report={schema="lycheegroup.relations-memory.v1",build=select(2,GetBuildInfo()),
  gcPolicy="natural; no explicit collection",sampleIntervalSeconds=5,durationSeconds=110,
  budgetBytes=20000000,peakBytes=0,samples={},events={},activeSamples=0,relationNotifications=0}

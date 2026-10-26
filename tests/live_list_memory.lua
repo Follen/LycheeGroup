@@ -9,7 +9,7 @@ if A.UI and (A.UI:IsShown() or A.UI.hiding or A.UI.preview) then return probe:Fa
 if A.Group and A.Group.Search:GetState()=="searching" then return probe:Fail("search_already_running") end
 if C_ChallengeMode.IsChallengeModeActive() then return probe:Fail("challenge_active") end
 local observerStartHeap=collectgarbage("count")
-local PACKAGES={"LycheeGroup","LycheeGroup_Group","LycheeGroup_Notes","LycheeGroup_UI"}
+local PACKAGES={"LycheeGroup","LycheeGroup_Group","LycheeGroup_Notes","LycheeGroup_UI","LycheeGroup_Guide"}
 local LIMIT,STEPS,RETAINED_STEPS,INTERVAL=115,1024,256,.10
 local BATCH,SAMPLE_EVERY,SAMPLE_CAPACITY=16,4,336
 local started=GetTime()
@@ -239,7 +239,9 @@ local function Finish()
  report.checks.nativeObjectsStable=not before.truncated and not after.truncated
   and before.frames==after.frames and before.regions==after.regions and before.animationGroups==after.animationGroups
  report.checks.allPackagesLoaded=true
- for i=1,#PACKAGES do if not report.samples[finalGC].loaded[i] then report.checks.allPackagesLoaded=false end end
+ for i,name in ipairs(PACKAGES) do
+  if name~="LycheeGroup_Guide" and not report.samples[finalGC].loaded[i] then report.checks.allPackagesLoaded=false end
+ end
  report.checks.noProbeDrivers=ticker==nil and eventFrame:GetScript("OnEvent")==nil
  local baseline,final=report.samples[baselineGC],report.samples[finalGC]
  report.summary.retainedBaselineSample,report.summary.retainedFinalSample=baselineGC,finalGC

@@ -14,6 +14,8 @@ end
 for _,mode in ipairs({"complete","cancel","observer_error","search_timeout","search_complete","warm_cancel","warm_complete","warm_observer_error","warm_open_failure"}) do
  local f=dofile("tests/live_probe_fixture.lua")()
  local A,U,G=f.A,f.U,f.G
+ local guideKB=mode=="warm_complete" and 512 or 0
+ GetAddOnMemoryUsage=function(name) return name=="LycheeGroup_Guide" and guideKB or 1000 end
  local searching=mode:match("^search_")~=nil
  if not searching then G.listing={activityID=2} end
  A.Floating:Bind(G);A.Floating:UpdateSettings()
@@ -53,6 +55,8 @@ for _,mode in ipairs({"complete","cancel","observer_error","search_timeout","sea
  Check(not probe.active,mode.." bounded completion")
  if mode=="complete" or mode=="search_complete" or mode=="warm_complete" then
   Check(probe.result~=nil,tostring(probe.error))
+  Check(probe.result.peakBytes==(4000+guideKB)*1024,"theme cycles include any retained Guide package cost")
+  for _,sample in ipairs(probe.result.samples) do Check(sample.packages.LycheeGroup_Guide==guideKB*1024,"each theme sample includes the Guide counter") end
   Check(probe.result.fontChanges==12 and probe.result.nativeClicks==58,"full operation sequence")
   Check(probe.result.settingsSections==9 and #U.pages.settings.credits==2,"credits first build is included in the measured sequence")
   Check(probe.result.accountUnchanged and probe.result.characterUnchanged and probe.result.sessionRestored,"stores restored")

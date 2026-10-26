@@ -14,9 +14,17 @@ end
 for _,script in ipairs({"live_ui_presence","live_ui_motion_profile","live_ui_transitions","live_memory"}) do
  local modes={"complete","complete_notes","cancel","callback_error"}
  if script=="live_ui_presence" or script=="live_ui_motion_profile" then modes[#modes+1]="cold_open_failure";modes[#modes+1]="cold_complete" end
+ if script=="live_memory" then modes[#modes+1]="cold_complete";modes[#modes+1]="cold_guide_complete" end
  for _,mode in ipairs(modes) do
   local f=dofile("tests/live_probe_fixture.lua")()
   local A,U,G=f.A,f.U,f.G
+  if script=="live_memory" then
+   local cold=mode:match("^cold_")~=nil;local guideLoaded=mode=="cold_guide_complete"
+   C_AddOns.IsAddOnLoaded=function(name)
+    return true,name=="LycheeGroup" or name=="LycheeGroup_Guide" and guideLoaded or name~="LycheeGroup_Guide" and (not cold or U.frame~=nil)
+   end
+   GetAddOnMemoryUsage=function(name) return name=="LycheeGroup_Guide" and (guideLoaded and 512 or 0) or 1000 end
+  end
   G.Roster={};G.Applicants={GetCount=function() return 0 end}
   function G.Game.frame:IsEventRegistered(event) return self.events[event]==true end
   local cvars={maxFPS="90",maxFPSBk="30",scriptProfile="0"}
@@ -59,10 +67,21 @@ for _,script in ipairs({"live_ui_presence","live_ui_motion_profile","live_ui_tra
   end
   local label=script.." "..mode
   Check(not p.active,label.." bounded completion")
-  if mode=="complete" or mode=="complete_notes" or mode=="cold_complete" then Check(p.result~=nil,tostring(p.error))
+  if mode=="complete" or mode=="complete_notes" or mode=="cold_complete" or mode=="cold_guide_complete" then Check(p.result~=nil,tostring(p.error))
   elseif mode=="callback_error" then Check(p.error and p.error:find("simulated callback failure",1,true),tostring(p.error))
   elseif mode=="cold_open_failure" then Check(p.error and p.error:find("simulated open failure",1,true),tostring(p.error))
   else Check(p.result==nil,label.." cancelled without success") end
+  if script=="live_memory" and p.result then
+   local guideLoaded=mode=="cold_guide_complete"
+   Check(#p.result.packages==5 and p.result.packages[5]=="LycheeGroup_Guide",label.." reports all five product packages")
+   Check(p.result.loadedAtStart[5]==guideLoaded and p.result.loadedAtEnd[5]==guideLoaded,label.." business pages preserve Guide load state")
+   Check(#p.result.summary.addonDeltaKB==5,label.." retained deltas include Guide")
+   for _,sample in ipairs(p.result.samples) do Check(sample.addonTotalKB==4000+(guideLoaded and 512 or 0),label.." simultaneous totals include Guide retention") end
+   if mode:match("^cold_") then
+    Check(p.result.coreOnlyAtStart==not guideLoaded,label.." a loaded Guide disqualifies core-only startup")
+    Check(p.result.businessPagesUnloadedAtStart,label.." Guide does not masquerade as a business page")
+   end
+  end
   Check(not U:IsShown() and U.page==originalPage and U.settingsReturnPage==originalReturn,label.." actual hidden route restored")
   Check(not U.Native.searchLease and not G:HasViews() and U.Motion:Count()==0,label.." UI owners released")
   Check(G.prefs.find==oldFind and Same(oldFind,oldFindValue),label.." original role filters preserved")

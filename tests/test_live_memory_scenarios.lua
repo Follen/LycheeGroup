@@ -4,6 +4,9 @@ local function Check(value,message) assert(value,message);checks=checks+1 end
 for _,mode in ipairs({"complete","remember_off","late_pool_growth","cancel","cancel_raid","cancel_applicants","observer_error","prepare_failure"}) do
  local f=dofile("tests/live_probe_fixture.lua")({rememberFilters=mode~="remember_off"})
  local A,U,G=f.A,f.U,f.G
+ local guideLoaded=mode=="remember_off"
+ C_AddOns.IsAddOnLoaded=function(name) return true,name~="LycheeGroup_Guide" or guideLoaded end
+ GetAddOnMemoryUsage=function(name) return name=="LycheeGroup_Guide" and (guideLoaded and 512 or 0) or 1000 end
  EJ_GetDifficulty=function() return 15 end;EJ_SetDifficulty=function() end
  EJ_SelectInstance=function() end;EJ_GetEncounterInfoByIndex=function() end
  C_LFGList.GetActivityInfoTable(1).difficultyID=15
@@ -43,6 +46,11 @@ for _,mode in ipairs({"complete","remember_off","late_pool_growth","cancel","can
  if mode=="complete" or mode=="remember_off" then
   if p.result then for key,value in pairs(p.result.checks) do Check(value,mode.." report check: "..key) end end
   Check(p.result and p.result.ok,tostring(p.error or "report failed"))
+  Check(#p.result.packages==5 and p.result.packages[5]=="LycheeGroup_Guide","the report includes the Guide package")
+  for _,sample in ipairs(p.result.samples) do
+   Check(sample.loaded[5]==guideLoaded,"the workload does not require Guide to be loaded")
+   Check(sample.addonTotalKB==4000+(guideLoaded and 512 or 0),"the combined probe retains all five package counters")
+  end
   Check(p.result.fixture.visiblePreviewResults==100 and p.result.fixture.boundPreviewResults==100,"all raid groups pass real Preview/Find filtering")
   Check(p.result.checks.raidScrolled and p.result.checks.raidFirstRowChanged,"full bound list actually scrolls")
   Check(p.result.fixture.initialFindPool<p.result.fixture.findPoolAtFirstBind and p.result.fixture.initialBatchPool<p.result.fixture.batchPoolAtFirstBind,"first full lists legitimately grow both empty-state pools")

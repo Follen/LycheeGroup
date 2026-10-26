@@ -13,7 +13,7 @@ if LFGListFrame and LFGListFrame.EntryCreation then
   if issecretvalue and issecretvalue(value) or value~="" then return probe:Fail("native_creation_draft_present") end
  end
 end
-local packages={"LycheeGroup","LycheeGroup_Group","LycheeGroup_Notes","LycheeGroup_UI"}
+local packages={"LycheeGroup","LycheeGroup_Group","LycheeGroup_Notes","LycheeGroup_UI","LycheeGroup_Guide"}
 local started=GetTime()
 local version,build,_,interface=GetBuildInfo()
 local report={schema="lycheegroup.heroic-memory.v1",packages=packages,units="KB",client={version=version,build=build,interface=interface},
@@ -165,7 +165,10 @@ local function Finish()
  report.checks.pageAndPoolReused=page.frame==originalFrame and #page.results.rows==originalPool
  report.checks.knownOwnersIdle=not ui:IsShown() and not g:HasViews() and g:GetResultCount()==0 and not g.Results.updatePending
   and g.Game.frame:GetScript("OnUpdate")==nil and not g.Search.timer and not g.Search.pending and next(ui.Motion.jobs)==nil
- report.checks.allPackagesLoaded=true;for i=1,#packages do if not report.samples[used].loaded[i] then report.checks.allPackagesLoaded=false end end
+ report.checks.allPackagesLoaded=true
+ for i,name in ipairs(packages) do
+  if name~="LycheeGroup_Guide" and not report.samples[used].loaded[i] then report.checks.allPackagesLoaded=false end
+ end
  report.checks.under20MB=report.peakBytes<=20000000
  report.ok=report.checks.correctActivity and report.checks.realScrollable and report.checks.pageAndPoolReused and report.checks.knownOwnersIdle and report.checks.allPackagesLoaded and report.checks.under20MB
  report.elapsedSeconds,report.sampleCount=GetTime()-started,used

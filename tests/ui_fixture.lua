@@ -22,6 +22,10 @@ if themeDefinition then
 end
 _G.LycheeGroupDB=settings;_G.LycheeGroupPrefsDB=preferences
 local A=LycheeGroup;A:LoadDB();dofile("addon/LycheeGroup/Bindings.lua")
+-- Most UI scenarios use an existing account. Pass guide={} to exercise the
+-- new-account welcome instead of opening it over unrelated controls.
+if A.db.guide==nil then A.db.guide={welcomeShown=true} end
+dofile("addon/LycheeGroup_Guide/Bootstrap.lua")
 for _,file in ipairs({"Locale.lua","Notes.lua","Records.lua","PlayerInfo.lua","RosterReminder.lua"}) do dofile("addon/LycheeGroup_Notes/"..file) end
 A.Notes:Initialize()
 local G={db={prefs={},blockedLeaders={}},prefs=A.charPrefs,subs={},views={},records={},apps={},applicants={},state="idle",declinedParties={}}
@@ -188,6 +192,7 @@ C_LFGList={
 dofile("tests/application_fixture.lua")(S)
 dofile("addon/LycheeGroup_Group/Locale.lua");G.L=A.GroupLocale;dofile("addon/LycheeGroup_Group/Catalog.lua")
 for _,file in ipairs({"Locale.lua","Theme.lua","Motion.lua","Components.lua","Elements.lua","Members.lua","Preview.lua","PlayerLinks.lua","RealmSlugs.lua","Tooltip.lua","Native.lua","Application.lua","Transfer.lua","Resize.lua","Host.lua","Find.lua","Create.lua","Notes.lua","Settings.lua"}) do dofile("addon/LycheeGroup_UI/"..file) end
+dofile("addon/LycheeGroup_Guide/Entry.lua")
 local U=A.UI;local C=U.C
 local Open=A.Open
 function A:Open(page,ctx) self.lastOpen=page;return Open(self,page,ctx) end

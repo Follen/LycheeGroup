@@ -32,7 +32,7 @@ out.initialFloatingPool=A.Floating and A.Floating.rows and #A.Floating.rows or 0
 local function Memory(label)
  local start=debugprofilestop();UpdateAddOnMemoryUsage()
  local row={label=label,elapsedSeconds=GetTime()-started,bytes=0,packages={},observerRefreshMs=debugprofilestop()-start,luaHeapKiB=collectgarbage('count')}
- for _,name in ipairs({'LycheeGroup','LycheeGroup_Group','LycheeGroup_Notes','LycheeGroup_UI'})do local bytes=GetAddOnMemoryUsage(name)*1024;row.packages[name]=bytes;row.bytes=row.bytes+bytes end
+ for _,name in ipairs({'LycheeGroup','LycheeGroup_Group','LycheeGroup_Notes','LycheeGroup_UI','LycheeGroup_Guide'})do local bytes=GetAddOnMemoryUsage(name)*1024;row.packages[name]=bytes;row.bytes=row.bytes+bytes end
  out.samples[#out.samples+1]=row;out.peakBytes=math.max(out.peakBytes,row.bytes);if row.bytes>out.budget then out.budgetPassed=false end
 end
 local function Clean()

@@ -1,0 +1,17 @@
+## Interface: 120105
+## Title: Lychee LFG · Guide
+## Author: FollenFang
+## Title-zhCN: |cffD53C49荔枝|r组队 · 引导
+## Notes: Interactive tours with the game's activities and simulated players.
+## Notes-zhCN: 使用游戏活动与模拟玩家数据的交互引导。
+## IconTexture: Interface\AddOns\LycheeGroup\Media\addon-logo.tga
+## Dependencies: LycheeGroup
+## LoadOnDemand: 1
+## Version: 1.2.5
+Guide.lua
+Bindings.lua
+Interactions.lua
+Data.lua
+Provider.lua
+Adapter.lua
+View.lua

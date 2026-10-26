@@ -1,12 +1,13 @@
 -- Six real searches through the normal refresh/reopen actions, with natural GC.
--- Run after live_list_memory.lua has warmed all four product packages and closed the UI.
+-- Run after live_list_memory.lua has warmed the four business packages and closed the UI.
+-- Guide remains load-on-demand; include its retained cost if it was used earlier.
 local probe=...
 local A=_G.LycheeGroup
 local ui,g=A and A.UI,A and A.Group
 if not ui or not g or ui:IsShown() or ui.hiding or ui.preview then return probe:Fail("requires_warmed_closed_ui") end
 if InCombatLockdown() or C_ChallengeMode.IsChallengeModeActive() or C_LFGList.HasActiveEntryInfo() or #C_LFGList.GetApplications()>0 then return probe:Fail("requires_idle_group_business") end
 if g:GetSearchState()=="searching" or g:GetSearchState()=="waiting" then return probe:Fail("search_already_running") end
-local packages={"LycheeGroup","LycheeGroup_Group","LycheeGroup_Notes","LycheeGroup_UI"}
+local packages={"LycheeGroup","LycheeGroup_Group","LycheeGroup_Notes","LycheeGroup_UI","LycheeGroup_Guide"}
 local page=ui.pages.find
 if not page or not page.frame or not page.results then return probe:Fail("requires_warmed_find_page") end
 local oldPage,oldReturn,oldPrefs=ui.page,ui.settingsReturnPage,g.prefs.find
@@ -102,7 +103,9 @@ local function Tick()
   report.checks.knownOwnersIdle=not ui:IsShown() and not g:HasViews() and g:GetResultCount()==0 and not g.Results.updatePending
    and g.Game.frame:GetScript("OnUpdate")==nil and not g.Search.timer and not g.Search.pending and next(ui.Motion.jobs)==nil
   report.checks.allPackagesLoaded=true
-  for i=1,#packages do if not report.samples[used].loaded[i] then report.checks.allPackagesLoaded=false end end
+  for i,name in ipairs(packages) do
+   if name~="LycheeGroup_Guide" and not report.samples[used].loaded[i] then report.checks.allPackagesLoaded=false end
+  end
   report.checks.budget=report.peakBytes<=20000000
   report.checks.sixNonemptySearches=#report.queries==6
   report.ok=report.checks.budget and report.checks.knownOwnersIdle and report.checks.reusedPage and report.checks.closedResultsReleased and report.checks.allPackagesLoaded and report.checks.sixNonemptySearches
