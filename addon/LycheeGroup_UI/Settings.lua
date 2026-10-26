@@ -7,6 +7,11 @@ local zh=A:GetLocale()=="zhCN"
 local function S(cn,en) return zh and cn or en end
 local sections={{"general",S("常规","General")},{"interface",S("界面显示","Appearance")},{"browse",S("寻求组队","Find groups")},{"memberIcons",S("成员显示","Member display")},{"notes",S("笔记与提醒","Notes & reminders")},{"blocks",S("屏蔽名单","Blocked leaders")},{"floating",S("悬浮窗","Floating window")},{"about",L.about},{"credits",S("鸣谢","Credits"),true}}
 local types={{value="positive",label=S("推荐","Positive")},{value="neutral",label=S("中性","Neutral")},{value="caution",label=S("拉黑","Blocked")}}
+local applicantSounds={
+ {value="voice",label=S("荔枝内置语音","Lychee built-in voice")},
+ {value="native",label=S("原生提示音","Native alert")},
+ {value="off",label=S("关闭","Off")},
+}
 local function ThemeChoices()
  local catalog=A.API.Theme:List({includeBuiltins=true});local choices={}
  table.sort(catalog,function(a,b)
@@ -22,7 +27,8 @@ local definitions={
  general={{"language",S("界面语言","Interface language"),S("仅改变插件文字，重载界面后生效。","Change addon text. Reload the UI to apply."),{{value="auto",label=S("跟随游戏","Game language")},{value="zhCN",label="简体中文"},{value="enUS",label="English"}}},
  {"toggleBinding",A.L.bindingToggle,"","binding"},
  {"minimap",S("显示小地图按钮","Show minimap button"),S("是否显示小地图按钮","Show or hide the minimap button.")},
- {"nativeLFGEntry",S("隐藏原生组队眼睛","Hide the native LFG eye"),S("预组队隐藏原生眼睛按钮","Hide the native eye button for premade groups.")}},
+ {"nativeLFGEntry",S("隐藏原生组队眼睛","Hide the native LFG eye"),S("预组队隐藏原生眼睛按钮","Hide the native eye button for premade groups.")},
+ {"applicantAlertSound",S("新申请提示音","New applicant sound"),S("选择新申请提示音","Choose the new applicant sound"),applicantSounds}},
  interface={{"theme",S("界面主题","Theme"),S("切换主窗口与悬浮窗外观，重载后生效。","Change the main and floating window appearance. Reload to apply."),ThemeChoices},
  {"font",S("界面字体","Interface font"),S("选择主窗口与悬浮窗使用的字体。","Choose the main and floating window font."),function() return A.Fonts:Choices() end},
  {"fontScale",S("字体大小","Font size"),S("调节插件全局文字大小。","Adjust text size throughout the addon."),"range",70,130},
@@ -56,7 +62,7 @@ function P:Build(parent)
    P:CancelBindingCapture(true);P:ShowBindingNotice(A.L.bindingCombat);P:Sync()
   end
  end)
- root:HookScript("OnHide",function() P:CancelBindingCapture(true);P:CloseLinkCopy(true);P:StopThemeSubscription() end)
+ root:HookScript("OnHide",function() P:CancelBindingCapture(true);P:CloseLinkCopy(true);P:StopThemeSubscription();P:StopSoundPreview() end)
  local rail=CreateFrame("Frame",nil,root);rail:SetSize(T.settingsSidebarWidth,T.contentHeight);rail:SetPoint("TOPLEFT");self.rail=rail
  self.nav={};for i,entry in ipairs(sections) do
   local b=C.Navigation(rail,entry[2],T.settingsSidebarWidth,function() P:SelectSection(entry[1]) end,nil,{radius=8,fontSize=14});b:SetPoint("TOPLEFT",0,-12-(i-1)*52);b.label:SetWidth(T.settingsBLabelWidth)
@@ -449,9 +455,12 @@ function P:BuildRow(parent,row,index)
   control=C.Button(holder,A.L.bindingChange,controlWidth,function() P:BeginBindingCapture() end);C.SetPoint(control,"RIGHT",control:GetParent(),"RIGHT","settingsControlRightX",0)
   holder:HookScript("OnHide",function() if P.bindingCapture==holder then P:CancelBindingCapture(true) end end)
  elseif row[4]=="action" then
-  control=C.Button(holder,S("重置位置","Reset position"),controlWidth,function() A.Appearance:SaveFloatingPosition(false) end);C.SetPoint(control,"RIGHT",control:GetParent(),"RIGHT","settingsControlRightX",0)
+  control=C.Button(holder,S("重置位置","Reset position"),controlWidth,function() A.Appearance:SaveFloatingPosition(false) end)
+  C.SetPoint(control,"RIGHT",control:GetParent(),"RIGHT","settingsControlRightX",0)
  elseif row[4] then
-  control=C.Choice(holder,controlWidth,function() return type(row[4])=="function" and row[4]() or row[4] end,function(value)
+  if row[1]=="applicantAlertSound" then
+   control=C.ChoiceTrigger(holder,controlWidth,function(button) P:OpenSoundMenu(button) end)
+  else control=C.Choice(holder,controlWidth,function() return type(row[4])=="function" and row[4]() or row[4] end,function(value)
    if row[1]=="theme" then
     local status=A.API.Theme:GetStatus()
     local storage=not status.followingDefault and status.next.activationStorage or "account"
@@ -459,7 +468,8 @@ function P:BuildRow(parent,row,index)
     P.themeSelectionError=not ok and S("无法切换主题，请重新选择。","Unable to switch themes. Choose another theme.") or nil
     P:Sync()
    else A:SetSetting(row[1],value) end
-  end);control:SetHeight(T.settingsControlHeight);C.SetPoint(control,"RIGHT",control:GetParent(),"RIGHT","settingsControlRightX",0)
+  end) end
+  control:SetHeight(T.settingsControlHeight);C.SetPoint(control,"RIGHT",control:GetParent(),"RIGHT","settingsControlRightX",0)
  else
   control=C.Check(holder,"",function(value)
    A:SetSetting(row[1],value)
@@ -612,7 +622,7 @@ UI:ApplyElementScope("settings")
  end
 function P:SelectSection(key)
  local changed=self.section~=key
- if changed then self:CancelBindingCapture(true);self:StopBlocks();self:CloseLinkCopy(true) end
+ if changed then self:CancelBindingCapture(true);self:StopBlocks();self:CloseLinkCopy(true);self:StopSoundPreview() end
  for _,panel in pairs(self.panels) do UI.Motion:FinishPlacement(panel) end
  self.section=key;for id,panel in pairs(self.panels) do panel:SetShown(id==key);self.nav[id]:SetActive(id==key);UI:Color(self.nav[id].label,id==key and "text" or "muted") end
  for _,entry in ipairs(sections) do if entry[1]==key then UI:SetText(self.heading,entry[2]);break end end
@@ -677,6 +687,75 @@ UI:ApplyElementScope("settings")
 function P:StopThemeSubscription()
  if self.themeSubscription then self.themeSubscription();self.themeSubscription=nil end
 end
+function P:HideSoundMenuButtons()
+ if not self.soundMenuButtons then return end
+ for _,button in ipairs(self.soundMenuButtons) do
+  if button.soundChoice then button:Hide();button.soundChoice=nil end
+ end
+end
+function P:SyncSoundMenuButtons()
+ if not self.soundMenuAnchor or not UI.context:IsMenuOpen(self.soundMenuAnchor) then self:HideSoundMenuButtons();return end
+ local menu=UI.context:GetMenu()
+ for _,row in ipairs(menu.list.rows) do
+  local entry=row:IsShown() and row:IsMouseEnabled() and applicantSounds[row.key]
+  local button=row.applicantSoundPreview
+  if entry and entry.value~="off" then
+   if not button then
+    button=C.IconButton(row,nil,32,function(b)
+     if row:IsMouseEnabled() and menu.list.clip:IsMouseOver() then P:PreviewApplicantSound(b.soundChoice) end
+    end,{iconSize=12})
+    button.icon:SetTexture("Interface\\AddOns\\LycheeGroup_UI\\Media\\sound-preview-play.tga")
+    button:SetPoint("RIGHT",-4,0);row.applicantSoundPreview=button
+    self.soundMenuButtons[#self.soundMenuButtons+1]=button
+   end
+   -- Hiding cancels the component's old press before this pooled row is rebound.
+   if button.soundChoice~=entry.value then button:Hide();button.soundChoice=entry.value end
+   if not button:IsShown() then button:Show() end
+   local width=math.max(0,row:GetWidth()-T.menuSelectInset-T.menuTextInset-40)
+   if math.abs(row.title:GetWidth()-width)>.01 then row.title:SetWidth(width) end
+  elseif button and button.soundChoice then button:Hide();button.soundChoice=nil end
+ end
+end
+function P:OpenSoundMenu(anchor)
+ if not self.soundMenuMeasure then self.soundMenuMeasure=C.Text(anchor,"","menuFontSize","text");self.soundMenuMeasure:Hide() end
+ local width=anchor:GetWidth()
+ local context,measure=UI.context,self.soundMenuMeasure
+ for _,entry in ipairs(applicantSounds) do
+  local key=context:GetMenuElementKey(anchor,entry.value)
+  local font=context:ResolveElementValue("menu.row","label","font",context.fontPath,key)
+  local size=context:ResolveElementValue("menu.row","label","fontSize",context:GetFontSize("menuFontSize"),key)
+  local flags=context:ResolveElementValue("menu.row","label","flags","",key)
+  local currentFont,currentSize,currentFlags=measure:GetFont()
+  if currentFont~=font or currentSize~=size or currentFlags~=flags then measure:SetFont(font,size,flags) end
+  -- Reserve the scrollbar too: startup row heights may make this menu scroll.
+  width=math.max(width,math.ceil(C.MeasureTextWidth(measure,entry.label))+T.menuSelectInset+T.menuTextInset+T.menuPadding*2+40+C.listRightInset)
+ end
+ UI:OpenMenu(anchor,applicantSounds,function(value,label) anchor:SetValue(value,label);A:SetSetting("applicantAlertSound",value) end,{kind="select",selectedValue=anchor.value,width=width})
+ if not UI.context:IsMenuOpen(anchor) then return end
+ self.soundMenuAnchor=anchor
+ if not self.soundMenuButtons then
+  self.soundMenuButtons={}
+  local menu=UI.context:GetMenu()
+  -- The shared menu/list exposes rows for product-owned controls. Rebind after
+  -- refresh so font/layout changes and row reuse cannot leave stale actions.
+  hooksecurefunc(menu.list,"Refresh",function() if P.soundMenuAnchor then P:SyncSoundMenuButtons() end end)
+  menu:HookScript("OnHide",function()
+   if not P.soundMenuAnchor then return end
+   P.soundMenuAnchor=nil;P:HideSoundMenuButtons();P:StopSoundPreview()
+  end)
+ end
+ self:SyncSoundMenuButtons()
+end
+function P:PreviewApplicantSound(choice)
+ if choice~="voice" and choice~="native" then return end
+ local group,err=A:Ensure("Group")
+ if not group then A:Print(A.L.loadFailed:format(tostring(err)));return end
+ self.previewAlerts=group.Alerts
+ self.previewAlerts:Preview(choice)
+end
+function P:StopSoundPreview()
+ if self.previewAlerts then self.previewAlerts:StopPreview();self.previewAlerts=nil end
+end
 function P:Enter(context)
  if self.dedicationExpired then self:HideDedicationToast() end
  self:StopThemeSubscription()
@@ -686,6 +765,7 @@ function P:Enter(context)
  self.frame:RegisterEvent("UPDATE_BINDINGS");self:SelectSection(context and context.section or self.section)
 end
 function P:Leave()
+ self:StopSoundPreview()
  self:StopThemeSubscription()
  self:CloseLinkCopy(true)
  self:StopBlocks()

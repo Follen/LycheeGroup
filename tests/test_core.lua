@@ -95,8 +95,35 @@ do
 	T.eq(A.db.askReason, true, "默认询问理由")
 	T.eq(A.db.reduceMotion, false, "默认完整动效")
 	T.eq(A.db.nativeLFGEntry, false, "默认保留原生组队眼睛")
+	T.eq(A:GetSetting("applicantAlertSound"),"native","新申请默认使用原生提示音")
 	T.eq(A.db.uiScale, 100, "主窗口缩放以当前尺寸 100% 为默认值")
 	T.eq(A.db.schema, 1)
+end
+
+do
+ local previousGroup,ensure=A.Group,A.Ensure
+ local loads=0
+ A.Group=nil;A.Ensure=function() loads=loads+1 end
+ T.ok(A:SetSetting("applicantAlertSound","native"))
+ T.eq(loads,0,"changing a sound preference does not load Group")
+ T.eq(A.Configuration.definitions["settings.applicantAlertSound"].storage,"account")
+ A.db=nil;A.charPrefs=nil;A:LoadDB()
+ T.eq(A:GetSetting("applicantAlertSound"),"native","sound preference survives reload")
+ T.eq(A:SetSetting("applicantAlertSound","unknown"),false,"invalid sound choices are rejected")
+ T.eq(A:GetSetting("applicantAlertSound"),"native")
+ local changedKey,changedValue
+ A.Group={OnSettingChanged=function(_,key,value) changedKey,changedValue=key,value end}
+ T.ok(A:SetSetting("applicantAlertSound","voice"))
+ T.eq(changedKey,"applicantAlertSound");T.eq(changedValue,"voice","loaded Group receives sound changes")
+ T.ok(A:SetSetting("applicantAlertSound","off"));T.eq(changedValue,"off")
+ A:SetSetting("applicantAlertSound","voice")
+ A.db=nil;A.charPrefs=nil;A:LoadDB()
+ T.eq(A:GetSetting("applicantAlertSound"),"voice","saved voice choice survives the native default")
+ A.db.uiConfig.user["settings.applicantAlertSound"]="bell";A.db.applicantAlertSound="bell"
+ A.db=nil;A.charPrefs=nil;A:LoadDB()
+ T.eq(A:GetSetting("applicantAlertSound"),"native","removed bell preferences fall back to the default native alert")
+ T.eq(A:SetSetting("applicantAlertSound","bell"),false,"removed bell cannot be selected")
+ A.Group,A.Ensure=previousGroup,ensure
 end
 
 do

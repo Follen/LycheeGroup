@@ -1,0 +1,14 @@
+Tool: built-in image_gen.imagegen
+Date: 2026-10-26
+transparent_background: true
+
+Use case: logo-brand
+Asset type: a tiny monochrome play icon for a World of Warcraft addon's dark dropdown menu, displayed at 18 by 18 pixels.
+Primary request: one solid white right-pointing play triangle, with very subtly rounded corners, on a genuinely transparent background. Flat UI symbol, simple and crisp. The icon must remain clear at 18 pixels.
+Composition: square canvas, one centered equilateral right-pointing triangle, optical center balanced, occupying approximately 70% of the canvas height and width, generous transparent margin. Use the smallest square output size available.
+Constraints: pure white fill; no outline, no surrounding circle or button, no shadow, no glow, no gradients, no texture, no letters, no text, no watermark, no other objects. Preserve alpha transparency.
+
+Source: play.png (1254 x 1254 RGBA), retained unmodified.
+Runtime: addon/LycheeGroup_UI/Media/sound-preview-play.tga (64 x 64 BGRA, uncompressed, 16428 bytes).
+Conversion from repository root:
+ffmpeg -hide_banner -loglevel error -n -i assets/imagegen/applicant-sound/play.png -vf "crop=780:780:219:244,scale=64:64:flags=lanczos" -frames:v 1 -pix_fmt bgra -c:v targa -rle 0 addon/LycheeGroup_UI/Media/sound-preview-play.tga

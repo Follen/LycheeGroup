@@ -13,7 +13,7 @@ local function position(region,root)
  return px+relative:GetWidth()*part(anchor,"LEFT","RIGHT")+x-region:GetWidth()*part(point[1],"LEFT","RIGHT"),py+relative:GetHeight()*part(anchor,"TOP","BOTTOM")-y-region:GetHeight()*part(point[1],"TOP","BOTTOM")
 end
 local sections={
- {"general","常规","General",{"language","toggleBinding","minimap","nativeLFGEntry"}},
+ {"general","常规","General",{"language","toggleBinding","minimap","nativeLFGEntry","applicantAlertSound"}},
  {"interface","界面显示","Appearance",{"theme","font","fontScale","uiScale","reduceMotion"}},
  {"browse","寻求组队","Find groups",{"defaultSort","rememberFilters","showImportantFilters"}},
  {"memberIcons","成员显示","Member display",{"relations","raidMembers","memberIconShape","memberIconScale","memberClassBorder","memberLeaderMark"}},
@@ -94,7 +94,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
    check(#(panel.rows or {})==#rows,tag..": category has unexpected settings: "..key)
    for index,setting in ipairs(rows) do
     local row=panel.rows[index]
-    if setting=="resetPosition" then check(row.action~=nil and p.controls[setting]==nil,tag..": position reset stops being an action")
+    if setting=="resetPosition" then check(row.action~=nil and p.controls[setting]==nil,tag..": action becomes a saved setting: "..setting)
     else
      local control=p.controls[setting]
      check(control~=nil and control.frame==row.frame and control.frame:GetParent()==panel,tag..": setting appears in the wrong category or order: "..setting)
@@ -106,7 +106,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
    for other,otherPanel in pairs(p.panels) do check(otherPanel:IsShown()==(other==key),tag..": a hidden category leaks content") end
   end
   local actual=0;for key in pairs(p.controls) do actual=actual+1;check(seen[key],tag..": unclassified setting: "..key) end
-  check(actual==count and count==26,tag..": settings were lost during regrouping")
+  check(actual==count and count==27,tag..": settings were lost during regrouping")
   check(p.rail:GetWidth()==208,tag..": categories change the sidebar width")
   check(#p.credits==2 and p.credits[1].name:GetText()=="@露露缇雅" and p.credits[2].name:GetText()=="@灵魂复苏",tag..": contributor names or order are incorrect")
   p.nav.general:Fire("OnClick","LeftButton");p.nav.credits:Fire("OnClick","LeftButton")
@@ -254,5 +254,78 @@ do
  u:Hide(true)
  for _,field in ipairs(p.linkCopies) do check(not field.field.box:HasFocus() and field.field.box:GetText()=="" and not field.clip:IsShown(),"hiding Settings leaks an inline input") end
  check(not u.Motion:IsRunning(p.linkMotion),"hiding Settings leaves copy animation running")
+end
+do
+ local f=dofile("tests/ui_fixture.lua")("zhCN",nil,{reduceMotion=true})
+ local a,u,g=f.A,f.U,f.G
+ local ensure=a.Ensure;local loads,plays,stops,lastChoice=0,0,0
+ a.Ensure=function(self,module) if module=="Group" then loads=loads+1 end;return ensure(self,module) end
+ g.Alerts={Preview=function(_,choice) plays=plays+1;lastChoice=choice end,StopPreview=function() stops=stops+1 end}
+ a:Open("settings",{section="general"});local p=u.pages.settings
+ local choice=p.controls.applicantAlertSound.widget
+ local function PreviewFor(value)
+  if not u.context:IsMenuOpen(choice) then choice:Fire("OnClick","LeftButton") end
+  local menu=u.context:GetMenu()
+  menu.list.clip.mouseOver=true
+  check(#menu.items==3,"preview is still a fourth menu item")
+  for _,row in ipairs(menu.list.rows) do
+   local entry=menu.items[row.key]
+   if entry and entry.value==value then return row.applicantSoundPreview,row end
+  end
+  error("missing sound option: "..value)
+ end
+ check(loads==0 and plays==0,"opening sound settings loads Group or plays a sound")
+ check(choice.value=="native","sound selector does not show the default native alert")
+ f.Pick(choice,"voice")
+ check(loads==0 and plays==0,"choosing a sound should save without loading or previewing")
+ local native=PreviewFor("native");native:Fire("OnClick","LeftButton")
+ check(loads==1 and plays==1 and lastChoice=="native","right-side action does not preview its own sound")
+ check(a:GetSetting("applicantAlertSound")=="voice" and choice.value=="voice","preview changes the chosen sound")
+ check(u.context:IsMenuOpen(choice),"preview closes the sound menu")
+ check(p.controls.applicantAlertSound.help:GetText()=="选择新申请提示音","sound description retains the old cooldown paragraph")
+ local voice=PreviewFor("voice");voice:Fire("OnClick","LeftButton")
+ check(plays==2 and lastChoice=="voice","switching preview does not use the row's sound")
+ local off=PreviewFor("off");check(not off or not off:IsShown(),"Off has a preview icon")
+ u:CloseMenu();check(stops==1 and p.previewAlerts==nil,"closing the dropdown retains preview playback")
+ f.Pick(choice,"off");PreviewFor("voice"):Fire("OnClick","LeftButton")
+ check(plays==3 and a:GetSetting("applicantAlertSound")=="off","previewing a sound while Off is selected changes the saved setting")
+ p:SelectSection("interface")
+ check(stops==2 and p.previewAlerts==nil,"leaving the sound section retains its preview")
+ p:SelectSection("general");f.Pick(choice,"voice");PreviewFor("voice"):Fire("OnClick","LeftButton")
+ u:Navigate("find")
+ check(stops==3 and p.previewAlerts==nil,"leaving Settings does not stop preview")
+ a:Open("settings",{section="general"});PreviewFor("native"):Fire("OnClick","LeftButton");u:Hide(true)
+ check(stops==4 and p.previewAlerts==nil,"hiding the window does not stop preview exactly once")
+ a:Open("settings",{section="general"})
+ for _=1,20 do PreviewFor("voice");u:CloseMenu() end
+ check(#p.soundMenuButtons==2,"reopening the menu allocates more preview buttons")
+ p.controls.language.widget:Fire("OnClick","LeftButton")
+ for _,button in ipairs(p.soundMenuButtons) do check(not button:IsShown() and button.soundChoice==nil,"sound action leaks into another dropdown") end
+ u:CloseMenu();PreviewFor("native")
+ check(#p.soundMenuButtons==2,"row reuse loses the original sound buttons")
+ u:Hide(true)
+end
+for _,locale in ipairs({"zhCN","enUS"}) do
+ local f=dofile("tests/ui_fixture.lua")(locale,nil,{reduceMotion=true})
+ local a,u=f.A,f.U
+ a:Open("settings",{section="general"});local p=u.pages.settings
+ for _,scale in ipairs({70,100,130}) do
+  a:SetSetting("fontScale",scale)
+  p.controls.applicantAlertSound.widget:Fire("OnClick","LeftButton")
+  local menu=u.context:GetMenu()
+  for _,row in ipairs(menu.list.rows) do
+   local entry=menu.items[row.key]
+   if entry and entry.value~="off" then
+    local button=row.applicantSoundPreview
+    check(button and button:IsShown(),locale..": missing preview icon")
+    check(row.title:GetStringWidth()<=row.title:GetWidth()+.01,locale..": sound label is clipped at "..scale)
+    local textX=position(row.title,row);local buttonX=position(button,row)
+    check(textX+row.title:GetWidth()<=buttonX,locale..": sound text overlaps preview icon at "..scale)
+    check(buttonX+button:GetWidth()<=row:GetWidth(),locale..": preview icon leaves its row")
+   end
+  end
+  u:CloseMenu()
+ end
+ u:Hide(true)
 end
 print("Settings sections: "..checks.." checks passed")
