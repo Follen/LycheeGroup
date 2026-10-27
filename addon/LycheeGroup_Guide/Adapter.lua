@@ -249,7 +249,7 @@ function Adapter:Attach()
   local lease=owner.previewApplication
   local ok,err=provider:Apply(resultID,{tank=selected.TANK==true,healer=selected.HEALER==true,damage=selected.DAMAGER==true},prefs.note or "")
   if ok then
-   if confirmedRoles and not prefs.enabled then
+   if confirmedRoles and (not prefs.enabled or lease and lease.rolesEdited) then
     prefs.roles=CopyRoles(confirmedRoles)
     provider.prefs.applicationRoles={TANK=confirmedRoles.TANK==true,HEALER=confirmedRoles.HEALER==true,DAMAGER=confirmedRoles.DAMAGER==true}
     if lease and lease.enableOnSave then SaveEnabled(provider,true) end

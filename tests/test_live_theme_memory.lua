@@ -37,6 +37,7 @@ for _,mode in ipairs({"complete","cancel","observer_error","search_timeout","sea
  if mode=="observer_error" or mode=="warm_observer_error" then f.failRead=12 end
  getmetatable(UIParent).Click=function(self) self:Fire("OnClick","LeftButton") end
  local savedFont,savedMotion=A:GetSetting("fontScale"),A:GetSetting("reduceMotion")
+ local savedStores,savedFindSealed=Copy(A.Configuration.stores),A.FindPreferences.sealed
  local open=A.Open
  if mode=="warm_open_failure" then
   A.Open=function(self,page,...)
@@ -69,6 +70,8 @@ for _,mode in ipairs({"complete","cancel","observer_error","search_timeout","sea
  elseif mode=="warm_open_failure" then Check(probe.error and probe.error:find("simulated open failure",1,true),tostring(probe.error))
  else Check(probe.result==nil,"cancellation must not report completion") end
  Check(A:GetSetting("fontScale")==savedFont and A:GetSetting("reduceMotion")==savedMotion,mode.." live preferences restored")
+ Check(Same(savedStores,A.Configuration.stores),mode.." all configuration stores restored on cleanup")
+ Check(savedFindSealed==A.FindPreferences.sealed,mode.." deferred migration state restored")
  Check(G.prefs.find==oldPrefs and Same(G.prefs.find,oldPrefsValue),mode.." role filter preferences restored without mutating their source")
  local filters=G.Search:GetFilters()
  Check(filters.sort=="rating" and filters.maxMembers==4 and filters.category==nil,mode.." runtime filters restored")

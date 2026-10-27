@@ -39,6 +39,7 @@ local RESULT_COLUMNS={
  description={x=741,width=BODY-765-(zh and T.findAgeWidthCN or T.findAgeWidthEN)},age={x=BODY-12-(zh and T.findAgeWidthCN or T.findAgeWidthEN),width=(zh and T.findAgeWidthCN or T.findAgeWidthEN)},
 }
 local RESULT_TEXT_COLUMNS={leader="leader",ilvl="ilvl",rating="score",description="description",age="age"}
+local resultColumnsVersion=0
 local APPLICATION_COLUMNS={title={x=0,width=APP_BODY-591},leader={x=APP_BODY-522,width=120}}
 local resultDefinitions={
  {key="title",label=Say("队伍","Group"),width="findResultTitleWidth",min="findResultTitleMin"},
@@ -59,6 +60,10 @@ local applicationDefinitions={
  {key="actions",label=Say("操作","Actions"),width="findApplicationActionsWidth",min="findApplicationActionsMin",align="CENTER"},
 }
 local state={category="seasonDungeon",searchMode="group",apps={},appIDs={},categoryPrefs={},filters={sort="newest"}}
+function P:MarkPreferenceFields(names,force)
+ local pending=self.preferenceFields or {};self.preferenceFields=pending
+ for name in names:gmatch("%S+") do pending[name]=force==true or pending[name]==true end
+end
 -- A class exclusion covers both narrower predicates. Spec and class/role are
 -- independent when a remote member's role is unavailable, so preserve that
 -- legacy combination and make it visible until the user selects a new mode.
@@ -98,6 +103,10 @@ local function MatchesConfirmedChoice(choice)
 end
 function P:CommitChoice()
  state.browseReady=true;state.confirmedChoice=ChoiceSnapshot(state)
+ self:MarkPreferenceFields("groupKey groupKeys selected",true)
+ if self.choiceTierChanged then self:MarkPreferenceFields("tier",true) end
+ if self.choiceDifficultyChanged then self:MarkPreferenceFields("difficultyID",true) end
+ self.choiceTierChanged,self.choiceDifficultyChanged=nil,nil
 end
 local function Record(id)
  local app=UI:GetGroup():GetApplication(id)
@@ -321,16 +330,21 @@ local function LayoutResultLeader(row)
 end
 local function LayoutResultRow(row)
  local y=row.resultContentOffset or 0
- row.title:ClearAllPoints();row.title:SetPoint("LEFT",RESULT_COLUMNS.title.x,y)
- row.meta:ClearAllPoints();row.meta:SetPoint("LEFT",RESULT_COLUMNS.activity.x,y);row.meta:SetWidth(RESULT_COLUMNS.activity.width)
- row.icon:ClearAllPoints();row.icon:SetPoint("LEFT",P.resultsHeader.columns.activity.x+T.findColumnInset,y)
- for key,field in pairs(RESULT_TEXT_COLUMNS) do
-  local region=row[field]
-  local column=RESULT_COLUMNS[key]
-  region:ClearAllPoints();region:SetPoint("LEFT",column.x,y);region:SetWidth(column.width)
+ -- Rekey/release can restore a previous style baseline. Reuse only this
+ -- binding's fixed columns; leader marks and member content remain live.
+ if row.resultColumnsVersion~=resultColumnsVersion or row.resultColumnOffset~=y or row.resultColumnKey~=row.key then
+  row.title:ClearAllPoints();row.title:SetPoint("LEFT",RESULT_COLUMNS.title.x,y)
+  row.meta:ClearAllPoints();row.meta:SetPoint("LEFT",RESULT_COLUMNS.activity.x,y);row.meta:SetWidth(RESULT_COLUMNS.activity.width)
+  row.icon:ClearAllPoints();row.icon:SetPoint("LEFT",P.resultsHeader.columns.activity.x+T.findColumnInset,y)
+  for key,field in pairs(RESULT_TEXT_COLUMNS) do
+   local region=row[field]
+   local column=RESULT_COLUMNS[key]
+   region:ClearAllPoints();region:SetPoint("LEFT",column.x,y);region:SetWidth(column.width)
+  end
+  row.declined:ClearAllPoints();row.declined:SetPoint("BOTTOMLEFT",RESULT_COLUMNS.title.x,T.findResultBottomInset)
+  row.declined:SetWidth(RESULT_COLUMNS.leader.x+RESULT_COLUMNS.leader.width-RESULT_COLUMNS.title.x)
+  row.resultColumnsVersion,row.resultColumnOffset,row.resultColumnKey=resultColumnsVersion,y,row.key
  end
- row.declined:ClearAllPoints();row.declined:SetPoint("BOTTOMLEFT",RESULT_COLUMNS.title.x,T.findResultBottomInset)
- row.declined:SetWidth(RESULT_COLUMNS.leader.x+RESULT_COLUMNS.leader.width-RESULT_COLUMNS.title.x)
  LayoutResultLeader(row);LayoutMembers(row)
 end
 local function RenderResult(row,id)
@@ -550,7 +564,7 @@ function P:Build(parent)
   row:HookScript("OnMouseDown",function(b,button)
    if button~="LeftButton" or clickedRow and not SameResultClick(b,b.key,Record(b.key)) then ClearResultClick() end
   end)
-  row:HookScript("OnLeave",ClearResultClick);row:HookScript("OnHide",ClearResultClick)
+  row:HookScript("OnLeave",ClearResultClick);row:HookScript("OnHide",function(b) ClearResultClick(b);b.resultColumnsVersion,b.resultColumnKey=nil,nil end)
   row:SetScript("OnDoubleClick",function(b,button)
    local valid=button=="LeftButton" and not UI.hiding and b:IsVisible() and b._hitVisible and SameResultClick(b,b.key,Record(b.key))
    ClearResultClick()
@@ -590,14 +604,18 @@ function P:Build(parent)
 self:RegisterBuildElements()
  end
 function P:ApplyResultColumns()
+ local changed=false
  for key,cell in pairs(self.resultsHeader.columns) do
   local column=RESULT_COLUMNS[key]
   local inset=key=="title" and T.findResultTitleX or key=="activity" and T.findColumnInset+T.findResultIconSize+6 or T.findColumnInset
-  column.x=cell.x+inset;column.width=cell.width-inset-(key=="age" and T.findResultRightInset or T.findColumnInset)
+  local x,width=cell.x+inset,cell.width-inset-(key=="age" and T.findResultRightInset or T.findColumnInset)
+  if column.x~=x or column.width~=width then changed=true end
+  column.x,column.width=x,width
   local label=self.resultsHeader.labels[key]
   local labelInset=key=="title" and T.findTitleLabelLeftX or inset
   label:ClearAllPoints();label:SetPoint("LEFT",labelInset,0);label:SetWidth(cell.width-labelInset-(key=="age" and T.findResultRightInset or T.findColumnInset))
  end
+ if changed then resultColumnsVersion=resultColumnsVersion+1 end
  for _,row in ipairs(self.results.rows) do
   row.title:SetWidth(RESULT_COLUMNS.title.width)
   row.membersX,row.membersWidth=RESULT_COLUMNS.members.x,RESULT_COLUMNS.members.width
@@ -745,7 +763,7 @@ function P:BuildQuickFilters()
     local presentCount=(state.filters.tankPresence=="present" and 1 or 0)+(state.filters.healerPresence=="present" and 1 or 0)+(state.filters.damagePresence=="present" and 1 or 0)
     value=(state.filters.roleMatchAny or presentCount<2) and "present" or nil
    else value=nil end
-   state.filters[key]=value;P:UpdateFilters()
+   state.filters[key]=value;P:MarkPreferenceFields(key,true);P:UpdateFilters()
   end,{height=32,radius=8});button:SetWidth(T.findButtonWidth)
   button:RegisterForClicks("LeftButtonUp","RightButtonUp")
   local present=role=="DAMAGER" and Say("已齐","Full") or Say("已有","Has")
@@ -777,11 +795,13 @@ function P:BuildQuickFilters()
 self:RegisterBuildQuickFiltersElements()
  end
 function P:SetRoleMatchAny(value)
+ self:MarkPreferenceFields("roleMatchAny",true)
  state.filters.roleMatchAny=value or nil
- if not value and state.filters.tankPresence=="present" and state.filters.healerPresence=="present" and state.filters.damagePresence=="present" then state.filters.damagePresence=nil end
+ if not value and state.filters.tankPresence=="present" and state.filters.healerPresence=="present" and state.filters.damagePresence=="present" then state.filters.damagePresence=nil;self:MarkPreferenceFields("damagePresence",true) end
  self:UpdateFilters()
 end
 function P:SetIdentityFilter(mode)
+ self:MarkPreferenceFields("hideSameClass hideSameSpec hideSameClassRole",true)
  state.filters.hideSameClass=mode=="class" or nil
  state.filters.hideSameSpec=mode=="spec" or nil
  state.filters.hideSameClassRole=mode=="classRole" or nil
@@ -1006,6 +1026,7 @@ function P:ApplyFilterFields()
  if not err and (values.minRating and values.maxRating and values.minRating>values.maxRating or values.minItemLevel and values.maxItemLevel and values.minItemLevel>values.maxItemLevel or values.minMembers and values.maxMembers and values.minMembers>values.maxMembers) then err=Say("最低值不能大于最高值。","Minimum must not exceed maximum.") end
  UI:SetText(self.filterError,err or "");self:LayoutFilters()
  if err then return false end
+ self:MarkPreferenceFields(table.concat(numericFilterKeys," "))
  for _,key in ipairs(numericFilterKeys) do state.filters[key]=values[key] end
  self:UpdateFilters();return true
 end
@@ -1060,8 +1081,8 @@ function P:BuildFilters()
  self.membersLabel=C.Text(body,Say("队伍人数","Group size"),14,"muted",T.findMembersLabelWidth);self.membersLabel:SetWidth(T.findMembersLabelWidth)
  self.fMinMembers,self.fMembers=self.filterFields.minMembers,self.filterFields.maxMembers
  self.roleLabel=C.Text(body,Say("队伍缺少职责","Role needed"),14,"muted",T.findRoleLabelWidth);self.roleLabel:SetWidth(T.findRoleLabelWidth)
- self.roleChoice=C.Choice(body,T.findRoleChoiceWidth,{{value=false,label=L.anyRole},{value="TANK",label=L.tank},{value="HEALER",label=L.healer},{value="DAMAGER",label=L.damage}},function(value) state.filters.neededRole=value or nil;P:UpdateFilters() end);self.roleChoice:SetWidth(T.findRoleChoiceWidth)
- self.hideZeroScore=C.Check(body,Say("过滤队长 0 分队伍","Hide 0-score leaders"),function(value) state.filters.hideZeroScore=value or nil;P:UpdateFilters() end)
+ self.roleChoice=C.Choice(body,T.findRoleChoiceWidth,{{value=false,label=L.anyRole},{value="TANK",label=L.tank},{value="HEALER",label=L.healer},{value="DAMAGER",label=L.damage}},function(value) state.filters.neededRole=value or nil;P:MarkPreferenceFields("neededRole",true);P:UpdateFilters() end);self.roleChoice:SetWidth(T.findRoleChoiceWidth)
+ self.hideZeroScore=C.Check(body,Say("过滤队长 0 分队伍","Hide 0-score leaders"),function(value) state.filters.hideZeroScore=value or nil;P:MarkPreferenceFields("hideZeroScore",true);P:UpdateFilters() end)
  C.Box(self.hideZeroScore,{width="findHideZeroScoreWidth",height="findHideZeroScoreHeight"});C.SetFont(self.hideZeroScore.label,14);C.SetLineHeight(self.hideZeroScore.label,20,true)
  self.hideZeroScore.label:ClearAllPoints();self.hideZeroScore.label:SetPoint("LEFT");self.hideZeroScore.label:SetWidth(T.findHideZeroScoreLabelWidth)
  self.hideZeroScore.track:ClearAllPoints();self.hideZeroScore.track:SetPoint("RIGHT")
@@ -1069,13 +1090,13 @@ function P:BuildFilters()
   {"requireBloodlust",Say("嗜血来源","Bloodlust source"),Say("队伍至少 4 人时，隐藏你加入后仍缺少嗜血来源的队伍。","Hide groups of 4 or more that would still lack a Bloodlust source after you join.")},
  }) do
   local key=entry[1]
-  local toggle=C.Check(body,entry[2],function(value) state.filters[key]=value or nil;P:UpdateFilters() end)
+  local toggle=C.Check(body,entry[2],function(value) state.filters[key]=value or nil;P:MarkPreferenceFields(key,true);P:UpdateFilters() end)
   self[key]=toggle;C.SetFont(toggle.label,14);C.SetLineHeight(toggle.label,20,true)
   toggle.label:ClearAllPoints();toggle.label:SetPoint("LEFT")
   toggle.track:ClearAllPoints();toggle.track:SetPoint("RIGHT")
   UI.Tooltip:BindText(toggle,entry[3])
  end
- self.socialChoice=C.Choice(body,T.findSocialChoiceWidth,{{value=false,label=Say("全部关系","All relations")},{value="friend",label=Say("好友在队","Friends in group")},{value="guild",label=Say("同公会成员","Guildmates")},{value="any",label=Say("含笔记记录","With player notes")},{value="positive",label=Say("含推荐玩家","Recommended players")},{value="noCaution",label=Say("不含拉黑记录","Without blocked players")}},function(value) state.social=value or nil;P:UpdateFilters() end);self.socialChoice:SetWidth(T.findSocialChoiceWidth)
+ self.socialChoice=C.Choice(body,T.findSocialChoiceWidth,{{value=false,label=Say("全部关系","All relations")},{value="friend",label=Say("好友在队","Friends in group")},{value="guild",label=Say("同公会成员","Guildmates")},{value="any",label=Say("含笔记记录","With player notes")},{value="positive",label=Say("含推荐玩家","Recommended players")},{value="noCaution",label=Say("不含拉黑记录","Without blocked players")}},function(value) state.social=value or nil;P:MarkPreferenceFields("social",true);P:UpdateFilters() end);self.socialChoice:SetWidth(T.findSocialChoiceWidth)
  self.filterError=C.Text(f,"",13,"warning",T.findFilterErrorWidth);self.filterError:SetWidth(T.findFilterErrorWidth);C.SetLineHeight(self.filterError,20,true)
  self.filterDone=C.Button(f,Say("完成","Done"),T.findFilterDoneWidth,function() if P:ApplyFilterFields() then P:SetFiltersOpen(false) end end,{height=34});self.filterDone:SetWidth(T.findFilterDoneWidth);self.filterDone:SetPrimary(true)
  self.filterRanges={}
@@ -1305,6 +1326,7 @@ function P:BuildPicker()
  local close=C.IconButton(f,"close",T.findCloseWidth2,function() P:ClosePicker() end);C.Box(close,{width="findCloseWidth2",height="findCloseHeight2"});C.SetPoint(close,"TOPRIGHT",close:GetParent(),"TOPRIGHT","findCloseToprightX2","findCloseToprightY2")
  self.pickerClose=close
  self.tierChoice=C.Choice(f,T.findTierChoiceWidth,function() return P:TierItems() end,function(value)
+  P.choiceTierChanged,P.choiceDifficultyChanged=true,true
   state.browseReady=false;UI:GetGroup().Search:EndBrowse()
   state.tier=value or nil;state.groupKey,state.groupKeys=nil,nil;P.draftGroupKeys=nil;state.difficultyID=nil
   P:RefreshPicker();P.results:SetPixelOffset(0,false);P:UpdateFilters(true)
@@ -1316,6 +1338,7 @@ function P:BuildPicker()
  for i=1,12 do self.difficultyButtons[i]=C.Button(self.difficultySurface,"",T.findButtonWidth2,function(button)
   local difficulty=button.value or nil
   if state.difficultyID==difficulty then return end
+  P.choiceDifficultyChanged=true
   state.browseReady=false;UI:GetGroup().Search:EndBrowse()
   state.difficultyID=difficulty
   P:RefreshPicker();P:UpdateFilters(true)
@@ -1400,6 +1423,7 @@ function P:ClosePicker()
   if self.unsub then self:UpdateFilters() end
  end
  self.draftGroupKeys=nil
+ self.choiceTierChanged,self.choiceDifficultyChanged=nil,nil
  if self.picker then self.pickerConfirm:Hide() end
 end
 function P:ToggleGroupChoice(key)
@@ -1542,6 +1566,7 @@ local function AvailableCategory(key)
 end
 local ChangeCategory
 function P:RefreshCategories()
+ if not UI.preview then A.FindPreferences:RegisterCategories(UI:GetGroup().Catalog:GetCategories()) end
  wipe(self.catIDs);wipe(self.seasonIDs);wipe(self.catMap)
  for _,cat in ipairs(UI:GetGroup().Catalog:GetCategories()) do
   local ids=cat.season and self.seasonIDs or self.catIDs;ids[#ids+1]=cat.key;self.catMap[cat.key]=cat
@@ -1562,7 +1587,7 @@ ChangeCategory=function(self,key)
   self.draftGroupKeys=nil
   state.category=key;state.searchMode="group"
   state.browseReady=false;UI:GetGroup().Search:EndBrowse()
-  local prefs=A:GetSetting("rememberFilters") and state.categoryPrefs[key]
+  local prefs=not UI.preview and A.FindPreferences:Category(key,A:GetSetting("rememberFilters")) or A:GetSetting("rememberFilters") and state.categoryPrefs[key]
   state.groupKey=prefs and prefs.groupKey or nil;state.tier=prefs and prefs.tier;state.difficultyID=prefs and prefs.difficultyID
   self:RestoreCategory(prefs or {})
   self.loading=true;state.personKey=nil
@@ -1576,6 +1601,7 @@ ChangeCategory=function(self,key)
 end
 function P:SelectCategory(key,row)
  local changed=ChangeCategory(self,key)
+ if changed then self.persistCategory=true end
  self.seasonCategories.selectedKey=state.category;self.categories.selectedKey=state.category
  self.seasonCategories:Refresh();self.categories:Refresh()
  if not self.picker then self:BuildPicker() end
@@ -1603,11 +1629,12 @@ function P:RememberCategory()
  prefs.requireBloodlust=state.filters.requireBloodlust
  prefs.roleMatchAny=state.filters.roleMatchAny
  for _,key in ipairs(numericFilterKeys) do prefs[key]=state.filters[key] end
- prefs.social=state.social;prefs.sort=state.filters.sort
+ prefs.social=state.social;prefs.sort=state.categorySort
 end
 function P:RestoreCategory(prefs)
  NormalizeIdentity(prefs)
  self.loading=true
+ state.groupKey,state.tier,state.difficultyID=prefs.groupKey,prefs.tier,prefs.difficultyID
  state.groupKeys=CopyGroupKeys(prefs.groupKeys)
  state.confirmedChoice=ChoiceSnapshot(prefs);self.restoringChoice=true
  local cat=Category();local seasonDungeon=cat and cat.id==2 and cat.season
@@ -1634,8 +1661,46 @@ function P:RestoreCategory(prefs)
  self:SyncFilterFields()
  self.roleChoice:SetValue(role or false,role and ({TANK=L.tank,HEALER=L.healer,DAMAGER=L.damage})[role] or L.anyRole)
  state.social=prefs.social=="caution" and "noCaution" or prefs.social;self.socialChoice:SetValue(state.social or false,state.social and ({friend=L.friendChar,guild=L.friendGuild,any=L.notes,positive=Say("含推荐玩家","Recommended players"),noCaution=Say("不含拉黑记录","Without blocked players")})[state.social] or Say("全部关系","All relations"))
- state.filters.sort=prefs.sort or A:GetSetting("defaultSort")
+ state.categorySort=prefs.sort
+ state.filters.sort=state.categorySort or A:GetSetting("defaultSort")
  self.loading=nil
+end
+function P:RefreshDefaultSort()
+ if not self.loaded or UI.preview or state.categorySort~=nil then return end
+ state.filters.sort=A:GetSetting("defaultSort")
+ if self.frame:IsVisible() and UI.page=="find" then self:UpdateFilters(true) end
+end
+function P:RefreshPreferences(changes)
+ if self.savingPreferences then return end
+ if UI.preview or not self.loaded or not self.frame:IsVisible() or UI.page~="find" then self.loaded=nil;return end
+ local categoryChanged=changes["settings.find.category"]
+ local memoryChanged=changes["settings.rememberFilters"]
+ local categoryPrefix="settings.find.categories."..state.category.."."
+ local fieldsChanged=false
+ for path in pairs(changes) do if path:sub(1,#categoryPrefix)==categoryPrefix then fieldsChanged=true;break end end
+ if memoryChanged and not categoryChanged and not fieldsChanged then
+  self.restorePreferencesOnLeave=true;return
+ end
+ local relevant=categoryChanged or memoryChanged or fieldsChanged
+ if not relevant then return end
+ self.applyingPreferences=true;self.preferenceFields=nil;self.persistCategory=nil
+ self:ClosePicker()
+ local remember=A:GetSetting("rememberFilters")
+ local category=categoryChanged and AvailableCategory(A.FindPreferences:InitialCategory(remember)) or state.category
+ if category~=state.category then ChangeCategory(self,category)
+ else
+  local prefs=A.FindPreferences:Category(category,remember)
+  -- The memory switch changes restoration, not the already confirmed browse.
+  -- Explicit activity writes in the same batch still replace their own leaves.
+  if memoryChanged and not categoryChanged and state.confirmedChoice then
+   for _,field in ipairs({"groupKey","groupKeys","tier","difficultyID","selected"}) do
+    if not changes[A.FindPreferences:Key(category,field)] then prefs[field]=state.confirmedChoice[field] end
+   end
+  end
+  self:RestoreCategory(prefs)
+ end
+ self:RefreshCategories();self:RefreshPicker();self:UpdateFilters(true)
+ self.applyingPreferences=nil
 end
 local function SyncSearchInputMode(self)
  if not self.search or not self.searchModeToggle then return false end
@@ -1727,17 +1792,37 @@ function P:UpdateFilters(reset)
  UI:GetGroup():SetFilters(filters)
 end
 function P:SavePrefs()
+ local choice=state.confirmedChoice or {}
+ local snapshot={groupKey=choice.groupKey or false,groupKeys=CopyGroupKeys(choice.groupKeys) or {},
+  tier=choice.tier or false,difficultyID=choice.difficultyID or false,selected=choice.selected==true,
+  neededRole=self.roleChoice.value or false,social=state.social or false,sort=state.categorySort or false}
+ for _,field in ipairs(A.FindPreferences.fields) do if snapshot[field]==nil then snapshot[field]=state.filters[field] or false end end
+ local pending=self.preferenceFields
+ if not UI.preview and not self.applyingPreferences and A:GetSetting("rememberFilters") then
+  local values
+  if self.persistCategory then values={["settings.find.category"]=state.category} end
+  if pending and self.preferenceSnapshot then for field,forced in pairs(pending) do
+   if forced or not A.Configuration:SameValue(snapshot[field],self.preferenceSnapshot[field]) then
+    values=values or {};values[A.FindPreferences:Key(state.category,field)]=snapshot[field]
+   end
+  end end
+  if values then
+   self.savingPreferences=true;A.Configuration:Set(values,{storage="character"});self.savingPreferences=nil
+  end
+ end
+ self.preferenceSnapshot=snapshot;self.preferenceFields=nil;self.persistCategory=nil
  local prefs=UI:GetGroup().prefs.find or {};UI:GetGroup().prefs.find=prefs
  if UI.preview then prefs.railCollapsed=state.railCollapsed==true end
  if not A:GetSetting("rememberFilters") then return end
  self:RememberCategory()
  prefs.category=state.category;prefs.categoryPrefs=state.categoryPrefs;prefs.social=state.social
- prefs.filters=prefs.filters or {};wipe(prefs.filters);for k,v in pairs(state.filters) do if k~="text" and k~="leaderText" and k~="searchMode" then prefs.filters[k]=v end end
- local choice=state.confirmedChoice or {}
+ prefs.filters=prefs.filters or {};wipe(prefs.filters);for k,v in pairs(state.filters) do if k~="text" and k~="leaderText" and k~="searchMode" and k~="sort" then prefs.filters[k]=v end end
+ prefs.filters.sort=state.categorySort
  prefs.filters.groupKey,prefs.filters.groupKeys,prefs.filters.difficultyID,prefs.filters.tier=choice.groupKey,CopyGroupKeys(choice.groupKeys),choice.difficultyID,choice.tier
  prefs.filters.selected=choice.selected==true
 end
 function P:ClearFilters()
+ self:MarkPreferenceFields("neededRole tankPresence healerPresence damagePresence hideZeroScore hideSameSpec hideSameClass hideSameClassRole requireBloodlust roleMatchAny minRating maxRating minItemLevel maxItemLevel minMembers maxMembers social",true)
  state.filters.hideZeroScore,state.filters.hideSameSpec,state.filters.hideSameClass=nil,nil,nil
  state.filters.hideSameClassRole,state.filters.requireBloodlust=nil,nil
  self.loading=true;self.fMinMembers.box:SetText("");self.fMembers.box:SetText("");self.roleChoice:SetValue(false,L.anyRole);state.filters.tankPresence,state.filters.healerPresence,state.filters.damagePresence=nil,nil,nil;state.filters.roleMatchAny=nil;for _,key in ipairs(numericFilterKeys) do state.filters[key]=nil end;self:SyncFilterFields();state.social=nil;self.socialChoice:SetValue(false,Say("全部关系","All relations"));self.loading=nil;self:UpdateFilters()
@@ -2046,6 +2131,7 @@ function P:Enter(context)
  ClearResultClick()
  self:InvalidateApplicationControlMetrics();self:QueueApplicationControlSettle()
  UI:GetGroup():Attach(self,"search")
+ if not UI.preview then A.FindPreferences:RegisterCategories(UI:GetGroup().Catalog:GetCategories()) end
  if UI.preview then
   self.search.box=self.previewSearchBox;self.previewSearchBox:Show();self.searchAvailable=true;self.searchError=nil
  else
@@ -2055,6 +2141,11 @@ function P:Enter(context)
   self.loaded=true;self.loading=true
   local stored=UI:GetGroup().prefs.find or {};state.railCollapsed=UI.preview and stored.railCollapsed==true or not UI.preview and A.Appearance:GetRailCollapsed()
   local prefs=A:GetSetting("rememberFilters") and stored or {}
+  if not UI.preview then
+   state.category=AvailableCategory(A.FindPreferences:InitialCategory(A:GetSetting("rememberFilters")))
+   state.categoryPrefs=stored.categoryPrefs or {}
+   self:RestoreCategory(A.FindPreferences:Category(state.category,A:GetSetting("rememberFilters")))
+  else
   local requestedCategory=prefs.category or "seasonDungeon"
   state.category=AvailableCategory(requestedCategory)
   local filters=state.category==requestedCategory and prefs.filters or {}
@@ -2063,12 +2154,13 @@ function P:Enter(context)
   local saved=state.categoryPrefs[state.category] or filters
   state.groupKey=saved.groupKey;state.difficultyID=saved.difficultyID;state.tier=saved.tier
   self:RestoreCategory(state.categoryPrefs[state.category] or {groupKey=filters.groupKey,groupKeys=filters.groupKeys,difficultyID=filters.difficultyID,tier=filters.tier,selected=filters.selected,minMembers=filters.minMembers,maxMembers=filters.maxMembers,neededRole=filters.neededRole,tankPresence=filters.tankPresence,healerPresence=filters.healerPresence,damagePresence=filters.damagePresence,hideZeroScore=filters.hideZeroScore,hideSameSpec=filters.hideSameSpec,hideSameClass=filters.hideSameClass,hideSameClassRole=filters.hideSameClassRole,requireBloodlust=filters.requireBloodlust,roleMatchAny=filters.roleMatchAny,minRating=filters.minRating,maxRating=filters.maxRating,minItemLevel=filters.minItemLevel,maxItemLevel=filters.maxItemLevel,needsDamage=filters.needsDamage,sort=filters.sort,social=state.social})
+  end
   self.loading=nil
  end
  if not UI.preview then state.railCollapsed=A.Appearance:GetRailCollapsed() end
  self:SetSidebarCollapsed(state.railCollapsed,false,false)
  SyncApplicationSettings(self)
- if not self.restoredInitial then
+ if UI.preview and not self.restoredInitial then
   local saved=state.categoryPrefs[state.category]
   if saved then state.tier=saved.tier;state.difficultyID=saved.difficultyID;state.groupKey=saved.groupKey end
   self.restoredInitial=true
@@ -2117,6 +2209,7 @@ function P:Enter(context)
  end
 end
 function P:Leave()
+ if self.restorePreferencesOnLeave then self.loaded=nil;self.restorePreferencesOnLeave=nil end
  ClearResultClick()
  self.frame:SetScript("OnUpdate",nil)
  self.resultsHeader:StopDrag(false);self.applicationHeader:StopDrag(false)
@@ -2140,6 +2233,7 @@ function P:BeginPreview(provider)
  self.liveState={state=state}
  state={category=provider.category,searchMode="group",apps={},appIDs={},categoryPrefs={},filters={sort="newest"},browseReady=true}
  self.loaded,self.restoredInitial=nil,nil
+ self.preferenceSnapshot,self.preferenceFields,self.persistCategory=nil,nil,nil
 end
 function P:EndPreview()
  local saved=self.liveState;if not saved then return end
@@ -2147,6 +2241,7 @@ function P:EndPreview()
  self.liveState=nil
  -- Rebind the visible controls from the restored real preferences on next entry.
  self.loaded=nil;self.restoredInitial=nil
+ self.preferenceSnapshot,self.preferenceFields,self.persistCategory=nil,nil,nil
 end
 
 -- Register the existing visual objects at their lazy build boundary. Recycled

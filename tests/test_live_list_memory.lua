@@ -1,7 +1,7 @@
 -- Lifecycle and preference preservation through the real Find/Search controllers.
 local checks=0
 local function Check(value,message) assert(value,message);checks=checks+1 end
-for _,mode in ipairs({"complete","remember_off","late_pool_growth","cancel","prepare_failure","observer_error","warm_open_failure"}) do
+for _,mode in ipairs({"complete","canonical_choice","remember_off","late_pool_growth","cancel","prepare_failure","observer_error","warm_open_failure"}) do
  local f=dofile("tests/live_probe_fixture.lua")({rememberFilters=mode~="remember_off"})
  local A,U,G=f.A,f.U,f.G
  local guideLoaded=mode=="remember_off"
@@ -9,6 +9,8 @@ for _,mode in ipairs({"complete","remember_off","late_pool_growth","cancel","pre
  GetAddOnMemoryUsage=function(name) return name=="LycheeGroup_Guide" and (guideLoaded and 512 or 0) or 1000 end
  A:Open("create");A:Open("settings");U:Hide(true)
  G.Search:SetFilters({sort="rating",maxMembers=4})
+ if mode=="canonical_choice" then assert(A.Configuration:Set({["settings.find.categories.seasonDungeon.selected"]=true,["settings.find.categories.seasonDungeon.minMembers"]=3},{storage="character"})) end
+ local savedStores=A.Configuration:CopyValue(A.Configuration.stores)
  local oldPrefs,oldPage,oldReturn=G.prefs.find,U.page,U.settingsReturnPage
  local oldRemember=A:GetSetting("rememberFilters")
  if mode=="prepare_failure" then f.emptyResults=true end
@@ -34,7 +36,7 @@ for _,mode in ipairs({"complete","remember_off","late_pool_growth","cancel","pre
   if not p.active then break end
  end
  Check(not p.active,mode.." completes within its bound")
- if mode=="complete" or mode=="remember_off" then
+ if mode=="complete" or mode=="canonical_choice" or mode=="remember_off" then
   Check(p.result and p.result.ok,tostring(p.error or "report failed"))
   Check(#p.result.packages==5 and p.result.packages[5]=="LycheeGroup_Guide","the report includes the Guide package")
   for _,sample in ipairs(p.result.samples) do
@@ -55,6 +57,7 @@ for _,mode in ipairs({"complete","remember_off","late_pool_growth","cancel","pre
  local filters=G.Search:GetFilters()
  Check(filters.sort=="rating" and filters.maxMembers==4 and filters.category==nil,mode.." initial filters restored")
  Check(G.prefs.find==oldPrefs and A:GetSetting("rememberFilters")==oldRemember,mode.." preference source and reference preserved")
+ Check(A.Configuration:SameValue(savedStores,A.Configuration.stores),mode.." canonical preferences and migration markers restored")
  Check(not U:IsShown() and U.page==oldPage and U.settingsReturnPage==oldReturn and not U.Native.searchLease and U.Motion:Count()==0,mode.." UI owners and navigation restored")
  Check(U._nav==oldPage and U.settingsButton.active==(oldPage=="settings"),mode.." navigation presentation restored")
  local reads=f.reads

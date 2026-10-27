@@ -14,6 +14,48 @@ end
 local scale="settings.fontScale"
 local function User(store,key) return store.uiConfig.user[key] end
 
+-- Pack defaults are distinct from an explicit selection and per-setting choices.
+do
+ local account,character={},{};local a,c=Reload(account,character)
+ T.eq(c:GetPresetStatus().followingDefault,true);T.eq(c:GetPresetStatus().defaultConfigured,false)
+ T.ok(c:RegisterPreset("suite",1,{[scale]=110},{storage="account",default=true}))
+ T.eq(c:Get(scale),110);T.eq(account.uiConfig.activePreset,nil);T.eq(User(account,scale),nil)
+ T.eq(c:GetPresetStatus().selected.id,"suite");T.eq(c:GetPresetStatus().followingDefault,true)
+ T.ok(c:Set({[scale]=115},{storage="character"}))
+ T.ok(c:RegisterPreset("suite",2,{[scale]=120},{storage="account",default=true}))
+ T.eq(c:Get(scale),115,"pack upgrades keep user overrides")
+ T.ok(c:Reset(scale,{storage="character"}));T.eq(c:Get(scale),120,"reset reveals the current pack default")
+ T.ok(c:ActivatePreset(false,{storage="character"}));T.eq(c:Get(scale),100)
+ T.eq(c:GetPresetStatus().followingDefault,false)
+ T.ok(c:RegisterPreset("another",1,{[scale]=105},{storage="account",default=true}))
+ T.eq(c:Get(scale),100,"new defaults cannot re-enable an explicitly disabled preset")
+ a,c=Reload(account,character);T.eq(c:Get(scale),100);T.eq(c:GetPresetStatus().default.id,"another")
+ T.ok(c:UseDefaultPreset({storage="character"}));T.eq(c:Get(scale),105)
+ T.ok(c:ActivatePreset("suite",{storage="account"}))
+ T.ok(c:SetDefaultPreset("another",{storage="character"}));T.eq(c:Get(scale),120,"an account choice beats a character default")
+ T.ok(c:UseDefaultPreset({storage="account"}));T.eq(c:Get(scale),105)
+ T.ok(c:SetDefaultPreset(false,{storage="session"}));T.eq(c:Get(scale),100)
+ T.eq(c:GetPresetStatus().defaultConfigured,true)
+ T.ok(c:SetDefaultPreset(nil,{storage="session"}));T.eq(c:Get(scale),105)
+ T.ok(c:RegisterPreset("another",2,{[scale]=125},{storage="character"}))
+ T.eq(c:Get(scale),125,"character package definitions shadow account definitions")
+ T.ok(c:RemovePreset("another",{storage="character"}));T.eq(c:Get(scale),105)
+ T.eq(c:GetPresetStatus().default.selectionStorage,"account")
+ T.ok(c:RemovePreset("another",{storage="account"}));T.eq(c:Get(scale),100)
+ T.eq(c:GetPresetStatus().defaultConfigured,false)
+ T.ok(c:SetDefaultPreset("suite",{storage="account"}))
+ local before=account.uiConfig.presets.suite;local default=account.uiConfig.defaultPreset
+ T.eq(c:RegisterPreset("broken",1,{unknown=1},{storage="account",default=true}),false)
+ T.eq(c:RegisterPreset("broken",1,{[scale]=105},{storage="account",default="yes"}),false)
+ T.eq(c:SetDefaultPreset("missing",{storage="account"}),false)
+ T.eq(c:SetDefaultPreset(true,{storage="account"}),false)
+ T.eq(account.uiConfig.presets.suite,before);T.eq(account.uiConfig.defaultPreset,default)
+ T.eq(account.uiConfig.presets.broken,nil)
+ a,c=Reload(account,{});T.eq(c:Get(scale),120,"new characters inherit account pack defaults")
+ local state=c:GetPresetStatus();state.selected.id="caller mutation"
+ T.eq(c:GetPresetStatus().selected.id,"suite")
+end
+
 -- A scoped schema query copies only selected leaves and preserves copy ownership.
 do
  local a,c=Reload({},{})
@@ -343,4 +385,125 @@ do
  T.ok(c:Reset("layout.find.railCollapsed",{storage="character"}))
  T.eq(prefs.uiConfigRecovery.find,findRecovery)
  T.ok(a.Appearance:SaveRailCollapsed(true));T.eq(prefs.find.railCollapsed,true)
+end
+
+-- Single-leaf writes isolate changed containers without copying unrelated
+-- package catalogs or the migration markers accumulated by late-loaded pages.
+do
+ local a,c=Reload({},{})
+ a.ApplyConfigurationChanges=function() end
+ T.ok(c:Reset(scale,{storage="character"}))
+ T.ok(c:RegisterPreset("copy.test",1,{[scale]=110},{storage="character",default=true}))
+ local store=c.stores.character
+ local user,presets,imported=store.user,store.presets,store.imported
+ T.ok(c:Set({[scale]=115},{storage="character"}))
+ T.eq(store.presets,presets,"a user write retains the unchanged package catalog")
+ T.eq(store.imported,imported,"an already sealed leaf retains migration markers")
+ T.ok(store.user~=user);T.eq(user[scale],nil);T.eq(c:Get(scale),115)
+ user=store.user
+ T.ok(c:Reset(scale,{storage="character"}))
+ T.ok(store.user~=user);T.eq(user[scale],115);T.eq(c:Get(scale),110)
+ T.eq(store.presets,presets);T.eq(store.imported,imported)
+
+ local key="settings.copyTest"
+ T.ok(c:RegisterDefinitions({[key]={default=false,type="boolean",storage="character"}}))
+ imported=store.imported;user=store.user
+ T.ok(c:Set({[key]=true},{storage="character"}))
+ T.ok(store.imported~=imported,"a new marker is staged separately")
+ T.eq(imported[key],nil);T.eq(store.imported[key],true);T.eq(user[key],nil)
+ imported=store.imported
+ T.ok(c:Reset(key,{storage="character"}));T.eq(store.imported,imported)
+ T.eq(c:Get(key),false);T.eq(store.imported[key],true,"reset prevents legacy resurrection")
+
+ user,presets,imported=store.user,store.presets,store.imported
+ T.ok(c:RegisterPreset("copy.test",2,{[scale]=120},{storage="character"}))
+ T.ok(store.presets~=presets);T.eq(presets["copy.test"].revision,1)
+ T.eq(store.user,user);T.eq(store.imported,imported);T.eq(c:Get(scale),120)
+ presets=store.presets
+ for _,operation in ipairs({
+  function() return c:ActivatePreset(false,{storage="character"}) end,
+  function() return c:UseDefaultPreset({storage="character"}) end,
+  function() return c:SetDefaultPreset(false,{storage="character"}) end,
+  function() return c:SetDefaultPreset("copy.test",{storage="character"}) end,
+ }) do
+  T.ok(operation());T.eq(store.user,user);T.eq(store.presets,presets);T.eq(store.imported,imported)
+ end
+ T.ok(c:ApplyPreset("copy.test",3,{[scale]=125},{storage="character"}))
+ T.eq(c:Get(scale),125);T.eq(store.user,user);T.eq(store.imported,imported)
+ presets=store.presets
+ T.ok(c:RemovePreset("copy.test",{storage="character"}))
+ T.eq(presets["copy.test"].revision,3);T.eq(store.presets["copy.test"],nil)
+ T.eq(store.user,user);T.eq(store.imported,imported);T.eq(c:Get(scale),100)
+
+ -- Catalog/marker size cannot increase the allocation of the same warm Set.
+ local writes={{[scale]=110},{[scale]=115}};local options={storage="character"}
+ local function Allocated()
+  c:Set(writes[1],options);collectgarbage("collect");collectgarbage("stop")
+  local before=collectgarbage("count")
+  for i=1,40 do c:Set(writes[i%2+1],options) end
+  local delta=collectgarbage("count")-before
+  collectgarbage("restart");return delta
+ end
+ local small=Allocated()
+ for i=1,1500 do
+  store.imported["retained.marker."..i]=true
+  store.presets["retained.package."..i]={revision=1,values={}}
+ end
+ local large=Allocated()
+ T.ok((large-small)/40<1,"warm single-key allocation is independent of unrelated catalogs and markers")
+end
+
+
+-- Drafts publish a complete batch before notifying, and a notification may
+-- reenter a second transaction without losing the outer values or markers.
+do
+ local a,c=Reload({},{})
+ local first,second="settings.batchCopy","settings.batchFlag"
+ T.ok(c:RegisterDefinitions({
+  [first]={default={},type="table",storage="character"},
+  [second]={default=false,type="boolean",storage="character"},
+ }))
+ local store=c.stores.character
+ local oldUser,oldImported,oldPresets=store.user,store.imported,store.presets
+ local input={nested={value=7}}
+ T.eq(c:Set({[first]=input,[second]="invalid"},{storage="character"}),false)
+ T.eq(store.user,oldUser);T.eq(store.imported,oldImported);T.eq(store.presets,oldPresets)
+ local resolve=c.Resolve;local draftReads=0
+ c.Resolve=function(self,key,...)
+  if self.stores.character~=store then
+   draftReads=draftReads+1
+   T.eq(store.user,oldUser);T.eq(store.imported,oldImported)
+   T.eq(oldUser[first],nil);T.eq(oldImported[first],nil)
+  end
+  return resolve(self,key,...)
+ end
+ local notifications=0
+ a.ApplyConfigurationChanges=function(self,changes)
+  notifications=notifications+1
+  T.eq(c.stores.character,store,"callbacks read the committed namespace")
+  T.eq(c:Get(first).nested.value,7)
+  T.eq(store.imported[first],true)
+  if notifications==1 then
+   -- Only the first transaction's snapshot needs the pre-commit checks.
+   c.Resolve=resolve
+   T.ok(c:Set({[second]=true},{storage="character"}))
+   changes[first].value.nested.value=99
+  else T.eq(c:Get(second),true);T.eq(store.imported[second],true) end
+ end
+ T.ok(c:Set({[first]=input},{storage="character"}))
+ T.ok(draftReads>0);T.eq(notifications,2)
+ input.nested.value=-1
+ T.eq(c:Get(first).nested.value,7,"caller and change-set copies cannot mutate committed values")
+ T.eq(c:Get(second),true);T.eq(oldUser[first],nil);T.eq(oldUser[second],nil)
+ T.eq(oldImported[first],nil);T.eq(oldImported[second],nil);T.eq(store.presets,oldPresets)
+
+ -- Reset seals a previously unimported leaf without editing its old marker map.
+ a.ApplyConfigurationChanges=function() end
+ local third="settings.resetMarker"
+ T.ok(c:RegisterDefinitions({[third]={default=false,type="boolean",storage="character"}}))
+ oldImported=store.imported
+ T.ok(c:Reset(third,{storage="character"}))
+ T.ok(store.imported~=oldImported);T.eq(oldImported[third],nil);T.eq(store.imported[third],true)
+ local resetImported=store.imported
+ T.ok(c:Reset(third,{storage="character"}));T.eq(store.imported,resetImported)
 end

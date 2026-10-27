@@ -72,13 +72,15 @@ for _,case in ipairs(cases) do
    local texture=glyph.texture
    Check(texture and texture:GetObjectType()=="Texture",case[1].." reads color from its glyph texture")
    local actual={texture:GetVertexColor()}
-   for i=1,4 do Check(math.abs(actual[i]-color[i])<.000001,case[1].." honors startup color") end
+   -- Native texture alpha shares the fourth color channel. A color-only
+   -- declaration keeps RGB fixed while ordinary icon alpha feedback continues.
+   for i=1,3 do Check(math.abs(actual[i]-color[i])<.000001,case[1].." honors startup RGB") end
    local owner=record.stateOwner
    if owner and owner.Fire then
     for _,event in ipairs({"OnEnter","OnLeave"}) do
      owner:Fire(event)
      local hovered={texture:GetVertexColor()}
-     for i=1,4 do Check(math.abs(hovered[i]-color[i])<.000001,case[1].." retains its declared color after "..event) end
+     for i=1,3 do Check(math.abs(hovered[i]-color[i])<.000001,case[1].." retains its declared RGB after "..event) end
     end
    end
    if case[1]=="notes.record" then rebindTarget,rebindRecord,rebindGlyph=target,record,glyph end
@@ -91,11 +93,28 @@ for _,case in ipairs(cases) do
    Check(rebindTarget.key~=oldKey,"a populated record reuses the same pool row for a new key")
    Check(Slot(rebindTarget,rebindRecord,case[2])==rebindGlyph,"rekeying preserves the original glyph Frame")
    local rebound={rebindGlyph.texture:GetVertexColor()}
-   for i=1,4 do Check(math.abs(rebound[i]-color[i])<.000001,"rekeying retains the fixed texture color") end
+   for i=1,3 do Check(math.abs(rebound[i]-color[i])<.000001,"rekeying retains the fixed texture RGB") end
   end
  end
  f.U:Hide(true)
 end
 for _,failure in ipairs(failures) do print("[glyph slot] "..failure) end
 Check(#failures==0,"public glyph slots must construct with native Frame capabilities and preserve their geometry")
+do
+ local f=dofile("tests/ui_fixture.lua")("enUS",nil,{reduceMotion=false})
+ local context=f.U.context;context.Motion:StopAll()
+ local button=context.C.IconButton(context.frame,"close",32,function() end,{variant="creditsLink"})
+ local before={button.icon.texture:GetVertexColor()}
+ button:Fire("OnEnter")
+ Check(context.Motion:IsRunning(button.icon),"real Glyph hover starts a color transition")
+ context.Motion:Tick(.007)
+ local current={button.icon.texture:GetVertexColor()}
+ Check(current[1]~=before[1] or current[2]~=before[2] or current[3]~=before[3],"first Glyph animation frame interpolates without a cached .color field")
+ button:Fire("OnLeave");context.Motion:Tick(0)
+ local redirected={button.icon.texture:GetVertexColor()}
+ for i=1,3 do Check(math.abs(redirected[i]-current[i])<.000001,"hover exit retargets from the current Glyph color") end
+ context.Motion:Tick(.3)
+ Check(not context.Motion:IsRunning(button.icon),"Glyph hover exit finishes its color transition")
+ context:Hide()
+end
 print("Glyph Frame slots: "..checks.." checks passed")

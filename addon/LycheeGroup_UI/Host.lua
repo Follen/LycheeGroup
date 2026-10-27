@@ -51,6 +51,10 @@ function UI:OnGroupReady()
 end
 
 function UI:OnSettingChanged(key)
+	if key=="defaultSort" then
+		if self.pages.find.frame then self.pages.find:RefreshDefaultSort() end
+		return
+	end
 	if key=="noteMarks" or key=="relations" then
 		local page=self.page and self.pages[self.page]
 		if page and page.OnNotesChanged then page:OnNotesChanged() end
@@ -156,7 +160,7 @@ end
 function UI:ClassColor(class)
 	local colors = RAID_CLASS_COLORS
 	local c = class and colors and colors[class]
-	if c then return c.r, c.g, c.b end
+	if c then return A.GroupPresentation.GameTextColor(T,c) end
 	return unpack(T.text)
 end
 

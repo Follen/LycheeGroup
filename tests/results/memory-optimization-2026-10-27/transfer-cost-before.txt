@@ -1,0 +1,2 @@
+before.Encode	ms	41	allocatedKiB	1863.1471354167	retainedKiB	470.4453125
+before.Decode	ms	41.333333333333	allocatedKiB	1142.9501953125	retainedKiB	341.3837890625

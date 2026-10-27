@@ -89,19 +89,19 @@ for _,entry in ipairs({"visible","hidden","first"}) do
  local before=f.searches
  a:Open("find",{applicationID=101});local p=u.pages.find
  T.eq(g.filters.category,"seasonRaid",entry.." application opens its real category")
- T.eq(g.filters.minItemLevel,"100",entry.." restores the destination's item level")
+ T.eq(g.filters.minItemLevel,100,entry.." restores the destination's item level")
  T.eq(g.filters.minRating,nil,entry.." does not carry the dungeon rating")
  T.eq(g.filters.guild,true);T.eq(g.filters.friends,false)
  T.eq(g.filters.personKey,nil);T.eq(g.filters.leaderText,nil)
  T.eq(g.filters.searchMode,"group");T.eq(p.search.box:GetText(),"")
- T.eq(g.prefs.find.categoryPrefs.seasonDungeon.minRating,"2000")
+ T.eq(g.prefs.find.categoryPrefs.seasonDungeon.minRating,2000)
  T.eq(g.prefs.find.categoryPrefs.seasonDungeon.social,"friend")
  T.eq(g.prefs.find.categoryPrefs.seasonRaid.difficultyID,nil)
  T.same(p.appList.ids,{101});T.eq(p.appList.selectedKey,101)
  T.eq(f.searches,before+1,"the handoff submits one destination search")
  T.ok(not p.picker or not p.picker:IsShown(),"an application link does not open the activity picker")
  p:SelectCategory("seasonDungeon")
- T.eq(g.filters.minRating,"2000");T.eq(g.filters.minItemLevel,nil);T.eq(g.filters.friends,true)
+ T.eq(g.filters.minRating,2000);T.eq(g.filters.minItemLevel,nil);T.eq(g.filters.friends,true)
  u:Hide(true)
 end
 -- A non-season dungeon must remain visible when the link is opened with the
@@ -120,7 +120,7 @@ do
  g.Catalog:Invalidate();Application(f,102,4)
  a:Open("find",{applicationID=102});local p=u.pages.find
  T.eq(g.filters.category,"2","non-season activity uses the non-season category")
- T.eq(g.filters.minItemLevel,"50");T.eq(g.filters.minRating,nil)
+ T.eq(g.filters.minItemLevel,50);T.eq(g.filters.minRating,nil)
  T.same(p.appList.ids,{102});T.eq(p.appList.selectedKey,102)
  T.eq(g.Applications:GetActiveCount(),1)
  u:Hide(true)
@@ -133,7 +133,7 @@ do
  local before=f.searches;a:Open("find",{applicationID=103})
  T.eq(p.search.box:GetText(),"12-15");T.eq(f.searches,before)
  T.same(p.appList.ids,{103});T.eq(p.appList.selectedKey,103)
- T.eq(g.filters.minRating,"2000");u:Hide(true)
+ T.eq(g.filters.minRating,2000);u:Hide(true)
 end
 
 -- A category can disappear from the native catalog after its selection was
@@ -184,7 +184,7 @@ for _,withFallback in ipairs({false,true}) do
   else
    T.eq(filters.category,"seasonDungeon",boundary.." resolves the missing category")
    T.eq(filters.minItemLevel,nil,boundary.." does not inherit the unavailable category's filters")
-   T.eq(filters.minRating,withFallback and "2000" or nil)
+   T.eq(filters.minRating,withFallback and 2000 or nil)
    T.eq(filters.guild,withFallback);T.eq(filters.friends,false)
    T.eq(p.filterFields.minItemLevel.box:GetText(),"")
    T.eq(preferences.find.categoryPrefs["4"].minItemLevel,77,"the unavailable category keeps its own saved filters")

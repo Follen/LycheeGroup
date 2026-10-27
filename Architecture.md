@@ -18,6 +18,8 @@ Host 通过 `Context:SetWindow(frame)` 接入主窗口并捕获动画终点锚�
 
 多列表格复用 `LycheeUI.C.TableHeader`：组件持有表头、边界、拖动状态和排序字段，当前排序标题提亮、不显示箭头，页面通过 `onLayout` 更新行几何、通过 `onSort` 重排展示键。右键分隔线调用 `ResetWidths` 清除该表比例并重新布局，不修改排序。`UI:GetTablePrefs` 从 Appearance 的有效配置缓存取得每表的列宽比例与排序字段／方向；用户拖动和点击由组件偏好回调提交角色用户层，程序重排不保存用户覆盖。Preview 使用自身 provider.prefs。Find 的团本和其他活动使用各自布局，结果与申请表均显式包含 `activity` 列；Appearance 仅在首次导入尚未规范化的角色旧列宽时，将仅有 `title` 的组合比例按 45%／55% 分给 `title`／`activity`，保留其他列与排序。已有规范用户值和偏好包均按单列语义使用，不从来源类型猜测旧组合宽度；1.2.4 已导入且无法区分来源的值也以规范保存值为准。后续 API 单键写入及兼容镜像不重新触发拆分。Create 根据活动切换可见列。Host 在关窗、导航、字体切换和打开模态窗口时取消未完成拖动。结果、历史和笔记服务仍持有原始数据；页面不重排服务数组。结果服务与 Find 表头排序共用同一关系口径：已归一化的战网好友、角色好友及公会聚合计数。Find 在产品层接入活动表头三态点击，并按当前分类的 `Catalog:GetGroups` 顺序派生活动 ID 到副本序号的映射；只在活动排序时建立或按目录引用变化重建，离页清空，复杂度与复用约束见性能文档。`Results:GetProgressCount` 只读取并缓存当前结果的击败数量，结果失效时一并清除，详情读取也回填同一数值。
 
+产品共用呈现模块按当前主题的 `gameTextTint` 输出职业、评分和钥石等级的文字颜色通道；默认保持原色，第三方主题可以调整文字着色；不改游戏颜色表、图标或业务数据，不分配颜色缓存。LycheeUI 的控件反馈从 slot 实际目标读取逐属性声明所有权，统一保护导航、独立子区域和 Glyph 的声明颜色；产品不额外绕过选中反馈。
+
 主包保存启动所需的小配置、明确入口、加载关系及跨包共用的静态展示规则。组队业务、玩家记录、界面和引导使用真实 AddOn 按需加载；不把整套代码放在主包后只延迟创建窗口。后台记录提醒无需加载界面，单独打开笔记无需加载组队业务。
 
 每项业务只有一个状态所有者。游戏事件推动相关变化，可见页面订阅所需字段，后台功能只保留真实业务需要的数据和事件。组队与笔记通过玩家身份直接联系，不互相 hook 控件，不将理由复制到各条队伍记录。
@@ -76,6 +78,8 @@ addon/
 品牌原始文件保留在 [Media](Media/lychee-logo.png)，离线预览直接引用此处 PNG。品牌、职责、关系、活动与申请操作等产品素材位于主包 `Media`，由产品 `productMedia` 参数提供路径，浮窗无需加载 UI 包即可使用。通用图形、箭头、按钮符号和阴影源位于 [LycheeUI/Media](https://github.com/Follen/LycheeUI/blob/v1.0.0/Media)，运行时位于主包 `Libs/LycheeUI/Media`，由共享 `media` 参数提供路径。UI 子包 Media 保留关于页图片，以及专用阵营、收藏星标、活动图标、成员遮罩和三态尺寸拖动柄 TGA。拖动柄源图在 `assets/imagegen/resize-grip`，收藏源图在 `assets/favorites`，职责盾牌源图在 `assets/roles`，阵营源图及生成信息见 [assets/factions](assets/factions/prompts.txt)。五个产品包的 TOC `IconTexture` 统一引用主包的 `Media/addon-logo.tga`；素材设计见 [Desgin.md](Desgin.md#1-品牌与语言)。共享库源码位于 `D:/Code/wow/addons/LycheeUI`，与本产品独立。磁盘素材引用不需要加载业务 UI。
 
 运行 `tools/Sync-LycheeUI.ps1` 从独立源码同步内置库，运行 `tools/Build-Addon.ps1` 生成只含五个产品目录的安装包。共享库的冻结状态与规则由 [.lock](https://github.com/Follen/LycheeUI/blob/v1.0.0/.lock) 维护；冻结时，同步脚本在复制前核对运行文件清单和 SHA-256，内容不一致便停止。产品内置副本不包含库 TOC、测试或说明文档，不手工维护第二份源码。其他插件的接入方式和公共接口由共享库 [README](https://github.com/Follen/LycheeUI/blob/v1.0.0/README.md) 与 [API.md](https://github.com/Follen/LycheeUI/blob/v1.0.0/API.md) 维护。
+
+当前未发布工作内置 LycheeUI 1.0.1 开发候选，加载排序为 10001，修复通用样式所有权；最新已发布标签仍为 v1.0.0。候选从独立工作树同步，实际清单见 [内置 .lock](addon/LycheeGroup/Libs/LycheeUI/.lock)，不将候选描述为已发布标签。
 
 ## 3. 加载、激活与退出
 
@@ -381,11 +385,19 @@ Create 的难度控件通过 `SelectDifficulty(activityID)` 验证当前活动�
 
 旧 `LN-` 文本由导入器读取，保留 `name`、`server`、`timestamp`、`reason`、`classSpec` 的旧字段含义，按完整身份与时间合并；缺失时间保持 `0`，空理由存 `""`，展示时再本地化。一次合并只通知一次受影响的 key 数组，界面据此更新当前编辑项和可见行。校验在导入边界完成，下游直接使用内部记录合同。
 
-导入导出编解码随 UI 加载，只在用户操作时运行；导出视图关闭后释放生成文本。Transfer 的 Base64 使用调用内分块缓冲，JSON 字符串直接截取连续片段，仅在转义处拼接；保留原有文本格式，不跨操作缓存用户记录或完整文本。容量与实测见 [perfermance.md](perfermance.md)。已有 `LN-` 导出文本可直接导入。
+导入导出编解码随 UI 加载，只在用户操作时运行；导出视图关闭后释放生成文本。Transfer 将 JSON 片段直接送入 Base64 编码器，片段之间只保留未组成三字节组的尾部；解码使用调用内定长字节缓冲。公开 Serialize 仍返回完整 JSON，所有缓冲按调用独立，不跨操作缓存用户记录或完整文本。已有文本格式及 `LN-` 导入合同保持，容量与实测见 [perfermance.md](perfermance.md)。
 
 ### 8.1 配置来源与外观接入
 
 主包 Configuration 管理设置与布局偏好，ThemeService 管理持久主题定义、选择及旧静态覆盖。两者共用原 uiConfig 存档位置，但使用不同分区；uiConfig.schema 为 2，业务存档 schema 不变。公开保存范围、优先级、错误与升级行为只在 [API.md](API.md) 维护。
+
+Configuration 的公开写入操作声明所修改的容器，事务草稿只复制该容器；迁移标记仅在已登记字段首次封存时复制，选择包只替换标量字段。提交顺序和有效值通知保持原合同，通用 Change 回调仍使用完整容器副本。Appearance 将寻队字段通知交给对应页面，`settings.find.*` 不触发无消费关系的 Settings.Sync；同批其他设置照常同步。
+
+偏好包的推荐 ID 保存于各层 `uiConfig.defaultPreset`，玩家明确选择保存在 `activePreset`；解析先查全部用户选择，再查默认候选。包注册和默认选择在一次事务内提交，用户叶独立保留。Application 的有效偏好缓存只在对应配置变更时失效，真实操作写用户层，预览与教学保留私有 provider。创建团本难度按下一次活动选择读取，不覆盖已有招募或正在编辑的表单。
+
+Bindings 持有每个原生按键方案的最小来源记录及最近两个键的快照，用于区分自动默认、已有外部绑定和用户修改。登录、绑定变更、对应配置更新触发检查；战斗阻塞时按需监听退出战斗，成功处理后解除。写原生绑定期间屏蔽自身事件递归，只有成功后更新来源记录；不轮询按键，不把默认键填入配置用户层。
+
+FindPreferences 在主包登记分类筛选的独立叶，负责旧值迁移及记忆关闭时的来源规则，使 Configuration 的读取、来源和变更检测一致。原生目录新增数字分类时补登记；存档中合法的分类键在绑定验证前恢复定义，避免重载丢失。Find 只在实际控件操作时标记待保存字段，普通刷新维护兼容投影；迁移标记阻止重置后从投影恢复旧值。每次配置事务只刷新一次当前页面；预览与教学继续读取私有 provider。
 
 ThemeService 的内置目录引用 Defaults.lua 中的透明毛玻璃声明，原默认主题仍是基础层；内置包不写入用户存档。第三方包的名称为目录元信息，默认候选保存在对应 theme.defaultPreset，明确选择继续保存在 activePreset。名称更新不参与 RuntimeTheme 来源比较。设置页仅在显示期间订阅主题目录与待生效选择变化，隐藏时取消；通知只刷新选择器和重载提示，不广播外观更新。目录查询不编译全部主题，格式损坏的存档项保留供诊断并从可选列表排除。
 

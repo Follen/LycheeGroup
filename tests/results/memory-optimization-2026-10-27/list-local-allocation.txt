@@ -1,0 +1,23 @@
+service-bulk-shared-native n=100 grossKiB=2.454 perKiB=0.025 nativeKiB=0.000 pluginKiB=2.454 retainedKiB=0.000 ms=18.000 info=10000 member=0 counts=0 list=100
+service-bulk-fresh-native n=100 grossKiB=5986.829 perKiB=59.868 nativeKiB=5984.375 pluginKiB=2.454 retainedKiB=0.000 ms=41.000 info=10000 member=0 counts=0 list=100
+service-setfilters-shared-native n=500 grossKiB=2.922 perKiB=0.006 nativeKiB=0.000 pluginKiB=2.922 retainedKiB=0.000 ms=122.000 info=0 member=0 counts=0 list=0
+service-getresults-cache-hit n=5000 grossKiB=0.000 perKiB=0.000 nativeKiB=0.000 pluginKiB=0.000 retainedKiB=0.000 ms=0.000 info=0 member=0 counts=0 list=0
+ui-stable-refresh-shared-native n=100 grossKiB=35.298 perKiB=0.353 nativeKiB=0.000 pluginKiB=35.298 retainedKiB=0.106 ms=150.000 info=0 member=0 counts=0 list=0
+SETTERS point=19700 samePoint=19700 clear=19100 size=20200 sameSize=20200
+ui-stable-refresh-without-scopeapply n=100 grossKiB=35.576 perKiB=0.356 nativeKiB=0.000 pluginKiB=35.576 retainedKiB=0.166 ms=156.000 info=0 member=0 counts=0 list=0
+SETTERS point=19700 samePoint=19700 clear=19100 size=20200 sameSize=20200
+ui-stable-refresh-without-rowlayout n=100 grossKiB=33.076 perKiB=0.331 nativeKiB=0.000 pluginKiB=33.076 retainedKiB=0.025 ms=129.000 info=0 member=0 counts=0 list=0
+SETTERS point=5400 samePoint=5400 clear=4800 size=8100 sameSize=8100
+ui-setfilters-shared-native n=100 grossKiB=36.000 perKiB=0.360 nativeKiB=0.000 pluginKiB=36.000 retainedKiB=0.168 ms=182.000 info=0 member=0 counts=0 list=0
+SETTERS point=19700 samePoint=19700 clear=19100 size=20200 sameSize=20200
+ui-bulk-shared-native n=100 grossKiB=38.333 perKiB=0.383 nativeKiB=0.000 pluginKiB=38.333 retainedKiB=0.166 ms=205.000 info=10000 member=0 counts=0 list=100
+SETTERS point=19700 samePoint=19700 clear=19100 size=20200 sameSize=20200
+ui-bulk-fresh-native n=100 grossKiB=6019.646 perKiB=60.196 nativeKiB=5984.375 pluginKiB=35.271 retainedKiB=0.025 ms=227.000 info=10000 member=0 counts=0 list=100
+SETTERS point=19700 samePoint=19700 clear=19100 size=20200 sameSize=20200
+ui-eight-dirty-shared-native n=100 grossKiB=33.878 perKiB=0.339 nativeKiB=0.000 pluginKiB=33.878 retainedKiB=0.025 ms=201.000 info=800 member=4000 counts=0 list=0
+SETTERS point=19700 samePoint=19700 clear=19100 size=20200 sameSize=20200
+ui-eight-dirty-fresh-native n=100 grossKiB=1621.378 perKiB=16.214 nativeKiB=1587.500 pluginKiB=33.878 retainedKiB=0.025 ms=212.000 info=800 member=4000 counts=0 list=0
+SETTERS point=19700 samePoint=19700 clear=19100 size=20200 sameSize=20200
+ui-scroll-cache-shared-native n=100 grossKiB=155.092 perKiB=1.551 nativeKiB=0.000 pluginKiB=155.092 retainedKiB=0.029 ms=114.000 info=0 member=0 counts=0 list=0
+SETTERS point=19567 samePoint=19567 clear=19567 size=19616 sameSize=19567
+nodes-before=1314 nodes-after=1314 rows=13 fullResults=100

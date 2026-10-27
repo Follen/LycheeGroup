@@ -53,7 +53,7 @@ local function ColorScore(t,score,kind)
  t:SetText(ScoreText(score))
  if type(score)~="number" or score<=0 then t:SetTextColor(unpack(T.muted))
  elseif kind=="pvp" then t:SetTextColor(unpack(T.text))
- else local c=C_ChallengeMode.GetDungeonScoreRarityColor(score);t:SetTextColor(c.r,c.g,c.b) end
+ else local c=C_ChallengeMode.GetDungeonScoreRarityColor(score);t:SetTextColor(A.GroupPresentation.GameTextColor(T,c)) end
 end
 local function SetActionTarget(button,key)
  if button.targetKey==key then return end
@@ -713,7 +713,7 @@ function F:Render()
     local metaTop=-pad-entry.nameHeight-T.floatingMemberTextGap
     if entry.factionTexture then row.faction:SetTexture(entry.factionTexture);row.faction:ClearAllPoints();row.faction:SetPoint("TOPLEFT",T.floatingMemberTextX,metaTop-(self.context:GetLineHeight("floatingMemberMetaLine")-T.floatingMemberFactionSize)/2);row.faction:Show() end
     row.meta:SetWidth(entry.metaWidth);row.meta:SetPoint("TOPLEFT",T.floatingMemberTextX+(entry.factionTexture and T.floatingMemberFactionSize+T.floatingMemberFactionGap or 0),metaTop);row.meta:SetText(entry.metaText)
-    local color=m.class and RAID_CLASS_COLORS[m.class];if color then row.name:SetTextColor(color.r,color.g,color.b) end
+    local color=m.class and RAID_CLASS_COLORS[m.class];if color then row.name:SetTextColor(A.GroupPresentation.GameTextColor(T,color)) end
     MemberIcon(row.icon,m,entry.memberIcon)
     if entry.hideRating then row.score:SetText("") elseif m.ratingKind=="pvp" then ColorScore(row.score,m.rating,"pvp") else ColorScore(row.score,m.dungeonScore) end
     C.SetFont(row.itemLevel,T.floatingMemberMetricFont);C.SetLineHeight(row.itemLevel,T.floatingMemberNameLine,true)
@@ -729,7 +729,7 @@ function F:Render()
     row.meta:SetWidth(T.floatingRowWidth-T.floatingRowMetaTopleftX2-T.floatingFooterRightInset);C.SetPoint(row.meta,"TOPLEFT",row.meta:GetParent(),"TOPLEFT","floatingRowMetaTopleftX2",-T.floatingApplicationPaddingY-T.floatingApplicationTextGap-entry.activityHeight);row.meta:SetText(app.name or "")
     row.cancel:ClearAllPoints();C.SetPoint(row.cancel,"TOPRIGHT",row.cancel:GetParent(),"TOPRIGHT","floatingRowCancelToprightX","floatingRowCancelToprightY");SetActionTarget(row.cancel,app.id);row.cancel.applicationID=app.id;row.cancel:Show();row.cancel:SetEnabled(not app.pendingStatus)
     row.leader:ClearAllPoints();row.leader:SetWidth(T.floatingRowLeaderWidth);C.SetPoint(row.leader,"TOPLEFT",row.leader:GetParent(),"TOPLEFT","floatingRowLeaderTopleftX2",-T.floatingApplicationPaddingY-T.floatingApplicationTextGap*2-entry.activityHeight-entry.titleHeight);row.timer:ClearAllPoints();C.SetPoint(row.timer,"TOPRIGHT",row.timer:GetParent(),"TOPRIGHT","floatingRowTimerToprightX2",-T.floatingApplicationPaddingY-T.floatingApplicationTextGap*2-entry.activityHeight-entry.titleHeight);row.leader:SetText(app.leaderName or (zh and "队长身份未知" or "Leader unknown"))
-    local color=app.leaderClass and RAID_CLASS_COLORS[app.leaderClass];if color then row.leader:SetTextColor(color.r,color.g,color.b) else row.leader:SetTextColor(unpack(T.muted)) end
+    local color=app.leaderClass and RAID_CLASS_COLORS[app.leaderClass];if color then row.leader:SetTextColor(A.GroupPresentation.GameTextColor(T,color)) else row.leader:SetTextColor(unpack(T.muted)) end
    end
    if kind=="footer" then
     row.footerOptions.x,row.footerOptions.y=T.floatingRowDeclineBottomrightX,T.floatingRowDeclineBottomrightY

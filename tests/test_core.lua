@@ -473,6 +473,8 @@ do
  local function Reset(bindings)
   assigned,order,writes,saves={}, {},0,{}
   A.db.bindingDefaultScopes=nil
+  for _,store in pairs(A.Configuration.stores) do store.user["settings.toggleBinding"]=nil end
+  B.pendingConfiguration=nil
   for _,entry in ipairs(bindings or {}) do assigned[entry[1]]=entry[2];order[#order+1]=entry[1] end
  end
  B:InitializeDefault()
@@ -517,7 +519,7 @@ do
   Load.addon("LycheeGroup","Bindings.lua")
   Stubs.FireEvent("PLAYER_LOGIN")
   T.eq(type(A.db.bindingDefaultScopes),"table","login repairs the scope container")
-  T.eq(A.db.bindingDefaultScopes.account,true)
+  T.eq(A.db.bindingDefaultScopes.account.mode,"external")
   T.eq(A.db.uiConfigRecovery.bindingDefaultScopes.value,bad,"the original invalid value is retained")
   T.eq(writes,0,"repair never replaces a player-selected binding")
   T.eq(assigned["ALT-G"],B.action)

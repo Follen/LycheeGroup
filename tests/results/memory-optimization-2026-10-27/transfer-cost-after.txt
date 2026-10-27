@@ -1,0 +1,2 @@
+candidate.Encode	ms	38.666666666667	allocatedKiB	1519.8492838542	retainedKiB	470.5859375
+candidate.Decode	ms	43	allocatedKiB	1033.5078125	retainedKiB	341.4619140625

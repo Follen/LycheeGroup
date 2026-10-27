@@ -306,7 +306,11 @@ function Appearance:SaveTableState(header,changes)
   ok,err=Configuration:Reset(keys,{storage="character"})
   self.savingTable=nil
   -- Clearing a user width may reveal a preset width in the same existing header.
-  if ok and header.layoutWidth then header:Layout(header.layoutWidth) end
+  -- Equal-value resets emit no change, but ResetWidths already cleared the view.
+  if ok then
+   self:RefreshTableState(id)
+   if header.layoutWidth then header:Layout(header.layoutWidth) end
+  end
   return ok,err
  elseif changes.widths then
   for column,width in pairs(changes.widths) do values[TableKey(id,"widths."..column)]=width end
@@ -340,17 +344,24 @@ end
 function A:OnConfigurationChanged(changes)
  local changedTables={};local window,position,rail,settings
  for key in pairs(changes) do
-  if key:sub(1,9)=="settings." then settings=true end
+  -- Find leaves only feed the Find page; Settings has no control or derived
+  -- display for them. Genuine settings still synchronize even while hidden.
+  if key:sub(1,9)=="settings." and key:sub(1,14)~="settings.find." then settings=true end
   local id=key:match("^layout%.tables%.([^.]+)%.");if id then changedTables[id]=true end
   if key=="layout.window.width" or key=="layout.window.height" then window=true end
   if key=="layout.floating.position" then position=true end
   if key=="layout.find.railCollapsed" then rail=true end
  end
+ local ui=self.UI
+ -- A header's Layout commits its current drag. Cancel the old geometry before
+ -- refreshing its shared state so it cannot replace a newly resolved default.
+ if next(changedTables) and ui and ui.context then for header in pairs(ui.context.tableHeaders or {}) do
+  if changedTables[Appearance:GetTableID(header.state)] then header:StopDrag(false) end
+ end end
  for id in pairs(changedTables) do Appearance:RefreshTableState(id) end
  if Appearance.savingTable then changedTables[Appearance.savingTable]=nil end
  if Appearance.savingRail then rail=nil end
  if position and self.Floating and self.Floating.frame then self.Floating:ResetPosition(true) end
- local ui=self.UI
  if ui and ui.frame then
   if window then ui:LoadWindowSize();ui:RefreshWindowSize() end
   if (next(changedTables) or rail) and ui.OnLayoutPreferencesChanged then ui:OnLayoutPreferencesChanged(changedTables,rail) end

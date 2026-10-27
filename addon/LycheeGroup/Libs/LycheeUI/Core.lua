@@ -1,5 +1,5 @@
 local addonName, private = ...
-local VERSION=10000 -- V1.0.0 embedded-copy load order.
+local VERSION=10001 -- V1.0.1 candidate embedded-copy load order.
 local Library=_G.LycheeUI
 private.LycheeUILoad,private.LycheeUILoadVersion=nil,nil
 if Library and Library.version and Library.version>=VERSION then private.LycheeUI=Library;return end

@@ -3,7 +3,11 @@
 --   lua tests/runner.lua core notes (runs selected modules only)
 -- Business logic and UI controllers use offline substitutes; passing these
 -- proves nothing about in-game API permissions, rendering or event ordering.
-local ALL = { "core", "commands", "native_queue", "configuration", "appearance", "theme_reload", "theme_menu", "theme_selection", "theme_controls", "notes", "group", "group_storage", "business_performance", "result_relationships", "catalog_routing", "alert_performance", "sound_menu", "libspecialization_performance", "raid_groups", "season_scores", "transfer", "ui", "activity_labels", "player_links", "resize", "table_find", "table_create", "table_notes", "notes_history_ui", "transient_notices", "filters", "result_unknown_numbers", "find_enhancements", "find_application_context", "season_picker", "create_difficulty", "auto_apply", "party_role_check", "preview", "guide_data", "guide_entry", "guide_adapter", "guide_bindings", "guide_view", "guide", "applicant_time", "roster_drag", "floating", "glyph_slots", "data_broker", "brand_motion", "minimap", "fonts" }
+local ALL = { "core", "binding_defaults", "commands", "native_queue", "configuration", "appearance", "layout_preset_defaults", "theme_reload", "theme_menu", "theme_selection", "theme_controls", "theme_game_colors", "notes", "group", "group_storage", "business_performance", "result_relationships", "catalog_routing", "alert_performance", "sound_menu", "libspecialization_performance", "raid_groups", "season_scores", "transfer", "ui", "activity_labels", "player_links", "resize", "table_find", "table_create", "table_notes", "notes_history_ui", "transient_notices", "filters", "result_unknown_numbers", "find_enhancements", "find_application_context", "season_picker", "create_difficulty", "auto_apply", "party_role_check", "preview", "guide_data", "guide_entry", "guide_adapter", "guide_bindings", "guide_view", "guide", "applicant_time", "roster_drag", "floating", "glyph_slots", "data_broker", "brand_motion", "minimap", "fonts" }
+
+ALL[#ALL+1]="behavior_defaults"
+ALL[#ALL+1]="find_defaults"
+ALL[#ALL+1]="find_row_geometry"
 
 local requested = {}
 local known = {}

@@ -120,3 +120,59 @@ do
   T.same(f.A.API.Appearance:GetColors("floating").surface,{.6,.5,.4,.3})
  end
 end
+
+-- Find-only changes have no Settings consumer, even after that page is built.
+-- Real settings retain their normal visible/hidden synchronization and reopening.
+for _,locale in ipairs({"zhCN","enUS"}) do
+ local f=Fixture(locale,nil,{reduceMotion=true});local a,u,c=f.A,f.U,f.A.Configuration
+ a:Open("settings");local settings=u.pages.settings;local sync=settings.Sync;local syncs=0
+ settings.Sync=function(self,...) syncs=syncs+1;return sync(self,...) end
+ local key="settings.find.categories.seasonDungeon.minRating"
+ local searches=0;local search=f.G.Search.Search
+ f.G.Search.Search=function(...) searches=searches+1;return search(...) end
+ T.ok(c:Set({[key]=100},{storage="character"}));T.eq(syncs,0,"visible settings has no Find-leaf dependency")
+ a:Open("find");syncs=0
+ for i=1,20 do T.ok(c:Set({[key]=100+i},{storage="character"})) end
+ T.eq(syncs,0,"Find edits do not synchronize the hidden Settings page")
+ T.eq(searches,0,"configuration changes do not start a native search")
+ T.eq(f.G.filters.minRating,120)
+ T.ok(c:Reset(key,{storage="character"}));T.eq(syncs,0)
+ T.eq(f.G.filters.minRating,nil)
+ T.ok(c:Set({["settings.rememberFilters"]=false}));T.eq(syncs,1)
+ T.eq(settings.controls.rememberFilters.widget.value,false,"hidden genuine settings still synchronize")
+ T.ok(c:ApplyPreset("sync.batch",1,{[key]=250,["settings.defaultSort"]="rating"}))
+ T.eq(syncs,2,"mixed Find/settings package changes synchronize Settings once")
+ T.eq(settings.controls.defaultSort.widget.value,"rating")
+ T.ok(c:RegisterPreset("sync.batch",2,{[key]=260,["settings.defaultSort"]="newest"}))
+ T.eq(syncs,3);T.eq(settings.controls.defaultSort.widget.value,"newest")
+ T.eq(f.G.filters.minRating,260,"remember-off still resolves package defaults")
+ a:Open("settings");T.eq(settings.controls.rememberFilters.widget.value,false)
+ T.eq(settings.controls.defaultSort.widget.value,"newest")
+ T.eq(searches,0)
+end
+
+-- Dynamic visual fields belong to the startup Theme boundary, never imported
+-- live-preference markers. Rejected live writes and valid Theme operations
+-- both preserve the Configuration migration namespaces.
+do
+ local f=Fixture("enUS");local a,c=f.A,f.A.Configuration
+ local markers={}
+ for _,storage in ipairs({"account","character","session"}) do
+  markers[storage]={reference=c.stores[storage].imported,value=c:CopyValue(c.stores[storage].imported)}
+ end
+ for _,key in ipairs({"theme.main.primary","style.main.button.base.root.height","element.main.settings.row.base.label.alpha"}) do
+  T.ok(a.Appearance:GetField(key));T.eq(c.definitions[key],nil)
+  for _,storage in ipairs({"account","character","session"}) do
+   T.eq(c:Set({[key]=1},{storage=storage}),false)
+   T.eq(c:Reset(key,{storage=storage}),false)
+   T.eq(c.stores[storage].imported,markers[storage].reference)
+   T.same(c.stores[storage].imported,markers[storage].value)
+  end
+ end
+ T.ok(a.API.Theme:Import(Theme("marker.visual",{main={tokens={primary={.2,.3,.4,1}}}}),{activate=true}))
+ T.ok(a.API.Theme:ResetOverrides("main",{"theme.main.primary"},{storage="account"}))
+ for _,storage in ipairs({"account","character","session"}) do
+  T.eq(c.stores[storage].imported,markers[storage].reference)
+  T.same(c.stores[storage].imported,markers[storage].value)
+ end
+end

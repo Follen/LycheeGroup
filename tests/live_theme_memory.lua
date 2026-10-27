@@ -9,6 +9,21 @@ local cfg=A.API.Configuration;local stores=A.Configuration.stores
 local function Copy(v) if type(v)~='table' then return v end;local out={};for k,x in pairs(v)do out[k]=Copy(x)end;return out end
 local function Same(a,b)if type(a)~='table' or type(b)~='table' then return a==b end;for k,v in pairs(a)do if not Same(v,b[k])then return false end end;for k in pairs(b)do if a[k]==nil then return false end end;return true end
 local savedAccount,savedCharacter,savedSession=Copy(stores.account),Copy(stores.character),Copy(stores.session)
+local savedFindSealed=A.FindPreferences and A.FindPreferences.sealed
+local function RestoreFindConfiguration()
+ -- First opening Find may migrate legacy preferences. Restore only the fields
+ -- owned by that migration, including its markers, on every cleanup path.
+ for storage,saved in pairs({account=savedAccount,character=savedCharacter,session=savedSession}) do
+  for _,section in ipairs({'user','imported'}) do
+   local target=stores[storage][section]
+   if target then
+    for key in pairs(target) do if key:sub(1,14)=='settings.find.' then target[key]=nil end end
+    for key,value in pairs(saved[section] or {}) do if key:sub(1,14)=='settings.find.' then target[key]=Copy(value) end end
+   end
+  end
+ end
+ if A.FindPreferences then A.FindPreferences.sealed=savedFindSealed end
+end
 local initial=A.UI;assert(not initial or not initial.preview and not initial.activeModal)
 local original={shown=initial and initial:IsShown(),page=initial and initial.page,returnPage=initial and initial.settingsReturnPage,section=initial and initial.pages.settings.section}
 local originalPageShown={}
@@ -57,6 +72,11 @@ local function Clean()
  end
  if group then group.Search:SetFilters(oldFindFilters);group.prefs.find=oldFindPrefs end
  if U and A.Floating then if floatingShown then A.Floating:ShowPanel()else A.Floating:Dismiss()end end
+ RestoreFindConfiguration()
+ if P then
+  P.loaded=nil;P.restoredInitial=nil;P.preferenceSnapshot=nil
+  P.preferenceFields=nil;P.persistCategory=nil;P.restorePreferencesOnLeave=nil
+ end
  cleaned=true
 end
 assert(probe:OnCleanup(function()

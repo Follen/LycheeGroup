@@ -2,6 +2,12 @@
 -- Profiles contain no widgets, mutable business state, native actions or timers.
 local A=_G.LycheeGroup
 local P={};A.GroupPresentation=P
+-- Preserve semantic hues while allowing light themes to darken game text.
+-- Return channels directly: row refreshes need no new color table or cache.
+function P.GameTextColor(theme,color)
+ local tint=theme.gameTextTint
+ return color.r*tint[1],color.g*tint[2],color.b*tint[3]
+end
 local empty={}
 local function Profile(kind,rosterMode,showRating,dungeons,requirement)
  return {kind=kind,rosterMode=rosterMode,groupMetric=kind=="raid" and "progress" or "rating",

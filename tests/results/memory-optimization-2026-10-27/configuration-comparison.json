@@ -1,0 +1,65 @@
+{
+  "productCommit": "73b425429433b988b72dff2ef83f9928424c173d",
+  "scope": "Offline Lua 5.1 allocation comparison; GC stopped only during measured loops. UI numbers include stubs. No game commands.",
+  "files": {
+    "addon/LycheeGroup/Configuration.lua": {
+      "beforeSHA256": "510ba46b15b5c24bff0196b17cd2084ab38f58dfb1289b6107aea5655b8b8af4",
+      "afterSHA256": "45a64b2b2e9cabc163ff29fa82bbe993f967812132e4202a5b6a19f0c1267c13"
+    },
+    "addon/LycheeGroup/Appearance.lua": {
+      "beforeSHA256": "b26dcdc6663560ca30ddcc5759e8eae8923b7412ae31aa86ab077720e5c2c59b",
+      "afterSHA256": "85f7742d2209c65d286b3709def93851b634d5d07b2ece5219cc15323ad8371c"
+    }
+  },
+  "artifacts": {
+    "before-Appearance.lua": "b26dcdc6663560ca30ddcc5759e8eae8923b7412ae31aa86ab077720e5c2c59b",
+    "before-Configuration.lua": "510ba46b15b5c24bff0196b17cd2084ab38f58dfb1289b6107aea5655b8b8af4",
+    "configuration-consumer-tests-green.txt": "eff72e53e5dd2760d68c6d5075c6911f05d2a9704b24f300cdbc8b2310a1ac6d",
+    "configuration-cost-after.txt": "0dae0bdd05a76480d20f0f75ee90f8f2d327ce7085f702b1913957ac8168c992",
+    "configuration-cost-before.txt": "02843eca1fd8e811cf95f370f0527895a10fd3620804b25abe993e3aee8e8c89",
+    "configuration-cost.lua": "f448b4b3621930485556bc52bbac658ab14fa55a38924e55ee5586750c512535",
+    "configuration-tests-green.txt": "25e4530ccc7587dc92d40f9ab1ad5312f01dd9f6763a35c8b8f42c40b3d58dea",
+    "configuration-tests-red.txt": "8973ef74bda63c69d6fd3a3c253a26a7a27197d90a8e00e55dd4147f1a13608e",
+    "run-before.lua": "878e04af9b91a264c0aa603993602abc016d276655521235bc0565555278f858"
+  },
+  "measurementsKiBPerOperation": {
+    "warmCharacterSet": {
+      "before": 17.07828125,
+      "after": 1.01578125
+    },
+    "coldCharacterSet": {
+      "before": 5.07828125,
+      "after": 1.01578125
+    },
+    "numericFindUnbuiltSettings": {
+      "before": 27.13494140625,
+      "after": 11.06962890625
+    },
+    "numericFindHiddenSettings": {
+      "before": 37.668984375,
+      "after": 11.07501953125
+    },
+    "stableSavePrefs": {
+      "before": 1.0625,
+      "after": 1.0625
+    }
+  },
+  "counters50NumericFindEdits": {
+    "settingsSync": {
+      "before": 50,
+      "after": 0
+    },
+    "configurationGet": {
+      "before": 1701,
+      "after": 301
+    }
+  },
+  "tests": {
+    "combinedModules": 20,
+    "combinedRunnerAssertions": 29372,
+    "configurationAppearanceAssertions": 15463,
+    "guideAdapterAdditionalInternalChecks": 26798,
+    "failures": 0,
+    "oldSourceRegressionModulesFailed": 2
+  }
+}

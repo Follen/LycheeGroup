@@ -25,18 +25,19 @@ local function ApplicationPrefs()
   if prefs.enabled==nil then prefs.enabled=group.prefs.autoApply==true end
   return prefs
  end
- Application.applicationPrefs=Application.applicationPrefs or {roles=CopyRoles(A.charPrefs.applicationRoles),enabled=A.charPrefs.autoApply==true}
+ Application.applicationPrefs=Application.applicationPrefs or {roles=CopyRoles(A:GetSetting("applicationRoles")),enabled=A:GetSetting("autoApply")==true}
  return Application.applicationPrefs
 end
 local function SaveEnabled(enabled)
  ApplicationPrefs().enabled=enabled==true
- local saved=UI.preview and UI:GetGroup().prefs or A.charPrefs
- saved.autoApply=enabled==true
+ if UI.preview then UI:GetGroup().prefs.autoApply=enabled==true
+ else A:SetSetting("autoApply",enabled==true) end
 end
 local function SaveRoles(roles)
  ApplicationPrefs().roles=CopyRoles(roles)
- local saved=UI.preview and UI:GetGroup().prefs or A.charPrefs
- saved.applicationRoles={TANK=roles.TANK==true,HEALER=roles.HEALER==true,DAMAGER=roles.DAMAGER==true}
+ local saved={TANK=roles.TANK==true,HEALER=roles.HEALER==true,DAMAGER=roles.DAMAGER==true}
+ if UI.preview then UI:GetGroup().prefs.applicationRoles=saved
+ else A:SetSetting("applicationRoles",saved) end
 end
 function Application:IsAutoApplyEnabled()
  return ApplicationPrefs().enabled==true
@@ -48,6 +49,16 @@ local function RefreshApplicationEntry()
   modal.autoApply:SetValue(Application:IsAutoApplyEnabled() or lease and lease.enableOnSave==true)
  end
  if Application.onPreferencesChanged then Application.onPreferencesChanged() end
+end
+function Application:OnPreferencesChanged(rolesChanged)
+ self.applicationPrefs=nil
+ if UI.preview then return end
+ local lease=self.applicationLease
+ if rolesChanged and lease and not lease.rolesEdited then
+  lease.roles=CopyRoles(ApplicationPrefs().roles) or {};lease.initialized=nil
+  self:RefreshApplicationRoles()
+ end
+ RefreshApplicationEntry()
 end
 local function ValidRoles(roles)
  if not roles or not next(roles) then return false end
@@ -135,6 +146,7 @@ UI:ApplyElementScope("application")
 function Application:SetApplicationRole(role)
  local lease=self.previewApplication or self.applicationLease;if not lease or not lease.available[role] then return end
  lease.roles[role]=not lease.roles[role] or nil
+ lease.rolesEdited=true
  self:RefreshApplicationRoles()
 end
 function Application:RefreshApplicationRoles()
@@ -250,7 +262,7 @@ function Application:Apply(resultID,manual,confirmedRoles)
  if UI.preview then ok,err=group:Apply(resultID,submittedRoles,prefs.note or "")
  else ok,err=group:Apply(resultID,submittedRoles) end
  if ok then
-  if confirmedRoles and not prefs.enabled then
+  if confirmedRoles and (not prefs.enabled or lease and lease.rolesEdited) then
    SaveRoles(confirmedRoles)
    if lease and lease.enableOnSave then SaveEnabled(true) end
    RefreshApplicationEntry()

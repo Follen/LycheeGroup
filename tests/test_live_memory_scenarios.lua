@@ -13,6 +13,7 @@ for _,mode in ipairs({"complete","remember_off","late_pool_growth","cancel","can
  for _,page in ipairs({"find","create","notes","settings"}) do A:Open(page);U:Hide(true) end
  local oldPrefs,oldPage,oldReturn=G.prefs.find,U.page,U.settingsReturnPage
  local oldRemember=A:GetSetting("rememberFilters")
+ local savedStores=A.Configuration:CopyValue(A.Configuration.stores)
  if mode=="observer_error" then f.failWhen=function() return U.preview and U.preview.scenario=="applications" end end
  if mode=="prepare_failure" then
   local get=G.Catalog.GetActivities
@@ -63,6 +64,7 @@ for _,mode in ipairs({"complete","remember_off","late_pool_growth","cancel","can
  elseif mode=="observer_error" then Check(p.error and p.error:find("simulated observer failure",1,true),tostring(p.error))
  else Check(p.result==nil,"cancellation cannot report completion") end
  Check(G.prefs.find==oldPrefs and A:GetSetting("rememberFilters")==oldRemember,mode.." real preference source and reference preserved")
+ Check(A.Configuration:SameValue(savedStores,A.Configuration.stores),mode.." canonical configuration preserved")
  Check(not U:IsShown() and not U.preview and U.page==oldPage and U.settingsReturnPage==oldReturn and not U.Native.searchLease and U.Motion:Count()==0,mode.." Preview and UI owners restored")
  Check(U._nav==oldPage and U.settingsButton.active==(oldPage=="settings"),mode.." navigation presentation restored")
  local reads=f.reads

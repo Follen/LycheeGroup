@@ -41,6 +41,19 @@ local filtersSaved=false
 local oldPage=A.UI and A.UI.page
 local oldReturn=A.UI and A.UI.settingsReturnPage
 local savedPrefs
+local configuration=A.Configuration
+local savedConfiguration=configuration:CopyValue(configuration.stores)
+local savedFindSealed=A.FindPreferences.sealed
+local function RestoreConfiguration()
+ for storage,saved in pairs(savedConfiguration) do
+  for _,section in ipairs({"user","imported"}) do
+   local target=configuration.stores[storage][section]
+   for key in pairs(target) do if key:sub(1,14)=="settings.find." then target[key]=nil end end
+   for key,value in pairs(saved[section]) do if key:sub(1,14)=="settings.find." then target[key]=configuration:CopyValue(value) end end
+  end
+ end
+ A.FindPreferences.sealed=savedFindSealed
+end
 local oldPageShown={}
 if A.UI then for key,p in pairs(A.UI.pages) do oldPageShown[key]=p.frame and p.frame:IsShown() or false end end
 local closed=false
@@ -60,6 +73,11 @@ local function Cleanup()
   for key,p in pairs(ui.pages) do if p.frame then p.frame:SetShown(oldPageShown[key]==true) end end
   ui.page,ui.settingsReturnPage=oldPage,oldReturn
   ui:UpdateNav();ui.Motion:FinishRect(ui.underline)
+ end
+ RestoreConfiguration()
+ if page then
+  page.loaded=nil;page.restoredInitial=nil;page.preferenceSnapshot=nil
+  page.preferenceFields=nil;page.persistCategory=nil;page.restorePreferencesOnLeave=nil
  end
 end
 assert(probe:Async(LIMIT))
@@ -162,6 +180,9 @@ end
 g=A.Group;page=ui.pages.find
 savedPrefs={value=g.prefs.find}
 g.prefs.find={category="seasonDungeon"}
+local pending={['settings.find.category']='seasonDungeon'}
+for _,field in ipairs(A.FindPreferences.fields) do pending[A.FindPreferences:Key('seasonDungeon',field)]=false end
+assert(configuration:Set(pending))
 page.loaded=nil;page.restoredInitial=nil
 local generationBefore=A.Group and A.Group.Search:GetGeneration() or 0
 local ok,err=A:Open("find")
@@ -243,6 +264,7 @@ local function Finish()
   if name~="LycheeGroup_Guide" and not report.samples[finalGC].loaded[i] then report.checks.allPackagesLoaded=false end
  end
  report.checks.noProbeDrivers=ticker==nil and eventFrame:GetScript("OnEvent")==nil
+ report.checks.configurationRestored=configuration:SameValue(savedConfiguration,configuration.stores)
  local baseline,final=report.samples[baselineGC],report.samples[finalGC]
  report.summary.retainedBaselineSample,report.summary.retainedFinalSample=baselineGC,finalGC
  report.summary.retainedDeltaKB=final.addonTotalKB-baseline.addonTotalKB
@@ -261,7 +283,7 @@ local function Finish()
  report.elapsedSeconds,report.sampleCount=GetTime()-started,sampleCount
  report.ok=report.checks.knownOwnersIdle and report.checks.resultPoolStable
   and report.checks.searchGenerationUnchanged and report.checks.naturalPackageBudget and report.checks.retainedPackageBudget
-  and report.checks.nativeObjectsStable and report.checks.allPackagesLoaded
+  and report.checks.nativeObjectsStable and report.checks.allPackagesLoaded and report.checks.configurationRestored
  for i=sampleCount+1,#report.samples do report.samples[i]=nil end
  return probe:Finish(report)
 end

@@ -17,6 +17,7 @@ local function Setup(roles)
         nativeRoles = {true, true, false, false}, accepted = true, writes = {}, calls = 0, hides = 0,
     }
     _G.LycheeGroup = {charPrefs = {applicationRoles = roles, autoApply = false}}
+    function LycheeGroup:GetSetting(key) return self.charPrefs[key] end
     _G.C_LFGList = {
         GetRoleCheckInfo = function() return state.premade, 123 end,
         GetAvailableRoles = function() return unpack(state.available) end,

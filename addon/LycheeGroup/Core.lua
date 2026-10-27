@@ -35,7 +35,9 @@ local DEFAULTS = {
 }
 for key,value in pairs(A.ThemeDefaults.settings) do DEFAULTS[key]=value end
 
-local CHARACTER_DEFAULTS = { rememberFilters = true, defaultSort = "newest" }
+-- False roles use the native role fallback; an empty role table explicitly
+-- selects none. False raid difficulty keeps the product's automatic selection.
+local CHARACTER_DEFAULTS = { rememberFilters = true, defaultSort = "newest", autoApply = false, applicationRoles = false, creationRaidDifficultyID = false }
 
 local function FontScale(value)
  value=tonumber(value)
@@ -52,12 +54,33 @@ function A:RegisterConfigurationSettings()
   local definition={default=value,storage=storage,type=type(value),legacy={storage=storage,key=key},enum=choices[key]}
   local range=ranges[key];if range then definition.min,definition.max=range[1],range[2];definition.integer=key~="minimapAngle" end
   if key=="font" then definition.validate=function(path) return path~="","font path must not be empty" end end
+  if key=="applicationRoles" then
+   definition.type={"boolean","table"}
+   definition.validate=function(roles)
+    if roles==false then return true end
+    if type(roles)~="table" then return false,"roles must be false or a role table" end
+    for role,selected in pairs(roles) do
+     if (role~="TANK" and role~="HEALER" and role~="DAMAGER") or type(selected)~="boolean" then return false,"roles must contain only TANK, HEALER and DAMAGER booleans" end
+    end
+    return true
+   end
+  elseif key=="creationRaidDifficultyID" then
+   definition.type={"boolean","number"}
+   definition.validate=function(value) return value==false or type(value)=="number" and value>0 and value<math.huge and value%1==0,"difficulty must be false or a positive integer" end
+  end
   if key=="fontScale" then definition.import=function(account)
    if account.fontScale~=nil then return FontScale(account.fontScale),true end
   end end
   if storage=="character" then definition.import=function(account,character)
-   if character[key]~=nil then return character[key],true end
-   if account[key]~=nil then return account[key],true end
+   local value=character[key];if value==nil then value=account[key] end
+   if key=="applicationRoles" and type(value)=="table" then
+    -- Match the legacy Group repair: keep valid role leaves from a damaged
+    -- table. New API writes still validate the complete table strictly.
+    local roles={}
+    for _,role in ipairs({"TANK","HEALER","DAMAGER"}) do if type(value[role])=="boolean" then roles[role]=value[role] end end
+    return roles,true
+   end
+   if value~=nil then return value,true end
   end end
   definitions["settings."..key]=definition
  end
@@ -278,7 +301,11 @@ end
 function A:ApplyConfigurationChanges(changes)
 	local function Changed(key) return changes["settings."..key]~=nil end
 	local function Value(key) return self:GetSetting(key) end
+	if Changed("toggleBinding") and self.Bindings then self.Bindings:OnConfigurationChanged() end
 	if Changed("nativeLFGEntry") and self.SyncNativeLFGEntry then self:SyncNativeLFGEntry() end
+	if (Changed("autoApply") or Changed("applicationRoles")) and self.UI and self.UI.Application then
+		self.UI.Application:OnPreferencesChanged(Changed("applicationRoles"))
+	end
 	if (Changed("minimap") or Changed("minimapAngle")) and self.Minimap then self.Minimap:UpdateSettings() end
 	if (Changed("font") or Changed("fontScale")) and self.Fonts then self.Fonts:Apply() end
 	for _,key in ipairs({"history","autoJoin","applicantAlertSound"}) do
