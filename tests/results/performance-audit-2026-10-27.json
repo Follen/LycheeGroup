@@ -20720,6 +20720,7 @@
     "complete": true,
     "cleanup": "complete"
   },
+  "retainedSourceNormalization": {"file": "tests/results/performance-audit-2026-10-27/offline-ui-cost.lua", "originalSHA256": "d9557f49ea0bc7e89fd9ddacf35b4b34da2b382b5e6c9a57a4ff726fbcb65c19", "change": "Removed one trailing blank line before commit; script behavior and measured output unchanged."},
   "retainedSources": {
     "tests/live_theme_memory.lua": "35a9c1f841a19d5e85458eb8f600182b2f4c191e7d07090e0f45f43d70687820",
     "tests/live_list_memory.lua": "a69102cabdcf773dd287d0f6730216946ba170a27d581d93351ffa272208a91b",
@@ -20727,7 +20728,7 @@
     "tests/live_layout_profile.lua": "3214c28158639bd3f43cad836f06db77818ae7729ede52b25fc1b4b8cc503dc7",
     "tests/results/performance-audit-2026-10-27/live-icon-cost.lua": "5929fc99532d94b797a060c7f8021ca1d9705f59561e03481b6113f7e07db1be",
     "tests/results/performance-audit-2026-10-27/offline-configuration-cost.lua": "f448b4b3621930485556bc52bbac658ab14fa55a38924e55ee5586750c512535",
-    "tests/results/performance-audit-2026-10-27/offline-ui-cost.lua": "d9557f49ea0bc7e89fd9ddacf35b4b34da2b382b5e6c9a57a4ff726fbcb65c19",
+    "tests/results/performance-audit-2026-10-27/offline-ui-cost.lua": "e08a894de35e8acd3b5ce6ab00548ffff01542b2c675d657c6594ca402128660",
     "tests/results/performance-audit-2026-10-27/offline-configuration-cost.txt": "6b647f897dd26074ceea08a8be10bf4429f24fcf33a1fab47423dadfff558cf1",
     "tests/results/performance-audit-2026-10-27/offline-ui-cost.txt": "859cb7ca9c5ebfc2e341f847e9f5e09791f7cf20554f681b608de9b63f16811b"
   }
