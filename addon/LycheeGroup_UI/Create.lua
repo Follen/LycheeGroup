@@ -311,7 +311,7 @@ function P:Build(parent)
  local filterSurface=CreateFrame("Frame",nil,manage);C.Box(filterSurface,{width="createFilterSurfaceWidth",height="createFilterSurfaceHeight"});C.SetPoint(filterSurface,"TOPLEFT",filterSurface:GetParent(),"TOPLEFT",0,"createFilterSurfaceTopleftY");C.Panel(filterSurface,"panel","createPanelRadius2");self.roleFilterSurface=filterSurface
  for i,key in ipairs({"ALL","TANK","HEALER","DAMAGER"}) do
   local b=C.Button(filterSurface,key=="ALL" and L.all or roles[key],nil,function()
-   if key=="ALL" then state.roles=nil
+   if key=="ALL" then state.roles=nil;state.buffClasses=nil
    else
     state.roles=state.roles or {};state.roles[key]=not state.roles[key] or nil
     if not next(state.roles) or state.roles.TANK and state.roles.HEALER and state.roles.DAMAGER then state.roles=nil end
@@ -561,14 +561,38 @@ function P:BuildRaidBuffs()
  for _,row in ipairs(self.buffList.rows) do
   row.title:Hide();row.meta:Hide();row:SetScript("OnClick",nil);row:EnableMouse(false);row:EnableMouseMotion(false);row.cells={}
   for i=1,2 do
-   local cell=CreateFrame("Frame",nil,row);cell:SetHeight(T.createCellHeight)
-   cell.icon=C.Icon(cell,T.createCellIconWidth);C.Box(cell.icon,{width="createCellIconWidth",height="createCellIconHeight"});cell.icon:SetPoint("LEFT",0,0)
-   cell.label=C.Text(cell,"",13,"muted");C.SetLineHeight(cell.label,20,true);C.SetPoint(cell.label,"LEFT",cell.label:GetParent(),"LEFT","createCellLabelLeftX",0);cell.label:SetWordWrap(false)
+   local cell=C.Button(row,"",nil,function(button)
+    if row._hitVisible==false or not P.buffList.clip:IsMouseOver() then return end
+    P:ToggleBuffClass(button.targetKey)
+   end,{variant="compact"});cell:SetHeight(T.createCellHeight);cell:SetLabelStyle(13,20);cell:SetTextColors("muted","text","onSecondaryContainer")
+   cell.icon=C.Icon(cell,T.createCellIconWidth);C.Box(cell.icon,{width="createCellIconWidth",height="createCellIconHeight"});cell.icon:SetPoint("LEFT",8,0)
+   cell.label:ClearAllPoints();C.SetPoint(cell.label,"LEFT",cell.icon,"LEFT","createCellLabelLeftX",0);cell.label:SetJustifyH("LEFT");cell.label:SetWordWrap(false)
+   cell:HookScript("OnHide",function(button) SetApplicantTarget(button,nil);C.RekeyElement(button,nil) end)
    row.cells[i]=cell
   end
+  row:HookScript("OnHide",function(button) for _,cell in ipairs(button.cells) do SetApplicantTarget(cell,nil);C.RekeyElement(cell,nil) end end)
  end
 self:RegisterBuildElements()
  end
+function P:ToggleBuffClass(class)
+ if not class or not self.buffReport then return end
+ local missing=false;for _,definition in ipairs(self.buffReport.missing) do if definition.class==class then missing=true;break end end
+ if not missing then return end
+ state.buffClasses=state.buffClasses or {};state.buffClasses[class]=not state.buffClasses[class] or nil
+ if not next(state.buffClasses) then state.buffClasses=nil end
+ self:RefreshApplicants()
+end
+local function PruneBuffClasses(report)
+ if not state.buffClasses then return false end
+ local changed=false
+ for class in pairs(state.buffClasses) do
+  local missing=false
+  if report then for _,definition in ipairs(report.missing) do if definition.class==class then missing=true;break end end end
+  if not missing then state.buffClasses[class]=nil;changed=true end
+ end
+ if not next(state.buffClasses) then state.buffClasses=nil end
+ return changed
+end
 function P:BuildRosterList()
  local list=CreateFrame("Frame",nil,self.rosterCard);C.SetPoint(list,"TOPLEFT",list:GetParent(),"TOPLEFT","createListTopleftX","createListTopleftY");list:SetWidth(T.createListWidth);self.rosterList=list
  local clip=CreateFrame("ScrollFrame",nil,list);clip:SetPoint("TOPLEFT");clip:SetPoint("BOTTOMRIGHT");list.clip=clip;list.gutter=0
@@ -673,6 +697,7 @@ local function RefreshRosterPresentation(self)
  self.groupSummary:SetShown(not inline)
  if inline then self:RefreshRosterList() else self:ClearRosterList() end
  self.buffReport=group:GetRaidBuffs(activityID)
+ local filterChanged=PruneBuffClasses(self.buffReport)
  if self.buffReport then
   if not self.buffArea then self:BuildRaidBuffs() end
   self.buffArea:Show()
@@ -683,9 +708,10 @@ local function RefreshRosterPresentation(self)
   self.buffList:SetItems(self.buffRows,function(row,index)
    local width=(row:GetWidth()-8)/2
    for i,cell in ipairs(row.cells) do
-    local definition=report.missing[index+i-1];cell:SetShown(definition~=nil)
+    local definition=report.missing[index+i-1];SetApplicantTarget(cell,definition and definition.class);cell:SetShown(definition~=nil)
     if definition then
-     cell:ClearAllPoints();cell:SetPoint("LEFT",(i-1)*(width+8),0);cell:SetWidth(width);cell.label:SetWidth(width-22)
+     C.RekeyElement(cell,definition.class);cell:SetActive(state.buffClasses and state.buffClasses[definition.class]==true or false)
+     cell:ClearAllPoints();cell:SetPoint("LEFT",(i-1)*(width+8),0);cell:SetWidth(width);cell.label:SetWidth(width-T.createCellLabelLeftX-16)
      UI:SetMemberIcon(cell.icon,definition)
      UI:SetText(cell.label,definition.key=="poisons" and report.counts.ROGUE==1 and S("毒药仅1人","1 rogue only") or zh and definition.cn or definition.en)
     end
@@ -694,6 +720,7 @@ local function RefreshRosterPresentation(self)
  elseif self.buffArea then
   self.buffArea:Hide();self.buffList:Clear()
  end
+ if filterChanged then self:RefreshApplicants() end
 end
 function P:RefreshRosterPresentation()
  if not self.roster then return end
@@ -1229,7 +1256,7 @@ function P:RefreshApplicants()
  local sortKey=state.sort=="score" and "rating" or state.sort=="mapScore" and "mapScore" or state.sort=="ilvl" and "itemLevel"
  local values=sortKey and {}
  local ids={};for _,id in ipairs(group:GetApplicants()) do
-  local app=group:GetApplicant(id);local match=not state.roles
+  local app=group:GetApplicant(id);local match=not state.roles and not state.buffClasses
   if timeModes then
    for index,member in ipairs(app.members) do
     local key=ApplicantTimeKey(id,member,index)
@@ -1238,7 +1265,10 @@ function P:RefreshApplicants()
   end
   if not match then
    for _,member in ipairs(app.members) do
-    for _,role in ipairs(roleOrder) do if state.roles[role] and UI:MemberHasRole(member,role) then match=true;break end end
+    if not state.buffClasses or state.buffClasses[member.class] then
+     match=not state.roles
+     if state.roles then for _,role in ipairs(roleOrder) do if state.roles[role] and UI:MemberHasRole(member,role) then match=true;break end end end
+    end
     if match then break end
    end
   end
@@ -1258,7 +1288,8 @@ function P:RefreshApplicants()
  end)
  self:LayoutBatches(ids)
  self.empty:SetShown(#ids==0);UI:SetText(self.appCount,L.applicantCount:format(#ids))
- for key,b in pairs(self.roleFilters) do b:SetActive(key=="ALL" and not state.roles or state.roles and state.roles[key]==true or false) end
+ for key,b in pairs(self.roleFilters) do b:SetActive(key=="ALL" and not state.roles and not state.buffClasses or state.roles and state.roles[key]==true or false) end
+ if self.buffList then for _,row in ipairs(self.buffList.rows) do for _,cell in ipairs(row.cells) do cell:SetActive(state.buffClasses and state.buffClasses[cell.targetKey]==true or false) end end end
  UI.Tooltip:RefreshApplicant()
 end
 function P:SetBatchOffset(value,animate)
@@ -1438,6 +1469,7 @@ function P:RegisterBuildElements()
 UI:ElementFields(self,"create","frame surface formFrame heading desc activityLabel pickerTrigger pickerIcon pickerName pickerContext difficultyChoice difficultyGroup difficultySelection difficultyFixedSurface difficultyFixed favorite titleLabel titleShell descriptionLabel descriptionShell req requirementsLabel ilvlLabel ilvl scoreLabel score styleLabel playstyle private crossFaction autoAccept autoInviteHint publish formCancel formNotice correctionNotice manage sIcon sMeta sName editListing cancelListing listingFavorite applicantsHeading appCount roleFilterSurface sortChoice applicantTable batchScroll batchBody batchSlider empty manageNotice rail favoritesCard favoritesToggle favoritesChevron favoritesBody favoritesEmpty rosterCard rosterTitle rosterCount groupSummary groupStrip buffArea buffTitle buffComplete picker pickerSearch pickerSearchHint pickerClear pickerSurface tierChoice pickerEmpty","create")
  UI:ElementList(self.favoritesList,"create.favoritesList","create","create.favoriteRow")
  UI:ElementList(self.buffList,"create.buffList","create","create.buff")
+ if self.buffList then for _,row in ipairs(self.buffList.rows) do for _,cell in ipairs(row.cells) do UI:Element(cell,"create.buffFilter","create",cell,"create.buffFilter",cell.targetKey) end end end
  UI:ElementList(self.pickerCategories,"create.pickerCategories","create","create.pickerCategory")
  UI:ElementList(self.pickerResults,"create.pickerResults","create","create.pickerActivity")
  for key,button in pairs(self.roleFilters or {}) do UI:Element(button,"create.roleFilter","create",button,"create.roleFilter",key) end
