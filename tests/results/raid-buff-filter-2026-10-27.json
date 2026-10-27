@@ -1,0 +1,140 @@
+{
+  "schema": "lycheegroup.raid-buff-filter.v1",
+  "date": "2026-10-27",
+  "branch": "codex/raid-buff-filter",
+  "base": "1a217987e980e7a804bceec1202f20de577456b8",
+  "candidate": "Uncommitted two-file feature on main; live installation includes the previously tested configuration and memory optimization candidate.",
+  "offline": {
+    "featureAssertions": 242,
+    "runnerAssertions": 51927,
+    "moduleFailures": 0,
+    "layoutScripts": 17,
+    "layoutFailures": 0,
+    "architectureChecks": 6539,
+    "architectureFailures": 0,
+    "integrationAssertions": 5289,
+    "integrationFeatureAssertions": 242
+  },
+  "native": {
+    "logs": {},
+    "ok": true,
+    "resourcesReleased": true,
+    "result": {
+      "build": "70575",
+      "checks": 62,
+      "cleaned": true,
+      "hardwareDispatch": false,
+      "nativeListingPresent": true,
+      "stages": [
+        {
+          "ids": "1,2,3,4,5",
+          "label": "initial"
+        },
+        {
+          "ids": "1,3",
+          "label": "warrior"
+        },
+        {
+          "ids": "1,2,3",
+          "label": "class_union"
+        },
+        {
+          "ids": "2",
+          "label": "toggle_one_off"
+        },
+        {
+          "ids": "1,2,3,4,5",
+          "label": "toggle_last_off"
+        },
+        {
+          "ids": "",
+          "label": "same_member_role_intersection"
+        },
+        {
+          "ids": "1",
+          "label": "multi_role"
+        },
+        {
+          "ids": "1,2,3,4,5",
+          "label": "all_clears_both"
+        },
+        {
+          "ids": "2",
+          "label": "prune_filled_warrior"
+        },
+        {
+          "ids": "1,2,3,4,5",
+          "label": "prune_last_class"
+        },
+        {
+          "ids": "5",
+          "label": "one_rogue_gap"
+        },
+        {
+          "ids": "1,2,3,4,5",
+          "label": "two_rogues_filled"
+        },
+        {
+          "ids": "3",
+          "label": "priest"
+        },
+        {
+          "ids": "1,2,3,4,5",
+          "label": "non_raid_clears"
+        }
+      ]
+    }
+  },
+  "request": "raid-buff-filter-controller",
+  "connection": "CON-43d23e312a3de5518bec9610e9bf8ce0",
+  "reportState": "verified",
+  "cleanup": "complete",
+  "closed": true,
+  "errors": {
+    "before": 43,
+    "after": 43,
+    "rowsUnchanged": true,
+    "historicalMissingFields": [
+      "error[18].stack",
+      "error[18].locals"
+    ]
+  },
+  "deployment": {
+    "before": {
+      "LycheeGroup_UI/Create.lua": "DB5DEDAFD991F448A4ED868441EAB8578F3919BDED44690313B20504B96B8B21",
+      "LycheeGroup/Theme/Elements.lua": "F38A09B5BA630634C6DCEB99092EBE5F94D9018491B64DC61F8EEDDBFC0532CE"
+    },
+    "base": "Installed memory optimization candidate plus only the two-file raid filter patch",
+    "after": {
+      "LycheeGroup_UI/Create.lua": "9C5FB4A6643C90699D2F14181CAC96198754C61B3F499940BBCB9597804B9FF2",
+      "LycheeGroup/Theme/Elements.lua": "C47ADBFD20D6F7DE72165B6232F453BE7D1C614F37CB12B815DC0B158351310A"
+    },
+    "integration": "C:\\Users\\follen\\.codex\\worktrees\\raid-buff-filter\\LycheeGroup\\.lycheedev\\raid-buff-filter\\integration",
+    "backup": "C:\\Users\\follen\\.codex\\worktrees\\raid-buff-filter\\LycheeGroup\\.lycheedev\\raid-buff-filter\\backup-20261027-151301",
+    "target": "D:/Game/World of Warcraft/_retail_/Interface/AddOns"
+  },
+  "installedHashes": {
+    "failures": [],
+    "checked": 163
+  },
+  "userAcceptance": "User confirmed the feature works in game on 2026-10-27. Agent did not dispatch hardware input for the feature test.",
+  "probeSha256": "c716898fa6d65ffb8e287769d2949e75ff7afc3eb112b23ef331708503556ff3",
+  "paddingFollowup": {
+    "sourceChange": "Eight logical pixels on each side of each buff button; selection and hover fill no longer touch the icon.",
+    "featureAssertions": 242,
+    "fontGeometryChecks": 4742,
+    "integrationAssertions": 5289,
+    "integrationFeatureAssertions": 242,
+    "deployment": {
+      "backup": "C:\\Users\\follen\\.codex\\worktrees\\raid-buff-filter\\LycheeGroup\\.lycheedev\\raid-buff-filter\\Create-before-hover.lua",
+      "path": "LycheeGroup_UI/Create.lua",
+      "after": "9234D49FC9E66ABE07149CB6EDB2949F01E590295C3AAEC0C8A23DC01437C021",
+      "reloaded": false,
+      "before": "9C5FB4A6643C90699D2F14181CAC96198754C61B3F499940BBCB9597804B9FF2",
+      "source": "C:\\Users\\follen\\.codex\\worktrees\\raid-buff-filter\\LycheeGroup\\.lycheedev\\raid-buff-filter\\integration-hover\\addon\\LycheeGroup_UI\\Create.lua",
+      "target": "D:\\Game\\World of Warcraft\\_retail_\\Interface\\AddOns\\LycheeGroup_UI\\Create.lua"
+    },
+    "loadedFixVerified": false,
+    "status": "Deployed; takes effect on the next reload. Earlier native results cover filter behavior before this geometry-only follow-up."
+  }
+}

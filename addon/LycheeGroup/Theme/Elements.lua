@@ -98,6 +98,7 @@ main["tooltip.rosterDragGhost"]={scope="tooltip",slotKinds={root="box",surface="
 main["tooltip.rosterDropHighlight"]={scope="tooltip",slotKinds={root="box",surface="surface"}}
 main["tooltip.emptyRosterGroups"]={scope="tooltip",slotKinds={root="box",surface="surface"}}
 main["tooltip.emptyRosterGroup"]={scope="tooltip",template=true,slotKinds=kinds.button}
+main["create.buffFilter"]={scope="create",template=true,slotKinds=kinds.iconButton}
 kinds.selection={root="box",fill="surface",surface="surface"}
 kinds.header={root="box"}
 local function Assign(target,kind,names)

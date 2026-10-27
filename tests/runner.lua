@@ -9,6 +9,7 @@ ALL[#ALL+1]="behavior_defaults"
 ALL[#ALL+1]="find_defaults"
 ALL[#ALL+1]="find_row_geometry"
 
+ALL[#ALL+1]="raid_buff_filter"
 local requested = {}
 local known = {}
 for _, name in ipairs(ALL) do known[name] = true end
