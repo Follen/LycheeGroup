@@ -1064,7 +1064,7 @@ function Tip:RenderDungeons(scores,top)
   row.keyLevel:ClearAllPoints();row.keyLevel:SetPoint("TOPLEFT",labelWidth+12,0);row.keyLevel:SetWidth(levelWidth);row.keyLevel:SetShown(run~=nil)
   if run and (row.coloredLevel~=run.level or row.keyLevel._color~=nil) then
    local color=C_ChallengeMode.GetKeystoneLevelRarityColor(run.level)
-   row.keyLevel:SetTextColor(color.r,color.g,color.b);row.keyLevel._color=nil;row.coloredLevel=run.level
+   row.keyLevel:SetTextColor(A.GroupPresentation.GameTextColor(T,color));row.keyLevel._color=nil;row.coloredLevel=run.level
   end
   row.status:ClearAllPoints();row.status:SetPoint("TOPRIGHT");row.status:SetWidth(statusWidth);row.status:SetShown(run~=nil)
   local nameX=labelWidth+12+(run and levelWidth+12 or 0)

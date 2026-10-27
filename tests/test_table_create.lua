@@ -204,10 +204,10 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  end end
  Click(header,"mapScore");g.listing.activityID=3;g:Notify("listing")
  Check(#header.definitions==7 and header.labels.mapScore==nil,"ordinary dungeons omit the unavailable dungeon score")
- Check(page.sortChoice.value=="newest" and header.state.sortKey==nil,"hiding the selected score clears its sorting state")
+ Check(page.sortChoice.value=="newest" and header.state.sortKey=="mapScore","hiding the selected score temporarily falls back without replacing its preference")
  Click(header,"rating");g.listing.activityID=1;g:Notify("listing")
  Check(#header.definitions==6 and header.labels.rating==nil,"raid applicants omit score columns")
- Check(header.state.sortKey==nil and page.sortChoice.value=="newest","raid applicants clear unavailable rating sorting")
+ Check(header.state.sortKey=="rating" and page.sortChoice.value=="newest","raid applicants retain unavailable rating sorting while displaying the default order")
  Click(header,"ilvl");Order(page,{1,3,2},"raids retain numeric item level sorting")
  g.Catalog.activities[4]={id=4,categoryID=4,isPvpActivity=true,isRatedPvpActivity=true,maxNumPlayers=3,fullName="Rated PvP"}
  g.listing.activityID=4;g:Notify("listing")

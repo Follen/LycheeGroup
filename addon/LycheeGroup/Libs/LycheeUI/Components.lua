@@ -424,7 +424,7 @@ function C.CheckMark(parent,color)
   local line=mark:CreateTexture(nil,"ARTWORK");line:SetSize(stroke[1],1.5)
   line:SetPoint("CENTER",stroke[2],stroke[3]);line:SetRotation(stroke[4]);mark.strokes[#mark.strokes+1]=line
  end
- function mark:SetColor(value) for _,line in ipairs(self.strokes) do line:SetColorTexture(unpack(value)) end end
+ function mark:SetColor(value) self.color=value;for _,line in ipairs(self.strokes) do line:SetColorTexture(unpack(value)) end end
  mark:SetColor(Value(color or "onSecondaryContainer"))
 
  return mark
@@ -1482,7 +1482,7 @@ function C.GameIcon(parent,size)
 end
 function C.Glyph(parent,kind,size,color)
  local frame=CreateFrame("Frame",nil,parent);frame:SetSize(size,size)
- local image=C.Icon(frame,size);image:SetAllPoints();frame.texture=image;frame._lycheeTexture=image
+ local image=C.Icon(frame,size);image:SetAllPoints();frame.texture=image;frame._lycheeTexture=image;image._lycheeGlyph=frame
  image:SetTexture(T.media..kind..".tga");image:SetTexCoord(0,1,0,1)
  function frame:SetSelected(selected,hovered) UI:SetIconState(image,selected,hovered) end
  function frame:SetTexture(file) image:SetTexture(file) end
@@ -1718,12 +1718,18 @@ end
 function Library.Context:SetIconState(icon,selected,hovered)
  icon=icon._lycheeTexture or icon
  local gray=not selected
- if icon:IsDesaturated()~=gray then icon:SetDesaturated(gray) end
+ if not self.C._OwnsIconStyle(icon,"desaturated",gray) and icon:IsDesaturated()~=gray then icon:SetDesaturated(gray) end
+ local alpha=selected and 1 or hovered and self.Theme.iconHoverAlpha or self.Theme.iconIdleAlpha
+ local ownAlpha=self.C._OwnsIconStyle(icon,"alpha",alpha)
+ local preserveAlpha=ownAlpha and icon:GetAlpha()
  local value=selected and 1 or hovered and self.Theme.iconHoverTint or self.Theme.iconIdleTint
  local byte=math.floor(value*255+.5)
- local r,g,b=icon:GetVertexColor()
- if not SameIconChannel(r,value,byte) or not SameIconChannel(g,value,byte) or not SameIconChannel(b,value,byte) then icon:SetVertexColor(value,value,value) end
- local alpha=selected and 1 or hovered and self.Theme.iconHoverAlpha or self.Theme.iconIdleAlpha
- if not SameIconChannel(icon:GetAlpha(),alpha,math.floor(alpha*255+.5)) then icon:SetAlpha(alpha) end
+ if not self.C._OwnsIconStyle(icon,"color",value) then
+  local r,g,b=icon:GetVertexColor()
+  if not SameIconChannel(r,value,byte) or not SameIconChannel(g,value,byte) or not SameIconChannel(b,value,byte) then icon:SetVertexColor(value,value,value) end
+ end
+ local effectiveAlpha=ownAlpha and preserveAlpha or alpha
+ if not SameIconChannel(icon:GetAlpha(),effectiveAlpha,math.floor(effectiveAlpha*255+.5)) then icon:SetAlpha(effectiveAlpha) end
+ self.C._ObserveIconAlpha(icon,alpha)
 end
 

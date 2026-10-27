@@ -7,7 +7,7 @@ local active, timer
 local function SelectedRoles()
     if not IsInGroup() or UnitIsGroupLeader("player") or InCombatLockdown() then return end
     if not C_LFGList.GetRoleCheckInfo or not C_LFGList.GetRoleCheckInfo() then return end
-    local roles = A.charPrefs and A.charPrefs.applicationRoles
+    local roles = A:GetSetting("applicationRoles")
     if type(roles) ~= "table" then return end
     local tank, healer, damage = roles.TANK == true, roles.HEALER == true, roles.DAMAGER == true
     if not tank and not healer and not damage then return end

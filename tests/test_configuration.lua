@@ -14,6 +14,48 @@ end
 local scale="settings.fontScale"
 local function User(store,key) return store.uiConfig.user[key] end
 
+-- Pack defaults are distinct from an explicit selection and per-setting choices.
+do
+ local account,character={},{};local a,c=Reload(account,character)
+ T.eq(c:GetPresetStatus().followingDefault,true);T.eq(c:GetPresetStatus().defaultConfigured,false)
+ T.ok(c:RegisterPreset("suite",1,{[scale]=110},{storage="account",default=true}))
+ T.eq(c:Get(scale),110);T.eq(account.uiConfig.activePreset,nil);T.eq(User(account,scale),nil)
+ T.eq(c:GetPresetStatus().selected.id,"suite");T.eq(c:GetPresetStatus().followingDefault,true)
+ T.ok(c:Set({[scale]=115},{storage="character"}))
+ T.ok(c:RegisterPreset("suite",2,{[scale]=120},{storage="account",default=true}))
+ T.eq(c:Get(scale),115,"pack upgrades keep user overrides")
+ T.ok(c:Reset(scale,{storage="character"}));T.eq(c:Get(scale),120,"reset reveals the current pack default")
+ T.ok(c:ActivatePreset(false,{storage="character"}));T.eq(c:Get(scale),100)
+ T.eq(c:GetPresetStatus().followingDefault,false)
+ T.ok(c:RegisterPreset("another",1,{[scale]=105},{storage="account",default=true}))
+ T.eq(c:Get(scale),100,"new defaults cannot re-enable an explicitly disabled preset")
+ a,c=Reload(account,character);T.eq(c:Get(scale),100);T.eq(c:GetPresetStatus().default.id,"another")
+ T.ok(c:UseDefaultPreset({storage="character"}));T.eq(c:Get(scale),105)
+ T.ok(c:ActivatePreset("suite",{storage="account"}))
+ T.ok(c:SetDefaultPreset("another",{storage="character"}));T.eq(c:Get(scale),120,"an account choice beats a character default")
+ T.ok(c:UseDefaultPreset({storage="account"}));T.eq(c:Get(scale),105)
+ T.ok(c:SetDefaultPreset(false,{storage="session"}));T.eq(c:Get(scale),100)
+ T.eq(c:GetPresetStatus().defaultConfigured,true)
+ T.ok(c:SetDefaultPreset(nil,{storage="session"}));T.eq(c:Get(scale),105)
+ T.ok(c:RegisterPreset("another",2,{[scale]=125},{storage="character"}))
+ T.eq(c:Get(scale),125,"character package definitions shadow account definitions")
+ T.ok(c:RemovePreset("another",{storage="character"}));T.eq(c:Get(scale),105)
+ T.eq(c:GetPresetStatus().default.selectionStorage,"account")
+ T.ok(c:RemovePreset("another",{storage="account"}));T.eq(c:Get(scale),100)
+ T.eq(c:GetPresetStatus().defaultConfigured,false)
+ T.ok(c:SetDefaultPreset("suite",{storage="account"}))
+ local before=account.uiConfig.presets.suite;local default=account.uiConfig.defaultPreset
+ T.eq(c:RegisterPreset("broken",1,{unknown=1},{storage="account",default=true}),false)
+ T.eq(c:RegisterPreset("broken",1,{[scale]=105},{storage="account",default="yes"}),false)
+ T.eq(c:SetDefaultPreset("missing",{storage="account"}),false)
+ T.eq(c:SetDefaultPreset(true,{storage="account"}),false)
+ T.eq(account.uiConfig.presets.suite,before);T.eq(account.uiConfig.defaultPreset,default)
+ T.eq(account.uiConfig.presets.broken,nil)
+ a,c=Reload(account,{});T.eq(c:Get(scale),120,"new characters inherit account pack defaults")
+ local state=c:GetPresetStatus();state.selected.id="caller mutation"
+ T.eq(c:GetPresetStatus().selected.id,"suite")
+end
+
 -- A scoped schema query copies only selected leaves and preserves copy ownership.
 do
  local a,c=Reload({},{})

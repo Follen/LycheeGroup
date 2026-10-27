@@ -78,15 +78,16 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  local apply=g.Apply;g.Apply=function() return false,"Rejected submission" end
  Click(modal.submit)
  Check(modal.error:GetText()=="Rejected submission" and not application:IsAutoApplyEnabled(),"failed submission cannot commit activation")
- Check(a.charPrefs.autoApply~=true and a.charPrefs.applicationRoles==nil,"failed submission saves neither automation nor role defaults")
+ Check(a.charPrefs.autoApply~=true and a:GetSetting("applicationRoles")==false,"failed submission saves neither automation nor role defaults")
  Click(modal.cancel);application:OpenApplicationSettings(42)
  Check(not modal.autoApply.value,"a failed and cancelled request leaves no checkbox draft")
  Click(modal.autoApply);g.Apply=apply;Click(modal.submit)
  Check(application:IsAutoApplyEnabled() and a.charPrefs.autoApply==true and u.activeModal==nil,"successful application commits requested activation")
  Check(LFGListApplicationDialog.submissions==1,"successful confirmation still uses the production application path")
  local savedRoles=a.charPrefs.applicationRoles
- application:OpenApplicationSettings(42);modal.roles.DAMAGER:Fire("OnClick");Click(modal.submit)
- Check(a.charPrefs.applicationRoles==savedRoles,"an enabled one-off application retains the configured automatic roles")
+ local editedRole=savedRoles.TANK and "DAMAGER" or "TANK"
+ application:OpenApplicationSettings(42);modal.roles[editedRole]:Fire("OnClick");Click(modal.submit)
+ Check(a.charPrefs.applicationRoles~=savedRoles and a.charPrefs.applicationRoles[editedRole]==true,"a successful explicitly edited application updates automatic roles")
  for _,percent in ipairs({70,100,130}) do
   a:SetSetting("fontScale",percent);application:OpenApplicationSettings();application:LayoutApplication()
   local available=modal.frame:GetWidth()-48-modal.submit:GetWidth()-8-modal.cancel:GetWidth()
@@ -94,6 +95,64 @@ for _,locale in ipairs({"zhCN","enUS"}) do
   Check(modal.autoApply.label:GetStringHeight()<=modal.autoApply:GetHeight(),"the checkbox label fits its click area at "..percent)
   u:CloseModal()
  end
+ u:Hide(true)
+
+ -- An enabled healer preference must accept an explicit DPS correction only
+ -- after successful submission, then use it for later applications and reload.
+ local corrected={autoApply=true,applicationRoles={TANK=false,HEALER=true,DAMAGER=false}}
+ f,a,u,g,application,find=Fixture(locale,corrected)
+ dialog=LFGListApplicationDialog;dialog.available={TANK=false,HEALER=true,DAMAGER=true}
+ for _,id in ipairs({42,43}) do g.records[id]={id=id,name="Role correction",activityID=2,numMembers=1,maxNumPlayers=5,age=1} end
+ local function CorrectDPS()
+  application:OpenApplicationSettings(42)
+  Check(application.applicationLease.roles.HEALER==true,"saved healer selection is shown before correction")
+  application:SetApplicationRole("HEALER");application:SetApplicationRole("DAMAGER")
+ end
+ local originalRoles=corrected.applicationRoles
+ CorrectDPS();apply=g.Apply;g.Apply=function() return false,"Rejected correction" end;Click(application.applicationModal.submit)
+ Check(corrected.applicationRoles==originalRoles and a:GetSetting("applicationRoles").HEALER==true,"failed correction does not save roles")
+ Click(application.applicationModal.cancel);g.Apply=apply
+ CorrectDPS();Click(application.applicationModal.cancel)
+ Check(corrected.applicationRoles==originalRoles,"cancelled correction does not save roles")
+ CorrectDPS();Click(application.applicationModal.submit)
+ Check(dialog.submitted.damage and not dialog.submitted.healer,"successful correction submits DPS to the requested group")
+ Check(a:GetSetting("applicationRoles").DAMAGER==true and a:GetSetting("applicationRoles").HEALER==false,"successful correction persists the new automatic role")
+ local correctedRoles=corrected.applicationRoles
+ Check(application:Apply(43),"the next automatic application succeeds")
+ Check(dialog.submitted.damage and not dialog.submitted.healer and corrected.applicationRoles==correctedRoles,"next automatic application uses DPS without another preference write")
+ u:Hide(true);f,a,u,g,application,find=Fixture(locale,corrected)
+ dialog=LFGListApplicationDialog;dialog.available={TANK=false,HEALER=true,DAMAGER=true}
+ application:OpenApplicationSettings()
+ Check(application.applicationLease.roles.DAMAGER==true and not application.applicationLease.roles.HEALER,"explicit correction survives a full reload")
+ u:CloseModal()
+
+ -- Fixed healer teaching data is private, including edited roles while the
+ -- tutorial's auto-apply is enabled and stale modal callbacks after exit.
+ for line in io.lines("addon/LycheeGroup_Guide/LycheeGroup_Guide.toc") do
+  local file=line:match("^%s*(.-)%s*$");if file~="" and file:sub(1,1)~="#" then dofile("addon/LycheeGroup_Guide/"..file) end
+ end
+ local guide=a.Guide;Check(guide:Open() and guide:Start(),"guide starts its private player")
+ local provider=u:GetGroup();Check(provider.player.role=="HEALER","the real DPS preference is tested against the guide's fixed healer")
+ local privateID;for _,id in ipairs(provider.recordIDs) do if not provider.Applications:IsActive(id) then privateID=id;break end end
+ application:OpenApplicationSettings();application:SetApplicationRole("HEALER");application:SetAutoApply(true);Click(application.applicationModal.submit)
+ Check(provider.prefs.autoApply==true and provider.prefs.applicationRoles.HEALER==true,"guide saves healer automation privately")
+ application:OpenApplicationSettings(privateID);application:SetApplicationRole("HEALER");application:SetApplicationRole("DAMAGER");Click(application.applicationModal.submit)
+ Check(provider.prefs.applicationRoles.DAMAGER==true and provider.prefs.applicationRoles.HEALER==false,"guide applies the same explicit correction rule to private preferences")
+ Check(corrected.applicationRoles==correctedRoles and a:GetSetting("applicationRoles").DAMAGER==true,"teaching confirmation cannot change real DPS preferences")
+ guide:Stop("interrupted");Click(application.applicationModal.submit)
+ Check(u.preview==nil and application.previewApplication==nil and corrected.applicationRoles==correctedRoles,"guide exit releases the lease before a stale callback can write real preferences")
+ application:OpenApplicationSettings();Check(application.applicationLease.roles.DAMAGER==true and not application.applicationLease.roles.HEALER,"leaving the healer tutorial restores the real DPS choice")
+ u:Hide(true)
+
+ -- An untouched confirmation must not turn a package role default into a user
+ -- override merely because it successfully applies while automation is on.
+ f,a,u,g,application,find=Fixture(locale,{autoApply=true})
+ dialog=LFGListApplicationDialog;dialog.available={TANK=false,HEALER=true,DAMAGER=true}
+ Check(a.Configuration:RegisterPreset("roles",1,{["settings.applicationRoles"]={HEALER=true}},{storage="account",default=true}),"package role default installs")
+ g.records[42]={id=42,name="Unedited default",activityID=2,numMembers=1,maxNumPlayers=5,age=1}
+ application:OpenApplicationSettings(42);Check(not application.applicationLease.rolesEdited,"preselection alone is not an edit")
+ Click(application.applicationModal.submit)
+ Check(dialog.submitted.healer and a.charPrefs.uiConfig.user["settings.applicationRoles"]==nil,"successful unedited confirmation leaves the package default unpinned")
  u:Hide(true)
 
  -- Preview uses its own flag and roles; all real submission paths are trapped.

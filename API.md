@@ -1,6 +1,6 @@
 # LycheeGroup 配置与主题 API
 
-本页维护 1.2.4 引入的 API v2。验证方法见 [tests/theme_reload.md](tests/theme_reload.md)，当前结果见 [perfermance.md](perfermance.md)，开发约束见 [Development.md](Development.md)。插件发布版本为 1.2.5；浮窗接入继续使用独立的 `API.Floating` v1，见[架构文档](Architecture.md#92-浮窗公开接口)。
+本页维护 1.2.4 引入的 API v2，含当前未发布的默认偏好包扩展。验证方法见 [tests/theme_reload.md](tests/theme_reload.md)，当前结果见 [perfermance.md](perfermance.md)，开发约束见 [Development.md](Development.md)。插件发布版本为 1.2.6；浮窗接入继续使用独立的 `API.Floating` v1，见[架构文档](Architecture.md#92-浮窗公开接口)。
 
 DataBroker 等独立状态展示可使用 `API.Floating:Subscribe(callback, {background=true})`，在独立浮窗关闭时继续取得申请摘要；取消订阅同时释放后台状态需求。悬停可调用 `API.Floating:ShowPopup(owner, anchor)` 临时展开共用列表，移出用 `HidePopup(owner)`，宿主隐藏用 `HidePopup(owner, true)`；这不搬移入口图标，独立浮窗关闭时仍可使用。其余挂载与状态合同继续见上述浮窗接口文档。
 
@@ -47,6 +47,8 @@ local ok, err = LycheeGroup.API.Theme:Import(definition, {storage = "account"})
 `name` 是可选的非空显示名称，设置页的主题列表使用它；旧包未提供名称时显示 `id`。名称随导出保留，仅修改名称不会要求重载。内置主题为 `lycheegroup.default`（默认主题）和 `lycheegroup.frosted`（透明毛玻璃）；这两个 ID 不允许导入覆盖或删除。复制默认模板创建第三方主题时，使用自己的 ID。
 
 `appearance.main` 和 `appearance.floating` 支持 `tokens`、`components`、`elements`、`utilities`。组件与元素可声明固定的 `base`、`states`、`variants`，元素还可组合 `classes` 和模板 `instances`。命名工具样式及状态前缀的语法见 [LycheeUI API](https://github.com/Follen/LycheeUI/blob/v1.0.0/API.md)。
+
+产品 token `gameTextTint` 分别作用于主窗、提示和浮窗的职业色、评分色及钥石等级文字。默认 `{1,1,1,1}` 保留游戏原色；前三通道分别乘到原颜色上，不修改原色表、角色数据或图标。声明图标颜色后，控件的选中、悬停刷新保留该颜色，未声明的透明度和灰度仍正常反馈。当前内置库包含这一通用所有权修复，候选身份与实际哈希见 [LycheeUI .lock](addon/LycheeGroup/Libs/LycheeUI/.lock)。
 
 `settings` 仅接收默认模板列出的 UI 设置，例如字体、字号、主窗与浮窗比例、动效、语言、入口和成员图标。自动申请、笔记、提醒、历史等业务设置使用 Configuration。`layout` 接收已有窗口、表格和位置偏好。主题提供默认值，玩家已保存的偏好继续优先。
 
@@ -175,13 +177,101 @@ Configuration 保存位置为 `session`、`account`、`character`，省略为 `s
 | `GetSchema(key)` | 指定键或全部实时设置目录 |
 | `Set(values, options)` | 一批扁平键值写用户层，整批验证 |
 | `Reset(keyOrKeys, options)` | 清除所选位置的一项或多项用户偏好 |
-| `RegisterPreset(id, revision, values, options)` | 注册或替换偏好包，不改变选择 |
+| `RegisterPreset(id, revision, values, options)` | 注册或替换偏好包；`default=true` 同时将其设为默认候选，不覆盖明确选择 |
 | `ActivatePreset(idOrFalse, options)` | 选择偏好包或明确关闭偏好包 |
 | `ApplyPreset(id, revision, values, options)` | 原子注册并选择偏好包 |
-| `RemovePreset(id, options)` | 删除该位置的定义和同 ID 选择 |
+| `SetDefaultPreset(idOrFalseOrNil, options)` | 指定默认候选；`false` 默认不使用偏好包，`nil` 清除此位置的候选 |
+| `UseDefaultPreset(options)` | 清除此位置的明确选择，重新按保存位置查找 |
+| `GetPresetStatus()` | 查询有效选择、默认候选、是否跟随默认及缺失定义错误 |
+| `RemovePreset(id, options)` | 删除该位置的定义和同 ID 明确选择、默认候选 |
 | `ListPresets()`、`ExportPreset(id)` | 查询定义、位置和有效选择，或导出定义副本 |
 
 偏好包只能包含实时设置与布局键。包升级用 RegisterPreset 替换默认值并保留用户层，不使用 Set 将包默认值逐项固定为用户选择。相同有效值写入仍记录明确用户意图，有效值未变时跳过无效界面刷新。输入与公开返回值均隔离复制。
+
+偏好包选择顺序为：会话明确选择 → 角色明确选择 → 账号明确选择 → 会话默认候选 → 角色默认候选 → 账号默认候选。明确选择 `false` 也优先于所有默认候选。定义按会话、角色、账号查找；同 ID 上层定义遮蔽下层定义。`UseDefaultPreset` 只清除指定位置的明确选择，其他位置的选择仍有效。
+
+`GetPresetStatus()` 返回 `selected`、`default`、`followingDefault`、`defaultConfigured`。前两项含 `id`（未用包时为 `false`）、`selectionStorage`（选择保存位置）；找到定义时另含 `storage` 和 `revision`，缺失时含 `error`。`selected` 是最终使用的候选；是否来自默认选择由 `followingDefault` 区分。
+
+整合包作者可以在自己的加载入口注册一次，更新时保留 ID 并替换 revision 和 values：
+
+```lua
+local config = LycheeGroup.API.Configuration
+local ok, err = config:RegisterPreset("myaddon.defaults", 2, {
+    ["settings.fontScale"] = 110,
+    ["settings.toggleBinding"] = "CTRL-G",
+    ["settings.autoApply"] = false,
+    ["settings.applicationRoles"] = {DAMAGER = true},
+    ["settings.creationRaidDifficultyID"] = 15,
+    ["layout.window.width"] = 1400,
+    ["layout.tables.findResults.widths.title"] = 0.22,
+    ["layout.tables.createApplicants.sortKey"] = "rating",
+    ["layout.tables.createApplicants.descending"] = true,
+}, {storage = "account", default = true})
+
+-- 用户自己调整后，即使作者再次注册升级，用户值仍优先。
+config:Set({["settings.fontScale"] = 100}, {storage = "character"})
+-- 用户重置这项后，重新继承包的 110。
+config:Reset("settings.fontScale", {storage = "character"})
+```
+
+配置包提供默认值时使用 `RegisterPreset(..., {default=true})`。`ApplyPreset` 会记录明确选择，适用于玩家主动应用整包的操作。上述写入均可在 UI 和业务包尚未加载时完成，后建页面读取有效值。
+
+### 设置与布局覆盖范围
+
+完整键、默认值、类型和范围通过 `GetSchema()` 查询；列宽和排序的合法列随表格区分，不猜测列名。当前八张表为 `findResults`、`findRaidResults`、`findApplications`、`createApplicants`、`notesRecords`、`notesHistory`、`notesHistoryMembers`、`blockedLeaders`。
+
+| 内容 | 配置入口与含义 |
+| --- | --- |
+| 设置页普通偏好 | `settings.<控件键>`，包括语言、字体、字号、比例、动效、入口、声音、成员显示、笔记、提醒、历史及浮窗开关；保存范围见 Schema |
+| 主题选择 | `Theme:Import(..., {default=true})`、`Theme:SetDefault`，下次重载生效 |
+| 窗口与侧栏 | `layout.window.width/height`、`layout.find.railCollapsed`，按角色保存 |
+| 浮窗位置 | `layout.floating.position`，锚点表或 `false`（自动位置），按账号保存；“重置位置”清除账号用户值并继承包／主题默认 |
+| 表格 | `layout.tables.<表>.widths.<列>`、`.sortKey`、`.descending`；宽度是可用表宽的权重，受该列最小宽度约束。未提供时沿用列定义；重置清除角色用户宽度，重新继承有效默认 |
+| 打开快捷键 | `settings.toggleBinding`，键名字符串或 `false`，默认 `";"`；沿原生账号／角色按键方案管理 |
+| 自动申请 | `settings.autoApply`，布尔，默认 `false`，按角色保存 |
+| 申请职责 | `settings.applicationRoles`，`false` 或只含 `TANK`／`HEALER`／`DAMAGER` 布尔叶的表，按角色保存 |
+| 创建团本难度 | `settings.creationRaidDifficultyID`，`false` 或正整数，按角色保存；当前活动不可用时按原流程选择可用难度，不覆盖保存值 |
+| 页面固定外观 | Theme 的 token、component、element 和 utility；留白、字号、控件宽高、状态颜色通过声明提供启动默认 |
+
+职责值 `false` 使用既有的专精／队列职责预选；`{}` 或全部为 `false` 明确不选职责，需玩家选择后才能自动提交。进入页面、显示控件和计算活动可用性不会把默认值写成用户覆盖。包更新会刷新未编辑的申请职责；已编辑草稿保留到玩家提交。
+
+自动申请开启时，玩家在申请弹窗明确修改职责并成功申请，会把新职责保存为用户覆盖，后续自动申请及重载使用新值。取消、申请失败和仅预选不写；独立申请设置页的“保存”仍是明确保存操作。教学中的同类操作只修改教学 provider。
+
+快捷键默认只更新本插件自动分配且用户未修改的主键，不抢占其他功能已有按键。已有原生绑定和旧版本初始化记录保持原状；玩家录键或在暴雪界面修改主键后记为用户选择。仅调整第二键不锁定自动主键，默认升级保留第二键。战斗期间等待退出战斗；冲突键释放后的绑定更新事件可重新尝试。`Get` 返回配置意图，实际按键仍以原生绑定及设置页显示为准。
+
+表格在当前活动下没有某个排序列时，暂用可用排序；原排序偏好保留，列恢复后继续使用。配置更新发生在列宽拖动期间时，取消旧拖动，再应用新值。
+
+### 寻队分类与筛选默认
+
+`settings.find.category` 提供初始分类；每分类的默认放在 `settings.find.categories.<分类键>.<字段>`。启动登记 `seasonDungeon`、`seasonRaid`、`1`、`2`、`3`、`4`、`6`、`7`、`8`、`9`、`121` 共 11 个分类；客户端发现的额外数字分类随目录登记，保存后的分类在下次存档验证前恢复登记。可用分类和活动仍以客户端目录为准；作者写入前通过 Schema 查询已登记字段。每个字段独立解析和覆盖，不使用整表用户快照遮蔽其他默认。
+
+| 字段 | 值 |
+| --- | --- |
+| `groupKey`、`groupKeys` | 单个非零整数活动组键，或 `{[活动组键]=true}` 集合；`false`／空集合表示不限定 |
+| `tier`、`difficultyID`、`selected` | 资料片层级、难度及既有活动选择状态；`tier` 接受正整数或 `exp数字`，`difficultyID` 接受正整数，前两项也可为 `false`，`selected` 为布尔 |
+| `neededRole` | `false`、`TANK`、`HEALER`、`DAMAGER` |
+| `tankPresence`、`healerPresence`、`damagePresence` | `false`、`missing`、`present` |
+| `hideZeroScore`、`hideSameSpec`、`hideSameClass`、`hideSameClassRole`、`requireBloodlust`、`roleMatchAny` | 布尔；具体活动不适用的条件不进入实际筛选 |
+| `minRating`、`maxRating`、`minItemLevel`、`maxItemLevel`、`minMembers`、`maxMembers` | 整数或 `false`；人数按当前活动人数上限投影，配置原值保留 |
+| `social` | `false`、`friend`、`guild`、`any`、`positive`、`noCaution` |
+| `sort` | `false`、`newest`、`rating`、`itemLevel`、`members`；`false` 跟随 `settings.defaultSort`，与表头列排序分别管理 |
+
+这些字段默认按角色保存。正常控件操作只写实际改变的字段；“清空筛选”写明确的关闭值，`Reset` 才恢复继承。分类和活动可用性修正、普通刷新、打开和关闭页面不会固定包默认。修改包或公开设置会刷新适用的筛选，但不直接确认搜索；后续操作沿用原页面流程。
+
+关闭 `settings.rememberFilters` 后，持久的账号／角色寻队用户值暂不参与解析，仍保留在存档；此时 `Get`、`GetSource` 使用会话用户值 → 当前包 → 主题偏好 → 内置默认。单独切换记忆开关保留当前浏览状态和未提交的选择草稿，页面在换分类或重新进入时读取新的有效值。关闭期间的临时页面操作不写持久用户层；再次启用后，下次恢复页面偏好时使用持久筛选覆盖。预览与教学使用各自私有偏好。
+
+例如，把大秘境最低评分默认设为 2000、默认不要求嗜血：
+
+```lua
+config:RegisterPreset("myaddon.find", 1, {
+    ["settings.find.category"] = "seasonDungeon",
+    ["settings.find.categories.seasonDungeon.minRating"] = 2000,
+    ["settings.find.categories.seasonDungeon.requireBloodlust"] = false,
+}, {storage = "account", default = true})
+```
+
+同一时刻只选用一个偏好包；实际整合包应把这些叶与上面的字体、列宽等放入同一个 `values`。分两次注册不同 ID 不会叠加成多层默认。
+
 
 ## 旧数据迁移
 

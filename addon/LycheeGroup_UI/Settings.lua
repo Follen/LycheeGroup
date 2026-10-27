@@ -465,7 +465,7 @@ function P:BuildRow(parent,row,index)
   control=C.Button(holder,A.L.bindingChange,controlWidth,function() P:BeginBindingCapture() end);C.SetPoint(control,"RIGHT",control:GetParent(),"RIGHT","settingsControlRightX",0)
   holder:HookScript("OnHide",function() if P.bindingCapture==holder then P:CancelBindingCapture(true) end end)
  elseif row[4]=="action" then
-  control=C.Button(holder,S("重置位置","Reset position"),controlWidth,function() A.Appearance:SaveFloatingPosition(false) end)
+  control=C.Button(holder,S("重置位置","Reset position"),controlWidth,function() A.Configuration:Reset("layout.floating.position",{storage="account"}) end)
   C.SetPoint(control,"RIGHT",control:GetParent(),"RIGHT","settingsControlRightX",0)
  elseif row[4] then
   if row[1]=="applicantAlertSound" then

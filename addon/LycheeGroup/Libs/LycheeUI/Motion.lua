@@ -265,7 +265,11 @@ function M:Color(panel,target,duration)
  if duration and not UI:IsReducedMotion() and self.colors[panel]==target then return end
  self:Stop(panel,true)
  local from=panel.color
- if UI:IsReducedMotion() or not duration or from==target then panel:SetColor(target);return end
+ if not from then
+  local texture=panel._lycheeTexture or panel
+  if texture.GetVertexColor then from={texture:GetVertexColor()} end
+ end
+ if UI:IsReducedMotion() or not duration or not from or from==target then panel:SetColor(target);return end
  local elapsed,value=0,{}
  self.colors[panel]=target
  self:Start(panel,function(dt)

@@ -69,7 +69,7 @@ function UI:SetScore(region,score,kind)
  if region._score~=score or region._scoreKind~=kind or region._color~=nil then
   local color
   if mapScore then color=C_ChallengeMode.GetSpecificDungeonOverallScoreRarityColor(score) else color=self:ScoreColor(score) end
-  if color then region:SetTextColor(color.r,color.g,color.b) else region:SetTextColor(unpack(self.Theme.muted)) end
+  if color then region:SetTextColor(A.GroupPresentation.GameTextColor(self.Theme,color)) else region:SetTextColor(unpack(self.Theme.muted)) end
   region._score,region._scoreKind,region._color=score,kind,nil
  end
 end
@@ -77,7 +77,10 @@ function UI:ScoreText(score,kind)
  if type(score)~="number" or score<0 then return A:GetLocale()=="zhCN" and "未知分数" or "Unknown" end
  if score==0 then return A:GetLocale()=="zhCN" and "暂无" or "Unrated" end
  if kind=="pvp" then return tostring(math.floor(score)) end
- return self:ScoreColor(score):WrapTextInColorCode(tostring(math.floor(score)))
+ local color=self:ScoreColor(score);local tint=self.Theme.gameTextTint
+ if tint[1]==1 and tint[2]==1 and tint[3]==1 then return color:WrapTextInColorCode(tostring(math.floor(score))) end
+ local r,g,b=A.GroupPresentation.GameTextColor(self.Theme,color)
+ return ("|cff%02x%02x%02x%d|r"):format(math.floor(r*255+.5),math.floor(g*255+.5),math.floor(b*255+.5),math.floor(score))
 end
 function UI:MemberCountText(record)
  local maximum=record.maxNumPlayers

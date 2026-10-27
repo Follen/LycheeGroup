@@ -117,7 +117,7 @@ end
 -- Whole-product configuration; this entry does not load a UI or business package.
 local configuration={version=2}
 A.API.Configuration=configuration
-for _,name in ipairs({"Get","GetSource","GetSchema","Set","Reset","RegisterPreset","ActivatePreset","ApplyPreset","RemovePreset","ListPresets","ExportPreset"}) do
+for _,name in ipairs({"Get","GetSource","GetSchema","Set","Reset","RegisterPreset","ActivatePreset","ApplyPreset","SetDefaultPreset","UseDefaultPreset","GetPresetStatus","RemovePreset","ListPresets","ExportPreset"}) do
  local method=name
  configuration[method]=function(_,...) return A.Configuration[method](A.Configuration,...) end
 end

@@ -2,16 +2,16 @@
   "schema": 1,
   "library": "LycheeUI",
   "status": "frozen",
-  "version": "1.0.0",
-  "note": "V1.0.0：独立公开发布；包含原生控件、主题、样式、显式增强布局、静态容器条件、按需调度和分批文字行高索引。运行文本使用 LF，发布内容由标签和 SHA-256 固定。",
+  "version": "1.0.1",
+  "note": "V1.0.1 开发候选，未发布标签；修复声明样式与默认图标反馈的属性所有权。已验证受影响的通用合同，运行文本使用 LF，当前内容由 SHA-256 固定。",
   "runtimeFiles": [
     {
       "path": "Components.lua",
-      "sha256": "28d6092b20b4d59c8cddf1950e25a29f81e39ceb80b37f4b8bf24a2526aa57f5"
+      "sha256": "6ada699b2a1147defd3d65e13513e901888fb84aeedf54d4c278a57e080038af"
     },
     {
       "path": "Core.lua",
-      "sha256": "145bac840ef2d20e63a71977c55cf27c493ac47736433fe45193659d8bbda0c8"
+      "sha256": "a1a7283b2ee2b5321ec8529c034fea45f939525ec7577198839033548de6a3c2"
     },
     {
       "path": "Elements.lua",
@@ -107,11 +107,11 @@
     },
     {
       "path": "Menu.lua",
-      "sha256": "06ebad32c933c7b500967f9fbd8de8ab1888a9102e5fa42ddd499ad00cfd63cd"
+      "sha256": "ba45194d9841a22f10e8ce0aea87a6cc52bbd0b18abfcf2d199133deba1d147a"
     },
     {
       "path": "Motion.lua",
-      "sha256": "af4360c01eca76351eb7c5f9ca031321be8cf63143829ef5364eac1cc4c56e21"
+      "sha256": "a27c042b1218f62213ba93f8e54303ac6213b7a1f0d798957a2b1d0a55bc2542"
     },
     {
       "path": "Native.lua",
@@ -123,23 +123,24 @@
     },
     {
       "path": "Styles.lua",
-      "sha256": "2f3790d737f0a94db8cdae836b457bfa80ef65c254d4c1ab2a07e567ba9ec762"
+      "sha256": "5af996384e1b4794fe1c7a1540af1f70975cafe918dc64836d17a7cd4ac6ac40"
     },
     {
       "path": "Theme.lua",
       "sha256": "ef3da514cd40133823f37e2d9d9d2fef84603ee7f2e0122bc22c3e0969e9d0ab"
     }
   ],
-  "frozenOn": "2026-10-26",
+  "frozenOn": "2026-10-27",
   "maintenance": {
-    "scope": "冻结 runtimeFiles 列出的运行源码、加载清单与通用素材；公开 API 和组件行为以 V1.0.0 合同为准。",
+    "scope": "冻结 runtimeFiles 列出的运行源码、加载清单与通用素材；公开 API 和组件行为以当前 API.md 合同为准。",
     "consumerBoundary": "产品页面、业务数据、品牌图形与轨迹、产品默认样式由消费方维护；消费方开发不得顺带修改或升级共享库。",
     "changeConditions": "用户明确要求修改 LycheeUI，或明确要求解决必须修改该库的问题时，在该授权范围内维护；已有授权无需逐次确认。",
     "sourceOfTruth": "先修改独立源库，再通过消费方同步脚本更新内置副本；不得直接修补内置副本或反向覆盖源库。",
     "validation": "运行文件变化后执行受影响的通用合同验证，核对消费方接入；验证完成后为新版本更新实际文件清单与 SHA-256，并重新冻结。文档修改不改变运行版本；已发布标签和运行内容不原位覆盖。",
     "integrity": "同步前核对冻结清单和哈希；存在差异时定位来源，不通过重写哈希掩盖未经确认的源码变化。运行文本保持 LF。"
   },
-  "loadVersion": 10000,
+  "loadVersion": 10001,
   "repository": "https://github.com/Follen/LycheeUI",
-  "tag": "v1.0.0"
+  "tag": null,
+  "baseTag": "v1.0.0"
 }

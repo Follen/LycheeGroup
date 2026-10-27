@@ -1208,6 +1208,8 @@ do
  local function Row(key) for _,row in ipairs(find.activities.rows) do if row.key==key then return row end end;error("missing activity row "..key) end
  local function Difficulty(id) for _,button in ipairs(find.difficultyButtons) do if button.value==id and button:IsShown() then button:Fire("OnClick");return end end;error("missing difficulty "..tostring(id)) end
  local function Check(key) Row(key).multiSelect:Fire("OnClick") end
+ -- This catalog scenario starts pending, independent of the prior explicit All choice.
+ T.ok(A.Configuration:Set({["settings.find.categories.seasonDungeon.selected"]=false},{storage="character"}))
  find:SelectCategory("seasonRaid")
  T.eq(Row(0).title:GetText(),"全部副本","the seasonal raid menu restores an explicit all-instances entry")
  find:SelectCategory("seasonDungeon")
@@ -1286,8 +1288,11 @@ do
  T.eq(find.emptyText:GetText(),"请选择副本")
  find:ClosePicker();find:SelectCategory("2")
  T.same(G.filters.groupKeys,{[201]=true});T.eq(Row(201).multiSelect:GetChecked(),true,"closing the expansion draft restores the last confirmed collection")
- local saved=G.prefs.find.categoryPrefs.seasonDungeon
- saved.groupKey=nil;saved.groupKeys={[201]=true,[203]=true,[999]=true};saved.difficultyID=8
+ T.ok(A.Configuration:Set({
+  ["settings.find.categories.seasonDungeon.groupKey"]=false,
+  ["settings.find.categories.seasonDungeon.groupKeys"]={[201]=true,[203]=true,[999]=true},
+  ["settings.find.categories.seasonDungeon.difficultyID"]=8,
+ },{storage="character"}))
  find:SelectCategory("seasonRaid");find:SelectCategory("seasonDungeon")
  T.same(G.filters.groupKeys,{[201]=true},"restoration excludes removed groups and groups without the chosen keystone activity")
  Row(0):Fire("OnClick","LeftButton");Difficulty(false)
@@ -1680,7 +1685,7 @@ do
  T.eq(U.Application.applicationLease.id,102);T.eq(dialog.Description:GetParent(),U.Application.applicationModal.note)
  T.eq(U.Application.applicationLease.roles.TANK,true,"first confirmation prefers the current specialization")
  T.eq(U.Application.applicationPrefs and U.Application.applicationPrefs.roles,nil,"preselection does not confirm saved roles")
- T.eq(A.charPrefs.applicationRoles,nil,"opening a default selection does not persist it")
+ T.eq(A.charPrefs.uiConfig.user["settings.applicationRoles"],nil,"opening a default selection does not persist it")
  U:CloseModal();T.eq(dialog.submissions,before)
  _G.GetSpecializationRole=function() return "HEALER" end
  find:Apply(102);T.eq(U.Application.applicationLease.roles.DAMAGER,true,"an unavailable specialization falls back to an available queue role")
@@ -1755,15 +1760,15 @@ do
  modal.roles.DAMAGER:Fire("OnClick");modal.roles.TANK:Fire("OnClick");modal.submit:Fire("OnClick")
  T.eq(dialog.submissions,before+4);T.eq(dialog.submitted.note,"Manual application note")
  T.eq(dialog.submitted.damage,true);T.eq(dialog.submitted.tank,false)
- T.same(U.Application.applicationPrefs.roles,{TANK=true},"manual application does not replace the automatic role configuration")
- T.same(A.charPrefs.applicationRoles,{TANK=true,HEALER=false,DAMAGER=false},"one-off overrides do not replace the character's saved automatic roles")
+ T.same(U.Application.applicationPrefs.roles,{DAMAGER=true},"successfully edited application replaces the automatic role configuration")
+ T.same(A.charPrefs.applicationRoles,{TANK=false,HEALER=false,DAMAGER=true},"explicitly edited successful roles persist for this character")
  dialog.Description.EditBox:UserType("Updated native note")
- dialog.available.TANK=false;find:Apply(102)
+ dialog.available.DAMAGER=false;find:Apply(102)
  T.eq(dialog.submissions,before+4,"an unavailable remembered role cannot be submitted")
  T.eq(modal.submit:IsEnabled(),false)
- modal.roles.DAMAGER:Fire("OnClick");modal.submit:Fire("OnClick")
- T.eq(dialog.submissions,before+5);T.eq(dialog.submitted.damage,true)
- dialog.available.TANK=true
+ modal.roles.TANK:Fire("OnClick");modal.submit:Fire("OnClick")
+ T.eq(dialog.submissions,before+5);T.eq(dialog.submitted.tank,true);T.eq(dialog.submitted.damage,false)
+ dialog.available.DAMAGER=true
  find.autoApply:Fire("OnClick");T.eq(U.Application:IsAutoApplyEnabled(),false)
  find:Apply(102);T.eq(dialog.submissions,before+5,"turning the switch off immediately restores confirmation")
  T.eq(U.Application.applicationLease.id,102);U:CloseModal()
@@ -2156,6 +2161,8 @@ find:SetFiltersOpen(true);T.ok(U.Motion.jobs[find.filterPanel]);find:SetFiltersO
 find:SelectCategory("seasonDungeon");T.ok(U.Motion.jobs[find.picker]);find:ClosePicker();T.eq(U.Motion.jobs[find.picker],nil)
 A:SetSetting("reduceMotion",false);G.state="searching";find:ReadSearchState();T.ok(U.Motion.jobs[find.busyIcon],"only an active search animates the lychee")
 find:ShowApplicationLimit();local closingRecords=G.records
+-- Close animation coverage keeps a confirmed browse even when memory is disabled.
+T.ok(A.Configuration:Set({["settings.find.categories.seasonDungeon.selected"]=true}))
 local applicationClock=find.countdown
 U:Hide(true);T.eq(next(U.Motion.jobs),nil,"closing releases scroll, tooltip and waiting jobs")
 T.eq(find.countdown,nil,"closing releases the application countdown")

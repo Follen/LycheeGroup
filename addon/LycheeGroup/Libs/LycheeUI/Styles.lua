@@ -362,7 +362,7 @@ function Library.AttachStyles(UI,C)
   local method=methods[key];if method then return Object(target,key)[method[2]] end
   return target.SetWidth and target.SetHeight
  end
- local Winner
+ local Winner,ObserveIconAlpha
  local function FontPreserve(target)
   local text=Text(target)
   return ((Winner(target,"spacing") or text~=target and Winner(text,"spacing")) and 1 or 0)+(Winner(text,"height") and 2 or 0)+((Winner(target,"justifyV") or text~=target and Winner(text,"justifyV")) and 4 or 0)
@@ -386,8 +386,14 @@ function Library.AttachStyles(UI,C)
   end
   Dimension("width","minWidth","maxWidth");Dimension("height","minHeight","maxHeight")
   if part.radius~=nil then target:SetRadius(Value(part.radius)) end
-  if part.alpha~=nil then if immediate or duration==0 then target:SetAlpha(Value(part.alpha)) else UI.Motion:Alpha(target,Value(part.alpha),duration or UI.Theme.feedbackDuration) end end
+  -- Texture color and alpha share a native channel. Preserve another alpha
+  -- owner when this patch only changes color, including a Glyph texture slot.
+  local texture=target._lycheeTexture or target
+  local preserveAlpha=part.color~=nil and (texture~=target or part.alpha==nil) and texture.GetVertexColor and Winner(texture,"alpha") and texture:GetAlpha()
   if part.color~=nil then local color=Value(part.color);if target.SetColor then if immediate or duration==0 then target:SetColor(color) else UI.Motion:Color(target,color,duration or UI.Theme.feedbackDuration) end elseif Text(target).SetTextColor then local text=Text(target);text:SetTextColor(unpack(color));text._color=color else target:SetVertexColor(unpack(color)) end end
+  if preserveAlpha and not Equal(texture:GetAlpha(),preserveAlpha) then texture:SetAlpha(preserveAlpha) end
+  if part.alpha~=nil then if immediate or duration==0 then target:SetAlpha(Value(part.alpha)) else UI.Motion:Alpha(target,Value(part.alpha),duration or UI.Theme.feedbackDuration) end end
+  if (part.alpha~=nil or preserveAlpha) and ObserveIconAlpha then ObserveIconAlpha(texture) end
   local text=Text(target)
   local preserve;if part.fontSize~=nil or part.lineHeight~=nil or part.singleLine~=nil or part.flags~=nil then preserve=FontPreserve(target) end
   if part.fontSize~=nil then C.DefaultFont(text,part.fontSize,part.flags or select(3,text:GetFont()),preserve) end
@@ -500,12 +506,51 @@ function Library.AttachStyles(UI,C)
   if not ok then error(message,0) end
   return out
  end
- function C.OwnsStyle(host,slot,key,value)
-  local controller=host._lycheeStyleController;local record=controller and controller.records[slot]
-  if not record or not record.rule.properties[key] then return false end
-  record.base[key]=value
-  return true
+ -- Shared icon feedback acts on a Texture even when a declaration names its
+ -- public Glyph Frame or a host's differently named slot. Consult those local
+ -- records rather than the feedback caller's Context/slot names. Keep the
+ -- latest default as the release/state-exit baseline for every active owner.
+ local function OwnsTargetStyle(target,key,value,iconColor)
+  if not target then return false end
+  local winner=Winner(target,key)
+  for record in pairs(target._lycheeFixedRecords or empty) do if record.rule.properties[key] then
+   if iconColor then
+    local base=record.base[key]
+    if type(base)~="table" or base[1]~=value or base[2]~=value or base[3]~=value then record.base[key]={value,value,value,type(base)=="table" and base[4] or 1} end
+   elseif value~=nil then record.base[key]=value end
+  end end
+  return winner~=nil and RuleValue(winner,key)~=nil
  end
+ function C.OwnsStyle(host,slot,key,value)
+  local controller=host._lycheeStyleController
+  local target=controller and controller.slots[slot] or (slot=="root" and host)
+  return OwnsTargetStyle(target,key,value)
+ end
+ function C._OwnsIconStyle(texture,key,value)
+  local ownTexture=OwnsTargetStyle(texture,key,value,key=="color")
+  local ownGlyph=OwnsTargetStyle(texture._lycheeGlyph,key,value,key=="color")
+  return ownTexture or ownGlyph
+ end
+ local function ObserveIconTarget(target,r,g,b,a,defaultAlpha)
+  if not target then return end
+  for record in pairs(target._lycheeFixedRecords or empty) do if record.rule.properties.color then
+   local applied,base=record.applied.color,record.base.color
+   -- Only adopt the alpha side effect of a library-owned alpha write. A
+   -- foreign RGB write still breaks ownership and must survive release.
+   if type(applied)=="table" and Equal(r,applied[1]) and Equal(g,applied[2]) and Equal(b,applied[3]) then applied[4]=a end
+   if defaultAlpha~=nil and type(base)=="table" and base[4]~=defaultAlpha then record.base.color={base[1],base[2],base[3],defaultAlpha} end
+  end end
+ end
+ ObserveIconAlpha=function(target,defaultAlpha)
+  local texture=target._lycheeTexture or target
+  local glyph=texture._lycheeGlyph
+  if not next(texture._lycheeFixedRecords or empty) and not (glyph and next(glyph._lycheeFixedRecords or empty)) then return end
+  if not texture.GetVertexColor then return end
+  local r,g,b,a=texture:GetVertexColor()
+  ObserveIconTarget(texture,r,g,b,a,defaultAlpha)
+  ObserveIconTarget(glyph,r,g,b,a,defaultAlpha)
+ end
+ C._ObserveIconAlpha=ObserveIconAlpha
  local function ProtectedRefresh(self,...)
   local value=self._lycheeBusinessRefresh(self,...);local controller=self._lycheeStyleController
   if controller and controller.hasOverrides then controller:Apply(select(1,...)==true) end
@@ -582,7 +627,12 @@ function Library.AttachStyles(UI,C)
   elseif key=="color" and previous and not target.color then
    local text=Text(target);local r,g,b,a
    if text.GetTextColor then r,g,b,a=text:GetTextColor() else r,g,b,a=(target._lycheeTexture or target):GetVertexColor() end
-   if Equal(r,previous[1]) and Equal(g,previous[2]) and Equal(b,previous[3]) and Equal(a,previous[4]) then return previous end
+   local texture=target._lycheeTexture or target
+   local alphaOwner=texture.GetVertexColor and Winner(texture,"alpha")
+   if Equal(r,previous[1]) and Equal(g,previous[2]) and Equal(b,previous[3]) and (Equal(a,previous[4]) or alphaOwner) then
+    if alphaOwner then previous[4]=a end
+    return previous
+   end
   elseif key=="drawLayer" and previous then
    local layer,sub=(target._lycheeTexture or target):GetDrawLayer()
    if layer==previous[1] and sub==previous[2] then return previous end
@@ -665,9 +715,10 @@ function Library.AttachStyles(UI,C)
     UI.Motion:Stop(record.target,true);record.applied[key]=Read(record.target,key)
    end
   end
+  if record.rule.properties.alpha then ObserveIconAlpha(record.target) end
   local target=record.target;target._lycheeFixedRecords[record]=nil
   local restore={}
-  for key in pairs(record.rule.properties) do if not Winner(target,key) and record.applied[key]~=nil and Equal(Read(target,key),Unwrap(record.applied[key])) then restore[key]=record.base[key] end end
+  for key in pairs(record.rule.properties) do if not Winner(target,key) and record.applied[key]~=nil and Equal(key=="color" and Current(record,key) or Read(target,key),Unwrap(record.applied[key])) then restore[key]=record.base[key] end end
   if record.artBase and Equal(Art(target),record.artApplied) then restore.__art=record.artBase;restore.texture,restore.atlas,restore.texCoord=nil,nil,nil end
   if next(restore) then Write(target,restore,true,nil,record.controller.host) end
   for other in pairs(target._lycheeFixedRecords) do other.controller:Apply(true,false,true) end

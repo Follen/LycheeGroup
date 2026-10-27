@@ -949,7 +949,10 @@ function P:SelectDifficulty(activityID)
  for _,item in ipairs(self:DifficultyItems()) do if item.value==activityID then
   local group=UI:GetGroup();local activity=group.Catalog:GetActivity(activityID)
   form.activityID=activityID
-  if group.Catalog:GetCategory(state.category).id==3 then group.prefs.creationRaidDifficultyID=activity.difficultyID end
+  if group.Catalog:GetCategory(state.category).id==3 then
+   if UI.preview then group.prefs.creationRaidDifficultyID=activity.difficultyID
+   else A:SetSetting("creationRaidDifficultyID",activity.difficultyID) end
+  end
   self:RefreshPicker();return
  end end
 end
@@ -994,7 +997,9 @@ function P:RefreshPicker()
    if activity.isMythicPlusActivity then form.activityID=activity.id;break end
   end
   if cat and cat.id==3 then
-   local difficultyID=UI:GetGroup().prefs.creationRaidDifficultyID
+   local difficultyID
+   if UI.preview then difficultyID=UI:GetGroup().prefs.creationRaidDifficultyID
+   else difficultyID=A:GetSetting("creationRaidDifficultyID") end
    for _,activity in ipairs(activities) do
     if type(difficultyID)=="number" and difficultyID>0 and activity.difficultyID==difficultyID then form.activityID=activity.id;break end
    end
@@ -1214,9 +1219,11 @@ function P:RefreshApplicants()
  if timeModes then for key in pairs(timeModes) do timeModes[key]=false end end
  local kind=self.hideApplicantRating and "none" or self.showApplicantMapScore and "dungeon" or "rating"
  if kind~=self.applicantTableKind then self.applicantTableKind=kind;self.applicantTable:SetColumns(ApplicantDefinitions(kind)) end
+ -- Missing columns affect this presentation only; the shared preference must
+ -- survive until its score column becomes available again.
+ local sorting=self.applicantTable.state
+ state.sort=columnSorts[sorting.sortKey] or "newest";state.descending=sorting.descending==true
  if self.hideApplicantRating and state.sort=="score" or not self.showApplicantMapScore and state.sort=="mapScore" then state.sort="newest";state.descending=false end
- local column=sortColumns[state.sort]
- if self.applicantTable.state.sortKey~=column or self.applicantTable.state.descending~=(state.descending==true) then self.applicantTable:SetSort(column,state.descending) end
  local label=state.sort=="score" and L.rating or state.sort=="mapScore" and headerLabels.mapScore or state.sort=="ilvl" and L.itemLevel or L.newest
  self.sortChoice:SetValue(state.sort,label)
  local sortKey=state.sort=="score" and "rating" or state.sort=="mapScore" and "mapScore" or state.sort=="ilvl" and "itemLevel"
