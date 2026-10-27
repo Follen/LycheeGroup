@@ -4,7 +4,7 @@
 
 A group-finding addon for retail World of Warcraft. Find groups, manage recruitment, and keep notes on players you meet, all in one window.
 
-The current version is **1.2.6**, targeting retail **12.1.5** (Interface `120105`) with Chinese and English support. See the [changelog](CHANGELOG.md) for release notes (in Chinese).
+The current version is **1.2.7**, targeting retail **12.1.5** (Interface `120105`) with Chinese and English support. See the [changelog](CHANGELOG.md) for release notes (in Chinese).
 
 ## Features
 
@@ -80,6 +80,6 @@ For the local widget-tree preview, run `lua tests/ui_preview.lua`, then open [`t
 
 Project documents (in Chinese): [Product](Product.md) · [Design](Desgin.md) · [Architecture](Architecture.md) · [Performance](perfermance.md) · [Third-party configuration API](API.md) · [Development rules](Development.md) · [Documentation and changelog rules](Agents.md). The product document describes the current implementation and in-game validation coverage.
 
-The current release is 1.2.6; release notes are in the [changelog](CHANGELOG.md). This release uses [Theme API v2](API.md): account or character themes apply at login or reload, while font size, scale, window size, and table preferences remain live. The pinned main commit is the historical equivalence reference for the architecture migration; current behavior and UI follow the documented product and design changes. See [Development.md](Development.md) for development rules and [theme reload validation](tests/theme_reload.md) for verification methods. Edit LycheeUI in its source directory and use the sync tool to update the embedded copy; [.lock](https://github.com/Follen/LycheeUI/blob/v1.0.0/.lock) records its freeze status. Shared-library contracts are in its [README](https://github.com/Follen/LycheeUI/blob/v1.0.0/README.md), [API](https://github.com/Follen/LycheeUI/blob/v1.0.0/API.md), and [design specification](https://github.com/Follen/LycheeUI/blob/v1.0.0/DESIGN.md).
+The current release is 1.2.7; release notes are in the [changelog](CHANGELOG.md). This release uses [Theme API v2](API.md): account or character themes apply at login or reload, while font size, scale, window size, and table preferences remain live. The pinned main commit is the historical equivalence reference for the architecture migration; current behavior and UI follow the documented product and design changes. See [Development.md](Development.md) for development rules and [theme reload validation](tests/theme_reload.md) for verification methods. Edit LycheeUI in its source directory and use the sync tool to update the embedded copy; [.lock](https://github.com/Follen/LycheeUI/blob/v1.0.0/.lock) records its freeze status. Shared-library contracts are in its [README](https://github.com/Follen/LycheeUI/blob/v1.0.0/README.md), [API](https://github.com/Follen/LycheeUI/blob/v1.0.0/API.md), and [design specification](https://github.com/Follen/LycheeUI/blob/v1.0.0/DESIGN.md).
 
 See the [library notes](addon/LycheeGroup_Group/Libs/README.md) for bundled third-party sources and licenses.

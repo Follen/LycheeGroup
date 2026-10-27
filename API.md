@@ -1,6 +1,6 @@
 # LycheeGroup 配置与主题 API
 
-本页维护 1.2.4 引入的 API v2，含当前未发布的默认偏好包扩展。验证方法见 [tests/theme_reload.md](tests/theme_reload.md)，当前结果见 [perfermance.md](perfermance.md)，开发约束见 [Development.md](Development.md)。插件发布版本为 1.2.6；浮窗接入继续使用独立的 `API.Floating` v1，见[架构文档](Architecture.md#92-浮窗公开接口)。
+本页维护 1.2.4 引入的 API v2，含 1.2.7 新增的默认偏好包扩展。验证方法见 [tests/theme_reload.md](tests/theme_reload.md)，当前结果见 [perfermance.md](perfermance.md)，开发约束见 [Development.md](Development.md)。插件发布版本为 1.2.7；浮窗接入继续使用独立的 `API.Floating` v1，见[架构文档](Architecture.md#92-浮窗公开接口)。
 
 DataBroker 等独立状态展示可使用 `API.Floating:Subscribe(callback, {background=true})`，在独立浮窗关闭时继续取得申请摘要；取消订阅同时释放后台状态需求。悬停可调用 `API.Floating:ShowPopup(owner, anchor)` 临时展开共用列表，移出用 `HidePopup(owner)`，宿主隐藏用 `HidePopup(owner, true)`；这不搬移入口图标，独立浮窗关闭时仍可使用。其余挂载与状态合同继续见上述浮窗接口文档。
 
