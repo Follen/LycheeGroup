@@ -16,25 +16,27 @@ for i = 1, #B64 do
 	local byte = B64:byte(i)
 	B64BYTES[i - 1], B64REV[byte] = byte, i - 1
 end
-local BLOCK_SIZE = 512 -- Reuse this many output slots per block, not one per byte.
+local BLOCK_SIZE = 512 -- Bounded reusable fragments instead of a full-output slot array.
 local MAX_DEPTH = 64 -- 解析深度上限:合法记录只有三层,超出按无效处理
 
 -- ---------------------------------------------------------------- JSON
 
-local function EscapeString(s)
-	if not s:find('[\\"\n\r]') then return '"' .. s .. '"' end
-	return '"' .. (s:gsub("\\", "\\\\"):gsub('"', '\\"'):gsub("\n", "\\n"):gsub("\r", "\\r")) .. '"'
-end
+local ESCAPES = { ['\\'] = '\\\\', ['"'] = '\\"', ['\n'] = '\\n', ['\r'] = '\\r' }
+local function EscapeString(s) return '"' .. s:gsub('[\\"\n\r]', ESCAPES) .. '"' end
 
 -- 顺序整数键为 true 时输出数组,否则输出对象;键名按字符串转义。
-function Transfer.Serialize(t)
-	local out, block, used = {}, {}, 0
+local function Serialize(t, write)
+	local out, block, used = not write and {}, {}, 0
+	local function Flush()
+		local chunk = table.concat(block, "", 1, used)
+		if write then write(chunk) else out[#out + 1] = chunk end
+		used = 0
+	end
 	local function Emit(value)
 		used = used + 1
 		block[used] = value
 		if used == BLOCK_SIZE then
-			out[#out + 1] = table.concat(block, "", 1, used)
-			used = 0
+			Flush()
 		end
 	end
 	local function String(value)
@@ -76,9 +78,10 @@ function Transfer.Serialize(t)
 		end
 	end
 	Table(t)
-	if used > 0 then out[#out + 1] = table.concat(block, "", 1, used) end
-	return table.concat(out)
+	if used > 0 then Flush() end
+	if not write then return table.concat(out) end
 end
+function Transfer.Serialize(t) return Serialize(t) end
 
 local function SkipSpace(s, pos)
 	return s:find("%S", pos) or #s + 1
@@ -162,19 +165,30 @@ end
 
 -- ---------------------------------------------------------------- Base64
 
-local function EncodeBase64(data)
+local function EncodeBase64(records)
 	local out, block, used = { PREFIX }, {}, 0
-	for i = 1, #data, 3 do
-		local b1, b2, b3 = data:byte(i, i + 2)
-		local n = b1 * 65536 + (b2 or 0) * 256 + (b3 or 0)
-		used = used + 1
-		block[used] = string.char(B64BYTES[math.floor(n / 262144)], B64BYTES[math.floor(n / 4096) % 64],
-			b2 and B64BYTES[math.floor(n / 64) % 64] or 61, b3 and B64BYTES[n % 64] or 61)
-		if used == BLOCK_SIZE then
-			out[#out + 1] = table.concat(block, "", 1, used)
-			used = 0
+	local char, floor, byte = string.char, math.floor, string.byte
+	local tail = ""
+	local function Write(data, final)
+		-- Serialization chunks may end inside a three-byte group. Carry only
+		-- its final one or two bytes, and emit padding once at the true end.
+		if tail ~= "" then data = tail .. data end
+		local limit = final and #data or #data - #data % 3
+		for i = 1, limit, 3 do
+			local b1, b2, b3 = byte(data, i, i + 2)
+			local n = b1 * 65536 + (b2 or 0) * 256 + (b3 or 0)
+			used = used + 1
+			block[used] = char(B64BYTES[floor(n / 262144)], B64BYTES[floor(n / 4096) % 64],
+				b2 and B64BYTES[floor(n / 64) % 64] or 61, b3 and B64BYTES[n % 64] or 61)
+			if used == BLOCK_SIZE then
+				out[#out + 1] = table.concat(block, "", 1, used)
+				used = 0
+			end
 		end
+		tail = data:sub(limit + 1)
 	end
+	Serialize(records, Write)
+	if tail ~= "" then Write("", true) end
 	if used > 0 then out[#out + 1] = table.concat(block, "", 1, used) end
 	return table.concat(out)
 end
@@ -184,14 +198,15 @@ local function DecodeBase64(payload, first, last)
 	local padding = payload:find("=", first, true)
 	local length = (padding and padding <= last and padding or last + 1) - first
 	local out, block, used = {}, {}, 0
+	local char, floor, byte = string.char, math.floor, string.byte
 	local full = length - length % 4
 	for i = 1, full, 4 do
-		local a, b, c, d = payload:byte(first + i - 1, first + i + 2)
+		local a, b, c, d = byte(payload, first + i - 1, first + i + 2)
 		local n = B64REV[a] * 262144 + B64REV[b] * 4096 + B64REV[c] * 64 + B64REV[d]
-		used = used + 1
-		block[used] = string.char(math.floor(n / 65536), math.floor(n / 256) % 256, n % 256)
-		if used == BLOCK_SIZE then
-			out[#out + 1] = table.concat(block, "", 1, used)
+		block[used + 1], block[used + 2], block[used + 3] = floor(n / 65536), floor(n / 256) % 256, n % 256
+		used = used + 3
+		if used == 384 then -- 128 input groups, bounded native char/unpack call.
+			out[#out + 1] = char(unpack(block, 1, used))
 			used = 0
 		end
 	end
@@ -200,9 +215,10 @@ local function DecodeBase64(payload, first, last)
 		local a, b, c = payload:byte(first + full, first + length - 1)
 		local first = B64REV[a] * 4 + math.floor(B64REV[b] / 16)
 		used = used + 1
-		block[used] = remaining == 3 and string.char(first, B64REV[b] % 16 * 16 + math.floor(B64REV[c] / 4)) or string.char(first)
+		block[used] = first
+		if remaining == 3 then used = used + 1;block[used] = B64REV[b] % 16 * 16 + floor(B64REV[c] / 4) end
 	end
-	if used > 0 then out[#out + 1] = table.concat(block, "", 1, used) end
+	if used > 0 then out[#out + 1] = char(unpack(block, 1, used)) end
 	return table.concat(out)
 end
 
@@ -210,7 +226,7 @@ end
 
 function Transfer.Encode(records)
 	if type(records) ~= "table" then records = {} end
-	return EncodeBase64(Transfer.Serialize(records))
+	return EncodeBase64(records)
 end
 
 -- 非法输入统一返回 nil + "invalidData"(UI.L 键),不区分失败细节。

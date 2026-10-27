@@ -1,0 +1,75 @@
+[PASS] core
+binding defaults: 493 checks passed
+[PASS] binding_defaults
+[PASS] commands
+[PASS] native_queue
+[PASS] configuration
+[PASS] appearance
+[PASS] layout_preset_defaults
+[PASS] theme_reload
+[PASS] theme_menu
+[PASS] theme_selection
+[PASS] theme_controls
+[PASS] theme_game_colors
+Notes case variants: 64=16900 instructions/64 date checks; 128=33500/128
+[PASS] notes
+[PASS] group
+[PASS] group_storage
+[PASS] business_performance
+[PASS] result_relationships
+[PASS] catalog_routing
+[PASS] alert_performance
+[PASS] sound_menu
+[PASS] libspecialization_performance
+[PASS] raid_groups
+[PASS] season_scores
+[PASS] transfer
+[PASS] ui
+[PASS] activity_labels
+[PASS] player_links
+[PASS] resize
+[PASS] table_find
+Applicant tables: 491 checks passed
+[PASS] table_create
+Notes/settings tables: 192 checks passed
+[PASS] table_notes
+[PASS] notes_history_ui
+[PASS] transient_notices
+[PASS] filters
+[PASS] result_unknown_numbers
+[PASS] find_enhancements
+[PASS] find_application_context
+[PASS] season_picker
+create difficulty: 80 checks passed
+[PASS] create_difficulty
+Auto apply: 122 checks passed
+[PASS] auto_apply
+[PASS] party_role_check
+[PASS] preview
+Guide native activity data: 455 checks passed
+[PASS] guide_data
+guide entry checks passed: 310
+[PASS] guide_entry
+guide adapter checks passed: 26798
+[PASS] guide_adapter
+guide binding checks passed: 246
+[PASS] guide_bindings
+guide view checks passed: 99654
+[PASS] guide_view
+[PASS] guide
+Applicant time: 186 checks passed
+[PASS] applicant_time
+[PASS] roster_drag
+[PASS] floating
+Glyph Frame slots: 643 checks passed
+[PASS] glyph_slots
+[PASS] data_broker
+[PASS] brand_motion
+[PASS] minimap
+[PASS] fonts
+behavior defaults: 155 checks passed
+[PASS] behavior_defaults
+[PASS] find_defaults
+Find row geometry: 1359 checks passed
+[PASS] find_row_geometry
+TOTAL: 57452 asserts passed, 0 modules failed

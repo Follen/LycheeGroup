@@ -1,0 +1,734 @@
+{
+  "schema": "lycheegroup.native-border-rounding.v1",
+  "date": "2026-10-27",
+  "client": "12.1.5.70575",
+  "cause": "Four WHITE8X8 border strips read back as 1.0000075101852417 logical pixels at effective scale 0.7111111283302307; the <=1 predicate skipped both native input decorations.",
+  "fix": "Allow 0.01 logical-pixel readback tolerance for the existing four-strip decoration pattern.",
+  "nativeObservation": {
+    "descriptionOwned": true,
+    "frames": [
+      {
+        "alpha": 1,
+        "height": 30.00002670288086,
+        "kind": "EditBox",
+        "parentKind": "Frame",
+        "path": "title",
+        "regionCount": 8,
+        "regions": [
+          {
+            "alpha": 1,
+            "color": [
+              1,
+              1,
+              1,
+              1
+            ],
+            "height": 16.999996185302734,
+            "index": 2,
+            "kind": "Texture",
+            "shown": false,
+            "width": 2.0000150203704834
+          },
+          {
+            "alpha": 0,
+            "atlas": "common-search-border-left",
+            "color": [
+              1,
+              1,
+              1,
+              0
+            ],
+            "height": 20.000017166137695,
+            "index": 3,
+            "kind": "Texture",
+            "shown": false,
+            "texture": 6725697,
+            "width": 7.999993801116943
+          },
+          {
+            "alpha": 0,
+            "atlas": "common-search-border-right",
+            "color": [
+              1,
+              1,
+              1,
+              0
+            ],
+            "height": 20.000017166137695,
+            "index": 4,
+            "kind": "Texture",
+            "shown": false,
+            "texture": 6725697,
+            "width": 8.000060081481934
+          },
+          {
+            "alpha": 0,
+            "atlas": "common-search-border-middle",
+            "color": [
+              1,
+              1,
+              1,
+              0
+            ],
+            "height": 20.000017166137695,
+            "index": 5,
+            "kind": "Texture",
+            "shown": false,
+            "texture": 6725697,
+            "width": 836.0000610351562
+          },
+          {
+            "alpha": 0,
+            "color": [
+              1,
+              1,
+              1,
+              0
+            ],
+            "height": 30.00002670288086,
+            "index": 7,
+            "kind": "Texture",
+            "shown": false,
+            "width": 847.0000610351562
+          },
+          {
+            "alpha": 1,
+            "color": [
+              1,
+              1,
+              1,
+              1
+            ],
+            "height": 16.999996185302734,
+            "index": 8,
+            "kind": "Texture",
+            "shown": false,
+            "width": 10.500012397766113
+          }
+        ],
+        "scale": 0.7111111283302307,
+        "shown": true,
+        "visible": true,
+        "width": 847.0000610351562
+      },
+      {
+        "alpha": 1,
+        "height": 33.99999237060547,
+        "kind": "Button",
+        "parentKind": "EditBox",
+        "path": "title/child1",
+        "regionCount": 2,
+        "regions": [
+          {
+            "alpha": 1,
+            "atlas": "groupfinder-icon-lock",
+            "color": [
+              1,
+              1,
+              1,
+              1
+            ],
+            "height": 33.99999237060547,
+            "index": 1,
+            "kind": "Texture",
+            "shown": true,
+            "texture": 985877,
+            "width": 27.99994659423828
+          },
+          {
+            "alpha": 1,
+            "atlas": "groupfinder-icon-lock",
+            "color": [
+              1,
+              1,
+              1,
+              1
+            ],
+            "height": 33.99999237060547,
+            "index": 2,
+            "kind": "Texture",
+            "shown": true,
+            "texture": 985877,
+            "width": 27.99994659423828
+          }
+        ],
+        "scale": 0.7111111283302307,
+        "shown": false,
+        "visible": false,
+        "width": 27.99994659423828
+      },
+      {
+        "alpha": 1,
+        "height": 30.00002670288086,
+        "kind": "Frame",
+        "parentKind": "EditBox",
+        "path": "title/child2",
+        "regionCount": 4,
+        "regions": [
+          {
+            "alpha": 1,
+            "color": [
+              0.250980406999588,
+              0.250980406999588,
+              0.250980406999588,
+              1
+            ],
+            "height": 1.0000075101852417,
+            "index": 1,
+            "kind": "Texture",
+            "shown": true,
+            "texture": 130871,
+            "width": 847.0000610351562
+          },
+          {
+            "alpha": 1,
+            "color": [
+              0.250980406999588,
+              0.250980406999588,
+              0.250980406999588,
+              1
+            ],
+            "height": 1.0000075101852417,
+            "index": 2,
+            "kind": "Texture",
+            "shown": true,
+            "texture": 130871,
+            "width": 847.0000610351562
+          },
+          {
+            "alpha": 1,
+            "color": [
+              0.250980406999588,
+              0.250980406999588,
+              0.250980406999588,
+              1
+            ],
+            "height": 28.000011444091797,
+            "index": 3,
+            "kind": "Texture",
+            "shown": true,
+            "texture": 130871,
+            "width": 1.0000075101852417
+          },
+          {
+            "alpha": 1,
+            "color": [
+              0.250980406999588,
+              0.250980406999588,
+              0.250980406999588,
+              1
+            ],
+            "height": 28.000011444091797,
+            "index": 4,
+            "kind": "Texture",
+            "shown": true,
+            "texture": 130871,
+            "width": 1.0000075101852417
+          }
+        ],
+        "scale": 0.7111111283302307,
+        "shown": true,
+        "visible": true,
+        "width": 847.0000610351562
+      },
+      {
+        "alpha": 1,
+        "height": 170.00003051757812,
+        "kind": "ScrollFrame",
+        "name": "LFGListCreationDescription",
+        "parentKind": "Frame",
+        "path": "description",
+        "regionCount": 11,
+        "regions": [
+          {
+            "alpha": 0,
+            "color": [
+              1,
+              1,
+              1,
+              0
+            ],
+            "height": 7.999993801116943,
+            "index": 1,
+            "kind": "Texture",
+            "shown": false,
+            "texture": 374208,
+            "width": 7.999993801116943
+          },
+          {
+            "alpha": 0,
+            "color": [
+              1,
+              1,
+              1,
+              0
+            ],
+            "height": 7.999993801116943,
+            "index": 2,
+            "kind": "Texture",
+            "shown": false,
+            "texture": 374209,
+            "width": 8.000060081481934
+          },
+          {
+            "alpha": 0,
+            "color": [
+              1,
+              1,
+              1,
+              0
+            ],
+            "height": 7.999993801116943,
+            "index": 3,
+            "kind": "Texture",
+            "shown": false,
+            "texture": 374207,
+            "width": 841.0001220703125
+          },
+          {
+            "alpha": 0,
+            "color": [
+              1,
+              1,
+              1,
+              0
+            ],
+            "height": 7.999993801116943,
+            "index": 4,
+            "kind": "Texture",
+            "shown": false,
+            "texture": 374202,
+            "width": 7.999993801116943
+          },
+          {
+            "alpha": 0,
+            "color": [
+              1,
+              1,
+              1,
+              0
+            ],
+            "height": 7.999993801116943,
+            "index": 5,
+            "kind": "Texture",
+            "shown": false,
+            "texture": 374203,
+            "width": 8.000060081481934
+          },
+          {
+            "alpha": 0,
+            "color": [
+              1,
+              1,
+              1,
+              0
+            ],
+            "height": 7.999993801116943,
+            "index": 6,
+            "kind": "Texture",
+            "shown": false,
+            "texture": 374201,
+            "width": 841.0001220703125
+          },
+          {
+            "alpha": 0,
+            "color": [
+              1,
+              1,
+              1,
+              0
+            ],
+            "height": 164.00001525878906,
+            "index": 7,
+            "kind": "Texture",
+            "shown": false,
+            "texture": 374204,
+            "width": 7.999993801116943
+          },
+          {
+            "alpha": 0,
+            "color": [
+              1,
+              1,
+              1,
+              0
+            ],
+            "height": 164.00001525878906,
+            "index": 8,
+            "kind": "Texture",
+            "shown": false,
+            "texture": 374206,
+            "width": 8.000060081481934
+          },
+          {
+            "alpha": 0,
+            "color": [
+              1,
+              1,
+              1,
+              0
+            ],
+            "height": 164.00001525878906,
+            "index": 9,
+            "kind": "Texture",
+            "shown": false,
+            "texture": 374205,
+            "width": 841.0001220703125
+          },
+          {
+            "alpha": 0,
+            "color": [
+              1,
+              1,
+              1,
+              0
+            ],
+            "height": 170.00003051757812,
+            "index": 11,
+            "kind": "Texture",
+            "shown": false,
+            "width": 847.0000610351562
+          }
+        ],
+        "scale": 0.7111111283302307,
+        "shown": true,
+        "visible": true,
+        "width": 847.0000610351562
+      },
+      {
+        "alpha": 1,
+        "height": 16.999996185302734,
+        "kind": "EditBox",
+        "parentKind": "ScrollFrame",
+        "path": "description/child1",
+        "regionCount": 4,
+        "regions": [
+          {
+            "alpha": 1,
+            "color": [
+              1,
+              1,
+              1,
+              1
+            ],
+            "height": 16.999996185302734,
+            "index": 2,
+            "kind": "Texture",
+            "shown": false,
+            "width": 2.0000150203704834
+          },
+          {
+            "alpha": 1,
+            "color": [
+              1,
+              1,
+              1,
+              1
+            ],
+            "height": 16.999996185302734,
+            "index": 4,
+            "kind": "Texture",
+            "shown": false,
+            "width": 39.75
+          }
+        ],
+        "scale": 0.7111111283302307,
+        "shown": true,
+        "visible": true,
+        "width": 831.0000610351562
+      },
+      {
+        "alpha": 1,
+        "height": 33.99999237060547,
+        "kind": "Button",
+        "parentKind": "ScrollFrame",
+        "path": "description/child2",
+        "regionCount": 2,
+        "regions": [
+          {
+            "alpha": 1,
+            "atlas": "groupfinder-icon-lock",
+            "color": [
+              1,
+              1,
+              1,
+              1
+            ],
+            "height": 33.99999237060547,
+            "index": 1,
+            "kind": "Texture",
+            "shown": true,
+            "texture": 985877,
+            "width": 27.99994659423828
+          },
+          {
+            "alpha": 1,
+            "atlas": "groupfinder-icon-lock",
+            "color": [
+              1,
+              1,
+              1,
+              1
+            ],
+            "height": 33.99999237060547,
+            "index": 2,
+            "kind": "Texture",
+            "shown": true,
+            "texture": 985877,
+            "width": 27.99994659423828
+          }
+        ],
+        "scale": 0.7111111283302307,
+        "shown": false,
+        "visible": false,
+        "width": 27.99994659423828
+      },
+      {
+        "alpha": 1,
+        "height": 172,
+        "kind": "Frame",
+        "parentKind": "ScrollFrame",
+        "path": "description/child3",
+        "regionCount": 0,
+        "regions": {},
+        "scale": 0.7111111283302307,
+        "shown": false,
+        "visible": false,
+        "width": 8.000060081481934
+      },
+      {
+        "alpha": 1,
+        "height": 133.99998474121094,
+        "kind": "Frame",
+        "parentKind": "Frame",
+        "path": "description/child3/child1",
+        "regionCount": 3,
+        "regions": [
+          {
+            "alpha": 0,
+            "atlas": "minimal-scrollbar-track-top",
+            "color": [
+              1,
+              1,
+              1,
+              0
+            ],
+            "height": 7.999993801116943,
+            "index": 1,
+            "kind": "Texture",
+            "shown": false,
+            "texture": 4331838,
+            "width": 8.000060081481934
+          },
+          {
+            "alpha": 0,
+            "atlas": "minimal-scrollbar-track-bottom",
+            "color": [
+              1,
+              1,
+              1,
+              0
+            ],
+            "height": 7.999993801116943,
+            "index": 2,
+            "kind": "Texture",
+            "shown": false,
+            "texture": 4331838,
+            "width": 8.000060081481934
+          },
+          {
+            "alpha": 0,
+            "atlas": "!minimal-scrollbar-track-middle",
+            "color": [
+              1,
+              1,
+              1,
+              0
+            ],
+            "height": 117.99999237060547,
+            "index": 3,
+            "kind": "Texture",
+            "shown": false,
+            "texture": 4332072,
+            "width": 8.000060081481934
+          }
+        ],
+        "scale": 0.7111111283302307,
+        "shown": true,
+        "visible": false,
+        "width": 8.000060081481934
+      },
+      {
+        "alpha": 1,
+        "height": 11.000016212463379,
+        "kind": "Button",
+        "parentKind": "Frame",
+        "path": "description/child3/child2",
+        "regionCount": 1,
+        "regions": [
+          {
+            "alpha": 0,
+            "atlas": "minimal-scrollbar-arrow-top",
+            "color": [
+              1,
+              1,
+              1,
+              0
+            ],
+            "height": 11.000016212463379,
+            "index": 1,
+            "kind": "Texture",
+            "shown": false,
+            "texture": 4331838,
+            "width": 16.99986457824707
+          }
+        ],
+        "scale": 0.7111111283302307,
+        "shown": true,
+        "visible": false,
+        "width": 16.99986457824707
+      },
+      {
+        "alpha": 1,
+        "height": 11.000016212463379,
+        "kind": "Button",
+        "parentKind": "Frame",
+        "path": "description/child3/child3",
+        "regionCount": 1,
+        "regions": [
+          {
+            "alpha": 0,
+            "atlas": "minimal-scrollbar-arrow-bottom",
+            "color": [
+              1,
+              1,
+              1,
+              0
+            ],
+            "height": 11.000016212463379,
+            "index": 1,
+            "kind": "Texture",
+            "shown": false,
+            "texture": 4331838,
+            "width": 16.99986457824707
+          }
+        ],
+        "scale": 0.7111111283302307,
+        "shown": true,
+        "visible": false,
+        "width": 16.99986457824707
+      },
+      {
+        "alpha": 1,
+        "height": 170.00003051757812,
+        "kind": "Frame",
+        "parentKind": "ScrollFrame",
+        "path": "description/child4",
+        "regionCount": 4,
+        "regions": [
+          {
+            "alpha": 1,
+            "color": [
+              0.250980406999588,
+              0.250980406999588,
+              0.250980406999588,
+              1
+            ],
+            "height": 1.0000075101852417,
+            "index": 1,
+            "kind": "Texture",
+            "shown": true,
+            "texture": 130871,
+            "width": 847.0000610351562
+          },
+          {
+            "alpha": 1,
+            "color": [
+              0.250980406999588,
+              0.250980406999588,
+              0.250980406999588,
+              1
+            ],
+            "height": 1.0000075101852417,
+            "index": 2,
+            "kind": "Texture",
+            "shown": true,
+            "texture": 130871,
+            "width": 847.0000610351562
+          },
+          {
+            "alpha": 1,
+            "color": [
+              0.250980406999588,
+              0.250980406999588,
+              0.250980406999588,
+              1
+            ],
+            "height": 168.00001525878906,
+            "index": 3,
+            "kind": "Texture",
+            "shown": true,
+            "texture": 130871,
+            "width": 1.0000075101852417
+          },
+          {
+            "alpha": 1,
+            "color": [
+              0.250980406999588,
+              0.250980406999588,
+              0.250980406999588,
+              1
+            ],
+            "height": 168.00001525878906,
+            "index": 4,
+            "kind": "Texture",
+            "shown": true,
+            "texture": 130871,
+            "width": 1.0000075101852417
+          }
+        ],
+        "scale": 0.7111111283302307,
+        "shown": true,
+        "visible": true,
+        "width": 847.0000610351562
+      }
+    ],
+    "page": "create",
+    "preview": false,
+    "shown": true,
+    "titleOwned": true,
+    "version": 10001
+  },
+  "nativeReportState": "verified",
+  "nativeCleanup": "complete",
+  "offline": {
+    "command": "lua tests/native_border_rounding_probe.lua",
+    "beforeFailures": 12,
+    "assertions": 72,
+    "afterFailures": 0,
+    "sourceLibraryAssertions": 1738,
+    "productUiAssertions": 4759,
+    "architectureChecks": 6609,
+    "architectureFailures": 0
+  },
+  "deployment": {
+    "after": {
+      "LycheeGroup/Libs/LycheeUI/Native.lua": "1E52AD3545188DCF943F475E384D3791967BB791D578FC054C226EBCE9B3328A",
+      "LycheeGroup/Libs/LycheeUI/.lock": "D01A830F14A3D3DFC2B81A6D3BF373F328340BB029B89D7AEFD24E59B4E7E9C9"
+    },
+    "backup": "C:\\Users\\follen\\.codex\\worktrees\\raid-buff-filter\\LycheeGroup\\.lycheedev\\native-input-border\\backup",
+    "previousRuntimeFilesChecked": 163,
+    "source": "C:/Users/follen/.codex/worktrees/post-audit-equivalence/LycheeGroup/addon",
+    "before": {
+      "LycheeGroup/Libs/LycheeUI/Native.lua": "1E684F5CB17201CA09EA2A747B61AEDE450258C0BCEBE88CA5DCB97F68D0D417",
+      "LycheeGroup/Libs/LycheeUI/.lock": "A055EA01EEF336662A705D6DA507027F466082675222FCADE7138B163AB29715"
+    },
+    "target": "D:/Game/World of Warcraft/_retail_/Interface/AddOns",
+    "reloaded": false
+  },
+  "loadedFixVerified": false,
+  "reloadStatus": "Files deployed; no additional reload performed while the user was editing the listing. The correction takes effect at the next reload.",
+  "scope": "Source fix maintained in LycheeUI-theme-style-ownership and synchronized to post-audit-equivalence. Raid filter worktree remains independent; installed feature patch preserved.",
+  "computerUse": "User prohibited computer-use before this investigation; none used for this issue.",
+  "connectionClosed": true
+}

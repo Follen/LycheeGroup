@@ -7,6 +7,7 @@ local ALL = { "core", "binding_defaults", "commands", "native_queue", "configura
 
 ALL[#ALL+1]="behavior_defaults"
 ALL[#ALL+1]="find_defaults"
+ALL[#ALL+1]="find_row_geometry"
 
 local requested = {}
 local known = {}

@@ -1,0 +1,23 @@
+Lua=Lua 5.1; baseline=40a900539510fe8af259a90d1e3c328093756fde; candidate=working; clock=os.clock; native writes normalized for Motion allocation tests
+working_blob Components.lua c44523e8e85b266c3f093083c540770c59def9db
+working_blob Styles.lua 13fe7d865a13bea23df3d8650c760646999734f5
+working_blob Motion.lua 9994d7223937c19221e3930d9dcfd096516a4973
+SCENES 40a900539510fe8af259a90d1e3c328093756fde version=1.0.1
+unowned_feedback iterations=10000 CPU_ms=32.000 GC_stopped_KiB=0.000 GetVertexColor=10000 GetAlpha=10000 IsDesaturated=10000 SetVertexColor=0 SetAlpha=0 SetDesaturated=0
+fixed_feedback_apply iterations=10000 CPU_ms=75.000 GC_stopped_KiB=1.875
+glyph_CPU iterations=100000 samples_ms=321,315,307
+button_CPU iterations=100000 samples_ms=529,520,568
+Motion_immediate_reduced iterations=10000 CPU_ms=11.000 GC_stopped_KiB=937.500 GetVertexColor=10000
+Motion_immediate_no_duration iterations=10000 CPU_ms=10.000 GC_stopped_KiB=937.500 GetVertexColor=10000
+Motion_stable_frame iterations=10000 CPU_ms=8.000 GC_stopped_KiB=0.000
+Motion_retarget iterations=10000 CPU_ms=34.000 GC_stopped_KiB=4570.313
+SCENES working version=1.0.1
+unowned_feedback iterations=10000 CPU_ms=10.000 GC_stopped_KiB=0.000 GetVertexColor=10000 GetAlpha=10000 IsDesaturated=10000 SetVertexColor=0 SetAlpha=0 SetDesaturated=0
+fixed_feedback_apply iterations=10000 CPU_ms=78.000 GC_stopped_KiB=0.000
+glyph_CPU iterations=100000 samples_ms=101,105,113
+button_CPU iterations=100000 samples_ms=482,505,485
+Motion_immediate_reduced iterations=10000 CPU_ms=5.000 GC_stopped_KiB=0.000 GetVertexColor=0
+Motion_immediate_no_duration iterations=10000 CPU_ms=5.000 GC_stopped_KiB=0.000 GetVertexColor=0
+Motion_stable_frame iterations=10000 CPU_ms=9.000 GC_stopped_KiB=0.000
+Motion_retarget iterations=10000 CPU_ms=36.000 GC_stopped_KiB=4570.313
+All measured scene RGB/alpha and Motion cleanup checks passed

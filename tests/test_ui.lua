@@ -195,10 +195,10 @@ local function SkinBorder(parent)
  for i=1,4 do
   local line=border:CreateTexture(nil,"OVERLAY");line:SetTexture(130871)
   if i<=2 then
-   local edge=i==1 and "TOP" or "BOTTOM";line:SetHeight(.75)
+   local edge=i==1 and "TOP" or "BOTTOM";line:SetHeight(1.0000075101852)
    line:SetPoint(edge.."LEFT",border,edge.."LEFT",0,0);line:SetPoint(edge.."RIGHT",border,edge.."RIGHT",0,0)
   else
-   local edge=i==3 and "LEFT" or "RIGHT";line:SetWidth(.75)
+   local edge=i==3 and "LEFT" or "RIGHT";line:SetWidth(1.0000075101852)
    line:SetPoint("TOP"..edge,border,"TOP"..edge,0,0);line:SetPoint("BOTTOM"..edge,border,"BOTTOM"..edge,0,0)
   end
  end

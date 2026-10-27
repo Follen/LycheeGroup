@@ -511,7 +511,7 @@ function Library.AttachStyles(UI,C)
  -- records rather than the feedback caller's Context/slot names. Keep the
  -- latest default as the release/state-exit baseline for every active owner.
  local function OwnsTargetStyle(target,key,value,iconColor)
-  if not target then return false end
+  if not target or not target._lycheeFixedRecords or not next(target._lycheeFixedRecords) then return false end
   local winner=Winner(target,key)
   for record in pairs(target._lycheeFixedRecords or empty) do if record.rule.properties[key] then
    if iconColor then

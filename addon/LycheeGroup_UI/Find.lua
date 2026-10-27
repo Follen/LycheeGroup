@@ -39,6 +39,7 @@ local RESULT_COLUMNS={
  description={x=741,width=BODY-765-(zh and T.findAgeWidthCN or T.findAgeWidthEN)},age={x=BODY-12-(zh and T.findAgeWidthCN or T.findAgeWidthEN),width=(zh and T.findAgeWidthCN or T.findAgeWidthEN)},
 }
 local RESULT_TEXT_COLUMNS={leader="leader",ilvl="ilvl",rating="score",description="description",age="age"}
+local resultColumnsVersion=0
 local APPLICATION_COLUMNS={title={x=0,width=APP_BODY-591},leader={x=APP_BODY-522,width=120}}
 local resultDefinitions={
  {key="title",label=Say("队伍","Group"),width="findResultTitleWidth",min="findResultTitleMin"},
@@ -329,16 +330,21 @@ local function LayoutResultLeader(row)
 end
 local function LayoutResultRow(row)
  local y=row.resultContentOffset or 0
- row.title:ClearAllPoints();row.title:SetPoint("LEFT",RESULT_COLUMNS.title.x,y)
- row.meta:ClearAllPoints();row.meta:SetPoint("LEFT",RESULT_COLUMNS.activity.x,y);row.meta:SetWidth(RESULT_COLUMNS.activity.width)
- row.icon:ClearAllPoints();row.icon:SetPoint("LEFT",P.resultsHeader.columns.activity.x+T.findColumnInset,y)
- for key,field in pairs(RESULT_TEXT_COLUMNS) do
-  local region=row[field]
-  local column=RESULT_COLUMNS[key]
-  region:ClearAllPoints();region:SetPoint("LEFT",column.x,y);region:SetWidth(column.width)
+ -- Rekey/release can restore a previous style baseline. Reuse only this
+ -- binding's fixed columns; leader marks and member content remain live.
+ if row.resultColumnsVersion~=resultColumnsVersion or row.resultColumnOffset~=y or row.resultColumnKey~=row.key then
+  row.title:ClearAllPoints();row.title:SetPoint("LEFT",RESULT_COLUMNS.title.x,y)
+  row.meta:ClearAllPoints();row.meta:SetPoint("LEFT",RESULT_COLUMNS.activity.x,y);row.meta:SetWidth(RESULT_COLUMNS.activity.width)
+  row.icon:ClearAllPoints();row.icon:SetPoint("LEFT",P.resultsHeader.columns.activity.x+T.findColumnInset,y)
+  for key,field in pairs(RESULT_TEXT_COLUMNS) do
+   local region=row[field]
+   local column=RESULT_COLUMNS[key]
+   region:ClearAllPoints();region:SetPoint("LEFT",column.x,y);region:SetWidth(column.width)
+  end
+  row.declined:ClearAllPoints();row.declined:SetPoint("BOTTOMLEFT",RESULT_COLUMNS.title.x,T.findResultBottomInset)
+  row.declined:SetWidth(RESULT_COLUMNS.leader.x+RESULT_COLUMNS.leader.width-RESULT_COLUMNS.title.x)
+  row.resultColumnsVersion,row.resultColumnOffset,row.resultColumnKey=resultColumnsVersion,y,row.key
  end
- row.declined:ClearAllPoints();row.declined:SetPoint("BOTTOMLEFT",RESULT_COLUMNS.title.x,T.findResultBottomInset)
- row.declined:SetWidth(RESULT_COLUMNS.leader.x+RESULT_COLUMNS.leader.width-RESULT_COLUMNS.title.x)
  LayoutResultLeader(row);LayoutMembers(row)
 end
 local function RenderResult(row,id)
@@ -558,7 +564,7 @@ function P:Build(parent)
   row:HookScript("OnMouseDown",function(b,button)
    if button~="LeftButton" or clickedRow and not SameResultClick(b,b.key,Record(b.key)) then ClearResultClick() end
   end)
-  row:HookScript("OnLeave",ClearResultClick);row:HookScript("OnHide",ClearResultClick)
+  row:HookScript("OnLeave",ClearResultClick);row:HookScript("OnHide",function(b) ClearResultClick(b);b.resultColumnsVersion,b.resultColumnKey=nil,nil end)
   row:SetScript("OnDoubleClick",function(b,button)
    local valid=button=="LeftButton" and not UI.hiding and b:IsVisible() and b._hitVisible and SameResultClick(b,b.key,Record(b.key))
    ClearResultClick()
@@ -598,14 +604,18 @@ function P:Build(parent)
 self:RegisterBuildElements()
  end
 function P:ApplyResultColumns()
+ local changed=false
  for key,cell in pairs(self.resultsHeader.columns) do
   local column=RESULT_COLUMNS[key]
   local inset=key=="title" and T.findResultTitleX or key=="activity" and T.findColumnInset+T.findResultIconSize+6 or T.findColumnInset
-  column.x=cell.x+inset;column.width=cell.width-inset-(key=="age" and T.findResultRightInset or T.findColumnInset)
+  local x,width=cell.x+inset,cell.width-inset-(key=="age" and T.findResultRightInset or T.findColumnInset)
+  if column.x~=x or column.width~=width then changed=true end
+  column.x,column.width=x,width
   local label=self.resultsHeader.labels[key]
   local labelInset=key=="title" and T.findTitleLabelLeftX or inset
   label:ClearAllPoints();label:SetPoint("LEFT",labelInset,0);label:SetWidth(cell.width-labelInset-(key=="age" and T.findResultRightInset or T.findColumnInset))
  end
+ if changed then resultColumnsVersion=resultColumnsVersion+1 end
  for _,row in ipairs(self.results.rows) do
   row.title:SetWidth(RESULT_COLUMNS.title.width)
   row.membersX,row.membersWidth=RESULT_COLUMNS.members.x,RESULT_COLUMNS.members.width

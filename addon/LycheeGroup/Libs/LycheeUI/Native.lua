@@ -54,8 +54,9 @@ local function SkinRegions(control,...)
   local region=select(index,...)
   if region:GetObjectType()~="Texture" or region:GetTexture()~=130871 then return false end
   local width,height=region:GetWidth(),region:GetHeight()
-  if height<=1 and width>2 then horizontal=horizontal+1
-  elseif width<=1 and height>2 then vertical=vertical+1 else return false end
+  -- Scaled native one-pixel strips can read back slightly above 1.
+  if height<=1.01 and width>2 then horizontal=horizontal+1
+  elseif width<=1.01 and height>2 then vertical=vertical+1 else return false end
  end
  return horizontal==2 and vertical==2
 end

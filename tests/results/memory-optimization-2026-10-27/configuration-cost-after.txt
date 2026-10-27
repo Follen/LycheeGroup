@@ -1,0 +1,24 @@
+SIZE	schema	349	cold-imported	66
+MEM	cold-character-single-Set	200	203.15625	1.01578125	0	0
+SIZE	schema	349	warm-imported	320
+MEM	warm-character-single-Set	200	203.15625	1.01578125	-0.0625	0.005
+MEM	warm-session-single-Set	200	156.28125	0.78140625	0	0
+MEM	scalar-Get	10000	0	0	0	0.0007
+MEM	scalar-GetSource	1000	62.5	0.0625	0	0.001
+MEM	same-inactive-RegisterPreset	100	3294.953125	32.94953125	0	0.89
+MEM	counterfactual-small-imported-single-Set	200	178.15625	0.89078125	0	0.005
+COUNT	stable-UpdateFilters-100	get=500,resolve=500,savePrefs=100,selectedPreset=500,updateFilters=100	user=0	imported=320
+COUNT	stable-SavePrefs-100	get=300,resolve=300,savePrefs=100,selectedPreset=300	user=0	imported=320
+COUNT	single-Set-100	get=693,notify=99,resolve=893,savePrefs=99,selectedPreset=496,set=100,snapshot=200,snapshotKeys=200,updateFilters=99	user=1	imported=320
+COUNT	inactive-package-replace-20	fullSnapshot=40,resolve=13960,selectedPreset=24040,snapshot=40,snapshotKeys=13960	user=1	imported=320
+COUNT	known-category-register-100		user=1	imported=320
+COUNT	active-package-many-leaves	category=1,fullSnapshot=2,get=59,notify=1,refreshPreferences=1,resolve=757,savePrefs=1,selectedPreset=1265,snapshot=2,snapshotKeys=698,updateFilters=1	user=1	imported=320
+COUNT	numeric-user-edits-50-settings-unbuilt	get=301,notify=50,refreshPreferences=50,resolve=401,savePrefs=50,selectedPreset=401,set=50,snapshot=100,snapshotKeys=100,updateFilters=50	user=1	imported=320
+MEM	numeric-user-edits-50-settings-unbuilt	50	553.4814453125	11.06962890625	0.15625	0.2
+COUNT	numeric-user-edits-50-settings-hidden	get=301,notify=50,refreshPreferences=50,resolve=401,savePrefs=50,selectedPreset=401,set=50,snapshot=100,snapshotKeys=100,updateFilters=50	user=1	imported=320
+MEM	numeric-user-edits-50-settings-hidden	50	553.7509765625	11.07501953125	0.08203125	0.2
+MEM	SavePrefs-only	500	531.25	1.0625	-0.0625	0.006
+MEM	known-category-register	500	31.25	0.0625	0	0
+GROWTH	349	372	372
+MEM	stable-bindings-initialize	1000	109.375	0.109375	0	0.002
+BINDINGS	0	0	0

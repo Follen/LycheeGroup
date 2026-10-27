@@ -385,11 +385,13 @@ Create 的难度控件通过 `SelectDifficulty(activityID)` 验证当前活动�
 
 旧 `LN-` 文本由导入器读取，保留 `name`、`server`、`timestamp`、`reason`、`classSpec` 的旧字段含义，按完整身份与时间合并；缺失时间保持 `0`，空理由存 `""`，展示时再本地化。一次合并只通知一次受影响的 key 数组，界面据此更新当前编辑项和可见行。校验在导入边界完成，下游直接使用内部记录合同。
 
-导入导出编解码随 UI 加载，只在用户操作时运行；导出视图关闭后释放生成文本。Transfer 的 Base64 使用调用内分块缓冲，JSON 字符串直接截取连续片段，仅在转义处拼接；保留原有文本格式，不跨操作缓存用户记录或完整文本。容量与实测见 [perfermance.md](perfermance.md)。已有 `LN-` 导出文本可直接导入。
+导入导出编解码随 UI 加载，只在用户操作时运行；导出视图关闭后释放生成文本。Transfer 将 JSON 片段直接送入 Base64 编码器，片段之间只保留未组成三字节组的尾部；解码使用调用内定长字节缓冲。公开 Serialize 仍返回完整 JSON，所有缓冲按调用独立，不跨操作缓存用户记录或完整文本。已有文本格式及 `LN-` 导入合同保持，容量与实测见 [perfermance.md](perfermance.md)。
 
 ### 8.1 配置来源与外观接入
 
 主包 Configuration 管理设置与布局偏好，ThemeService 管理持久主题定义、选择及旧静态覆盖。两者共用原 uiConfig 存档位置，但使用不同分区；uiConfig.schema 为 2，业务存档 schema 不变。公开保存范围、优先级、错误与升级行为只在 [API.md](API.md) 维护。
+
+Configuration 的公开写入操作声明所修改的容器，事务草稿只复制该容器；迁移标记仅在已登记字段首次封存时复制，选择包只替换标量字段。提交顺序和有效值通知保持原合同，通用 Change 回调仍使用完整容器副本。Appearance 将寻队字段通知交给对应页面，`settings.find.*` 不触发无消费关系的 Settings.Sync；同批其他设置照常同步。
 
 偏好包的推荐 ID 保存于各层 `uiConfig.defaultPreset`，玩家明确选择保存在 `activePreset`；解析先查全部用户选择，再查默认候选。包注册和默认选择在一次事务内提交，用户叶独立保留。Application 的有效偏好缓存只在对应配置变更时失效，真实操作写用户层，预览与教学保留私有 provider。创建团本难度按下一次活动选择读取，不覆盖已有招募或正在编辑的表单。
 

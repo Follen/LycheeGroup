@@ -1,0 +1,43 @@
+Font layout: 4742 geometry checks passed
+[PASS] font_layout
+Find filter layout: 8249 checks passed
+[PASS] find_filter_layout
+Notes workspace: 340 checks passed
+[PASS] notes_layout
+Blocked settings layout: 331 checks passed
+[PASS] blocked_layout
+Settings sections: 10101 checks passed
+[PASS] settings_sections
+Responsive settings: 2515 checks passed
+[PASS] settings_responsive
+[TRACE] zhCN/70 native active=4 ordinary row=53 list stride=53 notice=已有空余名额，可以继续申请。
+[TRACE] zhCN/100 native active=4 ordinary row=53 list stride=53 notice=已有空余名额，可以继续申请。
+[TRACE] zhCN/100 first animation native objects +1; source=Motion.Start lazy driver Frame
+[TRACE] zhCN/130 native active=4 ordinary row=53 list stride=53 notice=已有空余名额，可以继续申请。
+[TRACE] enUS/70 native active=4 ordinary row=53 list stride=53 notice=A slot is available. You can continue your application.
+[TRACE] enUS/100 native active=4 ordinary row=53 list stride=53 notice=A slot is available. You can continue your application.
+[TRACE] enUS/100 first animation native objects +1; source=Motion.Start lazy driver Frame
+[TRACE] enUS/130 native active=4 ordinary row=53 list stride=53 notice=A slot is available. You can continue your application.
+Application notice layout: 6764 checks, 0 failures
+[PASS] application_notice_layout
+[PASS] find member size: 379 geometry checks
+[PASS] find_member_size
+Product component checks passed: 521
+[PASS] product_components
+Product metric layout: 71 checks passed
+[PASS] product_layout
+Startup element layout: 7 checks passed
+[PASS] element_layout
+Deferred product theme: 32 checks passed
+[PASS] element_refresh
+Fixed Find elements: 12 checks passed
+[PASS] find_elements
+Find lazy pool checks passed: 47
+[PASS] find_pool
+Floating lazy pool checks passed: 28
+[PASS] floating_pool
+Result row scalar details: 15 checks passed
+[PASS] result_row_details
+Applicant hover checks passed: 247
+[PASS] applicant_hover
+UI geometry: 17 scripts passed, 0 failed

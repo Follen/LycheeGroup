@@ -1717,19 +1717,25 @@ local function SameIconChannel(value,target,byte)
 end
 function Library.Context:SetIconState(icon,selected,hovered)
  icon=icon._lycheeTexture or icon
+ local glyph=icon._lycheeGlyph
+ local records=icon._lycheeFixedRecords
+ local glyphRecords=glyph and glyph._lycheeFixedRecords
+ -- Recheck the actual targets each call, including foreign Context bindings
+ -- and emptied maps after release. Ordinary icons need no ownership queries.
+ local styled=records and next(records) or glyphRecords and next(glyphRecords)
  local gray=not selected
- if not self.C._OwnsIconStyle(icon,"desaturated",gray) and icon:IsDesaturated()~=gray then icon:SetDesaturated(gray) end
+ if not (styled and self.C._OwnsIconStyle(icon,"desaturated",gray)) and icon:IsDesaturated()~=gray then icon:SetDesaturated(gray) end
  local alpha=selected and 1 or hovered and self.Theme.iconHoverAlpha or self.Theme.iconIdleAlpha
- local ownAlpha=self.C._OwnsIconStyle(icon,"alpha",alpha)
+ local ownAlpha=styled and self.C._OwnsIconStyle(icon,"alpha",alpha)
  local preserveAlpha=ownAlpha and icon:GetAlpha()
  local value=selected and 1 or hovered and self.Theme.iconHoverTint or self.Theme.iconIdleTint
  local byte=math.floor(value*255+.5)
- if not self.C._OwnsIconStyle(icon,"color",value) then
+ if not (styled and self.C._OwnsIconStyle(icon,"color",value)) then
   local r,g,b=icon:GetVertexColor()
   if not SameIconChannel(r,value,byte) or not SameIconChannel(g,value,byte) or not SameIconChannel(b,value,byte) then icon:SetVertexColor(value,value,value) end
  end
  local effectiveAlpha=ownAlpha and preserveAlpha or alpha
  if not SameIconChannel(icon:GetAlpha(),effectiveAlpha,math.floor(effectiveAlpha*255+.5)) then icon:SetAlpha(effectiveAlpha) end
- self.C._ObserveIconAlpha(icon,alpha)
+ if styled then self.C._ObserveIconAlpha(icon,alpha) end
 end
 

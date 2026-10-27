@@ -195,11 +195,18 @@ local function Changes(previous,current)
  return changes
 end
 local function Shallow(value) local result={};for key,item in pairs(value) do result[key]=item end;return result end
-function C:Change(callback,storage,onCommit,keys)
+function C:Change(callback,storage,onCommit,keys,write)
  local previous=self:Snapshot(keys)
  local original=self.stores[storage]
  local draft=Shallow(original)
- draft.user,draft.presets,draft.imported=Shallow(original.user),Shallow(original.presets),Shallow(original.imported)
+ -- Public operations declare the container they replace. Unchanged catalogs
+ -- and sealed migration markers can stay shared through the draft and commit.
+ if write==nil or write=="user" then draft.user=Shallow(original.user) end
+ if write==nil or write=="presets" then draft.presets=Shallow(original.presets) end
+ if write==nil then draft.imported=Shallow(original.imported)
+ elseif write=="user" and storage~="session" then
+  for key in pairs(keys) do if self.definitions[key] and original.imported[key]~=true then draft.imported=Shallow(original.imported);break end end
+ end
  self.stores[storage]=draft
  callback()
  local changes=Changes(previous,self:Snapshot(keys))
@@ -379,11 +386,11 @@ function C:Set(values,options)
   for key,value in pairs(copy) do
    self.stores[storage].user[key]=value
    -- Dynamic appearance fields have no legacy source to mark as imported.
-   if storage~="session" and self.definitions[key] then self.stores[storage].imported[key]=true end
+   if storage~="session" and self.definitions[key] and self.stores[storage].imported[key]~=true then self.stores[storage].imported[key]=true end
   end
  end,storage,function()
   if storage~="session" then for key,value in pairs(copy) do self:MirrorLegacy(key,value,storage) end end
- end,copy)
+ end,copy,"user")
 end
 function C:Reset(keys,options)
  self:EnsureReady()
@@ -399,11 +406,11 @@ function C:Reset(keys,options)
  return self:Change(function()
   for _,key in ipairs(copy) do
    self.stores[storage].user[key]=nil
-   if storage~="session" and self.definitions[key] then self.stores[storage].imported[key]=true end
+   if storage~="session" and self.definitions[key] and self.stores[storage].imported[key]~=true then self.stores[storage].imported[key]=true end
   end
  end,storage,function()
   if storage~="session" then for _,key in ipairs(copy) do self:MirrorLegacy(key,nil,storage) end end
- end,writeSet)
+ end,writeSet,"user")
 end
 function C:RegisterPreset(id,revision,values,options)
  self:EnsureReady()
@@ -414,7 +421,7 @@ function C:RegisterPreset(id,revision,values,options)
  return self:Change(function()
   self.stores[storage].presets[id]={revision=revision,values=copy}
   if options and options.default then self.stores[storage].defaultPreset=id end
- end,storage)
+ end,storage,nil,nil,"presets")
 end
 function C:ActivatePreset(id,options)
  self:EnsureReady()
@@ -424,14 +431,14 @@ function C:ActivatePreset(id,options)
   local found=false;for _,store in pairs(self.stores) do if store.presets[id] then found=true end end
   if not found then return false,"unknown preset: "..id end
  end
- return self:Change(function() self.stores[storage].activePreset=id end,storage)
+ return self:Change(function() self.stores[storage].activePreset=id end,storage,nil,nil,"selection")
 end
 function C:ApplyPreset(id,revision,values,options)
  self:EnsureReady()
  local valid,err=Identity(id,revision);if not valid or revision==nil then return false,err or "preset revision is required" end
  local storage,reason=Storage(options);if not storage then return false,reason end
  local copy,problem=self:ValidateValues(values);if not copy then return false,problem end
- return self:Change(function() self.stores[storage].presets[id]={revision=revision,values=copy};self.stores[storage].activePreset=id end,storage)
+ return self:Change(function() self.stores[storage].presets[id]={revision=revision,values=copy};self.stores[storage].activePreset=id end,storage,nil,nil,"presets")
 end
 function C:SetDefaultPreset(id,options)
  self:EnsureReady()
@@ -440,12 +447,12 @@ function C:SetDefaultPreset(id,options)
   local valid,reason=Identity(id);if not valid then return false,reason end
   if not Package(self,id) then return false,"unknown preset: "..id end
  end
- return self:Change(function() self.stores[storage].defaultPreset=id end,storage)
+ return self:Change(function() self.stores[storage].defaultPreset=id end,storage,nil,nil,"selection")
 end
 function C:UseDefaultPreset(options)
  self:EnsureReady()
  local storage,err=Storage(options);if not storage then return false,err end
- return self:Change(function() self.stores[storage].activePreset=nil end,storage)
+ return self:Change(function() self.stores[storage].activePreset=nil end,storage,nil,nil,"selection")
 end
 function C:RemovePreset(id,options)
  self:EnsureReady()
@@ -455,7 +462,7 @@ function C:RemovePreset(id,options)
   local store=self.stores[storage];store.presets[id]=nil
   if store.activePreset==id then store.activePreset=nil end
   if store.defaultPreset==id then store.defaultPreset=nil end
- end,storage)
+ end,storage,nil,nil,"presets")
 end
 function C:ListPresets()
  self:EnsureReady()

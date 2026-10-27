@@ -344,7 +344,9 @@ end
 function A:OnConfigurationChanged(changes)
  local changedTables={};local window,position,rail,settings
  for key in pairs(changes) do
-  if key:sub(1,9)=="settings." then settings=true end
+  -- Find leaves only feed the Find page; Settings has no control or derived
+  -- display for them. Genuine settings still synchronize even while hidden.
+  if key:sub(1,9)=="settings." and key:sub(1,14)~="settings.find." then settings=true end
   local id=key:match("^layout%.tables%.([^.]+)%.");if id then changedTables[id]=true end
   if key=="layout.window.width" or key=="layout.window.height" then window=true end
   if key=="layout.floating.position" then position=true end

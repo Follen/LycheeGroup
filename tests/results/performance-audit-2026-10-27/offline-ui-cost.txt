@@ -1,0 +1,34 @@
+OFFLINE Lua=Lua 5.1 clock=os.clock; current source=40a9005; Group=73b4254
+VERSION 72c4f379cb6cb32162dfdd8182e1a5db689b5ba4 1.0.0
+stable_unowned_glyph n=10000 CPU_ms=7.000 GC_stopped_KiB=0.000 GetVertexColor=10000 GetAlpha=10000 IsDesaturated=10000 SetVertexColor=0 SetAlpha=0 SetDesaturated=0
+stable_unowned_button n=10000 CPU_ms=39.000 GC_stopped_KiB=0.000
+fixed_color_feedback_apply n=10000 CPU_ms=96.000 GC_stopped_KiB=5390.625
+fixed_color_apply_only n=10000 CPU_ms=35.000 GC_stopped_KiB=0.000
+72c4f37 stable_glyph n=100000 CPU_ms=74,75,73
+72c4f37 stable_button n=100000 CPU_ms=372,376,374
+reducedMotion_Color_immediate n=10000 CPU_ms=6.000 GC_stopped_KiB=0.000 GetVertexColor=0
+immediate_jobs=0
+VERSION 40a900539510fe8af259a90d1e3c328093756fde 1.0.1
+stable_unowned_glyph n=10000 CPU_ms=30.000 GC_stopped_KiB=0.000 GetVertexColor=10000 GetAlpha=10000 IsDesaturated=10000 SetVertexColor=0 SetAlpha=0 SetDesaturated=0
+stable_unowned_button n=10000 CPU_ms=51.000 GC_stopped_KiB=0.000
+fixed_color_feedback_apply n=10000 CPU_ms=72.000 GC_stopped_KiB=0.000
+fixed_color_apply_only n=10000 CPU_ms=36.000 GC_stopped_KiB=0.000
+40a9005 stable_glyph n=100000 CPU_ms=327,331,329
+40a9005 stable_button n=100000 CPU_ms=617,574,565
+reducedMotion_Color_immediate n=10000 CPU_ms=9.000 GC_stopped_KiB=937.500 GetVertexColor=10000
+immediate_jobs=0
+overlapping_owners_1 n=10000 CPU_ms=36.000 GC_stopped_KiB=0.000
+owners=1 record_visits_feedback=7 record_visits_all_Apply=1
+overlapping_owners_4 n=10000 CPU_ms=51.000 GC_stopped_KiB=0.000
+owners=4 record_visits_feedback=28 record_visits_all_Apply=16
+overlapping_owners_16 n=10000 CPU_ms=111.000 GC_stopped_KiB=0.000
+owners=16 record_visits_feedback=112 record_visits_all_Apply=272
+overlapping_owners_64 n=10000 CPU_ms=399.000 GC_stopped_KiB=0.000
+owners=64 record_visits_feedback=448 record_visits_all_Apply=4096
+fixed_color_actual_hover_toggles n=10000 CPU_ms=88.000 GC_stopped_KiB=1875.000
+Motion_100_jobs_10000_frames n=10000 CPU_ms=636.000 GC_stopped_KiB=0.000
+Motion_cleanup jobs=0 buffer_entries=0 running=false OnUpdate=nil
+Panel_retarget n=10000 CPU_ms=27.000 GC_stopped_KiB=3632.813
+Glyph_retarget n=10000 CPU_ms=30.000 GC_stopped_KiB=4570.313
+72c4f37 scope_cycles=1000 retained_KiB=201.125 empty_scope_groups=1000 retained_scope_keys=1000 active_targets=0
+40a9005 scope_cycles=1000 retained_KiB=201.098 empty_scope_groups=1000 retained_scope_keys=1000 active_targets=0

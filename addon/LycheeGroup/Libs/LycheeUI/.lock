@@ -3,11 +3,11 @@
   "library": "LycheeUI",
   "status": "frozen",
   "version": "1.0.1",
-  "note": "V1.0.1 开发候选，未发布标签；修复声明样式与默认图标反馈的属性所有权。已验证受影响的通用合同，运行文本使用 LF，当前内容由 SHA-256 固定。",
+  "note": "V1.0.1 开发候选，未发布标签；修复声明样式、颜色渐变和原生细边框尺寸舍入，并减少默认反馈分配。已验证受影响的通用合同，运行文本使用 LF，当前内容由 SHA-256 固定。",
   "runtimeFiles": [
     {
       "path": "Components.lua",
-      "sha256": "6ada699b2a1147defd3d65e13513e901888fb84aeedf54d4c278a57e080038af"
+      "sha256": "ec71e2fdc636d5f6f126201dd6b95ca757a2d5e2931cc15d6bda80403723d442"
     },
     {
       "path": "Core.lua",
@@ -111,11 +111,11 @@
     },
     {
       "path": "Motion.lua",
-      "sha256": "a27c042b1218f62213ba93f8e54303ac6213b7a1f0d798957a2b1d0a55bc2542"
+      "sha256": "15fc4809e69077de512ba0ec480fb6a1c58023a1b249a38d2cb6562625f74afc"
     },
     {
       "path": "Native.lua",
-      "sha256": "1e684f5cb17201ca09ea2a747b61aede450258c0bcebe88ca5dcb97f68d0d417"
+      "sha256": "1e52ad3545188dcf943f475e384d3791967bb791d578fc054c226ebce9b3328a"
     },
     {
       "path": "Responsive.lua",
@@ -123,7 +123,7 @@
     },
     {
       "path": "Styles.lua",
-      "sha256": "5af996384e1b4794fe1c7a1540af1f70975cafe918dc64836d17a7cd4ac6ac40"
+      "sha256": "97b2b9c14c84fcb10b17fd4dcee6bef8c794176bd528370747d2fee90636b051"
     },
     {
       "path": "Theme.lua",

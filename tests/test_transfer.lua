@@ -158,4 +158,47 @@ do
 	T.eq(Transfer.Serialize(records),"["..string.rep(one..",",127)..one.."]","nested tables share the emitter without per-level formatting changes")
 end
 
+do
+	-- Independent byte/bit accumulator checks the exact wire bytes across the
+	-- serialization fragment and numeric output-buffer boundaries.
+	local alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+	local function ReferenceBase64(text)
+		local out,acc,bits={},0,0
+		for index=1,#text do
+			acc,bits=acc*256+text:byte(index),bits+8
+			while bits>=6 do
+				bits=bits-6
+				local divisor=2^bits
+				local value=math.floor(acc/divisor)
+				out[#out+1]=alphabet:sub(value+1,value+1);acc=acc%divisor
+			end
+		end
+		if bits>0 then local value=acc*2^(6-bits);out[#out+1]=alphabet:sub(value+1,value+1) end
+		while #out%4~=0 do out[#out+1]="=" end
+		return "LN-"..table.concat(out)
+	end
+	local bytes={};for value=0,255 do bytes[#bytes+1]=string.char(value) end
+	local binary=table.concat(bytes)
+	for _,length in ipairs({0,1,2,3,127,128,129,255,256,257,383,384,385,511,512,513,1023,1024,1025}) do
+		local value=(binary..binary..binary..binary..binary):sub(1,length)
+		local records={value,reason="跨块\\\"\n\r",nested={true,false,17.25}}
+		T.eq(Transfer.Encode(records),ReferenceBase64(Transfer.Serialize(records)),"binary values preserve exact streamed wire bytes")
+		T.eq(Transfer.Decode(Transfer.Encode({value}))[1],value,"binary decode buffer boundary")
+	end
+	for count=124,132 do
+		local records={};for index=1,count do records[index]=index%2==0 and "中文\n" or "plain"..index end
+		T.eq(Transfer.Encode(records),ReferenceBase64(Transfer.Serialize(records)),"serialization chunk tail carries between writes")
+	end
+	local nestedText
+	local key=setmetatable({}, {__tostring=function()
+		nestedText=Transfer.Encode({"nested"});return "outer"
+	end})
+	local outer=Transfer.Encode({[key]="value"})
+	T.eq(nestedText,ReferenceBase64('["nested"]'),"nested encoding owns independent buffers")
+	T.eq(outer,ReferenceBase64('{"outer":"value"}'),"outer buffers survive nested serialization")
+	local bad=setmetatable({}, {__tostring=function() error("serialization callback failure") end})
+	T.eq(pcall(Transfer.Encode,{[bad]=true}),false,"serialization failure propagates")
+	T.eq(Transfer.Encode({"after failure"}),ReferenceBase64('["after failure"]'),"later encoding has no partial prior state")
+end
+
 _G.LycheeGroup = nil
