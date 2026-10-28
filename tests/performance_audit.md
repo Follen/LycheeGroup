@@ -85,3 +85,20 @@ lycheedev live execute --project . --session <CON-id> --file tests/live_find_ref
 ```
 
 普通关窗后等待退场完成，检查动画、输入占用、页面订阅、选择器成绩服务、申请时钟及列表绑定释放。成功、失败或取消均还原包装方法、原筛选表和偏好引用、所有配置存储、字号与原 Find 开窗状态；任务结束再正常关闭主窗。只包装两个产品 FontString 和产品自己的刷新入口，不改全局 API、CVar 或 GC 策略。报告中的局部计时包含计数包装，不能视为无插桩 CPU 对照。生命周期测试另注入旧版重复工作，检查断言确实能识别回归。
+
+
+## 原生职责同步
+
+`live_native_roles_profile.lua` 在私有原生 Context 内加载指定 Application 模块，构造三职责弹窗，正常动画、自然 GC。原生角色 API 在模块环境中替换为私有选择，真实全局 API、玩家设置和申请业务不变。稳定刷新与切换职责各执行 300 次计时，再各执行 300 次排版计数，每帧最多 10 次。共享控件及生产 LayoutApplication 参与测量，产品元素覆盖和职责图标材质不在此范围。自然堆读数是全客户端读数，不代表插件独占内存或保留量。
+
+```powershell
+./tests/Build-IsolatedLibraryProbe.ps1 -UseInstalledLibrary -ModulePath addon/LycheeGroup_UI/Application.lua -ProfilePath tests/live_native_roles_profile.lua -OutputPath .lycheedev/native-roles-profile.lua
+luac -p .lycheedev/native-roles-profile.lua
+lua tests/test_live_native_roles_profile.lua .lycheedev/native-roles-profile.lua
+lycheedev live execute --project . --session <CON-id> --file .lycheedev/native-roles-profile.lua --request native-roles-profile-01 --budget-seconds 35 --wait-seconds 45 --policy observation --format json
+```
+
+生命周期脚本检查正常结束、取消、超时、回调错误、战斗入口和迟到回调。成功后确认 `report.ok`、零动画任务、驱动停止及工具清理完成。比较旧版时将 `ModulePath` 指向固定 Git 提交导出的源码，保持探针与已加载共享库不变；旧版稳定排版计数预期不同，不直接套用候选生命周期里的零排版断言。测量结果保留在 [2026-10-28 记录](results/native-roles-2026-10-28.json)。
+
+
+`live_native_roles_smoke.lua` 用于已部署 1.2.8 的原生接入检查。前提是插件主窗及原生申请窗关闭、无其他模态窗口、非战斗；脚本加载 UI／Group 后，在透明但显示的主窗下打开职责设置，不搜索或提交队伍，不改职责或备注内容。结束归还原生输入父级和回调、关闭测试窗口；读取一次自然五包内存，观察器耗时单列。隐藏父窗不适合验证 OnHide 生命周期，不能用其清理失败判定正式流程缺陷。使用固定请求键、25 秒预算执行，保留 `report.ok` 及清理状态。

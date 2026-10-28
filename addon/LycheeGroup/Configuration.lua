@@ -130,6 +130,8 @@ function C:ValidateValues(values)
  if type(values)~="table" then return nil,"values must be a flat key/value table" end
  local ok,copy=pcall(Copy,values)
  if not ok then return nil,copy end
+ -- Retired role defaults must not break the remaining settings in older packages.
+ copy["settings.applicationRoles"]=nil
  for key,value in pairs(copy) do
   local def=ValueDefinition(self,key)
   if not def then return nil,"unknown configuration key: "..tostring(key) end
@@ -322,6 +324,7 @@ function C:BindNamespace(root)
  end
  self.namespaceErrors[root]=err
  for _,key in ipairs({"user","presets","imported"}) do self:BindTable(root,store,key,"uiConfig."..key) end
+ store.user["settings.applicationRoles"],store.imported["settings.applicationRoles"]=nil,nil
  for key,value in pairs(store.user) do
   local def=self.definitions[key]
   if def then
@@ -331,6 +334,7 @@ function C:BindNamespace(root)
   end
  end
  for id,package in pairs(store.presets) do
+  if type(package)=="table" and type(package.values)=="table" then package.values["settings.applicationRoles"]=nil end
   local ok,err=Identity(id,type(package)=="table" and package.revision or nil)
   if ok and (type(package)~="table" or package.revision==nil) then ok,err=false,"preset requires a revision and values table" end
   if ok then ok,err=StoredValues(self,package.values) end

@@ -200,7 +200,6 @@ local ok, err = config:RegisterPreset("myaddon.defaults", 2, {
     ["settings.fontScale"] = 110,
     ["settings.toggleBinding"] = "CTRL-G",
     ["settings.autoApply"] = false,
-    ["settings.applicationRoles"] = {DAMAGER = true},
     ["settings.creationRaidDifficultyID"] = 15,
     ["layout.window.width"] = 1400,
     ["layout.tables.findResults.widths.title"] = 0.22,
@@ -229,13 +228,13 @@ config:Reset("settings.fontScale", {storage = "character"})
 | 表格 | `layout.tables.<表>.widths.<列>`、`.sortKey`、`.descending`；宽度是可用表宽的权重，受该列最小宽度约束。未提供时沿用列定义；重置清除角色用户宽度，重新继承有效默认 |
 | 打开快捷键 | `settings.toggleBinding`，键名字符串或 `false`，默认 `";"`；沿原生账号／角色按键方案管理 |
 | 自动申请 | `settings.autoApply`，布尔，默认 `false`，按角色保存 |
-| 申请职责 | `settings.applicationRoles`，`false` 或只含 `TANK`／`HEALER`／`DAMAGER` 布尔叶的表，按角色保存 |
+| 申请职责 | 使用 I 键原生组队面板当前的坦克／治疗／输出多选，不属于 Configuration 或主题字段 |
 | 创建团本难度 | `settings.creationRaidDifficultyID`，`false` 或正整数，按角色保存；当前活动不可用时按原流程选择可用难度，不覆盖保存值 |
 | 页面固定外观 | Theme 的 token、component、element 和 utility；留白、字号、控件宽高、状态颜色通过声明提供启动默认 |
 
-职责值 `false` 使用既有的专精／队列职责预选；`{}` 或全部为 `false` 明确不选职责，需玩家选择后才能自动提交。进入页面、显示控件和计算活动可用性不会把默认值写成用户覆盖。包更新会刷新未编辑的申请职责；已编辑草稿保留到玩家提交。
+申请职责不再通过配置包提供默认值，`GetSchema()` 不包含 `settings.applicationRoles`。初始化清理旧账号、角色及偏好包中的该字段；旧包通过 `Set`、`RegisterPreset` 或 `ApplyPreset` 写入时忽略该字段，其他值仍按原合同验证和保存。进入页面、显示控件和计算活动可用性不会将原生职责复制为用户覆盖。
 
-自动申请开启时，玩家在申请弹窗明确修改职责并成功申请，会把新职责保存为用户覆盖，后续自动申请及重载使用新值。取消、申请失败和仅预选不写；独立申请设置页的“保存”仍是明确保存操作。教学中的同类操作只修改教学 provider。
+正式申请弹窗读取 `GetLFGRoles()` 的坦克、治疗、输出三项选择；点击按钮立即通过 `SetLFGRoles` 同步三项，保留原生 leader 标志，不将其显示为职责选项。取消或申请失败均保留原生编辑。自动申请每次读取当前原生选择：非空且全部可用时直接启用或提交，空值或含不可用项时打开职责设置；`settings.autoApply` 仍按角色保存。普通预览及引导只修改 `provider.applicationPrefs.roles`，不修改原生职责或正式存档。
 
 快捷键默认只更新本插件自动分配且用户未修改的主键，不抢占其他功能已有按键。已有原生绑定和旧版本初始化记录保持原状；玩家录键或在暴雪界面修改主键后记为用户选择。仅调整第二键不锁定自动主键，默认升级保留第二键。战斗期间等待退出战斗；冲突键释放后的绑定更新事件可重新尝试。`Get` 返回配置意图，实际按键仍以原生绑定及设置页显示为准。
 

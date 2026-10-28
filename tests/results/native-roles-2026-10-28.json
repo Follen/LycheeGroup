@@ -1,0 +1,192 @@
+{
+  "date": "2026-10-28",
+  "version": "1.2.8",
+  "base": "4900532e0dc73734727ecb7433b691d5343e4be5",
+  "scope": "Changed native role selection/controller; private native UI replay and offline functional coverage",
+  "runtime": {
+    "candidate": {
+      "request": "native-roles-candidate-01",
+      "operation": "LMO-594c3d806a5d8852480e10da590b3b6a",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "report": {
+        "build": "70575",
+        "buildMs": 2.4682000279426575,
+        "cleanup": {
+          "driverStopped": true,
+          "jobs": 0,
+          "productUnchanged": true
+        },
+        "gc": "natural; whole-client heap, not addon retained bytes",
+        "heapEndKiB": 424820.0947265625,
+        "heapStartKiB": 424169.982421875,
+        "iterations": 300,
+        "library": "1.0.1",
+        "maxBatch": 10,
+        "nativeIsPrivate": true,
+        "scenes": {
+          "toggle": {
+            "layouts": 300,
+            "maxBatchMs": 1.1176999807357788,
+            "timing": {
+              "count": 300,
+              "maxMs": 0.3124000132083893,
+              "p95Ms": 0.19629999995231628,
+              "totalMs": 23.580799996852875
+            }
+          },
+          "unchanged": {
+            "layouts": 0,
+            "maxBatchMs": 0.05880001187324524,
+            "timing": {
+              "count": 300,
+              "maxMs": 0.020400017499923706,
+              "p95Ms": 0.01660001277923584,
+              "totalMs": 1.2516001462936401
+            }
+          }
+        },
+        "scope": "private_native_application_modal"
+      }
+    },
+    "baseline": {
+      "request": "native-roles-baseline-01",
+      "operation": "LMO-7ae9aad7a874705e1402532d027bbf2c",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "report": {
+        "build": "70575",
+        "buildMs": 1.949999988079071,
+        "cleanup": {
+          "driverStopped": true,
+          "jobs": 0,
+          "productUnchanged": true
+        },
+        "gc": "natural; whole-client heap, not addon retained bytes",
+        "heapEndKiB": 431583.4052734375,
+        "heapStartKiB": 430931.3505859375,
+        "iterations": 300,
+        "library": "1.0.1",
+        "maxBatch": 10,
+        "nativeIsPrivate": true,
+        "scenes": {
+          "toggle": {
+            "layouts": 300,
+            "maxBatchMs": 0.8565999865531921,
+            "timing": {
+              "count": 300,
+              "maxMs": 0.27090001106262207,
+              "p95Ms": 0.19089999794960022,
+              "totalMs": 21.795800060033798
+            }
+          },
+          "unchanged": {
+            "layouts": 300,
+            "maxBatchMs": 0.6990000009536743,
+            "timing": {
+              "count": 300,
+              "maxMs": 0.17639997601509094,
+              "p95Ms": 0.1355000138282776,
+              "totalMs": 14.75869995355606
+            }
+          }
+        },
+        "scope": "private_native_application_modal"
+      }
+    },
+    "smoke-result": {
+      "operation": "LMO-81b1f4dfbb440fdcfe5ec9143356785c",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "report": {
+        "error": "LycheeMemoryProbe:44: ui_cleanup_failed",
+        "logs": {},
+        "ok": false,
+        "resourcesReleased": true
+      }
+    },
+    "smoke-cleanup": {
+      "operation": "LMO-8c2cb44da35c70b56a3fbaafb7ab37d2",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "report": {
+        "logs": {},
+        "ok": true,
+        "resourcesReleased": true,
+        "result": {
+          "restoredHiddenHostModalOwner": true
+        }
+      }
+    },
+    "smoke-result-02": {
+      "operation": "LMO-3c7468fb25c99ada809aaed70ac2ff76",
+      "reportState": "verified",
+      "cleanup": "complete",
+      "report": {
+        "logs": {},
+        "ok": true,
+        "resourcesReleased": true,
+        "result": {
+          "fullCollection": false,
+          "hiddenUI": true,
+          "layouts": 0,
+          "memoryBytes": {
+            "LycheeGroup": 2837803,
+            "LycheeGroup_Group": 1248482,
+            "LycheeGroup_Guide": 0,
+            "LycheeGroup_Notes": 0,
+            "LycheeGroup_UI": 4956889
+          },
+          "memoryObserverMs": 66.48500001430511,
+          "memoryScope": "single natural sample after hidden UI first build; not workload peak",
+          "nativeLeaseRestored": true,
+          "nativeRolesMatched": true,
+          "refreshTotalMs": 0.6535999774932861,
+          "stableRefreshes": 300,
+          "totalBytes": 9043174,
+          "unchangedRoles": true,
+          "version": "1.2.8"
+        }
+      }
+    }
+  },
+  "validation": {
+    "runnerAssertions": 58354,
+    "layoutScripts": 17,
+    "architectureChecks": 6609,
+    "probeLifecycleChecks": 335
+  },
+  "sources": {
+    "addon/LycheeGroup_UI/Application.lua": "5560f99a9120c7055134a991761217f7a025e71f4b97b6371f4364aba789e673",
+    "addon/LycheeGroup/Core.lua": "a32c8e9f43420d160d6e599c43751bd80b13f5c0dc166e404aceb1cf937e9076",
+    "addon/LycheeGroup/PartyRoleCheck.lua": "ad967d5a0f37a3e6d3c18e2319b68e2e9fce39621eb59cf84138c8c96c745448",
+    "addon/LycheeGroup/Configuration.lua": "53b0acf698b584f7f5856cc2676bf38eb266385de92a992125b1edf2df9f776c",
+    "addon/LycheeGroup_Guide/Adapter.lua": "1309009692b555a41aed874def3b51c25501b7da8def4353926d9da26b8e7199",
+    "addon/LycheeGroup_Group/Group.lua": "e0960e3c6d469fedf863452749bd40468709dd7118116fe4cf9bc0ca9395e7e4",
+    "tests/live_native_roles_profile.lua": "f69dc6bdb1cccc2cdb6fc2c3f992652af4ae8221b796aa41144530a398c5b5a0",
+    "tests/test_live_native_roles_profile.lua": "3740272fdc63df977a9a1f52686849d6a35992e59de4f1e4ecdb511fde13c196",
+    "tests/test_native_application_roles.lua": "4fd4ae4f0a3092eafa0805472a7760d999c3bbc502608f9cbaf1e67ad88567b8",
+    "tests/live_native_roles_smoke.lua": "e34769baa63d183858a296bad64398ebb9a09b256805c8c2671e7547b6e87724"
+  },
+  "limits": [
+    "Private modal uses real native frames and shared UI but a private role API; not hardware input or server application submission.",
+    "Natural heap readings are client-wide and include observer and unrelated work; no retained-memory or full-product 20 MB claim.",
+    "Element-scope overrides and icon textures are outside this private layout replay.",
+    "Existing dense-list memory overrun remains tracked in the 2026-10-27 audit."
+  ],
+  "smokeProbeCorrection": "First smoke opened its modal under a hidden host; native OnHide did not clear activeModal. Cleared only that probe-owned hidden modal pointer, then repeated with transparent shown host. No production code change.",
+  "deployment": {
+    "LycheeGroup\\Configuration.lua": "53b0acf698b584f7f5856cc2676bf38eb266385de92a992125b1edf2df9f776c",
+    "LycheeGroup\\Core.lua": "a32c8e9f43420d160d6e599c43751bd80b13f5c0dc166e404aceb1cf937e9076",
+    "LycheeGroup\\LycheeGroup.toc": "bf949ace226b50abeb581115ccb06a30580892b54c31fe9021617a45ec90a1af",
+    "LycheeGroup\\PartyRoleCheck.lua": "ad967d5a0f37a3e6d3c18e2319b68e2e9fce39621eb59cf84138c8c96c745448",
+    "LycheeGroup_Group\\Group.lua": "e0960e3c6d469fedf863452749bd40468709dd7118116fe4cf9bc0ca9395e7e4",
+    "LycheeGroup_Group\\LycheeGroup_Group.toc": "e526ce5babae10df65f0422a657699708578b91e29ee222cf20042e23d5f3dc5",
+    "LycheeGroup_Guide\\Adapter.lua": "1309009692b555a41aed874def3b51c25501b7da8def4353926d9da26b8e7199",
+    "LycheeGroup_Guide\\LycheeGroup_Guide.toc": "6cad34d74817d2ee414be5564073ba6d6d32d2c8659ed6ae723936eb4daaadc5",
+    "LycheeGroup_Notes\\LycheeGroup_Notes.toc": "168e139630f94c0a624ff108b9167427b2f9d3ae5da350355e109806b13b64e8",
+    "LycheeGroup_UI\\Application.lua": "5560f99a9120c7055134a991761217f7a025e71f4b97b6371f4364aba789e673",
+    "LycheeGroup_UI\\LycheeGroup_UI.toc": "dbe4bc352714b865f68b75a0ca287bf94b0bddbb7fa058951a79aea1d2dfad4f"
+  },
+  "connectionClosed": true
+}
