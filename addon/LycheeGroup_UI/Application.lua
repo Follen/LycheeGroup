@@ -1,4 +1,4 @@
--- Application preferences, role selection and confirmation belong to this UI flow.
+-- Application settings and confirmation belong to this UI flow; roles belong to native LFG.
 -- Real notes remain in the engine's registered description control.
 local A=_G.LycheeGroup
 local UI=A.UI
@@ -19,25 +19,29 @@ local function CopyRoles(source)
  local roles={};for _,role in ipairs(roleKeys) do if source[role]==true then roles[role]=true end end
  return roles
 end
+local function NativeRoles(roles)
+ roles=roles or {}
+ local _,tank,healer,damage=GetLFGRoles()
+ roles.TANK=tank==true or nil;roles.HEALER=healer==true or nil;roles.DAMAGER=damage==true or nil
+ return roles
+end
 local function ApplicationPrefs()
  if UI.preview then
   local group=UI:GetGroup();local prefs=group.applicationPrefs
   if prefs.enabled==nil then prefs.enabled=group.prefs.autoApply==true end
   return prefs
  end
- Application.applicationPrefs=Application.applicationPrefs or {roles=CopyRoles(A:GetSetting("applicationRoles")),enabled=A:GetSetting("autoApply")==true}
+ Application.applicationPrefs=Application.applicationPrefs or {enabled=A:GetSetting("autoApply")==true}
  return Application.applicationPrefs
+end
+local function CurrentRoles()
+ if UI.preview then return ApplicationPrefs().roles end
+ return NativeRoles()
 end
 local function SaveEnabled(enabled)
  ApplicationPrefs().enabled=enabled==true
  if UI.preview then UI:GetGroup().prefs.autoApply=enabled==true
  else A:SetSetting("autoApply",enabled==true) end
-end
-local function SaveRoles(roles)
- ApplicationPrefs().roles=CopyRoles(roles)
- local saved={TANK=roles.TANK==true,HEALER=roles.HEALER==true,DAMAGER=roles.DAMAGER==true}
- if UI.preview then UI:GetGroup().prefs.applicationRoles=saved
- else A:SetSetting("applicationRoles",saved) end
 end
 function Application:IsAutoApplyEnabled()
  return ApplicationPrefs().enabled==true
@@ -50,14 +54,9 @@ local function RefreshApplicationEntry()
  end
  if Application.onPreferencesChanged then Application.onPreferencesChanged() end
 end
-function Application:OnPreferencesChanged(rolesChanged)
+function Application:OnPreferencesChanged()
  self.applicationPrefs=nil
  if UI.preview then return end
- local lease=self.applicationLease
- if rolesChanged and lease and not lease.rolesEdited then
-  lease.roles=CopyRoles(ApplicationPrefs().roles) or {};lease.initialized=nil
-  self:RefreshApplicationRoles()
- end
  RefreshApplicationEntry()
 end
 local function ValidRoles(roles)
@@ -68,7 +67,7 @@ end
 function Application:SetAutoApply(enabled)
  local lease=self.previewApplication or self.applicationLease
  if enabled then
-  if ValidRoles(ApplicationPrefs().roles) then
+  if ValidRoles(CurrentRoles()) then
    SaveEnabled(true);if lease then lease.enableOnSave=nil end
   elseif lease then lease.enableOnSave=true
   else
@@ -144,40 +143,44 @@ function Application:LayoutApplication()
 UI:ApplyElementScope("application")
  end
 function Application:SetApplicationRole(role)
- local lease=self.previewApplication or self.applicationLease;if not lease or not lease.available[role] then return end
- lease.roles[role]=not lease.roles[role] or nil
- lease.rolesEdited=true
+ local lease=self.previewApplication or self.applicationLease;if not lease then return end
+ if UI.preview then
+  if not lease.available[role] then return end
+  lease.roles[role]=not lease.roles[role] or nil
+  ApplicationPrefs().roles=CopyRoles(lease.roles)
+ else
+  local leader,tank,healer,damage=GetLFGRoles()
+  local canTank,canHeal,canDamage=C_LFGList.GetAvailableRoles()
+  if role=="TANK" and canTank then tank=not tank
+  elseif role=="HEALER" and canHeal then healer=not healer
+  elseif role=="DAMAGER" and canDamage then damage=not damage
+  else return end
+  SetLFGRoles(leader,canTank and tank or false,canHeal and healer or false,canDamage and damage or false)
+ end
  self:RefreshApplicationRoles()
 end
 function Application:RefreshApplicationRoles()
  local lease=self.previewApplication or self.applicationLease;if not lease then return end
  local tank,healer,damage=C_LFGList.GetAvailableRoles()
  lease.available.TANK,lease.available.HEALER,lease.available.DAMAGER=tank,healer,damage
- if not lease.initialized then
+ local changed=not lease.initialized
+ if not UI.preview then NativeRoles(lease.roles);lease.initialized=true
+ elseif not lease.initialized then
   lease.initialized=true
-  if not ApplicationPrefs().roles then
-   local specRole
-   if GetSpecialization and GetSpecializationRole then
-    local spec=GetSpecialization();specRole=spec and GetSpecializationRole(spec)
-   end
-   if specRole and lease.available[specRole] then lease.roles[specRole]=true
-   else
-    local _,a,b,c=GetLFGRoles()
-    lease.roles.TANK=tank and a or nil;lease.roles.HEALER=healer and b or nil;lease.roles.DAMAGER=damage and c or nil
-    if not next(lease.roles) then
-     local role=tank and "TANK" or healer and "HEALER" or damage and "DAMAGER"
-     if role then lease.roles[role]=true end
-    end
-   end
-  end
+  if not ApplicationPrefs().roles then NativeRoles(lease.roles) end
  end
  local selected=false
  for _,role in ipairs(roleKeys) do
   if not lease.available[role] then lease.roles[role]=nil end
   if lease.roles[role] then selected=true end
-  self.applicationModal.roles[role]:SetAvailable(lease.available[role]==true)
-  self.applicationModal.roles[role]:SetActive(lease.roles[role]==true)
+  local button=self.applicationModal.roles[role]
+  local available,active=lease.available[role]==true,lease.roles[role]==true
+  if button:IsEnabled()~=available then button:SetAvailable(available);changed=true end
+  if (button.active==true)~=active then button:SetActive(active);changed=true end
  end
+ -- SetLFGRoles may also emit LFG_ROLE_UPDATE in this call. Read it again, but
+ -- avoid a second layout when the native event already rendered these roles.
+ if not changed then return end
  self.applicationModal.submit:SetAvailable(selected)
  UI:SetText(self.applicationModal.error,selected and "" or L.applicationRoleUnavailable)
  self:LayoutApplication()
@@ -238,7 +241,7 @@ function Application:ConfirmApplication()
   local ok,err=self:Apply(lease.id,true,lease.roles)
   if not ok and self.applicationModal.frame:IsShown() then UI:SetText(self.applicationModal.error,err or L.failed);self:LayoutApplication() end
  else
-  SaveRoles(lease.roles)
+  if UI.preview then ApplicationPrefs().roles=CopyRoles(lease.roles) end
   if lease.enableOnSave then SaveEnabled(true) end
   RefreshApplicationEntry();self:ReleaseApplication()
  end
@@ -253,7 +256,7 @@ function Application:Apply(resultID,manual,confirmedRoles)
   local result=C_LFGList.GetSearchResultInfo(resultID);if not result or result.isDelisted then return false,L.unavailable end
  end
  local prefs=ApplicationPrefs();local tank,healer,damage=C_LFGList.GetAvailableRoles()
- local roles=confirmedRoles or prefs.roles
+ local roles=confirmedRoles or CurrentRoles()
  if not confirmedRoles and (manual or not prefs.enabled or not roles) then return self:OpenApplicationSettings(resultID) end
  if not next(roles) or roles.TANK and not tank or roles.HEALER and not healer or roles.DAMAGER and not damage then return self:OpenApplicationSettings(resultID) end
  local submittedRoles={tank=roles.TANK==true,healer=roles.HEALER==true,damage=roles.DAMAGER==true}
@@ -262,8 +265,8 @@ function Application:Apply(resultID,manual,confirmedRoles)
  if UI.preview then ok,err=group:Apply(resultID,submittedRoles,prefs.note or "")
  else ok,err=group:Apply(resultID,submittedRoles) end
  if ok then
-  if confirmedRoles and (not prefs.enabled or lease and lease.rolesEdited) then
-   SaveRoles(confirmedRoles)
+  if confirmedRoles then
+   if UI.preview then prefs.roles=CopyRoles(confirmedRoles) end
    if lease and lease.enableOnSave then SaveEnabled(true) end
    RefreshApplicationEntry()
   end

@@ -103,17 +103,7 @@ function G:BindSavedPreferences(db,prefs)
  -- First-use character migration clones only the already validated seed.
  if prefs.find==nil then prefs.find=CopyPreferences(seed) end
  BindFind(prefs,prefs,"find",true)
- local roles=prefs.applicationRoles
- if roles~=nil and roles~=false then
-  if type(roles)~="table" then Retain(prefs,"applicationRoles",roles,"expected role booleans",true);prefs.applicationRoles=nil
-  else
-   for key,value in pairs(roles) do
-    if (key~="TANK" and key~="HEALER" and key~="DAMAGER") or type(value)~="boolean" then
-     Retain(prefs,"applicationRoles["..type(key)..":"..tostring(key).."]",value,"expected a role boolean",true);roles[key]=nil
-    end
-   end
-  end
- end
+ prefs.applicationRoles,legacy.applicationRoles=nil,nil
  local blocked=BindTable(db,db,"blockedLeaders","blockedLeaders")
  for key,value in pairs(blocked) do
   if type(key)~="string" or key=="" or value~=true then

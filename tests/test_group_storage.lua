@@ -153,7 +153,6 @@ do
   {find=true},{find={filters=true}},{find={categoryPrefs=true}},
   {find={categoryPrefs={seasonDungeon=true}}},
   {find={categoryPrefs={seasonDungeon={groupKeys=true}}}},
-  {applicationRoles=true},
  }
  for _,prefs in ipairs(malformed) do
   local f=Fixture(prefs);T.ok(f.A:Open("find"))
@@ -178,7 +177,7 @@ do
  T.eq(groupKeys[20],true);T.eq(groupKeys[30],false);T.eq(groupKeys.broken,nil)
  T.eq(category.minItemLevel,200);T.eq(category.minRating,nil);T.eq(filters.maxItemLevel,500)
  T.eq(filters.minRating,nil);T.eq(filters.maxRating,nil);T.eq(filters.minItemLevel,nil)
- T.eq(prefs.applicationRoles,roles);T.eq(roles.TANK,true);T.eq(roles.HEALER,false);T.eq(roles.DAMAGER,nil);T.eq(roles.OTHER,nil)
+ T.eq(prefs.applicationRoles,nil,"obsolete role preferences are removed instead of repaired")
  T.eq(g.db.blockedLeaders,blocked);T.same(g.Results:GetBlockedLeaders(),{"Good-Home"})
  T.eq(account.storageRecovery["blockedLeaders[number:7]"].value,true)
  T.eq(account.storageRecovery["blockedLeaders[string:False-Home]"].value,false)
@@ -253,9 +252,9 @@ do
  EXPANSION_NAME10,EXPANSION_NAME11=oldTen,oldEleven
 end
 
--- A deliberate empty role table and legacy false remain distinct valid values.
-for _,roles in ipairs({false,{}}) do
+-- Obsolete role values are removed regardless of their former representation.
+for _,roles in ipairs({false,{},true,{HEALER=true}}) do
  local prefs={applicationRoles=roles};local f=Fixture(prefs)
- T.eq(prefs.applicationRoles,roles);T.eq(prefs.uiConfigRecovery,nil)
+ T.eq(prefs.applicationRoles,nil);T.eq(prefs.uiConfigRecovery,nil)
  T.ok(f.A:Open("find"));f.U:Hide()
 end

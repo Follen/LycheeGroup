@@ -1672,8 +1672,8 @@ do
  local dialog=LFGListApplicationDialog;local roles={GetLFGRoles()};local setRoles=SetLFGRoles
  local getSpec,getSpecRole=GetSpecialization,GetSpecializationRole
  _G.GetSpecialization=function() return 2 end
- _G.GetSpecializationRole=function(spec) T.eq(spec,2);return "TANK" end
- _G.SetLFGRoles=function() error("an application must not change dungeon finder roles") end
+ _G.GetSpecializationRole=function() return "HEALER" end
+ setRoles(roles[1],true,false,false)
  local originalSubmit=dialog.SignUpButton:GetScript("OnClick");local originalEvent=dialog:GetScript("OnEvent");local noteParent=dialog.Description.EditBox:GetParent();local noteFont={dialog.Description.EditBox:GetFont()}
  local before=dialog.submissions
  U:CloseModal()
@@ -1683,29 +1683,33 @@ do
  find.applicationSettings:Fire("OnClick");T.eq(U.activeModal,nil,"the disabled text cannot bypass enabling configuration")
  T.eq(target.key,102);DoubleClickResult(target);T.eq(dialog.submissions,before,"a disabled double click opens a temporary confirmation")
  T.eq(U.Application.applicationLease.id,102);T.eq(dialog.Description:GetParent(),U.Application.applicationModal.note)
- T.eq(U.Application.applicationLease.roles.TANK,true,"first confirmation prefers the current specialization")
- T.eq(U.Application.applicationPrefs and U.Application.applicationPrefs.roles,nil,"preselection does not confirm saved roles")
+ T.eq(U.Application.applicationLease.roles.TANK,true,"first confirmation reads native roles despite a different specialization")
+ T.eq(U.Application.applicationPrefs and U.Application.applicationPrefs.roles,nil,"real application preferences do not cache roles")
  T.eq(A.charPrefs.uiConfig.user["settings.applicationRoles"],nil,"opening a default selection does not persist it")
  U:CloseModal();T.eq(dialog.submissions,before)
  _G.GetSpecializationRole=function() return "HEALER" end
- find:Apply(102);T.eq(U.Application.applicationLease.roles.DAMAGER,true,"an unavailable specialization falls back to an available queue role")
+ setRoles(roles[1],false,false,true)
+ find:Apply(102);T.eq(U.Application.applicationLease.roles.DAMAGER,true,"the next confirmation reads an externally changed native role")
  U:CloseModal();_G.GetSpecializationRole=function() return "TANK" end
+ setRoles(roles[1],true,false,false)
  find:Apply(102)
  dialog.Description.EditBox:UserType("Temporary native note")
- U.Application.applicationModal.roles.DAMAGER:Fire("OnClick");U.Application.applicationModal.submit:Fire("OnClick")
+ U.Application.applicationModal.roles.DAMAGER:Fire("OnClick")
+ T.same({GetLFGRoles()},{roles[1],true,false,true},"role clicks immediately synchronize the complete native multi-selection")
+ U.Application.applicationModal.submit:Fire("OnClick")
  T.eq(dialog.submissions,before+1);T.eq(dialog.submitted.note,"Temporary native note")
  T.eq(dialog.submitted.tank,true);T.eq(dialog.submitted.damage,true,"manual confirmation preserves multiple selected roles")
  T.eq(G.applyCalls,1,"temporary confirmation submits through the business Apply entry")
- T.eq(U.Application:IsAutoApplyEnabled(),false);T.same(U.Application.applicationPrefs.roles,{TANK=true,DAMAGER=true},"a confirmed manual application becomes this character's next default")
- T.same(A.charPrefs.applicationRoles,{TANK=true,HEALER=false,DAMAGER=true},"only the three explicit role booleans enter this character's saved preferences")
+ T.eq(U.Application:IsAutoApplyEnabled(),false);T.eq(U.Application.applicationPrefs.roles,nil,"confirmation does not cache native roles")
+ T.eq(A.charPrefs.applicationRoles,nil,"confirmed roles are not copied into character storage")
  T.eq(U.activeModal,nil);T.eq(dialog.Description:GetParent(),dialog);T.eq(dialog.Description.EditBox:GetParent(),noteParent)
  T.eq(dialog.SignUpButton:GetScript("OnClick"),originalSubmit);T.eq(dialog:GetScript("OnEvent"),originalEvent)
  T.same({dialog.Description.EditBox:GetFont()},noteFont,"releasing restores the original native text presentation")
  find.main:Fire("OnKeyDown","ENTER");T.eq(dialog.submissions,before+1,"Enter never submits while automatic application is off")
  T.eq(U.Application.applicationLease,nil,"Enter does not open the temporary application window")
  find.autoApply:Fire("OnClick")
- T.eq(U.Application:IsAutoApplyEnabled(),true,"confirmed available roles enable directly")
- T.eq(U.activeModal,nil,"valid saved roles do not require another settings confirmation")
+ T.eq(U.Application:IsAutoApplyEnabled(),true,"valid native roles enable directly")
+ T.eq(U.activeModal,nil,"valid native roles do not require another settings confirmation")
  T.eq(A.charPrefs.autoApply,true,"direct activation is saved for this character")
  find.autoApply:Fire("OnClick");T.eq(A.charPrefs.autoApply,false)
  dialog.available.DAMAGER=false
@@ -1719,7 +1723,7 @@ do
  T.eq(U.Application.applicationModal.autoApply.value,false,"cancelling clears the pending modal checkbox")
  find.autoApply:Fire("OnClick")
  local modal=U.Application.applicationModal
- dialog.available.DAMAGER=true;U.Application:RefreshApplicationRoles();modal.roles.DAMAGER:Fire("OnClick")
+ dialog.available.DAMAGER=true;setRoles(roles[1],true,false,false);U.Application:RefreshApplicationRoles();modal.roles.DAMAGER:Fire("OnClick")
  local groupText=modal.group:GetText();U:SetText(modal.group,string.rep("较长的申请队伍标题",6));U.Application:LayoutApplication()
  T.eq(modal.group:GetHeight(),modal.group:GetStringHeight(),"two-line application titles reserve their complete enlarged line boxes")
  U:SetText(modal.group,groupText);U.Application:LayoutApplication()
@@ -1731,10 +1735,10 @@ do
  dialog.Description.EditBox:UserType("A reusable native note");modal.submit:Fire("OnClick")
  T.eq(dialog.submissions,before+1,"saving activation does not submit a group application")
  T.eq(U.Application:IsAutoApplyEnabled(),true);T.eq(find.autoApply.value,true)
- T.same(U.Application.applicationPrefs.roles,{TANK=true,DAMAGER=true})
+ T.eq(U.Application.applicationPrefs.roles,nil);T.same({GetLFGRoles()},{roles[1],true,false,true})
  T.eq(LycheeGroupDB.autoApply,nil,"automatic application never writes an account-wide flag")
  T.eq(A.charPrefs.autoApply,true,"saving valid activation persists this character's switch")
- T.same(A.charPrefs.applicationRoles,{TANK=true,HEALER=false,DAMAGER=true})
+ T.eq(A.charPrefs.applicationRoles,nil)
  local activity=G.records[102].activityID;G.records[102].activityID=1
  DoubleClickResult(target);T.eq(dialog.submissions,before+2,"an enabled double click reuses the configured input directly")
  T.eq(dialog.submitted.tank,true);T.eq(dialog.submitted.damage,true,"quick submission retains the complete multi-role selection")
@@ -1750,7 +1754,8 @@ do
  T.eq(U.Application:IsAutoApplyEnabled(),true,"clicking the text edits without toggling")
  T.eq(U.Application.applicationLease.id,nil);T.eq(modal.submit.label:GetText(),U.L.save)
  dialog.Description.EditBox:UserType("Updated native note");modal.roles.DAMAGER:Fire("OnClick");modal.submit:Fire("OnClick")
- T.eq(dialog.submissions,before+3);T.same(U.Application.applicationPrefs.roles,{TANK=true})
+ T.eq(dialog.submissions,before+3);T.same({GetLFGRoles()},{roles[1],true,false,false})
+ T.eq(U.Application.applicationPrefs.roles,nil)
  find:OpenResultMenu(find.results,102)
  local menu=U.context.menu;T.eq(menu.items[1].label,"编辑后申请")
  menu.list.rows[1]:Fire("OnClick","LeftButton")
@@ -1760,11 +1765,11 @@ do
  modal.roles.DAMAGER:Fire("OnClick");modal.roles.TANK:Fire("OnClick");modal.submit:Fire("OnClick")
  T.eq(dialog.submissions,before+4);T.eq(dialog.submitted.note,"Manual application note")
  T.eq(dialog.submitted.damage,true);T.eq(dialog.submitted.tank,false)
- T.same(U.Application.applicationPrefs.roles,{DAMAGER=true},"successfully edited application replaces the automatic role configuration")
- T.same(A.charPrefs.applicationRoles,{TANK=false,HEALER=false,DAMAGER=true},"explicitly edited successful roles persist for this character")
+ T.same({GetLFGRoles()},{roles[1],false,false,true},"manual role edits become the next automatic native selection")
+ T.eq(U.Application.applicationPrefs.roles,nil);T.eq(A.charPrefs.applicationRoles,nil,"manual role edits are not copied into character storage")
  dialog.Description.EditBox:UserType("Updated native note")
  dialog.available.DAMAGER=false;find:Apply(102)
- T.eq(dialog.submissions,before+4,"an unavailable remembered role cannot be submitted")
+ T.eq(dialog.submissions,before+4,"an unavailable native role cannot be submitted")
  T.eq(modal.submit:IsEnabled(),false)
  modal.roles.TANK:Fire("OnClick");modal.submit:Fire("OnClick")
  T.eq(dialog.submissions,before+5);T.eq(dialog.submitted.tank,true);T.eq(dialog.submitted.damage,false)
@@ -1773,15 +1778,15 @@ do
  find:Apply(102);T.eq(dialog.submissions,before+5,"turning the switch off immediately restores confirmation")
  T.eq(U.Application.applicationLease.id,102);U:CloseModal()
  find.autoApply:Fire("OnClick")
- T.eq(U.Application:IsAutoApplyEnabled(),true,"reenabling reuses available saved roles directly")
+ T.eq(U.Application:IsAutoApplyEnabled(),true,"reenabling reads available native roles directly")
  T.eq(U.activeModal,nil,"reenabling valid roles does not open a redundant dialog")
  _G.GetSpecializationRole=function() return "DAMAGER" end
  find.applicationSettings:Fire("OnClick")
- T.eq(U.Application.applicationLease.roles.TANK,true,"editing retains explicitly saved roles across specialization changes")
+ T.eq(U.Application.applicationLease.roles.TANK,true,"editing retains native roles across specialization changes")
  local foreign=CreateFrame("Frame",nil,UIParent);dialog.Description:SetParent(foreign);dialog.Description:SetHeight(40)
  T.eq(U.Application.applicationLease,nil);T.eq(dialog.Description:GetParent(),foreign,"lease release preserves an external owner's layout")
  T.eq(U.activeModal,nil);dialog.Description:SetParent(dialog);dialog.Description:SetSize(210,28)
- T.same({GetLFGRoles()},roles,"temporary and automatic applications leave dungeon finder roles unchanged")
+ T.same({GetLFGRoles()},{roles[1],true,false,false},"releasing an application lease preserves the latest native role edit")
  local nativeApply=C_LFGList.ApplyToGroup;C_LFGList.ApplyToGroup=function() error("Rejected by client") end
  find:Apply(102);T.eq(find.limitText:GetText(),G.L.applyFailed,"client rejection is reported beside the application controls")
  C_LFGList.ApplyToGroup=nativeApply
@@ -1801,6 +1806,7 @@ do
  G.records[102]=pendingRecord;G.apps=priorApps;G:Notify("applications")
  _G.GetSpecialization,_G.GetSpecializationRole=getSpec,getSpecRole
  _G.SetLFGRoles=setRoles
+ setRoles(unpack(roles))
 end
 do
  local tip=U.Tooltip
@@ -3103,7 +3109,7 @@ do
  a:SetSetting("reduceMotion",false);a:Open("find")
  u.Motion:Tick(2)
  local page=u.pages.find;page:RefreshResults();T.eq(page.results.rows[1].key,901);page.results.rows[1]:Fire("OnClick","LeftButton")
- page.autoApply:Fire("OnClick");u.Application.applicationModal.submit:Fire("OnClick")
+ page.autoApply:Fire("OnClick");T.eq(u.activeModal,nil,"valid native roles enable the shortcut scenario without a settings dialog")
  T.ok(u.Application:IsAutoApplyEnabled())
  local dialog=LFGListApplicationDialog;local before=dialog.submissions
  u:Hide();T.ok(u.hiding);T.ok(u.frame:IsShown())
@@ -3756,12 +3762,13 @@ for _,locale in ipairs({"enUS","zhCN"}) do
  CheckAddPadding();u:ApplyFont(u.Theme.font);CheckAddPadding();u:Hide(true)
 end
 
--- Character defaults survive a new UI session; only confirmed, available roles are saved.
+-- Character settings survive a new UI session; application roles stay native.
 do
  local preferences={defaultSort="members",rememberFilters=true,applicationRoles={TANK=true,HEALER=true,DAMAGER=false},find={category="seasonDungeon",categoryPrefs={seasonDungeon={selected=true,groupKey=20,difficultyID=8,minMembers="2",maxMembers="4",sort="rating"}}}}
  local fresh=dofile("tests/ui_fixture.lua")("enUS",preferences,{defaultSort="itemLevel",rememberFilters=false})
  local a,u,g=fresh.A,fresh.U,fresh.G
  a:SetSetting("reduceMotion",true)
+ SetLFGRoles(false,true,true,false)
  g.records[901]={id=901,name="Saved roles",activityID=2,activity=g.Catalog:GetActivity(2),activityName="Dungeon activity",categoryID=2,leaderName="Leader-Home",leaderKey="Leader-Home",numMembers=2,maxNumPlayers=5,age=1,details={members={{name="Leader-Home",nameKey="Leader-Home",class="WARRIOR",assignedRole="TANK",isLeader=true},{name="Member-Home",nameKey="Member-Home",class="MAGE",assignedRole="DAMAGER"}}}}
  local countMembers=u.MemberCounts
  u.MemberCounts=function() error("five-player result and application rows must not calculate unused role counts") end
@@ -3771,22 +3778,26 @@ do
  T.eq(g.filters.sort,"rating","the category preserves this character's saved fallback sorting")
  T.eq(page.results.rows[1].roster.slots[1].icon:GetTexture(),"Interface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES","removing unused counts preserves the actual player's class icon")
  T.ok(page.results.rows[1].roster.slots[2].icon:IsShown());T.eq(page.results.rows[1].roster.slots[3].icon:IsShown(),false,"only the two actual members have portraits")
- T.eq(application:IsAutoApplyEnabled(),false,"saved roles alone do not enable automatic application")
- T.same(application.applicationPrefs.roles,{TANK=true,HEALER=true})
+ T.eq(application:IsAutoApplyEnabled(),false,"native roles alone do not enable automatic application")
+ T.eq(application.applicationPrefs.roles,nil,"real application preferences only cache the enabled flag")
+ T.eq(preferences.applicationRoles,nil,"legacy role defaults are removed from character storage")
  page:ClearFilters();T.eq(g.filters.sort,"rating","clearing conditions preserves existing sorting")
  T.eq(a.charPrefs.find.categoryPrefs.seasonDungeon.sort,"rating");T.eq(g.db.prefs.find,nil,"Find never writes the account migration seed")
  application:Apply(901)
- T.eq(application.applicationLease.roles.TANK,true);T.eq(application.applicationLease.roles.HEALER,nil,"unavailable remembered roles are filtered before confirmation")
+ T.eq(application.applicationLease.roles.TANK,true);T.eq(application.applicationLease.roles.HEALER,nil,"unavailable native roles are filtered before confirmation")
  local modal=application.applicationModal
  modal.roles.TANK:Fire("OnClick");modal.roles.DAMAGER:Fire("OnClick");u:CloseModal()
- T.same(preferences.applicationRoles,{TANK=true,HEALER=true,DAMAGER=false},"cancelled edits do not change saved role defaults")
- application:Apply(901);T.eq(application.applicationLease.roles.TANK,true,"cancelled changes do not alter the next default selection")
+ T.eq(preferences.applicationRoles,nil,"cancelled edits do not create saved role defaults")
+ T.same({GetLFGRoles()},{false,false,false,true},"cancelling leaves the immediate native role edits in place")
+ application:Apply(901);T.eq(application.applicationLease.roles.DAMAGER,true,"the next confirmation uses roles edited before cancellation")
  local nativeApply=C_LFGList.ApplyToGroup
  C_LFGList.ApplyToGroup=function() error("Rejected") end
  modal.roles.TANK:Fire("OnClick");modal.roles.DAMAGER:Fire("OnClick");modal.submit:Fire("OnClick")
- T.same(preferences.applicationRoles,{TANK=true,HEALER=true,DAMAGER=false},"a failed submission does not save one-off roles")
+ T.eq(preferences.applicationRoles,nil,"a failed submission does not write role defaults")
+ T.same({GetLFGRoles()},{false,true,false,false},"a failed submission preserves the native role edit")
  C_LFGList.ApplyToGroup=nativeApply;modal.submit:Fire("OnClick")
- T.same(preferences.applicationRoles,{TANK=false,HEALER=false,DAMAGER=true},"a successful manual confirmation saves this character's next roles")
+ T.eq(preferences.applicationRoles,nil,"a successful confirmation does not write role defaults")
+ T.same({GetLFGRoles()},{false,true,false,false},"a successful confirmation preserves the same native selection")
  T.eq(application:IsAutoApplyEnabled(),false);T.eq(preferences.enabled,nil);T.eq(preferences.note,nil)
  g.apps={{id=901,status="applied",result=g.records[901]}};page:RefreshApplications()
  T.ok(page.appList.rows[1].roster.slots[2].icon:IsShown(),"pinned applications keep both actual five-player members without unused counts")
@@ -3800,10 +3811,12 @@ do
  settings.controls.rememberFilters.widget:Fire("OnClick");T.eq(a.charPrefs.rememberFilters,false);T.eq(a.db.rememberFilters,false)
  u:Hide(true)
  local restored=dofile("tests/ui_fixture.lua")("zhCN",preferences)
+ SetLFGRoles(false,false,false,true)
  restored.A:SetSetting("reduceMotion",true);restored.A:Open("find")
- T.eq(restored.U.Application:IsAutoApplyEnabled(),false,"reloading without an enabled flag restores roles and keeps automation off")
- T.same(restored.U.Application.applicationPrefs.roles,{DAMAGER=true})
- T.eq(restored.A.charPrefs.applicationRoles,preferences.applicationRoles)
+ T.eq(restored.U.Application:IsAutoApplyEnabled(),false,"reloading without an enabled flag keeps automation off")
+ T.eq(restored.U.Application.applicationPrefs.roles,nil,"a new UI session does not restore a role cache")
+ T.same({GetLFGRoles()},{false,false,false,true},"a new UI session uses the current native selection instead of retired saved roles")
+ T.eq(restored.A.charPrefs.applicationRoles,nil)
  restored.U:Hide(true)
 end
 

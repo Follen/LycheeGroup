@@ -4,7 +4,7 @@
 
 魔兽世界正式服组队插件。在一个窗口里寻找队伍、管理招募，并记录与玩家的组队经历。
 
-当前版本为 **1.2.7**，目标客户端为正式服 **12.1.5**（Interface `120105`），支持中文和英文。版本变更见[更新日志](CHANGELOG.md)。
+当前版本为 **1.2.8**，目标客户端为正式服 **12.1.5**（Interface `120105`），支持中文和英文。版本变更见[更新日志](CHANGELOG.md)。
 
 ## 功能
 
@@ -80,6 +80,6 @@ lua tests/runner.lua
 
 项目说明：[产品](Product.md) · [设计](Desgin.md) · [架构](Architecture.md) · [性能](perfermance.md) · [第三方配置 API](API.md) · [开发规范](Development.md) · [文档与变更记录规则](Agents.md)。当前实现与游戏内验证范围见产品文档。
 
-当前版本为 1.2.7，版本变化见 [更新日志](CHANGELOG.md)。本版采用 [主题 API v2](API.md)：导入和选择按账号或角色保存，登录或重载后统一生效；字号、缩放、窗口和表格偏好继续实时更新。指定 main 提交是架构改造的历史等价参照，当前业务与界面按已记录的后续产品和设计要求维护。开发规则见 [Development.md](Development.md)，验证方法见 [主题重载验证](tests/theme_reload.md)。共享库在源目录修改后由同步工具维护内置副本，冻结状态以 [.lock](https://github.com/Follen/LycheeUI/blob/v1.0.0/.lock) 为准；通用接入见 [LycheeUI README](https://github.com/Follen/LycheeUI/blob/v1.0.0/README.md)、[API](https://github.com/Follen/LycheeUI/blob/v1.0.0/API.md) 和 [设计规范](https://github.com/Follen/LycheeUI/blob/v1.0.0/DESIGN.md)。
+当前版本为 1.2.8，版本变化见 [更新日志](CHANGELOG.md)。本版采用 [主题 API v2](API.md)：导入和选择按账号或角色保存，登录或重载后统一生效；字号、缩放、窗口和表格偏好继续实时更新。指定 main 提交是架构改造的历史等价参照，当前业务与界面按已记录的后续产品和设计要求维护。开发规则见 [Development.md](Development.md)，验证方法见 [主题重载验证](tests/theme_reload.md)。共享库在源目录修改后由同步工具维护内置副本，冻结状态以 [.lock](https://github.com/Follen/LycheeUI/blob/v1.0.0/.lock) 为准；通用接入见 [LycheeUI README](https://github.com/Follen/LycheeUI/blob/v1.0.0/README.md)、[API](https://github.com/Follen/LycheeUI/blob/v1.0.0/API.md) 和 [设计规范](https://github.com/Follen/LycheeUI/blob/v1.0.0/DESIGN.md)。
 
 内置第三方库的来源与许可见[库说明](addon/LycheeGroup_Group/Libs/README.md)。

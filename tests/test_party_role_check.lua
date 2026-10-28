@@ -1,4 +1,4 @@
--- Saved roles follow only a party member's premade-group role check.
+-- Native role selections follow only a party member's premade-group role check.
 local Stubs = TestStubs
 local replaced = {
     "LycheeGroup", "C_LFGList", "IsInGroup", "UnitIsGroupLeader", "InCombatLockdown",
@@ -14,7 +14,7 @@ local function Setup(roles)
     local state = {
         grouped = true, leader = false, combat = false, premade = true, valid = true,
         available = {true, true, true}, enabled = {true, true, true},
-        nativeRoles = {true, true, false, false}, accepted = true, writes = {}, calls = 0, hides = 0,
+        nativeRoles = {true, type(roles)=="table" and roles.TANK==true, type(roles)=="table" and roles.HEALER==true, type(roles)=="table" and roles.DAMAGER==true}, accepted = true, writes = {}, calls = 0, hides = 0,
     }
     _G.LycheeGroup = {charPrefs = {applicationRoles = roles, autoApply = false}}
     function LycheeGroup:GetSetting(key) return self.charPrefs[key] end
@@ -77,26 +77,26 @@ local ok, err = pcall(function()
     T.eq(s.calls, 0, "wait for native popup setup")
     Stubs.AdvanceClock(0)
     T.eq(s.calls, 1)
-    T.same(s.nativeRoles, {true, false, true, true}, "preserve leader flag and every saved role")
+    T.same(s.nativeRoles, {true, false, true, true}, "preserve leader flag and every native role")
     T.same(s.validated, {false, true, true})
     T.eq(s.hides, 1)
     T.eq(Stubs.PendingTimers(), 0)
-    T.eq(LycheeGroup.charPrefs.applicationRoles, roles, "saved choices are only read")
+    T.eq(LycheeGroup.charPrefs.applicationRoles, roles, "obsolete addon choices are never used or changed")
     T.eq(LycheeGroup.charPrefs.autoApply, false, "member confirmation is independent of self-application automation")
     T.eq(LycheeGroup.Group, nil); T.eq(LycheeGroup.UI, nil, "works without loading either package")
     s:Show(); Stubs.AdvanceClock(0)
     T.eq(s.calls, 1, "one attempt per native role check")
     s:Finish()
-    LycheeGroup.charPrefs.applicationRoles = {TANK = true}
+    s.nativeRoles = {true,true,false,false}
     s:Show(); Stubs.AdvanceClock(0)
-    T.eq(s.calls, 2, "next role check reads current saved preferences")
+    T.eq(s.calls, 2, "next role check reads current native preferences")
     T.same(s.nativeRoles, {true, true, false, false})
     s:Finish()
 
     for _, prefs in ipairs({false, {}, {HEALER = false}, {HEALER = "true"}}) do
         s = Setup(prefs)
         s:Show(); Stubs.AdvanceClock(0)
-        T.eq(s.calls, 0, "missing or empty saved roles require manual confirmation")
+        T.eq(s.calls, 0, "missing or empty native roles require manual confirmation")
         T.eq(#s.writes, 0); T.eq(Stubs.PendingTimers(), 0)
         T.eq(#Stubs.FramesWithEvent("LFG_ROLE_CHECK_HIDE"), 0)
         T.ok(LFDRoleCheckPopup:IsShown())
@@ -138,7 +138,8 @@ local ok, err = pcall(function()
         T.eq(s.calls, 1)
         T.eq(s.hides, 0, "failure does not hide manual confirmation")
         T.ok(LFDRoleCheckPopup:IsShown())
-        T.same(s.nativeRoles, {true, true, false, false}, "failed request restores native roles")
+        T.same(s.nativeRoles, {true, false, true, false}, "failed request leaves native roles untouched")
+        T.eq(#s.writes,0,"confirmation never rewrites native roles")
         s:Show(); Stubs.AdvanceClock(0)
         T.eq(s.calls, 1, "failed request is not retried")
         s:Finish()
