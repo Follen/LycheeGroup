@@ -91,9 +91,11 @@ addon/
 
 主包 `PartyRoleCheck.lua` 独立接入队员的预组队职责确认，不依赖 Group 或 UI 已加载。收到 `LFG_ROLE_CHECK_SHOW` 后通过 `GetLFGRoles()` 读取当前原生坦克、治疗、输出选择，只在非队长、非战斗且 `C_LFGList.GetRoleCheckInfo()` 明确为预组队时安排一次下一帧处理；原生弹窗完成初始化后，再读当前职责并重新检查身份、职责可用性、各职责按钮及原生组合校验。直接调用 `CompleteLFGRoleCheck(true)` 提交已有原生选择，仅明确成功后隐藏原生弹窗；失败保留手动入口，不改写原生职责。当前确认只尝试一次，`LFG_ROLE_CHECK_HIDE` 取消待处理任务并释放临时监听。桥接不读取或保存插件职责偏好。原生流程依据 wow-ui-source `e7aa82019dc298e0351c7159d60c2a9b916b9b67` 的 `LFDFrame.lua`，离线覆盖见 `tests/test_party_role_check.lua`；游戏内提交权限和真实多人事件顺序待实机验证。
 
-原生组队眼睛的显示与点击接入由 Entrypoints 持有。账号设置 `nativeLFGEntry` 只控制隐藏入口：隐藏时以透明且不响应鼠标的方式接管按钮，关闭已有队列 tooltip；不 Hide 按钮，保留 EyeHighlightAnim 的高亮动画；新申请声音由 Group.Alerts 单独接管。一次 OnShow、SetAlpha 与 QueueStatusFrame.Update hook 同步显示状态；按原生规则遍历 GetLFGMode，在任一分类存在 mode 且 submode 不是 noteleport 时释放接管，保留副本匹配、职责确认、就绪邀请和副本内传送入口，即使仍有预组队招募或申请也显示。所有此类状态结束后恢复隐藏；关闭设置同样恢复接管前的透明度和鼠标响应。按钮未加载时仅等对应 ADDON_LOADED，绑定后退订，不预加载业务界面。
+原生组队眼睛的显示与点击接入由 Entrypoints 持有，统一解析为 `hidden`、`native`、`premade` 三种状态。先检查账号设置 `nativeLFGEntry`：关闭时跳过系统队列查询；开启时沿原生规则检查各 LFG 分类的 mode／submode、PvP 职责和就绪确认、战场及世界 PvP 队列槽。任一有效系统状态均释放隐藏，包括暂停排队、入场邀请和战场内状态；全部结束后恢复隐藏。隐藏只租借 alpha 与鼠标响应，首次进入保存原值，离开归还；同状态不重复写属性、不分配快照表。不 Hide 原生按钮，保留 EyeHighlightAnim；隐藏时关闭已显示的队列详情，新申请声音仍归 Group.Alerts。
 
-绿眼睛的 OnClick 在按钮就绪后安装一次分流，与隐藏设置独立。左键从 `C_LFGList` 读取当前招募和活动申请，已有招募调用 `Open("create")`，否则以首个 applied／invited 的 `applicationID` 调用 `Open("find", context)`；无预组队时左键交回原回调，保留普通副本匹配的队列菜单和正在进行的战场计分板。右键同样原样交给原回调。预组队左键不调用 `LFGListUtil_OpenBestWindow`，因此不会同时触发集合石等插件在该函数上的开窗 hook；如原生窗口已显示，先隐藏以交还输入，荔枝打开失败则恢复。该分流只在点击时读取，不复制 Group 状态、不新增计时器，按钮等待与显示共用原有事件 Frame。原生分支与按钮类型参考 wow-ui-source `15881d522c44cd106d3d8660106ec9f9d2f44167` 的 QueueStatusFrame.lua／xml；替身验证见 `tests/test_native_queue.lua`。
+可见时，有当前招募或 applied／invited 申请则进入 `premade`，否则为 `native`。`premade` 按需建立并复用一个无材质子按钮，只处理左键；右键及其他鼠标键通过 `SetPassThroughButtons` 透到其下方的原生按钮，子按钮关闭鼠标移动响应，使原生悬停、详情和动画继续运行。原生 OnClick／OnEnter／OnLeave 保持原样，不从插件回调调用原生点击或菜单构建函数，避免将插件污染带进 PvP 的 AcceptBattlefieldPort 等受保护动作。左键释放时重新读取目标：招募优先 `Open("create")`，否则以当前活动申请 ID 打开 find；目标已结束则撤下子按钮，不补发原生点击。真实入口退出预览；先归还原生面板输入，荔枝加载失败时恢复此前可见的原生窗口。不会触发 LFGListUtil_OpenBestWindow 上其他插件的开窗 hook。
+
+状态刷新复用一次 OnShow、SetAlpha 和 QueueStatusFrame.Update 安全后置 hook，以及设置变更入口；原生队列窗口未监听的申请状态变化由现有入口 Frame 补充接收，Group 加载后保留此显示监听、停止业务转发，避免重复处理。不新增 Frame 事件源、timer 或队列缓存。显示与点击状态在同一次刷新内决定；原生按钮未加载时共用入口 Frame 等待对应 ADDON_LOADED，绑定后退订。子按钮随原生父按钮的显隐与几何变化，不另外跟踪位置。原生分支与鼠标接口依据 wow-ui-source `15881d522c44cd106d3d8660106ec9f9d2f44167` 的 QueueStatusFrame.lua／xml 和 SimpleScriptRegionAPIDocumentation.lua；离线合同见 `tests/test_native_queue.lua` 与 core 模块，实机记录见 [原生队列验证](tests/native_queue.md)。
 
 Host 在从 find／create／notes 进入 settings 时保存本次会话的 `settingsReturnPage`；同页重复进入不覆盖它。设置按钮在 settings 上将该页名交回已有 Open／Navigate 路由，无来源时使用 GetDefaultPage，不另建页面栈或持久化字段。
 

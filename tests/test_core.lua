@@ -393,7 +393,7 @@ do
  T.eq(eye:IsShown(),true);T.eq(eye.EyeHighlightAnim.playing,true,"the stock sound animation remains alive")
  T.eq(QueueStatusFrame:IsShown(),false,"a tooltip already open on the eye is dismissed")
  local routed=eye:GetScript("OnClick")
- T.ok(routed~=original,"the eye receives its one-time left-click router")
+ T.eq(routed,original,"the native click script remains untouched for protected PvP actions")
  T.eq(#Stubs.FramesWithEvent("ADDON_LOADED"),0,"native addon listener ends after binding")
  T.eq(opened,nil,"binding does not open or load a page")
  eye:SetAlpha(1);T.eq(eye:GetAlpha(),0,"later opacity changes cannot reveal the eye")
@@ -431,6 +431,37 @@ do
  T.eq(eye:GetAlpha(),0,"leaving every native queue restores premade concealment without OnShow")
  T.eq(eye:IsMouseEnabled(),false);T.eq(QueueStatusFrame:IsShown(),false)
  T.eq(eye.EyeHighlightAnim.playing,true,"premade applicant sounds still have their native animation")
+ local oldRole,oldReady,oldBattlefield,oldWorld=GetLFGRoleUpdate,GetLFGReadyCheckUpdate,GetBattlefieldStatus,GetWorldPVPQueueStatus
+ local pvp={}
+ GetLFGRoleUpdate=function() return pvp.role,nil,nil,nil,nil,pvp.battleground end
+ GetLFGReadyCheckUpdate=function() return pvp.ready,pvp.battleground end
+ GetBattlefieldStatus=function(index) if index==GetMaxBattlefieldID() then return pvp.status,nil,nil,nil,pvp.suspended end;return "none" end
+ GetWorldPVPQueueStatus=function(index) if index==MAX_WORLD_PVP_QUEUES then return pvp.world end;return "none" end
+ for _,scenario in ipairs({
+  {name="PvP role check",role=true,battleground=true},
+  {name="PvP ready check",ready=true,battleground=true},
+  {name="battlefield queued",status="queued"},
+  {name="battlefield invitation",status="confirm"},
+  {name="active battlefield",status="active"},
+  {name="suspended PvP queue",status="queued",suspended=true},
+  {name="world PvP queue",world="queued"},
+  {name="world PvP invitation",world="confirm"},
+  {name="active world PvP",world="active"},
+ }) do
+  pvp=scenario;QueueStatusFrame:Update()
+  T.eq(eye:GetAlpha(),.7,scenario.name.." preserves the native eye alongside a premade listing")
+  T.eq(eye:IsMouseEnabled(),true,scenario.name.." preserves queue menu access")
+  QueueStatusFrame:Show();QueueStatusFrame:Update();T.eq(QueueStatusFrame:IsShown(),true,scenario.name.." preserves queue details")
+  pvp={};QueueStatusFrame:Update();T.eq(eye:GetAlpha(),0,scenario.name.." releases its visibility exception when it ends")
+  T.eq(eye:IsMouseEnabled(),false)
+ end
+ pvp={role=true,ready=true,battleground=false,status="none",world="none"};QueueStatusFrame:Update()
+ T.eq(eye:GetAlpha(),0,"non-PvP checks and empty queue slots do not reveal the entry")
+ pvp={status="queued",world="queued"};QueueStatusFrame:Update()
+ pvp.status="none";QueueStatusFrame:Update();T.eq(eye:GetAlpha(),.7,"remaining world PvP keeps the entry visible")
+ pvp.world=nil;modes[1]={"queued"};QueueStatusFrame:Update();T.eq(eye:GetAlpha(),.7,"remaining dungeon queue keeps the entry visible")
+ modes[1]=nil;QueueStatusFrame:Update();T.eq(eye:GetAlpha(),0)
+ GetLFGRoleUpdate,GetLFGReadyCheckUpdate,GetBattlefieldStatus,GetWorldPVPQueueStatus=oldRole,oldReady,oldBattlefield,oldWorld
  modes[3]={"lfgparty","noteleport"};QueueStatusFrame:Update()
  T.eq(eye:GetAlpha(),0,"a state excluded by the native queue display does not reveal the eye")
  modes[3]={"queued"};eye:Show()

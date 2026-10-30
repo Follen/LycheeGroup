@@ -1,0 +1,107 @@
+{
+  "date": "2026-10-30",
+  "version": "1.2.8 + unreleased PvP queue fix",
+  "baseCommit": "c83fa9fa209864dbdbced98a23754cdee5770989",
+  "sourceCommit": "15881d522c44cd106d3d8660106ec9f9d2f44167",
+  "sourceSnapshot": "PIN-0186341d67e6671b73bfff1299e77f3026a027addaee76e47f1e1bdfee627d91",
+  "clientBuild": "12.1.5.70575",
+  "sources": {
+    "addon/LycheeGroup/Entrypoints.lua": "26e2b95fde716231c6721a12d3efb3ce097f0d86a422d84466fd6846ba2bfe70",
+    "tests/test_native_queue.lua": "5fc6815b4dd1f6758c2909cf58d09f6e69c24f56d433fdc7f50300eac568bf58",
+    "tests/test_core.lua": "66d958cbd98bbb66ac5a5b802b831131ec6032bab1f29be60b532ec12c0872ea",
+    "tests/stubs.lua": "8ba120f1329e60dedadc7d1d869fd57e28421854e497c7a087b698ccc8539ade",
+    "tests/live_native_queue.lua": "139a4fdb1f60386447a738c9c45b3260f331273851db93ad468aa17a83232f2c"
+  },
+  "diagnosis": {
+    "beforeRequest": "pvp-queue-errors-1",
+    "beforeProviderSession": 346,
+    "beforeError": "ADDON_ACTION_FORBIDDEN: LycheeGroup AcceptBattlefieldPort()",
+    "beforeStack": [
+      "QueueStatusFrame.lua:1350",
+      "QueueStatusFrame.lua:1365"
+    ],
+    "beforeHideSetting": false,
+    "beforeQueue": "queued / brawl",
+    "cause": "Addon OnClick wrapper invoked stock menu construction, tainting protected PvP action closure."
+  },
+  "regressions": {
+    "targetedCommand": "lua tests/runner.lua core native_queue",
+    "targetedAsserts": 713,
+    "fullCommand": "lua tests/runner.lua",
+    "fullAsserts": 58503,
+    "failedModules": 0,
+    "architectureCommand": "node tests/check_architecture.cjs",
+    "architectureChecks": 6609,
+    "architectureFailures": 0,
+    "steadyRefreshesPerStateAndLoadOrder": 100,
+    "steadyStates": [
+      "hidden",
+      "native",
+      "premade"
+    ],
+    "steadyFrameAndVisibilityWrites": 0,
+    "pendingTimers": 0
+  },
+  "live": {
+    "stateRequest": "pvp-queue-candidate-state-1",
+    "stateReport": {
+      "battlefield": [
+        {
+          "slot": 1,
+          "status": "none",
+          "suspended": false
+        }
+      ],
+      "childrenTruncated": false,
+      "eye": {
+        "alpha": 1,
+        "mouse": true,
+        "shown": false
+      },
+      "hideSetting": false,
+      "leftButtons": {},
+      "lfg": {},
+      "nativeClick": true,
+      "nativeEnter": true,
+      "nativeLeave": true,
+      "readyCheck": false,
+      "roleCheck": false,
+      "world": [
+        {
+          "slot": 1,
+          "status": "none"
+        },
+        {
+          "slot": 2,
+          "status": "none"
+        }
+      ]
+    },
+    "deployedBytesMatch": true,
+    "realRightClickExit": {
+      "passed": true,
+      "evidence": "User confirmed success after candidate reload and question about right-click exit.",
+      "automatedHardwareInput": false
+    },
+    "afterRequest": "pvp-queue-errors-after-1",
+    "afterProviderSession": 349,
+    "retainedErrorCount": 43,
+    "latestErrorSession": 346,
+    "latestErrorCounter": 1,
+    "connectionClosed": true,
+    "cleanupComplete": true,
+    "currentSessionErrorsInReturnedRows": 0,
+    "returnedErrorRows": 3
+  },
+  "coverage": [
+    "PvP visibility phases and mixed queues: offline fixtures",
+    "Premade left-click and passthrough routing: offline fixtures",
+    "Original click/enter/leave identity: live client",
+    "Real PvP exit: user confirmation"
+  ],
+  "notRun": [
+    "Every PvP queue subtype and actual dungeon matchmaking",
+    "Hardware hit testing of a mixed premade/PvP overlay",
+    "New CPU or whole-addon memory benchmark"
+  ]
+}
