@@ -9,21 +9,24 @@ local WAKE_EVENTS = {
 
 -- Keep the stock glow animation running; Group.Alerts owns applicant audio.
 local nativeLFGHooked = false
-local nativeLFGClickBound = false
-local nativeLFGState
-local function OpenNativePremadeGroup()
-    local page, applicationID
+local nativeLFGLeftButton
+local nativeLFGConcealed = false
+local nativeLFGAlpha, nativeLFGMouse
+local function GetNativePremadeTarget()
     if C_LFGList.HasActiveEntryInfo() then
-        page = "create"
-    else
-        for _, id in ipairs(C_LFGList.GetApplications()) do
-            local _, status = C_LFGList.GetApplicationInfo(id)
-            if status == "applied" or status == "invited" then
-                page, applicationID = "find", id
-                break
-            end
+        return "create"
+    end
+    for _, id in ipairs(C_LFGList.GetApplications()) do
+        local _, status = C_LFGList.GetApplicationInfo(id)
+        if status == "applied" or status == "invited" then
+            return "find", id
         end
     end
+end
+
+local function OpenNativePremadeGroup()
+    -- Re-read on release: an application may have ended since mouse-down.
+    local page, applicationID = GetNativePremadeTarget()
     if not page then return false end
     local nativeShown = PVEFrame and PVEFrame:IsShown()
     if nativeShown then HideUIPanel(PVEFrame) end
@@ -42,22 +45,64 @@ local function ShouldConcealNativeLFGEntry()
         local mode, submode = GetLFGMode(category)
         if mode and submode ~= "noteleport" then return false end
     end
+    -- PvP checks and battlefield queues use separate native state APIs.
+    local roleCheck, _, _, _, _, roleCheckIsBattleground = GetLFGRoleUpdate()
+    if roleCheck and roleCheckIsBattleground then return false end
+    local readyCheck, readyCheckIsBattleground = GetLFGReadyCheckUpdate()
+    if readyCheck and readyCheckIsBattleground then return false end
+    for index = 1, GetMaxBattlefieldID() do
+        local status = GetBattlefieldStatus(index)
+        if status and status ~= "none" then return false end
+    end
+    for index = 1, MAX_WORLD_PVP_QUEUES do
+        local status = GetWorldPVPQueueStatus(index)
+        if status and status ~= "none" then return false end
+    end
     return true
 end
 
+local function ResolveNativeLFGEntry()
+    if ShouldConcealNativeLFGEntry() then return "hidden" end
+    if GetNativePremadeTarget() then return "premade" end
+    return "native"
+end
+
 local function UpdateNativeLFGEntry(button)
-    if ShouldConcealNativeLFGEntry() then
-        if not nativeLFGState then
-            nativeLFGState = {alpha = button:GetAlpha(), mouse = button:IsMouseEnabled()}
+    local mode = ResolveNativeLFGEntry()
+    if mode == "hidden" then
+        if not nativeLFGConcealed then
+            nativeLFGAlpha, nativeLFGMouse = button:GetAlpha(), button:IsMouseEnabled()
+            nativeLFGConcealed = true
         end
-        button:SetAlpha(0)
-        button:EnableMouse(false)
-        QueueStatusFrame:Hide()
-    elseif nativeLFGState then
-        local state = nativeLFGState
-        nativeLFGState = nil
-        button:SetAlpha(state.alpha)
-        button:EnableMouse(state.mouse)
+        if button:GetAlpha() ~= 0 then button:SetAlpha(0) end
+        if button:IsMouseEnabled() then button:EnableMouse(false) end
+        if QueueStatusFrame:IsShown() then QueueStatusFrame:Hide() end
+    elseif nativeLFGConcealed then
+        nativeLFGConcealed = false
+        button:SetAlpha(nativeLFGAlpha)
+        button:EnableMouse(nativeLFGMouse)
+        nativeLFGAlpha, nativeLFGMouse = nil, nil
+    end
+
+    if mode == "premade" and button:IsMouseEnabled() then
+        if not nativeLFGLeftButton then
+            -- Own only the premade left-click hit area. Calling the stock
+            -- OnClick from addon Lua taints the PvP menu's protected actions.
+            -- Right clicks and hover reach the untouched native button below.
+            local left = CreateFrame("Button", nil, button)
+            left:SetAllPoints(button)
+            left:RegisterForClicks("LeftButtonUp")
+            left:SetPassThroughButtons("RightButton", "MiddleButton", "Button4", "Button5")
+            left:SetMouseMotionEnabled(false)
+            left:SetScript("OnClick", function(_, key)
+                if key == "LeftButton" then OpenNativePremadeGroup() end
+                UpdateNativeLFGEntry(button)
+            end)
+            nativeLFGLeftButton = left
+        end
+        if not nativeLFGLeftButton:IsShown() then nativeLFGLeftButton:Show() end
+    elseif nativeLFGLeftButton and nativeLFGLeftButton:IsShown() then
+        nativeLFGLeftButton:Hide()
     end
 end
 
@@ -68,30 +113,27 @@ function A:SyncNativeLFGEntry()
         return
     end
     events:UnregisterEvent("ADDON_LOADED")
-    if not nativeLFGClickBound then
-        nativeLFGClickBound = true
-        local original = button:GetScript("OnClick")
-        button:SetScript("OnClick", function(eye, key, ...)
-            if key == "LeftButton" and OpenNativePremadeGroup() then return end
-            -- Other clicks keep the native queue menu and battlefield actions.
-            if original then return original(eye, key, ...) end
-        end)
-    end
-    if not nativeLFGHooked and self:GetSetting("nativeLFGEntry") then
+    if not nativeLFGHooked then
         nativeLFGHooked = true
         button:HookScript("OnShow", UpdateNativeLFGEntry)
         hooksecurefunc(button, "SetAlpha", function(eye, alpha)
-            if nativeLFGState and alpha ~= 0 then eye:SetAlpha(0) end
+            if nativeLFGConcealed and alpha ~= 0 then eye:SetAlpha(0) end
         end)
         hooksecurefunc(QueueStatusFrame, "Update", function()
             UpdateNativeLFGEntry(button)
         end)
+        -- The stock updater does not subscribe to application status changes.
+        events:RegisterEvent("LFG_LIST_APPLICATION_STATUS_UPDATED")
     end
     UpdateNativeLFGEntry(button)
 end
 
 local function StopGroupWake()
-    for _, event in ipairs(WAKE_EVENTS) do events:UnregisterEvent(event) end
+    for _, event in ipairs(WAKE_EVENTS) do
+        if event ~= "LFG_LIST_APPLICATION_STATUS_UPDATED" or not nativeLFGHooked then
+            events:UnregisterEvent(event)
+        end
+    end
     events:UnregisterEvent("CHALLENGE_MODE_START")
 end
 
@@ -236,6 +278,10 @@ events:SetScript("OnEvent", function(_, event, ...)
         events:UnregisterEvent(event)
         OnPlayerLogin()
         return
+    end
+    if event == "LFG_LIST_APPLICATION_STATUS_UPDATED" and nativeLFGHooked then
+        UpdateNativeLFGEntry(QueueStatusButton)
+        if groupReady then return end -- Group already has its own listener.
     end
     HandOffToGroup(event, ...)
 end)

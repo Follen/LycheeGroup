@@ -28,6 +28,8 @@ end
 function FrameStub:Show() self.shown = true end
 function FrameStub:Hide() self.shown = false end
 function FrameStub:IsShown() return self.shown end
+function FrameStub:SetPassThroughButtons(...) self.passThroughButtons = {...} end
+function FrameStub:SetMouseMotionEnabled(enabled) self.mouseMotionEnabled = enabled end
 
 -- 构造/布局类方法一律允许链式 no-op;业务测试不依赖几何。
 local allowed = {
@@ -334,6 +336,12 @@ function Stubs.Install(overrides)
 		GetRaidRosterInfo = function(index) local unit=units["raid"..index];if unit then return unit.name,0,unit.subgroup or 1 end end,
 		IsInGroup = IsInGroup,
 		IsInRaid = IsInRaid,
+		GetLFGRoleUpdate = function() return false end,
+		GetLFGReadyCheckUpdate = function() return false end,
+		GetMaxBattlefieldID = function() return 3 end,
+		GetBattlefieldStatus = function() return "none" end,
+		MAX_WORLD_PVP_QUEUES = 2,
+		GetWorldPVPQueueStatus = function() return "none" end,
 		GetNumClasses = GetNumClasses,
 		GetClassInfo = GetClassInfo,
 		GetSpecializationInfoForClassID = GetSpecializationInfoForClassID,
