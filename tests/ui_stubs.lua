@@ -224,6 +224,8 @@ function S.Install()
  _G.CreateKeyChordStringUsingMetaKeyState=function(key)
   local mods=S.bindingModifiers;return (mods.ctrl and "CTRL-" or "")..(mods.alt and "ALT-" or "")..(mods.shift and "SHIFT-" or "")..key
  end
+ S.cvars={Sound_MasterVolume="0.7",Sound_SFXVolume="0.5",Sound_MusicVolume="0.3",Sound_AmbienceVolume="0.4",Sound_DialogVolume="0.8"}
+ _G.C_CVar={GetCVar=function(key) return S.cvars[key] end,SetCVar=function(key,value) S.cvars[key]=tostring(value) end}
  _G.STANDARD_TEXT_FONT="font"
  _G.LOCALIZED_CLASS_NAMES_MALE={WARRIOR="战士",PALADIN="圣骑士",PRIEST="牧师",MAGE="法师",DRUID="德鲁伊"}
  _G.GetTime=function() return 0 end

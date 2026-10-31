@@ -222,6 +222,8 @@ config:Reset("settings.fontScale", {storage = "character"})
 | 内容 | 配置入口与含义 |
 | --- | --- |
 | 设置页普通偏好 | `settings.<控件键>`，包括语言、字体、字号、比例、动效、入口、声音、成员显示、笔记、提醒、历史及浮窗开关；保存范围见 Schema |
+| 音频频道 | `settings.soundChannel`，账号保存，取 `Master`／`SFX`／`Music`／`Ambience`／`Dialog`，默认 `Dialog`；配置包和玩家覆盖沿用普通偏好合同 |
+| 频道音量 | 直接读写所选游戏频道的音量 CVar，不属于 Configuration 或主题字段；不从旧 `soundVolume` 迁移 |
 | 主题选择 | `Theme:Import(..., {default=true})`、`Theme:SetDefault`，下次重载生效 |
 | 窗口与侧栏 | `layout.window.width/height`、`layout.find.railCollapsed`，按角色保存 |
 | 浮窗位置 | `layout.floating.position`，锚点表或 `false`（自动位置），按账号保存；“重置位置”清除账号用户值并继承包／主题默认 |

@@ -51,6 +51,11 @@ function UI:OnGroupReady()
 end
 
 function UI:OnSettingChanged(key)
+ if key=="soundChannel" then
+  local settings=self.pages.settings
+  if settings.frame and self.page=="settings" then settings:Sync() end
+  return
+ end
 	if key=="defaultSort" then
 		if self.pages.find.frame then self.pages.find:RefreshDefaultSort() end
 		return

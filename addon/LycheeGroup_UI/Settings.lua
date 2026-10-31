@@ -5,13 +5,40 @@ local C,T,L=UI.C,UI.Theme,UI.L
 local P={section="general"};UI.pages.settings=P
 local zh=A:GetLocale()=="zhCN"
 local function S(cn,en) return zh and cn or en end
-local sections={{"general",S("常规","General")},{"interface",S("界面显示","Appearance")},{"browse",S("寻求组队","Find groups")},{"memberIcons",S("成员显示","Member display")},{"notes",S("笔记与提醒","Notes & reminders")},{"blocks",S("屏蔽名单","Blocked leaders")},{"floating",S("悬浮窗","Floating window")},{"about",L.about},{"credits",S("鸣谢","Credits"),true}}
+local sections={
+ {"general",S("常规与入口","General")},
+ {"browse",S("寻队偏好","Group search")},
+ {"memberIcons",S("成员与标记","Members")},
+ {"notifications",S("提示与声音","Alerts & sound")},
+ {"notes",S("笔记与历史","Notes & history")},
+ {"blocks",S("屏蔽名单","Blocked leaders")},
+ {"interface",S("外观与缩放","Appearance"),gapBefore=12},
+ {"floating",S("悬浮窗","Floating window")},
+ {"about",L.about,gapBefore=12},
+ {"credits",S("鸣谢","Credits"),true},
+}
 local types={{value="positive",label=S("推荐","Positive")},{value="neutral",label=S("中性","Neutral")},{value="caution",label=S("拉黑","Blocked")}}
 local applicantSounds={
  {value="voice",label=S("荔枝内置语音","Lychee built-in voice")},
  {value="native",label=S("原生提示音","Native alert")},
  {value="off",label=S("关闭","Off")},
 }
+local soundChannels={
+ {value="Master",label=S("主音量","Master")},
+ {value="SFX",label=S("音效","Sound effects")},
+ {value="Music",label=S("音乐","Music")},
+ {value="Ambience",label=S("环境","Ambience")},
+ {value="Dialog",label=S("对话","Dialog")},
+}
+local channelCVars={Master="Sound_MasterVolume",SFX="Sound_SFXVolume",Music="Sound_MusicVolume",Ambience="Sound_AmbienceVolume",Dialog="Sound_DialogVolume"}
+function P:ChannelVolumeCVar() return channelCVars[A:GetSetting("soundChannel")] end
+function P:GetChannelVolume()
+ return math.floor(tonumber(C_CVar.GetCVar(self:ChannelVolumeCVar()))*100+.5)
+end
+function P:SyncChannelVolume()
+ local control=self.controls.channelVolume.widget
+ local value=self:GetChannelVolume();control:SetValue(value);UI:SetText(control.valueLabel,value.."%")
+end
 local function ThemeChoices()
  local catalog=A.API.Theme:List({includeBuiltins=true});local choices={}
  table.sort(catalog,function(a,b)
@@ -26,9 +53,8 @@ end
 local definitions={
  general={{"language",S("界面语言","Interface language"),S("仅改变插件文字，重载界面后生效。","Change addon text. Reload the UI to apply."),{{value="auto",label=S("跟随游戏","Game language")},{value="zhCN",label="简体中文"},{value="enUS",label="English"}}},
  {"toggleBinding",A.L.bindingToggle,"","binding"},
- {"minimap",S("显示小地图按钮","Show minimap button"),S("是否显示小地图按钮","Show or hide the minimap button.")},
- {"nativeLFGEntry",S("隐藏原生组队眼睛","Hide the native LFG eye"),S("预组队隐藏原生眼睛按钮","Hide the native eye button for premade groups.")},
- {"applicantAlertSound",S("新申请提示音","New applicant sound"),S("选择新申请提示音","Choose the new applicant sound"),applicantSounds}},
+ {"minimap",S("显示小地图按钮","Show minimap button"),S("左键开关主窗，右键打开设置。","Left-click opens the main window; right-click opens settings.")},
+ {"nativeLFGEntry",S("隐藏原生组队眼睛","Hide the native LFG eye"),S("仅隐藏预组队入口，保留副本与 PvP 排队入口。","Hide the premade-group entry; keep dungeon and PvP queue access.")}},
  interface={{"theme",S("界面主题","Theme"),S("切换主窗口与悬浮窗外观，重载后生效。","Change the main and floating window appearance. Reload to apply."),ThemeChoices},
  {"font",S("界面字体","Interface font"),S("选择主窗口与悬浮窗使用的字体。","Choose the main and floating window font."),function() return A.Fonts:Choices() end},
  {"fontScale",S("字体大小","Font size"),S("调节插件全局文字大小。","Adjust text size throughout the addon."),"range",70,130},
@@ -37,32 +63,39 @@ local definitions={
  browse={
  {"defaultSort",S("默认排序","Default sorting"),S("各分类未单独设置排序时使用。","Used when a category has no saved sorting preference."),{{value="newest",label=L.newest},{value="rating",label=L.leaderRating},{value="itemLevel",label=L.requiredItemLevel},{value="members",label=L.members}}},
  {"rememberFilters",S("记住本角色的筛选","Remember character filters"),S("本角色独立保存各分类筛选。","Save category filters for this character.")},
- {"showImportantFilters",S("主界面重要筛选","Key filters on main page"),S("开启后在“我的申请”内显示；关闭时在筛选弹窗内调整。","Show them in My applications, or keep them in the filter panel when off.")}},
+ {"showImportantFilters",S("常用筛选快捷按钮","Filter shortcuts"),S("开启后在“我的申请”内显示；关闭时在筛选弹窗内调整。","Show them in My applications, or keep them in the filter panel when off.")},
+ {"raidMembers",S("团本成员名单","Raid member list"),S("设置寻队团本详情中的名单展开方式。","Choose how group-search raid details expand the roster."),{{value="shift",label=S("按 Shift 切换","Shift to toggle")},{value="alt",label=S("按 Alt 切换","Alt to toggle")},{value="ctrl",label=S("按 Ctrl 切换","Ctrl to toggle")},{value="always",label=S("始终展开","Always expand")}}}},
  memberIcons={
- {"relations",S("好友与公会标记","Friend and guild markers"),S("在队伍、申请者和成员提示中显示关系。","Show relationships in group and player details.")},
- {"raidMembers",S("团本成员名单","Raid member list"),S("选择团本提示展开成员名单的方式。","Choose how raid tooltips expand the roster."),{{value="shift",label=S("按 Shift 切换","Shift to toggle")},{value="alt",label=S("按 Alt 切换","Alt to toggle")},{value="ctrl",label=S("按 Ctrl 切换","Ctrl to toggle")},{value="always",label=S("始终展开","Always expand")}}},
- {"memberIconShape",S("图标形状","Icon shape"),S("选择寻队五人成员图标与边框的形状。","Shape of five-player icons and borders."),{{value="circle",label=S("圆形","Circle")},{value="square",label=S("圆角方形","Rounded square")}}},
- {"memberIconScale",S("图标缩放","Icon scale"),S("调整寻队五人成员图标大小，成员列自动留出空间。","Resize five-player icons; adjust column space."),"range",75,175},
+ {"memberIconShape",S("成员头像形状","Member icon shape"),S("用于寻队结果的五人队伍。","For five-player groups in search results."),{{value="circle",label=S("圆形","Circle")},{value="square",label=S("圆角方形","Rounded square")}}},
+ {"memberIconScale",S("成员头像大小","Member icon size"),S("调整寻队头像，成员列自动适配。","Resize search-result icons; the column adapts."),"range",75,175},
  {"memberClassBorder",S("职业色边框","Class-color borders"),S("在寻队已有成员图标周围显示职业色。","Show class colors around occupied member icons.")},
- {"memberLeaderMark",S("队长皇冠","Leader crown"),S("在实际队长的成员头像上方显示皇冠。","Show a crown above the actual leader's icon.")}},
+ {"memberLeaderMark",S("队长皇冠","Leader crown"),S("在实际队长的成员头像上方显示皇冠。","Show a crown above the actual leader's icon.")},
+ {"relations",S("好友与公会标记","Friend and guild markers"),S("在队伍、申请者和成员提示中显示关系。","Show relationships in group and player details.")},
+ {"noteMarks",S("荔枝笔记标记","Player note markers"),S("在队长、申请者和队友旁显示记录类型。","Show note types beside leaders, applicants and teammates.")}},
+ notifications={
+ {"reminders",S("玩家记录提醒","Player note reminders"),S("邀请或组队时，在聊天框提示已有玩家记录。","Show saved player notes in chat when inviting or grouping."),{{value="all",label=S("全部记录","All notes")},{value="positive",label=S("仅推荐","Recommended only")},{value="caution",label=S("仅拉黑","Blocked only")},{value="off",label=S("不提醒","Off")}}},
+ {"applicantAlertSound",S("新申请提示音","New applicant sound"),S("选择音色，点击菜单中的播放图标试听。","Choose a sound; use its play icon to preview."),applicantSounds},
+ {"soundChannel",S("音频频道","Audio channel"),S("提示音与试听使用所选游戏频道。","Alerts and previews use this game audio channel."),soundChannels},
+ {"channelVolume",S("频道音量","Channel volume"),S("直接调整游戏频道音量，也影响同频道的其他声音。","Changes the game channel volume, including other sounds on it."),"range",0,100}},
+
  notes={{"defaultNote",S("新记录的默认类型","Default note type"),S("每次记笔记时仍可选择其他类型。","Choose a different type whenever you record a player."),types},
- {"noteMarks",S("荔枝笔记标记","Player note markers"),S("分别显示推荐、中性和拉黑记录；包含队伍成员。","Show recommendation, neutral and block markers, including group members.")},
- {"reminders",S("组队与邀请提醒","Group and invite reminders"),S("收到邀请、邀请玩家或再次组队时，提示符合范围的记录。","Show matching player notes when receiving an invite, inviting a player or grouping again."),{{value="all",label=S("全部记录","All notes")},{value="positive",label=S("仅推荐","Recommended only")},{value="caution",label=S("仅拉黑","Blocked only")},{value="off",label=S("不提醒","Off")}}},
- {"history",S("记录大秘境历史队友","Record Mythic+ teammates"),S("完成后保留活动与成员，便于回顾和补充笔记。","Keep completed runs and teammates for reviewing and adding notes.")}},
+ {"history",S("记录大秘境历史队友","Record Mythic+ teammates"),S("保存完成的副本及队友，供笔记页回顾。","Save completed runs and teammates in Player Notes.")}},
  floating={{"floating",S("显示悬浮窗","Show floating window"),S("查看申请与招募状态，关闭主窗口后仍然显示。","View active applications and recruitment while the main window is closed.")},
- {"floatingCompatibility",S("悬浮窗兼容","Floating window integration"),S("自动接入第三方UI配置的视觉兼容","Automatically adapt the appearance to third-party UI configurations.")},
+ {"floatingCompatibility",S("悬浮窗兼容","Floating window integration"),S("接入第三方 UI 入口，开启时由对方控制大小。","Use a third-party UI entry and its sizing when enabled.")},
  {"floatingScale",S("悬浮窗缩放","Floating window scale"),S("调整悬浮窗大小。","Adjust the floating window size."),"range"},
  {"floatingLocked",S("锁定位置","Lock position"),S("锁定后不能拖动，查看状态和点击入口不受影响。","Lock movement while keeping the status and shortcuts active.")}}}
 local BODY_WIDTH = T.contentWidth - T.settingsMainX - T.settingsContentInset*2 - 12
 function P:Build(parent)
  local root=CreateFrame("Frame",nil,parent);root:SetAllPoints();self.frame=root
- root:SetScript("OnEvent",function(_,event)
-  if event=="UPDATE_BINDINGS" then P:Sync()
+ root:SetScript("OnEvent",function(_,event,name)
+  if event=="CVAR_UPDATE" then
+   if name:lower()==P:ChannelVolumeCVar():lower() then P:SyncChannelVolume() end
+  elseif event=="UPDATE_BINDINGS" then P:Sync()
   elseif event=="PLAYER_REGEN_DISABLED" then
    P:CancelBindingCapture(true);P:ShowBindingNotice(A.L.bindingCombat);P:Sync()
   end
  end)
- root:HookScript("OnHide",function() P:CancelBindingCapture(true);P:CloseLinkCopy(true);P:StopThemeSubscription();P:StopSoundPreview() end)
+ root:HookScript("OnHide",function() root:UnregisterEvent("CVAR_UPDATE");P:CancelBindingCapture(true);P:CloseLinkCopy(true);P:StopThemeSubscription();P:StopSoundPreview() end)
  local rail=CreateFrame("Frame",nil,root);rail:SetSize(T.settingsSidebarWidth,T.contentHeight);rail:SetPoint("TOPLEFT");self.rail=rail
  self.nav={};for i,entry in ipairs(sections) do
   local b=C.Navigation(rail,entry[2],T.settingsSidebarWidth,function() P:SelectSection(entry[1]) end,nil,{radius=8,fontSize=14});b:SetPoint("TOPLEFT",0,-12-(i-1)*52);b.label:SetWidth(T.settingsBLabelWidth)
@@ -434,7 +467,10 @@ function P:BuildRow(parent,row,index)
    value=math.floor(value/5+.5)*5
    local widget=P.controls[row[1]].widget
    UI:SetText(widget.valueLabel,value.."%")
-   A:SetSetting(row[1],value)
+   if row[1]=="channelVolume" then
+    if not UI.preview then C_CVar.SetCVar(P:ChannelVolumeCVar(),value/100) end
+    P:SyncChannelVolume()
+   else A:SetSetting(row[1],value) end
   end) end
   control.valueLabel=C.Text(control,"",14,"muted",nil);C.SetPoint(control.valueLabel,"LEFT",control,"RIGHT","settingsControlValueLabelLeftX",0);control.valueLabel:SetJustifyH("RIGHT")
   function control:LayoutValueWidth()
@@ -560,6 +596,7 @@ function P:LayoutRows()
  local navTop=12
  for _,entry in ipairs(sections) do
   local button=self.nav[entry[1]]
+  navTop=navTop+(entry.gapBefore or 0)
   button.label:SetHeight(0)
   local labelHeight=math.ceil(button.label:GetStringHeight())
   button.label:SetHeight(labelHeight);button:SetHeight(math.max(48,labelHeight+16))
@@ -634,6 +671,7 @@ function P:SelectSection(key)
  local changed=self.section~=key
  if changed then self:CancelBindingCapture(true);self:StopBlocks();self:CloseLinkCopy(true);self:StopSoundPreview() end
  for _,panel in pairs(self.panels) do UI.Motion:FinishPlacement(panel) end
+ if key=="notifications" then self.frame:RegisterEvent("CVAR_UPDATE") else self.frame:UnregisterEvent("CVAR_UPDATE") end
  self.section=key;for id,panel in pairs(self.panels) do panel:SetShown(id==key);self.nav[id]:SetActive(id==key);UI:Color(self.nav[id].label,id==key and "text" or "muted") end
  for _,entry in ipairs(sections) do if entry[1]==key then UI:SetText(self.heading,entry[2]);break end end
  if key=="blocks" then self:EnterBlocks() end
@@ -660,7 +698,7 @@ function P:Sync()
  for key,entry in pairs(self.controls) do
   local c,row=entry.widget,entry.definition
   local value
-  if key=="theme" then value=themeStatus.next.id or A.ThemeDefaults.id else value=A:GetSetting(key) end
+  if key=="theme" then value=themeStatus.next.id or A.ThemeDefaults.id elseif key=="channelVolume" then value=self:GetChannelVolume() else value=A:GetSetting(key) end
   if row[4]=="binding" then
    local text=self.bindingCapture and A.L.bindingListen or A.L.bindingCurrent:format(A.Bindings:Text())
    local conflict=not A.Bindings:Keys() and A.Bindings:Conflict(A.Bindings.defaultKey)
@@ -783,7 +821,7 @@ function P:Leave()
  self:StopThemeSubscription()
  self:CloseLinkCopy(true)
  self:StopBlocks()
- self.frame:UnregisterEvent("UPDATE_BINDINGS")
+ self.frame:UnregisterEvent("UPDATE_BINDINGS");self.frame:UnregisterEvent("CVAR_UPDATE")
  self.aboutClicks=0;self:HideDedicationToast()
  self.controls.uiScale.widget:FinishDrag(false)
  self:CancelBindingCapture(true)

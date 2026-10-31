@@ -179,7 +179,7 @@ function G:Restore()
 end
 
 function G:OnSettingChanged(key,value)
- if key=="applicantAlertSound" then self.Alerts:OnSettingChanged() end
+ if key=="applicantAlertSound" or key=="soundChannel" then self.Alerts:OnSettingChanged() end
  if key=="history" then
   if value then self.History:Restore() else self.History:Discard() end
  end

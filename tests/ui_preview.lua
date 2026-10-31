@@ -106,6 +106,9 @@ A:Open("notes");U.pages.notes:OpenEdit("晚风听雨-晨风号角");snapshot("�
 local notes=U.pages.notes;notes.list.clip.mouseOver=true;notes.list.rows[3]:Fire("OnEnter");snapshot("笔记列表悬停");notes.list.rows[3]:Fire("OnLeave");notes.list.clip.mouseOver=nil
 notes:SelectTab("history");notes.historyList.clip.mouseOver=true;notes.historyList.rows[1]:Fire("OnEnter");snapshot("历史记录悬停");notes.historyList.rows[1]:Fire("OnLeave");notes.historyList.clip.mouseOver=nil
 A:Open("settings");snapshot("设置")
+A:Open("settings",{section="notifications"});snapshot("提示与声音")
+A:Open("settings",{section="memberIcons"});snapshot("成员与标记设置")
+A:Open("settings",{section="browse"});snapshot("寻队偏好设置")
 local raidMembers={}
 for i=1,30 do local member={};for key,value in pairs(members[(i-1)%5+1]) do member[key]=value end;member.nameKey=member.nameKey..i;member.name=member.nameKey;member.isLeader=i==1;member.isSelf=i==1;member.subgroup=math.ceil(i/5);member.unit="raid"..i;member.guid="SampleRaid-"..i;raidMembers[i]=member end
 A:Open("find");A:SetSetting("raidMembers","always")
