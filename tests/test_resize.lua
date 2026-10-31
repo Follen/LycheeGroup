@@ -165,6 +165,7 @@ local footerTop=notes.editor:GetHeight()-U.Theme.notesESaveBottomrightY-notes.eS
 local point={notes.eReason:GetPoint()}
 T.ok(-point[#point]+notes.eReason:GetHeight()+12<=footerTop,"the short editor keeps its reason input above the actions")
 notes:SetEditorStatus("Draft validation message","error")
+footerTop=notes.editor:GetHeight()-U.Theme.notesESaveBottomrightY-notes.eSave:GetHeight()
 point={notes.eStatus:GetPoint()}
 T.ok(-point[#point]+notes.eStatus:GetStringHeight()+12<=footerTop,"visible feedback leaves space for the bottom actions")
 notes:SetEditorStatus("")

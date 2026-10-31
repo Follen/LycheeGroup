@@ -2888,7 +2888,7 @@ for _,choice in ipairs({{groupKeys={[20]=true},difficultyID=8},{selected=true,di
  T.eq(page.pickerConfirm:IsShown(),choice.groupKeys~=nil,"a restored collection can be edited and confirmed immediately")
  fresh.U:Hide(true)
 end
--- The role summary owns a live, complete roster and season-raid coverage.
+-- The role summary owns a live, complete roster and all-raid coverage.
 do
  local fresh=dofile("tests/ui_fixture.lua")("zhCN")
  local a,u,g=fresh.A,fresh.U,fresh.G
@@ -2959,6 +2959,10 @@ do
  end
  tip:Hide()
  page:UsePreset({activityID=1});T.ok(page.buffArea:IsShown());T.eq(page.buffReport.maxGroup,6)
+ local draftMatches=g.Catalog.Matches
+ g.Catalog.Matches=function(self,activity,category,...) if category=="seasonRaid" then return false end;return draftMatches(self,activity,category,...) end
+ page:RefreshRosterPresentation();T.ok(page.buffArea:IsShown(),"non-season raid drafts show coverage before publishing")
+ g.Catalog.Matches=draftMatches
  T.eq(#page.buffReport.missing,12)
  local raid=g.Catalog:GetActivity(1);raid.difficultyID=16;page:RefreshPicker()
  T.eq(page.buffReport.maxGroup,4,"difficulty changes update coverage without a roster event")
@@ -2978,7 +2982,7 @@ do
  g.listing={activityID=1,name="Raid listing"};g:Notify("listing");T.ok(page.buffArea:IsShown(),"managed listings use their own raid activity")
  local matches=g.Catalog.Matches
  g.Catalog.Matches=function(self,activity,category,...) if category=="seasonRaid" then return false end;return matches(self,activity,category,...) end
- g:Notify("activities");T.eq(page.buffArea:IsShown(),false,"a catalog refresh can remove outdated season coverage")
+ g:Notify("activities");T.ok(page.buffArea:IsShown(),"non-season managed raids retain coverage")
  g.Catalog.Matches=matches
  u:Hide(true);T.eq(page.roster,nil);T.eq(page.buffReport,nil);T.eq(tip.sourceRoster,nil)
 end

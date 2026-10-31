@@ -2331,7 +2331,16 @@ do
  T.eq(same,report,"roster refreshes reuse the report");T.eq(report.maxGroup,6);T.eq(report.memberCount,5)
  T.eq(report.counts.ROGUE,2);T.eq(Missing("poisons"),false);T.eq(Missing("attackPower"),false)
  T.ok(Missing("physical"),"group seven is excluded from flexible raids too")
- T.eq(buffs.Get(G.Catalog,106,members,report),nil,"earlier raids in this expansion have no coverage panel")
+ T.eq(buffs.Get(G.Catalog,106,members,report),report,"earlier raids in this expansion have coverage")
+ T.eq(buffs.Get(G.Catalog,105,members,report),report,"previous expansion raids have coverage")
+ local legacy={categoryID=3,mapID=4101}
+ local legacyCatalog={GetActivity=function() return legacy end}
+ for _,size in ipairs({10,20,25,40}) do
+  legacy.maxNumPlayers=size
+  buffs.Get(legacyCatalog,1,members,report)
+  T.eq(report.maxGroup,math.ceil(size/5),"legacy raid capacity controls eligible subgroups")
+  T.eq(report.counts.MONK,size==40 and 1 or nil,"forty-player raids include group seven")
+ end
  T.eq(buffs.Get(G.Catalog,513,members,report),nil,"world bosses have no coverage panel")
  T.eq(buffs.Get(G.Catalog,502,members,report),nil,"seasonal dungeons have no coverage panel")
  T.eq(buffs.Get(G.Catalog,nil,members,report),nil)

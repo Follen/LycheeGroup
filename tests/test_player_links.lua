@@ -74,21 +74,30 @@ for _,locale in ipairs({"zhCN","enUS"}) do
   [900]={categoryID=4,maxNumPlayers=5,isPvpActivity=true},
   [901]={categoryID=9,maxNumPlayers=40,isRatedPvpActivity=true},
   [902]={categoryID=6,maxNumPlayers=5},
+  [903]={id=903,categoryID=3,mapID=631,difficultyID=3,maxNumPlayers=10,isCurrentRaidActivity=false},
+  [904]={id=904,categoryID=3,mapID=409,difficultyID=9,maxNumPlayers=40,isCurrentRaidActivity=false},
+  [905]={id=905,categoryID=3,mapID=631,difficultyID=6,maxNumPlayers=25,isCurrentRaidActivity=false},
  }
  local getActivity=g.Catalog.GetActivity
  g.Catalog.GetActivity=function(self,id) return activities[id] or getActivity(self,id) end
+ local matches=g.Catalog.Matches
+ g.Catalog.Matches=function(self,activity,category,...)
+  if category=="seasonRaid" and activities[activity.id] then return false end
+  return matches(self,activity,category,...)
+ end
  local first={name="First-Illidan",nameKey="First-Illidan",class="MAGE",assignedRole="DAMAGER",applicantID=31,itemLevel=320,dungeonScore=2500,
   dungeonScores={mapScore=320,current={name="Current dungeon",level=12,timed=true},best={name="Best dungeon",level=13,timed=true}}}
  local second={name="Second-Illidan",nameKey="Second-Illidan",class="PRIEST",assignedRole="HEALER",applicantID=31,itemLevel=321}
  local app={id=31,status="applied",activityID=2,members={first,second}}
  g.applicants[31]=app;g.listing={activityID=2,name="Applicant links"}
+ g.GetRoster=function() return app.members end
  a:Open("create")
  local page,tip=u.pages.create,u.Tooltip
  page.batchScroll.mouseOver=true
  local region=locale=="zhCN" and "cn" or "us"
  local prefix=locale=="zhCN" and "/cn" or ""
  local host=locale=="zhCN" and "cn" or "www"
- for _,activityID in ipairs({2,3,1,902,900,901,2}) do
+ for _,activityID in ipairs({2,3,1,903,904,905,902,900,901,2}) do
   tip:Hide();app.activityID=activityID;g.listing.activityID=activityID;g:Notify("listing");g:Notify("applicants")
   local links=activityID~=900 and activityID~=901
   for index,member in ipairs(app.members) do
@@ -112,6 +121,18 @@ for _,locale in ipairs({"zhCN","enUS"}) do
     Check.eq(view.copyField:IsShown(),false,"PvP cannot open a hidden link action")
     Check.eq(view.copyField.box:HasFocus(),false)
    end
+  end
+  if activityID==903 or activityID==904 or activityID==905 then
+   tip:Hide();page.groupSummary:Fire("OnEnter")
+   local view=tip.interactive
+   Check.eq(view.memberButtons[1].member,first,"legacy raid roster tooltip keeps its actual members")
+   view.memberButtons[1]:Fire("OnClick")
+   Check.eq(tip.member,first,"legacy raid roster opens player details")
+   Check.eq(view.wcl:IsShown(),true);Check.eq(view.io:IsShown(),true);Check.eq(view.note:IsShown(),true)
+   view.wcl:Fire("OnClick")
+   Check.eq(view.copyField.box:GetText(),"https://"..host..".warcraftlogs.com/character/"..region.."/Illidan/First")
+   view.io:Fire("OnClick")
+   Check.eq(view.copyField.box:GetText(),"https://raider.io"..prefix.."/characters/"..region.."/illidan/First")
   end
  end
  -- A source refresh may change the activity while a copy field has focus.
