@@ -11,6 +11,8 @@ ALL[#ALL+1]="find_row_geometry"
 
 ALL[#ALL+1]="raid_buff_filter"
 ALL[#ALL+1]="native_application_roles"
+ALL[#ALL+1]="self_details"
+ALL[#ALL+1]="roster_scores"
 local requested = {}
 local known = {}
 for _, name in ipairs(ALL) do known[name] = true end

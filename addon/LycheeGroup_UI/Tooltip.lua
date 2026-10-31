@@ -567,7 +567,7 @@ function Tip:BuildInteractive()
   Tip:CopyPlayerLink("io")
  end);f.io:SetSurfaceColors("secondaryContainer","refreshHover","surfaceHighest")
  f.note=C.Button(canvas,L.record,T.tooltipFNoteWidth,function()
-  if UI.preview then return end
+  if UI.preview or not Tip.member or Members:IsSelf(Tip.member) then return end
   local key,name,realm=Links.Identity(Tip.member)
   if name then A:Open("notes",UI:HasNote(key) and {playerKey=key} or {add={name=name,realm=realm,class=Tip.member.class,specID=Tip.member.specID}}) end
  end);f.note:SetWidth(T.tooltipFNoteWidth)
@@ -997,6 +997,7 @@ UI:ApplyElementScope("tooltip")
  end
 function Tip:ShowPlayer(owner,member,context)
  if self.pinned then return end
+ if Members:IsSelf(member) then self:Hide();return end
  local directRoster=context and context.source=="roster"
  context=context or DefaultMemberContext(member)
  if context.canOpenDetails==false then return end
@@ -1074,6 +1075,10 @@ function Tip:RenderDungeons(scores,top)
  return top
 end
 function Tip:RenderPlayer(member,fromGroup,adjustPoint)
+ if Members:IsSelf(member) then
+  if self.member then self:Hide() end
+  return
+ end
  self:CancelRosterDrag();self:ClearRosterNotice()
  local context=self.sourceRoster and A.GroupPresentation.Member("roster") or self.sourceApp and ApplicantContext(self.sourceApp) or self.memberContext or DefaultMemberContext(member)
  if context.source=="applicant" then
@@ -1088,10 +1093,15 @@ function Tip:RenderPlayer(member,fromGroup,adjustPoint)
  self.selectedMemberID=Members:ID(member)
  self.applicantID=context.source=="applicant" and (self.sourceApp and self.sourceApp.id or member.applicantID) or nil
  local scores
+ local showMapScore=context.source=="applicant" and context.showDungeonRecords
  if context.source=="applicant" then
   if context.showDungeonRecords then scores=UI:GetGroup():GetApplicantDungeonScores(member) end
+ elseif context.source=="roster" and not UI.preview then
+  local group=UI:GetGroup();local listing=group:GetListing()
+  local activity=listing and group.Catalog:GetActivity(listing.activityID)
+  showMapScore=activity and activity.isMythicPlusActivity==true
+  scores=group:GetRosterDungeonScores(member,listing and listing.activityID) or {}
  else scores=member.dungeonScores end
- local showMapScore=context.source=="applicant" and context.showDungeonRecords
  local key,name,realm=Links.Identity(member)
  local note=key and A.Notes and A.Notes:Find(key)
  if not self.interactive then self:BuildInteractive() end
