@@ -22,11 +22,13 @@ local definitions={
 
 function Buffs.Get(catalog,activityID,members,report)
  local activity=catalog:GetActivity(activityID)
- if not activity or activity.categoryID~=3 or not catalog:Matches(activity,"seasonRaid") then return end
+ if not activity or activity.categoryID~=3 or (activity.mapID or 0)<=0 then return end
  report=report or {counts={},missing={}}
  local counts,missing=report.counts,report.missing
  wipe(counts);wipe(missing)
- report.maxGroup=activity.difficultyID==16 and 4 or 6
+ local maxPlayers=activity.maxNumPlayers
+ report.maxGroup=activity.difficultyID==16 and 4
+  or maxPlayers and maxPlayers>0 and math.min(8,math.ceil(maxPlayers/5)) or 6
  report.memberCount,report.unknown=0,0
  for _,member in ipairs(members) do
   if (member.subgroup or 1)<=report.maxGroup then

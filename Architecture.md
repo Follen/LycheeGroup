@@ -150,7 +150,7 @@ Settings 持有鸣谢分类、静态名单、头像及用户提供的平台链�
 
 ## 4. 状态所有权与数据流
 
-主窗尺寸由 [Resize.lua](addon/LycheeGroup_UI/Resize.lua) 管理：`layout.window.width/height` 由配置服务保存当前角色偏好的宽高，旧 `charPrefs.windowSize` 仅作为迁移来源与持久用户修改的兼容镜像，`windowWidth/windowHeight` 表示经屏幕和页面下限约束后的实际尺寸。Host 构建时读取、导航及屏幕适配时应用；只有拖动结束写回偏好，临时布局限制不覆盖存档。最小尺寸随字体比例及创建表单内容计算，屏幕适配也保证最小布局能放入屏幕。三态拖动柄按住时读取鼠标并固定左上角，松手、隐藏或离页停止采样；不改写整体缩放和字体设置。页面反馈通过 `RefreshWindowSize` 应用尺寸约束，拖动期间采用当前宽高，避免输入校验恢复拖动前的偏好。`LayoutWindow` 只调整当前页面的 `LayoutSize`，各页复用现有控件，保留输入和业务状态。随视口扩大的共享列表使用 `SetRowInitializer` 初始化现有及后续新增行，按实际可见需求扩充后复用。
+主窗尺寸由 [Resize.lua](addon/LycheeGroup_UI/Resize.lua) 管理：`layout.window.width/height` 由配置服务保存当前角色偏好的宽高，旧 `charPrefs.windowSize` 仅作为迁移来源与持久用户修改的兼容镜像，`windowWidth/windowHeight` 表示经屏幕和页面下限约束后的实际尺寸。Host 构建时读取、导航及屏幕适配时应用；只有拖动结束写回偏好，临时布局限制不覆盖存档。最小尺寸随字体比例、创建表单内容及笔记编辑区内容计算，屏幕适配也保证最小布局能放入屏幕。三态拖动柄按住时读取鼠标并固定左上角，松手、隐藏或离页停止采样；不改写整体缩放和字体设置。页面反馈通过 `RefreshWindowSize` 应用尺寸约束，拖动期间采用当前宽高，避免输入校验恢复拖动前的偏好。`LayoutWindow` 只调整当前页面的 `LayoutSize`，各页复用现有控件，保留输入和业务状态。随视口扩大的共享列表使用 `SetRowInitializer` 初始化现有及后续新增行，按实际可见需求扩充后复用。
 
 ```mermaid
 flowchart LR
@@ -239,7 +239,7 @@ Find 将 `hideSameSpec` 与赛季地下城的角色偏好一同保存，其他�
 
 创建页首次消费缺失专精时给库回调一次等待机会，之后通过 `CanInspect` 选择成员、串行 `NotifyInspect`，只在匹配 GUID 的 `INSPECT_READY` 后提交结果并通知界面。专精变化清除该成员旧值；新成员、重新上线及脱战事件重新推进尚缺的信息。原生检视窗口打开时让出，关闭事件继续；不调用 `ClearInspectPlayer`。离开最后一个创建页消费者取消本项目请求／计时器及检视相关事件。所有等待与节流参数只在 [perfermance.md](perfermance.md#6-招募申请者与通讯) 维护。
 
-[RaidBuffs.lua](addon/LycheeGroup_Group/RaidBuffs.lua) 以活动目录 `seasonRaid` 为展示范围，由 `Group.Roster:GetRaidBuffs(activityID)` 提供结果；预览复用同一统计模型。输入为现有 Roster 的 class／subgroup：difficulty 16 统计前四小队，其他赛季团本统计前六小队，不以是否已经进入团队作为前提。模型覆盖十三职业，盗贼阈值为两人，保留未知职业的未确认状态；不检测光环、天赋或技能实际状态，不统计战复／嗜血。刷新沿现有 Roster 事件，无新轮询。职业覆盖设计参考 [NSRT SetupManager 固定版本](https://github.com/Reloe/NorthernSkyRaidTools/blob/94a1c01ddf3c34f9944c3976ae667e1d1b21226e/NorthernSkyRaidTools/SetupManager.lua#L531-L595)，本项目自行实现，未复制其源代码。
+[RaidBuffs.lua](addon/LycheeGroup_Group/RaidBuffs.lua) 以原生活动分类 3 且具有有效副本地图的全部团本为展示范围，不依赖赛季目录，由 `Group.Roster:GetRaidBuffs(activityID)` 提供结果；预览复用同一统计模型。输入为现有 Roster 的 class／subgroup：difficulty 16 统计前四小队；其他团本按 `maxNumPlayers` 向上折算每组五人的小队数，至多八组，人数上限缺失或无效时沿用六组，不以是否已经进入团队作为前提。模型覆盖十三职业，盗贼阈值为两人，保留未知职业的未确认状态；不检测光环、天赋或技能实际状态，不统计战复／嗜血。刷新沿现有 Roster 事件，无新轮询。职业覆盖设计参考 [NSRT SetupManager 固定版本](https://github.com/Reloe/NorthernSkyRaidTools/blob/94a1c01ddf3c34f9944c3976ae667e1d1b21226e/NorthernSkyRaidTools/SetupManager.lua#L531-L595)，本项目自行实现，未复制其源代码。
 
 ## 5. 事件驱动的实际边界
 

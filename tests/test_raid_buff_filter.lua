@@ -81,7 +81,12 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  Click(Cell(p,"PRIEST"))
  local matches=g.Catalog.Matches
  g.Catalog.Matches=function(self,activity,category,...) if category=="seasonRaid" then return false end;return matches(self,activity,category,...) end
- g:Notify("activities");IDs(p,{1,2,3,4,5,6},"catalog removal clears invisible class filters")
+ g:Notify("activities");IDs(p,{3},"non-season raids retain the selected class filter")
+ Check(p.buffArea:IsShown() and Cell(p,"PRIEST").active,"non-season raid coverage remains visible and interactive")
+ local getActivity=g.Catalog.GetActivity
+ g.Catalog.GetActivity=function(self,id) if id~=1 then return getActivity(self,id) end end
+ g:Notify("activities");IDs(p,{1,2,3,4,5,6},"unavailable activity clears invisible class filters")
+ g.Catalog.GetActivity=getActivity
  g.Catalog.Matches=matches;g:Notify("activities")
  Click(Cell(p,"PRIEST"));Equal(a:Preview("applicants"),true,"preview enters")
  Equal(a:Preview("off"),true,"preview exits")

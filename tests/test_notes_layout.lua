@@ -74,12 +74,14 @@ for _,locale in ipairs({"zhCN","enUS"}) do
   Check(reasonTop+note.reason:GetHeight()+12<=note:GetHeight()+.001,"record keeps bottom padding at every font size")
   Near(P.list.rowHeight,note:GetHeight(),"record rows retain the continuous list surface")
   P:OpenEdit("Player-Home")
+  Check(P.eReason.scroll:GetHeight()+.001>=U.context:GetLineHeight(20),"reason viewport fits a complete text line at the minimum window size")
   local _,reasonY=Position(P.eReason,P.editor);local _,saveY=Position(P.eSave,P.editor)
   Check(reasonY+P.eReason:GetHeight()+16<=saveY,"editor reason clears the action row")
   Check(P.eIdentity:GetHeight()>P.eRealm:GetHeight(),"editor identity leads its secondary text")
   for _,mode in ipairs({"edit","add"}) do
    if mode=="add" then P:OpenAdd() end
    P:SetEditorStatus("A validation message\nAdditional validation detail","error")
+   Check(P.eReason.scroll:GetHeight()+.001>=U.context:GetLineHeight(20),mode.." feedback keeps a complete reason line visible")
    local _,statusY=Position(P.eStatus,P.editor);local _,buttonY=Position(P.eSave,P.editor)
    Check(statusY+P.eStatus:GetHeight()+12<=buttonY+.001,("%s status clears footer (%s %d: %.2f+%.2f+12 <= %.2f)"):format(mode,locale,percent,statusY,P.eStatus:GetHeight(),buttonY))
    local _,reasonTop=Position(P.eReason,P.editor)

@@ -334,6 +334,7 @@ function P:SetEditorStatus(text,kind)
  UI:SetText(self.eStatus,text)
  UI:Color(self.eStatus,kind=="error" and "warning" or kind=="success" and "good" or "muted")
  self:LayoutEditor()
+ if UI.page=="notes" then UI:RefreshWindowSize() end
 end
 function P:SelectTab(tab,skipDefault)
  local previous=state.tab;local changed=previous~=nil and previous~=tab
@@ -524,6 +525,28 @@ function P:ReflowMetrics(width,height)
 UI:ApplyElementScope("notes")
  end
 
+local function ReasonMinimum()
+ return math.max(32,UI.context:GetLineHeight(20)+T.editMultilineInset*2)
+end
+
+function P:GetMinimumHeight()
+ if state.panel~="add" and state.panel~="edit" then return 0 end
+ local add=state.panel=="add"
+ local identity=add and self.eNameLabel:GetHeight()+8+self.eName:GetHeight()
+  or math.max(self.eAvatar:GetHeight(),self.eIdentity:GetHeight()+self.eRealm:GetHeight()+4)
+ local status=self.eStatus:GetText()
+ local feedback=status and status~="" and self.eStatus:GetStringHeight()+8 or 0
+ local date=not add and self.eDate:GetHeight()+8 or 0
+ -- At the tightest spacing, keep one full input line and the footer intact.
+ local reasonTop=24+self.eTitle:GetHeight()+4+identity+8
+  +math.max(self.classLabel:GetHeight(),self.specLabel:GetHeight())+8
+  +math.max(self.classChoice:GetHeight(),self.specChoice:GetHeight())+8
+  +self.typeLabel:GetHeight()+8+math.max(T.notesTypeSwitchHeight,self.typeButtons.positive.label:GetHeight()+12)+8
+  +self.eReasonLabel:GetHeight()+8
+ return math.ceil(reasonTop+ReasonMinimum()+date+feedback+12+self.eSave:GetHeight()+T.notesESaveBottomrightY
+  +T.notesEditorTop+T.notesContentInset+T.notesEditorBottomInset+T.headerHeight+T.pageInset)
+end
+
 function P:LayoutEditor()
  if not state.panel then return end
  local add,missing=state.panel=="add",state.panel=="missing"
@@ -537,10 +560,11 @@ function P:LayoutEditor()
  local statusHeight=statusText and statusText~="" and self.eStatus:GetStringHeight()+8 or 0
  local dateHeight=not add and self.eDate:GetHeight()+8 or 0
  local footerTop=EDITOR_HEIGHT-T.notesESaveBottomrightY-self.eSave:GetHeight()
+ local reasonMinimum=ReasonMinimum()
  local fullReasonTop=pad+self.eTitle:GetHeight()+20+identityBlock+24+labelHeight+8+choiceHeight+24+self.typeLabel:GetHeight()+8+switchHeight+24+self.eReasonLabel:GetHeight()+8
  -- Preserve the normal spacing until the reason field reaches its minimum.
  -- Short windows then tighten only section gaps, keeping labels and actions apart.
- local tighten=math.min(16,math.max(0,(32-(footerTop-12-fullReasonTop-dateHeight-statusHeight))/4))
+ local tighten=math.min(16,math.max(0,(reasonMinimum-(footerTop-12-fullReasonTop-dateHeight-statusHeight))/4))
  local sectionGap,headingGap=24-tighten,20-tighten
  local identityTop=pad+self.eTitle:GetHeight()+headingGap
  self.eIdentity:ClearAllPoints();self.eIdentity:SetPoint("TOPLEFT",T.notesEIdentityTopleftX,-identityTop)
@@ -564,7 +588,7 @@ function P:LayoutEditor()
  local reasonTop=reasonLabelTop+self.eReasonLabel:GetHeight()+8
  C.SetPoint(self.eReasonLabel,"TOPLEFT",self.eReasonLabel:GetParent(),"TOPLEFT","notesEReasonLabelTopleftX",-reasonLabelTop)
  C.SetPoint(self.eReason,"TOPLEFT",self.eReason:GetParent(),"TOPLEFT","notesEReasonTopleftX",-reasonTop)
- local reasonHeight=math.max(32,math.min(T.notesEReasonHeight,footerTop-12-reasonTop-dateHeight-statusHeight))
+ local reasonHeight=math.max(reasonMinimum,math.min(T.notesEReasonHeight,footerTop-12-reasonTop-dateHeight-statusHeight))
  self.eReason:SetHeight(reasonHeight)
  C.SetPoint(self.eDate,"TOPLEFT",self.eDate:GetParent(),"TOPLEFT","notesEDateTopleftX",-reasonTop-reasonHeight-8)
  C.SetPoint(self.eStatus,"TOPLEFT",self.editor,"TOPLEFT","notesEStatusTopleftX",missing and -76 or -reasonTop-reasonHeight-dateHeight-8)
@@ -608,6 +632,7 @@ local function ShowEditorChrome(mode,reveal)
  P.eReasonLabel:SetShown(not missing);P.eReason:SetShown(not missing);P.eSave:SetShown(not missing);P.eCancel:SetShown(not missing)
  P.eDelete:SetShown(edit);P.classChoice:SetShown(not missing);P.specChoice:SetShown(not missing);for _,button in pairs(P.typeButtons) do button:SetShown(not missing) end
  P:LayoutEditor()
+ if UI.page=="notes" then UI:RefreshWindowSize() end
 end
 
 function P:OpenEdit(key)
