@@ -13,12 +13,13 @@ local function position(region,root)
  return px+relative:GetWidth()*part(anchor,"LEFT","RIGHT")+x-region:GetWidth()*part(point[1],"LEFT","RIGHT"),py+relative:GetHeight()*part(anchor,"TOP","BOTTOM")-y-region:GetHeight()*part(point[1],"TOP","BOTTOM")
 end
 local sections={
- {"general","常规","General",{"language","toggleBinding","minimap","nativeLFGEntry","applicantAlertSound","guide"}},
- {"interface","界面显示","Appearance",{"theme","font","fontScale","uiScale","reduceMotion"}},
- {"browse","寻求组队","Find groups",{"defaultSort","rememberFilters","showImportantFilters"}},
- {"memberIcons","成员显示","Member display",{"relations","raidMembers","memberIconShape","memberIconScale","memberClassBorder","memberLeaderMark"}},
- {"notes","笔记与提醒","Notes & reminders",{"defaultNote","noteMarks","reminders","history"}},
+ {"general","常规与入口","General",{"language","toggleBinding","minimap","nativeLFGEntry","guide"}},
+ {"browse","寻队偏好","Group search",{"defaultSort","rememberFilters","showImportantFilters","raidMembers"}},
+ {"memberIcons","成员与标记","Members",{"memberIconShape","memberIconScale","memberClassBorder","memberLeaderMark","relations","noteMarks"}},
+ {"notifications","提示与声音","Alerts & sound",{"reminders","applicantAlertSound","soundChannel","channelVolume"}},
+ {"notes","笔记与历史","Notes & history",{"defaultNote","history"}},
  {"blocks","屏蔽名单","Blocked leaders",{}},
+ {"interface","外观与缩放","Appearance",{"theme","font","fontScale","uiScale","reduceMotion"}},
  {"floating","悬浮窗","Floating window",{"floating","floatingCompatibility","floatingScale","floatingLocked","resetPosition"}},
  {"about","关于","About",{}},
  {"credits","鸣谢","Credits",{}},
@@ -31,7 +32,7 @@ local function layout(p,tag)
   if key=="credits" then
    near(y+button:GetHeight(),p.rail:GetHeight()-12,tag..": Credits does not stay at the bottom of the sidebar")
    check(y>=previous+16,tag..": Credits overlaps the ordinary settings categories")
-  elseif previous then near(y,previous+4,tag..": navigation entries lose their four-unit gap") else near(y,12,tag..": first category moves away from the rail inset") end
+  elseif previous then near(y,previous+4+((key=="interface" or key=="about") and 12 or 0),tag..": navigation group spacing changes") else near(y,12,tag..": first category moves away from the rail inset") end
   check(button:GetHeight()>=48 and button.label:GetHeight()>=button.label:GetStringHeight(),tag..": long category text is clipped")
   previous=y+button:GetHeight()
   check(previous<=p.rail:GetHeight(),tag..": a category falls below the smallest window")
@@ -106,7 +107,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
    for other,otherPanel in pairs(p.panels) do check(otherPanel:IsShown()==(other==key),tag..": a hidden category leaks content") end
   end
   local actual=0;for key in pairs(p.controls) do actual=actual+1;check(seen[key],tag..": unclassified setting: "..key) end
-  check(actual==count and count==27,tag..": settings were lost during regrouping")
+  check(actual==count and count==29,tag..": settings were lost during regrouping")
   check(p.rail:GetWidth()==208,tag..": categories change the sidebar width")
   check(#p.credits==2 and p.credits[1].name:GetText()=="@露露缇雅" and p.credits[2].name:GetText()=="@灵魂复苏",tag..": contributor names or order are incorrect")
   p.nav.general:Fire("OnClick","LeftButton");p.nav.credits:Fire("OnClick","LeftButton")
@@ -145,7 +146,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do
   p:SelectSection(section[1])
   for _,key in ipairs(section[4]) do
    local entry=p.controls[key]
-   if entry and key~="toggleBinding" and key~="theme" then
+   if entry and key~="toggleBinding" and key~="theme" and key~="channelVolume" then
     local original=a:GetSetting(key);local definition=a.Configuration.definitions["settings."..key]
     local storage=definition.storage;local widget,row=entry.widget,entry.definition;local changed
     if not row[4] then widget:Fire("OnClick","LeftButton");changed=not original
@@ -261,7 +262,7 @@ do
  local ensure=a.Ensure;local loads,plays,stops,lastChoice=0,0,0
  a.Ensure=function(self,module) if module=="Group" then loads=loads+1 end;return ensure(self,module) end
  g.Alerts={Preview=function(_,choice) plays=plays+1;lastChoice=choice end,StopPreview=function() stops=stops+1 end}
- a:Open("settings",{section="general"});local p=u.pages.settings
+ a:Open("settings",{section="notifications"});local p=u.pages.settings
  local choice=p.controls.applicantAlertSound.widget
  local function PreviewFor(value)
   if not u.context:IsMenuOpen(choice) then choice:Fire("OnClick","LeftButton") end
@@ -282,7 +283,7 @@ do
  check(loads==1 and plays==1 and lastChoice=="native","right-side action does not preview its own sound")
  check(a:GetSetting("applicantAlertSound")=="voice" and choice.value=="voice","preview changes the chosen sound")
  check(u.context:IsMenuOpen(choice),"preview closes the sound menu")
- check(p.controls.applicantAlertSound.help:GetText()=="选择新申请提示音","sound description retains the old cooldown paragraph")
+ check(p.controls.applicantAlertSound.help:GetText()=="选择音色，点击菜单中的播放图标试听。","sound description retains the old cooldown paragraph")
  local voice=PreviewFor("voice");voice:Fire("OnClick","LeftButton")
  check(plays==2 and lastChoice=="voice","switching preview does not use the row's sound")
  local off=PreviewFor("off");check(not off or not off:IsShown(),"Off has a preview icon")
@@ -291,24 +292,24 @@ do
  check(plays==3 and a:GetSetting("applicantAlertSound")=="off","previewing a sound while Off is selected changes the saved setting")
  p:SelectSection("interface")
  check(stops==2 and p.previewAlerts==nil,"leaving the sound section retains its preview")
- p:SelectSection("general");f.Pick(choice,"voice");PreviewFor("voice"):Fire("OnClick","LeftButton")
+ p:SelectSection("notifications");f.Pick(choice,"voice");PreviewFor("voice"):Fire("OnClick","LeftButton")
  u:Navigate("find")
  check(stops==3 and p.previewAlerts==nil,"leaving Settings does not stop preview")
- a:Open("settings",{section="general"});PreviewFor("native"):Fire("OnClick","LeftButton");u:Hide(true)
+ a:Open("settings",{section="notifications"});PreviewFor("native"):Fire("OnClick","LeftButton");u:Hide(true)
  check(stops==4 and p.previewAlerts==nil,"hiding the window does not stop preview exactly once")
- a:Open("settings",{section="general"})
+ a:Open("settings",{section="notifications"})
  for _=1,20 do PreviewFor("voice");u:CloseMenu() end
  check(#p.soundMenuButtons==2,"reopening the menu allocates more preview buttons")
- p.controls.language.widget:Fire("OnClick","LeftButton")
+ p:SelectSection("general");p.controls.language.widget:Fire("OnClick","LeftButton")
  for _,button in ipairs(p.soundMenuButtons) do check(not button:IsShown() and button.soundChoice==nil,"sound action leaks into another dropdown") end
- u:CloseMenu();PreviewFor("native")
+ u:CloseMenu();p:SelectSection("notifications");PreviewFor("native")
  check(#p.soundMenuButtons==2,"row reuse loses the original sound buttons")
  u:Hide(true)
 end
 for _,locale in ipairs({"zhCN","enUS"}) do
  local f=dofile("tests/ui_fixture.lua")(locale,nil,{reduceMotion=true})
  local a,u=f.A,f.U
- a:Open("settings",{section="general"});local p=u.pages.settings
+ a:Open("settings",{section="notifications"});local p=u.pages.settings
  for _,scale in ipairs({70,100,130}) do
   a:SetSetting("fontScale",scale)
   p.controls.applicantAlertSound.widget:Fire("OnClick","LeftButton")

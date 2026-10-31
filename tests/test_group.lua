@@ -2197,6 +2197,17 @@ do
  G.Alerts:Preview("native");T.eq(S.soundCalls,plays+2);T.eq(S.soundKit,47615)
  T.eq(A:GetSetting("applicantAlertSound"),"voice","previewing the other option does not select it")
  G.Alerts:StopPreview()
+ for _,channel in ipairs({"Master","SFX","Music","Ambience","Dialog"}) do
+  local before=S.soundCalls
+  A:SetSetting("soundChannel",channel)
+  T.eq(S.soundCalls,before,"choosing a channel does not auto-play")
+  G.Alerts:Preview("voice");T.eq(S.soundChannel,channel)
+  G.Alerts:Preview("native");T.eq(S.soundChannel,channel)
+  G.Alerts:StopPreview()
+ end
+ Reset();A:SetSetting("soundChannel","Music");Add(872);Update(872)
+ T.eq(S.soundChannel,"Music","real new-applicant alerts use the saved channel")
+ A:SetSetting("soundChannel","Dialog")
  A:SetSetting("applicantAlertSound","voice");G.Applicants:Clear();Advance(0)
  T.eq(Stubs.PendingTimers(),0)
 end

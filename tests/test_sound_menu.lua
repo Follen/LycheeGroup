@@ -2,7 +2,7 @@
 local Fixture=dofile("tests/ui_fixture.lua")
 local function Open(theme,locale)
  local f=Fixture(locale or "enUS",nil,{reduceMotion=true},theme)
- f.A:Open("settings",{section="general"})
+ f.A:Open("settings",{section="notifications"})
  f.P=f.U.pages.settings;f.choice=f.P.controls.applicantAlertSound.widget
  f.A:SetSetting("applicantAlertSound","voice")
  f.choice:Fire("OnClick","LeftButton")
@@ -34,7 +34,7 @@ do
  T.eq(#f.S.nodes,nodes,"stable sound menu allocates no controls")
  T.eq(f.base.PendingTimers(),0)
  f.U:CloseMenu()
- f.P.controls.language.widget:Fire("OnClick","LeftButton")
+ f.P:SelectSection("general");f.P.controls.language.widget:Fire("OnClick","LeftButton")
  local sync,hide=f.P.SyncSoundMenuButtons,f.P.HideSoundMenuButtons
  local unrelated=0
  f.P.SyncSoundMenuButtons=function(self,...) unrelated=unrelated+1;return sync(self,...) end

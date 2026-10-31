@@ -168,7 +168,7 @@ T.eq(A.charPrefs.rememberFilters,false,"browse preference writes to this charact
 T.eq(A:GetSetting("rememberFilters"),false)
 T.eq(settings.panels.keywords,nil,"keyword filtering has been removed from settings")
 T.eq(settings.keywordInput,nil)
-settings:SelectSection("memberIcons")
+settings:SelectSection("browse")
 for _,mode in ipairs({"shift","alt","ctrl","always"}) do
  Pick(settings.controls.raidMembers.widget,mode);T.eq(A.db.raidMembers,mode,"raid roster controls save the selected display mode")
 end

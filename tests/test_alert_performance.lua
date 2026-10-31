@@ -18,7 +18,7 @@ _G.C_LFGList={
 }
 _G.LycheeGroup={GroupLocale={}}
 local A=LycheeGroup
-function A:GetSetting() return S.choice end
+function A:GetSetting(key) return key=="soundChannel" and "Dialog" or S.choice end
 local G={};A.Group=G
 G.Public=function(value) return value end
 G.RemotePlayerKey=function(_,name) return name end

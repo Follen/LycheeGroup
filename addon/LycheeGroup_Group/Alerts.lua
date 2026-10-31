@@ -34,9 +34,10 @@ end
 function Alerts:Play(preview,choice)
  StopPlayback()
  choice=choice or A:GetSetting("applicantAlertSound")
+ local channel=A:GetSetting("soundChannel")
  local played,handle
- if choice=="voice" then played,handle=PlaySoundFile(VOICE,"Dialog")
- elseif choice=="native" then played,handle=PlaySound(47615,"Dialog") end
+ if choice=="voice" then played,handle=PlaySoundFile(VOICE,channel)
+ elseif choice=="native" then played,handle=PlaySound(47615,channel) end
  if played then soundHandle=handle;previewing=preview end
  return played
 end

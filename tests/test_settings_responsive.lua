@@ -30,7 +30,7 @@ for _,locale in ipairs({"zhCN","enUS"}) do for _,percent in ipairs({70,100,130})
  local A,UI=fixture.A,fixture.U;A:Open("settings",{section="general"})
  local P,T,context=UI.pages.settings,UI.Theme,UI.context
  check(A.API.Theme:Activate("lycheegroup.frosted"),"the pending theme fixture failed")
- for _,section in ipairs({"general","interface"}) do
+ for _,section in ipairs({"general","interface","notifications"}) do
   P:SelectSection(section)
   local panel=P.panels[section]
   for _,width in ipairs({639,640,844,639,844}) do
@@ -53,14 +53,14 @@ for _,locale in ipairs({"zhCN","enUS"}) do for _,percent in ipairs({70,100,130})
    end
   end
  end
- UI:SetWindowSize(1,1)
+ P:SelectSection("interface");UI:SetWindowSize(1,1)
  check(context:FlushLayouts(),"minimum-window settings layout did not settle")
  themeFeedback(P,locale.."/"..percent.." minimum window",true)
  -- The final width change also invalidates the hidden General rows. Settle
  -- their first measurement before checking repeated stable layouts.
  P:LayoutRows();check(context:FlushLayouts(),"hidden settings rows did not settle")
  local writes=0;local writeDetails={}
- for _,section in ipairs({"general","interface"}) do for rowIndex,row in ipairs(P.panels[section].rows) do for nodeIndex,node in ipairs({row.label,row.help,row.control}) do
+ for _,section in ipairs({"general","interface","notifications"}) do for rowIndex,row in ipairs(P.panels[section].rows) do for nodeIndex,node in ipairs({row.label,row.help,row.control}) do
   for _,method in ipairs({"SetWidth","SetHeight","ClearAllPoints","SetPoint"}) do
    local key=section..rowIndex.."/"..nodeIndex.."/"..method
    local original=node[method];node[method]=function(self,...) writes=writes+1;writeDetails[key]=(writeDetails[key] or 0)+1;return original(self,...) end
