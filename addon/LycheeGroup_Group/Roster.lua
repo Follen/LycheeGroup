@@ -258,3 +258,66 @@ function R:GetRaidBuffs(activityID)
  if report then self.buffReport=report end
  return report
 end
+
+local function Accessible(value)
+ value=G.Public(value)
+ if type(value)=="table" and (not canaccesstable or canaccesstable(value)) then return value end
+end
+local function Nonnegative(value)
+ value=G.Public(value)
+ if type(value)=="number" and value>=0 and value<math.huge then return value end
+end
+local function BetterRun(run,best)
+ if not best then return true end
+ local level,bestLevel=Positive(run.bestRunLevel),Positive(best.bestRunLevel)
+ if level~=bestLevel then return level>bestLevel end
+ local timed,bestTimed=G.Public(run.finishedSuccess)==true,G.Public(best.finishedSuccess)==true
+ if timed~=bestTimed then return timed end
+ local score,bestScore=Nonnegative(run.mapScore),Nonnegative(best.mapScore)
+ if score~=bestScore then return (score or -1)>(bestScore or -1) end
+ local duration,bestDuration=Positive(run.bestRunDurationMS),Positive(best.bestRunDurationMS)
+ return duration and (not bestDuration or duration<bestDuration) or false
+end
+local function RatingRun(info,activityID)
+ if not info then return end
+ local id=Positive(info.challengeModeID)
+ local level=Positive(info.bestRunLevel)
+ if not id or not level then return end
+ local name,_,limit=C_ChallengeMode.GetMapUIInfo(id)
+ name=G.Public(name)
+ if type(name)~="string" or name=="" then return end
+ return {activityID=activityID,name=name,level=level,timed=G.Public(info.finishedSuccess)==true,
+  durationMs=Positive(info.bestRunDurationMS),timeLimitSeconds=Positive(limit)}
+end
+
+-- Explicit player-detail reads use the native current-season summary only.
+-- Do not retain its run tree or initiate inspection, communication or polling.
+function R:GetDungeonScores(member,activityID)
+ if type(member)~="table" or not member.unit or not member.guid or G.Public(UnitGUID(member.unit))~=member.guid then return end
+ local currentMember=false
+ for _,entry in ipairs(self.members) do if entry==member then currentMember=true;break end end
+ if not currentMember then return end
+ local summary=Accessible(C_PlayerInfo.GetPlayerMythicPlusRatingSummary(member.unit))
+ local runs=summary and Accessible(summary.runs)
+ if not runs then return end
+ local activity=activityID and G.Catalog:GetActivity(activityID)
+ local mapID=activity and activity.isMythicPlusActivity and Positive(activity.mapID)
+ local current,best,currentID,ambiguous
+ for _,entry in ipairs(runs) do
+  local run=Accessible(entry)
+  local id=run and Positive(run.challengeModeID)
+  if id then
+   if Positive(run.bestRunLevel) and BetterRun(run,best) then best=run end
+   if mapID then
+    local _,_,_,_,_,gameMapID=C_ChallengeMode.GetMapUIInfo(id)
+    if Positive(gameMapID)==mapID then
+     if currentID and currentID~=id then ambiguous=true end
+     currentID=id
+     if not current or Positive(run.bestRunLevel) and (not Positive(current.bestRunLevel) or BetterRun(run,current)) then current=run end
+    end
+   end
+  end
+ end
+ if ambiguous then current=nil end
+ return {mapScore=current and Nonnegative(current.mapScore),current=RatingRun(current,activityID),best=RatingRun(best),bestLoaded=true}
+end

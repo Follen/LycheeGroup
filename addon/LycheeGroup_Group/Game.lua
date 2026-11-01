@@ -24,6 +24,7 @@ local APPLICANT_EVENTS = {
 }
 
 local PERMISSION_EVENTS = { "PARTY_LEADER_CHANGED" }
+local APPLICATION_ROLE_EVENTS = { "LFG_ROLE_CHECK_SHOW", "LFG_ROLE_CHECK_HIDE" }
 local RELATION_EVENTS = {
  "FRIENDLIST_UPDATE", "BN_FRIEND_LIST_SIZE_CHANGED", "BN_FRIEND_INFO_CHANGED",
  "BN_FRIEND_ACCOUNT_ONLINE", "BN_FRIEND_ACCOUNT_OFFLINE", "BN_DISCONNECTED",
@@ -54,13 +55,20 @@ end
 function Game:RefreshApplicationSubscriptions()
 	local frame = self.frame
 	local applications = G.Applications:GetActiveCount()>0
+	SetEvents(frame, APPLICATION_ROLE_EVENTS, applications)
 	if G:HasViews("search") or G.Search:GetState()=="searching" or applications then
 		frame:RegisterEvent("LFG_LIST_SEARCH_RESULT_UPDATED")
 	else frame:UnregisterEvent("LFG_LIST_SEARCH_RESULT_UPDATED") end
 	local listing = C_LFGList.HasActiveEntryInfo()
 	local autoJoin = A:GetSetting("autoJoin") and applications
-	SetEvents(frame, PERMISSION_EVENTS, listing or G:HasViews("create") or autoJoin)
-	if self.runTracking or G:HasViews() or listing or autoJoin or G.Roster:NeedsRosterEvents() then frame:RegisterEvent("GROUP_ROSTER_UPDATE") else frame:UnregisterEvent("GROUP_ROSTER_UPDATE") end
+	local checkingRoles=false
+	if applications then
+		for _,record in ipairs(G.Applications:GetApplications()) do
+			if G.Applications:IsCheckingRoles(record.id) then checkingRoles=true;break end
+		end
+	end
+	SetEvents(frame, PERMISSION_EVENTS, listing or G:HasViews("create") or autoJoin or checkingRoles)
+	if self.runTracking or G:HasViews() or listing or autoJoin or checkingRoles or G.Roster:NeedsRosterEvents() then frame:RegisterEvent("GROUP_ROSTER_UPDATE") else frame:UnregisterEvent("GROUP_ROSTER_UPDATE") end
 end
 
 function Game:RefreshSubscriptions()

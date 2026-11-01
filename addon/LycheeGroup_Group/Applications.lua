@@ -75,6 +75,7 @@ local function Update(id,status,pending,remaining,groupName,statusOnly)
  -- existing application must keep the latch that protects the previous join.
  if (status=="applied" or pending=="applied") and not wasApplying then joined=nil;record.partyGUID=nil end
  if record.status~=status then record.autoAttempted=nil end
+ if record.status~=status or record.pendingStatus~=pending then record.roleCheckCancelRequested=nil end
  record.status,record.pendingStatus=status,pending
  if finished[status] then record.removeAt=record.removeAt or GetTime()+5 else record.removeAt=nil end
  if type(remaining)=="number" then record.expiresAt=GetTime()+remaining end
@@ -111,6 +112,17 @@ function Applications:SyncAll()
  ScheduleRetirement()
  G.Game:RefreshApplicationSubscriptions()
 end
+local function HasOfflineHomeMember()
+ if not IsInGroup(LE_PARTY_CATEGORY_HOME) then return false end
+ local raid=IsInRaid(LE_PARTY_CATEGORY_HOME)
+ local count=raid and GetNumGroupMembers(LE_PARTY_CATEGORY_HOME) or GetNumSubgroupMembers(LE_PARTY_CATEGORY_HOME)
+ for i=1,count do
+  local unit=(raid and "raid" or "party")..i
+  local home=raid and UnitInRaid(unit,LE_PARTY_CATEGORY_HOME) or UnitInParty(unit,LE_PARTY_CATEGORY_HOME)
+  if home and UnitExists(unit) and UnitIsConnected(unit)==false then return true end
+ end
+ return false
+end
 function Applications:Apply(id,roles)
  if C_LFGList.HasActiveEntryInfo() then return false,L.recruiting end
  local record=records[id]
@@ -119,23 +131,38 @@ function Applications:Apply(id,roles)
  local _,status,pending=C_LFGList.GetApplicationInfo(id)
  if pending=="cancelled" then return false,L.actionBusy end
  if status=="cancelled" then return false,L.applicationCancelled end
+ if HasOfflineHomeMember() then return false,L.offlinePartyMember end
  local ok=pcall(C_LFGList.ApplyToGroup,id,roles.tank==true,roles.healer==true,roles.damage==true)
  if not ok then return false,L.applyFailed end
  self:SyncAll()
  G:Notify("applications")
  return true
 end
+function Applications:IsCheckingRoles(id)
+ local record=records[id]
+ if not record or record.pendingStatus~="applied" or record.status~="none" and record.status~="applied" then return false end
+ local checking,activityID=C_LFGList.GetRoleCheckInfo()
+ if not checking or not activityID or not record.result or record.result.activityID~=activityID then return false end
+ -- The native role check identifies an activity, not an application. Only a
+ -- single pending application can be associated with it without ambiguity.
+ for otherID,other in pairs(records) do
+  if otherID~=id and other.pendingStatus=="applied" then return false end
+ end
+ return true
+end
 function Applications:CanCancel(id)
  local record=records[id]
  if not record then return false,L.invalidAction end
- if record.pendingStatus then return false,L.actionBusy end
+ if record.roleCheckCancelRequested then return false,L.actionBusy end
+ if record.pendingStatus then
+  if self:IsCheckingRoles(id) and (not IsInGroup(LE_PARTY_CATEGORY_HOME) or UnitIsGroupLeader("player",LE_PARTY_CATEGORY_HOME)) then return true end
+  return false,L.actionBusy
+ end
  if record.status~="applied" then return false,L.invalidAction end
  return true
 end
 function Applications:Cancel(id)
- -- An explicit action rechecks its one native record. Routine CanCancel calls
- -- remain cache-only, and a stale local pending flag never overrides a newer
- -- native confirmation or permits cancelling a genuinely pending request.
+ -- An explicit action rechecks native state before choosing the cancellation API.
  local record=records[id]
  if not record then return false,L.invalidAction end
  local infoID,status,pending,remaining=C_LFGList.GetApplicationInfo(id)
@@ -156,13 +183,34 @@ function Applications:Cancel(id)
   G.Game:RefreshApplicationSubscriptions()
   G.Results:InvalidateView();G:Notify("applications")
  end
+ if pending=="applied" and C_LFGList.GetRoleCheckInfo() then self:SyncAll();record=records[id] end
  local allowed,reason=self:CanCancel(id)
  if not allowed then return false,reason end
+ if self:IsCheckingRoles(id) then
+  record.roleCheckCancelRequested=true
+  local ok,accepted=pcall(CompleteLFGRoleCheck,false)
+  if not ok or accepted~=true then
+   record.roleCheckCancelRequested=nil
+   G:Notify("applications")
+   return false,L.cancelFailed
+  end
+  -- Native events may run synchronously; never recreate their cleared state.
+  self:SyncAll();self:ReleaseFinished()
+  G.Results:InvalidateView();G:Notify("applications")
+  return true
+ end
  local ok=pcall(C_LFGList.CancelApplication,id)
  if not ok then return false,L.cancelFailed end
  self:SyncAll();self:ReleaseFinished()
  G.Results:InvalidateView();G:Notify("applications")
  return true
+end
+function Applications:OnRoleCheckChanged()
+ for id,record in pairs(records) do
+  if record.roleCheckCancelRequested and not self:IsCheckingRoles(id) then record.roleCheckCancelRequested=nil end
+ end
+ self:SyncAll();self:ReleaseFinished()
+ G.Results:InvalidateView();G:Notify("applications")
 end
 function Applications:AcceptInvite(id)
  local record=records[id]

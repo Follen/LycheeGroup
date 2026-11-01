@@ -81,6 +81,7 @@ function G:GetSearchError() return self.error end
 function G:SetFilters(filters) self.filters=filters;self:Notify("results") end
 function G:GetListing() return self.listing end
 function G:GetApplicantDungeonScores(member) return member.dungeonScores end
+function G:GetRosterDungeonScores(member) return member.dungeonScores end
 function G:GetApplicantMapScore(member) return member.dungeonScores and member.dungeonScores.mapScore end
 function G:CanManageApplicants() if self.manageApplicants==false then return false,"Cannot manage applicants" end;return true end
 function G:CanManageListing() if self.manageListing==false then return false,"Cannot manage listing" end;return true end
@@ -145,6 +146,7 @@ function G.Applications:IsActive(id)
 end
 function G.Applications:TryAutoJoin() end
 function G.Applications:CanCancel(id) local app=G:GetApplication(id);return app~=nil and app.status=="applied" and not app.pendingStatus end
+function G.Applications:IsCheckingRoles() return false end
 function G.Applications:GetActiveCount()
  local count=0;for _,app in ipairs(G.apps) do if self:IsActive(app.id) then count=count+1 end end;return count
 end
@@ -174,6 +176,7 @@ EJ_GetInstanceByIndex=function(index,isRaid) if index==1 and isRaid then return 
 EJ_GetInstanceInfo=function() return "Raid",nil,nil,67890,nil,12345 end
 C_EncounterJournal.GetInstanceForGameMap=function(map) if map==110 then return 10 end end
 C_LFGList={
+ GetRoleCheckInfo=function() return false end,
  HasActiveEntryInfo=function() return G.listing~=nil end,
  GetActivityInfoTable=function(id) return activities[id] end,
  GetAvailableCategories=function() return {2,3} end,

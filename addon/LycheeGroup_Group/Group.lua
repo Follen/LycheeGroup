@@ -219,6 +219,8 @@ local DISPATCH = {
 	LFG_LIST_APPLICATION_STATUS_UPDATED = function(g, resultID, newStatus, oldStatus, groupName)
 		g.Applications:OnStatusUpdated(resultID, newStatus, oldStatus, groupName)
 	end,
+	LFG_ROLE_CHECK_SHOW = function(g) g.Applications:OnRoleCheckChanged() end,
+	LFG_ROLE_CHECK_HIDE = function(g) g.Applications:OnRoleCheckChanged() end,
 	LFG_LIST_ACTIVE_ENTRY_UPDATE = function(g, created)
 		g.Listing:OnEntryUpdate(created)
 		g.Applicants:OnEntryUpdate(created)
@@ -226,12 +228,13 @@ local DISPATCH = {
 	LFG_LIST_APPLICANT_LIST_UPDATED = function(g) g.Applicants:RefreshList() end,
 	LFG_LIST_APPLICANT_UPDATED = function(g, applicantID) g.Applicants:OnApplicantUpdated(applicantID) end,
 	CHALLENGE_MODE_START = function(g) g.History:OnStart() end,
-	GROUP_ROSTER_UPDATE = function(g) g.History:OnRosterUpdate(); g:RefreshPermissions(); g:InvalidateRoster("group"); g.Applicants:TryAutoInvite(); g.Applications:TryAutoJoin(); g.Game:RefreshApplicationSubscriptions() end,
+	GROUP_ROSTER_UPDATE = function(g) g.History:OnRosterUpdate(); g:RefreshPermissions(); g:InvalidateRoster("group"); g.Applicants:TryAutoInvite(); g.Applications:TryAutoJoin(); g.Game:RefreshApplicationSubscriptions();if g.Applications:GetActiveCount()>0 then g:Notify("applications") end end,
 	PARTY_LEADER_CHANGED = function(g)
 		g.Listing:OnEntryUpdate()
 		g.Applicants:RefreshList(true)
 		g:RefreshPermissions()
 		g.Applications:TryAutoJoin()
+		g:Notify("applications")
 	end,
 	CHALLENGE_MODE_COMPLETED = function(g) g.History:OnCompleted() end,
 	CHALLENGE_MODE_RESET = function(g) g.History:Discard() end,
@@ -374,6 +377,7 @@ function G:GetHistory() return self.History:GetHistory() end
 function G:GetActiveRun() return self.History:GetActiveRun() end
 function G:InvalidateRoster(reason,unit) self.Roster:Invalidate(reason,unit) end
 function G:GetRoster() return self.Roster:Get() end
+function G:GetRosterDungeonScores(member,activityID) return self.Roster:GetDungeonScores(member,activityID) end
 function G:GetRaidBuffs(activityID) return self.Roster:GetRaidBuffs(activityID) end
 
 -- LFG remote names without a realm do not establish a complete player identity.

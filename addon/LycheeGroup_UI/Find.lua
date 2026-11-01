@@ -387,7 +387,8 @@ end
 local function UpdateApplicationStatus(row,app)
  local remaining=app.expiresAt and math.max(0,math.ceil(app.expiresAt-GetTime()))
  local status=app.pendingStatus or app.status
- UI:SetText(row.status,status=="invited" and Say("已收到邀请","Invited") or app.pendingStatus=="applied" and Say("提交中","Submitting") or status=="applied" and (remaining and remaining>0 and ("%d:%02d"):format(math.floor(remaining/60),remaining%60) or L.states.applied) or L.states[status] or status)
+ local checking=UI:GetGroup().Applications:IsCheckingRoles(app.id)
+ UI:SetText(row.status,app.roleCheckCancelRequested and A.GroupLocale.cancellingApplication or checking and A.GroupLocale.waitingForRoles or status=="invited" and Say("已收到邀请","Invited") or app.pendingStatus=="applied" and Say("提交中","Submitting") or status=="applied" and (remaining and remaining>0 and ("%d:%02d"):format(math.floor(remaining/60),remaining%60) or L.states.applied) or L.states[status] or status)
  UI:Color(row.status,UI:StatusColor(status))
  return status
 end
@@ -2000,7 +2001,7 @@ local function RefreshPendingResults() P:RefreshResults();return true end
 function P:Apply(id,manual)
  if state.applicationLimit then self:DismissApplicationNotice() end
  if not Record(id) then self:SetStatus(L.unavailable);return end
- local ok,err=UI.Application:Apply(id,manual);self:SetStatus(not state.applicationLimit and ok==false and (err or L.failed) or "")
+ local ok,err,notified=UI.Application:Apply(id,manual);self:SetStatus(not state.applicationLimit and ok==false and not notified and (err or L.failed) or "")
 end
 function P:OnApplicationCancelled(id)
  if not state.browseReady or not UI:GetGroup():GetResult(id) then return end

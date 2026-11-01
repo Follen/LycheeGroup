@@ -26,6 +26,9 @@ A.GroupLocale = {
 	applicationCancelled = choose("这条申请已取消，请刷新队伍列表后再次申请。", "This application was cancelled. Refresh the group list before applying again."),
 	applyFailed = choose("申请提交失败。", "Could not submit the application."),
 	cancelFailed = choose("取消申请失败。", "Could not cancel the application."),
+	offlinePartyMember = choose("队伍中有离线成员，请等其上线或调整队伍后再申请。", "A group member is offline. Wait for them to reconnect or adjust your group before applying."),
+	waitingForRoles = choose("等待职责确认", "Confirming roles"),
+	cancellingApplication = choose("取消中", "Cancelling"),
 	acceptFailed = choose("接受邀请失败。", "Could not accept the invite."),
 	declineFailed = choose("拒绝邀请失败。", "Could not decline the invite."),
 

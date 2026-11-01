@@ -1,4 +1,44 @@
 -- Offline interaction coverage for the approved v4.4 layout and native field leasing.
+-- Pending role-check actions and status labels share production business locale text.
+for _,locale in ipairs({"zhCN","enUS"}) do
+ local session=dofile("tests/ui_fixture.lua")(locale,nil,{reduceMotion=true})
+ local a,u,g=session.A,session.U,session.G
+ local now=0;GetTime=function() return now end
+ local app={id=71,status="applied",pendingStatus="applied",categoryID=2,activityID=2,name="Role check party",activityName="Dungeon",leaderName="Leader-Away",expiresAt=GetTime()+60}
+ g.apps={app}
+ local checking,cancels=true,0
+ function g.Applications:IsCheckingRoles(id) return id==app.id and checking end
+ function g.Applications:CanCancel(id)
+  return id==app.id and not app.roleCheckCancelRequested and (checking or app.status=="applied" and not app.pendingStatus)
+ end
+ function g:Cancel(id)
+  T.eq(id,app.id);cancels=cancels+1;app.roleCheckCancelRequested=true;self:Notify("applications");return true
+ end
+ a:Open("find");local page=u.pages.find;page.scopeToggle:Fire("OnClick");page:RefreshApplications()
+ local row=page.appList.rows[1]
+ T.eq(row.key,app.id);T.eq(row.status:GetText(),a.GroupLocale.waitingForRoles)
+ T.eq(row.status:GetText(),locale=="zhCN" and "等待职责确认" or "Confirming roles","role waiting uses the real business translation")
+ T.eq(row.cancel:IsShown(),true);T.eq(row.cancel:IsEnabled(),true,"role waiting exposes a working cancel action")
+ now=1;session.base.AdvanceClock(1);T.eq(row.status:GetText(),a.GroupLocale.waitingForRoles,"countdown keeps the role waiting status")
+ row.cancel:Fire("OnClick","LeftButton")
+ T.eq(cancels,1);T.eq(row.cancel:IsShown(),false,"cancellation request removes the repeat action")
+ T.eq(row.status:GetText(),a.GroupLocale.cancellingApplication)
+ T.eq(row.status:GetText(),locale=="zhCN" and "取消中" or "Cancelling")
+ now=2;session.base.AdvanceClock(1);T.eq(row.status:GetText(),a.GroupLocale.cancellingApplication,"countdown keeps cancellation status")
+ row.cancel:Fire("OnClick","LeftButton");T.eq(cancels,1,"hidden stale callback cannot request cancellation twice")
+ app.roleCheckCancelRequested=nil;checking=false;g:Notify("applications")
+ T.eq(row.cancel:IsShown(),false,"ordinary pending submission stays noncancellable")
+ T.eq(row.status:GetText(),locale=="zhCN" and "提交中" or "Submitting","ordinary submission retains its distinct status")
+ row.cancel:Fire("OnClick","LeftButton");T.eq(cancels,1)
+ app.status="none";app.expiresAt=nil;g:Notify("applications")
+ T.eq(row.status:GetText(),locale=="zhCN" and "提交中" or "Submitting","pending without a deadline is not reported expired")
+ checking=true;g:Notify("applications")
+ T.eq(row.cancel:IsShown(),true);T.eq(row.status:GetText(),a.GroupLocale.waitingForRoles)
+ app.roleCheckCancelRequested=true
+ row.cancel:Fire("OnClick","LeftButton");T.eq(cancels,1,"rendered action rechecks current permission")
+ u:Hide(true);T.eq(page.countdown,nil)
+end
+
 local f=dofile("tests/ui_fixture.lua")("zhCN")
 local A,U,G,S,Pick=f.A,f.U,f.G,f.S,f.Pick
 do
