@@ -81,6 +81,7 @@ function G:GetSearchError() return self.error end
 function G:SetFilters(filters) self.filters=filters;self:Notify("results") end
 function G:GetListing() return self.listing end
 function G:GetApplicantDungeonScores(member) return member.dungeonScores end
+function G:GetRosterDungeonScores(member) return member.dungeonScores end
 function G:GetApplicantMapScore(member) return member.dungeonScores and member.dungeonScores.mapScore end
 function G:CanManageApplicants() if self.manageApplicants==false then return false,"Cannot manage applicants" end;return true end
 function G:CanManageListing() if self.manageListing==false then return false,"Cannot manage listing" end;return true end

@@ -14,6 +14,7 @@ ALL[#ALL+1]="native_application_roles"
 ALL[#ALL+1]="notification_settings"
 ALL[#ALL+1]="applicant_comment"
 ALL[#ALL+1]="self_details"
+ALL[#ALL+1]="roster_scores"
 local requested = {}
 local known = {}
 for _, name in ipairs(ALL) do known[name] = true end

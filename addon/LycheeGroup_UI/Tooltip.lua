@@ -1097,10 +1097,15 @@ function Tip:RenderPlayer(member,fromGroup,adjustPoint)
  self.selectedMemberID=Members:ID(member)
  self.applicantID=context.source=="applicant" and (self.sourceApp and self.sourceApp.id or member.applicantID) or nil
  local scores
+ local showMapScore=context.source=="applicant" and context.showDungeonRecords
  if context.source=="applicant" then
   if context.showDungeonRecords then scores=UI:GetGroup():GetApplicantDungeonScores(member) end
+ elseif context.source=="roster" and not UI.preview then
+  local group=UI:GetGroup();local listing=group:GetListing()
+  local activity=listing and group.Catalog:GetActivity(listing.activityID)
+  showMapScore=activity and activity.isMythicPlusActivity==true
+  scores=group:GetRosterDungeonScores(member,listing and listing.activityID) or {}
  else scores=member.dungeonScores end
- local showMapScore=context.source=="applicant" and context.showDungeonRecords
  local key,name,realm=Links.Identity(member)
  local note=key and A.Notes and A.Notes:Find(key)
  if not self.interactive then self:BuildInteractive() end

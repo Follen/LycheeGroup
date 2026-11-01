@@ -374,6 +374,7 @@ function G:GetHistory() return self.History:GetHistory() end
 function G:GetActiveRun() return self.History:GetActiveRun() end
 function G:InvalidateRoster(reason,unit) self.Roster:Invalidate(reason,unit) end
 function G:GetRoster() return self.Roster:Get() end
+function G:GetRosterDungeonScores(member,activityID) return self.Roster:GetDungeonScores(member,activityID) end
 function G:GetRaidBuffs(activityID) return self.Roster:GetRaidBuffs(activityID) end
 
 -- LFG remote names without a realm do not establish a complete player identity.
