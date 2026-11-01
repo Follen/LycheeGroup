@@ -11,6 +11,14 @@ function Members:Identity(member)
  return nil,member.name,nil
 end
 function Members:ID(member) return member.guid or member.nameKey end
+function Members:IsSelf(member)
+ if not member then return false end
+ if member.isSelf~=nil then return member.isSelf==true end
+ if member.unit=="player" then return true end
+ local key=self:Identity(member)
+ local ownKey=key and A:UnitIdentity("player")
+ return ownKey~=nil and key:lower()==ownKey:lower()
+end
 function Members:Order(members,ordered,leaderKey)
  wipe(ordered)
  local leader

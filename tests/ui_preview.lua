@@ -84,7 +84,7 @@ local function Applicant(id,people,comment,status)
  local app={id=id,status=status or "applied",displayOrderID=id-70,activityID=2,comment=comment,members={}}
  for index,source in ipairs(people) do
   local member={};for key,value in pairs(source) do member[key]=value end
-  member.applicantID,member.applicantIndex=id,index;app.members[index]=member
+  member.applicantID,member.applicantIndex=id,index;member.isSelf=false;member.unit=nil;app.members[index]=member
   member.dungeonScores={mapScore=300+index*12}
  end
  G.applicants[id]=app;return app
@@ -102,6 +102,21 @@ G.listing.activityID=2;for _,app in pairs(G.applicants) do app.activityID=2 end;
 mainApplicant.members[1].itemLevel=326;mainApplicant.members[1].dungeonScore=3641
 mainApplicant.members[1].dungeonScores={mapScore=456,current={name="红玉新生法池",level=18,timed=true,durationMs=1952000,timeLimitSeconds=1980},best={name="毒牙洞窟",level=19,timed=false,durationMs=1900000,timeLimitSeconds=1800}}
 U.Tooltip:ShowPlayer(U.pages.create.batchPool[1].people[1],mainApplicant.members[1]);snapshot("申请者大秘境纪录");U.Tooltip.interactive.wcl:Fire("OnClick");snapshot("详情内复制 WCL");U.Tooltip:Hide()
+-- Actual applicant detail: short, long and empty comments with saved player notes.
+do
+ local tip=U.Tooltip
+ local original=mainApplicant.comment
+ local function preview(name,comment)
+  mainApplicant.comment=comment
+  tip:ShowPlayer(U.pages.create.batchPool[1].people[1],mainApplicant.members[1])
+  tip.interactive:ClearAllPoints();tip.interactive:SetPoint("TOPLEFT",UIParent,"TOPLEFT",32,-28)
+  snapshot(name,tip.interactive);tip:Hide()
+ end
+ preview("申请备注", "熟练机制，有合剂和食物，可以配合打断。")
+ preview("长备注与笔记", "两人一起申请，法师和治疗都有合剂、食物及战复道具。\n熟悉路线与首领机制，可按队长安排打断和控场；这把希望稳定打完，随时可以出发。")
+ preview("无申请备注", "")
+ mainApplicant.comment=original
+end
 A:Open("notes");U.pages.notes:OpenEdit("晚风听雨-晨风号角");snapshot("荔枝笔记")
 local notes=U.pages.notes;notes.list.clip.mouseOver=true;notes.list.rows[3]:Fire("OnEnter");snapshot("笔记列表悬停");notes.list.rows[3]:Fire("OnLeave");notes.list.clip.mouseOver=nil
 notes:SelectTab("history");notes.historyList.clip.mouseOver=true;notes.historyList.rows[1]:Fire("OnEnter");snapshot("历史记录悬停");notes.historyList.rows[1]:Fire("OnLeave");notes.historyList.clip.mouseOver=nil

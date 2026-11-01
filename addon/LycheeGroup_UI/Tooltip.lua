@@ -534,6 +534,8 @@ function Tip:BuildInteractive()
  f.raidLeader=C.Text(canvas,"",14,"muted");C.SetLineHeight(f.raidLeader,20);f.raidLeader:SetWordWrap(true);f.raidLeader:Hide()
  f.raidLeaderIcon=C.Icon(canvas,T.tooltipFRaidLeaderIconWidth);C.Box(f.raidLeaderIcon,{width="tooltipFRaidLeaderIconWidth",height="tooltipFRaidLeaderIconHeight"});UI:SetMediaTexture(f.raidLeaderIcon,"leader.tga");f.raidLeaderIcon:Hide()
  f.comment=C.Text(canvas,"",14,"text");C.SetPoint(f.comment,"TOPLEFT",f.comment:GetParent(),"TOPLEFT",0,"tooltipFCommentTopleftY");f.comment:SetWordWrap(true);C.SetLineHeight(f.comment,22)
+ f.applicantCommentHeading=C.Text(canvas,Say("申请备注","Application note"),14,"muted");C.SetLineHeight(f.applicantCommentHeading,20);f.applicantCommentHeading:SetWordWrap(true);f.applicantCommentHeading:Hide()
+ f.applicantComment=C.Text(canvas,"",14,"text");C.SetLineHeight(f.applicantComment,22);f.applicantComment:SetWordWrap(true);f.applicantComment:Hide()
  f.footer=C.Text(canvas,"",14,"dim");f.footer:SetWordWrap(true);C.SetLineHeight(f.footer,20)
  f.bossTitle=C.Text(canvas,Say("首领进度","Boss progress"),14,"text",T.tooltipFBossTitleWidth);f.bossTitle:SetWidth(T.tooltipFBossTitleWidth);C.SetLineHeight(f.bossTitle,20,true)
  f.bossCount=C.Text(canvas,"",14,"text",T.tooltipFBossCountWidth);f.bossCount:SetWidth(T.tooltipFBossCountWidth);f.bossCount:SetJustifyH("RIGHT");C.SetLineHeight(f.bossCount,20,true)
@@ -567,7 +569,7 @@ function Tip:BuildInteractive()
   Tip:CopyPlayerLink("io")
  end);f.io:SetSurfaceColors("secondaryContainer","refreshHover","surfaceHighest")
  f.note=C.Button(canvas,L.record,T.tooltipFNoteWidth,function()
-  if UI.preview then return end
+  if UI.preview or not Tip.member or Members:IsSelf(Tip.member) then return end
   local key,name,realm=Links.Identity(Tip.member)
   if name then A:Open("notes",UI:HasNote(key) and {playerKey=key} or {add={name=name,realm=realm,class=Tip.member.class,specID=Tip.member.specID}}) end
  end);f.note:SetWidth(T.tooltipFNoteWidth)
@@ -652,6 +654,7 @@ function Tip:ResetInteractive(owner,width,metricAlignment)
  f.metricTitleLayout:Layout();f.metricValueLayout:Layout()
  f.back:Hide();f.note:Hide();f.wcl:Hide();f.io:Hide();f.playerRole:Hide();f.noteHeading:Hide();f.noteGlyph:Hide();f.noteDate:Hide();f.noteDivider:Hide();f.bossTitle:Hide();f.bossCount:Hide();f.bossText:Hide();f.composition:Hide();f.pvpRatings:Hide()
  f.raidLeader:Hide();f.raidLeaderIcon:Hide()
+ f.applicantCommentHeading:Hide();f.applicantComment:Hide();UI:SetText(f.applicantComment,"")
  for _,row in ipairs(f.bossRows) do row:Hide() end
  f.actionLayout:Layout()
  f.dungeonTitle:Hide();f.dungeonEmpty:Hide();f.playerFaction:Hide()
@@ -997,6 +1000,7 @@ UI:ApplyElementScope("tooltip")
  end
 function Tip:ShowPlayer(owner,member,context)
  if self.pinned then return end
+ if Members:IsSelf(member) then self:Hide();return end
  local directRoster=context and context.source=="roster"
  context=context or DefaultMemberContext(member)
  if context.canOpenDetails==false then return end
@@ -1006,9 +1010,9 @@ function Tip:ShowPlayer(owner,member,context)
  if owner then self:CaptureOwner(owner) end
  self:RenderPlayer(member,false)
 end
-local function NoteHeader(f,note,top)
+local function NoteHeader(f,note,top,hideDivider)
  local color=note.type=="positive" and T.good or note.type=="caution" and T.warning or T.muted
- f.noteDivider:ClearAllPoints();f.noteDivider:SetPoint("TOPLEFT",0,-top);f.noteDivider:SetWidth(f.canvas:GetWidth());f.noteDivider:Show()
+ f.noteDivider:ClearAllPoints();f.noteDivider:SetPoint("TOPLEFT",0,-top);f.noteDivider:SetWidth(f.canvas:GetWidth());f.noteDivider:SetShown(not hideDivider)
  f.noteHeading:ClearAllPoints();C.SetPoint(f.noteHeading,"TOPLEFT",f.noteHeading:GetParent(),"TOPLEFT","tooltipFNoteHeadingTopleftX",-top-17);UI:SetText(f.noteHeading,L.notes);UI:Color(f.noteHeading,color);f.noteHeading:Show()
  UI:SetMediaTexture(f.noteGlyph,(note.type=="positive" and "heart" or note.type=="caution" and "caution" or "book")..".tga");f.noteGlyph:SetColor(color);f.noteGlyph:ClearAllPoints();C.SetPoint(f.noteGlyph,"LEFT",f.noteHeading,"LEFT","tooltipFNoteGlyphLeftX",0);f.noteGlyph:Show()
  f.comment:ClearAllPoints();f.comment:SetPoint("TOPLEFT",0,-top-17-f.noteHeading:GetStringHeight()-12);f.comment:SetHeight(0);UI:Color(f.comment,"text");UI:SetText(f.comment,note.reason~="" and note.reason or L.noReason)
@@ -1074,10 +1078,15 @@ function Tip:RenderDungeons(scores,top)
  return top
 end
 function Tip:RenderPlayer(member,fromGroup,adjustPoint)
+ if Members:IsSelf(member) then
+  if self.member then self:Hide() end
+  return
+ end
  self:CancelRosterDrag();self:ClearRosterNotice()
  local context=self.sourceRoster and A.GroupPresentation.Member("roster") or self.sourceApp and ApplicantContext(self.sourceApp) or self.memberContext or DefaultMemberContext(member)
+ local applicant
  if context.source=="applicant" then
-  local applicant=self.sourceApp or member.applicantID and UI:GetGroup():GetApplicant(member.applicantID)
+  applicant=self.sourceApp or member.applicantID and UI:GetGroup():GetApplicant(member.applicantID)
   if applicant then context=ApplicantContext(applicant) end
  end
  if context.canOpenDetails==false then return end
@@ -1152,8 +1161,16 @@ function Tip:RenderPlayer(member,fromGroup,adjustPoint)
  f.metricValueOptions.width,f.metricValueOptions.height,f.metricValueOptions.y=width,valueHeight,-metricTop-metricHeight-4
  f.metricTitleLayout:Layout();f.metricValueLayout:Layout()
  top=metricTop+metricHeight+4+valueHeight+20
+ local comment=applicant and applicant.comment
+ if comment and comment:find("%S") then
+  local heading,body=f.applicantCommentHeading,f.applicantComment
+  heading:SetWidth(width);heading:SetHeight(0);heading:ClearAllPoints();heading:SetPoint("TOPLEFT",0,-top);heading:Show()
+  top=top+math.max(heading:GetLineHeight(),heading:GetStringHeight())+6
+  body:SetWidth(width);body:SetHeight(0);body:ClearAllPoints();body:SetPoint("TOPLEFT",0,-top);UI:SetText(body,comment);body:Show()
+  top=top+math.max(body:GetLineHeight(),body:GetStringHeight())+20
+ end
  if scores then top=self:RenderDungeons(scores,top)+20 end
- if note then top=NoteHeader(f,note,top)+20 else f.comment:Hide() end
+ if note then top=NoteHeader(f,note,top,true)+20 else f.comment:Hide() end
  local showLinks=context.showPlayerLinks~=false
  local showNote=not UI.preview and key~=nil
  -- Preview presents the action without invoking native region APIs.
@@ -1262,7 +1279,7 @@ end
 function Tip:RegisterBuildInteractiveElements()
 local f=self.interactive
  UI:Element(f,"tooltip.rich","tooltip",f)
- UI:ElementFields(f,"tooltip","scroll canvas scrollbar icon title subtitle summary pvpRatings composition raidLeader raidLeaderIcon comment footer bossTitle bossCount bossText dungeonTitle dungeonEmpty playerRole playerFaction noteHeading noteGlyph noteDate noteDivider back wcl io note copyField copyHint","tooltip",f)
+ UI:ElementFields(f,"tooltip","scroll canvas scrollbar icon title subtitle summary pvpRatings composition raidLeader raidLeaderIcon comment applicantCommentHeading applicantComment footer bossTitle bossCount bossText dungeonTitle dungeonEmpty playerRole playerFaction noteHeading noteGlyph noteDate noteDivider back wcl io note copyField copyHint","tooltip",f)
  UI:Element(self.outsideClicks,"tooltip.outside","tooltip")
  for index,metric in ipairs(f.metrics) do UI:Element(metric.title,"tooltip.metric.title","tooltip",nil,"tooltip.metric.title",index,f);UI:Element(metric.value,"tooltip.metric.value","tooltip",nil,"tooltip.metric.value",index,f) end
 end
