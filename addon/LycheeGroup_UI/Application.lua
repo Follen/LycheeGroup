@@ -7,6 +7,33 @@ local T,L,C=UI.Theme,UI.L,UI.C
 local zh=A:GetLocale()=="zhCN"
 local function Say(cn,en) return zh and cn or en end
 
+function Application:HideFailureToast()
+ if self.failureTimer then self.failureTimer:Cancel();self.failureTimer=nil end
+ if self.failureToast and self.failureToast:IsShown() then self.failureToast:Hide() end
+end
+function Application:ShowFailureToast(message)
+ self:HideFailureToast()
+ if not self.failureToast then
+  local toast=C.Notice(UI.frame,T.applicationModalErrorWidth)
+  toast:SetPoint("BOTTOM",UI.frame,"BOTTOM",0,24)
+  toast:SetFrameStrata("DIALOG");toast:SetFrameLevel(UI.frame:GetFrameLevel()+120)
+  toast.close:Hide();toast.text:SetJustifyH("CENTER")
+  toast:HookScript("OnHide",function() Application:HideFailureToast() end)
+  self.failureToast=toast
+  UI:Element(toast,"application.failureToast","application")
+ end
+ self.failureToast:SetMessage(message,-28)
+ self:LayoutFailureToast()
+ UI:ApplyElementScope("application")
+ self.failureTimer=C_Timer.NewTimer(5,function() Application:HideFailureToast() end)
+end
+function Application:LayoutFailureToast()
+ local toast=self.failureToast
+ if not toast or not toast:IsShown() then return end
+ toast:SetWidth(math.min(T.applicationModalErrorWidth,UI.frame:GetWidth()-48))
+ toast:SetMessage(toast.text:GetText(),-28)
+end
+
 function Application:ClearFocus()
  if self.applicationLease then self.applicationLease.dialog.Description.EditBox:ClearFocus() end
  if self.previewApplication then self.applicationModal.previewNote.box:ClearFocus() end
@@ -238,8 +265,8 @@ function Application:ConfirmApplication()
  local prefs=ApplicationPrefs()
  if self.previewApplication then prefs.note=self.applicationModal.previewNote.box:GetText() end
  if lease.id then
-  local ok,err=self:Apply(lease.id,true,lease.roles)
-  if not ok and self.applicationModal.frame:IsShown() then UI:SetText(self.applicationModal.error,err or L.failed);self:LayoutApplication() end
+  local ok,err,notified=self:Apply(lease.id,true,lease.roles)
+  if not ok and self.applicationModal.frame:IsShown() then UI:SetText(self.applicationModal.error,notified and "" or err or L.failed);self:LayoutApplication() end
  else
   if UI.preview then ApplicationPrefs().roles=CopyRoles(lease.roles) end
   if lease.enableOnSave then SaveEnabled(true) end
@@ -265,6 +292,7 @@ function Application:Apply(resultID,manual,confirmedRoles)
  if UI.preview then ok,err=group:Apply(resultID,submittedRoles,prefs.note or "")
  else ok,err=group:Apply(resultID,submittedRoles) end
  if ok then
+  self:HideFailureToast()
   if confirmedRoles then
    if UI.preview then prefs.roles=CopyRoles(confirmedRoles) end
    if lease and lease.enableOnSave then SaveEnabled(true) end
@@ -272,6 +300,7 @@ function Application:Apply(resultID,manual,confirmedRoles)
   end
   self:ReleaseApplication()
  end
+ if not ok and err==group.L.offlinePartyMember then self:ShowFailureToast(err);return false,err,true end
  return ok,err
 end
 

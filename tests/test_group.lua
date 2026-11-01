@@ -167,6 +167,7 @@ _G.C_LFGList = {
 	end,
 	GetLanguageSearchFilter = function() return nil end,
 	GetApplications = function() return S.applications end,
+	GetRoleCheckInfo = function() return false end,
 	GetApplicationInfo = function(id) return id, S.appStatus[id], S.appPending[id], 120 end,
 	ApplyToGroup = function(id, tank, healer, damage)
 		S.applyCalls[#S.applyCalls + 1] = { id = id, tank = tank, healer = healer, damage = damage }

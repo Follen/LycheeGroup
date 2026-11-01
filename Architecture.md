@@ -293,7 +293,9 @@ Catalog 按分类保存活动 ID 成员集合，与该分类目录共同失效�
 
 Applications 与 Applicants 在收到原生已结束状态后设置一次展示清理期限；各自只安排最近期限，到期批量移除记录并通知页面。重复终态不重新计时，原生缺席可以提前清理；仅保留当前原生 ID 的移除标记防止迟到快照重新生成旧行，下一轮 applied 或原生列表移除时清除标记。搜索视图关闭后即时清理终态也保留同一移除标记，避免重复取消快照重新通知。邀请和待确认状态仍由原生事件推进；具体显示期限与任务约束见产品、性能文档。
 
-`Applications:Cancel` 收到已有申请的明确操作时，先读取该 ID 的 `GetApplicationInfo`，仅同步这项申请的状态；原生已移除时清理本地记录，不创建新申请。状态核对不读取成员详情，变化后沿现有通知更新消费者，再由 `CanCancel` 判断是否已确认且可取消。真实 pending、邀请或结束状态仍拒绝取消；用于日常绘制和菜单可用性的 `CanCancel` 继续只读缓存。成功提交后沿用完整申请同步，不新增轮询或计时任务。
+`Applications:Cancel` 先读取目标的 `GetApplicationInfo`；原生已移除时清理本地记录。普通已提交申请继续调用 `CancelApplication`。对于 `pendingStatus=applied`，`IsCheckingRoles` 要求当前 `GetRoleCheckInfo` 属于预组队、活动与记录一致，且只有一条待提交申请；点击时再同步原生申请集合检查唯一性。队长或普通队伍外的玩家可调用 `CompleteLFGRoleCheck(false)` 请求结束职责确认。调用前设置 `roleCheckCancelRequested` 防止重入，拒绝或异常时清除；同步原生事件已经清除的标志不在返回后重建。原生相同状态重复通知不清标志，职责确认结束时重新同步，不能把界面关闭等同于取消成功。
+
+活动申请期间订阅职责确认 SHOW／HIDE；当前职责确认还需要队长与普通队伍变化事件，沿现有 Game 订阅生命周期释放。主窗、菜单、浮窗统一使用 `CanCancel`；绘制只读申请缓存与当前职责确认身份，不读取成员详情。`Apply` 仅在提交前扫描明确属于 HOME 的现存成员，只有 `UnitIsConnected` 明确为 false 才拒绝新申请；不保留名单或持续监控。Preview 与 Guide 的 `IsCheckingRoles` 固定返回 false，教学和预览继续使用私有 provider。离线业务错误由 UI Application 转为复用的 Toast，并向调用方返回已提示标志，Find 与职责弹窗不重复显示错误；Toast 拥有一个 5 秒单次任务，重复触发、隐藏或成功申请均清理旧任务。
 
 邀请保留原生 `LFGListInviteDialog`，置顶申请只订阅邀请状态，不创建第二套回应按钮。共享 `autoJoin` 默认关闭；开启或收到状态事件后，`TryAutoJoin` 只选一条有效、未处理中且未尝试的申请邀请，持有单个 accepting ID，由事件确认结果，关窗不停止。上述固定源码 `LFGListInviteDialog_CheckPending` 对 invited 且无 pendingStatus 的记录显示弹窗并使用原生准备音。源码见 [固定版本源码](https://github.com/Gethe/wow-ui-source/tree/18c6d677b605b312f3d813d498404631fb941977/Interface/AddOns)中的 `LFGList.lua` 3684–3810 行。跨轮状态锁仅在新的 applied／pending applied 边沿解除，包含原生入口提交；重复同步不会重置已接受标志。实际接受权限与时序仍待实机验收。
 

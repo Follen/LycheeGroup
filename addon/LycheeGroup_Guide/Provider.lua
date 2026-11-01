@@ -115,6 +115,7 @@ function Guide:CreateProvider(scenario,options)
  function p.Applications:IsActive(id) return Active(p:GetApplication(id)) end
  function p.Applications:GetDeclinedAt(partyGUID) return partyGUID and p.declinedParties[partyGUID] end
  function p.Applications:CanCancel(id) local app=p:GetApplication(id);return app~=nil and app.status=="applied" and not app.pendingStatus end
+ function p.Applications:IsCheckingRoles() return false end
  function p.Applications:GetActiveCount() local count=0;for _,app in ipairs(p.apps) do if Active(app) then count=count+1 end end;return count end
  function p.Applications:TryAutoJoin() end
  function p:GetListing() return self.listing end
