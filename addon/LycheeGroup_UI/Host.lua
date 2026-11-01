@@ -140,6 +140,7 @@ function UI:ApplyFont(path,scale)
   end
  end
  if self.Application.applicationModal and self.Application.applicationModal.frame:IsShown() then self.Application:LayoutApplication() end
+ self.Application:LayoutFailureToast()
 end
 
 function UI:FitToScreen(deferPage)

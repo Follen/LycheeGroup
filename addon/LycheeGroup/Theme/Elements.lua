@@ -23,7 +23,7 @@ local main,floating={},{}
 local function Add(target,scope,kind,names)
  for id in names:gmatch("%S+") do target[id]={scope=scope,slotKinds=kinds[kind]} end
 end
-Add(main,"application","component","application.autoApply application.cancel application.note application.previewNote application.role application.submit")
+Add(main,"application","component","application.autoApply application.cancel application.note application.previewNote application.role application.submit application.failureToast")
 Add(main,"application","text","application.error application.group application.noteLabel application.roleLabel")
 Add(main,"create","applicant","create.applicantMember")
 Add(main,"create","batch","create.applicantBatch")
@@ -115,7 +115,7 @@ Assign(main,kinds.multiline,"notes.eReason notes.tBox application.previewNote to
 Assign(main,kinds.scrollbar,"create.batchSlider create.rosterList.slider tooltip.scrollbar")
 Assign(main,kinds.list,"create.buffList create.favoritesList create.pickerCategories create.pickerResults notes.list notes.historyList notes.historyModal.list settings.blocksList")
 Assign(main,kinds.header,"create.applicantTable notes.noteHeader notes.historyHeader notes.historyModal.header settings.blocksHeader")
-Assign(main,kinds.notice,"create.formNotice create.correctionNotice create.manageNotice settings.bindingNotice settings.dedicationToast")
+Assign(main,kinds.notice,"create.formNotice create.correctionNotice create.manageNotice settings.bindingNotice settings.dedicationToast application.failureToast")
 Assign(main,kinds.panel,"host.window create.surface create.difficultyFixedSurface create.difficultyGroup create.roleFilterSurface create.favoritesCard create.rosterCard create.picker create.pickerSurface notes.main notes.editor notes.typeSwitch settings.main")
 Assign(main,kinds.texture,"create.favoritesChevron")
 Assign(main,kinds.text,"create.pickerSearchHint")

@@ -33,6 +33,10 @@ local function ReleaseEntries()
  F.measureLayouts=nil
 end
 local function Waiting(app) return A.Group.Applications:IsActive(app.id) and app.status~="invited" and (app.status=="applied" or app.pendingStatus=="applied") end
+local function ApplicationStatus(app)
+ if app.roleCheckCancelRequested then return A.GroupLocale.cancellingApplication end
+ if A.Group.Applications:IsCheckingRoles(app.id) then return A.GroupLocale.waitingForRoles end
+end
 local function Operable(app) return app.status=="applied" and not app.pendingStatus and not app.acting end
 local function Text(parent,size,width)
  return C.Text(parent,"",size,"text",width,size==18 and 24 or size==16 and 22 or 20)
@@ -179,7 +183,7 @@ function F:Build()
    row.timer=Text(row,T.floatingTimerFont,T.floatingTimerMinWidth);C.SetLineHeight(row.timer,T.floatingTimerLine,true);row.timer:SetJustifyH("RIGHT");row.timer:SetTextColor(unpack(T.warning))
   row.cancel=C.Button(row,"",T.floatingRowCancelWidth,function(self)
    local id=self.targetKey;local app=id and A.Group:GetApplication(id)
-   if not app or not Waiting(app) or app.pendingStatus then return end
+   if not app or not A.Group.Applications:CanCancel(id) then return end
    local ok,err=A.Group:Cancel(id);if ok then self:SetEnabled(false) else A:Print(err) end
   end,{height=T.floatingCancelButtonHeight,hoverColor="negativeHover",pressedColor="negativePressed"});row.cancel:SetWidth(T.floatingRowCancelWidth);row.cancel.label:Hide();C.SetPoint(row.cancel,"TOPRIGHT",row.cancel:GetParent(),"TOPRIGHT","floatingRowCancelToprightX","floatingRowCancelToprightY");row.cancel:Hide()
   local cross=C.Glyph(row.cancel,"close",T.floatingCrossWidth);row.cancel.elementIcon=cross;C.Box(cross,{width="floatingCrossWidth",height="floatingCrossHeight"});cross:SetPoint("CENTER");cross:SetColor(T.dim)
@@ -569,10 +573,18 @@ function F:ShowPanel()
     local activityHeight=math.max(T.floatingActivityMinHeight,self.measure:GetStringHeight(),detailHeight)
     C.SetFont(self.measure,T.floatingApplicationTitleFont);C.SetLineHeight(self.measure,T.floatingApplicationTitleLine);self.measure:SetWidth(T.floatingRowWidth-T.floatingRowMetaTopleftX2-T.floatingFooterRightInset);self.measure:SetText(app.name or "")
     local titleHeight=math.max(self.context:GetLineHeight(T.floatingApplicationTitleLine),self.measure:GetStringHeight())
-    C.SetFont(self.measure,14);C.SetLineHeight(self.measure,20);self.measure:SetWidth(T.floatingRowLeaderWidth);self.measure:SetText(app.leaderName or (zh and "队长身份未知" or "Leader unknown"))
+    local leaderWidth=T.floatingRowLeaderWidth
+    local statusText=ApplicationStatus(app)
+    if statusText then
+     C.SetFont(self.measure,T.floatingTimerFont);C.SetLineHeight(self.measure,T.floatingTimerLine,true);self.measure:SetText(statusText)
+     local statusWidth=math.max(T.floatingTimerMinWidth,math.ceil(self.measure:GetUnboundedStringWidth()))
+     leaderWidth=math.max(20,T.floatingRowWidth-T.floatingRowLeaderTopleftX2-statusWidth-16)
+    end
+    C.SetFont(self.measure,14);C.SetLineHeight(self.measure,20);self.measure:SetWidth(leaderWidth);self.measure:SetText(app.leaderName or (zh and "队长身份未知" or "Leader unknown"))
     local leaderHeight=math.max(T.floatingLeaderMinHeight,self.measure:GetStringHeight())
     local height=math.max(T.floatingApplicationMinHeight,T.floatingApplicationPaddingY*2+activityHeight+T.floatingApplicationTextGap*2+titleHeight+leaderHeight)+T.floatingApplicationGap;local entry=AddEntry(total,height);total=total+height
     entry.application,entry.gap,entry.activityWidth,entry.detailWidth,entry.detailText,entry.activityHeight,entry.titleHeight=app,T.floatingApplicationGap,activityWidth,detailWidth,detailText,activityHeight,titleHeight
+    entry.leaderWidth=leaderWidth
     if app.expiresAt and app.expiresAt>now then pending=true end
    end end
   end
@@ -643,7 +655,7 @@ function F:RefreshClock()
   local app=row.application
   if app and row:IsShown() then
    local remaining=app.expiresAt and math.max(0,math.ceil(app.expiresAt-now))
-   row.timer:SetText(remaining and ("%d:%02d"):format(math.floor(remaining/60),remaining%60) or "—")
+   row.timer:SetText(ApplicationStatus(app) or remaining and ("%d:%02d"):format(math.floor(remaining/60),remaining%60) or "—")
    row.timer:SetWidth(math.max(T.floatingTimerMinWidth,math.ceil(row.timer:GetUnboundedStringWidth())))
   end
  end
@@ -727,8 +739,8 @@ function F:Render()
     row.score:Show();C.SetFont(row.score,T.floatingActivityDetailFont);row.score:SetHeight(0);row.score:SetWordWrap(true);C.SetLineHeight(row.score,T.floatingActivityLine);row.score:ClearAllPoints();row.score:SetWidth(entry.detailWidth);row.score:SetTextColor(unpack(T.text));row.score:SetText(entry.detailText);row.score:SetJustifyH("LEFT")
     row.name:SetWidth(entry.activityWidth);local nameWidth=math.min(entry.activityWidth,row.name:GetStringWidth());row.name:SetWidth(nameWidth);C.SetPoint(row.score,"TOPLEFT",row.score:GetParent(),"TOPLEFT",T.floatingRowNameTopleftX2+nameWidth+T.floatingActivityDetailGap,-T.floatingApplicationPaddingY)
     row.meta:SetWidth(T.floatingRowWidth-T.floatingRowMetaTopleftX2-T.floatingFooterRightInset);C.SetPoint(row.meta,"TOPLEFT",row.meta:GetParent(),"TOPLEFT","floatingRowMetaTopleftX2",-T.floatingApplicationPaddingY-T.floatingApplicationTextGap-entry.activityHeight);row.meta:SetText(app.name or "")
-    row.cancel:ClearAllPoints();C.SetPoint(row.cancel,"TOPRIGHT",row.cancel:GetParent(),"TOPRIGHT","floatingRowCancelToprightX","floatingRowCancelToprightY");SetActionTarget(row.cancel,app.id);row.cancel.applicationID=app.id;row.cancel:Show();row.cancel:SetEnabled(not app.pendingStatus)
-    row.leader:ClearAllPoints();row.leader:SetWidth(T.floatingRowLeaderWidth);C.SetPoint(row.leader,"TOPLEFT",row.leader:GetParent(),"TOPLEFT","floatingRowLeaderTopleftX2",-T.floatingApplicationPaddingY-T.floatingApplicationTextGap*2-entry.activityHeight-entry.titleHeight);row.timer:ClearAllPoints();C.SetPoint(row.timer,"TOPRIGHT",row.timer:GetParent(),"TOPRIGHT","floatingRowTimerToprightX2",-T.floatingApplicationPaddingY-T.floatingApplicationTextGap*2-entry.activityHeight-entry.titleHeight);row.leader:SetText(app.leaderName or (zh and "队长身份未知" or "Leader unknown"))
+    row.cancel:ClearAllPoints();C.SetPoint(row.cancel,"TOPRIGHT",row.cancel:GetParent(),"TOPRIGHT","floatingRowCancelToprightX","floatingRowCancelToprightY");SetActionTarget(row.cancel,app.id);row.cancel.applicationID=app.id;row.cancel:Show();row.cancel:SetEnabled(A.Group.Applications:CanCancel(app.id))
+    row.leader:ClearAllPoints();row.leader:SetWidth(entry.leaderWidth);C.SetPoint(row.leader,"TOPLEFT",row.leader:GetParent(),"TOPLEFT","floatingRowLeaderTopleftX2",-T.floatingApplicationPaddingY-T.floatingApplicationTextGap*2-entry.activityHeight-entry.titleHeight);row.timer:ClearAllPoints();C.SetPoint(row.timer,"TOPRIGHT",row.timer:GetParent(),"TOPRIGHT","floatingRowTimerToprightX2",-T.floatingApplicationPaddingY-T.floatingApplicationTextGap*2-entry.activityHeight-entry.titleHeight);row.leader:SetText(app.leaderName or (zh and "队长身份未知" or "Leader unknown"))
     local color=app.leaderClass and RAID_CLASS_COLORS[app.leaderClass];if color then row.leader:SetTextColor(A.GroupPresentation.GameTextColor(T,color)) else row.leader:SetTextColor(unpack(T.muted)) end
    end
    if kind=="footer" then

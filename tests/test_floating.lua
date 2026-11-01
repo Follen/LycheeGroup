@@ -76,6 +76,7 @@ for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Styles.lua","Componen
 _G.LycheeGroup=nil;_G.LycheeGroupDB=nil
 for _,file in ipairs({"Locale.lua","Theme/Defaults.lua","Theme/Elements.lua","Theme/FindElements.lua","Core.lua","Configuration.lua","Appearance.lua","Theme/Import.lua","Specializations.lua","Fonts.lua","BrandMotion.lua","ActivityLabels.lua","Floating.lua","API.lua"}) do dofile("addon/LycheeGroup/"..file) end
 local A=LycheeGroup;local API=A.API.Floating
+dofile("addon/LycheeGroup_Group/Locale.lua")
 local startupNotifications=0
 local stopStartup=API:Subscribe(function(status)
  startupNotifications=startupNotifications+1
@@ -98,6 +99,8 @@ local G={ResolveMemberSpec=resolveSpec,Applications={GetActiveCount=function() r
 local activities={[1]={categoryID=2,maxNumPlayers=5},[2]={categoryID=3,maxNumPlayers=30},[3]={categoryID=4,maxNumPlayers=3}}
 G.Catalog={GetActivity=function(_,id) return activities[id] end}
 function G:GetApplication(id) for _,app in ipairs(apps) do if app.id==id then return app end end end
+function G.Applications:IsCheckingRoles() return false end
+function G.Applications:CanCancel(id) local app=G:GetApplication(id);return app~=nil and app.status=="applied" and not app.pendingStatus and not app.roleCheckCancelRequested end
 function G:CanManageApplicants() return manageApplicants end
 function G:CanManageListing() return manageListing end
 function G:SetApplicantView(owner,visible) self.applicantViews=self.applicantViews or {};self.applicantViews[owner]=visible or nil end
@@ -1027,10 +1030,16 @@ for _,locale in ipairs({"zhCN","enUS"}) do
  for _,file in ipairs({"Core.lua","Theme.lua","Motion.lua","Styles.lua","Components.lua","Layouts.lua","Responsive.lua","Elements.lua","Native.lua","Menu.lua"}) do assert(loadfile("addon/LycheeGroup/Libs/LycheeUI/"..file))("LycheeGroup",private) end
  for _,file in ipairs({"Locale.lua","Theme/Defaults.lua","Theme/Elements.lua","Theme/FindElements.lua","Core.lua","Configuration.lua","Appearance.lua","Theme/Import.lua","Specializations.lua","Fonts.lua","BrandMotion.lua","ActivityLabels.lua","Floating.lua","API.lua","Presentation.lua"}) do dofile("addon/LycheeGroup/"..file) end
  local addon=LycheeGroup;addon:LoadDB();addon:SetSetting("reduceMotion",true)
+ dofile("addon/LycheeGroup_Group/Locale.lua")
  local applications,activeListing,notify={},nil,nil
  local group={Applications={GetActiveCount=function() return #applications end,IsActive=function() return true end},
   Catalog={GetActivity=function() return {categoryID=2,maxNumPlayers=5} end}}
  function group:GetApplications() return applications end
+ function group.Applications:IsCheckingRoles() return false end
+ function group.Applications:CanCancel(id)
+  for _,app in ipairs(applications) do if app.id==id then return app.status=="applied" and not app.pendingStatus and not app.roleCheckCancelRequested end end
+  return false
+ end
  function group:GetListing() return activeListing end
  function group:GetApplicants() return {} end
  function group:CanManageApplicants() return true end
@@ -1269,6 +1278,93 @@ do
   floating.cancel:Fire("OnClick","LeftButton");T.eq(g.listing,nil,"direct activation still ends the current listing")
   floating:Dismiss();f.A:SetSetting("floating",false)
  end
+end
+
+-- Role-check waiting/cancelling labels use the business locale and service permissions.
+for _,locale in ipairs({"zhCN","enUS"}) do
+ local f=dofile("tests/ui_fixture.lua")(locale,nil,{reduceMotion=true})
+ local a,g=f.A,f.G
+ local now=0;GetTime=function() return now end
+ local app={id=71,status="applied",pendingStatus="applied",categoryID=2,activityID=2,name="Role check party",activityName="Dungeon",leaderName="Leader-Away",expiresAt=GetTime()+60}
+ g.apps={app}
+ local checking,cancels=true,0
+ function g.Applications:IsCheckingRoles(id) return id==app.id and checking end
+ function g.Applications:CanCancel(id)
+  return id==app.id and not app.roleCheckCancelRequested and (checking or app.status=="applied" and not app.pendingStatus)
+ end
+ function g:Cancel(id)
+  T.eq(id,app.id);cancels=cancels+1;app.roleCheckCancelRequested=true;self:Notify("applications");return true
+ end
+ dofile("addon/LycheeGroup/Floating.lua");dofile("addon/LycheeGroup/API.lua")
+ local floating=a.Floating;floating:Bind(g);floating:UpdateSettings();floating:ShowPanel()
+ local row=floating.rows[1]
+ T.eq(row.applicationID,app.id);T.eq(row.timer:GetText(),a.GroupLocale.waitingForRoles)
+ T.eq(row.timer:GetText(),locale=="zhCN" and "等待职责确认" or "Confirming roles","native countdown is replaced by the complete waiting label")
+ T.eq(row.cancel:IsShown(),true);T.eq(row.cancel:IsEnabled(),true,"role confirmation waiting can be cancelled")
+ now=1;f.base.AdvanceClock(1);T.eq(row.timer:GetText(),a.GroupLocale.waitingForRoles,"countdown refresh preserves role-check status")
+ row.cancel:Fire("OnClick","LeftButton")
+ T.eq(cancels,1);T.eq(row.cancel:IsEnabled(),false,"request disables the cancellation action")
+ T.eq(row.timer:GetText(),a.GroupLocale.cancellingApplication)
+ T.eq(row.timer:GetText(),locale=="zhCN" and "取消中" or "Cancelling")
+ now=2;f.base.AdvanceClock(1);T.eq(row.timer:GetText(),a.GroupLocale.cancellingApplication,"timer cannot overwrite cancellation with remaining time")
+ row.cancel:Fire("OnClick","LeftButton");T.eq(cancels,1,"duplicate click cannot issue another cancellation")
+ app.roleCheckCancelRequested=nil;checking=false;g:Notify("applications")
+ T.eq(row.cancel:IsEnabled(),false,"ordinary pending submission is still not cancellable")
+ T.eq(row.timer:GetText(),"0:58","ordinary pending retains its existing deadline display")
+ row.cancel:Fire("OnClick","LeftButton");T.eq(cancels,1,"disabled ordinary pending cannot invoke service cancellation")
+ app.status="none";app.expiresAt=nil;g:Notify("applications")
+ T.eq(row.timer:GetText(),"—","pending without a deadline keeps its existing unknown-time display")
+ checking=true;g:Notify("applications")
+ T.eq(row.cancel:IsEnabled(),true);T.eq(row.timer:GetText(),a.GroupLocale.waitingForRoles)
+ -- A permission change between render and click must be checked by the callback too.
+ app.roleCheckCancelRequested=true
+ row.cancel:Fire("OnClick","LeftButton");T.eq(cancels,1,"stale enabled row respects fresh service permission")
+ floating:Dismiss();a:SetSetting("floating",false)
+ T.eq(floating.countdown,nil)
+end
+
+-- A complete player-realm identity must stay inside its card after role-status
+-- text reserves horizontal space, including live font and status transitions.
+for _,locale in ipairs({"zhCN","enUS"}) do
+ local f=dofile("tests/ui_fixture.lua")(locale,nil,{reduceMotion=true})
+ local a,g=f.A,f.G
+ local clock=GetTime;GetTime=function() return 0 end
+ local name="Abcdefghijkl-ArgentDawn"
+ local app={id=81,status="applied",categoryID=2,activityID=2,name="Role check party",activityName="Dungeon",leaderName=name,expiresAt=60}
+ g.apps={app}
+ local checking=false
+ function g.Applications:IsCheckingRoles(id) return id==app.id and checking end
+ function g.Applications:CanCancel(id) return id==app.id and not app.roleCheckCancelRequested end
+ dofile("addon/LycheeGroup/Floating.lua");dofile("addon/LycheeGroup/API.lua")
+ local floating=a.Floating;floating:Bind(g);floating:UpdateSettings();floating:ShowPanel()
+ for _,percent in ipairs({100,125}) do
+  a:SetSetting("fontScale",percent)
+  for _,status in ipairs({"waiting","cancelling","normal"}) do
+   checking=status~="normal"
+   app.pendingStatus=checking and "applied" or nil
+   app.roleCheckCancelRequested=status=="cancelling" or nil
+   g:Notify("applications")
+   local row,entry=floating.rows[1],floating.entries[1]
+   local context=locale.."/"..percent.."/"..status
+   T.eq(row.applicationID,app.id,context.." retains the application binding")
+   T.eq(row.leader:GetText(),name,context.." keeps the complete player-realm identity")
+   local expected=status=="waiting" and a.GroupLocale.waitingForRoles or status=="cancelling" and a.GroupLocale.cancellingApplication or "1:00"
+   T.eq(row.timer:GetText(),expected,context.." displays the current status")
+   local point,relative,relativePoint=row.leader:GetPoint()
+   T.eq(point,"TOPLEFT");T.eq(relative,row);T.eq(relativePoint,"TOPLEFT")
+   local _,leaderY=Position(row.leader)
+   local bottom=-leaderY+row.leader:GetStringHeight()
+   T.ok(bottom<=entry.height-(entry.gap or 0)+.001,context.." keeps every wrapped name line inside its card")
+   local width,height=row.leader:GetWidth(),entry.height
+   floating:RefreshClock()
+   T.eq(row.leader:GetWidth(),width,context.." clock refresh preserves measured name width")
+   T.eq(entry.height,height,context.." clock refresh preserves measured card height")
+   T.eq(row.timer:GetText(),expected,context.." clock refresh preserves the status")
+  end
+ end
+ floating:Dismiss();a:SetSetting("floating",false)
+ T.eq(floating.countdown,nil,"long-name status coverage releases its countdown")
+ GetTime=clock
 end
 
 _G.LycheeGroup=nil;_G.LycheeGroupDB=nil

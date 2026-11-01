@@ -1,0 +1,39 @@
+{
+  "date": "2026-10-30",
+  "baseCommit": "c83fa9f",
+  "branch": "codex/cancel-pending-role-check",
+  "clientBuild": "12.1.5.70575",
+  "session": "CON-91de6f6709de8304b9de0d2c04aecd59",
+  "operation": "LMO-3db27d1f172bd8317ee48302c95224b0",
+  "request": "offline-cancel-toast-visual-2",
+  "reportState": "verified",
+  "cleanup": "complete",
+  "report": {
+    "logs": {},
+    "ok": true,
+    "resourcesReleased": true,
+    "result": {
+      "applyRejected": true,
+      "build": "70575",
+      "height": 40,
+      "hiddenAfterTimeout": true,
+      "message": "队伍中有离线成员，请等其上线或调整队伍后再申请。",
+      "offlineUnit": "party1",
+      "precheck": "function",
+      "strata": "DIALOG",
+      "text": "队伍中有离线成员，请等其上线或调整队伍后再申请。",
+      "textHeight": 17.250001907348633,
+      "timer": true,
+      "timerReleased": true,
+      "visible": true,
+      "width": 464.00006103515625
+    }
+  },
+  "scope": "Live HOME party has an offline party1. Real Applications:Apply(0) rejects the invalid target at the offline precheck; no real group submission. The returned error is shown through the production toast renderer, visually inspected, and hidden by its 5-second timer. UI routing is covered by offline tests.",
+  "roleCheckCancellation": "Not exercised: the previously observed pending application ended before the guarded cancellation probe ran.",
+  "offlineRegression": {
+    "command": "lua tests/runner.lua",
+    "passedAsserts": 59566,
+    "failedModules": 0
+  }
+}
