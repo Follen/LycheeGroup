@@ -1,0 +1,72 @@
+{
+  "schema": "lycheegroup.blocked-local-leaders.v1",
+  "date": "2026-11-03",
+  "baselineMain": "7d0ef4b8335e99a3655bb1dee14a98ae9f8b6387",
+  "client": "12.1.5.70688",
+  "scope": "Retail native raid search; same-realm leaders returned without a realm suffix. Real search, Results blocking controller and Find menu construction; no note saved and no physical mouse hit-testing.",
+  "cause": "Results used RemotePlayerKey for native result leaders. It rejected same-realm short names, leaving no persistent leader block and disabling the note menu entry. Member-info short names retain their stricter contract.",
+  "session": "CON-f79964df862b51c8500ba61d12106c4b",
+  "connectionClosed": true,
+  "before": {
+    "request": "block-local-before-fix",
+    "operation": "LMO-8962490d87fb226b25b17288d2e746f7",
+    "reportState": "verified",
+    "reportOk": true,
+    "cleanup": "complete",
+    "rawResults": 100,
+    "missingNormalizedLeaders": 10,
+    "selectedSameRealmGroups": 5,
+    "savedBlockedLeaders": 0,
+    "immediatelyVisible": 0,
+    "returnedGroupsAfterRefresh": 5,
+    "changedTitleTokens": 5,
+    "visibleAgain": 5,
+    "noteBlockMenuDisabled": true
+  },
+  "deployment": {
+    "file": "addon/LycheeGroup_Group/Results.lua",
+    "baselineGitBlob": "f9e07f32ceff5b0c8d53768ffc53a84296044547",
+    "fixedGitBlob": "aa11ccda1638340d37aaa66334329985d8d716a6",
+    "installation": "D:/Game/World of Warcraft/_retail_",
+    "reloadRequest": "block-local-fix-reload",
+    "reloadComplete": true,
+    "freshRuntimeBound": true
+  },
+  "after": {
+    "request": "block-local-after-fix",
+    "operation": "LMO-54c85b0a362c813ff39fddf70b0aea03",
+    "reportState": "verified",
+    "reportOk": true,
+    "cleanup": "complete",
+    "rawResults": 100,
+    "sameRealmShortNames": 9,
+    "missingNormalizedLeaders": 0,
+    "selectedSameRealmGroups": 5,
+    "savedBlockedLeaders": 5,
+    "immediatelyVisible": 0,
+    "returnedGroupsAfterRefresh": 4,
+    "changedTitleTokens": 4,
+    "visibleAgain": 0,
+    "noteBlockMenuDisabled": false
+  },
+  "cleanupVerification": {
+    "request": "block-cleanup-confirm",
+    "operation": "LMO-768a52a7b2e9be5bdf7903b3a87ed78c",
+    "reportState": "verified",
+    "reportOk": true,
+    "cleanup": "complete",
+    "blockedLeaders": 0,
+    "blockedTitles": 0,
+    "originalBlockListsWereEmpty": true
+  },
+  "offline": {
+    "command": "lua tests/runner.lua",
+    "assertionsPassed": 60309,
+    "modulesFailed": 0,
+    "regression": "Same-realm identity, title token and result ID rotation, changed title and recreated party, fresh Results owner, notes filter, strict remote member identity.",
+    "architectureCommand": "node tests/check_architecture.cjs",
+    "architectureChecksPassed": 6609,
+    "frozenFiles": 31
+  },
+  "limits": "Live search populations differ between runs; four of five selected groups returned after the fix. This validates persisted identity across a refresh for those four groups. Reload persistence and party recreation are covered by the offline regression. Newly encountered other leaders with the same visible title remain subject to the documented opaque title-token limitation."
+}

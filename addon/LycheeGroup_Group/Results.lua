@@ -92,7 +92,9 @@ local function Normalize(id,record,invalidateDetails,expectedScan,metadataDirty)
  record.name,record.comment=Public(info.name),Public(info.comment)
  record.partyGUID=Public(info.partyGUID)
  record.leaderName=Public(info.leaderName)
- record.leaderKey=G:RemotePlayerKey(record.leaderName)
+ -- The native search leader includes a realm only for cross-realm players.
+ -- Member-info names have a different contract and still use RemotePlayerKey.
+ record.leaderKey=A:PlayerKey(record.leaderName)
  RememberBlockedLeader(record)
  record.leaderFactionGroup=Public(info.leaderFactionGroup)
  record.numMembers=Public(info.numMembers)

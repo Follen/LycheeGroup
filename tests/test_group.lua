@@ -555,6 +555,22 @@ do
 		G.Results:ClearBlockedTitles()
 		T.eq(next(G.db.blockedLeaders),nil,"clearing after reload removes saved leaders even without session title tokens")
 		T.eq(#G.Results:GetResults(),6)
+		-- The native leader field omits the realm for same-realm players.
+		S.results={[41]={searchResultID=41,activityIDs={502},name="|Kt-old|k",leaderName="同服队长",partyGUID="Party-block-local",numMembers=1,age=1}}
+		S.resultIDs={41};G.Results:BeginSearch(G.Results.gen);G.Results:CommitResults(G.Results.gen)
+		T.eq(G:GetResult(41).leaderKey,"同服队长-晨风号角","same-realm native search leaders retain a complete identity")
+		G.Results:BlockTitle(S.results[41].name)
+		T.eq(G.db.blockedLeaders["同服队长-晨风号角"],true,"blocking records the same-realm leader")
+		S.results={[42]={searchResultID=42,activityIDs={502},name="|Kt-new|k",leaderName="同服队长",partyGUID="Party-block-local",numMembers=1,age=1}}
+		S.resultIDs={42};G.Results:BeginSearch(G.Results.gen);G.Results:CommitResults(G.Results.gen)
+		T.same(G.Results:GetResults(),{},"same-realm leader stays blocked when the native ID and title token rotate")
+		S.results[42].name="Another title";S.results[42].partyGUID="Party-recreated";G.Results:OnResultUpdated(42)
+		T.same(G.Results:GetResults(),{},"changing the title and recreating the party cannot bypass a saved leader block")
+		Load.addon("LycheeGroup_Group","Results.lua")
+		G.Results:BeginSearch(G.Results.gen);G.Results:CommitResults(G.Results.gen)
+		T.same(G.Results:GetResults(),{},"same-realm leader blocks survive loading a fresh result owner")
+		T.eq(G:RemotePlayerKey("同服队长"),nil,"unnamed-realm remote member records still require an explicit realm")
+		G.Results:ClearBlockedTitles()
 		S.results,S.resultIDs=oldResults,oldIDs
 		G.Results:BeginSearch(G.Results.gen);G.Results:CommitResults(G.Results.gen)
 	end
@@ -721,7 +737,7 @@ do
 	T.same(G.Results:GetResults(),{12},"中性笔记使用同一队长范围")
 	G.Search:SetFilters({notes="any"});T.same(G.Results:GetResults(),{12,11},"任意笔记保留不同类型的已知队长")
 	S.results[12].leaderName="团长乙";G.Results:OnResultUpdated(12)
-	G.Search:SetFilters({notes="neutral"});T.same(G.Results:GetResults(),{},"裸名队长不被当成本服完整身份，也不扫描名单补猜")
+	G.Search:SetFilters({notes="neutral"});T.same(G.Results:GetResults(),{12},"原生搜索结果的同服队长按本服身份匹配笔记，不扫描成员名单")
 	T.eq(S.playerReads,noteMemberReads,"笔记筛选不读取队员详情")
 	T.eq(noteQueries["治疗者-晨风号角"],nil,"寻队不查询非队长的笔记")
 	T.eq(noteQueries["身份未公开的队长-银松森林"],nil,"不使用成员名单推断结果未提供的队长身份")
