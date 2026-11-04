@@ -8,6 +8,11 @@ local function SameActivities(a,b)
  for i,id in ipairs(a) do if id~=b[i] then return false end end
  return true
 end
+local function SubmitNative(category,activityIDs,clearText)
+ if clearText then C_LFGList.ClearSearchTextFields() end
+ local language=C_LFGList.GetLanguageSearchFilter()
+ C_LFGList.Search(category.id,G.Catalog:GetSearchFilter(category),0,language,nil,nil,activityIDs)
+end
 function Search:BindInput(lease) self.inputLease=lease end
 function Search:ReleaseInput(expected)
  if self.inputLease==expected then self.inputLease=nil end
@@ -89,9 +94,9 @@ function Search:Submit(request)
 -- Group mode uses the native text field for group-name and optional M+ level
  -- matching. Leader mode searches the complete returned set locally by public
  -- leaderName; description text remains unavailable to Lua because it is kstring.
- if request.mode=="leader" or request.mode=="native" and not lease then C_LFGList.ClearSearchTextFields() end
- local language=C_LFGList.GetLanguageSearchFilter()
- local ok=pcall(C_LFGList.Search,category.id,G.Catalog:GetSearchFilter(category),0,language,nil,nil,filter)
+ -- Preparation can fail inside a cancellation notification just as submission
+ -- can. Both must end the busy state so the next explicit refresh can recover.
+ local ok=pcall(SubmitNative,category,filter,request.mode=="leader" or request.mode=="native" and not lease)
  if not ok then
   self.state,self.error,self.pending="failed",L.searchRestricted,nil
   G.Results:FailSearch(self.generation)

@@ -1,0 +1,43 @@
+{
+  "schema": "lycheegroup.pvp-role-confirmation.v1",
+  "date": "2026-11-04",
+  "baselineReleaseCommit": "107cdca",
+  "source": {
+    "repository": "Gethe/wow-ui-source",
+    "commit": "d07eb00237d8891f153215db98a5df880a26cfe5",
+    "snapshot": "PIN-7f660916539214df4b12e141094e3f1306ddda35387f9e9492bc688c43bcc836",
+    "rolePopupCapture": "CAP-43b3ac74acfdd1ee3cf58f42619670c72a4fab7a608d0df3cb1f6c14668bc089",
+    "roleSelectionCapture": "CAP-8057860df0a9be4e50508670eb7819898b8156c0aa43476583e92ec08923417f",
+    "findings": [
+      "PvP queue role confirmation uses LFG_ROLE_CHECK_SHOW and the existing LFDRoleCheckPopup.",
+      "GetLFGRoleUpdate's sixth result selects the battleground role-check branch; its selection comes from GetPVPRoles rather than GetLFGRoles.",
+      "The native accept handler submits CompleteLFGRoleCheck(true) and hides only after success."
+    ],
+    "indexCoverage": "The whole-source query exceeded the configured source budget. GitHub's fixed-commit tree resolved the file paths; LycheeDev then inspected and captured the original files without indexing."
+  },
+  "regression": {
+    "command": "lua tests/runner.lua party_role_check",
+    "beforeFix": "Failed: expected one PvP role confirmation, got zero.",
+    "assertionsPassedAfterFix": 331,
+    "modulesFailed": 0,
+    "coverage": "Different PvE/PvP selections, multi-role changes before the next frame, empty/unavailable/locked roles, invalid combinations, ended/changed queues, combat, solo, leader, missing PvP API, rejected submission, existing premade behavior and temporary event/timer cleanup."
+  },
+  "fullRegression": {
+    "command": "lua tests/runner.lua",
+    "assertionsPassed": 60458,
+    "modulesFailed": 0,
+    "architectureChecksPassed": 6609,
+    "frozenFiles": 31
+  },
+  "deployment": {
+    "file": "addon/LycheeGroup/PartyRoleCheck.lua",
+    "installation": "D:/Game/World of Warcraft/_retail_",
+    "sha256": "dfc231b3d7d16f631be4149f65c2f20eee88fc44ad0cef84160ea15bf0695dc9",
+    "installedFileMatches": true
+  },
+  "live": {
+    "passiveInstanceCandidates": 0,
+    "performed": false,
+    "remaining": "Real multiplayer PvP queue events and game submission permissions. No queue was joined and no live confirmation was submitted."
+  }
+}

@@ -3338,6 +3338,48 @@ do
  A.Notes,A.NotesLocale=previousNotes,previousLocale;A:SetSetting("reminders",reminders)
 end
 
+-- A cancelled application can request a refresh inside a notification. If a
+-- native preparation step fails there, the callback boundary catches the error;
+-- browsing must still be recoverable without reloading the addon.
+do
+ local view={};G:Attach(view,"search");G.Search:EndBrowse();G.Search:OnResultsReceived()
+ local applications,statuses,pending=S.applications,S.appStatus,S.appPending
+ local results,resultIDs=S.results,S.resultIDs
+ local filters={};for key,value in pairs(G.Search:GetFilters()) do filters[key]=value end
+ local language,clearText=C_LFGList.GetLanguageSearchFilter,C_LFGList.ClearSearchTextFields
+ S.results={[11]={searchResultID=11,activityIDs={502},name="Recoverable search",leaderName="Leader-Home",numMembers=2,age=1}}
+ S.resultIDs={11};G.Search:SetFilters({})
+ S.applications={11,12,13,14,15};S.appStatus={};S.appPending={}
+ for _,id in ipairs(S.applications) do S.appStatus[id]="applied" end
+ G.Applications:SyncAll();T.eq(G.Applications:GetActiveCount(),5)
+ G.Search:Search("seasonDungeon",502);Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED")
+ local calls=#S.searchCalls
+ local stop=G:Subscribe(function(kind,id)
+  if kind=="applicationCancelled" and id==11 then G.Search:Search("seasonDungeon",502) end
+ end)
+ C_LFGList.GetLanguageSearchFilter=function() error("native search preparation unavailable",0) end
+ S.appStatus[11]="cancelled";Fire("LFG_LIST_APPLICATION_STATUS_UPDATED",11,"cancelled","applied")
+ T.eq(G.Applications:GetActiveCount(),4,"cancellation frees one of five slots even when the automatic refresh fails")
+ T.eq(#S.searchCalls,calls,"preparation failed before a native search was submitted")
+ T.eq(G.Search:GetState(),"failed","a failed cancellation refresh must not leave a phantom in-flight search")
+ C_LFGList.GetLanguageSearchFilter=language
+ T.ok(G.Search:Search("seasonDungeon",502))
+ T.eq(#S.searchCalls,calls+1,"manual refresh submits a new search after the preparation failure")
+ Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED")
+ T.eq(G.Search:GetState(),"done")
+ T.ok(#G:GetResults()>0,"results return without a reload")
+ C_LFGList.ClearSearchTextFields=function() error("native text reset unavailable",0) end
+ T.eq(G.Search:Search("seasonDungeon",502,"leader",""),false)
+ T.eq(G.Search:GetState(),"failed","a native text reset error also releases the busy state")
+ C_LFGList.ClearSearchTextFields=clearText
+ T.ok(G.Search:Search("seasonDungeon",502,"leader",""))
+ T.eq(#S.searchCalls,calls+2,"leader search can be retried after its text reset recovers")
+ Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED");T.eq(G.Search:GetState(),"done")
+ stop();S.applications,S.appStatus,S.appPending=applications,statuses,pending
+ S.results,S.resultIDs=results,resultIDs;G.Search:SetFilters(filters)
+ G.Applications:SyncAll();G:Detach(view)
+end
+
 -- Failure belongs to the request that was in flight, not the newer queued choice.
 do
  local view={};G:Attach(view,"search")

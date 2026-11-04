@@ -89,7 +89,7 @@ addon/
 
 冷启动只把进行中的申请、邀请或待处理状态视为 LFG 业务；原生应用列表中的已拒绝、已接受和已取消条目不会单独唤醒 Group。
 
-主包 `PartyRoleCheck.lua` 独立接入队员的预组队职责确认，不依赖 Group 或 UI 已加载。收到 `LFG_ROLE_CHECK_SHOW` 后通过 `GetLFGRoles()` 读取当前原生坦克、治疗、输出选择，只在非队长、非战斗且 `C_LFGList.GetRoleCheckInfo()` 明确为预组队时安排一次下一帧处理；原生弹窗完成初始化后，再读当前职责并重新检查身份、职责可用性、各职责按钮及原生组合校验。直接调用 `CompleteLFGRoleCheck(true)` 提交已有原生选择，仅明确成功后隐藏原生弹窗；失败保留手动入口，不改写原生职责。当前确认只尝试一次，`LFG_ROLE_CHECK_HIDE` 取消待处理任务并释放临时监听。桥接不读取或保存插件职责偏好。原生流程依据 wow-ui-source `e7aa82019dc298e0351c7159d60c2a9b916b9b67` 的 `LFDFrame.lua`，离线覆盖见 `tests/test_party_role_check.lua`；游戏内提交权限和真实多人事件顺序待实机验证。
+主包 `PartyRoleCheck.lua` 独立接入队员的预组队与 PvP 排队职责确认，不依赖 Group 或 UI 已加载。收到 `LFG_ROLE_CHECK_SHOW` 后，`GetLFGRoleUpdate()` 明确为进行中的战场职责确认时读取 `GetPVPRoles()`；否则仅在 `C_LFGList.GetRoleCheckInfo()` 明确为预组队时读取 `GetLFGRoles()`。非队长、非战斗且已有有效选择时安排一次下一帧处理；原生弹窗完成初始化后，再读当前职责并重新检查确认类型、身份、职责可用性、各职责按钮及原生组合校验。直接调用 `CompleteLFGRoleCheck(true)` 提交已有原生选择，仅明确成功后隐藏原生弹窗；失败保留手动入口，不改写原生职责。当前确认只尝试一次，`LFG_ROLE_CHECK_HIDE` 取消待处理任务并释放临时监听。桥接不读取或保存插件职责偏好，也不处理战场入场邀请。原生流程依据 wow-ui-source `d07eb00237d8891f153215db98a5df880a26cfe5` 的 `LFDFrame.lua` 和 `LFGFrame.lua`，离线覆盖见 `tests/test_party_role_check.lua`；游戏内提交权限和真实多人事件顺序待实机验证。
 
 原生组队眼睛的显示与点击接入由 Entrypoints 持有，统一解析为 `hidden`、`native`、`premade` 三种状态。先检查账号设置 `nativeLFGEntry`：关闭时跳过系统队列查询；开启时沿原生规则检查各 LFG 分类的 mode／submode、PvP 职责和就绪确认、战场及世界 PvP 队列槽。任一有效系统状态均释放隐藏，包括暂停排队、入场邀请和战场内状态；全部结束后恢复隐藏。隐藏只租借 alpha 与鼠标响应，首次进入保存原值，离开归还；同状态不重复写属性、不分配快照表。不 Hide 原生按钮，保留 EyeHighlightAnim；隐藏时关闭已显示的队列详情，新申请声音仍归 Group.Alerts。
 
@@ -175,7 +175,7 @@ flowchart LR
 
 | 所有者 | 权威状态 | 消费方式 |
 | --- | --- | --- |
-| Group.Search | 当前条件、搜索请求和代次 | 发起搜索，只提交当前相关结果 |
+| Group.Search | 当前条件、搜索请求和代次 | 发起搜索，只提交当前相关结果；清理原生搜索文字、读取语言条件和提交请求共用异常边界，任一步失败均退出搜索中状态并允许手动重试 |
 | Group.Results | 当前完整合法结果、必要元数据、搜索代次、会话标题规则与账号队长屏蔽名单 | 按身份读取，筛选／排序产生 ID 顺序，不深拷贝全库 |
 | Group.Applications | 所有分类已提交申请与邀请状态、原生到期时刻、终态展示清理、会话拒绝时间和单个自动接受中的邀请 | 全局五项额度；独立于页面寿命，实际结果驱动状态；拒绝时间按原生 partyGUID 保存 |
 | Group.Listing / Applicants | 当前招募与申请者、各成员全部 requestedRoles、assignedRole／specID、终态展示清理 | 报名职责独立于分配职责和当前专精；更新具体记录，原生仍活动但详情暂缺时保留最后确认的招募快照，原生确认结束后清理所属数据 |
