@@ -86,6 +86,8 @@ LycheeUI 是独立于产品业务的 UI 抽象层。依赖方向只能是 `Lyche
 
 正式申请职责归原生 LFG 持有：打开、刷新和自动申请时读取 `GetLFGRoles()` 的坦克／治疗／输出，职责点击立即通过 `SetLFGRoles` 同步完整多选并保留 leader 标志。不要从专精、DB 或配置包预选职责，也不以取消或提交失败回滚原生编辑。正式 `Application.applicationPrefs` 只缓存 `enabled`；旧 `applicationRoles` 及 `settings.applicationRoles` 由现有加载与配置边界清理。验证同时覆盖原生面板修改后再申请、三项多选、取消／失败保留、空值及不可用职责的待确认入口、备注 lease 归还和旧包其他值保留；对应回归见 `tests/test_native_application_roles.lua`、`tests/test_auto_apply.lua` 与 `tests/test_party_role_check.lua`。
 
+队员的 PvP 排队职责确认读取 `GetPVPRoles()`，与预组队使用的 PvE 职责分开；不读取专精或用 PvE 选择兜底。自动确认前复查队列类型和当前原生选择，不改写职责。回归应覆盖 PvE／PvP 选择不同、下一帧前修改选择、空选择、不可用职责、确认结束或类型切换，以及失败保留手动窗口。
+
 ### 使用引导的开发边界
 
 教学逻辑全部留在 `LycheeGroup_Guide`。引导接入对原四个产品包 Lua 的修改仅包括独立命令需求：Entrypoints 通用 `/lg dev` 分发、命令帮助 Locale 和普通 Preview 用法提示；新申请声音等独立业务变更按各自合同维护。玩家功能只保留 `/lg`，页面和记录操作使用界面入口；测试命令为 `/lg dev floattest`、`/lg dev test [applications|create|applicants|off]` 和 `/lg dev guide`，`/lg dev` 列出清单，不保留旧玩家子命令、测试命令或别名。教学逻辑不进入原 UI／Group Lua，Host、Settings 和 Resize 源码不增加引导分支。通过主包 TOC 末尾的 `..\LycheeGroup_Guide\Bootstrap.lua` 与 UI TOC 末尾的 `..\LycheeGroup_Guide\Entry.lua` 接入：Bootstrap 只向通用 `A.DevCommands` 表注册 guide，Entrypoints 不直接提及引导；账号首开判断、动态设置行和启动状态归 `A.GuideEntry`，不增加 `A.OpenGuide` 或 `A.MODULES` 条目。完整 Guide 包加载只建立定义；首次普通 Show 或手动入口随后创建欢迎视图，点击开始后才读取真实目录、建立 provider 并接入当前教学控件。删除旧轻提示及字体刷新 lease。

@@ -1,0 +1,32 @@
+{
+  "schema": "lycheegroup.search-cancellation-recovery.v1",
+  "date": "2026-11-04",
+  "baselineReleaseCommit": "107cdca",
+  "reportedSymptom": "After reaching five applications and cancelling one, refreshing no longer restores the group list until a UI reload.",
+  "reproducedFailure": "Search set its state to searching before clearing native search text and reading language settings. These preparation calls were outside the submission pcall. An exception caught by the cancellation notification boundary left no submitted native request and a permanent searching state; later refreshes only queued behind that nonexistent request.",
+  "method": "Offline fault injection in the real Group.Applications cancellation-event and Group.Search flow. The native language getter is made to throw during the confirmed cancellation of one of five applications. A second case injects failure in the native text-reset call for leader search.",
+  "beforeFix": {
+    "command": "lua tests/runner.lua group",
+    "result": "Failed: expected failed, got searching after the cancellation-triggered refresh."
+  },
+  "afterFix": {
+    "fullRegressionCommand": "lua tests/runner.lua",
+    "assertionsPassed": 60473,
+    "moduleFailures": 0,
+    "architectureChecksPassed": 6609,
+    "coverage": [
+      "One confirmed cancellation reduces five active applications to four even when automatic refresh preparation fails.",
+      "A failed preparation has not submitted a native search and leaves the controller in failed rather than searching.",
+      "Manual retry submits a native search and returns results without reloading.",
+      "Leader-search text-reset failure is recoverable in the same way.",
+      "The Find page enables both refresh and empty-state retry when search fails."
+    ]
+  },
+  "deployment": {
+    "file": "addon/LycheeGroup_Group/Search.lua",
+    "installation": "D:/Game/World of Warcraft/_retail_",
+    "sha256": "be8bb24497a0a9bff2455e2e96bc8193915d9aac5a7bfe5c64e977ab81a65ee6",
+    "installedFileMatches": true
+  },
+  "limits": "The stuck-state path is reproduced and repaired using injected preparation errors. The original reporter's triggering error and exact screen state have not been observed. No live cancellation or five-application test was performed in this investigation."
+}

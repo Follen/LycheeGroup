@@ -555,6 +555,22 @@ do
 		G.Results:ClearBlockedTitles()
 		T.eq(next(G.db.blockedLeaders),nil,"clearing after reload removes saved leaders even without session title tokens")
 		T.eq(#G.Results:GetResults(),6)
+		-- The native leader field omits the realm for same-realm players.
+		S.results={[41]={searchResultID=41,activityIDs={502},name="|Kt-old|k",leaderName="同服队长",partyGUID="Party-block-local",numMembers=1,age=1}}
+		S.resultIDs={41};G.Results:BeginSearch(G.Results.gen);G.Results:CommitResults(G.Results.gen)
+		T.eq(G:GetResult(41).leaderKey,"同服队长-晨风号角","same-realm native search leaders retain a complete identity")
+		G.Results:BlockTitle(S.results[41].name)
+		T.eq(G.db.blockedLeaders["同服队长-晨风号角"],true,"blocking records the same-realm leader")
+		S.results={[42]={searchResultID=42,activityIDs={502},name="|Kt-new|k",leaderName="同服队长",partyGUID="Party-block-local",numMembers=1,age=1}}
+		S.resultIDs={42};G.Results:BeginSearch(G.Results.gen);G.Results:CommitResults(G.Results.gen)
+		T.same(G.Results:GetResults(),{},"same-realm leader stays blocked when the native ID and title token rotate")
+		S.results[42].name="Another title";S.results[42].partyGUID="Party-recreated";G.Results:OnResultUpdated(42)
+		T.same(G.Results:GetResults(),{},"changing the title and recreating the party cannot bypass a saved leader block")
+		Load.addon("LycheeGroup_Group","Results.lua")
+		G.Results:BeginSearch(G.Results.gen);G.Results:CommitResults(G.Results.gen)
+		T.same(G.Results:GetResults(),{},"same-realm leader blocks survive loading a fresh result owner")
+		T.eq(G:RemotePlayerKey("同服队长"),nil,"unnamed-realm remote member records still require an explicit realm")
+		G.Results:ClearBlockedTitles()
 		S.results,S.resultIDs=oldResults,oldIDs
 		G.Results:BeginSearch(G.Results.gen);G.Results:CommitResults(G.Results.gen)
 	end
@@ -721,7 +737,7 @@ do
 	T.same(G.Results:GetResults(),{12},"中性笔记使用同一队长范围")
 	G.Search:SetFilters({notes="any"});T.same(G.Results:GetResults(),{12,11},"任意笔记保留不同类型的已知队长")
 	S.results[12].leaderName="团长乙";G.Results:OnResultUpdated(12)
-	G.Search:SetFilters({notes="neutral"});T.same(G.Results:GetResults(),{},"裸名队长不被当成本服完整身份，也不扫描名单补猜")
+	G.Search:SetFilters({notes="neutral"});T.same(G.Results:GetResults(),{12},"原生搜索结果的同服队长按本服身份匹配笔记，不扫描成员名单")
 	T.eq(S.playerReads,noteMemberReads,"笔记筛选不读取队员详情")
 	T.eq(noteQueries["治疗者-晨风号角"],nil,"寻队不查询非队长的笔记")
 	T.eq(noteQueries["身份未公开的队长-银松森林"],nil,"不使用成员名单推断结果未提供的队长身份")
@@ -3320,6 +3336,48 @@ do
  T.ok(Stubs.ChatMessages()[#Stubs.ChatMessages()]:find("团长乙-晨风号角",1,true))
  reminder.Stop();Stubs.SetUnit("party1",nil);Stubs.SetUnit("party2",nil);G:InvalidateRoster("group")
  A.Notes,A.NotesLocale=previousNotes,previousLocale;A:SetSetting("reminders",reminders)
+end
+
+-- A cancelled application can request a refresh inside a notification. If a
+-- native preparation step fails there, the callback boundary catches the error;
+-- browsing must still be recoverable without reloading the addon.
+do
+ local view={};G:Attach(view,"search");G.Search:EndBrowse();G.Search:OnResultsReceived()
+ local applications,statuses,pending=S.applications,S.appStatus,S.appPending
+ local results,resultIDs=S.results,S.resultIDs
+ local filters={};for key,value in pairs(G.Search:GetFilters()) do filters[key]=value end
+ local language,clearText=C_LFGList.GetLanguageSearchFilter,C_LFGList.ClearSearchTextFields
+ S.results={[11]={searchResultID=11,activityIDs={502},name="Recoverable search",leaderName="Leader-Home",numMembers=2,age=1}}
+ S.resultIDs={11};G.Search:SetFilters({})
+ S.applications={11,12,13,14,15};S.appStatus={};S.appPending={}
+ for _,id in ipairs(S.applications) do S.appStatus[id]="applied" end
+ G.Applications:SyncAll();T.eq(G.Applications:GetActiveCount(),5)
+ G.Search:Search("seasonDungeon",502);Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED")
+ local calls=#S.searchCalls
+ local stop=G:Subscribe(function(kind,id)
+  if kind=="applicationCancelled" and id==11 then G.Search:Search("seasonDungeon",502) end
+ end)
+ C_LFGList.GetLanguageSearchFilter=function() error("native search preparation unavailable",0) end
+ S.appStatus[11]="cancelled";Fire("LFG_LIST_APPLICATION_STATUS_UPDATED",11,"cancelled","applied")
+ T.eq(G.Applications:GetActiveCount(),4,"cancellation frees one of five slots even when the automatic refresh fails")
+ T.eq(#S.searchCalls,calls,"preparation failed before a native search was submitted")
+ T.eq(G.Search:GetState(),"failed","a failed cancellation refresh must not leave a phantom in-flight search")
+ C_LFGList.GetLanguageSearchFilter=language
+ T.ok(G.Search:Search("seasonDungeon",502))
+ T.eq(#S.searchCalls,calls+1,"manual refresh submits a new search after the preparation failure")
+ Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED")
+ T.eq(G.Search:GetState(),"done")
+ T.ok(#G:GetResults()>0,"results return without a reload")
+ C_LFGList.ClearSearchTextFields=function() error("native text reset unavailable",0) end
+ T.eq(G.Search:Search("seasonDungeon",502,"leader",""),false)
+ T.eq(G.Search:GetState(),"failed","a native text reset error also releases the busy state")
+ C_LFGList.ClearSearchTextFields=clearText
+ T.ok(G.Search:Search("seasonDungeon",502,"leader",""))
+ T.eq(#S.searchCalls,calls+2,"leader search can be retried after its text reset recovers")
+ Fire("LFG_LIST_SEARCH_RESULTS_RECEIVED");T.eq(G.Search:GetState(),"done")
+ stop();S.applications,S.appStatus,S.appPending=applications,statuses,pending
+ S.results,S.resultIDs=results,resultIDs;G.Search:SetFilters(filters)
+ G.Applications:SyncAll();G:Detach(view)
 end
 
 -- Failure belongs to the request that was in flight, not the newer queued choice.

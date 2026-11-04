@@ -2198,6 +2198,8 @@ do
  G.state="failed";G.error="Search failed";G:Notify("search")
  T.eq(find.emptyText:GetText(),U.L.searchFailedTitle);T.eq(find.emptyHelp:GetText(),"Search failed")
  T.eq(find.start:IsShown(),true);T.eq(find.busyIcon:IsShown(),false)
+ T.eq(find.refresh:IsEnabled(),true,"search failure restores the manual refresh control")
+ T.eq(find.start:IsEnabled(),true,"the empty-state retry is available after failure")
  G.state="done";G.error=nil;G:Notify("search")
  T.eq(find.emptyText:GetText(),U.L.noResults);T.eq(find.emptyHelp:GetText(),U.L.noResultsHelp)
  T.eq(fills,emptyFills,"empty-state transitions update immediately without rebinding rows")

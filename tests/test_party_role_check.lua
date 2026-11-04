@@ -1,10 +1,11 @@
--- Native role selections follow only a party member's premade-group role check.
+-- Native PvE/PvP role selections follow a party member's matching role check.
 local Stubs = TestStubs
 local replaced = {
     "LycheeGroup", "C_LFGList", "IsInGroup", "UnitIsGroupLeader", "InCombatLockdown",
     "LFDRoleCheckPopup", "LFDRoleCheckPopupRoleButtonTank", "LFDRoleCheckPopupRoleButtonHealer",
     "LFDRoleCheckPopupRoleButtonDPS", "LFDPopupCheckRoleSelectionValid", "GetLFGRoles",
-    "SetLFGRoles", "CompleteLFGRoleCheck", "StaticPopupSpecial_Hide",
+    "SetLFGRoles", "GetPVPRoles", "SetPVPRoles", "GetLFGRoleUpdate",
+    "CompleteLFGRoleCheck", "StaticPopupSpecial_Hide",
 }
 local original = {}
 for _, key in ipairs(replaced) do original[key] = _G[key] end
@@ -14,9 +15,10 @@ local function Setup(roles)
     local state = {
         grouped = true, leader = false, combat = false, premade = true, valid = true,
         available = {true, true, true}, enabled = {true, true, true},
+        battleground = false, checking = true, pvpRoles = {false, false, true}, pvpWrites = 0, lfgReads = 0,
         nativeRoles = {true, type(roles)=="table" and roles.TANK==true, type(roles)=="table" and roles.HEALER==true, type(roles)=="table" and roles.DAMAGER==true}, accepted = true, writes = {}, calls = 0, hides = 0,
     }
-    _G.LycheeGroup = {charPrefs = {applicationRoles = roles, autoApply = false}}
+    _G.LycheeGroup = {charPrefs = {applicationRoles = roles, autoApply = false, autoJoin = false}}
     function LycheeGroup:GetSetting(key) return self.charPrefs[key] end
     _G.C_LFGList = {
         GetRoleCheckInfo = function() return state.premade, 123 end,
@@ -34,7 +36,13 @@ local function Setup(roles)
         state.validated = {tank, healer, damage}
         return state.valid
     end
-    _G.GetLFGRoles = function() return unpack(state.nativeRoles) end
+    _G.GetLFGRoles = function() state.lfgReads = state.lfgReads + 1; return unpack(state.nativeRoles) end
+    _G.GetPVPRoles = function() return unpack(state.pvpRoles) end
+    _G.SetPVPRoles = function(tank, healer, damage)
+        state.pvpWrites = state.pvpWrites + 1
+        state.pvpRoles = {tank, healer, damage}
+    end
+    _G.GetLFGRoleUpdate = function() return state.checking, 1, 2, nil, nil, state.battleground end
     _G.SetLFGRoles = function(leader, tank, healer, damage)
         state.nativeRoles = {leader, tank, healer, damage}
         state.writes[#state.writes + 1] = state.nativeRoles
@@ -92,6 +100,52 @@ local ok, err = pcall(function()
     T.eq(s.calls, 2, "next role check reads current native preferences")
     T.same(s.nativeRoles, {true, true, false, false})
     s:Finish()
+
+    s = Setup({HEALER = true})
+    s.premade = false; s.battleground = true
+    s:Show(); s:Show(); Stubs.AdvanceClock(0)
+    T.eq(s.calls, 1, "a party member's PvP queue role check is automatically confirmed")
+    T.same(s.validated, {false, false, true}, "PvP confirmation uses PvP roles rather than the different PvE selection")
+    T.eq(s.lfgReads, 0, "PvP confirmation does not read PvE roles")
+    T.eq(s.hides, 1)
+    T.eq(s.pvpWrites, 0, "existing PvP roles are preserved")
+    T.eq(#s.writes, 0)
+    T.same(s.nativeRoles, {true, false, true, false})
+    T.eq(LycheeGroup.charPrefs.autoApply, false, "PvP role confirmation works independently of auto apply")
+    T.eq(LycheeGroup.charPrefs.autoJoin, false, "role confirmation does not depend on accepting premade invitations")
+    s:Show(); Stubs.AdvanceClock(0)
+    T.eq(s.calls, 1, "PvP confirmation is attempted once per role check")
+    s:Finish()
+
+    s = Setup({TANK = true})
+    s.premade = false; s.battleground = true
+    s:Show(); s.pvpRoles = {false, true, true}; Stubs.AdvanceClock(0)
+    T.same(s.validated, {false, true, true}, "PvP selection changes before confirmation use the latest multi-role choice")
+    T.eq(s.calls, 1); s:Finish()
+
+    for _, blocked in ipairs({"empty PvP roles", "unavailable role", "locked role", "invalid combination", "ended queue", "changed queue", "combat", "solo", "leader", "missing PvP API", "rejected"}) do
+        s = Setup({HEALER = true})
+        s.premade = false; s.battleground = true
+        if blocked == "empty PvP roles" then s.pvpRoles = {false, false, false}
+        elseif blocked == "unavailable role" then s.available[3] = false
+        elseif blocked == "combat" then s.combat = true
+        elseif blocked == "solo" then s.grouped = false
+        elseif blocked == "leader" then s.leader = true
+        elseif blocked == "missing PvP API" then _G.GetPVPRoles = nil end
+        s:Show()
+        if blocked == "locked role" then s.enabled[3] = false
+        elseif blocked == "invalid combination" then s.valid = false
+        elseif blocked == "ended queue" then s.checking = false
+        elseif blocked == "changed queue" then s.battleground = false; s.premade = true
+        elseif blocked == "rejected" then s.accepted = false end
+        Stubs.AdvanceClock(0)
+        T.eq(s.calls, blocked == "rejected" and 1 or 0, "PvP " .. blocked .. " retains manual confirmation")
+        T.eq(s.hides, 0); T.ok(LFDRoleCheckPopup:IsShown())
+        T.eq(s.lfgReads, blocked == "changed queue" and 1 or 0)
+        T.eq(s.pvpWrites, 0); T.eq(#s.writes, 0)
+        T.eq(Stubs.PendingTimers(), 0)
+        s:Finish()
+    end
 
     for _, prefs in ipairs({false, {}, {HEALER = false}, {HEALER = "true"}}) do
         s = Setup(prefs)
